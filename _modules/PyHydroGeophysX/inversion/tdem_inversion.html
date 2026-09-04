@@ -1,0 +1,974 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.inversion.tdem_inversion &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/inversion/tdem_inversion';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/inversion/tdem_inversion.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../../PyHydroGeophysX.html" class="nav-link">PyHydroGeophysX</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.inversion.tdem_inversion</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.inversion.tdem_inversion</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""</span>
+<span class="sd">Inversion utilities for Time-Domain Electromagnetic (TDEM) data.</span>
+
+<span class="sd">This module provides classes for 1D TDEM inversion using SimPEG,</span>
+<span class="sd">with support for both L2 and sparse (IRLS) regularization.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">simpeg.electromagnetics.time_domain</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tdem</span>
+
+<span class="c1"># SimPEG imports</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">discretize</span><span class="w"> </span><span class="kn">import</span> <span class="n">TensorMesh</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">simpeg</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">data</span><span class="p">,</span>
+    <span class="n">data_misfit</span><span class="p">,</span>
+    <span class="n">directives</span><span class="p">,</span>
+    <span class="n">inverse_problem</span><span class="p">,</span>
+    <span class="n">inversion</span><span class="p">,</span>
+    <span class="n">maps</span><span class="p">,</span>
+    <span class="n">optimization</span><span class="p">,</span>
+    <span class="n">regularization</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">simpeg.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">mkvc</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># TDEMInversion Result</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="TDEMInversionResult">
+<a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.inversion.tdem_inversion.TDEMInversionResult">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">TDEMInversionResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Container for TDEM inversion results.</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        recovered_model: Final recovered model (log-conductivity)</span>
+<span class="sd">        recovered_conductivity: Recovered conductivity (S/m)</span>
+<span class="sd">        l2_model: L2 model before IRLS (log-conductivity)</span>
+<span class="sd">        l2_conductivity: L2 conductivity (S/m)</span>
+<span class="sd">        predicted_data: Predicted data from recovered model</span>
+<span class="sd">        mesh: TensorMesh used for inversion</span>
+<span class="sd">        thicknesses: Layer thicknesses used in inversion</span>
+<span class="sd">        chi2: Final chi-squared misfit</span>
+<span class="sd">        iterations: Number of iterations</span>
+<span class="sd">        convergence_history: History of data misfit per iteration</span>
+<span class="sd">    """</span>
+    <span class="n">recovered_model</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">recovered_conductivity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">l2_model</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">l2_conductivity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">predicted_data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">mesh</span><span class="p">:</span> <span class="n">TensorMesh</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">thicknesses</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">chi2</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">convergence_history</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># TDEMInversion</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="TDEMInversion">
+<a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.inversion.tdem_inversion.TDEMInversion">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">TDEMInversion</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Class for 1D TDEM inversion using SimPEG.</span>
+<span class="sd">    </span>
+<span class="sd">    This class provides functionality for inverting TDEM sounding data</span>
+<span class="sd">    to recover 1D layered Earth conductivity models.</span>
+<span class="sd">    </span>
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; # Load or create data</span>
+<span class="sd">        &gt;&gt;&gt; times = np.logspace(-5, -2, 31)</span>
+<span class="sd">        &gt;&gt;&gt; dobs = ...  # observed data</span>
+<span class="sd">        &gt;&gt;&gt; uncertainties = ...  # data uncertainties</span>
+<span class="sd">        &gt;&gt;&gt; </span>
+<span class="sd">        &gt;&gt;&gt; # Create inversion</span>
+<span class="sd">        &gt;&gt;&gt; inv = TDEMInversion(</span>
+<span class="sd">        ...     times=times,</span>
+<span class="sd">        ...     dobs=dobs,</span>
+<span class="sd">        ...     uncertainties=uncertainties,</span>
+<span class="sd">        ...     source_radius=10.0</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; </span>
+<span class="sd">        &gt;&gt;&gt; # Run inversion</span>
+<span class="sd">        &gt;&gt;&gt; result = inv.run()</span>
+<span class="sd">    """</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">times</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">dobs</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">uncertainties</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">source_radius</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
+        <span class="n">source_location</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">receiver_location</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">n_layers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">25</span><span class="p">,</span>
+        <span class="n">min_thickness</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">max_thickness</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Initialize TDEM inversion.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            times: Time channels (s)</span>
+<span class="sd">            dobs: Observed data (T)</span>
+<span class="sd">            uncertainties: Data uncertainties (T)</span>
+<span class="sd">            source_radius: Loop radius (m)</span>
+<span class="sd">            source_location: Source center [x, y, z] (m)</span>
+<span class="sd">            receiver_location: Receiver position [x, y, z] (m)</span>
+<span class="sd">            n_layers: Number of layers for inversion mesh</span>
+<span class="sd">            min_thickness: Minimum layer thickness (m)</span>
+<span class="sd">            max_thickness: Maximum layer thickness (m)</span>
+<span class="sd">            **kwargs: Additional parameters:</span>
+<span class="sd">                - starting_conductivity: Starting model conductivity (S/m)</span>
+<span class="sd">                - alpha_s: Smallness regularization weight</span>
+<span class="sd">                - alpha_x: Smoothness regularization weight</span>
+<span class="sd">                - max_iterations: Maximum iterations</span>
+<span class="sd">                - use_irls: Whether to use IRLS for sparse inversion</span>
+<span class="sd">                - irls_norms: [p, q] norms for IRLS (default [1, 0])</span>
+<span class="sd">                - beta0_ratio: Initial beta ratio</span>
+<span class="sd">                - verbose: Print progress</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">times</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dobs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dobs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uncertainties</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">uncertainties</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_radius</span> <span class="o">=</span> <span class="n">source_radius</span>
+        
+        <span class="k">if</span> <span class="n">source_location</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">source_location</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">receiver_location</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">receiver_location</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">])</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_location</span> <span class="o">=</span> <span class="n">source_location</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">receiver_location</span> <span class="o">=</span> <span class="n">receiver_location</span>
+        
+        <span class="c1"># Inversion mesh parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_layers</span> <span class="o">=</span> <span class="n">n_layers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_thickness</span> <span class="o">=</span> <span class="n">min_thickness</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_thickness</span> <span class="o">=</span> <span class="n">max_thickness</span>
+        
+        <span class="c1"># Default parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">'starting_conductivity'</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>  <span class="c1"># S/m</span>
+            <span class="s1">'alpha_s'</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>
+            <span class="s1">'alpha_x'</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+            <span class="s1">'max_iterations'</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
+            <span class="s1">'use_irls'</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s1">'irls_norms'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+            <span class="s1">'beta0_ratio'</span><span class="p">:</span> <span class="mf">1e2</span><span class="p">,</span>
+            <span class="s1">'max_irls_iterations'</span><span class="p">:</span> <span class="mi">30</span><span class="p">,</span>
+            <span class="s1">'cg_maxiter'</span><span class="p">:</span> <span class="mi">30</span><span class="p">,</span>
+            <span class="s1">'verbose'</span><span class="p">:</span> <span class="kc">True</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="c1"># Initialize components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">survey</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inv_thicknesses</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_setup_complete</span> <span class="o">=</span> <span class="kc">False</span>
+    
+<div class="viewcode-block" id="TDEMInversion.setup">
+<a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.inversion.tdem_inversion.TDEMInversion.setup">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Set up inversion components (survey, mesh, simulation)."""</span>
+        <span class="c1"># Create inversion layer thicknesses</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inv_thicknesses</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_thickness</span><span class="p">),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_thickness</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_layers</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Create mesh for regularization</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">TensorMesh</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_thicknesses</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_thicknesses</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]],</span> <span class="s2">"0"</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Create receiver</span>
+        <span class="n">receiver_list</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">tdem</span><span class="o">.</span><span class="n">receivers</span><span class="o">.</span><span class="n">PointMagneticFluxDensity</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">receiver_location</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">,</span>
+                <span class="n">orientation</span><span class="o">=</span><span class="s2">"z"</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
+        
+        <span class="c1"># Create waveform and source</span>
+        <span class="n">waveform</span> <span class="o">=</span> <span class="n">tdem</span><span class="o">.</span><span class="n">sources</span><span class="o">.</span><span class="n">StepOffWaveform</span><span class="p">()</span>
+        <span class="n">source_list</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">tdem</span><span class="o">.</span><span class="n">sources</span><span class="o">.</span><span class="n">CircularLoop</span><span class="p">(</span>
+                <span class="n">receiver_list</span><span class="o">=</span><span class="n">receiver_list</span><span class="p">,</span>
+                <span class="n">location</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">source_location</span><span class="p">,</span>
+                <span class="n">waveform</span><span class="o">=</span><span class="n">waveform</span><span class="p">,</span>
+                <span class="n">current</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                <span class="n">radius</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">source_radius</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
+        
+        <span class="c1"># Create survey</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">survey</span> <span class="o">=</span> <span class="n">tdem</span><span class="o">.</span><span class="n">Survey</span><span class="p">(</span><span class="n">source_list</span><span class="p">)</span>
+        
+        <span class="c1"># Create simulation with exponential mapping (model is log-conductivity)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_mapping</span> <span class="o">=</span> <span class="n">maps</span><span class="o">.</span><span class="n">ExpMap</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span> <span class="o">=</span> <span class="n">tdem</span><span class="o">.</span><span class="n">Simulation1DLayered</span><span class="p">(</span>
+            <span class="n">survey</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">survey</span><span class="p">,</span>
+            <span class="n">thicknesses</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_thicknesses</span><span class="p">,</span>
+            <span class="n">sigmaMap</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model_mapping</span>
+        <span class="p">)</span>
+        <span class="c1"># Avoid the default Pardiso backend on Windows: missing MKL/Pardiso</span>
+        <span class="c1"># symbols cause a native delay-load crash rather than a Python error.</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">pymatsolver</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">solver</span> <span class="o">=</span> <span class="n">pymatsolver</span><span class="o">.</span><span class="n">Solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">solver_opts</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_setup_complete</span> <span class="o">=</span> <span class="kc">True</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">'verbose'</span><span class="p">]:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Inversion setup complete:"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  - </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_layers</span><span class="si">}</span><span class="s2"> layers"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  - Thickness range: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_thicknesses</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_thicknesses</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  - </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dobs</span><span class="p">)</span><span class="si">}</span><span class="s2"> data points"</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="TDEMInversion.run">
+<a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.inversion.tdem_inversion.TDEMInversion.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">starting_model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TDEMInversionResult</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Run TDEM inversion.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            starting_model: Initial log-conductivity model (optional)</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            TDEMInversionResult with inversion results</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_setup_complete</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setup</span><span class="p">()</span>
+        
+        <span class="n">verbose</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">'verbose'</span><span class="p">]</span>
+        
+        <span class="c1"># Create starting model if not provided</span>
+        <span class="k">if</span> <span class="n">starting_model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sigma_0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">'starting_conductivity'</span><span class="p">]</span>
+            <span class="n">starting_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">sigma_0</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">nC</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Starting model: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">starting_model</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> S/m"</span><span class="p">)</span>
+        
+        <span class="c1"># Create data object</span>
+        <span class="n">data_object</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">Data</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">survey</span><span class="p">,</span>
+            <span class="n">dobs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dobs</span><span class="p">,</span>
+            <span class="n">standard_deviation</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">uncertainties</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Data misfit</span>
+        <span class="n">dmis</span> <span class="o">=</span> <span class="n">data_misfit</span><span class="o">.</span><span class="n">L2DataMisfit</span><span class="p">(</span>
+            <span class="n">simulation</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="p">,</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">data_object</span>
+        <span class="p">)</span>
+        <span class="n">dmis</span><span class="o">.</span><span class="n">W</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">uncertainties</span>
+        
+        <span class="c1"># Regularization</span>
+        <span class="n">reg_map</span> <span class="o">=</span> <span class="n">maps</span><span class="o">.</span><span class="n">IdentityMap</span><span class="p">(</span><span class="n">nP</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">nC</span><span class="p">)</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="n">regularization</span><span class="o">.</span><span class="n">Sparse</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span>
+            <span class="n">mapping</span><span class="o">=</span><span class="n">reg_map</span><span class="p">,</span>
+            <span class="n">alpha_s</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">'alpha_s'</span><span class="p">],</span>
+            <span class="n">alpha_x</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">'alpha_x'</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">reg</span><span class="o">.</span><span class="n">reference_model</span> <span class="o">=</span> <span class="n">starting_model</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">'use_irls'</span><span class="p">]:</span>
+            <span class="n">reg</span><span class="o">.</span><span class="n">norms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">'irls_norms'</span><span class="p">]</span>
+        
+        <span class="c1"># Optimization</span>
+        <span class="n">opt</span> <span class="o">=</span> <span class="n">optimization</span><span class="o">.</span><span class="n">ProjectedGNCG</span><span class="p">(</span>
+            <span class="n">maxIter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">'max_iterations'</span><span class="p">],</span>
+            <span class="n">maxIterLS</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+            <span class="n">maxIterCG</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">'cg_maxiter'</span><span class="p">],</span>
+            <span class="n">tolCG</span><span class="o">=</span><span class="mf">1e-3</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Inverse problem</span>
+        <span class="n">inv_prob</span> <span class="o">=</span> <span class="n">inverse_problem</span><span class="o">.</span><span class="n">BaseInvProblem</span><span class="p">(</span><span class="n">dmis</span><span class="p">,</span> <span class="n">reg</span><span class="p">,</span> <span class="n">opt</span><span class="p">)</span>
+        
+        <span class="c1"># Directives</span>
+        <span class="n">directives_list</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">directives</span><span class="o">.</span><span class="n">UpdateSensitivityWeights</span><span class="p">(),</span>
+            <span class="n">directives</span><span class="o">.</span><span class="n">BetaEstimate_ByEig</span><span class="p">(</span><span class="n">beta0_ratio</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">'beta0_ratio'</span><span class="p">]),</span>
+            <span class="n">directives</span><span class="o">.</span><span class="n">SaveOutputEveryIteration</span><span class="p">(</span><span class="n">save_txt</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+        <span class="p">]</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">'use_irls'</span><span class="p">]:</span>
+            <span class="n">directives_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">directives</span><span class="o">.</span><span class="n">UpdateIRLS</span><span class="p">(</span>
+                    <span class="n">max_irls_iterations</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s1">'max_irls_iterations'</span><span class="p">],</span>
+                    <span class="n">irls_cooling_factor</span><span class="o">=</span><span class="mf">1.5</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        
+        <span class="n">directives_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">directives</span><span class="o">.</span><span class="n">UpdatePreconditioner</span><span class="p">())</span>
+        
+        <span class="c1"># Create and run inversion</span>
+        <span class="n">inv</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">BaseInversion</span><span class="p">(</span><span class="n">inv_prob</span><span class="p">,</span> <span class="n">directives_list</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Running TDEM inversion..."</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+        
+        <span class="n">recovered_model</span> <span class="o">=</span> <span class="n">inv</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">starting_model</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"="</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"Inversion complete!"</span><span class="p">)</span>
+        
+        <span class="c1"># Create result object</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">TDEMInversionResult</span><span class="p">()</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">recovered_model</span> <span class="o">=</span> <span class="n">recovered_model</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">recovered_conductivity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_mapping</span> <span class="o">*</span> <span class="n">recovered_model</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">thicknesses</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_thicknesses</span>
+        
+        <span class="c1"># Get L2 model if available</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">inv_prob</span><span class="p">,</span> <span class="s1">'l2model'</span><span class="p">)</span> <span class="ow">and</span> <span class="n">inv_prob</span><span class="o">.</span><span class="n">l2model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">l2_model</span> <span class="o">=</span> <span class="n">inv_prob</span><span class="o">.</span><span class="n">l2model</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">l2_conductivity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_mapping</span> <span class="o">*</span> <span class="n">inv_prob</span><span class="o">.</span><span class="n">l2model</span>
+        
+        <span class="c1"># Predicted data</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">predicted_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">dpred</span><span class="p">(</span><span class="n">recovered_model</span><span class="p">)</span>
+        
+        <span class="c1"># Compute chi-squared</span>
+        <span class="n">residual</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dobs</span> <span class="o">-</span> <span class="n">result</span><span class="o">.</span><span class="n">predicted_data</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">uncertainties</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">chi2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">residual</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dobs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Final chi-squared: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">chi2</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">result</span></div>
+
+    
+<div class="viewcode-block" id="TDEMInversion.plot_result">
+<a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.inversion.tdem_inversion.TDEMInversion.plot_result">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_result</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">result</span><span class="p">:</span> <span class="n">TDEMInversionResult</span><span class="p">,</span>
+        <span class="n">true_model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">save_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Plot inversion results.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            result: TDEMInversionResult from run()</span>
+<span class="sd">            true_model: Tuple of (thicknesses, conductivity) for true model</span>
+<span class="sd">            save_path: Path to save figure (optional)</span>
+<span class="sd">        """</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">simpeg.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_1d_layer_model</span>
+        
+        <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+        
+        <span class="c1"># Model comparison</span>
+        <span class="n">ax1</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="c1"># Plot true model if provided</span>
+        <span class="k">if</span> <span class="n">true_model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">true_thick</span><span class="p">,</span> <span class="n">true_cond</span> <span class="o">=</span> <span class="n">true_model</span>
+            <span class="n">plot_thick</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">true_thick</span><span class="p">,</span> <span class="mf">50.0</span><span class="p">]</span>
+            <span class="n">plot_1d_layer_model</span><span class="p">(</span><span class="n">plot_thick</span><span class="p">,</span> <span class="n">true_cond</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">show_layers</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> 
+                              <span class="n">color</span><span class="o">=</span><span class="s1">'k'</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        
+        <span class="c1"># Plot L2 model if available</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">l2_conductivity</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">plot_1d_layer_model</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">h</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">result</span><span class="o">.</span><span class="n">l2_conductivity</span><span class="p">,</span> 
+                              <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">show_layers</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">'b'</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="c1"># Plot sparse model</span>
+        <span class="n">plot_1d_layer_model</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">h</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">result</span><span class="o">.</span><span class="n">recovered_conductivity</span><span class="p">,</span>
+                          <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">show_layers</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">'r'</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">ax1</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s1">'log'</span><span class="p">)</span>
+        <span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">'Conductivity (S/m)'</span><span class="p">)</span>
+        <span class="n">ax1</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">'Depth (m)'</span><span class="p">)</span>
+        <span class="n">ax1</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">'Recovered Conductivity Model'</span><span class="p">)</span>
+        
+        <span class="n">legend_labels</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">true_model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">legend_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'True Model'</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">l2_conductivity</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">legend_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'L2 Model'</span><span class="p">)</span>
+        <span class="n">legend_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'Sparse Model'</span><span class="p">)</span>
+        <span class="n">ax1</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">legend_labels</span><span class="p">)</span>
+        <span class="n">ax1</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">ax1</span><span class="o">.</span><span class="n">invert_yaxis</span><span class="p">()</span>
+        
+        <span class="c1"># Data comparison</span>
+        <span class="n">ax2</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">ax2</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">*</span> <span class="mf">1e3</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dobs</span><span class="p">),</span> <span class="s1">'ko'</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">'Observed'</span><span class="p">)</span>
+        <span class="n">ax2</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">*</span> <span class="mf">1e3</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">predicted_data</span><span class="p">),</span> <span class="s1">'r-'</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">'Predicted'</span><span class="p">)</span>
+        
+        <span class="n">ax2</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">'Time (ms)'</span><span class="p">)</span>
+        <span class="n">ax2</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">'|Bz| (T)'</span><span class="p">)</span>
+        <span class="n">ax2</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Data Fit (χ² = </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">chi2</span><span class="si">:</span><span class="s1">.2f</span><span class="si">}</span><span class="s1">)'</span><span class="p">)</span>
+        <span class="n">ax2</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">ax2</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">'both'</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+        
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="n">save_path</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">save_path</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">150</span><span class="p">)</span>
+        
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+</div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># run tdem inversion</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="run_tdem_inversion">
+<a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.inversion.tdem_inversion.run_tdem_inversion">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_tdem_inversion</span><span class="p">(</span>
+    <span class="n">times</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">dobs</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">uncertainties</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">source_radius</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
+    <span class="n">n_layers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">25</span><span class="p">,</span>
+    <span class="n">use_irls</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TDEMInversionResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Convenience function to run TDEM inversion.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        times: Time channels (s)</span>
+<span class="sd">        dobs: Observed data (T)</span>
+<span class="sd">        uncertainties: Data uncertainties (T)</span>
+<span class="sd">        source_radius: Loop radius (m)</span>
+<span class="sd">        n_layers: Number of inversion layers</span>
+<span class="sd">        use_irls: Use IRLS for sparse inversion</span>
+<span class="sd">        verbose: Print progress</span>
+<span class="sd">        **kwargs: Additional parameters for TDEMInversion</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        TDEMInversionResult with inversion results</span>
+<span class="sd">    """</span>
+    <span class="n">inv</span> <span class="o">=</span> <span class="n">TDEMInversion</span><span class="p">(</span>
+        <span class="n">times</span><span class="o">=</span><span class="n">times</span><span class="p">,</span>
+        <span class="n">dobs</span><span class="o">=</span><span class="n">dobs</span><span class="p">,</span>
+        <span class="n">uncertainties</span><span class="o">=</span><span class="n">uncertainties</span><span class="p">,</span>
+        <span class="n">source_radius</span><span class="o">=</span><span class="n">source_radius</span><span class="p">,</span>
+        <span class="n">n_layers</span><span class="o">=</span><span class="n">n_layers</span><span class="p">,</span>
+        <span class="n">use_irls</span><span class="o">=</span><span class="n">use_irls</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">inv</span><span class="o">.</span><span class="n">run</span><span class="p">()</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

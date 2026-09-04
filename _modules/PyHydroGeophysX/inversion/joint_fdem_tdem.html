@@ -1,0 +1,1046 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.inversion.joint_fdem_tdem &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/inversion/joint_fdem_tdem';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/inversion/joint_fdem_tdem.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../../PyHydroGeophysX.html" class="nav-link">PyHydroGeophysX</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.inversion.joint_fdem_tdem</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.inversion.joint_fdem_tdem</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Shared-model joint inversion for collocated FDEM and TDEM soundings."""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">least_squares</span>
+
+
+<div class="viewcode-block" id="JointFDEMTDEMResult">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.inversion.html#PyHydroGeophysX.inversion.joint_fdem_tdem.JointFDEMTDEMResult">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">JointFDEMTDEMResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Outputs from a shared-conductivity FDEM-TDEM inversion."""</span>
+
+    <span class="n">resistivity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">conductivity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">thicknesses</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">predicted_fdem</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">predicted_tdem</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">chi2_fdem</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">chi2_tdem</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">coverage_fdem</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">coverage_tdem</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">convergence</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">baseline</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">meta</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span></div>
+
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">_JointInputs</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Validated arrays and simulations shared by both optimizer backends."""</span>
+
+    <span class="n">frequencies</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">times</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">f_obs</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">f_obs_interleaved</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">t_obs</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">f_unc</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">f_unc_interleaved</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">t_unc</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">thicknesses</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">n_layers</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">f_geom</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+    <span class="n">t_geom</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+    <span class="n">f_modeler</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="n">t_modeler</span><span class="p">:</span> <span class="n">Any</span>
+
+
+<div class="viewcode-block" id="JointFDEMTDEMInversion">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.inversion.html#PyHydroGeophysX.inversion.joint_fdem_tdem.JointFDEMTDEMInversion">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">JointFDEMTDEMInversion</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Invert one FDEM and one TDEM sounding for a common 1-D conductivity model.</span>
+
+<span class="sd">    Both datasets retain their own survey geometry and uncertainty model. Their</span>
+<span class="sd">    normalized residuals are combined with a common first-difference smoothness</span>
+<span class="sd">    term, so neither method dominates solely because it has more channels.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">fdem_data</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+        <span class="n">tdem_data</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+        <span class="n">fdem_geometry</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">tdem_geometry</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">thicknesses</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fdem_data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">fdem_data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tdem_data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">tdem_data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fdem_geometry</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">fdem_geometry</span> <span class="ow">or</span> <span class="p">{})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tdem_geometry</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">tdem_geometry</span> <span class="ow">or</span> <span class="p">{})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"n_layers"</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+            <span class="s2">"min_thickness"</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+            <span class="s2">"max_thickness"</span><span class="p">:</span> <span class="mf">40.0</span><span class="p">,</span>
+            <span class="s2">"starting_resistivity"</span><span class="p">:</span> <span class="mf">100.0</span><span class="p">,</span>
+            <span class="s2">"min_resistivity"</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+            <span class="s2">"max_resistivity"</span><span class="p">:</span> <span class="mf">10000.0</span><span class="p">,</span>
+            <span class="s2">"max_iterations"</span><span class="p">:</span> <span class="mi">30</span><span class="p">,</span>
+            <span class="s2">"smoothness"</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span>
+            <span class="s2">"fdem_relative_error"</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+            <span class="s2">"tdem_relative_error"</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+            <span class="s2">"fdem_noise_floor"</span><span class="p">:</span> <span class="mf">1e-14</span><span class="p">,</span>
+            <span class="s2">"tdem_noise_floor"</span><span class="p">:</span> <span class="mf">1e-18</span><span class="p">,</span>
+            <span class="s2">"fdem_data_scale"</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+            <span class="s2">"tdem_data_scale"</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+            <span class="s2">"fdem_weight"</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+            <span class="s2">"tdem_weight"</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+            <span class="s2">"backend"</span><span class="p">:</span> <span class="s2">"auto"</span><span class="p">,</span>
+            <span class="s2">"run_baseline"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thicknesses</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">thicknesses</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">thicknesses</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_layer_thicknesses</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">thicknesses</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">thicknesses</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">thicknesses</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"thicknesses must contain positive finite values."</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">thicknesses</span>
+        <span class="n">n_layers</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"n_layers"</span><span class="p">]),</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">geomspace</span><span class="p">(</span>
+            <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"min_thickness"</span><span class="p">]),</span>
+            <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"max_thickness"</span><span class="p">]),</span>
+            <span class="n">n_layers</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_require</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">fields</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">fields</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2"> data is missing required fields: </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_version_tuple</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the numeric major/minor/patch prefix of a version string."""</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+
+        <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\d+"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))[:</span><span class="mi">3</span><span class="p">]]</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">((</span><span class="n">values</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])[:</span><span class="mi">3</span><span class="p">])</span>
+
+<div class="viewcode-block" id="JointFDEMTDEMInversion.native_backend_status">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.inversion.html#PyHydroGeophysX.inversion.joint_fdem_tdem.JointFDEMTDEMInversion.native_backend_status">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">native_backend_status</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Report whether the tested native SimPEG joint path is available."""</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">simpeg</span>
+        <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"available"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"version"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span> <span class="s2">"reason"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)}</span>
+        <span class="n">version</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">simpeg</span><span class="p">,</span> <span class="s2">"__version__"</span><span class="p">,</span> <span class="s2">"0"</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_version_tuple</span><span class="p">(</span><span class="n">version</span><span class="p">)</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s2">"available"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="s2">"version"</span><span class="p">:</span> <span class="n">version</span><span class="p">,</span>
+                <span class="s2">"reason"</span><span class="p">:</span> <span class="s2">"Native joint inversion requires SimPEG &gt;= 0.25.2; SciPy fallback remains available."</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"available"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"version"</span><span class="p">:</span> <span class="n">version</span><span class="p">,</span> <span class="s2">"reason"</span><span class="p">:</span> <span class="s2">""</span><span class="p">}</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_prepare_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_JointInputs</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Validate observations and construct the two native simulations."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_require</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fdem_data</span><span class="p">,</span> <span class="p">(</span><span class="s2">"frequencies"</span><span class="p">,</span> <span class="s2">"real"</span><span class="p">,</span> <span class="s2">"imag"</span><span class="p">),</span> <span class="s2">"FDEM"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_require</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tdem_data</span><span class="p">,</span> <span class="p">(</span><span class="s2">"times"</span><span class="p">,</span> <span class="s2">"response"</span><span class="p">),</span> <span class="s2">"TDEM"</span><span class="p">)</span>
+
+        <span class="c1"># Import lazily so the registry and Qt page remain usable without SimPEG.</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.forward</span><span class="w"> </span><span class="kn">import</span> <span class="n">em1d</span> <span class="k">as</span> <span class="n">em_forward</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.forward.fdem_forward</span><span class="w"> </span><span class="kn">import</span> <span class="n">FDEMForwardModeling</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.forward.tdem_forward</span><span class="w"> </span><span class="kn">import</span> <span class="n">TDEMForwardModeling</span>
+
+        <span class="n">frequencies</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fdem_data</span><span class="p">[</span><span class="s2">"frequencies"</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tdem_data</span><span class="p">[</span><span class="s2">"times"</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">f_scale</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"fdem_data_scale"</span><span class="p">])</span>
+        <span class="n">t_scale</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"tdem_data_scale"</span><span class="p">])</span>
+        <span class="n">f_real</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fdem_data</span><span class="p">[</span><span class="s2">"real"</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="o">*</span> <span class="n">f_scale</span>
+        <span class="n">f_imag</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fdem_data</span><span class="p">[</span><span class="s2">"imag"</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="o">*</span> <span class="n">f_scale</span>
+        <span class="n">t_obs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tdem_data</span><span class="p">[</span><span class="s2">"response"</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="o">*</span> <span class="n">t_scale</span>
+        <span class="k">if</span> <span class="n">f_real</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">frequencies</span><span class="o">.</span><span class="n">size</span> <span class="ow">or</span> <span class="n">f_imag</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">frequencies</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"FDEM frequency, real, and imaginary arrays must have equal length."</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">t_obs</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">times</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"TDEM time and response arrays must have equal length."</span><span class="p">)</span>
+
+        <span class="n">thicknesses</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_layer_thicknesses</span><span class="p">()</span>
+        <span class="n">n_layers</span> <span class="o">=</span> <span class="n">thicknesses</span><span class="o">.</span><span class="n">size</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">f_geom</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">em_forward</span><span class="o">.</span><span class="n">DEFAULT_FDEM</span><span class="p">)</span>
+        <span class="n">f_geom</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fdem_geometry</span><span class="p">)</span>
+        <span class="n">t_geom</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">em_forward</span><span class="o">.</span><span class="n">DEFAULT_TDEM</span><span class="p">)</span>
+        <span class="n">t_geom</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tdem_geometry</span><span class="p">)</span>
+        <span class="n">f_modeler</span> <span class="o">=</span> <span class="n">FDEMForwardModeling</span><span class="p">(</span>
+            <span class="n">thicknesses</span><span class="o">=</span><span class="n">thicknesses</span><span class="p">,</span>
+            <span class="n">survey_config</span><span class="o">=</span><span class="n">em_forward</span><span class="o">.</span><span class="n">_fdem_config</span><span class="p">(</span><span class="n">f_geom</span><span class="p">,</span> <span class="n">frequencies</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">t_modeler</span> <span class="o">=</span> <span class="n">TDEMForwardModeling</span><span class="p">(</span>
+            <span class="n">thicknesses</span><span class="o">=</span><span class="n">thicknesses</span><span class="p">,</span>
+            <span class="n">survey_config</span><span class="o">=</span><span class="n">em_forward</span><span class="o">.</span><span class="n">_tdem_config</span><span class="p">(</span><span class="n">t_geom</span><span class="p">,</span> <span class="n">times</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">f_obs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">f_real</span><span class="p">,</span> <span class="n">f_imag</span><span class="p">))</span>
+        <span class="n">f_obs_interleaved</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">((</span><span class="n">f_real</span><span class="p">,</span> <span class="n">f_imag</span><span class="p">))</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">f_amp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">f_real</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">f_imag</span><span class="p">)</span>
+        <span class="n">f_unc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">f_amp</span><span class="p">,</span> <span class="n">f_amp</span><span class="p">))</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"fdem_relative_error"</span><span class="p">])</span>
+        <span class="n">f_unc</span> <span class="o">+=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"fdem_noise_floor"</span><span class="p">])</span> <span class="o">*</span> <span class="nb">abs</span><span class="p">(</span><span class="n">f_scale</span><span class="p">)</span>
+        <span class="n">f_unc_interleaved</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">f_amp</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"fdem_relative_error"</span><span class="p">])</span>
+        <span class="n">f_unc_interleaved</span> <span class="o">+=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"fdem_noise_floor"</span><span class="p">])</span> <span class="o">*</span> <span class="nb">abs</span><span class="p">(</span><span class="n">f_scale</span><span class="p">)</span>
+        <span class="n">t_unc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"tdem_relative_error"</span><span class="p">])</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">t_obs</span><span class="p">)</span>
+        <span class="n">t_unc</span> <span class="o">+=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"tdem_noise_floor"</span><span class="p">])</span> <span class="o">*</span> <span class="nb">abs</span><span class="p">(</span><span class="n">t_scale</span><span class="p">)</span>
+        <span class="n">f_unc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">f_unc</span><span class="p">,</span> <span class="mf">1e-30</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">f_unc_interleaved</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">f_unc_interleaved</span><span class="p">,</span> <span class="mf">1e-30</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">t_unc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">t_unc</span><span class="p">,</span> <span class="mf">1e-30</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">_JointInputs</span><span class="p">(</span>
+            <span class="n">frequencies</span><span class="o">=</span><span class="n">frequencies</span><span class="p">,</span>
+            <span class="n">times</span><span class="o">=</span><span class="n">times</span><span class="p">,</span>
+            <span class="n">f_obs</span><span class="o">=</span><span class="n">f_obs</span><span class="p">,</span>
+            <span class="n">f_obs_interleaved</span><span class="o">=</span><span class="n">f_obs_interleaved</span><span class="p">,</span>
+            <span class="n">t_obs</span><span class="o">=</span><span class="n">t_obs</span><span class="p">,</span>
+            <span class="n">f_unc</span><span class="o">=</span><span class="n">f_unc</span><span class="p">,</span>
+            <span class="n">f_unc_interleaved</span><span class="o">=</span><span class="n">f_unc_interleaved</span><span class="p">,</span>
+            <span class="n">t_unc</span><span class="o">=</span><span class="n">t_unc</span><span class="p">,</span>
+            <span class="n">thicknesses</span><span class="o">=</span><span class="n">thicknesses</span><span class="p">,</span>
+            <span class="n">n_layers</span><span class="o">=</span><span class="n">n_layers</span><span class="p">,</span>
+            <span class="n">f_geom</span><span class="o">=</span><span class="n">f_geom</span><span class="p">,</span>
+            <span class="n">t_geom</span><span class="o">=</span><span class="n">t_geom</span><span class="p">,</span>
+            <span class="n">f_modeler</span><span class="o">=</span><span class="n">f_modeler</span><span class="p">,</span>
+            <span class="n">t_modeler</span><span class="o">=</span><span class="n">t_modeler</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_normalized_coverage</span><span class="p">(</span><span class="n">block</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="n">sensitivity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">block</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+        <span class="n">maximum</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">sensitivity</span><span class="p">))</span> <span class="k">if</span> <span class="n">sensitivity</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="mf">0.0</span>
+        <span class="k">return</span> <span class="n">sensitivity</span> <span class="o">/</span> <span class="n">maximum</span> <span class="k">if</span> <span class="n">maximum</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">sensitivity</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_scipy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="n">_JointInputs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">JointFDEMTDEMResult</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Run the backwards-compatible SciPy least-squares implementation."""</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">forward_fdem</span><span class="p">(</span><span class="n">resistivity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">f_modeler</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span>
+                <span class="mf">1.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">resistivity</span><span class="p">,</span> <span class="mf">1e-12</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="p">))</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">inputs</span><span class="o">.</span><span class="n">frequencies</span><span class="o">.</span><span class="n">size</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">iscomplexobj</span><span class="p">(</span><span class="n">response</span><span class="p">):</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="n">response</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">response</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()[:</span> <span class="n">inputs</span><span class="o">.</span><span class="n">frequencies</span><span class="o">.</span><span class="n">size</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">response</span><span class="o">.</span><span class="n">real</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">imag</span><span class="p">))</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">forward_tdem</span><span class="p">(</span><span class="n">resistivity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span>
+                <span class="n">inputs</span><span class="o">.</span><span class="n">t_modeler</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">resistivity</span><span class="p">,</span> <span class="mf">1e-12</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()[:</span> <span class="n">inputs</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">size</span><span class="p">]</span>
+
+        <span class="n">f_weight</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"fdem_weight"</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">f_obs</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">t_weight</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"tdem_weight"</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">t_obs</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">smooth</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"smoothness"</span><span class="p">]),</span> <span class="mf">0.0</span><span class="p">))</span>
+        <span class="n">convergence</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">components</span><span class="p">(</span><span class="n">log10_resistivity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+            <span class="n">resistivity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">log10_resistivity</span><span class="p">)</span>
+            <span class="n">pred_f</span> <span class="o">=</span> <span class="n">forward_fdem</span><span class="p">(</span><span class="n">resistivity</span><span class="p">)</span>
+            <span class="n">pred_t</span> <span class="o">=</span> <span class="n">forward_tdem</span><span class="p">(</span><span class="n">resistivity</span><span class="p">)</span>
+            <span class="n">raw_f</span> <span class="o">=</span> <span class="p">(</span><span class="n">pred_f</span> <span class="o">-</span> <span class="n">inputs</span><span class="o">.</span><span class="n">f_obs</span><span class="p">)</span> <span class="o">/</span> <span class="n">inputs</span><span class="o">.</span><span class="n">f_unc</span>
+            <span class="n">raw_t</span> <span class="o">=</span> <span class="p">(</span><span class="n">pred_t</span> <span class="o">-</span> <span class="n">inputs</span><span class="o">.</span><span class="n">t_obs</span><span class="p">)</span> <span class="o">/</span> <span class="n">inputs</span><span class="o">.</span><span class="n">t_unc</span>
+            <span class="k">return</span> <span class="n">pred_f</span><span class="p">,</span> <span class="n">pred_t</span><span class="p">,</span> <span class="n">raw_f</span><span class="p">,</span> <span class="n">raw_t</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">residual</span><span class="p">(</span><span class="n">log10_resistivity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="n">_pred_f</span><span class="p">,</span> <span class="n">_pred_t</span><span class="p">,</span> <span class="n">raw_f</span><span class="p">,</span> <span class="n">raw_t</span> <span class="o">=</span> <span class="n">components</span><span class="p">(</span><span class="n">log10_resistivity</span><span class="p">)</span>
+            <span class="n">model_term</span> <span class="o">=</span> <span class="n">smooth</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">log10_resistivity</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">f_weight</span> <span class="o">*</span> <span class="n">raw_f</span><span class="p">,</span> <span class="n">t_weight</span> <span class="o">*</span> <span class="n">raw_t</span><span class="p">,</span> <span class="n">model_term</span><span class="p">))</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">callback</span><span class="p">(</span><span class="n">intermediate</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">intermediate</span><span class="p">,</span> <span class="s2">"x"</span><span class="p">,</span> <span class="n">intermediate</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="n">_pred_f</span><span class="p">,</span> <span class="n">_pred_t</span><span class="p">,</span> <span class="n">raw_f</span><span class="p">,</span> <span class="n">raw_t</span> <span class="o">=</span> <span class="n">components</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+            <span class="n">convergence</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                <span class="s2">"chi2_fdem"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">raw_f</span><span class="o">**</span><span class="mi">2</span><span class="p">)),</span>
+                <span class="s2">"chi2_tdem"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">raw_t</span><span class="o">**</span><span class="mi">2</span><span class="p">)),</span>
+            <span class="p">})</span>
+            <span class="n">progress_callback</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"progress_callback"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">progress_callback</span><span class="p">):</span>
+                <span class="n">progress_callback</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">convergence</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+
+        <span class="n">start</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">n_layers</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"starting_resistivity"</span><span class="p">])))</span>
+        <span class="n">lower</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">n_layers</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"min_resistivity"</span><span class="p">])))</span>
+        <span class="n">upper</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">n_layers</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"max_resistivity"</span><span class="p">])))</span>
+        <span class="n">options</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"method"</span><span class="p">:</span> <span class="s2">"trf"</span><span class="p">,</span>
+            <span class="s2">"bounds"</span><span class="p">:</span> <span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">),</span>
+            <span class="s2">"max_nfev"</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="mi">40</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"max_iterations"</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">n_layers</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)),</span>
+            <span class="s2">"xtol"</span><span class="p">:</span> <span class="mf">1e-8</span><span class="p">,</span>
+            <span class="s2">"ftol"</span><span class="p">:</span> <span class="mf">1e-8</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">inspect</span>
+            <span class="k">if</span> <span class="s2">"callback"</span> <span class="ow">in</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">least_squares</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
+                <span class="n">options</span><span class="p">[</span><span class="s2">"callback"</span><span class="p">]</span> <span class="o">=</span> <span class="n">callback</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="n">solution</span> <span class="o">=</span> <span class="n">least_squares</span><span class="p">(</span><span class="n">residual</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+        <span class="n">resistivity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">solution</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">predicted_fdem</span><span class="p">,</span> <span class="n">predicted_tdem</span><span class="p">,</span> <span class="n">raw_fdem</span><span class="p">,</span> <span class="n">raw_tdem</span> <span class="o">=</span> <span class="n">components</span><span class="p">(</span><span class="n">solution</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">final_record</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"chi2_fdem"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">raw_fdem</span><span class="o">**</span><span class="mi">2</span><span class="p">)),</span>
+            <span class="s2">"chi2_tdem"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">raw_tdem</span><span class="o">**</span><span class="mi">2</span><span class="p">)),</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">convergence</span> <span class="ow">or</span> <span class="n">convergence</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">final_record</span><span class="p">:</span>
+            <span class="n">convergence</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">final_record</span><span class="p">)</span>
+
+        <span class="n">jacobian</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">solution</span><span class="o">.</span><span class="n">jac</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+        <span class="n">fdem_rows</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">f_obs</span><span class="o">.</span><span class="n">size</span>
+        <span class="n">tdem_rows</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">t_obs</span><span class="o">.</span><span class="n">size</span>
+        <span class="n">coverage_fdem</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalized_coverage</span><span class="p">(</span><span class="n">jacobian</span><span class="p">[:</span><span class="n">fdem_rows</span><span class="p">])</span>
+        <span class="n">coverage_tdem</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalized_coverage</span><span class="p">(</span><span class="n">jacobian</span><span class="p">[</span><span class="n">fdem_rows</span><span class="p">:</span><span class="n">fdem_rows</span> <span class="o">+</span> <span class="n">tdem_rows</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">JointFDEMTDEMResult</span><span class="p">(</span>
+            <span class="n">resistivity</span><span class="o">=</span><span class="n">resistivity</span><span class="p">,</span>
+            <span class="n">conductivity</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">resistivity</span><span class="p">,</span> <span class="mf">1e-12</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="n">thicknesses</span><span class="o">=</span><span class="n">inputs</span><span class="o">.</span><span class="n">thicknesses</span><span class="p">,</span>
+            <span class="n">predicted_fdem</span><span class="o">=</span><span class="n">predicted_fdem</span><span class="p">,</span>
+            <span class="n">predicted_tdem</span><span class="o">=</span><span class="n">predicted_tdem</span><span class="p">,</span>
+            <span class="n">chi2_fdem</span><span class="o">=</span><span class="n">final_record</span><span class="p">[</span><span class="s2">"chi2_fdem"</span><span class="p">],</span>
+            <span class="n">chi2_tdem</span><span class="o">=</span><span class="n">final_record</span><span class="p">[</span><span class="s2">"chi2_tdem"</span><span class="p">],</span>
+            <span class="n">coverage_fdem</span><span class="o">=</span><span class="n">coverage_fdem</span><span class="p">,</span>
+            <span class="n">coverage_tdem</span><span class="o">=</span><span class="n">coverage_tdem</span><span class="p">,</span>
+            <span class="n">convergence</span><span class="o">=</span><span class="n">convergence</span><span class="p">,</span>
+            <span class="n">meta</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">"nfev"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">solution</span><span class="o">.</span><span class="n">nfev</span><span class="p">),</span>
+                <span class="s2">"iterations"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">convergence</span><span class="p">),</span>
+                <span class="s2">"backend_version"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">scipy</span><span class="p">,</span> <span class="s2">"__version__"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)),</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_simpeg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="n">_JointInputs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">JointFDEMTDEMResult</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Run a native SimPEG multi-data-misfit inversion on one shared model."""</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.sparse</span><span class="w"> </span><span class="kn">import</span> <span class="n">diags</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">simpeg</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">simpeg</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span>
+            <span class="n">data_misfit</span><span class="p">,</span>
+            <span class="n">directives</span><span class="p">,</span>
+            <span class="n">inverse_problem</span><span class="p">,</span>
+            <span class="n">inversion</span><span class="p">,</span>
+            <span class="n">maps</span><span class="p">,</span>
+            <span class="n">objective_function</span><span class="p">,</span>
+            <span class="n">optimization</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">simpeg.electromagnetics</span><span class="w"> </span><span class="kn">import</span> <span class="n">frequency_domain</span> <span class="k">as</span> <span class="n">fdem</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">simpeg.electromagnetics</span><span class="w"> </span><span class="kn">import</span> <span class="n">time_domain</span> <span class="k">as</span> <span class="n">tdem</span>
+
+        <span class="n">model_map</span> <span class="o">=</span> <span class="n">maps</span><span class="o">.</span><span class="n">ExpMap</span><span class="p">(</span><span class="n">nP</span><span class="o">=</span><span class="n">inputs</span><span class="o">.</span><span class="n">n_layers</span><span class="p">)</span>
+        <span class="n">f_simulation</span> <span class="o">=</span> <span class="n">fdem</span><span class="o">.</span><span class="n">Simulation1DLayered</span><span class="p">(</span>
+            <span class="n">survey</span><span class="o">=</span><span class="n">inputs</span><span class="o">.</span><span class="n">f_modeler</span><span class="o">.</span><span class="n">survey</span><span class="p">,</span>
+            <span class="n">thicknesses</span><span class="o">=</span><span class="n">inputs</span><span class="o">.</span><span class="n">thicknesses</span><span class="p">,</span>
+            <span class="n">sigmaMap</span><span class="o">=</span><span class="n">model_map</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">t_simulation</span> <span class="o">=</span> <span class="n">tdem</span><span class="o">.</span><span class="n">Simulation1DLayered</span><span class="p">(</span>
+            <span class="n">survey</span><span class="o">=</span><span class="n">inputs</span><span class="o">.</span><span class="n">t_modeler</span><span class="o">.</span><span class="n">survey</span><span class="p">,</span>
+            <span class="n">thicknesses</span><span class="o">=</span><span class="n">inputs</span><span class="o">.</span><span class="n">thicknesses</span><span class="p">,</span>
+            <span class="n">sigmaMap</span><span class="o">=</span><span class="n">model_map</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">f_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">Data</span><span class="p">(</span>
+            <span class="n">inputs</span><span class="o">.</span><span class="n">f_modeler</span><span class="o">.</span><span class="n">survey</span><span class="p">,</span>
+            <span class="n">dobs</span><span class="o">=</span><span class="n">inputs</span><span class="o">.</span><span class="n">f_obs_interleaved</span><span class="p">,</span>
+            <span class="n">standard_deviation</span><span class="o">=</span><span class="n">inputs</span><span class="o">.</span><span class="n">f_unc_interleaved</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">t_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">Data</span><span class="p">(</span>
+            <span class="n">inputs</span><span class="o">.</span><span class="n">t_modeler</span><span class="o">.</span><span class="n">survey</span><span class="p">,</span>
+            <span class="n">dobs</span><span class="o">=</span><span class="n">inputs</span><span class="o">.</span><span class="n">t_obs</span><span class="p">,</span>
+            <span class="n">standard_deviation</span><span class="o">=</span><span class="n">inputs</span><span class="o">.</span><span class="n">t_unc</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">f_misfit</span> <span class="o">=</span> <span class="n">data_misfit</span><span class="o">.</span><span class="n">L2DataMisfit</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">f_data</span><span class="p">,</span> <span class="n">simulation</span><span class="o">=</span><span class="n">f_simulation</span><span class="p">)</span>
+        <span class="n">t_misfit</span> <span class="o">=</span> <span class="n">data_misfit</span><span class="o">.</span><span class="n">L2DataMisfit</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">t_data</span><span class="p">,</span> <span class="n">simulation</span><span class="o">=</span><span class="n">t_simulation</span><span class="p">)</span>
+        <span class="n">f_multiplier</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"fdem_weight"</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">f_obs</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">t_multiplier</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"tdem_weight"</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">t_obs</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">joint_misfit</span> <span class="o">=</span> <span class="n">f_multiplier</span> <span class="o">*</span> <span class="n">f_misfit</span> <span class="o">+</span> <span class="n">t_multiplier</span> <span class="o">*</span> <span class="n">t_misfit</span>
+
+        <span class="n">difference</span> <span class="o">=</span> <span class="n">diags</span><span class="p">(</span>
+            <span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">n_layers</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">n_layers</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)),</span>
+            <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+            <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">n_layers</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">inputs</span><span class="o">.</span><span class="n">n_layers</span><span class="p">),</span>
+            <span class="nb">format</span><span class="o">=</span><span class="s2">"csr"</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">smoothness</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"smoothness"</span><span class="p">]),</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">regularization</span> <span class="o">=</span> <span class="n">objective_function</span><span class="o">.</span><span class="n">L2ObjectiveFunction</span><span class="p">(</span>
+            <span class="n">nP</span><span class="o">=</span><span class="n">inputs</span><span class="o">.</span><span class="n">n_layers</span><span class="p">,</span>
+            <span class="n">W</span><span class="o">=</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">smoothness</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">10.0</span><span class="p">))</span> <span class="o">*</span> <span class="n">difference</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">lower</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">n_layers</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"max_resistivity"</span><span class="p">])))</span>
+        <span class="n">upper</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">n_layers</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"min_resistivity"</span><span class="p">])))</span>
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">optimization</span><span class="o">.</span><span class="n">ProjectedGNCG</span><span class="p">(</span>
+            <span class="n">maxIter</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"max_iterations"</span><span class="p">]),</span>
+            <span class="n">lower</span><span class="o">=</span><span class="n">lower</span><span class="p">,</span>
+            <span class="n">upper</span><span class="o">=</span><span class="n">upper</span><span class="p">,</span>
+            <span class="n">cg_maxiter</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">inputs</span><span class="o">.</span><span class="n">n_layers</span><span class="p">),</span>
+            <span class="n">cg_atol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+            <span class="n">cg_rtol</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">maxIterLS</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+            <span class="n">tolX</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+            <span class="n">tolF</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+            <span class="n">tolG</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">convergence</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">components</span><span class="p">(</span><span class="n">log_conductivity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+            <span class="n">f_interleaved</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">f_simulation</span><span class="o">.</span><span class="n">dpred</span><span class="p">(</span><span class="n">log_conductivity</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+            <span class="n">f_complex</span> <span class="o">=</span> <span class="n">f_interleaved</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">f_interleaved</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">pred_f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">f_complex</span><span class="o">.</span><span class="n">real</span><span class="p">,</span> <span class="n">f_complex</span><span class="o">.</span><span class="n">imag</span><span class="p">))</span>
+            <span class="n">pred_t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">t_simulation</span><span class="o">.</span><span class="n">dpred</span><span class="p">(</span><span class="n">log_conductivity</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+            <span class="n">raw_f</span> <span class="o">=</span> <span class="p">(</span><span class="n">pred_f</span> <span class="o">-</span> <span class="n">inputs</span><span class="o">.</span><span class="n">f_obs</span><span class="p">)</span> <span class="o">/</span> <span class="n">inputs</span><span class="o">.</span><span class="n">f_unc</span>
+            <span class="n">raw_t</span> <span class="o">=</span> <span class="p">(</span><span class="n">pred_t</span> <span class="o">-</span> <span class="n">inputs</span><span class="o">.</span><span class="n">t_obs</span><span class="p">)</span> <span class="o">/</span> <span class="n">inputs</span><span class="o">.</span><span class="n">t_unc</span>
+            <span class="k">return</span> <span class="n">pred_f</span><span class="p">,</span> <span class="n">pred_t</span><span class="p">,</span> <span class="n">raw_f</span><span class="p">,</span> <span class="n">raw_t</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">callback</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">_pred_f</span><span class="p">,</span> <span class="n">_pred_t</span><span class="p">,</span> <span class="n">raw_f</span><span class="p">,</span> <span class="n">raw_t</span> <span class="o">=</span> <span class="n">components</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">"iteration"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">convergence</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="s2">"chi2_fdem"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">raw_f</span><span class="o">**</span><span class="mi">2</span><span class="p">)),</span>
+                <span class="s2">"chi2_tdem"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">raw_t</span><span class="o">**</span><span class="mi">2</span><span class="p">)),</span>
+            <span class="p">}</span>
+            <span class="n">convergence</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+            <span class="n">progress_callback</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"progress_callback"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">progress_callback</span><span class="p">):</span>
+                <span class="n">progress_callback</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">record</span><span class="p">))</span>
+
+        <span class="k">class</span><span class="w"> </span><span class="nc">_ProgressDirective</span><span class="p">(</span><span class="n">directives</span><span class="o">.</span><span class="n">InversionDirective</span><span class="p">):</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">endIter</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># noqa: N802 - SimPEG directive API</span>
+                <span class="n">callback</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invProb</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+
+        <span class="n">inverse_problem_object</span> <span class="o">=</span> <span class="n">inverse_problem</span><span class="o">.</span><span class="n">BaseInvProblem</span><span class="p">(</span>
+            <span class="n">joint_misfit</span><span class="p">,</span>
+            <span class="n">regularization</span><span class="p">,</span>
+            <span class="n">optimizer</span><span class="p">,</span>
+            <span class="n">beta</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+            <span class="n">print_version</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">init_bfgs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">inversion_object</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">BaseInversion</span><span class="p">(</span>
+            <span class="n">inverse_problem_object</span><span class="p">,</span>
+            <span class="n">directiveList</span><span class="o">=</span><span class="p">[</span><span class="n">_ProgressDirective</span><span class="p">()],</span>
+        <span class="p">)</span>
+        <span class="n">starting_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span>
+            <span class="n">inputs</span><span class="o">.</span><span class="n">n_layers</span><span class="p">,</span>
+            <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"starting_resistivity"</span><span class="p">])),</span>
+        <span class="p">)</span>
+        <span class="n">recovered_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">inversion_object</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">starting_model</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">predicted_fdem</span><span class="p">,</span> <span class="n">predicted_tdem</span><span class="p">,</span> <span class="n">raw_fdem</span><span class="p">,</span> <span class="n">raw_tdem</span> <span class="o">=</span> <span class="n">components</span><span class="p">(</span><span class="n">recovered_model</span><span class="p">)</span>
+        <span class="n">final_record</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"iteration"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="s2">"iter"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">convergence</span><span class="p">))),</span>
+            <span class="s2">"chi2_fdem"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">raw_fdem</span><span class="o">**</span><span class="mi">2</span><span class="p">)),</span>
+            <span class="s2">"chi2_tdem"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">raw_tdem</span><span class="o">**</span><span class="mi">2</span><span class="p">)),</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">convergence</span> <span class="ow">or</span> <span class="ow">not</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">convergence</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"chi2_fdem"</span><span class="p">],</span> <span class="n">final_record</span><span class="p">[</span><span class="s2">"chi2_fdem"</span><span class="p">])</span>
+            <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">convergence</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"chi2_tdem"</span><span class="p">],</span> <span class="n">final_record</span><span class="p">[</span><span class="s2">"chi2_tdem"</span><span class="p">])</span>
+        <span class="p">):</span>
+            <span class="n">convergence</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">final_record</span><span class="p">)</span>
+
+        <span class="n">f_jacobian</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">f_simulation</span><span class="o">.</span><span class="n">getJ</span><span class="p">(</span><span class="n">recovered_model</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">t_jacobian</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">t_simulation</span><span class="o">.</span><span class="n">getJ</span><span class="p">(</span><span class="n">recovered_model</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">f_weighted_jacobian</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">f_multiplier</span><span class="p">)</span> <span class="o">*</span> <span class="n">f_jacobian</span> <span class="o">/</span> <span class="n">inputs</span><span class="o">.</span><span class="n">f_unc_interleaved</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">t_weighted_jacobian</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">t_multiplier</span><span class="p">)</span> <span class="o">*</span> <span class="n">t_jacobian</span> <span class="o">/</span> <span class="n">inputs</span><span class="o">.</span><span class="n">t_unc</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">resistivity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">recovered_model</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">JointFDEMTDEMResult</span><span class="p">(</span>
+            <span class="n">resistivity</span><span class="o">=</span><span class="n">resistivity</span><span class="p">,</span>
+            <span class="n">conductivity</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">recovered_model</span><span class="p">),</span>
+            <span class="n">thicknesses</span><span class="o">=</span><span class="n">inputs</span><span class="o">.</span><span class="n">thicknesses</span><span class="p">,</span>
+            <span class="n">predicted_fdem</span><span class="o">=</span><span class="n">predicted_fdem</span><span class="p">,</span>
+            <span class="n">predicted_tdem</span><span class="o">=</span><span class="n">predicted_tdem</span><span class="p">,</span>
+            <span class="n">chi2_fdem</span><span class="o">=</span><span class="n">final_record</span><span class="p">[</span><span class="s2">"chi2_fdem"</span><span class="p">],</span>
+            <span class="n">chi2_tdem</span><span class="o">=</span><span class="n">final_record</span><span class="p">[</span><span class="s2">"chi2_tdem"</span><span class="p">],</span>
+            <span class="n">coverage_fdem</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_normalized_coverage</span><span class="p">(</span><span class="n">f_weighted_jacobian</span><span class="p">),</span>
+            <span class="n">coverage_tdem</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_normalized_coverage</span><span class="p">(</span><span class="n">t_weighted_jacobian</span><span class="p">),</span>
+            <span class="n">convergence</span><span class="o">=</span><span class="n">convergence</span><span class="p">,</span>
+            <span class="n">meta</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">"iterations"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="s2">"iter"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">convergence</span><span class="p">))),</span>
+                <span class="s2">"simpeg_version"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">simpeg</span><span class="p">,</span> <span class="s2">"__version__"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)),</span>
+                <span class="s2">"backend_version"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">simpeg</span><span class="p">,</span> <span class="s2">"__version__"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)),</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_baseline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="n">_JointInputs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Run the existing independent single-method comparison models."""</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"run_baseline"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="p">{}</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion</span><span class="w"> </span><span class="kn">import</span> <span class="n">em1d</span> <span class="k">as</span> <span class="n">em_inversion</span>
+
+        <span class="n">common</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"n_layers"</span><span class="p">:</span> <span class="n">inputs</span><span class="o">.</span><span class="n">n_layers</span><span class="p">,</span>
+            <span class="s2">"min_thickness"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">thicknesses</span><span class="o">.</span><span class="n">min</span><span class="p">()),</span>
+            <span class="s2">"max_thickness"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">thicknesses</span><span class="o">.</span><span class="n">max</span><span class="p">()),</span>
+            <span class="s2">"starting_resistivity"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"starting_resistivity"</span><span class="p">]),</span>
+            <span class="s2">"max_iterations"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"max_iterations"</span><span class="p">]),</span>
+            <span class="s2">"smoothness"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"smoothness"</span><span class="p">]),</span>
+        <span class="p">}</span>
+        <span class="n">f_inv</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="o">**</span><span class="n">common</span><span class="p">,</span>
+            <span class="s2">"rel_error"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"fdem_relative_error"</span><span class="p">]),</span>
+            <span class="s2">"noise_floor"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"fdem_noise_floor"</span><span class="p">]),</span>
+            <span class="s2">"data_scale"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"fdem_data_scale"</span><span class="p">]),</span>
+        <span class="p">}</span>
+        <span class="n">t_inv</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="o">**</span><span class="n">common</span><span class="p">,</span>
+            <span class="s2">"rel_error"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"tdem_relative_error"</span><span class="p">]),</span>
+            <span class="s2">"noise_floor"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"tdem_noise_floor"</span><span class="p">]),</span>
+            <span class="s2">"data_scale"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s2">"tdem_data_scale"</span><span class="p">]),</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">"FDEM"</span><span class="p">:</span> <span class="n">em_inversion</span><span class="o">.</span><span class="n">fdem_invert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fdem_data</span><span class="p">,</span> <span class="n">inputs</span><span class="o">.</span><span class="n">f_geom</span><span class="p">,</span> <span class="n">f_inv</span><span class="p">),</span>
+            <span class="s2">"TDEM"</span><span class="p">:</span> <span class="n">em_inversion</span><span class="o">.</span><span class="n">tdem_invert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tdem_data</span><span class="p">,</span> <span class="n">inputs</span><span class="o">.</span><span class="n">t_geom</span><span class="p">,</span> <span class="n">t_inv</span><span class="p">),</span>
+        <span class="p">}</span>
+
+<div class="viewcode-block" id="JointFDEMTDEMInversion.run">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.inversion.html#PyHydroGeophysX.inversion.joint_fdem_tdem.JointFDEMTDEMInversion.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">JointFDEMTDEMResult</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Run native SimPEG joint inversion or the compatible SciPy fallback."""</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_inputs</span><span class="p">()</span>
+        <span class="n">requested</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"backend"</span><span class="p">,</span> <span class="s2">"auto"</span><span class="p">))</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">aliases</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"native"</span><span class="p">:</span> <span class="s2">"simpeg"</span><span class="p">,</span> <span class="s2">"simpeg_native"</span><span class="p">:</span> <span class="s2">"simpeg"</span><span class="p">,</span> <span class="s2">"fallback"</span><span class="p">:</span> <span class="s2">"scipy"</span><span class="p">}</span>
+        <span class="n">requested</span> <span class="o">=</span> <span class="n">aliases</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">requested</span><span class="p">,</span> <span class="n">requested</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">requested</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">"auto"</span><span class="p">,</span> <span class="s2">"simpeg"</span><span class="p">,</span> <span class="s2">"scipy"</span><span class="p">}:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"backend must be 'auto', 'simpeg', or 'scipy'."</span><span class="p">)</span>
+
+        <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">native_backend_status</span><span class="p">()</span>
+        <span class="n">fallback_reason</span> <span class="o">=</span> <span class="s2">""</span>
+        <span class="k">if</span> <span class="n">requested</span> <span class="o">==</span> <span class="s2">"scipy"</span> <span class="ow">or</span> <span class="p">(</span><span class="n">requested</span> <span class="o">==</span> <span class="s2">"auto"</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">status</span><span class="p">[</span><span class="s2">"available"</span><span class="p">]):</span>
+            <span class="n">resolved</span> <span class="o">=</span> <span class="s2">"scipy"</span>
+            <span class="n">fallback_reason</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">status</span><span class="p">[</span><span class="s2">"reason"</span><span class="p">])</span> <span class="k">if</span> <span class="n">requested</span> <span class="o">==</span> <span class="s2">"auto"</span> <span class="k">else</span> <span class="s2">""</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_scipy</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">requested</span> <span class="o">==</span> <span class="s2">"simpeg"</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">status</span><span class="p">[</span><span class="s2">"available"</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">status</span><span class="p">[</span><span class="s2">"reason"</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_simpeg</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+                <span class="n">resolved</span> <span class="o">=</span> <span class="s2">"simpeg"</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">requested</span> <span class="o">==</span> <span class="s2">"simpeg"</span> <span class="ow">or</span> <span class="s2">"cancelled by user"</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="k">raise</span>
+                <span class="n">fallback_reason</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"Native SimPEG joint inversion failed: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_scipy</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+                <span class="n">resolved</span> <span class="o">=</span> <span class="s2">"scipy"</span>
+
+        <span class="n">result</span><span class="o">.</span><span class="n">baseline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_baseline</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
+            <span class="s2">"backend"</span><span class="p">:</span> <span class="n">resolved</span><span class="p">,</span>
+            <span class="s2">"requested_backend"</span><span class="p">:</span> <span class="n">requested</span><span class="p">,</span>
+            <span class="s2">"fallback_reason"</span><span class="p">:</span> <span class="n">fallback_reason</span><span class="p">,</span>
+            <span class="s2">"parameters"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="o">!=</span> <span class="s2">"progress_callback"</span>
+            <span class="p">},</span>
+        <span class="p">})</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+</div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"JointFDEMTDEMInversion"</span><span class="p">,</span> <span class="s2">"JointFDEMTDEMResult"</span><span class="p">]</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

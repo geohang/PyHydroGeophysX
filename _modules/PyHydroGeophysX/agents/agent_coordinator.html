@@ -1,0 +1,1260 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.agents.agent_coordinator &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/agents/agent_coordinator';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/agents/agent_coordinator.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../../PyHydroGeophysX.html" class="nav-link">PyHydroGeophysX</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.agents.agent_coordinator</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.agents.agent_coordinator</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""</span>
+<span class="sd">Agent Coordinator for Multi-Agent Workflow</span>
+
+<span class="sd">Coordinates the execution of multiple specialized agents to complete</span>
+<span class="sd">the full geophysical processing workflow. Supports cross-modal geophysical</span>
+<span class="sd">data processing (ERT, seismic, and more) with multiple LLM API providers</span>
+<span class="sd">(GPT, Gemini, Claude).</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.base_agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentResult</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._pricing</span><span class="w"> </span><span class="kn">import</span> <span class="n">estimate_llm_cost_usd</span><span class="p">,</span> <span class="n">estimate_tokens</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Agent Coordinator</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="AgentCoordinator">
+<a class="viewcode-back" href="../../../api/agents.html#PyHydroGeophysX.AgentCoordinator">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AgentCoordinator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Coordinates multiple agents to execute a complete workflow.</span>
+<span class="sd">    </span>
+<span class="sd">    The coordinator manages cross-modal geophysical workflows such as: </span>
+<span class="sd">    "load geophysical data → process → invert → convert to hydrologic parameters → report"</span>
+<span class="sd">    with support for multiple data types (ERT, seismic, etc.) and LLM providers (GPT, Gemini, Claude).</span>
+<span class="sd">    """</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">api_key</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"results/agents"</span><span class="p">,</span>
+                 <span class="n">llm_provider</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"openai"</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Initialize the agent coordinator.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            api_key: LLM API key for agents</span>
+<span class="sd">            output_dir: Directory for saving results</span>
+<span class="sd">            llm_provider: LLM provider to use ('openai', 'gemini', or 'claude')</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span> <span class="o">=</span> <span class="n">api_key</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_default_api_key</span><span class="p">(</span><span class="n">llm_provider</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">=</span> <span class="n">output_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">llm_provider</span> <span class="o">=</span> <span class="n">llm_provider</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">agents</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">'status'</span><span class="p">:</span> <span class="s1">'initialized'</span><span class="p">,</span>
+            <span class="s1">'current_step'</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s1">'completed_steps'</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s1">'data'</span><span class="p">:</span> <span class="p">{}</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">execution_log</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">llm_usage_ledger</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="c1"># Create output directory</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<div class="viewcode-block" id="AgentCoordinator.preview_workflow">
+<a class="viewcode-back" href="../../../api/agents.html#PyHydroGeophysX.AgentCoordinator.preview_workflow">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">preview_workflow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">AgentResult</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Resolve and validate a workflow plan without running processing.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        config : dict</span>
+<span class="sd">            Workflow configuration. May include ``user_request`` or ``request``</span>
+<span class="sd">            for deterministic preview parsing.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        AgentResult</span>
+<span class="sd">            Preview result with resolved config, validation warnings, plan, and</span>
+<span class="sd">            approximate LLM cost.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; coordinator = AgentCoordinator(api_key=None)</span>
+<span class="sd">        &gt;&gt;&gt; result = coordinator.preview_workflow({"data_file": "missing.ohm"})</span>
+<span class="sd">        &gt;&gt;&gt; result["status"]</span>
+<span class="sd">        'failed'</span>
+<span class="sd">        """</span>
+        <span class="n">request</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"user_request"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"request"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span>
+        <span class="n">resolved_config</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">request</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">.context_input_agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">ContextInputAgent</span>
+
+            <span class="n">context_agent</span> <span class="o">=</span> <span class="n">ContextInputAgent</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">llm_provider</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">llm_provider</span><span class="p">)</span>
+            <span class="n">preview</span> <span class="o">=</span> <span class="n">context_agent</span><span class="o">.</span><span class="n">preview_config</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">request</span><span class="p">))</span>
+            <span class="n">resolved_config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">preview</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"workflow_config"</span><span class="p">,</span> <span class="n">preview</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"data"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"workflow_config"</span><span class="p">,</span> <span class="p">{})))</span>
+            <span class="n">resolved_config</span><span class="p">[</span><span class="s2">"user_request"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_raw_seismic_config</span><span class="p">(</span><span class="n">resolved_config</span><span class="p">)</span>
+        <span class="n">validation_errors</span><span class="p">,</span> <span class="n">validation_warnings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_preview_files</span><span class="p">(</span><span class="n">resolved_config</span><span class="p">)</span>
+        <span class="n">plan</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_preview_plan</span><span class="p">(</span><span class="n">resolved_config</span><span class="p">)</span>
+        <span class="n">cost_estimate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_estimate_preview_cost</span><span class="p">(</span><span class="n">resolved_config</span><span class="p">,</span> <span class="n">plan</span><span class="p">)</span>
+        <span class="n">dep_warnings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_dependencies</span><span class="p">(</span><span class="n">plan</span><span class="p">)</span>
+        <span class="n">validation_warnings</span> <span class="o">=</span> <span class="n">dep_warnings</span> <span class="o">+</span> <span class="n">validation_warnings</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">===== PyHydroGeophysX Agent Preview ====="</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">request</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Request: </span><span class="si">{</span><span class="n">request</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Estimated LLM cost: $</span><span class="si">{</span><span class="n">cost_estimate</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> (approximate)"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"Resolved execution plan:"</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">plan</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">. </span><span class="si">{</span><span class="n">step</span><span class="p">[</span><span class="s1">'agent'</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">step</span><span class="p">[</span><span class="s1">'step'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">validation_errors</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"Validation errors:"</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">err</span> <span class="ow">in</span> <span class="n">validation_errors</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  - </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">validation_warnings</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"Validation warnings:"</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">warn</span> <span class="ow">in</span> <span class="n">validation_warnings</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  - </span><span class="si">{</span><span class="n">warn</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">validation_errors</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">AgentResult</span><span class="p">(</span>
+                <span class="n">status</span><span class="o">=</span><span class="s2">"failed"</span><span class="p">,</span>
+                <span class="n">summary</span><span class="o">=</span><span class="s2">"Workflow preview found input problems before execution."</span><span class="p">,</span>
+                <span class="n">data</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s2">"workflow_config"</span><span class="p">:</span> <span class="n">resolved_config</span><span class="p">,</span>
+                    <span class="s2">"execution_plan"</span><span class="p">:</span> <span class="n">plan</span><span class="p">,</span>
+                    <span class="s2">"validation_errors"</span><span class="p">:</span> <span class="n">validation_errors</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="n">warnings</span><span class="o">=</span><span class="n">validation_warnings</span><span class="p">,</span>
+                <span class="n">cost_estimate_usd</span><span class="o">=</span><span class="n">cost_estimate</span><span class="p">,</span>
+                <span class="n">error</span><span class="o">=</span><span class="s2">"Input validation failed."</span><span class="p">,</span>
+                <span class="n">error_fix_hint</span><span class="o">=</span><span class="p">(</span>
+                    <span class="s2">"Fix the listed file paths or unsupported extensions before running the workflow. See: "</span>
+                    <span class="s2">"https://geohang.github.io/PyHydroGeophysX/agents/troubleshooting.html#data-file-not-found"</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+
+        <span class="n">status</span> <span class="o">=</span> <span class="s2">"success"</span> <span class="k">if</span> <span class="n">plan</span> <span class="k">else</span> <span class="s2">"needs_review"</span>
+        <span class="n">summary</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">"Workflow preview is ready to run."</span>
+            <span class="k">if</span> <span class="n">plan</span>
+            <span class="k">else</span> <span class="s2">"Workflow preview needs more information before it can build a plan."</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">AgentResult</span><span class="p">(</span>
+            <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="p">,</span>
+            <span class="n">summary</span><span class="o">=</span><span class="n">summary</span><span class="p">,</span>
+            <span class="n">data</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">"workflow_config"</span><span class="p">:</span> <span class="n">resolved_config</span><span class="p">,</span>
+                <span class="s2">"execution_plan"</span><span class="p">:</span> <span class="n">plan</span><span class="p">,</span>
+                <span class="s2">"validation_warnings"</span><span class="p">:</span> <span class="n">validation_warnings</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="n">warnings</span><span class="o">=</span><span class="n">validation_warnings</span><span class="p">,</span>
+            <span class="n">next_suggested_action</span><span class="o">=</span><span class="s2">"Review the resolved configuration, then run without dry_run."</span><span class="p">,</span>
+            <span class="n">cost_estimate_usd</span><span class="o">=</span><span class="n">cost_estimate</span><span class="p">,</span>
+            <span class="n">error_fix_hint</span><span class="o">=</span><span class="kc">None</span>
+            <span class="k">if</span> <span class="n">plan</span>
+            <span class="k">else</span> <span class="p">(</span>
+                <span class="s2">"Provide a supported data file or a more specific workflow request. See: "</span>
+                <span class="s2">"https://geohang.github.io/PyHydroGeophysX/agents/troubleshooting.html#ambiguous-natural-language-request"</span>
+            <span class="p">),</span>
+        <span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_check_dependencies</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plan</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Check that required Python packages and CLI tools are available.</span>
+
+<span class="sd">        Inspects the proposed *plan* and tests only the dependencies that will</span>
+<span class="sd">        actually be used.  Returns a list of human-readable warning strings</span>
+<span class="sd">        (empty list when everything is in order).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        plan : list</span>
+<span class="sd">            Execution plan as returned by :meth:`_build_preview_plan`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list of str</span>
+<span class="sd">            Warning messages for missing dependencies.</span>
+<span class="sd">        """</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">importlib</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+
+        <span class="n">agent_names</span> <span class="o">=</span> <span class="p">{</span><span class="n">step</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"agent"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">}</span>
+        <span class="n">warnings_out</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">needs_pygimli</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span>
+            <span class="n">a</span> <span class="ow">in</span> <span class="n">agent_names</span>
+            <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="p">(</span>
+                <span class="s2">"ERTLoaderAgent"</span><span class="p">,</span> <span class="s2">"ERTInversionAgent"</span><span class="p">,</span> <span class="s2">"SeismicAgent"</span><span class="p">,</span>
+                <span class="s2">"StructureConstraintAgent"</span><span class="p">,</span> <span class="s2">"InversionEvaluationAgent"</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">needs_pygimli</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="s2">"pygimli"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">warnings_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="s2">"PyGIMLi is not installed or cannot be imported. "</span>
+                    <span class="s2">"ERT/seismic steps will fail at runtime. "</span>
+                    <span class="s2">"Install via: conda install -c gimli pygimli"</span>
+                <span class="p">)</span>
+
+        <span class="n">needs_gmsh</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="s2">"Mesh"</span> <span class="ow">in</span> <span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">agent_names</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">needs_gmsh</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+                    <span class="p">[</span><span class="s2">"gmsh"</span><span class="p">,</span> <span class="s2">"--version"</span><span class="p">],</span>
+                    <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">warnings_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="s2">"GMSH binary returned non-zero exit code. "</span>
+                        <span class="s2">"3D mesh generation may fail."</span>
+                    <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+                <span class="n">warnings_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="s2">"GMSH is not on PATH. 3D mesh generation will fail at runtime. "</span>
+                    <span class="s2">"Install GMSH and ensure it is accessible as 'gmsh'."</span>
+                <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="n">warnings_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not verify GMSH installation: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+        <span class="n">needs_anthropic</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">needs_google</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"llm_provider"</span><span class="p">,</span> <span class="s2">"openai"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">provider</span> <span class="o">==</span> <span class="s2">"claude"</span><span class="p">:</span>
+            <span class="n">needs_anthropic</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">provider</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"gemini"</span><span class="p">,</span> <span class="s2">"google"</span><span class="p">):</span>
+            <span class="n">needs_google</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">if</span> <span class="n">needs_anthropic</span> <span class="ow">and</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="s2">"anthropic"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warnings_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="s2">"anthropic package is not installed. LLM calls will fail. "</span>
+                <span class="s2">"Install via: pip install anthropic"</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">needs_google</span> <span class="ow">and</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="s2">"google.generativeai"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warnings_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="s2">"google-generativeai package is not installed. LLM calls will fail. "</span>
+                <span class="s2">"Install via: pip install google-generativeai"</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">warnings_out</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_preview_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Validate file references in a preview configuration."""</span>
+        <span class="n">extension_map</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"data_file"</span><span class="p">:</span> <span class="p">{</span><span class="s2">".ohm"</span><span class="p">,</span> <span class="s2">".bin"</span><span class="p">,</span> <span class="s2">".dat"</span><span class="p">,</span> <span class="s2">".stg"</span><span class="p">,</span> <span class="s2">".txt"</span><span class="p">,</span> <span class="s2">".data"</span><span class="p">},</span>
+            <span class="s2">"ert_file"</span><span class="p">:</span> <span class="p">{</span><span class="s2">".ohm"</span><span class="p">,</span> <span class="s2">".bin"</span><span class="p">,</span> <span class="s2">".dat"</span><span class="p">,</span> <span class="s2">".stg"</span><span class="p">,</span> <span class="s2">".txt"</span><span class="p">,</span> <span class="s2">".data"</span><span class="p">},</span>
+            <span class="s2">"electrode_file"</span><span class="p">:</span> <span class="p">{</span><span class="s2">".dat"</span><span class="p">,</span> <span class="s2">".txt"</span><span class="p">,</span> <span class="s2">".csv"</span><span class="p">},</span>
+            <span class="s2">"seismic_file"</span><span class="p">:</span> <span class="p">{</span><span class="s2">".dat"</span><span class="p">,</span> <span class="s2">".txt"</span><span class="p">},</span>
+            <span class="s2">"raw_seismic_file"</span><span class="p">:</span> <span class="p">{</span><span class="s2">".sgy"</span><span class="p">,</span> <span class="s2">".segy"</span><span class="p">},</span>
+            <span class="s2">"tdem_file"</span><span class="p">:</span> <span class="p">{</span><span class="s2">".dat"</span><span class="p">,</span> <span class="s2">".txt"</span><span class="p">,</span> <span class="s2">".csv"</span><span class="p">},</span>
+            <span class="s2">"csv_file"</span><span class="p">:</span> <span class="p">{</span><span class="s2">".csv"</span><span class="p">},</span>
+            <span class="s2">"metadata_file"</span><span class="p">:</span> <span class="p">{</span><span class="s2">".json"</span><span class="p">},</span>
+        <span class="p">}</span>
+        <span class="n">errors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">warnings_out</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">_check_one</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">value</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+                <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span> <span class="o">/</span> <span class="n">path</span>
+            <span class="n">absolute</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">absolute</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">: file does not exist at </span><span class="si">{</span><span class="n">absolute</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="k">return</span>
+            <span class="n">allowed</span> <span class="o">=</span> <span class="n">extension_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">allowed</span> <span class="ow">and</span> <span class="n">absolute</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">allowed</span><span class="p">:</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">: unsupported extension '</span><span class="si">{</span><span class="n">absolute</span><span class="o">.</span><span class="n">suffix</span><span class="si">}</span><span class="s2">'. "</span>
+                    <span class="sa">f</span><span class="s2">"Supported extensions: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">allowed</span><span class="p">))</span><span class="si">}</span><span class="s2">."</span>
+                <span class="p">)</span>
+            <span class="n">size_mb</span> <span class="o">=</span> <span class="n">absolute</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_size</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">size_mb</span> <span class="o">&gt;</span> <span class="mi">500</span><span class="p">:</span>
+                <span class="n">warnings_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">absolute</span><span class="si">}</span><span class="s2"> is </span><span class="si">{</span><span class="n">size_mb</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> MB. Use local execution for large files."</span>
+                <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">extension_map</span><span class="p">:</span>
+            <span class="n">_check_one</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">list_field</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"time_lapse_files"</span><span class="p">,</span> <span class="s2">"timelapse_files"</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">list_field</span><span class="p">,</span> <span class="p">[])</span> <span class="ow">or</span> <span class="p">[]:</span>
+                <span class="n">_check_one</span><span class="p">(</span><span class="s2">"ert_file"</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings_out</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_raw_seismic_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Separate raw SEG-Y paths from travel-time seismic paths in-place."""</span>
+        <span class="n">seismic_file</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"seismic_file"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">seismic_file</span> <span class="ow">and</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">seismic_file</span><span class="p">))</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">".sgy"</span><span class="p">,</span> <span class="s2">".segy"</span><span class="p">}:</span>
+            <span class="n">config</span><span class="p">[</span><span class="s2">"raw_seismic_file"</span><span class="p">]</span> <span class="o">=</span> <span class="n">seismic_file</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"seismic_file"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">config</span><span class="p">[</span><span class="s2">"raw_seismic_processing"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_preview_plan</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">"""Build a human-readable execution plan from a resolved config."""</span>
+        <span class="n">request</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"user_request"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">has_ert</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ert_file"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"data_file"</span><span class="p">))</span>
+        <span class="n">has_seismic</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"seismic_file"</span><span class="p">))</span>
+        <span class="n">has_raw_seismic</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"raw_seismic_file"</span><span class="p">))</span>
+        <span class="n">has_tdem</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"tdem_file"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"tdem"</span> <span class="ow">in</span> <span class="n">request</span><span class="p">)</span>
+        <span class="n">time_lapse_files</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"time_lapse_files"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"timelapse_files"</span><span class="p">)</span>
+        <span class="n">wants_water_content</span> <span class="o">=</span> <span class="s2">"water content"</span> <span class="ow">in</span> <span class="n">request</span> <span class="ow">or</span> <span class="nb">bool</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"petrophysical_params"</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">has_tdem</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"TDEMAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Validate and process TDEM data"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"ReportAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Summarize TDEM results"</span><span class="p">},</span>
+            <span class="p">]</span>
+        <span class="k">if</span> <span class="n">time_lapse_files</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"ERTLoaderAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Load each time-lapse ERT dataset"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"ERTInversionAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Run time-lapse inversion"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"InversionEvaluationAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Evaluate quality and retry if needed"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"ReportAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Generate time-lapse report"</span><span class="p">},</span>
+            <span class="p">]</span>
+        <span class="k">if</span> <span class="n">has_raw_seismic</span> <span class="ow">and</span> <span class="n">has_ert</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"RawSeismicProcessor"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Read raw SEG-Y and organize shot gathers"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"RawSeismicProcessor"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Apply preprocessing and first-break picking"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"RawSeismicProcessor"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Export PyGIMLi travel-time data"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"SeismicAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Run seismic refraction workflow"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"ERTLoaderAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Load ERT data"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"StructureConstraintAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Apply seismic structure to ERT inversion"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"PetrophysicsAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Convert resistivity to water content with uncertainty"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"ReportAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Generate data-fusion report"</span><span class="p">},</span>
+            <span class="p">]</span>
+        <span class="k">if</span> <span class="n">has_raw_seismic</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"RawSeismicProcessor"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Read raw SEG-Y and organize shot gathers"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"RawSeismicProcessor"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Apply preprocessing and first-break picking"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"RawSeismicProcessor"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Export PyGIMLi travel-time data"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"SeismicAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Run seismic refraction workflow"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"ReportAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Summarize seismic processing and SRT results"</span><span class="p">},</span>
+            <span class="p">]</span>
+        <span class="k">if</span> <span class="n">has_ert</span> <span class="ow">and</span> <span class="n">has_seismic</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"SeismicAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Invert seismic data and extract interfaces"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"ERTLoaderAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Load ERT data"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"StructureConstraintAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Apply seismic structure to ERT inversion"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"PetrophysicsAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Convert resistivity to water content with uncertainty"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"ReportAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Generate data-fusion report"</span><span class="p">},</span>
+            <span class="p">]</span>
+        <span class="k">if</span> <span class="n">has_seismic</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"SeismicAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Run seismic refraction workflow"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"ReportAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Summarize seismic results"</span><span class="p">},</span>
+            <span class="p">]</span>
+        <span class="k">if</span> <span class="n">has_ert</span><span class="p">:</span>
+            <span class="n">plan</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"ERTLoaderAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Load and validate ERT data"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"ERTInversionAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Run ERT inversion"</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"InversionEvaluationAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Evaluate inversion quality"</span><span class="p">},</span>
+            <span class="p">]</span>
+            <span class="k">if</span> <span class="n">wants_water_content</span><span class="p">:</span>
+                <span class="n">plan</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="p">{</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"WaterContentAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Convert resistivity to water content"</span><span class="p">}</span>
+                <span class="p">)</span>
+            <span class="n">plan</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"agent"</span><span class="p">:</span> <span class="s2">"ReportAgent"</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="s2">"Generate workflow report"</span><span class="p">})</span>
+            <span class="k">return</span> <span class="n">plan</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_estimate_preview_cost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">plan</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Estimate approximate LLM cost for the proposed workflow."""</span>
+        <span class="n">request</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"user_request"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+        <span class="n">prompt_tokens</span> <span class="o">=</span> <span class="n">estimate_tokens</span><span class="p">(</span><span class="n">request</span><span class="p">)</span> <span class="o">+</span> <span class="mi">400</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">plan</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">completion_tokens</span> <span class="o">=</span> <span class="mi">250</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">plan</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">estimate_llm_cost_usd</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">llm_provider</span><span class="p">,</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"llm_model"</span><span class="p">,</span> <span class="s2">"gpt-4o-mini"</span><span class="p">),</span>
+            <span class="n">prompt_tokens</span><span class="p">,</span>
+            <span class="n">completion_tokens</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_as_agent_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">agent_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AgentResult</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Normalize legacy agent dictionaries to AgentResult."""</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">AgentResult</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">agent_name</span><span class="si">}</span><span class="s2"> returned a legacy dictionary. "</span>
+                <span class="s2">"This remains supported but will prefer AgentResult in a future release."</span><span class="p">,</span>
+                <span class="ne">DeprecationWarning</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">AgentResult</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span>
+                <span class="n">result</span><span class="p">,</span>
+                <span class="n">default_summary</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">agent_name</span><span class="si">}</span><span class="s2"> completed."</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">AgentResult</span><span class="p">(</span>
+            <span class="n">status</span><span class="o">=</span><span class="s2">"needs_review"</span><span class="p">,</span>
+            <span class="n">summary</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">agent_name</span><span class="si">}</span><span class="s2"> returned an unsupported result type."</span><span class="p">,</span>
+            <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s2">"raw_result"</span><span class="p">:</span> <span class="n">result</span><span class="p">},</span>
+            <span class="n">error_fix_hint</span><span class="o">=</span><span class="s2">"Update the agent to return AgentResult or a legacy dictionary."</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_default_api_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Get default API key based on provider."""</span>
+        <span class="n">provider_env_map</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">'openai'</span><span class="p">:</span> <span class="s1">'OPENAI_API_KEY'</span><span class="p">,</span>
+            <span class="s1">'gemini'</span><span class="p">:</span> <span class="s1">'GEMINI_API_KEY'</span><span class="p">,</span>
+            <span class="s1">'claude'</span><span class="p">:</span> <span class="s1">'ANTHROPIC_API_KEY'</span>
+        <span class="p">}</span>
+        <span class="n">env_var</span> <span class="o">=</span> <span class="n">provider_env_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">provider</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="n">env_var</span><span class="p">)</span> <span class="k">if</span> <span class="n">env_var</span> <span class="k">else</span> <span class="kc">None</span>
+    
+<div class="viewcode-block" id="AgentCoordinator.register_agent">
+<a class="viewcode-back" href="../../../api/agents.html#PyHydroGeophysX.AgentCoordinator.register_agent">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">register_agent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">agent_instance</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Register an agent with the coordinator.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            agent_name: Unique identifier for the agent</span>
+<span class="sd">            agent_instance: Agent instance to register</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">agents</span><span class="p">[</span><span class="n">agent_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">agent_instance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Registered agent: </span><span class="si">{</span><span class="n">agent_name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_save_checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Persist an intermediate result to disk for later resumption.</span>
+
+<span class="sd">        Checkpoints are stored as pickle files inside ``&lt;output_dir&gt;/checkpoints/``.</span>
+<span class="sd">        Primitive/JSON-safe results are also saved as a ``*.json`` sidecar for</span>
+<span class="sd">        quick inspection without unpickling.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        step_name : str</span>
+<span class="sd">            Unique workflow step identifier (e.g. ``'load_ert'``).</span>
+<span class="sd">        result : Any</span>
+<span class="sd">            The result object to persist.</span>
+<span class="sd">        """</span>
+        <span class="n">ckpt_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">"checkpoints"</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">ckpt_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">pkl_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ckpt_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step_name</span><span class="si">}</span><span class="s2">.pkl"</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pkl_path</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">fh</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
+
+        <span class="c1"># Best-effort JSON sidecar (skipped for non-serialisable objects)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">json_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ckpt_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step_name</span><span class="si">}</span><span class="s2">.json"</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">json_path</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">result</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{</span><span class="s2">"value"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">)},</span> <span class="n">fh</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Checkpoint saved: </span><span class="si">{</span><span class="n">step_name</span><span class="si">}</span><span class="s2"> → </span><span class="si">{</span><span class="n">pkl_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load_checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Load a previously saved checkpoint.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        step_name : str</span>
+<span class="sd">            The step name used when calling :meth:`_save_checkpoint`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Any or None</span>
+<span class="sd">            The unpickled result, or ``None`` if no checkpoint exists.</span>
+<span class="sd">        """</span>
+        <span class="n">pkl_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">"checkpoints"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step_name</span><span class="si">}</span><span class="s2">.pkl"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">pkl_path</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pkl_path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fh</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Checkpoint loaded: </span><span class="si">{</span><span class="n">step_name</span><span class="si">}</span><span class="s2"> ← </span><span class="si">{</span><span class="n">pkl_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Failed to load checkpoint </span><span class="si">{</span><span class="n">step_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s2">"WARNING"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="AgentCoordinator.execute_workflow">
+<a class="viewcode-back" href="../../../api/agents.html#PyHydroGeophysX.AgentCoordinator.execute_workflow">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">execute_workflow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">dry_run</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                         <span class="n">resume</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Execute the complete workflow with registered agents.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            config: Configuration dictionary containing:</span>
+<span class="sd">                - data_file: Path to ERT data file</span>
+<span class="sd">                - instrument: Instrument type (E4D, Syscal, etc.)</span>
+<span class="sd">                - inversion_params: Parameters for inversion</span>
+<span class="sd">                - petrophysical_params: Parameters for water content conversion</span>
+<span class="sd">                - use_seismic: Whether to include seismic processing (default: False)</span>
+<span class="sd">                - seismic_data: Optional seismic data file</span>
+<span class="sd">                - use_climate: Whether to include climate data (default: False)</span>
+<span class="sd">                - climate_config: Climate data configuration (coords/geometry, dates, etc.)</span>
+<span class="sd">                - ert_timestamps: Timestamps for ERT acquisitions (for climate alignment)</span>
+<span class="sd">            dry_run: If True, return a preview plan without executing.</span>
+<span class="sd">            resume: If True, load checkpointed intermediate results and skip</span>
+<span class="sd">                    already-completed steps.</span>
+<span class="sd">                </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary containing workflow results, or ``AgentResult`` when</span>
+<span class="sd">            ``dry_run=True``.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">dry_run</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">preview_workflow</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">llm_usage_ledger</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">"Starting workflow execution"</span> <span class="o">+</span> <span class="p">(</span><span class="s2">" (resume mode)"</span> <span class="k">if</span> <span class="n">resume</span> <span class="k">else</span> <span class="s2">""</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'status'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'running'</span>
+        
+        <span class="k">def</span><span class="w"> </span><span class="nf">_step_done</span><span class="p">(</span><span class="n">step_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">"""Return True if *step_name* has a valid checkpoint when resuming."""</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">resume</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_checkpoint</span><span class="p">(</span><span class="n">step_name</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">_maybe_load</span><span class="p">(</span><span class="n">step_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">            </span><span class="sd">"""Load checkpoint when resuming; return None otherwise."""</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">resume</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_checkpoint</span><span class="p">(</span><span class="n">step_name</span><span class="p">)</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Step 0 (Optional): Fetch climate data if requested</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'use_climate'</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="s1">'climate_config'</span> <span class="ow">in</span> <span class="n">config</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">"Step 0: Fetching climate data"</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'current_step'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'fetch_climate'</span>
+                
+                <span class="n">ckpt</span> <span class="o">=</span> <span class="n">_maybe_load</span><span class="p">(</span><span class="s1">'fetch_climate'</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">ckpt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">climate_results</span> <span class="o">=</span> <span class="n">ckpt</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">"  → Loaded from checkpoint"</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">climate_config</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">'climate_config'</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="s1">'ert_timestamps'</span> <span class="ow">in</span> <span class="n">config</span><span class="p">:</span>
+                        <span class="n">climate_config</span><span class="p">[</span><span class="s1">'ert_timestamps'</span><span class="p">]</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">'ert_timestamps'</span><span class="p">]</span>
+                    <span class="n">climate_results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute_agent</span><span class="p">(</span><span class="s1">'climate_data'</span><span class="p">,</span> <span class="n">climate_config</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_save_checkpoint</span><span class="p">(</span><span class="s1">'fetch_climate'</span><span class="p">,</span> <span class="n">climate_results</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'data'</span><span class="p">][</span><span class="s1">'climate_data'</span><span class="p">]</span> <span class="o">=</span> <span class="n">climate_results</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'completed_steps'</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'fetch_climate'</span><span class="p">)</span>
+            
+            <span class="c1"># Step 1: Load ERT data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">"Step 1: Loading ERT data"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'current_step'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'load_ert'</span>
+            <span class="n">ckpt</span> <span class="o">=</span> <span class="n">_maybe_load</span><span class="p">(</span><span class="s1">'load_ert'</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ckpt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">ert_data</span> <span class="o">=</span> <span class="n">ckpt</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">"  → Loaded from checkpoint"</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ert_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute_agent</span><span class="p">(</span><span class="s1">'ert_loader'</span><span class="p">,</span> <span class="p">{</span>
+                    <span class="s1">'data_file'</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'data_file'</span><span class="p">),</span>
+                    <span class="s1">'instrument'</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'instrument'</span><span class="p">,</span> <span class="s1">'E4D'</span><span class="p">),</span>
+                    <span class="s1">'project_dir'</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'project_dir'</span><span class="p">,</span> <span class="s1">'.'</span><span class="p">),</span>
+                    <span class="s1">'crs'</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'crs'</span><span class="p">,</span> <span class="s1">'local'</span><span class="p">)</span>
+                <span class="p">})</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_save_checkpoint</span><span class="p">(</span><span class="s1">'load_ert'</span><span class="p">,</span> <span class="n">ert_data</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'data'</span><span class="p">][</span><span class="s1">'ert_data'</span><span class="p">]</span> <span class="o">=</span> <span class="n">ert_data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'completed_steps'</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'load_ert'</span><span class="p">)</span>
+            
+            <span class="c1"># Step 1b (Optional): Process seismic data if available</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'use_seismic'</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="s1">'seismic_data'</span> <span class="ow">in</span> <span class="n">config</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">"Step 1b: Processing seismic data"</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'current_step'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'process_seismic'</span>
+                <span class="n">ckpt</span> <span class="o">=</span> <span class="n">_maybe_load</span><span class="p">(</span><span class="s1">'process_seismic'</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">ckpt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">seismic_results</span> <span class="o">=</span> <span class="n">ckpt</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">"  → Loaded from checkpoint"</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">seismic_results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute_agent</span><span class="p">(</span><span class="s1">'seismic_processor'</span><span class="p">,</span> <span class="p">{</span>
+                        <span class="s1">'seismic_data'</span><span class="p">:</span> <span class="n">config</span><span class="p">[</span><span class="s1">'seismic_data'</span><span class="p">],</span>
+                        <span class="s1">'velocity_threshold'</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'velocity_threshold'</span><span class="p">,</span> <span class="mi">1200</span><span class="p">)</span>
+                    <span class="p">})</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_save_checkpoint</span><span class="p">(</span><span class="s1">'process_seismic'</span><span class="p">,</span> <span class="n">seismic_results</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'data'</span><span class="p">][</span><span class="s1">'seismic_structure'</span><span class="p">]</span> <span class="o">=</span> <span class="n">seismic_results</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'completed_steps'</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'process_seismic'</span><span class="p">)</span>
+            
+            <span class="c1"># Step 2: ERT Inversion</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">"Step 2: Running ERT inversion"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'current_step'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'invert_ert'</span>
+            <span class="n">ckpt</span> <span class="o">=</span> <span class="n">_maybe_load</span><span class="p">(</span><span class="s1">'invert_ert'</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ckpt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">inversion_results</span> <span class="o">=</span> <span class="n">ckpt</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">"  → Loaded from checkpoint"</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">inversion_input</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">'ert_data'</span><span class="p">:</span> <span class="n">ert_data</span><span class="p">[</span><span class="s1">'ert_data'</span><span class="p">],</span>
+                    <span class="s1">'inversion_params'</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'inversion_params'</span><span class="p">,</span> <span class="p">{}),</span>
+                <span class="p">}</span>
+                <span class="k">if</span> <span class="s1">'seismic_structure'</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'data'</span><span class="p">]:</span>
+                    <span class="n">inversion_input</span><span class="p">[</span><span class="s1">'seismic_structure'</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'data'</span><span class="p">][</span><span class="s1">'seismic_structure'</span><span class="p">]</span>
+                    <span class="n">inversion_input</span><span class="p">[</span><span class="s1">'use_structure_constraint'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">inversion_results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute_agent</span><span class="p">(</span><span class="s1">'ert_inversion'</span><span class="p">,</span> <span class="n">inversion_input</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_save_checkpoint</span><span class="p">(</span><span class="s1">'invert_ert'</span><span class="p">,</span> <span class="n">inversion_results</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'data'</span><span class="p">][</span><span class="s1">'inversion_results'</span><span class="p">]</span> <span class="o">=</span> <span class="n">inversion_results</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'completed_steps'</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'invert_ert'</span><span class="p">)</span>
+            
+            <span class="c1"># Step 3: Convert to water content</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">"Step 3: Converting to water content"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'current_step'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'convert_to_wc'</span>
+            <span class="n">ckpt</span> <span class="o">=</span> <span class="n">_maybe_load</span><span class="p">(</span><span class="s1">'convert_to_wc'</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ckpt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">wc_results</span> <span class="o">=</span> <span class="n">ckpt</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">"  → Loaded from checkpoint"</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">wc_results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute_agent</span><span class="p">(</span><span class="s1">'water_content'</span><span class="p">,</span> <span class="p">{</span>
+                    <span class="s1">'inversion_results'</span><span class="p">:</span> <span class="n">inversion_results</span><span class="p">,</span>
+                    <span class="s1">'petrophysical_params'</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'petrophysical_params'</span><span class="p">,</span> <span class="p">{}),</span>
+                    <span class="s1">'uncertainty_analysis'</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'run_uncertainty'</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+                    <span class="s1">'n_realizations'</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'n_realizations'</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+                <span class="p">})</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_save_checkpoint</span><span class="p">(</span><span class="s1">'convert_to_wc'</span><span class="p">,</span> <span class="n">wc_results</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'data'</span><span class="p">][</span><span class="s1">'water_content'</span><span class="p">]</span> <span class="o">=</span> <span class="n">wc_results</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'completed_steps'</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'convert_to_wc'</span><span class="p">)</span>
+            
+            <span class="c1"># Step 4: Generate report</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">"Step 4: Generating report"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'current_step'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'generate_report'</span>
+            <span class="n">ckpt</span> <span class="o">=</span> <span class="n">_maybe_load</span><span class="p">(</span><span class="s1">'generate_report'</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ckpt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">report</span> <span class="o">=</span> <span class="n">ckpt</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">"  → Loaded from checkpoint"</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">report</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute_agent</span><span class="p">(</span><span class="s1">'report'</span><span class="p">,</span> <span class="p">{</span>
+                    <span class="s1">'workflow_data'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'data'</span><span class="p">],</span>
+                    <span class="s1">'config'</span><span class="p">:</span> <span class="n">config</span><span class="p">,</span>
+                    <span class="s1">'output_dir'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span>
+                <span class="p">})</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_save_checkpoint</span><span class="p">(</span><span class="s1">'generate_report'</span><span class="p">,</span> <span class="n">report</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'data'</span><span class="p">][</span><span class="s1">'report'</span><span class="p">]</span> <span class="o">=</span> <span class="n">report</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'completed_steps'</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">'generate_report'</span><span class="p">)</span>
+            
+            <span class="c1"># Mark workflow as complete</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'status'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'completed'</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'current_step'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">"Workflow completed successfully"</span><span class="p">)</span>
+            
+            <span class="c1"># Save workflow state</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_workflow_state</span><span class="p">()</span>
+            
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s1">'status'</span><span class="p">:</span> <span class="s1">'success'</span><span class="p">,</span>
+                <span class="s1">'results'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'data'</span><span class="p">],</span>
+                <span class="s1">'log'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">execution_log</span><span class="p">,</span>
+                <span class="s1">'llm_usage_ledger'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_usage_ledger</span><span class="p">,</span>
+                <span class="s1">'total_llm_cost_estimate_usd'</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span>
+                    <span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'cost_estimate_usd'</span><span class="p">)</span> <span class="ow">or</span> <span class="mf">0.0</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_usage_ledger</span>
+                <span class="p">),</span>
+            <span class="p">}</span>
+            
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'status'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'failed'</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Workflow failed: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s1">'ERROR'</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_workflow_state</span><span class="p">()</span>
+            
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s1">'status'</span><span class="p">:</span> <span class="s1">'failed'</span><span class="p">,</span>
+                <span class="s1">'error'</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">),</span>
+                <span class="s1">'log'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">execution_log</span><span class="p">,</span>
+                <span class="s1">'partial_results'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'data'</span><span class="p">],</span>
+                <span class="s1">'llm_usage_ledger'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_usage_ledger</span><span class="p">,</span>
+                <span class="s1">'total_llm_cost_estimate_usd'</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span>
+                    <span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'cost_estimate_usd'</span><span class="p">)</span> <span class="ow">or</span> <span class="mf">0.0</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_usage_ledger</span>
+                <span class="p">),</span>
+            <span class="p">}</span></div>
+
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_execute_agent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">input_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">AgentResult</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Execute a specific agent.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            agent_name: Name of the agent to execute</span>
+<span class="sd">            input_data: Input data for the agent</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Agent execution results</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">agent_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">agents</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Agent '</span><span class="si">{</span><span class="n">agent_name</span><span class="si">}</span><span class="s2">' not registered"</span><span class="p">)</span>
+        
+        <span class="n">agent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">agents</span><span class="p">[</span><span class="n">agent_name</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Executing agent: </span><span class="si">{</span><span class="n">agent_name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_as_agent_result</span><span class="p">(</span><span class="n">agent</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">input_data</span><span class="p">),</span> <span class="n">agent_name</span><span class="p">)</span>
+            <span class="n">ledger</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">agent</span><span class="p">,</span> <span class="s2">"llm_usage_ledger"</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="n">seen_count</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">agent</span><span class="p">,</span> <span class="s2">"_coordinator_seen_ledger_count"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ledger</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">seen_count</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">llm_usage_ledger</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ledger</span><span class="p">[</span><span class="n">seen_count</span><span class="p">:])</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="n">agent</span><span class="p">,</span> <span class="s2">"_coordinator_seen_ledger_count"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ledger</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Agent </span><span class="si">{</span><span class="n">agent_name</span><span class="si">}</span><span class="s2"> completed successfully"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Agent </span><span class="si">{</span><span class="n">agent_name</span><span class="si">}</span><span class="s2"> failed: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s1">'ERROR'</span><span class="p">)</span>
+            <span class="k">raise</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'INFO'</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Add entry to execution log."""</span>
+        <span class="n">log_entry</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">'timestamp'</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+            <span class="s1">'level'</span><span class="p">:</span> <span class="n">level</span><span class="p">,</span>
+            <span class="s1">'message'</span><span class="p">:</span> <span class="n">message</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">execution_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">log_entry</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">level</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_save_workflow_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Save current workflow state to file."""</span>
+        <span class="n">state_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'workflow_state.json'</span><span class="p">)</span>
+        
+        <span class="c1"># Convert non-serializable objects to strings</span>
+        <span class="n">serializable_state</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">'status'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'status'</span><span class="p">],</span>
+            <span class="s1">'current_step'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'current_step'</span><span class="p">],</span>
+            <span class="s1">'completed_steps'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'completed_steps'</span><span class="p">],</span>
+            <span class="s1">'data_keys'</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'data'</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="p">}</span>
+        
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">state_file</span><span class="p">,</span> <span class="s1">'w'</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">serializable_state</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="c1"># Save execution log</span>
+        <span class="n">log_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'execution_log.json'</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">log_file</span><span class="p">,</span> <span class="s1">'w'</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">execution_log</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="AgentCoordinator.get_workflow_summary">
+<a class="viewcode-back" href="../../../api/agents.html#PyHydroGeophysX.AgentCoordinator.get_workflow_summary">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_workflow_summary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Get summary of workflow execution."""</span>
+        <span class="n">total_cost</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
+            <span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'cost_estimate_usd'</span><span class="p">)</span> <span class="ow">or</span> <span class="mf">0.0</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_usage_ledger</span>
+        <span class="p">)</span>
+        <span class="n">total_tokens</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
+            <span class="nb">int</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'total_tokens'</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_usage_ledger</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">'status'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'status'</span><span class="p">],</span>
+            <span class="s1">'completed_steps'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'completed_steps'</span><span class="p">],</span>
+            <span class="s1">'total_steps'</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'completed_steps'</span><span class="p">]),</span>
+            <span class="s1">'current_step'</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'current_step'</span><span class="p">],</span>
+            <span class="s1">'available_results'</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">workflow_state</span><span class="p">[</span><span class="s1">'data'</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+            <span class="s1">'total_llm_cost_estimate_usd'</span><span class="p">:</span> <span class="n">total_cost</span><span class="p">,</span>
+            <span class="s1">'total_llm_tokens'</span><span class="p">:</span> <span class="n">total_tokens</span><span class="p">,</span>
+            <span class="s1">'llm_calls'</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">llm_usage_ledger</span><span class="p">),</span>
+        <span class="p">}</span></div>
+</div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

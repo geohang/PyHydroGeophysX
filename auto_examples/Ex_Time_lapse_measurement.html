@@ -1,0 +1,1246 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Ex. Creating Synthetic Time-Lapse ERT Measurements &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'auto_examples/Ex_Time_lapse_measurement';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex_Time_lapse_measurement.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion" href="Ex_ERT_workflow.html" />
+    <link rel="prev" title="Ex. Seismic Refraction Tomography (SRT) Forward Modeling" href="EX_SRT_forward.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Ex_FDEM_workflow.html">FDEM Forward + Inversion Workflow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_model_output.html">Ex. Loading and Processing Hydrological Model Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_Structure_resinv.html">Ex. Structure-Constrained Resistivity Inversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_TEM_LMHM_LCI.html">Recovered Section Against the Truth</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_gravity_magnetics_inversion.html">Ex. Gravity and Magnetics Processing and Inversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_TL_inversion_memory.html">Memory-Optimized Time-Lapse ERT Inversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_EM_line_section.html">Ex. Airborne EM Line Inversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_ERT_single_inversion.html">Ex. Single ERT File Inversion (No Time-Lapse)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_structure_TLresinv.html">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_TL_inversion.html">Ex. Time-Lapse ERT Inversion Techniques</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_joint_inversion.html">Joint ERT-SRT Inversion: Cross-Gradient and Geostatistical Coupling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_TDEM_workflow.html">Ex. TDEM Workflow: From Hydrological Models to EM Responses and Inversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_hydro_to_multigeophys.html">Hydrology to Multi-Geophysics Responses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="EX_SRT_forward.html">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Ex. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_ERT_workflow.html">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Hydrologyic Properties Estimation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_3D_ERT_forward.html">3D ERT Forward Modeling with MODFLOW Integration</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Examples Gallery</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Ex. Creating Synthetic Time-Lapse ERT Measurements</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-ex-time-lapse-measurement-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="ex-creating-synthetic-time-lapse-ert-measurements">
+<span id="sphx-glr-auto-examples-ex-time-lapse-measurement-py"></span><h1>Ex. Creating Synthetic Time-Lapse ERT Measurements<a class="headerlink" href="#ex-creating-synthetic-time-lapse-ert-measurements" title="Link to this heading">#</a></h1>
+<p>This example demonstrates how to create synthetic time-lapse electrical
+resistivity tomography (ERT) measurements for watershed monitoring applications.</p>
+<p>The example covers:
+1. Loading time-series water content data from MODFLOW simulations
+2. Converting water content to resistivity for each timestep
+3. Forward modeling to generate synthetic ERT data for multiple time periods
+4. Parallel processing for efficient computation across multiple timesteps
+5. Visualization of apparent resistivity changes over time
+6. Creating animations showing temporal water content variations</p>
+<p>This workflow is essential for testing time-lapse inversion algorithms
+and understanding the sensitivity of ERT measurements to hydrological changes.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pygimli.physics</span><span class="w"> </span><span class="kn">import</span> <span class="n">ert</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mpl_toolkits.axes_grid1</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_axes_locatable</span>
+
+<span class="c1"># Setup package path for development</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="c1"># For regular Python scripts</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+    <span class="c1"># For Jupyter notebooks</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+<span class="c1"># Add the parent directory to Python path</span>
+<span class="n">parent_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">current_dir</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">parent_dir</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
+
+<span class="c1"># Import PyHydroGeophysX modules</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.interpolation</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProfileInterpolator</span><span class="p">,</span> <span class="n">create_surface_lines</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.mesh_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeshCreator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics.resistivity_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">water_content_to_resistivity</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.forward.ert_forward</span><span class="w"> </span><span class="kn">import</span> <span class="n">ERTForwardModeling</span>
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">"data"</span><span class="p">)</span>
+<span class="n">dataset_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"TL_measurements"</span><span class="p">)</span>
+<span class="n">figure_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">"results"</span><span class="p">,</span> <span class="s2">"TL_measurements"</span><span class="p">)</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">figure_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">mesh_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span> <span class="s2">"mesh.bms"</span><span class="p">)</span>
+<span class="n">appres_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span> <span class="s2">"appres"</span><span class="p">)</span>
+<span class="n">water_content_mesh_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span> <span class="s2">"water_content_mesh.npy"</span><span class="p">)</span>
+<span class="n">resistivity_mesh_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span> <span class="s2">"resistivity_mesh.npy"</span><span class="p">)</span>
+<span class="n">apparent_resistivity_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span> <span class="s2">"apparent_resistivity.npy"</span><span class="p">)</span>
+<span class="n">porosity_mesh_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span> <span class="s2">"porosity_mesh.npy"</span><span class="p">)</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">appres_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">"Step 1: Set up the ERT profiles like in the workflow example."</span><span class="p">)</span>
+
+<span class="c1"># Load domain information from files</span>
+<span class="c1"># (Replace with your actual file paths)</span>
+<span class="n">idomain</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"id.txt"</span><span class="p">))</span>
+<span class="n">top</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"top.txt"</span><span class="p">))</span>
+<span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"Porosity.npy"</span><span class="p">))</span>
+
+<span class="c1"># Define profile endpoints</span>
+<span class="n">point1</span> <span class="o">=</span> <span class="p">[</span><span class="mi">115</span><span class="p">,</span> <span class="mi">70</span><span class="p">]</span>  <span class="c1"># [col, row]</span>
+<span class="n">point2</span> <span class="o">=</span> <span class="p">[</span><span class="mi">95</span><span class="p">,</span> <span class="mi">180</span><span class="p">]</span>  <span class="c1"># [col, row]</span>
+
+<span class="c1"># Initialize profile interpolator</span>
+<span class="n">interpolator</span> <span class="o">=</span> <span class="n">ProfileInterpolator</span><span class="p">(</span>
+    <span class="n">point1</span><span class="o">=</span><span class="n">point1</span><span class="p">,</span>
+    <span class="n">point2</span><span class="o">=</span><span class="n">point2</span><span class="p">,</span>
+    <span class="n">surface_data</span><span class="o">=</span><span class="n">top</span><span class="p">,</span>
+    <span class="n">origin_x</span><span class="o">=</span><span class="mf">569156.2983333333</span><span class="p">,</span>
+    <span class="n">origin_y</span><span class="o">=</span><span class="mf">4842444.17</span><span class="p">,</span>
+    <span class="n">pixel_width</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">pixel_height</span><span class="o">=-</span><span class="mf">1.0</span>
+<span class="p">)</span>
+
+<span class="c1"># Interpolate porosity to profile</span>
+<span class="n">porosity_profile</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_3d_data</span><span class="p">(</span><span class="n">porosity</span><span class="p">)</span>
+
+
+
+<span class="c1"># Load structure layers</span>
+<span class="n">bot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"bot.npy"</span><span class="p">))</span>
+
+<span class="c1"># Process layers to get structure</span>
+<span class="n">structure</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_layer_data</span><span class="p">([</span><span class="n">top</span><span class="p">]</span> <span class="o">+</span> <span class="n">bot</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+
+<span class="c1"># Create surface lines</span>
+<span class="c1"># Indicate the layer for the structure regolith, fractured bedrock and fresh bedrock</span>
+<span class="n">top_idx</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">mid_idx</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">bot_idx</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">12</span><span class="p">)</span>
+<span class="n">surface</span><span class="p">,</span> <span class="n">line1</span><span class="p">,</span> <span class="n">line2</span> <span class="o">=</span> <span class="n">create_surface_lines</span><span class="p">(</span>
+    <span class="n">L_profile</span><span class="o">=</span><span class="n">interpolator</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span>
+    <span class="n">structure</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+    <span class="n">top_idx</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">mid_idx</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">bot_idx</span><span class="o">=</span><span class="mi">12</span>
+<span class="p">)</span>
+
+<span class="c1"># Reuse the mesh that belongs to a cached model array. Triangle meshing can</span>
+<span class="c1"># change slightly across PyGIMLi versions, so recreating and overwriting the</span>
+<span class="c1"># mesh would make otherwise valid cached cell arrays incompatible.</span>
+<span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">mesh_path</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">water_content_mesh_path</span><span class="p">):</span>
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">mesh_path</span><span class="p">)</span>
+    <span class="n">cached_cell_count</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">water_content_mesh_path</span><span class="p">,</span> <span class="n">mmap_mode</span><span class="o">=</span><span class="s2">"r"</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span> <span class="o">!=</span> <span class="n">cached_cell_count</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"Cached mesh/model mismatch: "</span>
+            <span class="sa">f</span><span class="s2">"mesh has </span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span><span class="si">}</span><span class="s2"> cells but water_content_mesh.npy "</span>
+            <span class="sa">f</span><span class="s2">"has </span><span class="si">{</span><span class="n">cached_cell_count</span><span class="si">}</span><span class="s2"> values per timestep. Regenerate both together."</span>
+        <span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">mesh_creator</span> <span class="o">=</span> <span class="n">MeshCreator</span><span class="p">(</span><span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+    <span class="n">mesh</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">mesh_creator</span><span class="o">.</span><span class="n">create_from_layers</span><span class="p">(</span>
+        <span class="n">surface</span><span class="o">=</span><span class="n">surface</span><span class="p">,</span>
+        <span class="n">layers</span><span class="o">=</span><span class="p">[</span><span class="n">line1</span><span class="p">,</span> <span class="n">line2</span><span class="p">],</span>
+        <span class="n">bottom_depth</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">line2</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">mesh</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">mesh_path</span><span class="p">)</span>
+
+
+
+<span class="n">ID1</span> <span class="o">=</span> <span class="n">porosity_profile</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">ID1</span><span class="p">[:</span><span class="n">mid_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1">#regolith</span>
+<span class="n">ID1</span><span class="p">[</span><span class="n">mid_idx</span><span class="p">:</span><span class="n">bot_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span> <span class="c1"># fractured bedrock</span>
+<span class="n">ID1</span><span class="p">[</span><span class="n">bot_idx</span><span class="p">:]</span> <span class="o">=</span> <span class="mi">2</span> <span class="c1"># fresh bedrock</span>
+
+<span class="c1"># Get mesh centers and markers</span>
+<span class="n">mesh_centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
+<span class="n">mesh_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">())</span>
+
+<span class="c1"># Interpolate porosity to mesh</span>
+<span class="n">porosity_mesh</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_to_mesh</span><span class="p">(</span>
+    <span class="n">property_values</span><span class="o">=</span><span class="n">porosity_profile</span><span class="p">,</span>
+    <span class="n">depth_values</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+    <span class="n">mesh_x</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+    <span class="n">mesh_y</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+    <span class="n">mesh_markers</span><span class="o">=</span><span class="n">mesh_markers</span><span class="p">,</span>
+    <span class="n">ID</span><span class="o">=</span><span class="n">ID1</span><span class="p">,</span> <span class="c1"># Use ID1 to indicate the layers for interpolation</span>
+    <span class="n">layer_markers</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span>
+
+<span class="p">)</span>
+<span class="c1"># The repository stores the generated one-year dataset under ``data`` so that</span>
+<span class="c1"># the inversion examples can reuse it. Set PYHYDROGEOPHYSX_WATERCONTENT to a</span>
+<span class="c1"># full hydrological-model array when this dataset needs to be regenerated.</span>
+<span class="n">n_timesteps</span> <span class="o">=</span> <span class="mi">365</span>
+<span class="n">monthly_days</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="mi">361</span><span class="p">,</span> <span class="mi">30</span><span class="p">))</span>
+<span class="n">monthly_ert_paths</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">day</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">appres_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"synthetic_data</span><span class="si">{</span><span class="n">day</span><span class="si">}</span><span class="s2">.dat"</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">day</span> <span class="ow">in</span> <span class="n">monthly_days</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Generate the one-year water-content and resistivity models when needed.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">models_complete</span> <span class="o">=</span> <span class="nb">all</span><span class="p">(</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="p">(</span><span class="n">water_content_mesh_path</span><span class="p">,</span> <span class="n">resistivity_mesh_path</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">models_complete</span><span class="p">:</span>
+    <span class="c1"># Keep all cached model properties from the same regeneration run.  In</span>
+    <span class="c1"># particular, do not overwrite only the porosity file when the water-</span>
+    <span class="c1"># content and resistivity arrays are being reused.</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">porosity_mesh_path</span><span class="p">,</span> <span class="n">porosity_mesh</span><span class="p">)</span>
+    <span class="n">default_water_content</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"Watercontent.npy"</span><span class="p">)</span>
+    <span class="n">water_content_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+        <span class="s2">"PYHYDROGEOPHYSX_WATERCONTENT"</span><span class="p">,</span>
+        <span class="n">default_water_content</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">water_content_all</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">water_content_path</span><span class="p">,</span> <span class="n">mmap_mode</span><span class="o">=</span><span class="s2">"r"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">water_content_all</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">4</span> <span class="ow">or</span> <span class="n">water_content_all</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">n_timesteps</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"A full-year Watercontent.npy with shape (at least 365, nlay, nrow, ncol) "</span>
+            <span class="s2">"is required. Set PYHYDROGEOPHYSX_WATERCONTENT to the full model output."</span>
+        <span class="p">)</span>
+
+    <span class="c1"># The original hydrological run contains three years. The published</span>
+    <span class="c1"># time-lapse example uses the final year (indices 730:1095).</span>
+    <span class="n">source_start</span> <span class="o">=</span> <span class="n">water_content_all</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">n_timesteps</span>
+    <span class="n">marker_labels</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="n">rho_sat</span> <span class="o">=</span> <span class="p">[</span><span class="mf">100.0</span><span class="p">,</span> <span class="mf">500.0</span><span class="p">,</span> <span class="mf">2400.0</span><span class="p">]</span>
+    <span class="n">n_val</span> <span class="o">=</span> <span class="p">[</span><span class="mf">2.2</span><span class="p">,</span> <span class="mf">1.8</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">]</span>
+    <span class="n">sigma_s</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.002</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]</span>
+    <span class="n">water_content_mesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">open_memmap</span><span class="p">(</span>
+        <span class="n">water_content_mesh_path</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="s2">"w+"</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+        <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_timesteps</span><span class="p">,</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()),</span>
+    <span class="p">)</span>
+    <span class="n">resistivity_mesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">open_memmap</span><span class="p">(</span>
+        <span class="n">resistivity_mesh_path</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="s2">"w+"</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+        <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_timesteps</span><span class="p">,</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()),</span>
+    <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">day</span><span class="p">,</span> <span class="n">source_index</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">source_start</span><span class="p">,</span> <span class="n">water_content_all</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
+        <span class="n">water_content_profile</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_3d_data</span><span class="p">(</span>
+            <span class="n">water_content_all</span><span class="p">[</span><span class="n">source_index</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">wc_mesh</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_to_mesh</span><span class="p">(</span>
+            <span class="n">property_values</span><span class="o">=</span><span class="n">water_content_profile</span><span class="p">,</span>
+            <span class="n">depth_values</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+            <span class="n">mesh_x</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+            <span class="n">mesh_y</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+            <span class="n">mesh_markers</span><span class="o">=</span><span class="n">mesh_markers</span><span class="p">,</span>
+            <span class="n">ID</span><span class="o">=</span><span class="n">ID1</span><span class="p">,</span>
+            <span class="n">layer_markers</span><span class="o">=</span><span class="n">marker_labels</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">res_model</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">wc_mesh</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">marker</span><span class="p">,</span> <span class="n">saturated_rho</span><span class="p">,</span> <span class="n">exponent</span><span class="p">,</span> <span class="n">surface_sigma</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+            <span class="n">marker_labels</span><span class="p">,</span> <span class="n">rho_sat</span><span class="p">,</span> <span class="n">n_val</span><span class="p">,</span> <span class="n">sigma_s</span>
+        <span class="p">):</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">mesh_markers</span> <span class="o">==</span> <span class="n">marker</span>
+            <span class="n">res_model</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">water_content_to_resistivity</span><span class="p">(</span>
+                <span class="n">wc_mesh</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span>
+                <span class="n">saturated_rho</span><span class="p">,</span>
+                <span class="n">exponent</span><span class="p">,</span>
+                <span class="n">porosity_mesh</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span>
+                <span class="n">surface_sigma</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="n">water_content_mesh</span><span class="p">[</span><span class="n">day</span><span class="p">]</span> <span class="o">=</span> <span class="n">wc_mesh</span>
+        <span class="n">resistivity_mesh</span><span class="p">[</span><span class="n">day</span><span class="p">]</span> <span class="o">=</span> <span class="n">res_model</span>
+        <span class="k">if</span> <span class="n">day</span> <span class="o">%</span> <span class="mi">30</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">day</span> <span class="o">==</span> <span class="n">n_timesteps</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Generated hydrological models for day </span><span class="si">{</span><span class="n">day</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">n_timesteps</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="n">water_content_mesh</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="n">resistivity_mesh</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+    <span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"n_timesteps"</span><span class="p">:</span> <span class="n">n_timesteps</span><span class="p">,</span>
+        <span class="s2">"source_shape"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">water_content_all</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+        <span class="s2">"source_start_index"</span><span class="p">:</span> <span class="n">source_start</span><span class="p">,</span>
+        <span class="s2">"source_end_index_exclusive"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">water_content_all</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+        <span class="s2">"profile_point1_col_row"</span><span class="p">:</span> <span class="n">point1</span><span class="p">,</span>
+        <span class="s2">"profile_point2_col_row"</span><span class="p">:</span> <span class="n">point2</span><span class="p">,</span>
+        <span class="s2">"noise_standard_deviation"</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+        <span class="s2">"noise_seed_base"</span><span class="p">:</span> <span class="mi">1000</span><span class="p">,</span>
+        <span class="s2">"water_content_mesh_file"</span><span class="p">:</span> <span class="s2">"water_content_mesh.npy"</span><span class="p">,</span>
+        <span class="s2">"resistivity_mesh_file"</span><span class="p">:</span> <span class="s2">"resistivity_mesh.npy"</span><span class="p">,</span>
+        <span class="s2">"porosity_mesh_file"</span><span class="p">:</span> <span class="s2">"porosity_mesh.npy"</span><span class="p">,</span>
+        <span class="s2">"apparent_resistivity_file"</span><span class="p">:</span> <span class="s2">"apparent_resistivity.npy"</span><span class="p">,</span>
+        <span class="s2">"monthly_ert_days"</span><span class="p">:</span> <span class="n">monthly_days</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span> <span class="s2">"metadata.json"</span><span class="p">),</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">stream</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">stream</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Using cached one-year water-content and resistivity models."</span><span class="p">)</span>
+
+<span class="n">water_content_mesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">water_content_mesh_path</span><span class="p">,</span> <span class="n">mmap_mode</span><span class="o">=</span><span class="s2">"r"</span><span class="p">)</span>
+<span class="n">resistivity_mesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">resistivity_mesh_path</span><span class="p">,</span> <span class="n">mmap_mode</span><span class="o">=</span><span class="s2">"r"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Generate daily synthetic ERT measurements with deterministic 5% noise.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">ert_complete</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">apparent_resistivity_path</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">monthly_ert_paths</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+<span class="p">)</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">ert_complete</span><span class="p">:</span>
+    <span class="n">xpos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">15</span> <span class="o">+</span> <span class="mi">72</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">72</span><span class="p">)</span>
+    <span class="n">ypos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">xpos</span><span class="p">,</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">surface_profile</span><span class="p">)</span>
+    <span class="n">electrode_positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">((</span><span class="n">xpos</span><span class="p">,</span> <span class="n">ypos</span><span class="p">))</span>
+    <span class="n">schemeert</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">createData</span><span class="p">(</span><span class="n">elecs</span><span class="o">=</span><span class="n">electrode_positions</span><span class="p">,</span> <span class="n">schemeName</span><span class="o">=</span><span class="s2">"wa"</span><span class="p">)</span>
+
+    <span class="n">mesh</span><span class="o">.</span><span class="n">setCellMarkers</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">())</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">appendTriangleBoundary</span><span class="p">(</span>
+        <span class="n">mesh</span><span class="p">,</span>
+        <span class="n">marker</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">xbound</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+        <span class="n">ybound</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">forward_operator</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">()</span>
+    <span class="n">forward_operator</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">schemeert</span><span class="p">)</span>
+    <span class="n">forward_operator</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
+    <span class="n">apparent_resistivity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">format</span><span class="o">.</span><span class="n">open_memmap</span><span class="p">(</span>
+        <span class="n">apparent_resistivity_path</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="s2">"w+"</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+        <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n_timesteps</span><span class="p">,</span> <span class="n">schemeert</span><span class="o">.</span><span class="n">size</span><span class="p">()),</span>
+    <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">day</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_timesteps</span><span class="p">):</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span>
+            <span class="n">forward_operator</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">resistivity_mesh</span><span class="p">[</span><span class="n">day</span><span class="p">]),</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">random_generator</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">1000</span> <span class="o">+</span> <span class="n">day</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">*=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">random_generator</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+        <span class="n">apparent_resistivity</span><span class="p">[</span><span class="n">day</span><span class="p">]</span> <span class="o">=</span> <span class="n">response</span>
+
+        <span class="k">if</span> <span class="n">day</span> <span class="ow">in</span> <span class="n">monthly_ert_paths</span><span class="p">:</span>
+            <span class="n">synth_data</span> <span class="o">=</span> <span class="n">schemeert</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">synth_data</span><span class="p">[</span><span class="s2">"rhoa"</span><span class="p">]</span> <span class="o">=</span> <span class="n">response</span>
+            <span class="n">synth_data</span><span class="p">[</span><span class="s2">"err"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">)</span>
+            <span class="n">synth_data</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">monthly_ert_paths</span><span class="p">[</span><span class="n">day</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">day</span> <span class="o">%</span> <span class="mi">30</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">day</span> <span class="o">==</span> <span class="n">n_timesteps</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Generated synthetic ERT data for day </span><span class="si">{</span><span class="n">day</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">n_timesteps</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="n">apparent_resistivity</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Using cached one-year synthetic ERT measurements."</span><span class="p">)</span>
+
+<span class="n">apparent_resistivity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">apparent_resistivity_path</span><span class="p">,</span> <span class="n">mmap_mode</span><span class="o">=</span><span class="s2">"r"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>example to load and show the synthetic data</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">syn_data</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">monthly_ert_paths</span><span class="p">[</span><span class="mi">30</span><span class="p">])</span>
+<span class="n">ert</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">syn_data</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="synthetic-ert-data-visualization">
+<h2>Synthetic ERT Data Visualization<a class="headerlink" href="#synthetic-ert-data-visualization" title="Link to this heading">#</a></h2>
+<p>This plot shows a single timestep of synthetic ERT measurements. The data
+represents apparent resistivity values measured at different electrode
+configurations. Each point corresponds to a specific current injection and
+voltage measurement pair, providing information about subsurface resistivity
+distribution at this particular time.</p>
+<a class="reference internal image-reference" href="../_images/Ex_Time_lapse_measurement_fig_01.png"><img alt="../_images/Ex_Time_lapse_measurement_fig_01.png" class="align-center" src="../_images/Ex_Time_lapse_measurement_fig_01.png" style="width: 700px;" />
+</a>
+<p>%%
+Load the consolidated daily apparent-resistivity responses.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">syn_data_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">apparent_resistivity</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>## plot the apparent resitivity</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pylab</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pylab</span>
+<span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'legend.fontsize'</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
+          <span class="c1">#'figure.figsize': (15, 5),</span>
+         <span class="s1">'axes.labelsize'</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
+         <span class="s1">'axes.titlesize'</span><span class="p">:</span><span class="mi">13</span><span class="p">,</span>
+         <span class="s1">'xtick.labelsize'</span><span class="p">:</span><span class="mi">13</span><span class="p">,</span>
+         <span class="s1">'ytick.labelsize'</span><span class="p">:</span><span class="mi">13</span><span class="p">}</span>
+
+<span class="n">pylab</span><span class="o">.</span><span class="n">rcParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">"font.family"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"Arial"</span>
+
+
+<span class="n">rng</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="s2">"09/01/2011"</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">"08/30/2012"</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="s2">"D"</span><span class="p">)</span>
+<span class="n">precip</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"precip.npy"</span><span class="p">))</span>
+<span class="n">syn_data_array</span><span class="o">.</span><span class="n">shape</span>
+
+
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">211</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">365</span><span class="p">),</span><span class="n">precip</span><span class="p">,</span><span class="n">color</span><span class="o">=</span><span class="s1">'k'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">364</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">'Precipitation (mm)'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">'Time (days)'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">212</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">syn_data_array</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">aspect</span><span class="o">=</span><span class="s1">'auto'</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">pg</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">cMap</span><span class="p">(</span><span class="s1">'rhoa'</span><span class="p">),</span> <span class="n">vmin</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mi">2000</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">'Measurement #'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">'Time (days)'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">figure_dir</span><span class="p">,</span> <span class="s2">"apparent_resistivity.tiff"</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="time-lapse-apparent-resistivity-response">
+<h2>Time-Lapse Apparent Resistivity Response<a class="headerlink" href="#time-lapse-apparent-resistivity-response" title="Link to this heading">#</a></h2>
+<p>The time-series analysis reveals the relationship between precipitation events
+and subsurface electrical response. The top panel shows daily precipitation
+over one year, while the bottom panel displays the corresponding apparent
+resistivity measurements for all electrode configurations. Notice how
+resistivity decreases (becomes more conductive) following major precipitation
+events, indicating increased water content in the subsurface.</p>
+<a class="reference internal image-reference" href="../_images/Ex_Time_lapse_measurement_fig_02.png"><img alt="../_images/Ex_Time_lapse_measurement_fig_02.png" class="align-center" src="../_images/Ex_Time_lapse_measurement_fig_02.png" style="width: 800px;" />
+</a>
+<p>%%</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">211</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">syn_data_array</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">aspect</span><span class="o">=</span><span class="s1">'auto'</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">pg</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">cMap</span><span class="p">(</span><span class="s1">'rhoa'</span><span class="p">),</span> <span class="n">vmin</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mi">2000</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">'Apparent Resistivity (Ω·m)'</span><span class="p">)</span>
+</pre></div>
+</div>
+<a class="reference internal image-reference" href="../_images/Ex_Time_lapse_measurement_fig_03.png"><img alt="../_images/Ex_Time_lapse_measurement_fig_03.png" class="align-center" src="../_images/Ex_Time_lapse_measurement_fig_03.png" style="width: 800px;" />
+</a>
+<p>%%</p>
+<p>## Showing the water content model for the differnent timesteps</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">14</span><span class="p">))</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">palettable.lightbartlein.diverging</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlueDarkRed18_18_r</span>
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18_r</span><span class="o">.</span><span class="n">mpl_colormap</span>
+<span class="n">ax1</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">wc25</span> <span class="o">=</span> <span class="n">water_content_mesh</span><span class="p">[</span><span class="mi">30</span><span class="p">]</span>
+<span class="n">cbar1</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">wc25</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span> <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+              <span class="n">cMin</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mf">0.32</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">'Water Content (-)'</span><span class="p">,</span><span class="n">xlabel</span><span class="o">=</span><span class="s1">'Distance (m)'</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">'Elevation (m)'</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"Day 30"</span><span class="p">)</span>
+
+
+<span class="n">ax1</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">wc150</span><span class="o">=</span> <span class="n">water_content_mesh</span><span class="p">[</span><span class="mi">150</span><span class="p">]</span>
+<span class="n">cbar1</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">wc150</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span> <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+              <span class="n">cMin</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mf">0.32</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">'Water Content (-)'</span><span class="p">,</span><span class="n">xlabel</span><span class="o">=</span><span class="s1">'Distance (m)'</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">'Elevation (m)'</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"Day 150"</span><span class="p">)</span>
+
+
+<span class="n">ax1</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+<span class="n">wc210</span><span class="o">=</span> <span class="n">water_content_mesh</span><span class="p">[</span><span class="mi">210</span><span class="p">]</span>
+<span class="n">cbar1</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">wc210</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span> <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+              <span class="n">cMin</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mf">0.32</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">'Water Content (-)'</span><span class="p">,</span><span class="n">xlabel</span><span class="o">=</span><span class="s1">'Distance (m)'</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">'Elevation (m)'</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"Day 210"</span><span class="p">)</span>
+
+
+<span class="n">ax1</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+<span class="n">wc280</span><span class="o">=</span> <span class="n">water_content_mesh</span><span class="p">[</span><span class="mi">330</span><span class="p">]</span>
+<span class="n">cbar1</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">wc280</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span> <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+              <span class="n">cMin</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mf">0.32</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">'Water Content (-)'</span><span class="p">,</span><span class="n">xlabel</span><span class="o">=</span><span class="s1">'Distance (m)'</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">'Elevation (m)'</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"Day 330"</span><span class="p">)</span>
+
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">figure_dir</span><span class="p">,</span> <span class="s2">"water_content_model.tiff"</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="water-content-evolution-over-time">
+<h2>Water Content Evolution Over Time<a class="headerlink" href="#water-content-evolution-over-time" title="Link to this heading">#</a></h2>
+<p>These cross-sections show how water content changes throughout the year at
+four representative time points. Day 30 shows relatively dry conditions,
+Day 150 captures the wet season response, Day 210 represents peak saturation
+after sustained precipitation, and Day 330 shows the transition to drier
+conditions. Notice how water infiltrates from the surface (regolith layer)
+and gradually saturates deeper layers (fractured and fresh bedrock).</p>
+<a class="reference internal image-reference" href="../_images/Ex_Time_lapse_measurement_fig_04.png"><img alt="../_images/Ex_Time_lapse_measurement_fig_04.png" class="align-center" src="../_images/Ex_Time_lapse_measurement_fig_04.png" style="width: 900px;" />
+</a>
+<p>%%
+## Showing the water content model for the differnent timesteps</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">14</span><span class="p">))</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">palettable.lightbartlein.diverging</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+<span class="n">ax1</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">wc30</span> <span class="o">=</span> <span class="n">resistivity_mesh</span><span class="p">[</span><span class="mi">30</span><span class="p">]</span>
+<span class="n">cbar1</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">wc30</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span> <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">showColorBar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">"Distance (m)"</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">"Elevation (m)"</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">'Resistivity (Ω·m)'</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">3000</span><span class="p">)</span>
+
+
+
+<span class="n">ax1</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">wc150</span><span class="o">=</span> <span class="n">resistivity_mesh</span><span class="p">[</span><span class="mi">150</span><span class="p">]</span>
+<span class="n">cbar1</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">wc150</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span> <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">showColorBar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">"Distance (m)"</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">"Elevation (m)"</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">'Resistivity (Ω·m)'</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">3000</span><span class="p">)</span>
+
+
+
+<span class="n">ax1</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+<span class="n">wc210</span><span class="o">=</span> <span class="n">resistivity_mesh</span><span class="p">[</span><span class="mi">210</span><span class="p">]</span>
+<span class="n">cbar1</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">wc210</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span>
+              <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">showColorBar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">"Distance (m)"</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">"Elevation (m)"</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">'Resistivity (Ω·m)'</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">3000</span><span class="p">)</span>
+
+
+<span class="n">ax1</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+<span class="n">wc280</span><span class="o">=</span> <span class="n">resistivity_mesh</span><span class="p">[</span><span class="mi">330</span><span class="p">]</span>
+<span class="n">cbar1</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">wc280</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span> <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">showColorBar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">"Distance (m)"</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">"Elevation (m)"</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">'Resistivity (Ω·m)'</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">3000</span><span class="p">)</span>
+
+
+<span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">figure_dir</span><span class="p">,</span> <span class="s2">"resistivity_model.tiff"</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="resistivity-model-evolution">
+<h2>Resistivity Model Evolution<a class="headerlink" href="#resistivity-model-evolution" title="Link to this heading">#</a></h2>
+<p>The corresponding resistivity models show the inverse relationship with water
+content - high resistivity zones (red/yellow) indicate dry conditions while
+low resistivity areas (blue) represent saturated regions. The petrophysical
+transformation from water content to resistivity uses layer-specific parameters
+(formation resistivity, cementation exponent) that account for different
+geological units. This resistivity evolution serves as the basis for forward
+modeling synthetic ERT measurements.</p>
+<a class="reference internal image-reference" href="../_images/Ex_Time_lapse_measurement_fig_05.png"><img alt="../_images/Ex_Time_lapse_measurement_fig_05.png" class="align-center" src="../_images/Ex_Time_lapse_measurement_fig_05.png" style="width: 900px;" />
+</a>
+<p>%%</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+
+<span class="c1"># Import your color map</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">palettable.lightbartlein.diverging</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlueDarkRed18_18_r</span>
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18_r</span><span class="o">.</span><span class="n">mpl_colormap</span>
+
+<span class="c1"># Create a list to store the frames</span>
+<span class="n">frames</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="c1"># Set the DPI for consistent figure size</span>
+<span class="n">dpi</span> <span class="o">=</span> <span class="mi">100</span>
+
+<span class="c1"># Create frames and store them in memory</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">365</span><span class="p">):</span>
+    <span class="c1"># Print progress update</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">10</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Processing frame </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> of 365"</span><span class="p">)</span>
+
+    <span class="c1"># Set up new figure for each frame - reduced height to eliminate empty space</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mf">2.2</span><span class="p">])</span>
+
+    <span class="c1"># Use more of the figure space</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Load data</span>
+    <span class="n">moi</span> <span class="o">=</span> <span class="n">water_content_mesh</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+    <span class="c1"># Plot the data</span>
+    <span class="n">ax</span><span class="p">,</span> <span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">moi</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">"vertical"</span><span class="p">,</span>
+                     <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="mf">0.00</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mf">0.32</span><span class="p">,</span>
+                     <span class="n">xlabel</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span>  <span class="c1"># Remove labels to save space</span>
+                     <span class="n">label</span><span class="o">=</span><span class="s1">'Water content'</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+
+    <span class="c1"># Style adjustments</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s1">'top'</span><span class="p">]</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s1">'right'</span><span class="p">]</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s1">'bottom'</span><span class="p">]</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s1">'left'</span><span class="p">]</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">get_xaxis</span><span class="p">()</span><span class="o">.</span><span class="n">set_ticks</span><span class="p">([])</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">get_yaxis</span><span class="p">()</span><span class="o">.</span><span class="n">set_ticks</span><span class="p">([])</span>
+
+    <span class="c1"># Add day counter with better positioning and visibility</span>
+    <span class="c1"># Use transAxes to position the text in a consistent location</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="sa">f</span><span class="s1">'Day: </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">'</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span>
+            <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">fontweight</span><span class="o">=</span><span class="s1">'bold'</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">'black'</span><span class="p">,</span>
+            <span class="n">bbox</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">facecolor</span><span class="o">=</span><span class="s1">'white'</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">'none'</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
+
+    <span class="c1"># Add compact axis labels</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="s1">'Distance (m)'</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span>
+            <span class="n">ha</span><span class="o">=</span><span class="s1">'center'</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s1">'Elevation (m)'</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span>
+            <span class="n">va</span><span class="o">=</span><span class="s1">'center'</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">90</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+
+    <span class="c1"># Save to buffer instead of file</span>
+    <span class="n">buf</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">'png'</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">'tight'</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>  <span class="c1"># Close the figure</span>
+
+    <span class="c1"># Convert buffer to image and append to frames</span>
+    <span class="n">buf</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+    <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>  <span class="c1"># Copy the image to ensure it stays in memory</span>
+    <span class="n">buf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"All frames processed!"</span><span class="p">)</span>
+
+<span class="c1"># Save as GIF</span>
+<span class="n">gif_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">figure_dir</span><span class="p">,</span> <span class="s2">"WCanimation.gif"</span><span class="p">)</span>
+<span class="c1"># The first frame's duration will be longer (500ms) to show initial state</span>
+<span class="n">durations</span> <span class="o">=</span> <span class="p">[</span><span class="mi">500</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="mi">100</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># 100ms per frame after the first</span>
+
+<span class="c1"># Save the GIF with optimized settings</span>
+<span class="n">frames</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">save</span><span class="p">(</span>
+    <span class="n">gif_path</span><span class="p">,</span>
+    <span class="nb">format</span><span class="o">=</span><span class="s1">'GIF'</span><span class="p">,</span>
+    <span class="n">append_images</span><span class="o">=</span><span class="n">frames</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span>
+    <span class="n">save_all</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">duration</span><span class="o">=</span><span class="n">durations</span><span class="p">,</span>
+    <span class="n">loop</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>  <span class="c1"># 0 means loop forever</span>
+    <span class="n">optimize</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"GIF saved successfully to </span><span class="si">{</span><span class="n">gif_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="animation-and-advanced-visualization">
+<h2>Animation and Advanced Visualization<a class="headerlink" href="#animation-and-advanced-visualization" title="Link to this heading">#</a></h2>
+<p>The code also generates an animated GIF showing the complete temporal evolution
+of water content throughout the year. This animation provides insights into:</p>
+<ul class="simple">
+<li><p><strong>Seasonal patterns</strong>: Clear wet and dry season variations</p></li>
+<li><p><strong>Infiltration dynamics</strong>: How water moves from surface to depth</p></li>
+<li><p><strong>Layer interactions</strong>: Different response rates in geological units</p></li>
+<li><p><strong>Event-based changes</strong>: Rapid responses to individual storms</p></li>
+</ul>
+<p>The animation is saved as ‘WCanimation.gif’ in the results directory.</p>
+</section>
+<section id="summary-and-applications">
+<h2>Summary and Applications<a class="headerlink" href="#summary-and-applications" title="Link to this heading">#</a></h2>
+<p>This example demonstrated the complete workflow for creating synthetic
+time-lapse ERT measurements from hydrological model outputs:</p>
+<p><strong>Key Workflow Steps:</strong></p>
+<ol class="arabic simple">
+<li><p><strong>Load and process</strong> MODFLOW water content time series</p></li>
+<li><p><strong>Interpolate</strong> 3D data to 2D profiles for geophysical modeling</p></li>
+<li><p><strong>Convert</strong> water content to resistivity using petrophysical models</p></li>
+<li><p><strong>Generate</strong> synthetic ERT data via forward modeling</p></li>
+<li><p><strong>Visualize</strong> temporal patterns in apparent resistivity</p></li>
+<li><p><strong>Create animations</strong> showing subsurface dynamics</p></li>
+</ol>
+<p><strong>Scientific Insights:</strong></p>
+<ul class="simple">
+<li><p>ERT measurements show clear <strong>sensitivity</strong> to hydrological changes</p></li>
+<li><p><strong>Temporal regularization</strong> is crucial for time-lapse inversions</p></li>
+<li><p><strong>Multi-layer</strong> petrophysical models capture geological heterogeneity</p></li>
+<li><p><strong>Parallel processing</strong> enables efficient large dataset generation</p></li>
+</ul>
+<p><strong>Next Steps:</strong></p>
+<ul class="simple">
+<li><p>Apply time-lapse inversion techniques (see Ex_TL_inversion.py)</p></li>
+<li><p>Include structural constraints from seismic data</p></li>
+<li><p>Implement uncertainty quantification methods</p></li>
+<li><p>Integrate with real field measurements for validation</p></li>
+</ul>
+<p>This synthetic dataset provides a controlled environment for testing and
+validating time-lapse ERT monitoring approaches in watershed applications.</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-ex-time-lapse-measurement-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/9dd013c8b83498d2902774a5496f924d/Ex_Time_lapse_measurement.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">Ex_Time_lapse_measurement.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/6045e2e6aa7af74b87718bedd95b4222/Ex_Time_lapse_measurement.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">Ex_Time_lapse_measurement.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/4d877de5e0c5721785252631168f77dc/Ex_Time_lapse_measurement.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">Ex_Time_lapse_measurement.zip</span></code></a></p>
+</div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="EX_SRT_forward.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="Ex_ERT_workflow.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#synthetic-ert-data-visualization">Synthetic ERT Data Visualization</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#time-lapse-apparent-resistivity-response">Time-Lapse Apparent Resistivity Response</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#water-content-evolution-over-time">Water Content Evolution Over Time</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#resistivity-model-evolution">Resistivity Model Evolution</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#animation-and-advanced-visualization">Animation and Advanced Visualization</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#summary-and-applications">Summary and Applications</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/auto_examples/Ex_Time_lapse_measurement.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/auto_examples/Ex_Time_lapse_measurement.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

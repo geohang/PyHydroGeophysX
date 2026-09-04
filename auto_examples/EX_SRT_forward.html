@@ -1,0 +1,1209 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Ex. Seismic Refraction Tomography (SRT) Forward Modeling &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'auto_examples/EX_SRT_forward';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/EX_SRT_forward.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Ex. Creating Synthetic Time-Lapse ERT Measurements" href="Ex_Time_lapse_measurement.html" />
+    <link rel="prev" title="Hydrology to Multi-Geophysics Responses" href="Ex_hydro_to_multigeophys.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Ex_FDEM_workflow.html">FDEM Forward + Inversion Workflow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_model_output.html">Ex. Loading and Processing Hydrological Model Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_Structure_resinv.html">Ex. Structure-Constrained Resistivity Inversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_TEM_LMHM_LCI.html">Recovered Section Against the Truth</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_gravity_magnetics_inversion.html">Ex. Gravity and Magnetics Processing and Inversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_TL_inversion_memory.html">Memory-Optimized Time-Lapse ERT Inversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_EM_line_section.html">Ex. Airborne EM Line Inversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_ERT_single_inversion.html">Ex. Single ERT File Inversion (No Time-Lapse)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_structure_TLresinv.html">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_TL_inversion.html">Ex. Time-Lapse ERT Inversion Techniques</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_joint_inversion.html">Joint ERT-SRT Inversion: Cross-Gradient and Geostatistical Coupling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_TDEM_workflow.html">Ex. TDEM Workflow: From Hydrological Models to EM Responses and Inversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_hydro_to_multigeophys.html">Hydrology to Multi-Geophysics Responses</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_Time_lapse_measurement.html">Ex. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_ERT_workflow.html">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Hydrologyic Properties Estimation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ex_3D_ERT_forward.html">3D ERT Forward Modeling with MODFLOW Integration</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Examples Gallery</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-ex-srt-forward-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="ex-seismic-refraction-tomography-srt-forward-modeling">
+<span id="sphx-glr-auto-examples-ex-srt-forward-py"></span><h1>Ex. Seismic Refraction Tomography (SRT) Forward Modeling<a class="headerlink" href="#ex-seismic-refraction-tomography-srt-forward-modeling" title="Link to this heading">#</a></h1>
+<p>This example demonstrates seismic refraction tomography forward modeling
+for watershed structure characterization using PyHydroGeophysX.</p>
+<p>The workflow includes:
+1. Converting water content to seismic P-wave velocity using rock physics models
+2. Creating seismic survey geometry along topographic profiles
+3. Forward modeling to generate synthetic travel time data
+4. Visualization of velocity models and first-arrival picks
+5. One-step integrated workflow from hydrology to seismic measurements</p>
+<p>SRT is valuable for determining subsurface structure and bedrock interface
+geometry, which provides important constraints for hydrogeophysical modeling
+and interpretation of ERT data.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pygimli.physics</span><span class="w"> </span><span class="kn">import</span> <span class="n">ert</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pygimli.physics</span><span class="w"> </span><span class="kn">import</span> <span class="n">TravelTimeManager</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pygimli.physics.traveltime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mpl_toolkits.axes_grid1</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_axes_locatable</span>
+
+<span class="c1"># Setup package path for development</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="c1"># For regular Python scripts</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+    <span class="c1"># For Jupyter notebooks</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+<span class="c1"># Add the parent directory to Python path</span>
+<span class="n">parent_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">current_dir</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">parent_dir</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
+
+<span class="c1"># Import PyHydroGeophysX modules</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.interpolation</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProfileInterpolator</span><span class="p">,</span> <span class="n">create_surface_lines</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.mesh_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeshCreator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.plt_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">drawFirstPicks</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics.resistivity_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">water_content_to_resistivity</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics.velocity_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">HertzMindlinModel</span><span class="p">,</span> <span class="n">DEMModel</span>
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">output_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">"results"</span><span class="p">,</span> <span class="s2">"SRT_forward"</span><span class="p">)</span>
+<span class="n">seismic_data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">"data"</span><span class="p">,</span> <span class="s2">"Seismic"</span><span class="p">)</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">seismic_data_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>## 1. Follow the workflow to create the mesh and model</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># These would be your actual data files</span>
+<span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">"data"</span><span class="p">)</span>
+
+<span class="c1"># Load domain information from files</span>
+<span class="c1"># (Replace with your actual file paths)</span>
+<span class="n">idomain</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"id.txt"</span><span class="p">))</span>
+<span class="n">top</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"top.txt"</span><span class="p">))</span>
+<span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"Porosity.npy"</span><span class="p">))</span>
+
+<span class="n">Water_Content</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"Watercontent.npy"</span><span class="p">))</span>
+
+<span class="n">water_content</span> <span class="o">=</span> <span class="n">Water_Content</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="c1"># in the publication, we used the 50th time step data</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">water_content</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+
+<span class="c1"># Step 3: Set up profile for 2D section</span>
+
+<span class="c1"># Define profile endpoints</span>
+<span class="n">point1</span> <span class="o">=</span> <span class="p">[</span><span class="mi">115</span><span class="p">,</span> <span class="mi">70</span><span class="p">]</span>  <span class="c1"># [col, row]</span>
+<span class="n">point2</span> <span class="o">=</span> <span class="p">[</span><span class="mi">95</span><span class="p">,</span> <span class="mi">180</span><span class="p">]</span>  <span class="c1"># [col, row]</span>
+
+<span class="c1"># Initialize profile interpolator</span>
+<span class="n">interpolator</span> <span class="o">=</span> <span class="n">ProfileInterpolator</span><span class="p">(</span>
+    <span class="n">point1</span><span class="o">=</span><span class="n">point1</span><span class="p">,</span>
+    <span class="n">point2</span><span class="o">=</span><span class="n">point2</span><span class="p">,</span>
+    <span class="n">surface_data</span><span class="o">=</span><span class="n">top</span><span class="p">,</span>
+    <span class="n">origin_x</span><span class="o">=</span><span class="mf">569156.2983333333</span><span class="p">,</span>
+    <span class="n">origin_y</span><span class="o">=</span><span class="mf">4842444.17</span><span class="p">,</span>
+    <span class="n">pixel_width</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">pixel_height</span><span class="o">=-</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">num_points</span> <span class="o">=</span> <span class="mi">400</span>
+<span class="p">)</span>
+
+
+
+<span class="c1"># Interpolate water content to profile</span>
+<span class="n">water_content_profile</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_3d_data</span><span class="p">(</span><span class="n">water_content</span><span class="p">)</span>
+
+<span class="c1"># Interpolate porosity to profile</span>
+<span class="n">porosity_profile</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_3d_data</span><span class="p">(</span><span class="n">porosity</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>## Creating geometry for the seismic refraction survey</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load structure layers</span>
+<span class="n">bot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"bot.npy"</span><span class="p">))</span>
+
+<span class="c1"># Process layers to get structure</span>
+<span class="n">structure</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_layer_data</span><span class="p">([</span><span class="n">top</span><span class="p">]</span> <span class="o">+</span> <span class="n">bot</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+
+<span class="c1"># Create surface lines</span>
+<span class="c1"># Indicate the layer for the structure regolith, fractured bedrock and fresh bedrock</span>
+<span class="n">top_idx</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">mid_idx</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">bot_idx</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="mi">13</span><span class="p">)</span>
+<span class="n">surface</span><span class="p">,</span> <span class="n">line1</span><span class="p">,</span> <span class="n">line2</span> <span class="o">=</span> <span class="n">create_surface_lines</span><span class="p">(</span>
+    <span class="n">L_profile</span><span class="o">=</span><span class="n">interpolator</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span>
+    <span class="n">structure</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+    <span class="n">top_idx</span><span class="o">=</span><span class="n">top_idx</span><span class="p">,</span>
+    <span class="n">mid_idx</span><span class="o">=</span><span class="n">mid_idx</span><span class="p">,</span>
+    <span class="n">bot_idx</span><span class="o">=</span><span class="n">bot_idx</span>
+<span class="p">)</span>
+
+<span class="c1"># Create mesh</span>
+<span class="n">mesh_creator</span> <span class="o">=</span> <span class="n">MeshCreator</span><span class="p">(</span><span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+<span class="n">mesh</span><span class="p">,</span> <span class="n">geom</span> <span class="o">=</span> <span class="n">mesh_creator</span><span class="o">.</span><span class="n">create_from_layers</span><span class="p">(</span>
+    <span class="n">surface</span><span class="o">=</span><span class="n">surface</span><span class="p">,</span>
+    <span class="n">layers</span><span class="o">=</span><span class="p">[</span><span class="n">line1</span><span class="p">,</span> <span class="n">line2</span><span class="p">],</span>
+    <span class="n">bottom_depth</span><span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">line2</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="mi">10</span> <span class="c1">#50.0</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>## Interpolating data to mesh</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># marker labels for the layers</span>
+<span class="n">marker_labels</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="c1"># top. mid, bottom layers (example values)</span>
+<span class="c1"># assign the values for the regolith and fractured bedrock</span>
+<span class="n">ID1</span> <span class="o">=</span> <span class="n">porosity_profile</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">ID1</span><span class="p">[:</span><span class="n">mid_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="c1">#regolith</span>
+<span class="n">ID1</span><span class="p">[</span><span class="n">mid_idx</span><span class="p">:]</span> <span class="o">=</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># fractured bedrock</span>
+
+
+<span class="c1"># Get mesh centers and markers</span>
+<span class="n">mesh_centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
+<span class="n">mesh_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">())</span>
+<span class="n">porosity_mesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">mesh_markers</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+<span class="n">wc_mesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">mesh_markers</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">marker_labels</span><span class="p">)):</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="c1"># assign the values for the fresh bedrock, since fresh bedrock is no flux boundary and assume the homogeneous as the last layer</span>
+        <span class="n">ID1</span><span class="p">[</span><span class="n">bot_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="c1"># fractured bedrock # fresh bedrock</span>
+    <span class="c1"># Interpolate porosity to mesh</span>
+    <span class="n">porosity_temp</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_to_mesh</span><span class="p">(</span>
+        <span class="n">property_values</span><span class="o">=</span><span class="n">porosity_profile</span><span class="p">,</span>
+        <span class="n">depth_values</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+        <span class="n">mesh_x</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="n">mesh_y</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="n">mesh_markers</span><span class="o">=</span><span class="n">mesh_markers</span><span class="p">,</span>
+        <span class="n">ID</span><span class="o">=</span><span class="n">ID1</span><span class="p">,</span> <span class="c1"># Use ID1 to indicate the layers for interpolation</span>
+        <span class="n">layer_markers</span> <span class="o">=</span> <span class="p">[</span><span class="n">marker_labels</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span>
+
+    <span class="p">)</span>
+
+    <span class="n">porosity_mesh</span><span class="p">[</span><span class="n">mesh_markers</span><span class="o">==</span><span class="n">marker_labels</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">porosity_temp</span><span class="p">[</span><span class="n">mesh_markers</span><span class="o">==</span><span class="n">marker_labels</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
+
+    <span class="c1"># Interpolate water content to mesh</span>
+    <span class="n">wc_temp</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_to_mesh</span><span class="p">(</span>
+        <span class="n">property_values</span><span class="o">=</span><span class="n">water_content_profile</span><span class="p">,</span>
+        <span class="n">depth_values</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+        <span class="n">mesh_x</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="n">mesh_y</span><span class="o">=</span><span class="n">mesh_centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="n">mesh_markers</span><span class="o">=</span><span class="n">mesh_markers</span><span class="p">,</span>
+        <span class="n">ID</span><span class="o">=</span><span class="n">ID1</span><span class="p">,</span> <span class="c1"># Use ID1 to indicate the layers for interpolation</span>
+        <span class="n">layer_markers</span> <span class="o">=</span> <span class="p">[</span><span class="n">marker_labels</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span>
+    <span class="p">)</span>
+    <span class="n">wc_mesh</span><span class="p">[</span><span class="n">mesh_markers</span><span class="o">==</span><span class="n">marker_labels</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">wc_temp</span><span class="p">[</span><span class="n">mesh_markers</span><span class="o">==</span><span class="n">marker_labels</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
+
+
+
+
+<span class="n">saturation</span> <span class="o">=</span> <span class="n">wc_mesh</span> <span class="o">/</span> <span class="n">porosity_mesh</span>
+</pre></div>
+</div>
+<p>## Convert to P wave velocity using petrophysical model</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Initialize velocity models</span>
+<span class="n">hm_model</span> <span class="o">=</span> <span class="n">HertzMindlinModel</span><span class="p">(</span><span class="n">critical_porosity</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">coordination_number</span><span class="o">=</span><span class="mf">6.0</span><span class="p">)</span>
+<span class="n">dem_model</span> <span class="o">=</span> <span class="n">DEMModel</span><span class="p">()</span>
+
+<span class="c1"># Initialize velocity model</span>
+<span class="n">velocity_mesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">wc_mesh</span><span class="p">)</span>
+
+
+<span class="n">top_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mesh_markers</span> <span class="o">==</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">top_bulk_modulus</span> <span class="o">=</span> <span class="mf">30.0</span>  <span class="c1"># GPa</span>
+<span class="n">top_shear_modulus</span> <span class="o">=</span> <span class="mf">20.0</span>  <span class="c1"># GPa</span>
+<span class="n">top_mineral_density</span> <span class="o">=</span> <span class="mi">2650</span>  <span class="c1"># kg/m³</span>
+<span class="n">top_depth</span> <span class="o">=</span> <span class="mf">1.0</span>  <span class="c1"># m</span>
+
+<span class="c1"># Get Vp values using Hertz-Mindlin model</span>
+<span class="n">Vp_high</span><span class="p">,</span> <span class="n">Vp_low</span> <span class="o">=</span> <span class="n">hm_model</span><span class="o">.</span><span class="n">calculate_velocity</span><span class="p">(</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity_mesh</span><span class="p">[</span><span class="n">top_mask</span><span class="p">],</span>
+    <span class="n">saturation</span><span class="o">=</span><span class="n">saturation</span><span class="p">[</span><span class="n">top_mask</span><span class="p">],</span>
+    <span class="n">bulk_modulus</span><span class="o">=</span><span class="n">top_bulk_modulus</span><span class="p">,</span>
+    <span class="n">shear_modulus</span><span class="o">=</span><span class="n">top_shear_modulus</span><span class="p">,</span>
+    <span class="n">mineral_density</span><span class="o">=</span><span class="n">top_mineral_density</span><span class="p">,</span>
+    <span class="n">depth</span><span class="o">=</span><span class="n">top_depth</span>
+<span class="p">)</span>
+
+<span class="c1"># Use average of high and low bounds</span>
+<span class="n">velocity_mesh</span><span class="p">[</span><span class="n">top_mask</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">Vp_high</span> <span class="o">+</span> <span class="n">Vp_low</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+
+
+
+<span class="n">mid_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mesh_markers</span> <span class="o">==</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+<span class="n">mid_bulk_modulus</span> <span class="o">=</span> <span class="mf">45.0</span>  <span class="c1"># GPa</span>
+<span class="n">mid_shear_modulus</span> <span class="o">=</span> <span class="mf">35.0</span> <span class="c1"># GPa</span>
+<span class="n">mid_mineral_density</span> <span class="o">=</span> <span class="mi">2670</span>  <span class="c1"># kg/m³</span>
+<span class="n">mid_aspect_ratio</span> <span class="o">=</span> <span class="mf">0.05</span>
+
+<span class="c1"># Get Vp values using DEM model</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">Vp</span> <span class="o">=</span> <span class="n">dem_model</span><span class="o">.</span><span class="n">calculate_velocity</span><span class="p">(</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity_mesh</span><span class="p">[</span><span class="n">mid_mask</span><span class="p">],</span>
+    <span class="n">saturation</span><span class="o">=</span><span class="n">saturation</span><span class="p">[</span><span class="n">mid_mask</span><span class="p">],</span>
+    <span class="n">bulk_modulus</span><span class="o">=</span><span class="n">mid_bulk_modulus</span><span class="p">,</span>
+    <span class="n">shear_modulus</span><span class="o">=</span><span class="n">mid_shear_modulus</span><span class="p">,</span>
+    <span class="n">mineral_density</span><span class="o">=</span><span class="n">mid_mineral_density</span><span class="p">,</span>
+    <span class="n">aspect_ratio</span><span class="o">=</span><span class="n">mid_aspect_ratio</span>
+<span class="p">)</span>
+
+<span class="n">velocity_mesh</span><span class="p">[</span><span class="n">mid_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">Vp</span>
+
+<span class="n">bot_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">mesh_markers</span> <span class="o">==</span> <span class="n">marker_labels</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+<span class="n">bot_bulk_modulus</span> <span class="o">=</span> <span class="mi">55</span>  <span class="c1"># GPa</span>
+<span class="n">bot_shear_modulus</span> <span class="o">=</span> <span class="mi">50</span>  <span class="c1"># GPa</span>
+<span class="n">bot_mineral_density</span> <span class="o">=</span> <span class="mi">2700</span> <span class="c1"># kg/m³</span>
+<span class="n">bot_aspect_ratio</span> <span class="o">=</span> <span class="mf">0.04</span>
+
+<span class="c1"># Get Vp values using DEM model</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">Vp</span> <span class="o">=</span> <span class="n">dem_model</span><span class="o">.</span><span class="n">calculate_velocity</span><span class="p">(</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity_mesh</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">],</span>
+    <span class="n">saturation</span><span class="o">=</span><span class="n">saturation</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">],</span>
+    <span class="n">bulk_modulus</span><span class="o">=</span><span class="n">bot_bulk_modulus</span><span class="p">,</span>
+    <span class="n">shear_modulus</span><span class="o">=</span><span class="n">bot_shear_modulus</span><span class="p">,</span>
+    <span class="n">mineral_density</span><span class="o">=</span><span class="n">bot_mineral_density</span><span class="p">,</span>
+    <span class="n">aspect_ratio</span><span class="o">=</span><span class="n">bot_aspect_ratio</span>
+<span class="p">)</span>
+
+<span class="n">velocity_mesh</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">Vp</span>
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">top_mask</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">top_mask</span><span class="p">]))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">mid_mask</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">mid_mask</span><span class="p">]))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">velocity_mesh</span><span class="p">[</span><span class="n">bot_mask</span><span class="p">]))</span>
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">palettable.lightbartlein.diverging</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+
+
+<span class="n">fixed_cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">ax</span><span class="p">,</span><span class="n">cbar</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span><span class="n">velocity_mesh</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span> <span class="n">axs</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">"horizontal"</span><span class="p">,</span>
+        <span class="n">cMap</span><span class="o">=</span><span class="n">fixed_cmap</span><span class="p">,</span> <span class="n">showColorBar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">"Distance (m)"</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">"Elevation (m)"</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s1">'Velocity (m s$^{-1}$)'</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">5500</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="p-wave-velocity-model-from-petrophysical-conversion">
+<h2>P-Wave Velocity Model from Petrophysical Conversion<a class="headerlink" href="#p-wave-velocity-model-from-petrophysical-conversion" title="Link to this heading">#</a></h2>
+<p>The velocity model shows realistic three-layer structure derived from water
+content and porosity using rock physics models. Regolith (500-2500 m/s),
+fractured bedrock (2500-4500 m/s), and fresh bedrock (4500+ m/s) exhibit
+distinct velocity ranges appropriate for watershed environments.</p>
+<a class="reference internal image-reference" href="../_images/EX_SRT_forward_fig_01.png"><img alt="../_images/EX_SRT_forward_fig_01.png" class="align-center" src="../_images/EX_SRT_forward_fig_01.png" style="width: 700px;" />
+</a>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mpl</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+
+<span class="c1"># Font settings for publication</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">'font.family'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'Arial'</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">'font.size'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">'axes.labelsize'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">'axes.titlesize'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">'xtick.labelsize'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">'ytick.labelsize'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">'legend.fontsize'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">'figure.dpi'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">150</span>
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.interpolate</span><span class="w"> </span><span class="kn">import</span> <span class="n">griddata</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="c1"># First interpolation for the main plot</span>
+<span class="n">x1</span><span class="p">,</span> <span class="n">y1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="mi">20</span><span class="p">:</span><span class="mi">21</span><span class="p">:</span><span class="mi">1</span><span class="n">j</span><span class="p">,</span> <span class="mi">1568</span><span class="p">:</span><span class="mi">1613</span><span class="p">:</span><span class="mi">40</span><span class="n">j</span><span class="p">]</span>
+<span class="n">vel</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">(</span><span class="n">mesh_centers</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">],</span> <span class="n">velocity_mesh</span><span class="p">,</span> <span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">),</span> <span class="n">method</span><span class="o">=</span><span class="s1">'linear'</span><span class="p">)</span>
+<span class="n">po</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">(</span><span class="n">mesh_centers</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">],</span> <span class="n">porosity_mesh</span><span class="p">,</span> <span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">),</span> <span class="n">method</span><span class="o">=</span><span class="s1">'linear'</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+
+<span class="c1"># First subplot - narrower left side (spans both rows, 1 column)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot2grid</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">rowspan</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">colspan</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">vel</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">y1</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">c</span><span class="o">=</span><span class="s1">'k'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">6400</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">'Velocity (m/s)'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">'Depth (m)'</span><span class="p">)</span>
+
+<span class="c1"># Second subplot - larger top right position (spans 2 columns)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot2grid</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">colspan</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="c1"># Second interpolation</span>
+<span class="n">x1</span><span class="p">,</span> <span class="n">y1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="mi">20</span><span class="p">:</span><span class="mi">21</span><span class="p">:</span><span class="mi">1</span><span class="n">j</span><span class="p">,</span> <span class="mf">1609.2</span><span class="p">:</span><span class="mi">1613</span><span class="p">:</span><span class="mi">8</span><span class="n">j</span><span class="p">]</span>
+<span class="n">vel_1</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">(</span><span class="n">mesh_centers</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">],</span> <span class="n">velocity_mesh</span><span class="p">,</span> <span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">),</span> <span class="n">method</span><span class="o">=</span><span class="s1">'linear'</span><span class="p">)</span>
+<span class="n">po_1</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">(</span><span class="n">mesh_centers</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">],</span> <span class="n">porosity_mesh</span><span class="p">,</span> <span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">),</span> <span class="n">method</span><span class="o">=</span><span class="s1">'linear'</span><span class="p">)</span>
+<span class="n">sat_1</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">(</span><span class="n">mesh_centers</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">],</span> <span class="n">saturation</span><span class="p">,</span> <span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">),</span> <span class="n">method</span><span class="o">=</span><span class="s1">'linear'</span><span class="p">)</span>
+
+<span class="n">Vp_high</span><span class="p">,</span> <span class="n">Vp_low</span> <span class="o">=</span> <span class="n">hm_model</span><span class="o">.</span><span class="n">calculate_velocity</span><span class="p">(</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">po_1</span><span class="o">.</span><span class="n">ravel</span><span class="p">()),</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">po_1</span><span class="o">.</span><span class="n">ravel</span><span class="p">()),</span> <span class="mi">100</span><span class="p">),</span>
+    <span class="n">saturation</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">sat_1</span><span class="o">.</span><span class="n">ravel</span><span class="p">()),</span>
+    <span class="n">bulk_modulus</span><span class="o">=</span><span class="n">top_bulk_modulus</span><span class="p">,</span>
+    <span class="n">shear_modulus</span><span class="o">=</span><span class="n">top_shear_modulus</span><span class="p">,</span>
+    <span class="n">mineral_density</span><span class="o">=</span><span class="n">top_mineral_density</span><span class="p">,</span>
+    <span class="n">depth</span><span class="o">=</span><span class="n">top_depth</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">po_1</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">vel_1</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">c</span><span class="o">=</span><span class="n">sat_1</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">vmin</span><span class="o">=</span><span class="mf">0.30</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mf">0.35</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">'Blues'</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">'Regolith'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">'Saturation (-)'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">po_1</span><span class="o">.</span><span class="n">ravel</span><span class="p">()),</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">po_1</span><span class="o">.</span><span class="n">ravel</span><span class="p">()),</span> <span class="mi">100</span><span class="p">),</span>
+         <span class="p">(</span><span class="n">Vp_high</span> <span class="o">+</span> <span class="n">Vp_low</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">'k--'</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">'Hertz–Mindlin model'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">frameon</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">'Porosity (-)'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">'Velocity (m/s)'</span><span class="p">)</span>
+
+<span class="c1"># Third subplot - larger bottom right position (spans 2 columns)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot2grid</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">colspan</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="c1"># Third interpolation</span>
+<span class="n">x1</span><span class="p">,</span> <span class="n">y1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mgrid</span><span class="p">[</span><span class="mi">20</span><span class="p">:</span><span class="mi">20</span><span class="p">:</span><span class="mi">20</span><span class="n">j</span><span class="p">,</span> <span class="mi">1578</span><span class="p">:</span><span class="mi">1609</span><span class="p">:</span><span class="mi">20</span><span class="n">j</span><span class="p">]</span>
+<span class="n">vel_2</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">(</span><span class="n">mesh_centers</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">],</span> <span class="n">velocity_mesh</span><span class="p">,</span> <span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">),</span> <span class="n">method</span><span class="o">=</span><span class="s1">'linear'</span><span class="p">)</span>
+<span class="n">po_2</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">(</span><span class="n">mesh_centers</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">],</span> <span class="n">porosity_mesh</span><span class="p">,</span> <span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">),</span> <span class="n">method</span><span class="o">=</span><span class="s1">'linear'</span><span class="p">)</span>
+<span class="n">sat_2</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">(</span><span class="n">mesh_centers</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">],</span> <span class="n">saturation</span><span class="p">,</span> <span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">),</span> <span class="n">method</span><span class="o">=</span><span class="s1">'linear'</span><span class="p">)</span>
+
+<span class="c1"># Get Vp values using DEM model</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">Vp_minsat</span> <span class="o">=</span> <span class="n">dem_model</span><span class="o">.</span><span class="n">calculate_velocity</span><span class="p">(</span>
+    <span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">po_2</span><span class="o">.</span><span class="n">ravel</span><span class="p">()),</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">po_2</span><span class="o">.</span><span class="n">ravel</span><span class="p">()),</span> <span class="mi">100</span><span class="p">),</span>
+    <span class="n">saturation</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">sat_2</span><span class="o">.</span><span class="n">ravel</span><span class="p">()),</span>
+    <span class="n">bulk_modulus</span><span class="o">=</span><span class="n">mid_bulk_modulus</span><span class="p">,</span>
+    <span class="n">shear_modulus</span><span class="o">=</span><span class="n">mid_shear_modulus</span><span class="p">,</span>
+    <span class="n">mineral_density</span><span class="o">=</span><span class="n">mid_mineral_density</span><span class="p">,</span>
+    <span class="n">aspect_ratio</span><span class="o">=</span><span class="n">mid_aspect_ratio</span>
+<span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">po_2</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">vel_2</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">c</span><span class="o">=</span><span class="n">sat_2</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">'Blues'</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">'Fractured Bedrock'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">po_2</span><span class="o">.</span><span class="n">ravel</span><span class="p">()),</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">po_2</span><span class="o">.</span><span class="n">ravel</span><span class="p">()),</span> <span class="mi">100</span><span class="p">),</span><span class="n">Vp_minsat</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">'DEM Model'</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="s1">'k'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">frameon</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">'Porosity (-)'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">'Velocity (m/s)'</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">'Saturation (-)'</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">"velocity_porosity_saturation.tiff"</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">'tight'</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="petrophysical-relationships-analysis">
+<h2>Petrophysical Relationships Analysis<a class="headerlink" href="#petrophysical-relationships-analysis" title="Link to this heading">#</a></h2>
+<p>Multi-panel analysis validates rock physics models: velocity-depth profile
+(left), Hertz-Mindlin model for regolith showing saturation effects (top right),
+and DEM model for fractured bedrock (bottom right). Theoretical curves match
+computed values, confirming realistic petrophysical transformations.</p>
+<a class="reference internal image-reference" href="../_images/EX_SRT_forward_fig_02.png"><img alt="../_images/EX_SRT_forward_fig_02.png" class="align-center" src="../_images/EX_SRT_forward_fig_02.png" style="width: 800px;" />
+</a>
+<p>%% [markdown]
+## Short distance seismic survey</p>
+<p>################# Seismic data #####################</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create a synthetic seismic data scheme</span>
+<span class="n">xpos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">15</span><span class="o">+</span><span class="mi">72</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span><span class="mi">72</span><span class="p">)</span>
+<span class="n">ypos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">xpos</span><span class="p">,</span><span class="n">interpolator</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span><span class="n">interpolator</span><span class="o">.</span><span class="n">surface_profile</span><span class="p">)</span>
+<span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">xpos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="n">ypos</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)))</span>
+
+<span class="n">numberGeophones</span> <span class="o">=</span> <span class="mi">72</span>
+<span class="n">shotDistance</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">sensors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">15</span> <span class="o">+</span> <span class="mi">72</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">numberGeophones</span><span class="p">)</span>
+<span class="n">scheme</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">traveltime</span><span class="o">.</span><span class="n">createRAData</span><span class="p">(</span><span class="n">sensors</span><span class="p">,</span><span class="n">shotDistance</span><span class="o">=</span><span class="n">shotDistance</span><span class="p">)</span>
+
+
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numberGeophones</span><span class="p">):</span>
+    <span class="n">minusx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">surface</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">sensors</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">minusx</span><span class="p">))</span>
+    <span class="n">new_x</span> <span class="o">=</span> <span class="n">surface</span><span class="p">[</span><span class="n">index</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">new_y</span> <span class="o">=</span> <span class="n">surface</span><span class="p">[</span><span class="n">index</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">pos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_x</span>
+    <span class="n">pos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_y</span>
+
+
+<span class="n">scheme</span><span class="o">.</span><span class="n">setSensors</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+
+
+<span class="n">mgr</span> <span class="o">=</span> <span class="n">TravelTimeManager</span><span class="p">()</span>
+<span class="n">datasrt</span> <span class="o">=</span> <span class="n">mgr</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">slowness</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">velocity_mesh</span><span class="p">,</span> <span class="n">scheme</span><span class="o">=</span><span class="n">scheme</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+                    <span class="n">noiseLevel</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">noiseAbs</span><span class="o">=</span><span class="mf">0.00001</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">1334</span>
+                    <span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">datasrt</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">"synthetic_seismic_data.dat"</span><span class="p">))</span>
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Usage</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="n">drawFirstPicks</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">datasrt</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">"synthetic_seismic_data_first_picks_short.tiff"</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">'tight'</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="short-survey-first-arrival-travel-times">
+<h2>Short Survey First-Arrival Travel Times<a class="headerlink" href="#short-survey-first-arrival-travel-times" title="Link to this heading">#</a></h2>
+<p>The 72-geophone short survey (72m length) provides high-resolution shallow
+imaging with dense ray coverage. First-arrival picks show clear velocity
+layering with direct waves, refracted arrivals, and crossover distances
+indicating velocity interfaces at shallow depths.</p>
+<a class="reference internal image-reference" href="../_images/EX_SRT_forward_fig_03.png"><img alt="../_images/EX_SRT_forward_fig_03.png" class="align-center" src="../_images/EX_SRT_forward_fig_03.png" style="width: 600px;" />
+</a>
+<p>%% [markdown]
+## Long distance seismic survey</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">numberGeophones</span> <span class="o">=</span> <span class="mi">90</span>
+<span class="n">shotDistance</span> <span class="o">=</span> <span class="mi">3</span>
+
+<span class="n">sensors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">110</span><span class="p">,</span> <span class="n">numberGeophones</span><span class="p">)</span>
+
+<span class="n">scheme</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">physics</span><span class="o">.</span><span class="n">traveltime</span><span class="o">.</span><span class="n">createRAData</span><span class="p">(</span><span class="n">sensors</span><span class="p">,</span><span class="n">shotDistance</span><span class="o">=</span><span class="n">shotDistance</span><span class="p">)</span>
+
+<span class="c1"># Adapt sensor positions to slope</span>
+<span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">numberGeophones</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
+
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numberGeophones</span><span class="p">):</span>
+    <span class="n">minusx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">surface</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">sensors</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">minusx</span><span class="p">))</span>
+    <span class="n">new_x</span> <span class="o">=</span> <span class="n">surface</span><span class="p">[</span><span class="n">index</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">new_y</span> <span class="o">=</span> <span class="n">surface</span><span class="p">[</span><span class="n">index</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">pos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_x</span>
+    <span class="n">pos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_y</span>
+
+
+<span class="n">scheme</span><span class="o">.</span><span class="n">setSensors</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">mgr</span> <span class="o">=</span> <span class="n">TravelTimeManager</span><span class="p">()</span>
+<span class="n">datasrt</span> <span class="o">=</span> <span class="n">mgr</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">slowness</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">velocity_mesh</span><span class="p">,</span> <span class="n">scheme</span><span class="o">=</span><span class="n">scheme</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+                    <span class="n">noiseLevel</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">noiseAbs</span><span class="o">=</span><span class="mf">0.00001</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">1334</span>
+                    <span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">datasrt</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">"synthetic_seismic_data_long.dat"</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>## SRT one step from HM to GM</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+
+<span class="c1"># Import PyHydroGeophysX modules</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.interpolation</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProfileInterpolator</span><span class="p">,</span> <span class="n">create_surface_lines</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.mesh_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeshCreator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.Hydro_modular.hydro_to_srt</span><span class="w"> </span><span class="kn">import</span> <span class="n">hydro_to_srt</span>
+
+<span class="c1"># 1. Set up output directory</span>
+<span class="n">output_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">"results"</span><span class="p">,</span> <span class="s2">"srt_example"</span><span class="p">)</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Load your data</span>
+<span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">"data"</span><span class="p">)</span>
+<span class="n">idomain</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"id.txt"</span><span class="p">))</span>
+<span class="n">top</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"top.txt"</span><span class="p">))</span>
+<span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"Porosity.npy"</span><span class="p">))</span>
+<span class="n">water_content</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"Watercontent.npy"</span><span class="p">))[</span><span class="mi">5</span><span class="p">]</span>  <span class="c1"># orignal Time step is 50</span>
+
+<span class="c1"># Set up profile</span>
+<span class="n">point1</span> <span class="o">=</span> <span class="p">[</span><span class="mi">115</span><span class="p">,</span> <span class="mi">70</span><span class="p">]</span>
+<span class="n">point2</span> <span class="o">=</span> <span class="p">[</span><span class="mi">95</span><span class="p">,</span> <span class="mi">180</span><span class="p">]</span>
+
+<span class="n">interpolator</span> <span class="o">=</span> <span class="n">ProfileInterpolator</span><span class="p">(</span>
+    <span class="n">point1</span><span class="o">=</span><span class="n">point1</span><span class="p">,</span>
+    <span class="n">point2</span><span class="o">=</span><span class="n">point2</span><span class="p">,</span>
+    <span class="n">surface_data</span><span class="o">=</span><span class="n">top</span><span class="p">,</span>
+    <span class="n">origin_x</span><span class="o">=</span><span class="mf">569156.0</span><span class="p">,</span>
+    <span class="n">origin_y</span><span class="o">=</span><span class="mf">4842444.0</span><span class="p">,</span>
+    <span class="n">pixel_width</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">pixel_height</span><span class="o">=-</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">num_points</span><span class="o">=</span><span class="mi">400</span>
+<span class="p">)</span>
+
+<span class="c1"># Create mesh structure</span>
+<span class="n">bot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">"bot.npy"</span><span class="p">))</span>
+<span class="n">layer_idx</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">12</span><span class="p">]</span>  <span class="c1"># Example indices for top, middle, and bottom layers</span>
+<span class="n">structure</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_layer_data</span><span class="p">([</span><span class="n">top</span><span class="p">]</span> <span class="o">+</span> <span class="n">bot</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+<span class="n">surface</span><span class="p">,</span> <span class="n">line1</span><span class="p">,</span> <span class="n">line2</span> <span class="o">=</span> <span class="n">create_surface_lines</span><span class="p">(</span>
+    <span class="n">L_profile</span><span class="o">=</span><span class="n">interpolator</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span>
+    <span class="n">structure</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span>
+    <span class="n">top_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+    <span class="n">mid_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+    <span class="n">bot_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+<span class="p">)</span>
+
+<span class="c1"># Create mesh</span>
+<span class="n">mesh_creator</span> <span class="o">=</span> <span class="n">MeshCreator</span><span class="p">(</span><span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+<span class="n">mesh</span><span class="p">,</span> <span class="n">geom</span> <span class="o">=</span> <span class="n">mesh_creator</span><span class="o">.</span><span class="n">create_from_layers</span><span class="p">(</span>
+    <span class="n">surface</span><span class="o">=</span><span class="n">surface</span><span class="p">,</span>
+    <span class="n">layers</span><span class="o">=</span><span class="p">[</span><span class="n">line1</span><span class="p">,</span> <span class="n">line2</span><span class="p">],</span>
+    <span class="n">bottom_depth</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">line2</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])</span><span class="o">-</span><span class="mi">10</span>
+<span class="p">)</span>
+
+<span class="c1"># Define layer markers</span>
+<span class="n">marker_labels</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>  <span class="c1"># top, middle, bottom layers</span>
+
+<span class="c1"># Rock physics parameters for each layer</span>
+<span class="n">vel_parameters</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">'top'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'bulk_modulus'</span><span class="p">:</span> <span class="mf">30.0</span><span class="p">,</span>         <span class="c1"># GPa</span>
+        <span class="s1">'shear_modulus'</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">,</span>        <span class="c1"># GPa</span>
+        <span class="s1">'mineral_density'</span><span class="p">:</span> <span class="mi">2650</span><span class="p">,</span>      <span class="c1"># kg/m³</span>
+        <span class="s1">'depth'</span><span class="p">:</span> <span class="mf">1.0</span>                  <span class="c1"># m</span>
+    <span class="p">},</span>
+    <span class="s1">'mid'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'bulk_modulus'</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>         <span class="c1"># GPa</span>
+        <span class="s1">'shear_modulus'</span><span class="p">:</span> <span class="mf">35.0</span><span class="p">,</span>        <span class="c1"># GPa</span>
+        <span class="s1">'mineral_density'</span><span class="p">:</span> <span class="mi">2670</span><span class="p">,</span>      <span class="c1"># kg/m³</span>
+        <span class="s1">'aspect_ratio'</span><span class="p">:</span> <span class="mf">0.05</span>          <span class="c1"># Crack aspect ratio</span>
+    <span class="p">},</span>
+    <span class="s1">'bot'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'bulk_modulus'</span><span class="p">:</span> <span class="mf">55.0</span><span class="p">,</span>         <span class="c1"># GPa</span>
+        <span class="s1">'shear_modulus'</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">,</span>        <span class="c1"># GPa</span>
+        <span class="s1">'mineral_density'</span><span class="p">:</span> <span class="mi">2680</span><span class="p">,</span>      <span class="c1"># kg/m³</span>
+        <span class="s1">'aspect_ratio'</span><span class="p">:</span> <span class="mf">0.03</span>          <span class="c1"># Crack aspect ratio</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="n">mesh_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">())</span>
+<span class="c1"># 13. Now we call hydro_to_srt with the pre-processed mesh values</span>
+<span class="n">synth_data</span><span class="p">,</span> <span class="n">velocity_mesh</span> <span class="o">=</span> <span class="n">hydro_to_srt</span><span class="p">(</span>
+    <span class="n">water_content</span><span class="o">=</span><span class="n">water_content</span><span class="p">,</span>           <span class="c1"># Use pre-interpolated mesh values</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">porosity</span><span class="p">,</span>          <span class="c1"># Use pre-interpolated mesh values</span>
+    <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span>
+    <span class="n">profile_interpolator</span><span class="o">=</span><span class="n">interpolator</span><span class="p">,</span>
+    <span class="n">layer_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">,</span>
+    <span class="n">structure</span> <span class="o">=</span> <span class="n">structure</span><span class="p">,</span>
+    <span class="n">marker_labels</span><span class="o">=</span><span class="n">marker_labels</span><span class="p">,</span>
+    <span class="n">vel_parameters</span><span class="o">=</span><span class="n">vel_parameters</span><span class="p">,</span>
+    <span class="n">sensor_spacing</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">sensor_start</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>
+    <span class="n">num_sensors</span><span class="o">=</span><span class="mi">72</span><span class="p">,</span>
+    <span class="n">shot_distance</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">noise_level</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">noise_abs</span><span class="o">=</span><span class="mf">0.00001</span><span class="p">,</span>
+    <span class="n">save_path</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">seismic_data_dir</span><span class="p">,</span> <span class="s2">"synthetic_seismic_data.dat"</span><span class="p">),</span>
+    <span class="n">mesh_markers</span><span class="o">=</span><span class="n">mesh_markers</span><span class="p">,</span>       <span class="c1"># Pass the mesh markers directly</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">seed</span><span class="o">=</span><span class="mi">1334</span>
+<span class="p">)</span>
+
+<span class="c1"># 14. Visualize the results</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.forward.srt_forward</span><span class="w"> </span><span class="kn">import</span> <span class="n">SeismicForwardModeling</span>
+
+<span class="c1"># Create a figure</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+
+<span class="c1"># Plot velocity model</span>
+<span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">velocity_mesh</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cMap</span><span class="o">=</span><span class="s1">'jet'</span><span class="p">,</span>
+        <span class="n">cMin</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">'Velocity (m/s)'</span><span class="p">,</span>
+        <span class="n">xlabel</span><span class="o">=</span><span class="s2">"Distance (m)"</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">"Elevation (m)"</span><span class="p">)</span>
+
+<span class="c1"># Plot first-arrival travel times</span>
+<span class="n">SeismicForwardModeling</span><span class="o">.</span><span class="n">draw_first_picks</span><span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">synth_data</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">'Synthetic First-Arrival Travel Times'</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="one-step-integrated-workflow-results">
+<h2>One-Step Integrated Workflow Results<a class="headerlink" href="#one-step-integrated-workflow-results" title="Link to this heading">#</a></h2>
+<p>The integrated hydro-to-seismic workflow produces consistent results: velocity
+model (top) shows realistic layering from petrophysical conversion, while
+synthetic travel times (bottom) exhibit clear refraction patterns suitable
+for tomographic inversion and interface extraction.</p>
+<a class="reference internal image-reference" href="../_images/EX_SRT_forward_fig_05.png"><img alt="../_images/EX_SRT_forward_fig_05.png" class="align-center" src="../_images/EX_SRT_forward_fig_05.png" style="width: 800px;" />
+</a>
+</section>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Link to this heading">#</a></h2>
+<p>This workflow demonstrated complete seismic forward modeling from hydrological
+inputs to synthetic measurements. Key achievements include realistic velocity
+models from rock physics, multi-scale survey design, and integrated
+hydro-geophysical workflows suitable for watershed monitoring applications.</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-ex-srt-forward-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/2289a12d9de6380c2715aebefa2e227b/EX_SRT_forward.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">EX_SRT_forward.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/8fe41bbbfd8a53a129ba0b4a4b34e2c4/EX_SRT_forward.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">EX_SRT_forward.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/6aefaabbb6eaf1b0fbae7ff67a7f9410/EX_SRT_forward.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">EX_SRT_forward.zip</span></code></a></p>
+</div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="Ex_hydro_to_multigeophys.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Hydrology to Multi-Geophysics Responses</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="Ex_Time_lapse_measurement.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Ex. Creating Synthetic Time-Lapse ERT Measurements</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#p-wave-velocity-model-from-petrophysical-conversion">P-Wave Velocity Model from Petrophysical Conversion</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#petrophysical-relationships-analysis">Petrophysical Relationships Analysis</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#short-survey-first-arrival-travel-times">Short Survey First-Arrival Travel Times</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-step-integrated-workflow-results">One-Step Integrated Workflow Results</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#summary">Summary</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/auto_examples/EX_SRT_forward.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/auto_examples/EX_SRT_forward.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

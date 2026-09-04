@@ -1,0 +1,788 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Agent Web App &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'agents/webapp';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/agents/webapp.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Desktop Studio (Qt)" href="desktop_studio.html" />
+    <link rel="prev" title="Agents, Web App and Desktop" href="index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Agent Web App</a></li>
+<li class="toctree-l1"><a class="reference internal" href="desktop_studio.html">Desktop Studio (Qt)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quick_start.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="workflows.html">Common Workflow Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="agent_reference.html">Agent Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">System Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">System Architecture</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Agents, Web App and Desktop</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Agent Web App</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="agent-web-app">
+<h1>Agent Web App<a class="headerlink" href="#agent-web-app" title="Link to this heading">#</a></h1>
+<p>PyHydroGeophysX ships two interactive Streamlit applications:</p>
+<ol class="arabic simple">
+<li><p><strong>Geophysics Workflow App</strong> – natural-language orchestration of ERT/SRT/TDEM/FDEM workflows.</p></li>
+<li><p><strong>3D Mesh Builder</strong> – graphical tool for building and exporting 3D ERT meshes (new in v0.3).</p></li>
+</ol>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Prefer a native desktop app? The <a class="reference internal" href="desktop_studio.html"><span class="doc">Qt Desktop Studio</span></a> is
+available as a downloadable Windows / macOS application (a small <em>light</em> build and a
+<em>full</em> build with the geophysics engines included).</p>
+<p><span class="sd-d-grid"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-secondary reference external" href="https://github.com/geohang/PyHydroGeophysX/releases/latest"><span>Download the Desktop Studio (Windows / macOS)</span></a></span></p>
+</div>
+<nav class="contents local" id="on-this-page">
+<p class="topic-title">On this page</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#geophysics-workflow-app" id="id3">Geophysics Workflow App</a></p></li>
+<li><p><a class="reference internal" href="#d-mesh-builder-app" id="id4">3D Mesh Builder App</a></p></li>
+</ul>
+</nav>
+<section id="geophysics-workflow-app">
+<h2><a class="toc-backref" href="#id3" role="doc-backlink">Geophysics Workflow App</a><a class="headerlink" href="#geophysics-workflow-app" title="Link to this heading">#</a></h2>
+<section id="open-the-app">
+<h3>Open the App<a class="headerlink" href="#open-the-app" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Live URL: <a class="reference external" href="https://pyhydrogeophysx.streamlit.app/">https://pyhydrogeophysx.streamlit.app/</a></p></li>
+<li><p>Local script: <code class="docutils literal notranslate"><span class="pre">examples/app_geophysics_workflow.py</span></code></p></li>
+<li><p>Local launcher: <code class="docutils literal notranslate"><span class="pre">pyhydrogeophysx-gui</span></code></p></li>
+</ul>
+<p><span class="sd-d-grid"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-primary reference external" href="https://pyhydrogeophysx.streamlit.app/"><span>Launch PyHydroGeophysX Agent Web App</span></a></span></p>
+</section>
+<section id="what-it-does">
+<h3>What It Does<a class="headerlink" href="#what-it-does" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Starts in demo mode with bundled cached ERT and joint ERT+SRT results — no API
+key required for a first click-through.</p></li>
+<li><p>Collects workflow goals and optional context in natural language.</p></li>
+<li><p>Shows the parsed configuration for review before running on user data.</p></li>
+<li><p>Shows an estimated LLM cost in the sidebar when the live LLM path is used.</p></li>
+<li><p>Routes tasks to agent pipelines for ERT, SRT, TDEM, FDEM, and conversion workflows.</p></li>
+<li><p>Provides a local raw SEG-Y processing panel for shot-gather preview, assisted
+first-break picking, travel-time export, and SRT inversion.</p></li>
+<li><p>Supports multi-method orchestration through <code class="docutils literal notranslate"><span class="pre">DataFusionAgent</span></code>.</p></li>
+<li><p>Supports joint ERT+SRT workflows where compatible inputs are provided.</p></li>
+<li><p>Produces intermediate artifacts and workflow reports where available.</p></li>
+</ul>
+</section>
+<section id="required-inputs">
+<h3>Required Inputs<a class="headerlink" href="#required-inputs" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>A clear task prompt (for example, “run a time-lapse ERT inversion”).</p></li>
+<li><p>Paths or uploaded references to required survey/model files.</p></li>
+<li><p>For joint inversion: both ERT and SRT datasets for the same profile/domain.</p></li>
+<li><p>Optional provider credentials when you want LLM-backed interpretation.</p></li>
+</ul>
+</section>
+<section id="limitations-and-notes">
+<h3>Limitations and Notes<a class="headerlink" href="#limitations-and-notes" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Uploaded data quality and schema consistency still control result quality.</p></li>
+<li><p>Some workflows require optional dependencies (for example <code class="docutils literal notranslate"><span class="pre">pygimli</span></code> or SimPEG).</p></li>
+<li><p>Joint inversion expects physically consistent survey geometry across methods.</p></li>
+<li><p>LLM-generated recommendations should be reviewed before production decisions.</p></li>
+<li><p>For common failure modes and fixes, see <a class="reference internal" href="troubleshooting.html"><span class="doc">Troubleshooting</span></a>.</p></li>
+</ul>
+</section>
+</section>
+<section id="d-mesh-builder-app">
+<h2><a class="toc-backref" href="#id4" role="doc-backlink">3D Mesh Builder App</a><a class="headerlink" href="#d-mesh-builder-app" title="Link to this heading">#</a></h2>
+<p>The 3D Mesh Builder is a standalone Streamlit app for interactively configuring
+and exporting tetrahedral meshes for ERT forward modeling and inversion.</p>
+<section id="id1">
+<h3>Open the App<a class="headerlink" href="#id1" title="Link to this heading">#</a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Recommended: via the package launcher</span>
+python<span class="w"> </span>-m<span class="w"> </span>PyHydroGeophysX.gui_mesh3d
+
+<span class="c1"># Or directly with Streamlit</span>
+streamlit<span class="w"> </span>run<span class="w"> </span>examples/app_mesh3d.py
+</pre></div>
+</div>
+</section>
+<section id="id2">
+<h3>What It Does<a class="headerlink" href="#id2" title="Link to this heading">#</a></h3>
+<p>The app is organized into three tabs:</p>
+<dl>
+<dt><strong>Electrode View</strong></dt><dd><p>Visualizes electrode positions in an interactive 3D scatter plot (Plotly).
+Supports three array configurations:</p>
+<ul class="simple">
+<li><p><em>Surface Grid</em> — rectangular grid of surface electrodes.</p></li>
+<li><p><em>Borehole</em> — single vertical borehole electrode string.</p></li>
+<li><p><em>Crosshole</em> — two parallel boreholes for crosshole tomography.</p></li>
+</ul>
+<p>Four topography types are available: Flat, Linear Tilt, Gaussian Hill, and
+Custom Expression (any valid Python/NumPy expression using <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">y</span></code>).</p>
+</dd>
+<dt><strong>Generate Mesh</strong></dt><dd><p>Runs <code class="docutils literal notranslate"><span class="pre">Mesh3DCreator</span></code> from <code class="docutils literal notranslate"><span class="pre">PyHydroGeophysX.core.mesh_3d</span></code> with the configured
+parameters. Mesh statistics (cell count, node count, quality histogram) are
+displayed inline after generation.</p>
+</dd>
+<dt><strong>Export</strong></dt><dd><p>Downloads the generated mesh as:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">.bms</span></code> — native PyGIMLi binary mesh format.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.vtk</span></code> — VTK format for ParaView or other 3D visualizers.</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="sidebar-controls">
+<h3>Sidebar Controls<a class="headerlink" href="#sidebar-controls" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Control</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Mesh Type</p></td>
+<td><p>surface or volume</p></td>
+</tr>
+<tr class="row-odd"><td><p>Electrode Array Type</p></td>
+<td><p>Surface Grid / Borehole / Crosshole</p></td>
+</tr>
+<tr class="row-even"><td><p>Grid Nx / Ny</p></td>
+<td><p>Number of electrodes along each axis</p></td>
+</tr>
+<tr class="row-odd"><td><p>Electrode Spacing (m)</p></td>
+<td><p>Uniform spacing between adjacent electrodes</p></td>
+</tr>
+<tr class="row-even"><td><p>Topography Type</p></td>
+<td><p>Flat / Linear Tilt / Gaussian Hill / Custom</p></td>
+</tr>
+<tr class="row-odd"><td><p>Max Mesh Cell Size</p></td>
+<td><p>Controls resolution (smaller = finer mesh)</p></td>
+</tr>
+<tr class="row-even"><td><p>Mesh Depth (m)</p></td>
+<td><p>Vertical extent of the mesh below surface</p></td>
+</tr>
+<tr class="row-odd"><td><p>Output Filename</p></td>
+<td><p>Base name for exported files</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="step-by-step-build-a-surface-ert-mesh">
+<h3>Step-by-Step: Build a Surface ERT Mesh<a class="headerlink" href="#step-by-step-build-a-surface-ert-mesh" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p>Launch the app: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">PyHydroGeophysX.gui_mesh3d</span></code></p></li>
+<li><p>In the sidebar, choose <strong>Surface Grid</strong> as the Electrode Array Type.</p></li>
+<li><p>Set <strong>Grid Nx = 10</strong>, <strong>Grid Ny = 5</strong>, <strong>Spacing = 5 m</strong>.</p></li>
+<li><p>Choose <strong>Linear Tilt</strong> topography to simulate sloping terrain.</p></li>
+<li><p>Click the <strong>Electrode View</strong> tab to verify the electrode positions in 3D.</p></li>
+<li><p>Click <strong>Generate Mesh</strong> tab, then press <strong>Generate 3D Mesh</strong>.</p></li>
+<li><p>Inspect cell count and quality histogram shown below the mesh summary.</p></li>
+<li><p>Click <strong>Export</strong> tab and download as <code class="docutils literal notranslate"><span class="pre">.bms</span></code> or <code class="docutils literal notranslate"><span class="pre">.vtk</span></code>.</p></li>
+</ol>
+</section>
+<section id="step-by-step-build-a-crosshole-mesh">
+<h3>Step-by-Step: Build a Crosshole Mesh<a class="headerlink" href="#step-by-step-build-a-crosshole-mesh" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p>Launch the app: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">PyHydroGeophysX.gui_mesh3d</span></code></p></li>
+<li><p>Choose <strong>Crosshole</strong> array type; set borehole depth and electrode spacing.</p></li>
+<li><p>Adjust <strong>Max Mesh Cell Size</strong> (start with 2.0 m for a fast first mesh).</p></li>
+<li><p>Click <strong>Electrode View</strong> to confirm both borehole strings.</p></li>
+<li><p>Generate and export as <code class="docutils literal notranslate"><span class="pre">.bms</span></code> for use with PyGIMLi crosshole inversion.</p></li>
+</ol>
+</section>
+<section id="requirements">
+<h3>Requirements<a class="headerlink" href="#requirements" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">PyHydroGeophysX</span></code> package with the <code class="docutils literal notranslate"><span class="pre">core.mesh_3d</span></code> module.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pygimli</span></code> for mesh generation (<code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">-c</span> <span class="pre">gimli</span> <span class="pre">pygimli</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gmsh</span></code> on PATH for tetrahedral meshing.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">plotly</span></code> for 3D electrode visualization (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">plotly</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">streamlit</span></code> (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">streamlit</span></code>).</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Agents, Web App and Desktop</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="desktop_studio.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Desktop Studio (Qt)</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#geophysics-workflow-app">Geophysics Workflow App</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#open-the-app">Open the App</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-it-does">What It Does</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#required-inputs">Required Inputs</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#limitations-and-notes">Limitations and Notes</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#d-mesh-builder-app">3D Mesh Builder App</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Open the App</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">What It Does</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sidebar-controls">Sidebar Controls</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-by-step-build-a-surface-ert-mesh">Step-by-Step: Build a Surface ERT Mesh</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-by-step-build-a-crosshole-mesh">Step-by-Step: Build a Crosshole Mesh</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#requirements">Requirements</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/agents/webapp.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/agents/webapp.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

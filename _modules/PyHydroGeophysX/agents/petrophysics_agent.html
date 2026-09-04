@@ -1,0 +1,1137 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.agents.petrophysics_agent &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/agents/petrophysics_agent';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/agents/petrophysics_agent.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../../PyHydroGeophysX.html" class="nav-link">PyHydroGeophysX</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.agents.petrophysics_agent</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.agents.petrophysics_agent</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""</span>
+<span class="sd">Petrophysics Agent</span>
+
+<span class="sd">Converts resistivity models to hydrological properties (water content, saturation, porosity)</span>
+<span class="sd">using structure-constrained petrophysical models with Monte Carlo uncertainty quantification.</span>
+<span class="sd">Implements the workflow from Ex_MC_Hydro.py.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.base_agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseAgent</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Petrophysics Agent</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="PetrophysicsAgent">
+<a class="viewcode-back" href="../../../api/agents.html#PyHydroGeophysX.agents.petrophysics_agent.PetrophysicsAgent">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">PetrophysicsAgent</span><span class="p">(</span><span class="n">BaseAgent</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Agent for converting resistivity to hydrological properties with uncertainty.</span>
+<span class="sd">    </span>
+<span class="sd">    This agent uses Archie's law and modified petrophysical models to convert</span>
+<span class="sd">    resistivity to water content, incorporating:</span>
+<span class="sd">    - Layer-specific parameters from structural constraints</span>
+<span class="sd">    - Monte Carlo uncertainty quantification</span>
+<span class="sd">    - Surface conductivity effects in clay-rich materials</span>
+<span class="sd">    """</span>
+    
+    <span class="c1"># Default parameter distributions for common geological layers</span>
+    <span class="n">DEFAULT_LAYER_PARAMS</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">'regolith'</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">'m'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="mf">1.3</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">},</span>
+            <span class="s1">'n'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="mf">2.1</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">},</span>
+            <span class="s1">'sigma_sur'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">200</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">200</span><span class="p">},</span>
+            <span class="s1">'porosity'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="mf">0.42</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">},</span>
+            <span class="s1">'rho_fluid'</span><span class="p">:</span> <span class="mf">20.0</span>
+        <span class="p">},</span>
+        <span class="s1">'bedrock'</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">'m'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="mf">1.9</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">},</span>
+            <span class="s1">'n'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="mf">1.7</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">},</span>
+            <span class="s1">'sigma_sur'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">},</span>
+            <span class="s1">'porosity'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="mf">0.15</span><span class="p">},</span>
+            <span class="s1">'rho_fluid'</span><span class="p">:</span> <span class="mf">20.0</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">api_key</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">llm_provider</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"openai"</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Initialize Petrophysics Agent."""</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">"petrophysics"</span><span class="p">,</span> <span class="n">api_key</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">llm_provider</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">system_message</span> <span class="o">=</span> <span class="s2">"""You are an expert in petrophysical modeling and hydrogeophysics.</span>
+<span class="s2">You understand how to convert electrical resistivity to water content using Archie's law</span>
+<span class="s2">and modified petrophysical relationships. You can recommend appropriate parameters for</span>
+<span class="s2">different geological materials and quantify uncertainties."""</span>
+    
+<div class="viewcode-block" id="PetrophysicsAgent.execute">
+<a class="viewcode-back" href="../../../api/agents.html#PyHydroGeophysX.agents.petrophysics_agent.PetrophysicsAgent.execute">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Convert resistivity to water content with uncertainty quantification.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            input_data: Dictionary containing:</span>
+<span class="sd">                - resistivity_model: Resistivity values (can be 1D or 2D for time-lapse)</span>
+<span class="sd">                - mesh: PyGIMLI mesh with cell markers</span>
+<span class="sd">                - cell_markers: Array identifying geological layers</span>
+<span class="sd">                - layer_params: Dictionary of parameters for each layer (optional)</span>
+<span class="sd">                - n_realizations: Number of Monte Carlo samples (default: 100)</span>
+<span class="sd">                - output_dir: Directory for saving results</span>
+<span class="sd">                </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary containing water content statistics and uncertainty</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Starting petrophysical conversion with uncertainty analysis"</span><span class="p">)</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics.resistivity_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">resistivity_to_saturation</span>
+
+            <span class="c1"># Extract parameters</span>
+            <span class="n">resistivity_model</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'resistivity_model'</span><span class="p">)</span>
+            <span class="n">mesh</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'mesh'</span><span class="p">)</span>
+            <span class="n">cell_markers</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'cell_markers'</span><span class="p">)</span>
+            <span class="n">layer_params</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'layer_params'</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="c1"># Normalize legacy key name</span>
+            <span class="n">petrophysical_params</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'petrophysical_params'</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'petrophysical_parameters'</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">geological_context</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'geological_context'</span><span class="p">,</span> <span class="s1">'generic'</span><span class="p">)</span>
+            <span class="n">n_realizations</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'n_realizations'</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+            <span class="n">seed</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'seed'</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+            <span class="n">output_dir</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'output_dir'</span><span class="p">,</span> <span class="s1">'results/petrophysics'</span><span class="p">)</span>
+            
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">resistivity_model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"resistivity_model is required"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">cell_markers</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"cell_markers is required"</span><span class="p">)</span>
+            
+            <span class="c1"># Ensure resistivity_model is 2D (cells × timesteps)</span>
+            <span class="n">resistivity_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">resistivity_array</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">resistivity_array</span> <span class="o">=</span> <span class="n">resistivity_array</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            
+            <span class="n">n_cells</span><span class="p">,</span> <span class="n">n_timesteps</span> <span class="o">=</span> <span class="n">resistivity_array</span><span class="o">.</span><span class="n">shape</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Processing </span><span class="si">{</span><span class="n">n_cells</span><span class="si">}</span><span class="s2"> cells, </span><span class="si">{</span><span class="n">n_timesteps</span><span class="si">}</span><span class="s2"> time step(s)"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Monte Carlo realizations: </span><span class="si">{</span><span class="n">n_realizations</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            
+            <span class="c1"># Check if cell_markers need simplification (too many unique markers)</span>
+            <span class="n">unique_layers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">cell_markers</span><span class="p">)</span>
+            <span class="n">n_unique</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_layers</span><span class="p">)</span>
+            
+            <span class="c1"># If too many unique markers (each cell has unique marker), treat as single layer</span>
+            <span class="k">if</span> <span class="n">n_unique</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Too many unique markers (</span><span class="si">{</span><span class="n">n_unique</span><span class="si">}</span><span class="s2">), treating as single layer"</span><span class="p">)</span>
+                <span class="n">cell_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_cells</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+                <span class="n">unique_layers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Created single-layer model"</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">unique_layers</span><span class="p">)</span><span class="si">}</span><span class="s2"> geological layers: </span><span class="si">{</span><span class="n">unique_layers</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            
+            <span class="c1"># Determine information level for uncertainty scaling</span>
+            <span class="c1"># If layer_params are provided (from natural language), that's high information</span>
+            <span class="k">if</span> <span class="n">layer_params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">layer_params</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">info_level</span> <span class="o">=</span> <span class="s1">'high'</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Layer-specific parameters provided: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">layer_params</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">info_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_assess_information_level</span><span class="p">(</span><span class="n">geological_context</span><span class="p">,</span> <span class="n">petrophysical_params</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Information level: </span><span class="si">{</span><span class="n">info_level</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            
+            <span class="c1"># Get layer parameters</span>
+            <span class="k">if</span> <span class="n">layer_params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Generating layer parameters based on available information"</span><span class="p">)</span>
+                <span class="n">layer_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_layer_params_with_uncertainty</span><span class="p">(</span>
+                    <span class="n">cell_markers</span><span class="p">,</span> 
+                    <span class="n">info_level</span><span class="p">,</span>
+                    <span class="n">petrophysical_params</span><span class="p">,</span>
+                    <span class="n">geological_context</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Convert named layer parameters to numeric IDs if needed</span>
+                <span class="n">layer_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_named_to_numeric_params</span><span class="p">(</span>
+                    <span class="n">layer_params</span><span class="p">,</span> 
+                    <span class="n">unique_layers</span><span class="p">,</span>
+                    <span class="n">info_level</span>
+                <span class="p">)</span>
+            
+            <span class="c1"># Get LLM recommendations if available</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span> <span class="ow">and</span> <span class="n">petrophysical_params</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s1">'generic'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">geological_context</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Requesting LLM recommendations for petrophysical parameters"</span><span class="p">)</span>
+                <span class="n">llm_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_recommended_params</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">,</span> <span class="n">cell_markers</span><span class="p">,</span> <span class="n">geological_context</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">llm_params</span><span class="p">:</span>
+                    <span class="n">layer_params</span> <span class="o">=</span> <span class="n">llm_params</span>
+            
+            <span class="c1"># Monte Carlo simulation</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Starting Monte Carlo simulation..."</span><span class="p">)</span>
+            <span class="n">mc_results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_monte_carlo</span><span class="p">(</span>
+                <span class="n">resistivity_array</span><span class="p">,</span>
+                <span class="n">cell_markers</span><span class="p">,</span>
+                <span class="n">layer_params</span><span class="p">,</span>
+                <span class="n">n_realizations</span><span class="p">,</span>
+                <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
+            <span class="p">)</span>
+            
+            <span class="c1"># Calculate statistics</span>
+            <span class="n">water_content_all</span> <span class="o">=</span> <span class="n">mc_results</span><span class="p">[</span><span class="s1">'water_content_all'</span><span class="p">]</span>
+            <span class="n">saturation_all</span> <span class="o">=</span> <span class="n">mc_results</span><span class="p">[</span><span class="s1">'saturation_all'</span><span class="p">]</span>
+            
+            <span class="n">water_content_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">water_content_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">water_content_p10</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">water_content_p50</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">water_content_p90</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">water_content_all</span><span class="p">,</span> <span class="mi">90</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            
+            <span class="n">saturation_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">saturation_all</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">saturation_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">saturation_all</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Monte Carlo simulation completed"</span><span class="p">)</span>
+            
+            <span class="c1"># Save results</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'water_content_mean.npy'</span><span class="p">),</span> <span class="n">water_content_mean</span><span class="p">)</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'water_content_std.npy'</span><span class="p">),</span> <span class="n">water_content_std</span><span class="p">)</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'saturation_mean.npy'</span><span class="p">),</span> <span class="n">saturation_mean</span><span class="p">)</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'saturation_std.npy'</span><span class="p">),</span> <span class="n">saturation_std</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Results saved to disk"</span><span class="p">)</span>
+            
+            <span class="c1"># Get LLM interpretation</span>
+            <span class="n">interpretation</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Generating interpretation of petrophysical results"</span><span class="p">)</span>
+                <span class="n">interpretation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interpret_results</span><span class="p">(</span>
+                    <span class="n">water_content_mean</span><span class="p">,</span>
+                    <span class="n">water_content_std</span><span class="p">,</span>
+                    <span class="n">layer_params</span><span class="p">,</span>
+                    <span class="n">cell_markers</span>
+                <span class="p">)</span>
+            
+            <span class="c1"># Calculate statistics</span>
+            <span class="n">wc_mean_overall</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">water_content_mean</span><span class="p">)</span>
+            <span class="n">wc_std_overall</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">water_content_std</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">'status'</span><span class="p">:</span> <span class="s1">'success'</span><span class="p">,</span>
+                <span class="s1">'water_content_mean'</span><span class="p">:</span> <span class="n">water_content_mean</span><span class="p">,</span>
+                <span class="s1">'water_content_std'</span><span class="p">:</span> <span class="n">water_content_std</span><span class="p">,</span>
+                <span class="s1">'water_content_p10'</span><span class="p">:</span> <span class="n">water_content_p10</span><span class="p">,</span>
+                <span class="s1">'water_content_p50'</span><span class="p">:</span> <span class="n">water_content_p50</span><span class="p">,</span>
+                <span class="s1">'water_content_p90'</span><span class="p">:</span> <span class="n">water_content_p90</span><span class="p">,</span>
+                <span class="s1">'saturation_mean'</span><span class="p">:</span> <span class="n">saturation_mean</span><span class="p">,</span>
+                <span class="s1">'saturation_std'</span><span class="p">:</span> <span class="n">saturation_std</span><span class="p">,</span>
+                <span class="s1">'cell_markers'</span><span class="p">:</span> <span class="n">cell_markers</span><span class="p">,</span>  <span class="c1"># Include the markers used for layer-specific analysis</span>
+                <span class="s1">'layer_params'</span><span class="p">:</span> <span class="n">layer_params</span><span class="p">,</span>
+                <span class="s1">'layer_params_used'</span><span class="p">:</span> <span class="n">layer_params</span><span class="p">,</span>
+                <span class="s1">'petrophysical_params'</span><span class="p">:</span> <span class="n">petrophysical_params</span> <span class="ow">or</span> <span class="p">{},</span>
+                <span class="s1">'params_used'</span><span class="p">:</span> <span class="n">mc_results</span><span class="p">[</span><span class="s1">'params_used'</span><span class="p">],</span>
+                <span class="s1">'statistics'</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s1">'mean_water_content'</span><span class="p">:</span> <span class="n">wc_mean_overall</span><span class="p">,</span>
+                    <span class="s1">'mean_uncertainty'</span><span class="p">:</span> <span class="n">wc_std_overall</span><span class="p">,</span>
+                    <span class="s1">'wc_range'</span><span class="p">:</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">water_content_mean</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">water_content_mean</span><span class="p">)],</span>
+                    <span class="s1">'n_realizations'</span><span class="p">:</span> <span class="n">n_realizations</span><span class="p">,</span>
+                    <span class="s1">'n_layers'</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_layers</span><span class="p">)</span>
+                <span class="p">},</span>
+                <span class="s1">'interpretation'</span><span class="p">:</span> <span class="n">interpretation</span><span class="p">,</span>
+                <span class="s1">'output_dir'</span><span class="p">:</span> <span class="n">output_dir</span>
+            <span class="p">}</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Water content range: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="s1">'statistics'</span><span class="p">][</span><span class="s1">'wc_range'</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> - "</span>
+                              <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="s1">'statistics'</span><span class="p">][</span><span class="s1">'wc_range'</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Mean uncertainty: </span><span class="si">{</span><span class="n">wc_std_overall</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span>
+            
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Error during petrophysical conversion: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s1">'ERROR'</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">'status'</span><span class="p">:</span> <span class="s1">'failed'</span><span class="p">,</span>
+                <span class="s1">'error'</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+            <span class="p">}</span>
+            <span class="k">raise</span></div>
+
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_default_layer_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cell_markers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Get default parameters based on cell markers.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            cell_markers: Array of layer markers</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary of layer parameters</span>
+<span class="sd">        """</span>
+        <span class="n">unique_layers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">cell_markers</span><span class="p">)</span>
+        <span class="n">layer_params</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">layer_id</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">unique_layers</span><span class="p">):</span>
+            <span class="c1"># Use regolith params for top layer, bedrock for others</span>
+            <span class="n">template</span> <span class="o">=</span> <span class="s1">'regolith'</span> <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s1">'bedrock'</span>
+            <span class="n">layer_params</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">layer_id</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT_LAYER_PARAMS</span><span class="p">[</span><span class="n">template</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">layer_params</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_assess_information_level</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geological_context</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> 
+                                   <span class="n">petrophysical_params</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Assess the level of information available for parameter estimation.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            geological_context: Description of geological context</span>
+<span class="sd">            petrophysical_params: Explicit petrophysical measurements</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            'high', 'medium', or 'low' information level</span>
+<span class="sd">        """</span>
+        <span class="c1"># Log what we received for debugging</span>
+        <span class="n">has_petro_params</span> <span class="o">=</span> <span class="n">petrophysical_params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">petrophysical_params</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Petrophysical params provided: </span><span class="si">{</span><span class="n">has_petro_params</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">has_petro_params</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Parameters: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">petrophysical_params</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">has_petro_params</span><span class="p">:</span>
+            <span class="c1"># Explicit field measurements provided - highest confidence</span>
+            <span class="k">return</span> <span class="s1">'high'</span>
+        <span class="k">elif</span> <span class="n">geological_context</span> <span class="ow">and</span> <span class="s1">'generic'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">geological_context</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="c1"># Geological description provided - medium confidence</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">geological_context</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">50</span><span class="p">:</span>  <span class="c1"># Detailed description</span>
+                <span class="k">return</span> <span class="s1">'medium'</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s1">'low'</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Minimal information - lowest confidence, highest uncertainty</span>
+            <span class="k">return</span> <span class="s1">'low'</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_convert_named_to_numeric_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer_params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> 
+                                        <span class="n">unique_layers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                                        <span class="n">info_level</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Convert named layer parameters (e.g., 'regolith', 'fractured_bedrock') </span>
+<span class="sd">        to numeric layer IDs with proper uncertainty structure.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            layer_params: Dictionary with named layer keys (e.g., {'regolith': {...}, 'fractured_bedrock': {...}})</span>
+<span class="sd">            unique_layers: Array of numeric layer IDs from cell markers</span>
+<span class="sd">            info_level: Information level for uncertainty scaling</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary with numeric layer IDs as keys</span>
+<span class="sd">        """</span>
+        <span class="c1"># Check if already numeric</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">))</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">layer_params</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="k">return</span> <span class="n">layer_params</span>
+        
+        <span class="c1"># Mapping for named layers to expected markers</span>
+        <span class="c1"># From add_velocity_interface: marker 2 = above interface (regolith), marker 3 = below interface (bedrock)</span>
+        <span class="n">layer_name_mapping</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">'regolith'</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="s1">'fractured_bedrock'</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+            <span class="s1">'bedrock'</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+            <span class="s1">'background'</span><span class="p">:</span> <span class="mi">1</span>
+        <span class="p">}</span>
+        
+        <span class="n">numeric_params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">uncertainty_scale</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'high'</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span> <span class="s1">'medium'</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> <span class="s1">'low'</span><span class="p">:</span> <span class="mf">0.75</span><span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">info_level</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">layer_name</span><span class="p">,</span> <span class="n">params</span> <span class="ow">in</span> <span class="n">layer_params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c1"># Get numeric ID for this layer</span>
+            <span class="n">layer_id</span> <span class="o">=</span> <span class="n">layer_name_mapping</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">layer_name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">layer_id</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">layer_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">unique_layers</span><span class="p">:</span>
+                <span class="c1"># Try to map to available layers</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_layers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">layer_id</span> <span class="o">=</span> <span class="n">unique_layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_layers</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="c1"># Assume first named layer maps to first numeric layer, etc.</span>
+                    <span class="n">idx</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">layer_params</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">layer_name</span><span class="p">)</span>
+                    <span class="n">layer_id</span> <span class="o">=</span> <span class="n">unique_layers</span><span class="p">[</span><span class="nb">min</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_layers</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">continue</span>
+            
+            <span class="c1"># Convert range parameters to mean/std format expected by Monte Carlo</span>
+            <span class="n">converted</span> <span class="o">=</span> <span class="p">{}</span>
+            
+            <span class="c1"># Handle rho_sat_range</span>
+            <span class="k">if</span> <span class="s1">'rho_sat_range'</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+                <span class="n">rho_min</span><span class="p">,</span> <span class="n">rho_max</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">'rho_sat_range'</span><span class="p">]</span>
+                <span class="n">rho_mean</span> <span class="o">=</span> <span class="p">(</span><span class="n">rho_min</span> <span class="o">+</span> <span class="n">rho_max</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+                <span class="n">rho_std</span> <span class="o">=</span> <span class="p">(</span><span class="n">rho_max</span> <span class="o">-</span> <span class="n">rho_min</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>  <span class="c1"># ~95% within range</span>
+                <span class="n">converted</span><span class="p">[</span><span class="s1">'rho_sat'</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">rho_mean</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="n">rho_std</span><span class="p">}</span>
+                <span class="n">converted</span><span class="p">[</span><span class="s1">'use_rho_sat'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+            
+            <span class="c1"># Handle n_range (cementation exponent)</span>
+            <span class="k">if</span> <span class="s1">'n_range'</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+                <span class="n">n_min</span><span class="p">,</span> <span class="n">n_max</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">'n_range'</span><span class="p">]</span>
+                <span class="n">n_mean</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_min</span> <span class="o">+</span> <span class="n">n_max</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+                <span class="n">n_std</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_max</span> <span class="o">-</span> <span class="n">n_min</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+                <span class="n">converted</span><span class="p">[</span><span class="s1">'n'</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">n_mean</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="n">n_std</span><span class="p">}</span>
+            
+            <span class="c1"># Handle porosity_range</span>
+            <span class="k">if</span> <span class="s1">'porosity_range'</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+                <span class="n">phi_min</span><span class="p">,</span> <span class="n">phi_max</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">'porosity_range'</span><span class="p">]</span>
+                <span class="n">phi_mean</span> <span class="o">=</span> <span class="p">(</span><span class="n">phi_min</span> <span class="o">+</span> <span class="n">phi_max</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+                <span class="n">phi_std</span> <span class="o">=</span> <span class="p">(</span><span class="n">phi_max</span> <span class="o">-</span> <span class="n">phi_min</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+                <span class="n">converted</span><span class="p">[</span><span class="s1">'porosity'</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">phi_mean</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="n">phi_std</span><span class="p">}</span>
+            
+            <span class="c1"># Add default sigma_sur (surface conductivity)</span>
+            <span class="k">if</span> <span class="s1">'sigma_sur'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">converted</span><span class="p">:</span>
+                <span class="n">converted</span><span class="p">[</span><span class="s1">'sigma_sur'</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="mf">0.001</span><span class="p">}</span>
+            
+            <span class="n">numeric_params</span><span class="p">[</span><span class="n">layer_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">converted</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Mapped '</span><span class="si">{</span><span class="n">layer_name</span><span class="si">}</span><span class="s2">' to layer ID </span><span class="si">{</span><span class="n">layer_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  ρ_sat: </span><span class="si">{</span><span class="n">converted</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'rho_sat'</span><span class="p">,</span><span class="w"> </span><span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'mean'</span><span class="p">,</span><span class="w"> </span><span class="s1">'N/A'</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> ± </span><span class="si">{</span><span class="n">converted</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'rho_sat'</span><span class="p">,</span><span class="w"> </span><span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'std'</span><span class="p">,</span><span class="w"> </span><span class="s1">'N/A'</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> Ωm"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  n: </span><span class="si">{</span><span class="n">converted</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'n'</span><span class="p">,</span><span class="w"> </span><span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'mean'</span><span class="p">,</span><span class="w"> </span><span class="s1">'N/A'</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> ± </span><span class="si">{</span><span class="n">converted</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'n'</span><span class="p">,</span><span class="w"> </span><span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'std'</span><span class="p">,</span><span class="w"> </span><span class="s1">'N/A'</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  φ: </span><span class="si">{</span><span class="n">converted</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'porosity'</span><span class="p">,</span><span class="w"> </span><span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'mean'</span><span class="p">,</span><span class="w"> </span><span class="s1">'N/A'</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> ± </span><span class="si">{</span><span class="n">converted</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'porosity'</span><span class="p">,</span><span class="w"> </span><span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'std'</span><span class="p">,</span><span class="w"> </span><span class="s1">'N/A'</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">numeric_params</span>
+    
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_guess_params_from_geology</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geological_context</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">layer_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Heuristic petrophysical guesses from geological text. Returns mean values; uncertainty is applied later."""</span>
+        <span class="n">ctx</span> <span class="o">=</span> <span class="p">(</span><span class="n">geological_context</span> <span class="ow">or</span> <span class="s1">''</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">base_regolith</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'m'</span><span class="p">:</span> <span class="mf">1.5</span><span class="p">,</span> <span class="s1">'n'</span><span class="p">:</span> <span class="mf">2.0</span><span class="p">,</span> <span class="s1">'porosity'</span><span class="p">:</span> <span class="mf">0.40</span><span class="p">,</span> <span class="s1">'sigma_sur'</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">200</span><span class="p">,</span> <span class="s1">'rho_fluid'</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">}</span>
+        <span class="n">base_bedrock</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'m'</span><span class="p">:</span> <span class="mf">1.8</span><span class="p">,</span> <span class="s1">'n'</span><span class="p">:</span> <span class="mf">2.0</span><span class="p">,</span> <span class="s1">'porosity'</span><span class="p">:</span> <span class="mf">0.22</span><span class="p">,</span> <span class="s1">'sigma_sur'</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">400</span><span class="p">,</span> <span class="s1">'rho_fluid'</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">}</span>
+        <span class="n">guess</span> <span class="o">=</span> <span class="n">base_regolith</span> <span class="k">if</span> <span class="n">layer_index</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">base_bedrock</span>
+
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">k</span> <span class="ow">in</span> <span class="n">ctx</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">'sand'</span><span class="p">,</span> <span class="s1">'sandstone'</span><span class="p">]):</span>
+            <span class="n">guess</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'m'</span><span class="p">:</span> <span class="mf">1.3</span><span class="p">,</span> <span class="s1">'n'</span><span class="p">:</span> <span class="mf">1.8</span><span class="p">,</span> <span class="s1">'porosity'</span><span class="p">:</span> <span class="mf">0.38</span><span class="p">,</span> <span class="s1">'sigma_sur'</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">300</span><span class="p">,</span> <span class="s1">'rho_fluid'</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">}</span>
+        <span class="k">elif</span> <span class="nb">any</span><span class="p">(</span><span class="n">k</span> <span class="ow">in</span> <span class="n">ctx</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">'clay'</span><span class="p">,</span> <span class="s1">'shale'</span><span class="p">,</span> <span class="s1">'mud'</span><span class="p">]):</span>
+            <span class="n">guess</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'m'</span><span class="p">:</span> <span class="mf">1.8</span><span class="p">,</span> <span class="s1">'n'</span><span class="p">:</span> <span class="mf">2.2</span><span class="p">,</span> <span class="s1">'porosity'</span><span class="p">:</span> <span class="mf">0.45</span><span class="p">,</span> <span class="s1">'sigma_sur'</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">100</span><span class="p">,</span> <span class="s1">'rho_fluid'</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">}</span>
+        <span class="k">elif</span> <span class="nb">any</span><span class="p">(</span><span class="n">k</span> <span class="ow">in</span> <span class="n">ctx</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">'carbonate'</span><span class="p">,</span> <span class="s1">'limestone'</span><span class="p">,</span> <span class="s1">'dolomite'</span><span class="p">]):</span>
+            <span class="n">guess</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'m'</span><span class="p">:</span> <span class="mf">1.7</span><span class="p">,</span> <span class="s1">'n'</span><span class="p">:</span> <span class="mf">2.0</span><span class="p">,</span> <span class="s1">'porosity'</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> <span class="s1">'sigma_sur'</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">500</span><span class="p">,</span> <span class="s1">'rho_fluid'</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">}</span>
+        <span class="k">elif</span> <span class="nb">any</span><span class="p">(</span><span class="n">k</span> <span class="ow">in</span> <span class="n">ctx</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">'fractured'</span><span class="p">,</span> <span class="s1">'bedrock'</span><span class="p">,</span> <span class="s1">'granite'</span><span class="p">,</span> <span class="s1">'basalt'</span><span class="p">]):</span>
+            <span class="n">guess</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'m'</span><span class="p">:</span> <span class="mf">2.0</span><span class="p">,</span> <span class="s1">'n'</span><span class="p">:</span> <span class="mf">2.1</span><span class="p">,</span> <span class="s1">'porosity'</span><span class="p">:</span> <span class="mf">0.18</span><span class="p">,</span> <span class="s1">'sigma_sur'</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">600</span><span class="p">,</span> <span class="s1">'rho_fluid'</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">}</span>
+        <span class="k">elif</span> <span class="nb">any</span><span class="p">(</span><span class="n">k</span> <span class="ow">in</span> <span class="n">ctx</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">'soil'</span><span class="p">,</span> <span class="s1">'regolith'</span><span class="p">,</span> <span class="s1">'weathered'</span><span class="p">]):</span>
+            <span class="n">guess</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'m'</span><span class="p">:</span> <span class="mf">1.5</span><span class="p">,</span> <span class="s1">'n'</span><span class="p">:</span> <span class="mf">2.0</span><span class="p">,</span> <span class="s1">'porosity'</span><span class="p">:</span> <span class="mf">0.42</span><span class="p">,</span> <span class="s1">'sigma_sur'</span><span class="p">:</span> <span class="mi">1</span><span class="o">/</span><span class="mi">220</span><span class="p">,</span> <span class="s1">'rho_fluid'</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">guess</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_layer_params_with_uncertainty</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cell_markers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                                           <span class="n">info_level</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                           <span class="n">petrophysical_params</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">],</span>
+                                           <span class="n">geological_context</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Generate layer parameters with uncertainty scaled by information level.</span>
+<span class="sd">        </span>
+<span class="sd">        Uncertainty levels:</span>
+<span class="sd">        - Low info (scenario 1): High uncertainty (std = 50-100% of mean)</span>
+<span class="sd">        - Medium info (scenario 2): Moderate uncertainty (std = 20-30% of mean)</span>
+<span class="sd">        - High info (scenario 3): Low uncertainty (std = 5-10% of mean)</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            cell_markers: Array of layer markers</span>
+<span class="sd">            info_level: 'high', 'medium', or 'low'</span>
+<span class="sd">            petrophysical_params: Explicit measurements if available</span>
+<span class="sd">            geological_context: Geological description</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary of layer parameters with appropriate uncertainty</span>
+<span class="sd">        """</span>
+        <span class="n">unique_layers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">cell_markers</span><span class="p">)</span>
+        <span class="n">layer_params</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="c1"># Uncertainty multipliers based on information level</span>
+        <span class="n">uncertainty_scales</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">'high'</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>   <span class="c1"># explicit measurements: tight bounds</span>
+            <span class="s1">'medium'</span><span class="p">:</span> <span class="mf">0.50</span><span class="p">,</span>  <span class="c1"># geology-described: generous uncertainty</span>
+            <span class="s1">'low'</span><span class="p">:</span> <span class="mf">1.00</span>     <span class="c1"># minimal information: very high uncertainty</span>
+        <span class="p">}</span>
+        
+        <span class="n">scale</span> <span class="o">=</span> <span class="n">uncertainty_scales</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">info_level</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">)</span>
+        
+        <span class="c1"># Base parameters vary by information level</span>
+        <span class="k">if</span> <span class="n">info_level</span> <span class="o">==</span> <span class="s1">'high'</span> <span class="ow">and</span> <span class="n">petrophysical_params</span><span class="p">:</span>
+            <span class="c1"># Use explicit measurements</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">layer_id</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">unique_layers</span><span class="p">):</span>
+                <span class="n">template</span> <span class="o">=</span> <span class="s1">'regolith'</span> <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s1">'bedrock'</span>
+                <span class="n">base</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT_LAYER_PARAMS</span><span class="p">[</span><span class="n">template</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                
+                <span class="c1"># Override with explicit values if provided</span>
+                <span class="n">porosity_val</span> <span class="o">=</span> <span class="n">petrophysical_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'porosity'</span><span class="p">,</span> <span class="n">base</span><span class="p">[</span><span class="s1">'porosity'</span><span class="p">][</span><span class="s1">'mean'</span><span class="p">])</span>
+                <span class="n">n_val</span> <span class="o">=</span> <span class="n">petrophysical_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'n'</span><span class="p">,</span> <span class="n">base</span><span class="p">[</span><span class="s1">'n'</span><span class="p">][</span><span class="s1">'mean'</span><span class="p">])</span>
+                <span class="n">m_val</span> <span class="o">=</span> <span class="n">petrophysical_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'m'</span><span class="p">,</span> <span class="n">base</span><span class="p">[</span><span class="s1">'m'</span><span class="p">][</span><span class="s1">'mean'</span><span class="p">])</span>
+                <span class="n">rho_sat_val</span> <span class="o">=</span> <span class="n">petrophysical_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'rho_sat'</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                
+                <span class="c1"># When rho_sat is provided, use it directly instead of calculating via m</span>
+                <span class="c1"># This is more accurate: S = (rho_sat / rho)^(1/n)</span>
+                <span class="k">if</span> <span class="n">rho_sat_val</span><span class="p">:</span>
+                    <span class="c1"># Use much smaller uncertainty for rho_sat since it's a direct measurement</span>
+                    <span class="c1"># and has larger absolute value (uncertainty propagates non-linearly)</span>
+                    <span class="n">rho_sat_uncertainty_scale</span> <span class="o">=</span> <span class="n">scale</span> <span class="o">*</span> <span class="mf">0.1</span>
+                    <span class="n">layer_params</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">layer_id</span><span class="p">)]</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s1">'n'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">n_val</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="n">n_val</span> <span class="o">*</span> <span class="n">scale</span><span class="p">},</span>
+                        <span class="s1">'sigma_sur'</span><span class="p">:</span> <span class="n">base</span><span class="p">[</span><span class="s1">'sigma_sur'</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                        <span class="s1">'porosity'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">porosity_val</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="n">porosity_val</span> <span class="o">*</span> <span class="n">scale</span><span class="p">},</span>
+                        <span class="s1">'rho_sat'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">rho_sat_val</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="n">rho_sat_val</span> <span class="o">*</span> <span class="n">rho_sat_uncertainty_scale</span><span class="p">},</span>  <span class="c1"># Use rho_sat directly</span>
+                        <span class="s1">'use_rho_sat'</span><span class="p">:</span> <span class="kc">True</span>  <span class="c1"># Flag to use rho_sat instead of m</span>
+                    <span class="p">}</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">layer_params</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">layer_id</span><span class="p">)]</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s1">'m'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">m_val</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="n">m_val</span> <span class="o">*</span> <span class="n">scale</span><span class="p">},</span>
+                        <span class="s1">'n'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">n_val</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="n">n_val</span> <span class="o">*</span> <span class="n">scale</span><span class="p">},</span>
+                        <span class="s1">'sigma_sur'</span><span class="p">:</span> <span class="n">base</span><span class="p">[</span><span class="s1">'sigma_sur'</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                        <span class="s1">'porosity'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">porosity_val</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="n">porosity_val</span> <span class="o">*</span> <span class="n">scale</span><span class="p">},</span>
+                        <span class="s1">'rho_fluid'</span><span class="p">:</span> <span class="n">base</span><span class="p">[</span><span class="s1">'rho_fluid'</span><span class="p">],</span>
+                        <span class="s1">'use_rho_sat'</span><span class="p">:</span> <span class="kc">False</span>
+                    <span class="p">}</span>
+                
+        <span class="k">elif</span> <span class="n">info_level</span> <span class="o">==</span> <span class="s1">'medium'</span><span class="p">:</span>
+            <span class="c1"># Geology-informed guess with generous uncertainty</span>
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">layer_id</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">unique_layers</span><span class="p">):</span>
+                <span class="n">base</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_guess_params_from_geology</span><span class="p">(</span><span class="n">geological_context</span><span class="p">,</span> <span class="n">layer_index</span><span class="o">=</span><span class="n">idx</span><span class="p">)</span>
+                <span class="n">m_mean</span> <span class="o">=</span> <span class="n">base</span><span class="p">[</span><span class="s1">'m'</span><span class="p">];</span> <span class="n">n_mean</span> <span class="o">=</span> <span class="n">base</span><span class="p">[</span><span class="s1">'n'</span><span class="p">];</span> <span class="n">phi_mean</span> <span class="o">=</span> <span class="n">base</span><span class="p">[</span><span class="s1">'porosity'</span><span class="p">];</span> <span class="n">sigma_sur</span> <span class="o">=</span> <span class="n">base</span><span class="p">[</span><span class="s1">'sigma_sur'</span><span class="p">]</span>
+                <span class="n">layer_params</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">layer_id</span><span class="p">)]</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">'m'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">m_mean</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">m_mean</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">)},</span>
+                    <span class="s1">'n'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">n_mean</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">n_mean</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">)},</span>
+                    <span class="s1">'sigma_sur'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">sigma_sur</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">sigma_sur</span><span class="p">),</span> <span class="mi">1</span><span class="o">/</span><span class="mi">250</span><span class="p">)},</span>
+                    <span class="s1">'porosity'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">phi_mean</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">phi_mean</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale</span><span class="p">,</span> <span class="mf">0.08</span><span class="p">)},</span>
+                    <span class="s1">'rho_fluid'</span><span class="p">:</span> <span class="n">base</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'rho_fluid'</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">)</span>
+                <span class="p">}</span>
+                
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># 'low' information level</span>
+            <span class="c1"># Minimal information: defaults with very high uncertainty</span>
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">layer_id</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">unique_layers</span><span class="p">):</span>
+                <span class="n">base</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_guess_params_from_geology</span><span class="p">(</span><span class="n">geological_context</span><span class="p">,</span> <span class="n">layer_index</span><span class="o">=</span><span class="n">idx</span><span class="p">)</span>
+                <span class="n">m_mean</span> <span class="o">=</span> <span class="n">base</span><span class="p">[</span><span class="s1">'m'</span><span class="p">];</span> <span class="n">n_mean</span> <span class="o">=</span> <span class="n">base</span><span class="p">[</span><span class="s1">'n'</span><span class="p">];</span> <span class="n">phi_mean</span> <span class="o">=</span> <span class="n">base</span><span class="p">[</span><span class="s1">'porosity'</span><span class="p">];</span> <span class="n">sigma_sur</span> <span class="o">=</span> <span class="n">base</span><span class="p">[</span><span class="s1">'sigma_sur'</span><span class="p">]</span>
+                <span class="n">layer_params</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">layer_id</span><span class="p">)]</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">'m'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">m_mean</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">m_mean</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">)},</span>
+                    <span class="s1">'n'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">n_mean</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">n_mean</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">)},</span>
+                    <span class="s1">'sigma_sur'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">sigma_sur</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">sigma_sur</span><span class="p">),</span> <span class="mi">1</span><span class="o">/</span><span class="mi">150</span><span class="p">)},</span>
+                    <span class="s1">'porosity'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'mean'</span><span class="p">:</span> <span class="n">phi_mean</span><span class="p">,</span> <span class="s1">'std'</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">phi_mean</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale</span><span class="p">,</span> <span class="mf">0.15</span><span class="p">)},</span>
+                    <span class="s1">'rho_fluid'</span><span class="p">:</span> <span class="n">base</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'rho_fluid'</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">)</span>
+                <span class="p">}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Generated parameters with </span><span class="si">{</span><span class="n">info_level</span><span class="si">}</span><span class="s2"> information level (std scale: </span><span class="si">{</span><span class="n">scale</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">layer_params</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_monte_carlo</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">resistivity_array</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">cell_markers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">layer_params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span>
+        <span class="n">n_realizations</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">7</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Run Monte Carlo uncertainty quantification.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            resistivity_array: Resistivity values (cells × timesteps)</span>
+<span class="sd">            cell_markers: Layer markers</span>
+<span class="sd">            layer_params: Parameters for each layer</span>
+<span class="sd">            n_realizations: Number of MC samples</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary with MC results</span>
+<span class="sd">        """</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics.monte_carlo</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+            <span class="n">run_petrophysics_monte_carlo</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">layers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">cell_markers</span><span class="p">):</span>
+            <span class="n">parameters</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">layer_params</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">marker</span><span class="p">)])</span>
+            <span class="n">parameters</span><span class="p">[</span><span class="s2">"marker"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">marker</span><span class="p">)</span>
+            <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">run_petrophysics_monte_carlo</span><span class="p">(</span>
+            <span class="n">resistivity_array</span><span class="p">,</span>
+            <span class="n">cell_markers</span><span class="p">,</span>
+            <span class="n">layers</span><span class="p">,</span>
+            <span class="n">products</span><span class="o">=</span><span class="p">(</span><span class="s2">"water_content"</span><span class="p">,),</span>
+            <span class="n">n_realizations</span><span class="o">=</span><span class="n">n_realizations</span><span class="p">,</span>
+            <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
+            <span class="n">progress</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">,</span>
+            <span class="n">return_realizations</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_recommended_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resistivity_array</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                               <span class="n">cell_markers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                               <span class="n">geological_context</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">''</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Get LLM recommendations for petrophysical parameters.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            resistivity_array: Resistivity values</span>
+<span class="sd">            cell_markers: Layer markers</span>
+<span class="sd">            geological_context: Geological description for context</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Recommended parameters dictionary</span>
+<span class="sd">        """</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">unique_layers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">cell_markers</span><span class="p">)</span>
+            <span class="n">res_stats</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">'mean'</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">),</span>
+                <span class="s1">'std'</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">),</span>
+                <span class="s1">'range'</span><span class="p">:</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">)]</span>
+            <span class="p">}</span>
+            
+            <span class="n">context_info</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Geological Context: </span><span class="si">{</span><span class="n">geological_context</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">geological_context</span> <span class="k">else</span> <span class="s2">""</span>
+            
+            <span class="n">prompt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"""Recommend petrophysical parameters for converting resistivity to water content:</span>
+
+<span class="s2">Resistivity Statistics:</span>
+<span class="s2">- Mean: </span><span class="si">{</span><span class="n">res_stats</span><span class="p">[</span><span class="s1">'mean'</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> Ωm</span>
+<span class="s2">- Range: </span><span class="si">{</span><span class="n">res_stats</span><span class="p">[</span><span class="s1">'range'</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">res_stats</span><span class="p">[</span><span class="s1">'range'</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> Ωm</span>
+<span class="s2">- Number of layers: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">unique_layers</span><span class="p">)</span><span class="si">}{</span><span class="n">context_info</span><span class="si">}</span>
+
+<span class="s2">Provide parameters for each layer:</span>
+<span class="s2">1. Cementation exponent (m): 1.3-2.0</span>
+<span class="s2">2. Saturation exponent (n): 1.5-2.5</span>
+<span class="s2">3. Porosity: 0.2-0.5</span>
+<span class="s2">4. Fluid resistivity: ~20 Ωm</span>
+
+<span class="s2">For top layer (regolith): Higher porosity, lower m</span>
+<span class="s2">For bottom layers (bedrock): Lower porosity, higher m"""</span>
+            
+            <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_llm</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">system_message</span><span class="p">,</span>
+                                     <span class="n">temperature</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">max_tokens</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+            
+            <span class="c1"># Use defaults if parsing fails</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_default_layer_params</span><span class="p">(</span><span class="n">cell_markers</span><span class="p">)</span>
+            
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_default_layer_params</span><span class="p">(</span><span class="n">cell_markers</span><span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_interpret_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">water_content_mean</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                          <span class="n">water_content_std</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                          <span class="n">layer_params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span>
+                          <span class="n">cell_markers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Get LLM interpretation of petrophysical results.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            water_content_mean: Mean water content</span>
+<span class="sd">            water_content_std: Water content uncertainty</span>
+<span class="sd">            layer_params: Parameters used</span>
+<span class="sd">            cell_markers: Layer markers</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Interpretation string</span>
+<span class="sd">        """</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">unique_layers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">cell_markers</span><span class="p">)</span>
+            
+            <span class="n">results_summary</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"""</span>
+<span class="s2">            Petrophysical Conversion Results:</span>
+<span class="s2">            - Water content range: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">water_content_mean</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">water_content_mean</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span>
+<span class="s2">            - Mean uncertainty: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">water_content_std</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span>
+<span class="s2">            - Number of layers: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">unique_layers</span><span class="p">)</span><span class="si">}</span>
+<span class="s2">            """</span>
+            
+            <span class="n">prompt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"""Interpret these petrophysical conversion results:</span>
+
+<span class="si">{</span><span class="n">results_summary</span><span class="si">}</span>
+
+<span class="s2">Provide a brief interpretation (2-3 sentences) about:</span>
+<span class="s2">1. What the water content values suggest about subsurface hydrology</span>
+<span class="s2">2. The reliability of the estimates based on uncertainty"""</span>
+            
+            <span class="n">interpretation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_llm</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">system_message</span><span class="p">,</span>
+                                           <span class="n">temperature</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">max_tokens</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">interpretation</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">"Petrophysical conversion completed with uncertainty quantification"</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_log_execution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'INFO'</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Log execution message."""</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">] [</span><span class="si">{</span><span class="n">level</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

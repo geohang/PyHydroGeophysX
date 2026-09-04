@@ -1,0 +1,955 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.petrophysics.resistivity_models &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/petrophysics/resistivity_models';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/petrophysics/resistivity_models.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../../PyHydroGeophysX.html" class="nav-link">PyHydroGeophysX</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.petrophysics.resistivity_models</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.petrophysics.resistivity_models</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""</span>
+<span class="sd">Simplified Waxman-Smits model for converting between water content and resistivity.</span>
+
+<span class="sd">This implementation follows the Waxman-Smits model that expresses conductivity as:</span>
+<span class="sd">    </span>
+<span class="sd">    σ = σsat * S^n + σs * S^(n-1)</span>
+<span class="sd">    </span>
+<span class="sd">where:</span>
+<span class="sd">- σ is the electrical conductivity of the formation</span>
+<span class="sd">- σsat is the conductivity at full saturation without surface effects (1/rhos)</span>
+<span class="sd">- σs is the surface conductivity</span>
+<span class="sd">- S is the water saturation (S = θ/φ where θ is water content and φ is porosity)</span>
+<span class="sd">- n is the saturation exponent</span>
+
+<span class="sd">The resistivity is the reciprocal of conductivity: ρ = 1/σ</span>
+<span class="sd">"""</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">fsolve</span><span class="p">,</span> <span class="n">root_scalar</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># WS Model</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="WS_Model">
+<a class="viewcode-back" href="../../../api/petrophysics.html#PyHydroGeophysX.WS_Model">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">WS_Model</span><span class="p">(</span>
+    <span class="n">saturation</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">porosity</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">sigma_w</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">m</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">n</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">sigma_s</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Convert water content to resistivity using Waxman-Smits model.</span>
+
+<span class="sd">    Based on equation: σ = (S_w^n/F)σ_w + σ_s</span>
+<span class="sd">    where F = φ^(-m) (formation factor from Archie's law)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        saturation (array): Saturation (S_w)</span>
+<span class="sd">        porosity (array): Porosity values (φ)</span>
+<span class="sd">        sigma_w (float): Pore water conductivity (σ_w)</span>
+<span class="sd">        m (float): Cementation exponent</span>
+<span class="sd">        n (float): Saturation exponent</span>
+<span class="sd">        sigma_s (float): Surface conductivity (σ_s). Default is 0 (no surface effects).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        array: Resistivity values</span>
+<span class="sd">    """</span>
+    <span class="c1"># Clip saturation to physically meaningful range (avoid division by zero)</span>
+    <span class="n">saturation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">saturation</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+
+    <span class="c1"># Calculate formation factor F = φ^(-m)</span>
+    <span class="n">formation_factor</span> <span class="o">=</span> <span class="n">porosity</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="n">m</span><span class="p">)</span>
+
+    <span class="c1"># Calculate conductivity using Waxman-Smits model</span>
+    <span class="c1"># σ = (S_w^n/F)(σ_w + σ_s/S_w)</span>
+    <span class="n">sigma</span> <span class="o">=</span> <span class="p">(</span><span class="n">saturation</span><span class="o">**</span><span class="n">n</span> <span class="o">/</span> <span class="n">formation_factor</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">sigma_w</span> <span class="o">+</span> <span class="n">sigma_s</span><span class="o">/</span><span class="n">saturation</span><span class="p">)</span>
+
+    <span class="c1"># Add minimum conductivity threshold to prevent division by zero</span>
+    <span class="n">sigma_min</span> <span class="o">=</span> <span class="mf">1e-6</span>
+    <span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="n">sigma_min</span><span class="p">)</span>
+
+    <span class="c1"># Convert conductivity to resistivity</span>
+    <span class="n">resistivity</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">sigma</span>
+
+    <span class="c1"># Clip resistivity to physically reasonable range</span>
+    <span class="n">resistivity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">resistivity</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">1e6</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">resistivity</span></div>
+
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># water content to resistivity</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="water_content_to_resistivity">
+<a class="viewcode-back" href="../../../api/petrophysics.html#PyHydroGeophysX.water_content_to_resistivity">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">water_content_to_resistivity</span><span class="p">(</span>
+    <span class="n">water_content</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">rhos</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">n</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">porosity</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">sigma_sur</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Convert water content to resistivity using Waxman-Smits model.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        water_content (array): Volumetric water content (θ)</span>
+<span class="sd">        rhos (float): Saturated resistivity without surface effects</span>
+<span class="sd">        n (float): Saturation exponent</span>
+<span class="sd">        porosity (array): Porosity values (φ)</span>
+<span class="sd">        sigma_sur (float): Surface conductivity. Default is 0 (no surface effects).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        array: Resistivity values</span>
+<span class="sd">    """</span>
+    <span class="c1"># Calculate saturation with minimum threshold to avoid division issues</span>
+    <span class="n">saturation</span> <span class="o">=</span> <span class="n">water_content</span> <span class="o">/</span> <span class="n">porosity</span>
+    <span class="n">saturation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">saturation</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+
+    <span class="c1"># Calculate conductivity using Waxman-Smits model</span>
+    <span class="n">sigma_sat</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">rhos</span>
+    <span class="n">sigma</span> <span class="o">=</span> <span class="n">sigma_sat</span> <span class="o">*</span> <span class="n">saturation</span><span class="o">**</span><span class="n">n</span> <span class="o">+</span> <span class="n">sigma_sur</span> <span class="o">*</span> <span class="n">saturation</span><span class="o">**</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Add minimum conductivity threshold to prevent division by zero</span>
+    <span class="n">sigma_min</span> <span class="o">=</span> <span class="mf">1e-6</span>
+    <span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="n">sigma_min</span><span class="p">)</span>
+
+    <span class="c1"># Convert conductivity to resistivity</span>
+    <span class="n">resistivity</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">sigma</span>
+
+    <span class="c1"># Clip resistivity to physically reasonable range</span>
+    <span class="n">resistivity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">resistivity</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">1e6</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">resistivity</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># resistivity to water content</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="resistivity_to_water_content">
+<a class="viewcode-back" href="../../../api/petrophysics.html#PyHydroGeophysX.resistivity_to_water_content">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resistivity_to_water_content</span><span class="p">(</span>
+    <span class="n">resistivity</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">rhos</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">n</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">porosity</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">sigma_sur</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Convert resistivity to water content using Waxman-Smits model.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        resistivity (array): Resistivity values</span>
+<span class="sd">        rhos (float): Saturated resistivity without surface effects</span>
+<span class="sd">        n (float): Saturation exponent</span>
+<span class="sd">        porosity (array): Porosity values</span>
+<span class="sd">        sigma_sur (float): Surface conductivity. Default is 0 (no surface effects).</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        array: Volumetric water content values</span>
+<span class="sd">    """</span>
+    <span class="c1"># Calculate saturation. ``resistivity_to_saturation`` derives the saturated</span>
+    <span class="c1"># resistivity from Archie's law (a * rho_fluid * porosity^-m); passing</span>
+    <span class="c1"># rho_fluid=rhos with m=0 collapses that expression to the ``rhos`` given</span>
+    <span class="c1"># here, so the same Waxman-Smits solver applies unchanged. The previous</span>
+    <span class="c1"># positional call passed the wrong arguments and raised a TypeError.</span>
+    <span class="n">saturation</span> <span class="o">=</span> <span class="n">resistivity_to_saturation</span><span class="p">(</span>
+        <span class="n">resistivity</span><span class="p">,</span>
+        <span class="n">porosity</span><span class="o">=</span><span class="n">porosity</span><span class="p">,</span>
+        <span class="n">m</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">rho_fluid</span><span class="o">=</span><span class="n">rhos</span><span class="p">,</span>
+        <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span>
+        <span class="n">sigma_sur</span><span class="o">=</span><span class="n">sigma_sur</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Convert saturation to water content</span>
+    <span class="n">water_content</span> <span class="o">=</span> <span class="n">saturation</span> <span class="o">*</span> <span class="n">porosity</span>
+
+    <span class="k">return</span> <span class="n">water_content</span></div>
+
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># resistivity to saturation</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="resistivity_to_saturation">
+<a class="viewcode-back" href="../../../api/petrophysics.html#PyHydroGeophysX.resistivity_to_saturation">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resistivity_to_saturation</span><span class="p">(</span>
+    <span class="n">resistivity</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">porosity</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">m</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">rho_fluid</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">n</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">sigma_sur</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">a</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Convert resistivity to saturation using Waxman-Smits model.</span>
+<span class="sd">    </span>
+<span class="sd">    The function calculates saturated resistivity using Archie's law:</span>
+<span class="sd">    rhos = a * rho_fluid * porosity^(-m)</span>
+<span class="sd">    </span>
+<span class="sd">    Then solves the Waxman-Smits equation:</span>
+<span class="sd">    1/rho = sigma_sat * S^n + sigma_sur * S^(n-1)</span>
+<span class="sd">    where sigma_sat = 1/rhos</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        resistivity (array): Resistivity values (ohm-m)</span>
+<span class="sd">        porosity (array): Porosity values (fraction, 0-1)</span>
+<span class="sd">        m (float): Cementation exponent (typically 1.3-2.5)</span>
+<span class="sd">        rho_fluid (float): Fluid resistivity (ohm-m)</span>
+<span class="sd">        n (float): Saturation exponent (typically 1.8-2.2)</span>
+<span class="sd">        sigma_sur (float): Surface conductivity (S/m). Default is 0 (no surface effects)</span>
+<span class="sd">        a (float): Tortuosity factor. Default is 1.0</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        array: Saturation values (fraction, 0-1)</span>
+<span class="sd">    """</span>
+    <span class="c1"># Convert inputs to arrays and broadcast</span>
+    <span class="n">resistivity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">resistivity</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">porosity</span>    <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">porosity</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">sigma_sur</span>   <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">sigma_sur</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">n_arr</span>       <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">m_arr</span>       <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">m</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">L</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">len</span><span class="p">,</span> <span class="p">(</span><span class="n">resistivity</span><span class="p">,</span> <span class="n">porosity</span><span class="p">,</span> <span class="n">sigma_sur</span><span class="p">,</span> <span class="n">n_arr</span><span class="p">,</span> <span class="n">m_arr</span><span class="p">)))</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_b</span><span class="p">(</span><span class="n">x</span><span class="p">):</span> <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">==</span><span class="mi">1</span> <span class="k">else</span> <span class="n">x</span>
+    <span class="n">resistivity</span><span class="p">,</span> <span class="n">porosity</span><span class="p">,</span> <span class="n">sigma_sur</span><span class="p">,</span> <span class="n">n_arr</span><span class="p">,</span> <span class="n">m_arr</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">_b</span><span class="p">,</span>
+        <span class="p">(</span><span class="n">resistivity</span><span class="p">,</span> <span class="n">porosity</span><span class="p">,</span> <span class="n">sigma_sur</span><span class="p">,</span> <span class="n">n_arr</span><span class="p">,</span> <span class="n">m_arr</span><span class="p">))</span>
+
+    <span class="c1"># Clip porosity to avoid extremes</span>
+    <span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">porosity</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">,</span> <span class="mf">0.99</span><span class="p">)</span>
+
+    <span class="c1"># Saturated resistivity (Archie)</span>
+    <span class="n">rhos</span> <span class="o">=</span> <span class="n">a</span> <span class="o">*</span> <span class="n">rho_fluid</span> <span class="o">*</span> <span class="n">porosity</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="n">m_arr</span><span class="p">)</span>
+    <span class="n">sigma_sat</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">rhos</span>
+    <span class="n">sigma_obs</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">resistivity</span>
+
+    <span class="c1"># Initial guess via Archie's law</span>
+    <span class="n">S0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">((</span><span class="n">rhos</span> <span class="o">/</span> <span class="n">resistivity</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_arr</span><span class="p">),</span> <span class="mf">1e-3</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+
+    <span class="c1"># Solver settings</span>
+    <span class="n">tol</span><span class="p">,</span> <span class="n">maxiter</span> <span class="o">=</span> <span class="mf">1e-6</span><span class="p">,</span> <span class="mi">50</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_solve</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">sigma_sur</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">S0</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">ni</span><span class="p">,</span> <span class="n">Ci</span> <span class="o">=</span> <span class="n">sigma_sat</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">sigma_sur</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">n_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">sigma_obs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="c1"># Residual and derivative</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">f</span><span class="p">(</span><span class="n">S</span><span class="p">):</span>      <span class="k">return</span> <span class="n">A</span> <span class="o">*</span> <span class="n">S</span><span class="o">**</span><span class="n">ni</span> <span class="o">+</span> <span class="n">B</span> <span class="o">*</span> <span class="n">S</span><span class="o">**</span><span class="p">(</span><span class="n">ni</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">Ci</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">fprime</span><span class="p">(</span><span class="n">S</span><span class="p">):</span> <span class="k">return</span> <span class="n">A</span> <span class="o">*</span> <span class="n">ni</span> <span class="o">*</span> <span class="n">S</span><span class="o">**</span><span class="p">(</span><span class="n">ni</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">B</span> <span class="o">*</span> <span class="p">(</span><span class="n">ni</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">S</span><span class="o">**</span><span class="p">(</span><span class="n">ni</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">sol</span> <span class="o">=</span> <span class="n">root_scalar</span><span class="p">(</span><span class="n">f</span><span class="p">,</span>
+                              <span class="n">fprime</span><span class="o">=</span><span class="n">fprime</span><span class="p">,</span>
+                              <span class="n">bracket</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
+                              <span class="n">method</span><span class="o">=</span><span class="s1">'brentq'</span><span class="p">,</span>
+                              <span class="n">xtol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span>
+                              <span class="n">maxiter</span><span class="o">=</span><span class="n">maxiter</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">sol</span><span class="o">.</span><span class="n">root</span> <span class="k">if</span> <span class="n">sol</span><span class="o">.</span><span class="n">converged</span> <span class="k">else</span> <span class="n">S0</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">S0</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+    <span class="c1"># Compute saturation for each point</span>
+    <span class="n">sat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">_solve</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">L</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">sat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">sat</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+
+    <span class="c1"># Return scalar if inputs were scalar</span>
+    <span class="k">if</span> <span class="n">sat</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">sat</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">sat</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># resistivity to porosity</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="resistivity_to_porosity">
+<a class="viewcode-back" href="../../../api/petrophysics.html#PyHydroGeophysX.resistivity_to_porosity">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resistivity_to_porosity</span><span class="p">(</span>
+    <span class="n">resistivity</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">saturation</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">m</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">rho_fluid</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">n</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">sigma_sur</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">a</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Convert resistivity to porosity using Waxman-Smits model, given known saturation.</span>
+<span class="sd">    </span>
+<span class="sd">    The function solves the Waxman-Smits equation for porosity:</span>
+<span class="sd">    1/rho = sigma_sat * S^n + sigma_sur * S^(n-1)</span>
+<span class="sd">    where sigma_sat = 1/rhos and rhos = a * rho_fluid * porosity^(-m)</span>
+<span class="sd">    </span>
+<span class="sd">    Rearranging: porosity = [(1/rho - sigma_sur * S^(n-1)) * (a * rho_fluid) / S^n]^(1/m)</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        resistivity (array): Resistivity values (ohm-m)</span>
+<span class="sd">        saturation (array): Saturation values (fraction, 0-1)</span>
+<span class="sd">        m (float): Cementation exponent (typically 1.3-2.5)</span>
+<span class="sd">        rho_fluid (float): Fluid resistivity (ohm-m)</span>
+<span class="sd">        n (float): Saturation exponent (typically 1.8-2.2)</span>
+<span class="sd">        sigma_sur (float): Surface conductivity (S/m). Default is 0 (no surface effects)</span>
+<span class="sd">        a (float): Tortuosity factor. Default is 1.0</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        array: Porosity values (fraction, 0-1)</span>
+<span class="sd">    """</span>
+    <span class="c1"># Convert inputs to arrays</span>
+    <span class="n">resistivity_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">resistivity</span><span class="p">)</span>
+    <span class="n">saturation_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">saturation</span><span class="p">)</span>
+    <span class="n">sigma_sur_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">sigma_sur</span><span class="p">)</span>
+    <span class="n">n_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">m_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+    
+    <span class="c1"># Ensure all arrays have compatible shapes</span>
+    <span class="n">max_length</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">saturation_array</span><span class="p">))</span>
+    
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">saturation_array</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">max_length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">saturation_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">max_length</span><span class="p">,</span> <span class="n">saturation_array</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sigma_sur_array</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">max_length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">sigma_sur_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">max_length</span><span class="p">,</span> <span class="n">sigma_sur_array</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">n_array</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">max_length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">n_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">max_length</span><span class="p">,</span> <span class="n">n_array</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">m_array</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">max_length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">m_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">max_length</span><span class="p">,</span> <span class="n">m_array</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">max_length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">resistivity_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">max_length</span><span class="p">,</span> <span class="n">resistivity_array</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    
+    <span class="c1"># Validate saturation values</span>
+    <span class="n">saturation_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">saturation_array</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>  <span class="c1"># Avoid extreme values</span>
+    
+    <span class="c1"># Initialize porosity array</span>
+    <span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">)</span>
+    
+    <span class="c1"># Solve for each resistivity-saturation pair</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">)):</span>
+        <span class="n">rho_val</span> <span class="o">=</span> <span class="n">resistivity_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">S_val</span> <span class="o">=</span> <span class="n">saturation_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">sigma_sur_val</span> <span class="o">=</span> <span class="n">sigma_sur_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">n_val</span> <span class="o">=</span> <span class="n">n_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">m_val</span> <span class="o">=</span> <span class="n">m_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        
+        <span class="k">if</span> <span class="n">sigma_sur_val</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Without surface conductivity, use simplified Archie's law</span>
+            <span class="c1"># 1/rho = (1/rhos) * S^n = (porosity^m / (a * rho_fluid)) * S^n</span>
+            <span class="c1"># porosity^m = (a * rho_fluid) / (rho * S^n)</span>
+            <span class="c1"># porosity = [(a * rho_fluid) / (rho * S^n)]^(1/m)</span>
+            
+            <span class="n">porosity_val</span> <span class="o">=</span> <span class="p">((</span><span class="n">a</span> <span class="o">*</span> <span class="n">rho_fluid</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">rho_val</span> <span class="o">*</span> <span class="n">S_val</span><span class="o">**</span><span class="n">n_val</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">m_val</span><span class="p">)</span>
+            
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># With surface conductivity, solve numerically</span>
+            <span class="c1"># 1/rho = (porosity^m / (a * rho_fluid)) * S^n + sigma_sur * S^(n-1)</span>
+            <span class="c1"># Rearranging: porosity^m = (1/rho - sigma_sur * S^(n-1)) * (a * rho_fluid) / S^n</span>
+            
+            <span class="n">conductivity_term</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">rho_val</span> <span class="o">-</span> <span class="n">sigma_sur_val</span> <span class="o">*</span> <span class="n">S_val</span><span class="o">**</span><span class="p">(</span><span class="n">n_val</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">conductivity_term</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># Direct calculation if the term is positive</span>
+                <span class="n">porosity_val</span> <span class="o">=</span> <span class="p">(</span><span class="n">conductivity_term</span> <span class="o">*</span> <span class="n">a</span> <span class="o">*</span> <span class="n">rho_fluid</span> <span class="o">/</span> <span class="n">S_val</span><span class="o">**</span><span class="n">n_val</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">m_val</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># If negative (which shouldn't happen physically), use numerical solver</span>
+                <span class="k">def</span><span class="w"> </span><span class="nf">func</span><span class="p">(</span><span class="n">phi</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">phi</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="mf">1e10</span>  <span class="c1"># Large penalty for non-physical values</span>
+                    <span class="n">rhos</span> <span class="o">=</span> <span class="n">a</span> <span class="o">*</span> <span class="n">rho_fluid</span> <span class="o">*</span> <span class="n">phi</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="n">m_val</span><span class="p">)</span>
+                    <span class="n">sigma_sat</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">rhos</span>
+                    <span class="k">return</span> <span class="n">sigma_sat</span> <span class="o">*</span> <span class="n">S_val</span><span class="o">**</span><span class="n">n_val</span> <span class="o">+</span> <span class="n">sigma_sur_val</span> <span class="o">*</span> <span class="n">S_val</span><span class="o">**</span><span class="p">(</span><span class="n">n_val</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">rho_val</span>
+                
+                <span class="c1"># Initial guess using simplified formula</span>
+                <span class="n">initial_guess</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="p">((</span><span class="n">a</span> <span class="o">*</span> <span class="n">rho_fluid</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">rho_val</span> <span class="o">*</span> <span class="n">S_val</span><span class="o">**</span><span class="n">n_val</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">m_val</span><span class="p">))</span>
+                
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">solution</span> <span class="o">=</span> <span class="n">fsolve</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">initial_guess</span><span class="p">)</span>
+                    <span class="n">porosity_val</span> <span class="o">=</span> <span class="n">solution</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="c1"># If numerical solution fails, use simplified formula</span>
+                    <span class="n">porosity_val</span> <span class="o">=</span> <span class="p">((</span><span class="n">a</span> <span class="o">*</span> <span class="n">rho_fluid</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">rho_val</span> <span class="o">*</span> <span class="n">S_val</span><span class="o">**</span><span class="n">n_val</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">m_val</span><span class="p">)</span>
+        
+        <span class="n">porosity</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">porosity_val</span>
+    
+    <span class="c1"># Ensure porosity is physically meaningful</span>
+    <span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">porosity</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.99</span><span class="p">)</span>
+    
+    <span class="c1"># Return scalar if input was scalar</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">resistivity</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">saturation</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">porosity</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    
+    <span class="k">return</span> <span class="n">porosity</span></div>
+
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># resistivity to saturation2</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="resistivity_to_saturation2">
+<a class="viewcode-back" href="../../../api/petrophysics.html#PyHydroGeophysX.resistivity_to_saturation2">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resistivity_to_saturation2</span><span class="p">(</span>
+    <span class="n">resistivity</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">rhos</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">n</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">sigma_sur</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Convert resistivity to saturation using Waxman-Smits model.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        resistivity (array): Resistivity values</span>
+<span class="sd">        rhos (float): Saturated resistivity without surface effects</span>
+<span class="sd">        n (float): Saturation exponent</span>
+<span class="sd">        sigma_sur (float): Surface conductivity. Default is 0 (no surface effects).</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        array: Saturation values</span>
+<span class="sd">    """</span>
+    <span class="c1"># Convert inputs to arrays</span>
+    <span class="n">resistivity_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">resistivity</span><span class="p">)</span>
+    <span class="n">sigma_sur_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">sigma_sur</span><span class="p">)</span>
+    <span class="n">n_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    
+    <span class="c1"># Ensure all arrays have compatible shapes</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sigma_sur_array</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">sigma_sur_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">,</span> <span class="n">sigma_sur_array</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">n_array</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">n_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">,</span> <span class="n">n_array</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    
+    <span class="c1"># Calculate sigma_sat</span>
+    <span class="n">sigma_sat</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">rhos</span>
+    
+    <span class="c1"># First calculate saturation without surface conductivity (Archie's law)</span>
+    <span class="c1"># This provides an initial guess for numerical solution</span>
+    <span class="n">S_initial</span> <span class="o">=</span> <span class="p">(</span><span class="n">rhos</span> <span class="o">/</span> <span class="n">resistivity_array</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">n_array</span><span class="p">)</span>
+    <span class="n">S_initial</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">S_initial</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    
+    <span class="c1"># Initialize saturation array</span>
+    <span class="n">saturation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">)</span>
+    
+    <span class="c1"># Solve for each resistivity value</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">resistivity_array</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">sigma_sur_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># If no surface conductivity, use Archie's law</span>
+            <span class="n">saturation</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">S_initial</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># With surface conductivity, solve numerically</span>
+            <span class="n">n_val</span> <span class="o">=</span> <span class="n">n_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            
+            <span class="k">def</span><span class="w"> </span><span class="nf">func</span><span class="p">(</span><span class="n">S</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">sigma_sat</span> <span class="o">*</span> <span class="n">S</span><span class="o">**</span><span class="n">n_val</span> <span class="o">+</span> <span class="n">sigma_sur_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">S</span><span class="o">**</span><span class="p">(</span><span class="n">n_val</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">resistivity_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            
+            <span class="n">solution</span> <span class="o">=</span> <span class="n">fsolve</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">S_initial</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">saturation</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">solution</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    
+    <span class="c1"># Ensure saturation is physically meaningful</span>
+    <span class="n">saturation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">saturation</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    
+    <span class="c1"># Return scalar if input was scalar</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">resistivity</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">saturation</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    
+    <span class="k">return</span> <span class="n">saturation</span></div>
+
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

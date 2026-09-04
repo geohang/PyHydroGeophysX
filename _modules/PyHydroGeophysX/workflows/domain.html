@@ -1,0 +1,1014 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.workflows.domain &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/workflows/domain';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/workflows/domain.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../../PyHydroGeophysX.html" class="nav-link">PyHydroGeophysX</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.workflows.domain</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.workflows.domain</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Adapters from serializable workflow contracts to canonical domain APIs."""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">asdict</span><span class="p">,</span> <span class="n">is_dataclass</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.data_processing</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_inputs</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArtifactRef</span><span class="p">,</span> <span class="n">RunContext</span><span class="p">,</span> <span class="n">WorkflowRunResult</span><span class="p">,</span> <span class="n">WorkflowSpec</span>
+
+
+<span class="nd">@contextmanager</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_input_directory</span><span class="p">(</span>
+    <span class="n">bundle</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">fallback</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Yield a directory holding the run's inputs under their original names.</span>
+
+<span class="sd">    A run stores these inputs as one compressed bundle rather than as the loose</span>
+<span class="sd">    files it used to copy, because a time-lapse sequence or a hydrology array</span>
+<span class="sd">    set is several files that only ever get read together. The readers below are</span>
+<span class="sd">    PyGIMLi's loaders and ``np.load``, which want a real path, so the bundle is</span>
+<span class="sd">    expanded for the length of the run and thrown away afterwards; only the</span>
+<span class="sd">    compressed copy is what the Project keeps.</span>
+
+<span class="sd">    ``fallback`` is the older ``{name: path}`` mapping. Runs recorded before the</span>
+<span class="sd">    bundle existed still carry it, and their copied files are already a</span>
+<span class="sd">    directory, so those are used where they are.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">bundle</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">"phgx_inputs_"</span><span class="p">)</span> <span class="k">as</span> <span class="n">scratch</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="nb">str</span><span class="p">(</span><span class="n">run_inputs</span><span class="o">.</span><span class="n">expand_file_bundle</span><span class="p">(</span><span class="n">bundle</span><span class="p">,</span> <span class="n">scratch</span><span class="p">))</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">fallback</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="kc">None</span>
+        <span class="k">return</span>
+    <span class="n">parents</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">fallback</span><span class="o">.</span><span class="n">values</span><span class="p">()}</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parents</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Input artifacts must share one directory."</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">parents</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_materialize</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">ArtifactRef</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">resolve_artifact</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">):</span> <span class="n">_materialize</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">_materialize</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">value</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">value</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_json_value</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="n">value</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="n">value</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+        <span class="n">result</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">ok</span><span class="p">,</span> <span class="n">encoded</span> <span class="o">=</span> <span class="n">_json_value</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ok</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">None</span>
+            <span class="n">result</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="n">encoded</span>
+        <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="n">result</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+            <span class="n">ok</span><span class="p">,</span> <span class="n">encoded</span> <span class="o">=</span> <span class="n">_json_value</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ok</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">None</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">encoded</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="n">result</span>
+    <span class="k">if</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_json_value</span><span class="p">(</span><span class="n">asdict</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+    <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_legacy_result</span><span class="p">(</span>
+    <span class="n">spec</span><span class="p">:</span> <span class="n">WorkflowSpec</span><span class="p">,</span>
+    <span class="n">context</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">,</span>
+    <span class="n">result</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WorkflowRunResult</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="n">asdict</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+        <span class="n">objects</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"domain_result"</span><span class="p">:</span> <span class="n">result</span><span class="p">}</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+        <span class="n">objects</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">objects</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"domain_result"</span><span class="p">:</span> <span class="n">result</span><span class="p">}</span>
+    <span class="n">status</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"status"</span><span class="p">,</span> <span class="s2">"ok"</span><span class="p">))</span>
+    <span class="n">artifacts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">summary</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">raw</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">"output_dir"</span><span class="p">:</span>
+            <span class="n">summary</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="n">path_values</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">key</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"_path"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">"vtk"</span><span class="p">,</span> <span class="s2">"vtk_combined"</span><span class="p">}</span>
+        <span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">)):</span>
+            <span class="n">path_values</span> <span class="o">=</span> <span class="p">[</span><span class="n">value</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">key</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"_paths"</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="n">path_values</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">"figure_paths"</span><span class="p">,</span> <span class="s2">"data_paths"</span><span class="p">,</span> <span class="s2">"artifacts"</span><span class="p">,</span> <span class="s2">"outputs"</span><span class="p">}:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+                <span class="n">path_values</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+                <span class="n">path_values</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">path_values</span><span class="p">):</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">candidate</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                <span class="n">artifacts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ArtifactRef</span><span class="o">.</span><span class="n">from_path</span><span class="p">(</span>
+                    <span class="n">path</span><span class="p">,</span>
+                    <span class="n">artifact_id</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">spec</span><span class="o">.</span><span class="n">workflow_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                    <span class="n">kind</span><span class="o">=</span><span class="n">key</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"s"</span><span class="p">),</span>
+                    <span class="n">base_dir</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">project_root</span><span class="p">,</span>
+                <span class="p">))</span>
+        <span class="n">ok</span><span class="p">,</span> <span class="n">encoded</span> <span class="o">=</span> <span class="n">_json_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ok</span><span class="p">:</span>
+            <span class="n">summary</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">encoded</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">objects</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="n">metrics</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">summary</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"metrics"</span><span class="p">,</span> <span class="p">{})</span> <span class="ow">or</span> <span class="p">{})</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"chi2"</span><span class="p">,</span> <span class="s2">"rrms"</span><span class="p">,</span> <span class="s2">"iterations"</span><span class="p">,</span> <span class="s2">"n_data"</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">summary</span><span class="p">:</span>
+            <span class="n">metrics</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">summary</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">WorkflowRunResult</span><span class="p">(</span>
+        <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="p">,</span>
+        <span class="n">summary</span><span class="o">=</span><span class="n">summary</span><span class="p">,</span>
+        <span class="n">metrics</span><span class="o">=</span><span class="n">metrics</span><span class="p">,</span>
+        <span class="n">artifacts</span><span class="o">=</span><span class="n">artifacts</span><span class="p">,</span>
+        <span class="n">warnings</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">summary</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"warnings"</span><span class="p">,</span> <span class="p">[])</span> <span class="ow">or</span> <span class="p">[]),</span>
+        <span class="n">provenance</span><span class="o">=</span><span class="p">{</span><span class="s2">"workflow_id"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">workflow_id</span><span class="p">,</span> <span class="s2">"schema_version"</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">schema_version</span><span class="p">},</span>
+        <span class="n">objects</span><span class="o">=</span><span class="n">objects</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="run_hydro_geophysics">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.workflows.html#PyHydroGeophysX.workflows.domain.run_hydro_geophysics">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_hydro_geophysics</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">WorkflowSpec</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WorkflowRunResult</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.Hydro_modular.hydro_to_geophysics</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_hydro_forward</span>
+
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">_materialize</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">inputs</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+    <span class="n">parameters</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">_materialize</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">context</span><span class="p">))</span>
+    <span class="n">parameters</span><span class="p">[</span><span class="s2">"seed"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">parameters</span><span class="p">[</span><span class="s2">"output_dir"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">output_dir</span><span class="p">)</span>
+    <span class="n">domain_context</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"context"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">inputs</span><span class="p">)</span>
+    <span class="n">domain_context</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"output_dir"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">output_dir</span><span class="p">))</span>
+    <span class="n">methods</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"methods"</span><span class="p">,</span> <span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"methods"</span><span class="p">,</span> <span class="p">[])))</span>
+    <span class="n">point1</span> <span class="o">=</span> <span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"point1"</span><span class="p">,</span> <span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"point1"</span><span class="p">))</span>
+    <span class="n">point2</span> <span class="o">=</span> <span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"point2"</span><span class="p">,</span> <span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"point2"</span><span class="p">))</span>
+    <span class="k">with</span> <span class="n">_input_directory</span><span class="p">(</span>
+        <span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"hydro_bundle"</span><span class="p">),</span> <span class="nb">dict</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"hydro_files"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span>
+    <span class="p">)</span> <span class="k">as</span> <span class="n">data_dir</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">data_dir</span><span class="p">:</span>
+            <span class="n">parameters</span><span class="p">[</span><span class="s2">"hydro_data_dir"</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_dir</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">run_hydro_forward</span><span class="p">(</span>
+            <span class="n">domain_context</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span> <span class="n">methods</span><span class="p">,</span> <span class="n">point1</span><span class="p">,</span> <span class="n">point2</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">progress</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">_legacy_result</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="run_geo_hydrology">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.workflows.html#PyHydroGeophysX.workflows.domain.run_geo_hydrology">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_geo_hydrology</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">WorkflowSpec</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WorkflowRunResult</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.Geophy_modular.ERT_to_WC</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_ert_to_wc</span>
+
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">_materialize</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">inputs</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+    <span class="n">parameters</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">_materialize</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">context</span><span class="p">))</span>
+    <span class="n">parameters</span><span class="p">[</span><span class="s2">"seed"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">parameters</span><span class="p">[</span><span class="s2">"output_dir"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">output_dir</span><span class="p">)</span>
+    <span class="n">domain_context</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"context"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">inputs</span><span class="p">)</span>
+    <span class="n">domain_context</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"output_dir"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">output_dir</span><span class="p">))</span>
+    <span class="k">with</span> <span class="n">_input_directory</span><span class="p">(</span>
+        <span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model_bundle"</span><span class="p">),</span> <span class="nb">dict</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model_files"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span>
+    <span class="p">)</span> <span class="k">as</span> <span class="n">data_dir</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">data_dir</span><span class="p">:</span>
+            <span class="n">parameters</span><span class="p">[</span><span class="s2">"model_data_dir"</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_dir</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">run_ert_to_wc</span><span class="p">(</span><span class="n">domain_context</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">progress</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_legacy_result</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="run_seismic3d">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.workflows.html#PyHydroGeophysX.workflows.domain.run_seismic3d">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_seismic3d</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">WorkflowSpec</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WorkflowRunResult</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.Geophy_modular.structure_integration</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_3d_model</span>
+
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">_materialize</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">inputs</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+    <span class="n">parameters</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">_materialize</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">context</span><span class="p">))</span>
+    <span class="n">parameters</span><span class="p">[</span><span class="s2">"output_dir"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">output_dir</span><span class="p">)</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"lines"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[])</span>
+    <span class="n">domain_context</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"context"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">inputs</span><span class="p">)</span>
+    <span class="n">domain_context</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"output_dir"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">output_dir</span><span class="p">))</span>
+    <span class="k">with</span> <span class="n">_input_directory</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"line_bundle"</span><span class="p">),</span> <span class="p">{})</span> <span class="k">as</span> <span class="n">scratch</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">scratch</span><span class="p">:</span>
+            <span class="c1"># The page stored bundle member names in place of the paths, so</span>
+            <span class="c1"># point each line back at the file the bundle just wrote.</span>
+            <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="o">**</span><span class="n">line</span><span class="p">,</span>
+                    <span class="o">**</span><span class="p">{</span>
+                        <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">scratch</span><span class="p">)</span> <span class="o">/</span> <span class="nb">str</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="n">field</span><span class="p">]))</span>
+                        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"mesh"</span><span class="p">,</span> <span class="s2">"velocity"</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">line</span>
+                    <span class="p">},</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span>
+            <span class="p">]</span>
+        <span class="n">parameters</span><span class="p">[</span><span class="s2">"lines"</span><span class="p">]</span> <span class="o">=</span> <span class="n">lines</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">build_3d_model</span><span class="p">(</span><span class="n">domain_context</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">progress</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_legacy_result</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="run_mesh3d">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.workflows.html#PyHydroGeophysX.workflows.domain.run_mesh3d">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_mesh3d</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">WorkflowSpec</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WorkflowRunResult</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.mesh_3d</span><span class="w"> </span><span class="kn">import</span> <span class="n">generate_mesh</span><span class="p">,</span> <span class="n">save_outputs</span>
+
+    <span class="n">config</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">_materialize</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">context</span><span class="p">))</span>
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">_materialize</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">inputs</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"topography_points"</span><span class="p">):</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">"topography_points"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="s2">"topography_points"</span><span class="p">])</span>
+    <span class="n">config</span><span class="p">[</span><span class="s2">"output_dir"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">output_dir</span><span class="p">)</span>
+    <span class="n">output_formats</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"output_formats"</span><span class="p">,</span> <span class="p">[]))</span>
+    <span class="n">output_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"output_name"</span><span class="p">,</span> <span class="s2">"mesh3d"</span><span class="p">))</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">generate_mesh</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">progress</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">output_formats</span><span class="p">:</span>
+        <span class="c1"># A mesh that generated is worth keeping even when writing it out fails.</span>
+        <span class="c1"># Letting the export raise here discards it and reports "mesh generation</span>
+        <span class="c1"># failed", which sends the user looking at meshing parameters for what is</span>
+        <span class="c1"># really a filesystem or path-encoding problem.</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">"outputs"</span><span class="p">]</span> <span class="o">=</span> <span class="n">save_outputs</span><span class="p">(</span>
+                <span class="n">result</span><span class="p">[</span><span class="s2">"mesh"</span><span class="p">],</span>
+                <span class="n">result</span><span class="p">[</span><span class="s2">"electrodes"</span><span class="p">],</span>
+                <span class="n">context</span><span class="o">.</span><span class="n">output_dir</span><span class="p">,</span>
+                <span class="n">output_name</span><span class="p">,</span>
+                <span class="n">output_formats</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - the mesh itself is still good</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">"outputs"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">"output_error"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">progress</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"The mesh generated, but saving it to </span><span class="si">{</span><span class="n">context</span><span class="o">.</span><span class="n">output_dir</span><span class="si">}</span><span class="s2"> failed: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_legacy_result</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="run_ert_timelapse">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.workflows.html#PyHydroGeophysX.workflows.domain.run_ert_timelapse">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_ert_timelapse</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">WorkflowSpec</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WorkflowRunResult</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion.time_lapse</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_timelapse_ert</span>
+
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">_materialize</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">inputs</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+    <span class="n">bundle</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"data_bundle"</span><span class="p">)</span>
+    <span class="n">parameters</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">_materialize</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">context</span><span class="p">))</span>
+    <span class="k">with</span> <span class="n">_input_directory</span><span class="p">(</span><span class="n">bundle</span><span class="p">,</span> <span class="p">{})</span> <span class="k">as</span> <span class="n">scratch</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">scratch</span><span class="p">:</span>
+            <span class="c1"># Names were written in sequence order, and the order is the whole</span>
+            <span class="c1"># point of a time-lapse: step n is what step n-1 is compared to.</span>
+            <span class="n">files</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">scratch</span><span class="p">)</span> <span class="o">/</span> <span class="n">name</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">run_inputs</span><span class="o">.</span><span class="n">bundle_file_names</span><span class="p">(</span><span class="n">bundle</span><span class="p">)</span>
+            <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"data_files"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[])</span>
+        <span class="n">times</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"measurement_times"</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)))</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">run_timelapse_ert</span><span class="p">(</span>
+            <span class="n">files</span><span class="p">,</span> <span class="n">times</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">output_dir</span><span class="p">),</span> <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">progress</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">_legacy_result</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="run_ert3d_forward">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.workflows.html#PyHydroGeophysX.workflows.domain.run_ert3d_forward">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_ert3d_forward</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">WorkflowSpec</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WorkflowRunResult</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.mesh_serialization</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_mesh_artifact</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.forward.ert3d</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_ert3d_forward</span> <span class="k">as</span> <span class="n">simulate</span>
+
+    <span class="n">mesh_ref</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"mesh"</span><span class="p">)</span>
+    <span class="n">mesh_structure_ref</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"mesh_structure"</span><span class="p">)</span>
+    <span class="n">sensors_ref</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"sensors"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mesh_ref</span><span class="p">,</span> <span class="n">ArtifactRef</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mesh_structure_ref</span><span class="p">,</span> <span class="n">ArtifactRef</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sensors_ref</span><span class="p">,</span> <span class="n">ArtifactRef</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"ert3d.forward requires mesh, mesh_structure, and sensors ArtifactRefs."</span>
+        <span class="p">)</span>
+    <span class="n">structure_path</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resolve_artifact</span><span class="p">(</span><span class="n">mesh_structure_ref</span><span class="p">)</span>
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">load_object</span><span class="p">(</span>
+        <span class="n">mesh_ref</span><span class="p">,</span>
+        <span class="k">lambda</span> <span class="n">path</span><span class="p">:</span> <span class="n">load_mesh_artifact</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">structure_path</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">sensors</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">load_object</span><span class="p">(</span><span class="n">sensors_ref</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">)</span>
+    <span class="n">parameters</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">_materialize</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">context</span><span class="p">))</span>
+    <span class="n">parameters</span><span class="p">[</span><span class="s2">"seed"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">parameters</span><span class="p">[</span><span class="s2">"output_dir"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">output_dir</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_legacy_result</span><span class="p">(</span>
+        <span class="n">spec</span><span class="p">,</span>
+        <span class="n">context</span><span class="p">,</span>
+        <span class="n">simulate</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">sensors</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">progress</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">),</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="run_ert_single">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.workflows.html#PyHydroGeophysX.workflows.domain.run_ert_single">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_ert_single</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">WorkflowSpec</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WorkflowRunResult</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion.ert_inversion</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_ert_manager_inversion</span>
+
+    <span class="n">source</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"data"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">ArtifactRef</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"ert.single_inversion requires inputs.data as an ArtifactRef."</span><span class="p">)</span>
+    <span class="n">parameters</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
+    <span class="c1"># The desktop workflow has already serialized its edited/QC-filtered</span>
+    <span class="c1"># container in pygimli's native unified format.  Re-running the original</span>
+    <span class="c1"># instrument parser here is both redundant and harmful in an isolated</span>
+    <span class="c1"># process: the BERT parser imports pandas/pyarrow even though no tabular</span>
+    <span class="c1"># conversion remains to do.  On Windows Store Python, arrow.dll has crashed</span>
+    <span class="c1"># during that unnecessary second parse.  Raw public workflow inputs still</span>
+    <span class="c1"># retain the caller-selected instrument parser.</span>
+    <span class="n">normalized_input</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">((</span><span class="n">source</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"qc_filtered"</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+    <span class="n">instrument</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">normalized_input</span> <span class="k">else</span> <span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"instrument"</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">run_ert_manager_inversion</span><span class="p">(</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">resolve_artifact</span><span class="p">(</span><span class="n">source</span><span class="p">),</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">output_dir</span><span class="p">,</span>
+        <span class="n">relative_error</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"relative_error"</span><span class="p">,</span> <span class="mf">0.03</span><span class="p">)),</span>
+        <span class="n">absolute_error</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"absolute_error"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)),</span>
+        <span class="n">error_source</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"error_source"</span><span class="p">,</span> <span class="s2">"file"</span><span class="p">)),</span>
+        <span class="n">mesh_quality</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"mesh_quality"</span><span class="p">,</span> <span class="mf">34.0</span><span class="p">)),</span>
+        <span class="n">para_depth</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"para_depth"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)),</span>
+        <span class="n">para_max_cell_size</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"para_max_cell_size"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)),</span>
+        <span class="n">mesh_file</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"mesh_file"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">),</span>
+        <span class="n">lam</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"lambda"</span><span class="p">,</span> <span class="mf">50.0</span><span class="p">)),</span>
+        <span class="n">max_iterations</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"max_iterations"</span><span class="p">,</span> <span class="mi">20</span><span class="p">)),</span>
+        <span class="n">plateau_tolerance</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"plateau_tolerance"</span><span class="p">,</span> <span class="mf">0.005</span><span class="p">)),</span>
+        <span class="n">max_total_iterations</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"max_total_iterations"</span><span class="p">,</span> <span class="mi">60</span><span class="p">)),</span>
+        <span class="n">engine</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"engine"</span><span class="p">,</span> <span class="s2">"pyhydro"</span><span class="p">)),</span>
+        <span class="n">geometric_factor_policy</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"geometric_factor_policy"</span><span class="p">,</span> <span class="s2">"fix"</span><span class="p">)),</span>
+        <span class="n">geometric_factor_tolerance</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"geometric_factor_tolerance"</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">)),</span>
+        <span class="n">instrument</span><span class="o">=</span><span class="n">instrument</span><span class="p">,</span>
+        <span class="n">reject_outliers</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"reject_outliers"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)),</span>
+        <span class="n">outlier_threshold</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"outlier_threshold"</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">)),</span>
+        <span class="n">outlier_passes</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"outlier_passes"</span><span class="p">,</span> <span class="mi">2</span><span class="p">)),</span>
+        <span class="n">min_data_fraction</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"min_data_fraction"</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)),</span>
+        <span class="n">auto_lambda</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"auto_lambda"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)),</span>
+        <span class="n">target_chi2</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"target_chi2"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)),</span>
+        <span class="n">chi2_tolerance</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"chi2_tolerance"</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">)),</span>
+        <span class="n">max_lambda_trials</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"max_lambda_trials"</span><span class="p">,</span> <span class="mi">6</span><span class="p">)),</span>
+        <span class="n">lambda_warm_start</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"lambda_warm_start"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)),</span>
+        <span class="n">lambda_cold_retry_chi2</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"lambda_cold_retry_chi2"</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">)),</span>
+        <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">progress</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">workflow_result</span> <span class="o">=</span> <span class="n">_legacy_result</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+    <span class="n">manager</span> <span class="o">=</span> <span class="n">workflow_result</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"mgr"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">workflow_result</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="s2">"manager"</span><span class="p">]</span> <span class="o">=</span> <span class="n">manager</span>
+    <span class="n">fixed_manager</span> <span class="o">=</span> <span class="n">workflow_result</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"fixed_mgr"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">fixed_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">workflow_result</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="s2">"fixed_manager"</span><span class="p">]</span> <span class="o">=</span> <span class="n">fixed_manager</span>
+    <span class="n">convergence</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">workflow_result</span><span class="o">.</span><span class="n">summary</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"convergence"</span><span class="p">,</span> <span class="p">[])</span> <span class="ow">or</span> <span class="p">[])</span>
+    <span class="n">workflow_result</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="s2">"convergence"</span><span class="p">]</span> <span class="o">=</span> <span class="n">convergence</span>
+    <span class="n">workflow_result</span><span class="o">.</span><span class="n">objects</span><span class="p">[</span><span class="s2">"fixed_convergence"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+        <span class="n">workflow_result</span><span class="o">.</span><span class="n">summary</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"fixed_convergence"</span><span class="p">,</span> <span class="p">[])</span> <span class="ow">or</span> <span class="p">[]</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">workflow_result</span></div>
+
+
+
+<div class="viewcode-block" id="run_em_inversion">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.workflows.html#PyHydroGeophysX.workflows.domain.run_em_inversion">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_em_inversion</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">WorkflowSpec</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WorkflowRunResult</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.workflows</span><span class="w"> </span><span class="kn">import</span> <span class="n">em1d</span>
+
+    <span class="n">source</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"data"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">ArtifactRef</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"em.inversion requires inputs.data as an ArtifactRef."</span><span class="p">)</span>
+    <span class="n">parameters</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
+    <span class="n">method</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"method"</span><span class="p">,</span> <span class="s2">"TDEM"</span><span class="p">))</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+    <span class="n">moment</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"moment"</span><span class="p">,</span> <span class="s2">"HM"</span><span class="p">))</span>
+    <span class="n">sounding</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"sounding"</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+    <span class="n">geometry</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"geometry"</span><span class="p">,</span> <span class="p">{}))</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">load_object</span><span class="p">(</span>
+        <span class="n">source</span><span class="p">,</span>
+        <span class="k">lambda</span> <span class="n">path</span><span class="p">:</span> <span class="n">em1d</span><span class="o">.</span><span class="n">load_sounding</span><span class="p">(</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">method</span><span class="p">,</span> <span class="n">sounding</span><span class="o">=</span><span class="n">sounding</span><span class="p">,</span> <span class="n">moment</span><span class="o">=</span><span class="n">moment</span><span class="p">,</span>
+            <span class="n">use_flags</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"use_project_flags"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)),</span>
+            <span class="n">max_relative_std</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"tail_max_relative_std"</span><span class="p">),</span>
+            <span class="n">gate_rejection</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"gate_rejection"</span><span class="p">,</span> <span class="s2">"truncate"</span><span class="p">)),</span>
+            <span class="n">reject_negative</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"reject_negative"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)),</span>
+            <span class="n">min_gates_per_moment</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"min_gates_per_moment"</span><span class="p">),</span>
+            <span class="n">ttem_loop_area</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"loop_area"</span><span class="p">),</span>
+            <span class="n">ttem_gex_path</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ttem_gex_path"</span><span class="p">),</span>
+            <span class="n">ttem_tfi_path</span><span class="o">=</span><span class="n">geometry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ttem_tfi_path"</span><span class="p">),</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">"FDEM"</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">em1d</span><span class="o">.</span><span class="n">fdem_invert</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">geometry</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">progress</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"moments"</span><span class="p">):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">em1d</span><span class="o">.</span><span class="n">tdem_joint_invert</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span> <span class="n">geometry</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">progress</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">em1d</span><span class="o">.</span><span class="n">tdem_invert</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">geometry</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">progress</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"robust"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"enabled"</span><span class="p">):</span>
+        <span class="c1"># The persisted single-sounding path needs the same weight audit as lines.</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">"data_paths"</span><span class="p">]</span> <span class="o">=</span> <span class="n">em1d</span><span class="o">.</span><span class="n">save_inversion</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">context</span><span class="o">.</span><span class="n">output_dir</span><span class="p">)</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">"metrics"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"chi2_effective"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"chi2_effective"</span><span class="p">],</span>
+                             <span class="s2">"downweighted_gates"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"robust"</span><span class="p">][</span><span class="s2">"downweighted"</span><span class="p">]}</span>
+    <span class="k">return</span> <span class="n">_legacy_result</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="run_joint">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.workflows.html#PyHydroGeophysX.workflows.domain.run_joint">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_joint</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">WorkflowSpec</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WorkflowRunResult</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.data_processing.joint_io</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_joint_observations</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion.joint</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_joint_inversion</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion.joint_api</span><span class="w"> </span><span class="kn">import</span> <span class="n">JointInversionRequest</span>
+
+    <span class="n">parameters</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">_materialize</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">context</span><span class="p">))</span>
+    <span class="n">serialized_data</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"data"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">serialized_data</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"joint_inversion.run requires inputs.data artifact mapping."</span><span class="p">)</span>
+    <span class="n">loaded_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">reference</span> <span class="ow">in</span> <span class="n">serialized_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reference</span><span class="p">,</span> <span class="n">ArtifactRef</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Joint input </span><span class="si">{</span><span class="n">method</span><span class="si">!r}</span><span class="s2"> must be an ArtifactRef."</span><span class="p">)</span>
+        <span class="n">loaded_data</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">method</span><span class="p">)]</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">load_object</span><span class="p">(</span>
+            <span class="n">reference</span><span class="p">,</span>
+            <span class="k">lambda</span> <span class="n">path</span><span class="p">,</span> <span class="n">selected</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">method</span><span class="p">):</span> <span class="n">load_joint_observations</span><span class="p">(</span><span class="n">selected</span><span class="p">,</span> <span class="n">path</span><span class="p">),</span>
+        <span class="p">)</span>
+    <span class="n">run_baseline</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"run_baseline"</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>
+    <span class="n">request</span> <span class="o">=</span> <span class="n">JointInversionRequest</span><span class="p">(</span>
+        <span class="n">method_a</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"method_a"</span><span class="p">)),</span>
+        <span class="n">method_b</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"method_b"</span><span class="p">)),</span>
+        <span class="n">strategy</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"strategy"</span><span class="p">)),</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">loaded_data</span><span class="p">,</span>
+        <span class="n">parameters</span><span class="o">=</span><span class="n">parameters</span><span class="p">,</span>
+        <span class="n">output_dir</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">output_dir</span><span class="p">,</span>
+        <span class="n">run_baseline</span><span class="o">=</span><span class="n">run_baseline</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">_legacy_result</span><span class="p">(</span>
+        <span class="n">spec</span><span class="p">,</span>
+        <span class="n">context</span><span class="p">,</span>
+        <span class="n">run_joint_inversion</span><span class="p">(</span>
+            <span class="n">request</span><span class="p">,</span>
+            <span class="n">progress</span><span class="o">=</span><span class="k">lambda</span> <span class="n">record</span><span class="p">:</span> <span class="n">context</span><span class="o">.</span><span class="n">progress</span><span class="p">(</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="run_gravmag_inversion">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.workflows.html#PyHydroGeophysX.workflows.domain.run_gravmag_inversion">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_gravmag_inversion</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">WorkflowSpec</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">WorkflowRunResult</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion.gravmag</span><span class="w"> </span><span class="kn">import</span> <span class="n">invert_gravmag</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.builtin</span><span class="w"> </span><span class="kn">import</span> <span class="n">_load_array</span>
+
+    <span class="n">parameters</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
+    <span class="n">kind</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"kind"</span><span class="p">,</span> <span class="s2">"gravity"</span><span class="p">))</span>
+    <span class="n">parameters</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"solver"</span><span class="p">,</span> <span class="s2">"simpeg"</span><span class="p">)</span>
+    <span class="n">parameters</span><span class="p">[</span><span class="s2">"out_dir"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">output_dir</span><span class="p">)</span>
+    <span class="n">parameters</span><span class="p">[</span><span class="s2">"random_seed"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">z_value</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"z"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">z_value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">parameters</span><span class="p">[</span><span class="s2">"z"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_load_array</span><span class="p">(</span><span class="n">z_value</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"z"</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">invert_gravmag</span><span class="p">(</span>
+        <span class="n">_load_array</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"x"</span><span class="p">),</span> <span class="n">context</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"x"</span><span class="p">),</span>
+        <span class="n">_load_array</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"y"</span><span class="p">),</span> <span class="n">context</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"y"</span><span class="p">),</span>
+        <span class="n">_load_array</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"values"</span><span class="p">),</span> <span class="n">context</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"values"</span><span class="p">),</span>
+        <span class="n">kind</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">parameters</span><span class="p">,</span>
+        <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">progress</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">_legacy_result</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span></div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"run_em_inversion"</span><span class="p">,</span>
+    <span class="s2">"run_ert3d_forward"</span><span class="p">,</span>
+    <span class="s2">"run_ert_single"</span><span class="p">,</span>
+    <span class="s2">"run_ert_timelapse"</span><span class="p">,</span>
+    <span class="s2">"run_geo_hydrology"</span><span class="p">,</span>
+    <span class="s2">"run_gravmag_inversion"</span><span class="p">,</span>
+    <span class="s2">"run_hydro_geophysics"</span><span class="p">,</span>
+    <span class="s2">"run_joint"</span><span class="p">,</span>
+    <span class="s2">"run_mesh3d"</span><span class="p">,</span>
+    <span class="s2">"run_seismic3d"</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

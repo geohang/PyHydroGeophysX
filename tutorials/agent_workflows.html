@@ -1,0 +1,844 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Agent Workflows &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'tutorials/agent_workflows';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/tutorials/agent_workflows.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Examples Gallery" href="../auto_examples/index.html" />
+    <link rel="prev" title="Seismic Structure Constraints" href="seismic_structure_constraints.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="field_ert_data_qc.html">Field ERT Data QC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hydrology_to_ert.html">Hydrology to ERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hydrology_to_tdem.html">Hydrology to EM (TDEM and FDEM)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="joint_inversion.html">Joint ERT + SRT Inversion</a></li>
+<li class="toctree-l1"><a class="reference internal" href="time_lapse_monitoring.html">Time-Lapse Monitoring</a></li>
+<li class="toctree-l1"><a class="reference internal" href="seismic_structure_constraints.html">Seismic Structure Constraints</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Agent Workflows</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Tutorials and Workflows</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Agent Workflows</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="agent-workflows">
+<h1>Agent Workflows<a class="headerlink" href="#agent-workflows" title="Link to this heading">#</a></h1>
+<p>PyHydroGeophysX includes an agent-based system for natural-language orchestration
+of hydrogeophysical tasks.  These step-by-step tutorials walk through the most
+common use cases.</p>
+<nav class="contents local" id="on-this-page">
+<p class="topic-title">On this page</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#quick-reference" id="id1">Quick Reference</a></p></li>
+<li><p><a class="reference internal" href="#tutorial-1-interactive-3d-mesh-builder" id="id2">Tutorial 1 — Interactive 3D Mesh Builder</a></p></li>
+<li><p><a class="reference internal" href="#tutorial-2-first-ert-workflow-in-code" id="id3">Tutorial 2 — First ERT Workflow in Code</a></p></li>
+<li><p><a class="reference internal" href="#tutorial-3-resuming-a-failed-workflow" id="id4">Tutorial 3 — Resuming a Failed Workflow</a></p></li>
+<li><p><a class="reference internal" href="#tutorial-4-tracking-llm-cost-and-token-usage" id="id5">Tutorial 4 — Tracking LLM Cost and Token Usage</a></p></li>
+<li><p><a class="reference internal" href="#tutorial-5-natural-language-to-workflow" id="id6">Tutorial 5 — Natural Language to Workflow</a></p></li>
+<li><p><a class="reference internal" href="#further-reading" id="id7">Further Reading</a></p></li>
+</ul>
+</nav>
+<section id="quick-reference">
+<h2><a class="toc-backref" href="#id1" role="doc-backlink">Quick Reference</a><a class="headerlink" href="#quick-reference" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Task</p></th>
+<th class="head"><p>Where to go</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Web app (no install)</p></td>
+<td><p><a class="reference external" href="https://pyhydrogeophysx.streamlit.app/">pyhydrogeophysx.streamlit.app</a></p></td>
+</tr>
+<tr class="row-odd"><td><p>3D Mesh Builder GUI</p></td>
+<td><p><a class="reference internal" href="#tut-mesh3d"><span class="std std-ref">Tutorial 1 — Interactive 3D Mesh Builder</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>First ERT workflow in code</p></td>
+<td><p><a class="reference internal" href="#tut-basic-ert"><span class="std std-ref">Tutorial 2 — First ERT Workflow in Code</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>Recover a failed/crashed workflow</p></td>
+<td><p><a class="reference internal" href="#tut-resume"><span class="std std-ref">Tutorial 3 — Resuming a Failed Workflow</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>Track LLM cost</p></td>
+<td><p><a class="reference internal" href="#tut-cost"><span class="std std-ref">Tutorial 4 — Tracking LLM Cost and Token Usage</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>Time-lapse monitoring</p></td>
+<td><p><a class="reference internal" href="../agents/workflows.html"><span class="doc">Common Workflow Patterns</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>Architecture deep-dive</p></td>
+<td><p><a class="reference internal" href="../agents/architecture.html"><span class="doc">System Architecture</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>Agent API reference</p></td>
+<td><p><a class="reference internal" href="../agents/agent_reference.html"><span class="doc">Agent Reference</span></a></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="tutorial-1-interactive-3d-mesh-builder">
+<span id="tut-mesh3d"></span><h2><a class="toc-backref" href="#id2" role="doc-backlink">Tutorial 1 — Interactive 3D Mesh Builder</a><a class="headerlink" href="#tutorial-1-interactive-3d-mesh-builder" title="Link to this heading">#</a></h2>
+<p>The 3D Mesh Builder is a standalone Streamlit app.  No API key is required.</p>
+<p><strong>Launch</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># via the package launcher (recommended)</span>
+python<span class="w"> </span>-m<span class="w"> </span>PyHydroGeophysX.gui_mesh3d
+
+<span class="c1"># or directly</span>
+streamlit<span class="w"> </span>run<span class="w"> </span>examples/app_mesh3d.py
+</pre></div>
+</div>
+<p><strong>Step-by-step: surface grid mesh</strong></p>
+<ol class="arabic simple">
+<li><p>Open the sidebar and choose <strong>Surface Grid</strong> as the Electrode Array Type.</p></li>
+<li><p>Set <strong>Grid Nx = 10</strong>, <strong>Grid Ny = 5</strong>, <strong>Spacing = 5 m</strong>.</p></li>
+<li><p>Select <strong>Linear Tilt</strong> topography to simulate gently sloping terrain.</p></li>
+<li><p>Click the <strong>Electrode View</strong> tab — a 3D scatter plot confirms electrode positions.</p></li>
+<li><p>Increase <strong>Max Cell Size</strong> to 5 m for a quick first mesh (lower values = finer).</p></li>
+<li><p>Click the <strong>Generate Mesh</strong> tab, then press <strong>Generate 3D Mesh</strong>.
+Cell count, node count, and a quality histogram appear below.</p></li>
+<li><p>Click the <strong>Export</strong> tab and download the mesh as <code class="docutils literal notranslate"><span class="pre">.bms</span></code> (PyGIMLi) or <code class="docutils literal notranslate"><span class="pre">.vtk</span></code>
+(ParaView / any VTK reader).</p></li>
+</ol>
+<p><strong>Step-by-step: crosshole mesh</strong></p>
+<ol class="arabic simple">
+<li><p>Choose <strong>Crosshole</strong> array type.</p></li>
+<li><p>Set borehole depth and per-electrode spacing.</p></li>
+<li><p>Set <strong>Max Cell Size = 2 m</strong> for crosshole resolution.</p></li>
+<li><p>Confirm both boreholes in the <strong>Electrode View</strong> tab.</p></li>
+<li><p>Generate and export as <code class="docutils literal notranslate"><span class="pre">.bms</span></code> for use with PyGIMLi crosshole inversion.</p></li>
+</ol>
+<p><strong>Requirements:</strong> <code class="docutils literal notranslate"><span class="pre">pygimli</span></code>, <code class="docutils literal notranslate"><span class="pre">gmsh</span></code> on PATH, <code class="docutils literal notranslate"><span class="pre">plotly</span></code>, <code class="docutils literal notranslate"><span class="pre">streamlit</span></code>.
+See <span class="xref std std-ref">agents/troubleshooting:3D Mesh Generation Fails (gmsh not found)</span> if
+GMSH is missing.</p>
+</section>
+<section id="tutorial-2-first-ert-workflow-in-code">
+<span id="tut-basic-ert"></span><h2><a class="toc-backref" href="#id3" role="doc-backlink">Tutorial 2 — First ERT Workflow in Code</a><a class="headerlink" href="#tutorial-2-first-ert-workflow-in-code" title="Link to this heading">#</a></h2>
+<p>This tutorial runs a complete ERT inversion and water-content conversion without
+the web app.</p>
+<p><strong>Prerequisites</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>activate<span class="w"> </span>pg<span class="w">        </span><span class="c1"># or your PyHydroGeophysX environment</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span><span class="s2">"sk-..."</span>
+</pre></div>
+</div>
+<p><strong>Code walkthrough</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.agents</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">AgentCoordinator</span><span class="p">,</span>
+    <span class="n">ContextInputAgent</span><span class="p">,</span>
+    <span class="n">ERTLoaderAgent</span><span class="p">,</span>
+    <span class="n">ERTInversionAgent</span><span class="p">,</span>
+    <span class="n">InversionEvaluationAgent</span><span class="p">,</span>
+    <span class="n">WaterContentAgent</span><span class="p">,</span>
+    <span class="n">ReportAgent</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">api_key</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">'OPENAI_API_KEY'</span><span class="p">]</span>
+
+<span class="c1"># 1. Create coordinator with a results directory</span>
+<span class="n">coordinator</span> <span class="o">=</span> <span class="n">AgentCoordinator</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="s1">'./results'</span><span class="p">)</span>
+
+<span class="c1"># 2. Register agents</span>
+<span class="n">coordinator</span><span class="o">.</span><span class="n">register_agent</span><span class="p">(</span><span class="s1">'context'</span><span class="p">,</span>       <span class="n">ContextInputAgent</span><span class="p">(</span><span class="n">api_key</span><span class="p">))</span>
+<span class="n">coordinator</span><span class="o">.</span><span class="n">register_agent</span><span class="p">(</span><span class="s1">'ert_loader'</span><span class="p">,</span>    <span class="n">ERTLoaderAgent</span><span class="p">(</span><span class="n">api_key</span><span class="p">))</span>
+<span class="n">coordinator</span><span class="o">.</span><span class="n">register_agent</span><span class="p">(</span><span class="s1">'ert_inversion'</span><span class="p">,</span> <span class="n">ERTInversionAgent</span><span class="p">(</span><span class="n">api_key</span><span class="p">))</span>
+<span class="n">coordinator</span><span class="o">.</span><span class="n">register_agent</span><span class="p">(</span><span class="s1">'evaluation'</span><span class="p">,</span>    <span class="n">InversionEvaluationAgent</span><span class="p">(</span><span class="n">api_key</span><span class="p">))</span>
+<span class="n">coordinator</span><span class="o">.</span><span class="n">register_agent</span><span class="p">(</span><span class="s1">'water_content'</span><span class="p">,</span> <span class="n">WaterContentAgent</span><span class="p">(</span><span class="n">api_key</span><span class="p">))</span>
+<span class="n">coordinator</span><span class="o">.</span><span class="n">register_agent</span><span class="p">(</span><span class="s1">'report'</span><span class="p">,</span>        <span class="n">ReportAgent</span><span class="p">(</span><span class="n">api_key</span><span class="p">))</span>
+
+<span class="c1"># 3. Define workflow configuration</span>
+<span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">'data_file'</span><span class="p">:</span> <span class="s1">'examples/data/sample_ert.ohm'</span><span class="p">,</span>
+    <span class="s1">'instrument'</span><span class="p">:</span> <span class="s1">'E4D'</span><span class="p">,</span>
+    <span class="s1">'inversion_params'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'lambda'</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span> <span class="s1">'max_iter'</span><span class="p">:</span> <span class="mi">10</span><span class="p">},</span>
+    <span class="s1">'petrophysical_params'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'layer1'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'porosity'</span><span class="p">:</span> <span class="mf">0.35</span><span class="p">,</span> <span class="s1">'n'</span><span class="p">:</span> <span class="mf">2.0</span><span class="p">,</span> <span class="s1">'m'</span><span class="p">:</span> <span class="mf">1.5</span><span class="p">},</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+
+<span class="c1"># 4. (Optional) Dry-run — validates files and estimates cost without running</span>
+<span class="n">preview</span> <span class="o">=</span> <span class="n">coordinator</span><span class="o">.</span><span class="n">execute_workflow</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">dry_run</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Execution plan:   "</span><span class="p">,</span> <span class="n">preview</span><span class="p">[</span><span class="s1">'data'</span><span class="p">][</span><span class="s1">'execution_plan'</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Dep. warnings:    "</span><span class="p">,</span> <span class="n">preview</span><span class="p">[</span><span class="s1">'data'</span><span class="p">][</span><span class="s1">'validation_warnings'</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Est. cost:        $</span><span class="si">{</span><span class="n">preview</span><span class="p">[</span><span class="s1">'cost_estimate_usd'</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="c1"># 5. Run the full workflow</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">coordinator</span><span class="o">.</span><span class="n">execute_workflow</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+
+<span class="c1"># 6. Check LLM cost summary</span>
+<span class="n">summary</span> <span class="o">=</span> <span class="n">coordinator</span><span class="o">.</span><span class="n">get_workflow_summary</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Total cost: $</span><span class="si">{</span><span class="n">summary</span><span class="p">[</span><span class="s1">'total_llm_cost_estimate_usd'</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Tokens:     </span><span class="si">{</span><span class="n">summary</span><span class="p">[</span><span class="s1">'total_llm_tokens'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"LLM calls:  </span><span class="si">{</span><span class="n">summary</span><span class="p">[</span><span class="s1">'llm_calls'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="c1"># 7. Persist outputs (numpy → .npy, meshes → .bms, DataFrames → .csv)</span>
+<span class="n">coordinator</span><span class="o">.</span><span class="n">save_workflow_results</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="tutorial-3-resuming-a-failed-workflow">
+<span id="tut-resume"></span><h2><a class="toc-backref" href="#id4" role="doc-backlink">Tutorial 3 — Resuming a Failed Workflow</a><a class="headerlink" href="#tutorial-3-resuming-a-failed-workflow" title="Link to this heading">#</a></h2>
+<p>Long workflows can be interrupted (network drop, out-of-memory, server restart).
+Since v0.3 every step is checkpointed automatically.  Restart with <code class="docutils literal notranslate"><span class="pre">resume=True</span></code>
+and only the failed/skipped steps run again.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># First run — crashes at step 3 of 5</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">coordinator</span><span class="o">.</span><span class="n">execute_workflow</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Failed: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="c1"># Restart — steps 1 &amp; 2 loaded from ./results/checkpoints/</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">coordinator</span><span class="o">.</span><span class="n">execute_workflow</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">resume</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Checkpoint files are stored as:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>results/
+└── checkpoints/
+    ├── fetch_climate.pkl
+    ├── fetch_climate.json        ← human-readable sidecar
+    ├── load_ert.pkl
+    └── load_ert.json
+</pre></div>
+</div>
+<p>To force a clean restart delete the checkpoints folder:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>rm<span class="w"> </span>-rf<span class="w"> </span>./results/checkpoints/
+</pre></div>
+</div>
+<p>See also: <span class="xref std std-ref">agents/troubleshooting:Resuming a Failed or Interrupted Workflow</span></p>
+</section>
+<section id="tutorial-4-tracking-llm-cost-and-token-usage">
+<span id="tut-cost"></span><h2><a class="toc-backref" href="#id5" role="doc-backlink">Tutorial 4 — Tracking LLM Cost and Token Usage</a><a class="headerlink" href="#tutorial-4-tracking-llm-cost-and-token-usage" title="Link to this heading">#</a></h2>
+<p>Every LLM call is recorded in each agent’s <code class="docutils literal notranslate"><span class="pre">llm_usage_ledger</span></code> and aggregated
+by <code class="docutils literal notranslate"><span class="pre">AgentCoordinator</span></code>.</p>
+<p><strong>Per-agent ledger</strong> (inspect raw entries):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">coordinator</span><span class="o">.</span><span class="n">agents</span><span class="p">[</span><span class="s1">'ert_inversion'</span><span class="p">]</span><span class="o">.</span><span class="n">llm_usage_ledger</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+<span class="c1"># {</span>
+<span class="c1">#   'agent': 'ert_inversion',</span>
+<span class="c1">#   'provider': 'openai',</span>
+<span class="c1">#   'model': 'gpt-4o-mini',</span>
+<span class="c1">#   'prompt_tokens': 320,</span>
+<span class="c1">#   'completion_tokens': 85,</span>
+<span class="c1">#   'total_tokens': 405,</span>
+<span class="c1">#   'cost_estimate_usd': 0.000121,</span>
+<span class="c1">#   'timestamp': 1714500000.0,</span>
+<span class="c1"># }</span>
+</pre></div>
+</div>
+<p><strong>Workflow-level summary</strong> (after <code class="docutils literal notranslate"><span class="pre">execute_workflow</span></code>):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">summary</span> <span class="o">=</span> <span class="n">coordinator</span><span class="o">.</span><span class="n">get_workflow_summary</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Status:       </span><span class="si">{</span><span class="n">summary</span><span class="p">[</span><span class="s1">'status'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Steps done:   </span><span class="si">{</span><span class="n">summary</span><span class="p">[</span><span class="s1">'completed_steps'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Total cost:   $</span><span class="si">{</span><span class="n">summary</span><span class="p">[</span><span class="s1">'total_llm_cost_estimate_usd'</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Total tokens: </span><span class="si">{</span><span class="n">summary</span><span class="p">[</span><span class="s1">'total_llm_tokens'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"LLM calls:    </span><span class="si">{</span><span class="n">summary</span><span class="p">[</span><span class="s1">'llm_calls'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Cost rates are defined in <code class="docutils literal notranslate"><span class="pre">PyHydroGeophysX/agents/_pricing.py</span></code>.</p>
+</section>
+<section id="tutorial-5-natural-language-to-workflow">
+<h2><a class="toc-backref" href="#id6" role="doc-backlink">Tutorial 5 — Natural Language to Workflow</a><a class="headerlink" href="#tutorial-5-natural-language-to-workflow" title="Link to this heading">#</a></h2>
+<p>Skip manual config dictionaries and let <code class="docutils literal notranslate"><span class="pre">ContextInputAgent</span></code> parse a plain
+English description:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.agents</span><span class="w"> </span><span class="kn">import</span> <span class="n">ContextInputAgent</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="n">context</span> <span class="o">=</span> <span class="n">ContextInputAgent</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">'OPENAI_API_KEY'</span><span class="p">])</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">execute</span><span class="p">({</span>
+    <span class="s1">'user_request'</span><span class="p">:</span> <span class="p">(</span>
+        <span class="s2">"I have Syscal Pro ERT data at data/field.bin. "</span>
+        <span class="s2">"Run a standard inversion with lambda=20, then convert "</span>
+        <span class="s2">"resistivity to water content assuming porosity 0.35."</span>
+    <span class="p">)</span>
+<span class="p">})</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s1">'workflow_config'</span><span class="p">]</span>
+<span class="c1"># Pass config directly to coordinator.execute_workflow(config)</span>
+</pre></div>
+</div>
+<p>The agent is guided by a detailed system message set at initialisation and
+augmented with <code class="docutils literal notranslate"><span class="pre">.github/agents/context_input.agent.md</span></code> on first call.</p>
+</section>
+<section id="further-reading">
+<h2><a class="toc-backref" href="#id7" role="doc-backlink">Further Reading</a><a class="headerlink" href="#further-reading" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Full workflow patterns: <a class="reference internal" href="../agents/workflows.html"><span class="doc">Common Workflow Patterns</span></a></p></li>
+<li><p>Agent API: <a class="reference internal" href="../agents/agent_reference.html"><span class="doc">Agent Reference</span></a></p></li>
+<li><p>Architecture: <a class="reference internal" href="../agents/architecture.html"><span class="doc">System Architecture</span></a></p></li>
+<li><p>Hosted app &amp; 3D Mesh Builder: <a class="reference internal" href="../agents/webapp.html"><span class="doc">Agent Web App</span></a></p></li>
+<li><p>Troubleshooting: <a class="reference internal" href="../agents/troubleshooting.html"><span class="doc">Troubleshooting</span></a></p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="seismic_structure_constraints.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Seismic Structure Constraints</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../auto_examples/index.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Examples Gallery</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#quick-reference">Quick Reference</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tutorial-1-interactive-3d-mesh-builder">Tutorial 1 — Interactive 3D Mesh Builder</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tutorial-2-first-ert-workflow-in-code">Tutorial 2 — First ERT Workflow in Code</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tutorial-3-resuming-a-failed-workflow">Tutorial 3 — Resuming a Failed Workflow</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tutorial-4-tracking-llm-cost-and-token-usage">Tutorial 4 — Tracking LLM Cost and Token Usage</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tutorial-5-natural-language-to-workflow">Tutorial 5 — Natural Language to Workflow</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#further-reading">Further Reading</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/tutorials/agent_workflows.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/tutorials/agent_workflows.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

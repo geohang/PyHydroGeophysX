@@ -1,0 +1,941 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.inversion.gravmag &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/inversion/gravmag';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/inversion/gravmag.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../../PyHydroGeophysX.html" class="nav-link">PyHydroGeophysX</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.inversion.gravmag</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.inversion.gravmag</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""SimPEG gravity and magnetics inversion."""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX._internal.optional_dependencies</span><span class="w"> </span><span class="kn">import</span> <span class="n">BackendUnavailable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX._internal.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">noop</span> <span class="k">as</span> <span class="n">_noop</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.data_processing</span><span class="w"> </span><span class="kn">import</span> <span class="n">table_io</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.data_processing.gravmag</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">regional_residual</span><span class="p">,</span>
+    <span class="n">spatially_balanced_indices</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">LogFn</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span>
+
+<span class="n">_DEFAULT_NOISE_FLOOR</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"gravity"</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s2">"magnetics"</span><span class="p">:</span> <span class="mf">2.0</span><span class="p">}</span>
+
+
+<div class="viewcode-block" id="InversionBackendUnavailable">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.workflows.html#PyHydroGeophysX.gravmag.InversionBackendUnavailable">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">InversionBackendUnavailable</span><span class="p">(</span><span class="n">BackendUnavailable</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""SimPEG / discretize / a usable solver could not be imported."""</span></div>
+
+
+
+<div class="viewcode-block" id="backend_status">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.workflows.html#PyHydroGeophysX.gravmag.backend_status">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">backend_status</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Report whether the SimPEG potential-field inversion stack is available."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">pymatsolver</span>  <span class="c1"># noqa: F401</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">discretize</span><span class="w"> </span><span class="kn">import</span> <span class="n">TensorMesh</span>  <span class="c1"># noqa: F401</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">simpeg.potential_fields</span><span class="w"> </span><span class="kn">import</span> <span class="n">gravity</span><span class="p">,</span> <span class="n">magnetics</span>  <span class="c1"># noqa: F401</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - optional numerical backend</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"available"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"available"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="s2">""</span><span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="invert_gravmag">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.workflows.html#PyHydroGeophysX.gravmag.invert_gravmag">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">invert_gravmag</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">field</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">detrend</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                   <span class="n">n_xy</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">22</span><span class="p">,</span> <span class="n">n_z</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">12</span><span class="p">,</span> <span class="n">max_iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+                   <span class="n">beta0_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">max_stations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">600</span><span class="p">,</span>
+                   <span class="n">relative_error</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.03</span><span class="p">,</span> <span class="n">noise_floor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">solver</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"simpeg"</span><span class="p">,</span> <span class="n">auto_beta</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                   <span class="n">target_chi2</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">chi2_tolerance</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
+                   <span class="n">max_beta_trials</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span> <span class="n">sensitivity_power</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+                   <span class="n">out_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">random_seed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span>
+                   <span class="n">log</span><span class="p">:</span> <span class="n">LogFn</span> <span class="o">=</span> <span class="n">_noop</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Run a SimPEG 3D potential-field inversion under the survey.</span>
+
+<span class="sd">    ``gravity`` recovers a density-contrast model (g/cc); ``magnetics`` recovers a</span>
+<span class="sd">    susceptibility model (SI) and needs ``field`` = {inclination, declination,</span>
+<span class="sd">    strength_nT}. ``z`` is optional per-station elevation (m, positive upward); a</span>
+<span class="sd">    missing value falls back to 1 m. ``detrend`` (0..3) removes a polynomial</span>
+<span class="sd">    regional trend before inversion. The returned grid uses elevation increasing</span>
+<span class="sd">    upward. ``random_seed`` makes SimPEG's eigenvalue-based beta estimate</span>
+<span class="sd">    reproducible. Raises :class:`InversionBackendUnavailable` if SimPEG is missing.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">pymatsolver</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">discretize</span><span class="w"> </span><span class="kn">import</span> <span class="n">TensorMesh</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">simpeg</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">data_misfit</span><span class="p">,</span> <span class="n">directives</span><span class="p">,</span> <span class="n">inverse_problem</span><span class="p">,</span>
+                            <span class="n">inversion</span><span class="p">,</span> <span class="n">maps</span><span class="p">,</span> <span class="n">optimization</span><span class="p">,</span> <span class="n">regularization</span><span class="p">)</span>
+        <span class="n">is_grav</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">kind</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"grav"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_grav</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">simpeg.potential_fields</span><span class="w"> </span><span class="kn">import</span> <span class="n">gravity</span> <span class="k">as</span> <span class="n">pf</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">simpeg.potential_fields</span><span class="w"> </span><span class="kn">import</span> <span class="n">magnetics</span> <span class="k">as</span> <span class="n">pf</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
+        <span class="k">raise</span> <span class="n">InversionBackendUnavailable</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">();</span> <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">y</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">value</span><span class="o">.</span><span class="n">size</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"x, y and value must have the same number of stations."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">z</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">z</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"z must be omitted or contain one elevation per station."</span><span class="p">)</span>
+    <span class="n">good</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">good</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">good</span><span class="p">],</span> <span class="n">value</span><span class="p">[</span><span class="n">good</span><span class="p">],</span> <span class="n">z</span><span class="p">[</span><span class="n">good</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="mi">20</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Need at least ~20 stations for a stable inversion."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">detrend</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">regional_residual</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">degree</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">detrend</span><span class="p">))</span>
+        <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Removed a degree-</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">detrend</span><span class="p">)</span><span class="si">}</span><span class="s2"> regional trend before inversion."</span><span class="p">)</span>
+    <span class="n">n_input</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="nb">int</span><span class="p">(</span><span class="n">max_stations</span><span class="p">):</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">spatially_balanced_indices</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">max_stations</span><span class="p">))</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">value</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">z</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">kind</span><span class="si">}</span><span class="s2"> inversion: </span><span class="si">{</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> stations"</span><span class="p">)</span>
+
+    <span class="n">x0</span><span class="p">,</span> <span class="n">x1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">()),</span> <span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">());</span> <span class="n">y0</span><span class="p">,</span> <span class="n">y1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">min</span><span class="p">()),</span> <span class="nb">float</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+    <span class="n">csx</span> <span class="o">=</span> <span class="p">(</span><span class="n">x1</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">/</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_xy</span><span class="p">);</span> <span class="n">csy</span> <span class="o">=</span> <span class="p">(</span><span class="n">y1</span> <span class="o">-</span> <span class="n">y0</span><span class="p">)</span> <span class="o">/</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_xy</span><span class="p">)</span>
+    <span class="n">csz</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">csx</span><span class="p">,</span> <span class="n">csy</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.6</span>
+    <span class="n">padx</span><span class="p">,</span> <span class="n">pady</span> <span class="o">=</span> <span class="mf">0.15</span> <span class="o">*</span> <span class="p">(</span><span class="n">x1</span> <span class="o">-</span> <span class="n">x0</span><span class="p">),</span> <span class="mf">0.15</span> <span class="o">*</span> <span class="p">(</span><span class="n">y1</span> <span class="o">-</span> <span class="n">y0</span><span class="p">)</span>
+    <span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nz</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_xy</span><span class="p">)</span> <span class="o">+</span> <span class="mi">4</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_xy</span><span class="p">)</span> <span class="o">+</span> <span class="mi">4</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_z</span><span class="p">)</span>
+    <span class="n">ox</span><span class="p">,</span> <span class="n">oy</span><span class="p">,</span> <span class="n">oz</span> <span class="o">=</span> <span class="n">x0</span> <span class="o">-</span> <span class="n">padx</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">csx</span><span class="p">,</span> <span class="n">y0</span> <span class="o">-</span> <span class="n">pady</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">csy</span><span class="p">,</span> <span class="o">-</span><span class="n">csz</span> <span class="o">*</span> <span class="n">nz</span>
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">TensorMesh</span><span class="p">([[(</span><span class="n">csx</span><span class="p">,</span> <span class="n">nx</span><span class="p">)],</span> <span class="p">[(</span><span class="n">csy</span><span class="p">,</span> <span class="n">ny</span><span class="p">)],</span> <span class="p">[(</span><span class="n">csz</span><span class="p">,</span> <span class="n">nz</span><span class="p">)]],</span> <span class="n">origin</span><span class="o">=</span><span class="p">[</span><span class="n">ox</span><span class="p">,</span> <span class="n">oy</span><span class="p">,</span> <span class="n">oz</span><span class="p">])</span>
+    <span class="n">actv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">n_cells</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="n">model_map</span> <span class="o">=</span> <span class="n">maps</span><span class="o">.</span><span class="n">IdentityMap</span><span class="p">(</span><span class="n">nP</span><span class="o">=</span><span class="n">mesh</span><span class="o">.</span><span class="n">n_cells</span><span class="p">)</span>
+
+    <span class="n">rx</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">receivers</span><span class="o">.</span><span class="n">Point</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">],</span>
+                            <span class="n">components</span><span class="o">=</span><span class="p">(</span><span class="s2">"gz"</span> <span class="k">if</span> <span class="n">is_grav</span> <span class="k">else</span> <span class="s2">"tmi"</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">is_grav</span><span class="p">:</span>
+        <span class="n">survey</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">survey</span><span class="o">.</span><span class="n">Survey</span><span class="p">(</span><span class="n">pf</span><span class="o">.</span><span class="n">sources</span><span class="o">.</span><span class="n">SourceField</span><span class="p">(</span><span class="n">receiver_list</span><span class="o">=</span><span class="p">[</span><span class="n">rx</span><span class="p">]))</span>
+        <span class="n">sim</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">Simulation3DIntegral</span><span class="p">(</span>
+            <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">survey</span><span class="o">=</span><span class="n">survey</span><span class="p">,</span> <span class="n">rhoMap</span><span class="o">=</span><span class="n">model_map</span><span class="p">,</span> <span class="n">active_cells</span><span class="o">=</span><span class="n">actv</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">"geoana"</span><span class="p">)</span>
+        <span class="n">m_label</span><span class="p">,</span> <span class="n">m_cmap</span> <span class="o">=</span> <span class="s2">"density (g/cc)"</span><span class="p">,</span> <span class="s2">"RdBu_r"</span>
+        <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">floor</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.5</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">field</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="n">src</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">sources</span><span class="o">.</span><span class="n">UniformBackgroundField</span><span class="p">(</span>
+            <span class="n">receiver_list</span><span class="o">=</span><span class="p">[</span><span class="n">rx</span><span class="p">],</span> <span class="n">amplitude</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"strength_nT"</span><span class="p">,</span> <span class="mf">50000.0</span><span class="p">)),</span>
+            <span class="n">inclination</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"inclination"</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">)),</span>
+            <span class="n">declination</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"declination"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)))</span>
+        <span class="n">survey</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">survey</span><span class="o">.</span><span class="n">Survey</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
+        <span class="n">sim</span> <span class="o">=</span> <span class="n">pf</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">Simulation3DIntegral</span><span class="p">(</span>
+            <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">survey</span><span class="o">=</span><span class="n">survey</span><span class="p">,</span> <span class="n">chiMap</span><span class="o">=</span><span class="n">model_map</span><span class="p">,</span> <span class="n">active_cells</span><span class="o">=</span><span class="n">actv</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">"geoana"</span><span class="p">)</span>
+        <span class="n">m_label</span><span class="p">,</span> <span class="n">m_cmap</span> <span class="o">=</span> <span class="s2">"susceptibility (SI)"</span><span class="p">,</span> <span class="s2">"viridis"</span>
+        <span class="c1"># Smooth susceptibility "contrast": bound symmetric about 0 so the start</span>
+        <span class="c1"># model (0) is interior, otherwise ProjectedGNCG is stuck at the 0 lower bound.</span>
+        <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">floor</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">2.0</span>
+    <span class="c1"># scipy LU solver: avoids the Pardiso/MKL native crash in this environment.</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">solver</span> <span class="o">=</span> <span class="n">pymatsolver</span><span class="o">.</span><span class="n">Solver</span>
+    <span class="n">sim</span><span class="o">.</span><span class="n">solver_opts</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">if</span> <span class="n">noise_floor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">noise_floor</span> <span class="o">=</span> <span class="n">_DEFAULT_NOISE_FLOOR</span><span class="p">[</span><span class="s2">"gravity"</span> <span class="k">if</span> <span class="n">is_grav</span> <span class="k">else</span> <span class="s2">"magnetics"</span><span class="p">]</span>
+    <span class="n">std</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">relative_error</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">+</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">noise_floor</span><span class="p">))</span>
+    <span class="n">dmis</span> <span class="o">=</span> <span class="n">data_misfit</span><span class="o">.</span><span class="n">L2DataMisfit</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">Data</span><span class="p">(</span><span class="n">survey</span><span class="p">,</span> <span class="n">dobs</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="n">standard_deviation</span><span class="o">=</span><span class="n">std</span><span class="p">),</span> <span class="n">simulation</span><span class="o">=</span><span class="n">sim</span><span class="p">)</span>
+    <span class="n">reg</span> <span class="o">=</span> <span class="n">regularization</span><span class="o">.</span><span class="n">WeightedLeastSquares</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">active_cells</span><span class="o">=</span><span class="n">actv</span><span class="p">)</span>
+    <span class="n">opt</span> <span class="o">=</span> <span class="n">optimization</span><span class="o">.</span><span class="n">ProjectedGNCG</span><span class="p">(</span><span class="n">maxIter</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">max_iterations</span><span class="p">),</span> <span class="n">lower</span><span class="o">=</span><span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="n">upper</span><span class="p">,</span>
+                                     <span class="n">maxIterCG</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">tolCG</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span>
+    <span class="n">beta_report</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"solver"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">solver</span><span class="p">)}</span>
+    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">solver</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"linear"</span><span class="p">:</span>
+        <span class="c1"># Potential-field sensitivities do not depend on the model, so this is a</span>
+        <span class="c1"># quadratic problem: one linear solve per beta, no Gauss-Newton loop, no</span>
+        <span class="c1"># beta cooling schedule, and a beta that the result can be attributed to.</span>
+        <span class="n">m0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">n_cells</span><span class="p">)</span>
+        <span class="c1"># Weight before estimating beta: the weights change the model term, and</span>
+        <span class="c1"># a beta scaled against the unweighted one starts in the wrong place.</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">apply_sensitivity_weights</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">dmis</span><span class="p">,</span> <span class="n">reg</span><span class="p">,</span> <span class="n">m0</span><span class="p">,</span>
+                                            <span class="n">power</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">sensitivity_power</span><span class="p">),</span> <span class="n">log</span><span class="o">=</span><span class="n">log</span><span class="p">)</span>
+        <span class="n">beta_report</span><span class="p">[</span><span class="s2">"sensitivity_weighted"</span><span class="p">]</span> <span class="o">=</span> <span class="n">weights</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="n">beta0</span> <span class="o">=</span> <span class="n">estimate_beta0</span><span class="p">(</span><span class="n">dmis</span><span class="p">,</span> <span class="n">reg</span><span class="p">,</span> <span class="n">m0</span><span class="p">,</span> <span class="n">ratio</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">beta0_ratio</span><span class="p">),</span>
+                               <span class="n">seed</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">random_seed</span> <span class="ow">or</span> <span class="mi">42</span><span class="p">))</span>
+        <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Linear Tikhonov solve (</span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">n_cells</span><span class="si">}</span><span class="s2"> cells, </span><span class="si">{</span><span class="n">value</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> data), "</span>
+            <span class="sa">f</span><span class="s2">"beta0 </span><span class="si">{</span><span class="n">beta0</span><span class="si">:</span><span class="s2">.4g</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">auto_beta</span><span class="p">:</span>
+            <span class="n">swept</span> <span class="o">=</span> <span class="n">sweep_beta_for_chi2</span><span class="p">(</span>
+                <span class="n">dmis</span><span class="p">,</span> <span class="n">reg</span><span class="p">,</span> <span class="n">m0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">size</span><span class="p">),</span> <span class="n">beta0</span><span class="o">=</span><span class="n">beta0</span><span class="p">,</span>
+                <span class="n">target_chi2</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">target_chi2</span><span class="p">),</span> <span class="n">chi2_tolerance</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">chi2_tolerance</span><span class="p">),</span>
+                <span class="n">max_trials</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">max_beta_trials</span><span class="p">),</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">),</span> <span class="n">log</span><span class="o">=</span><span class="n">log</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">mrec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">swept</span><span class="p">[</span><span class="s2">"model"</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="n">chi2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">swept</span><span class="p">[</span><span class="s2">"chi2"</span><span class="p">])</span>
+            <span class="n">convergence</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span><span class="p">[</span><span class="s2">"chi2"</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">swept</span><span class="p">[</span><span class="s2">"trials"</span><span class="p">]]</span>
+            <span class="n">beta_report</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="n">swept</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span>
+                                <span class="p">(</span><span class="s2">"beta"</span><span class="p">,</span> <span class="s2">"beta0"</span><span class="p">,</span> <span class="s2">"status"</span><span class="p">,</span> <span class="s2">"reason"</span><span class="p">,</span> <span class="s2">"trials"</span><span class="p">,</span>
+                                 <span class="s2">"clipped"</span><span class="p">)})</span>
+            <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  beta </span><span class="si">{</span><span class="n">swept</span><span class="p">[</span><span class="s1">'beta'</span><span class="p">]</span><span class="si">:</span><span class="s2">.4g</span><span class="si">}</span><span class="s2"> gives chi2 </span><span class="si">{</span><span class="n">chi2</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> "</span>
+                <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">swept</span><span class="p">[</span><span class="s1">'status'</span><span class="p">]</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mrec</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">solve_tikhonov</span><span class="p">(</span><span class="n">dmis</span><span class="p">,</span> <span class="n">reg</span><span class="p">,</span> <span class="n">m0</span><span class="p">,</span> <span class="n">beta0</span><span class="p">,</span>
+                                        <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">))</span>
+            <span class="n">mrec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mrec</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="n">chi2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">dmis</span><span class="p">(</span><span class="n">mrec</span><span class="p">))</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">size</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">convergence</span> <span class="o">=</span> <span class="p">[</span><span class="n">chi2</span><span class="p">]</span>
+            <span class="n">beta_report</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">"beta"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">beta0</span><span class="p">),</span> <span class="s2">"beta0"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">beta0</span><span class="p">),</span>
+                                <span class="s2">"status"</span><span class="p">:</span> <span class="s2">"fixed"</span><span class="p">,</span> <span class="s2">"trials"</span><span class="p">:</span> <span class="p">[],</span>
+                                <span class="s2">"clipped"</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">"clipped"</span><span class="p">])})</span>
+        <span class="k">return</span> <span class="n">_gravmag_payload</span><span class="p">(</span>
+            <span class="n">kind</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">mrec</span><span class="p">,</span> <span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="p">,</span> <span class="n">ox</span><span class="p">,</span> <span class="n">oy</span><span class="p">,</span> <span class="n">oz</span><span class="p">,</span> <span class="n">csx</span><span class="p">,</span> <span class="n">csy</span><span class="p">,</span> <span class="n">csz</span><span class="p">,</span>
+            <span class="n">m_label</span><span class="p">,</span> <span class="n">m_cmap</span><span class="p">,</span> <span class="n">chi2</span><span class="p">,</span> <span class="n">value</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">n_input</span><span class="p">,</span> <span class="n">relative_error</span><span class="p">,</span>
+            <span class="n">noise_floor</span><span class="p">,</span> <span class="n">convergence</span><span class="p">,</span> <span class="n">beta_report</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">)</span>
+
+    <span class="n">invprob</span> <span class="o">=</span> <span class="n">inverse_problem</span><span class="o">.</span><span class="n">BaseInvProblem</span><span class="p">(</span><span class="n">dmis</span><span class="p">,</span> <span class="n">reg</span><span class="p">,</span> <span class="n">opt</span><span class="p">)</span>
+    <span class="c1"># ``on_disk`` was added in newer SimPEG releases. ``save_txt=False`` keeps</span>
+    <span class="c1"># iteration history in memory and is supported by both 0.24 and newer APIs.</span>
+    <span class="n">history_directive</span> <span class="o">=</span> <span class="n">directives</span><span class="o">.</span><span class="n">SaveOutputEveryIteration</span><span class="p">(</span><span class="n">save_txt</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">dlist</span> <span class="o">=</span> <span class="p">[</span><span class="n">directives</span><span class="o">.</span><span class="n">UpdateSensitivityWeights</span><span class="p">(</span><span class="n">every_iteration</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+             <span class="n">directives</span><span class="o">.</span><span class="n">BetaEstimate_ByEig</span><span class="p">(</span><span class="n">beta0_ratio</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">beta0_ratio</span><span class="p">),</span>
+                                           <span class="n">random_seed</span><span class="o">=</span><span class="n">random_seed</span><span class="p">),</span>
+             <span class="n">directives</span><span class="o">.</span><span class="n">BetaSchedule</span><span class="p">(</span><span class="n">coolingFactor</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">coolingRate</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+             <span class="n">history_directive</span><span class="p">,</span> <span class="n">directives</span><span class="o">.</span><span class="n">TargetMisfit</span><span class="p">()]</span>
+    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Running SimPEG inversion (</span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">n_cells</span><span class="si">}</span><span class="s2"> cells, up to </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">max_iterations</span><span class="p">)</span><span class="si">}</span><span class="s2"> iters)…"</span><span class="p">)</span>
+    <span class="n">mrec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">inversion</span><span class="o">.</span><span class="n">BaseInversion</span><span class="p">(</span><span class="n">invprob</span><span class="p">,</span> <span class="n">directiveList</span><span class="o">=</span><span class="n">dlist</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">n_cells</span><span class="p">)),</span> <span class="nb">float</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">phi_d</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">dmis</span><span class="p">(</span><span class="n">mrec</span><span class="p">));</span> <span class="n">chi2</span> <span class="o">=</span> <span class="n">phi_d</span> <span class="o">/</span> <span class="n">value</span><span class="o">.</span><span class="n">size</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
+        <span class="n">chi2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">)</span>
+    <span class="n">convergence</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">phi_d</span><span class="p">)</span> <span class="o">/</span> <span class="n">value</span><span class="o">.</span><span class="n">size</span> <span class="k">for</span> <span class="n">phi_d</span> <span class="ow">in</span> <span class="n">history_directive</span><span class="o">.</span><span class="n">phi_d</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">_gravmag_payload</span><span class="p">(</span>
+        <span class="n">kind</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">mrec</span><span class="p">,</span> <span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="p">,</span> <span class="n">ox</span><span class="p">,</span> <span class="n">oy</span><span class="p">,</span> <span class="n">oz</span><span class="p">,</span> <span class="n">csx</span><span class="p">,</span> <span class="n">csy</span><span class="p">,</span> <span class="n">csz</span><span class="p">,</span>
+        <span class="n">m_label</span><span class="p">,</span> <span class="n">m_cmap</span><span class="p">,</span> <span class="n">chi2</span><span class="p">,</span> <span class="n">value</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">n_input</span><span class="p">,</span> <span class="n">relative_error</span><span class="p">,</span>
+        <span class="n">noise_floor</span><span class="p">,</span> <span class="n">convergence</span><span class="p">,</span> <span class="n">beta_report</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_gravmag_payload</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">mrec</span><span class="p">,</span> <span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="p">,</span> <span class="n">ox</span><span class="p">,</span> <span class="n">oy</span><span class="p">,</span> <span class="n">oz</span><span class="p">,</span> <span class="n">csx</span><span class="p">,</span> <span class="n">csy</span><span class="p">,</span> <span class="n">csz</span><span class="p">,</span>
+                     <span class="n">m_label</span><span class="p">,</span> <span class="n">m_cmap</span><span class="p">,</span> <span class="n">chi2</span><span class="p">,</span> <span class="n">n_data</span><span class="p">,</span> <span class="n">n_input</span><span class="p">,</span> <span class="n">relative_error</span><span class="p">,</span>
+                     <span class="n">noise_floor</span><span class="p">,</span> <span class="n">convergence</span><span class="p">,</span> <span class="n">beta_report</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Shared result shape for both the SimPEG and the linear solver paths."""</span>
+    <span class="n">model3d</span> <span class="o">=</span> <span class="n">mrec</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s2">"F"</span><span class="p">)</span>
+    <span class="n">ex</span> <span class="o">=</span> <span class="n">ox</span> <span class="o">+</span> <span class="n">csx</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">ey</span> <span class="o">=</span> <span class="n">oy</span> <span class="o">+</span> <span class="n">csy</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">ny</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">ez</span> <span class="o">=</span> <span class="n">oz</span> <span class="o">+</span> <span class="n">csz</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nz</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">out</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"kind"</span><span class="p">:</span> <span class="n">kind</span><span class="p">,</span> <span class="s2">"edges"</span><span class="p">:</span> <span class="p">(</span><span class="n">ex</span><span class="p">,</span> <span class="n">ey</span><span class="p">,</span> <span class="n">ez</span><span class="p">),</span> <span class="s2">"model3d"</span><span class="p">:</span> <span class="n">model3d</span><span class="p">,</span>
+        <span class="s2">"label"</span><span class="p">:</span> <span class="n">m_label</span><span class="p">,</span> <span class="s2">"cmap"</span><span class="p">:</span> <span class="n">m_cmap</span><span class="p">,</span> <span class="s2">"log_scale"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="s2">"chi2"</span><span class="p">:</span> <span class="n">chi2</span><span class="p">,</span> <span class="s2">"n_data"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_data</span><span class="p">),</span> <span class="s2">"n_input"</span><span class="p">:</span> <span class="n">n_input</span><span class="p">,</span>
+        <span class="s2">"n_cells"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">n_cells</span><span class="p">),</span> <span class="s2">"relative_error"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">relative_error</span><span class="p">),</span>
+        <span class="s2">"noise_floor"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">noise_floor</span><span class="p">),</span> <span class="s2">"convergence"</span><span class="p">:</span> <span class="n">convergence</span><span class="p">,</span>
+        <span class="s2">"model_range"</span><span class="p">:</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmin</span><span class="p">(</span><span class="n">mrec</span><span class="p">)),</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">mrec</span><span class="p">))],</span>
+        <span class="s2">"beta"</span><span class="p">:</span> <span class="n">beta_report</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">out_dir</span><span class="p">:</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="n">table_io</span><span class="o">.</span><span class="n">ensure_dir</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">out_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"gravmag_inversion"</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">savez</span><span class="p">(</span><span class="n">base</span> <span class="o">/</span> <span class="s2">"model_grid.npz"</span><span class="p">,</span> <span class="n">ex</span><span class="o">=</span><span class="n">ex</span><span class="p">,</span> <span class="n">ey</span><span class="o">=</span><span class="n">ey</span><span class="p">,</span> <span class="n">ez</span><span class="o">=</span><span class="n">ez</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model3d</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">pyvista</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pv</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="n">pv</span><span class="o">.</span><span class="n">RectilinearGrid</span><span class="p">(</span><span class="n">ex</span><span class="p">,</span> <span class="n">ey</span><span class="p">,</span> <span class="n">ez</span><span class="p">)</span>
+            <span class="n">grid</span><span class="o">.</span><span class="n">cell_data</span><span class="p">[</span><span class="n">m_label</span><span class="p">]</span> <span class="o">=</span> <span class="n">model3d</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="s2">"F"</span><span class="p">)</span>
+            <span class="n">grid</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">base</span> <span class="o">/</span> <span class="s2">"model.vtr"</span><span class="p">))</span>
+            <span class="n">out</span><span class="p">[</span><span class="s2">"vtk"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">base</span> <span class="o">/</span> <span class="s2">"model.vtr"</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - VTK export is optional</span>
+            <span class="k">pass</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"output_dir"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">base</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+<span class="c1">#: Beta is not lambda. It scales against the data units and the mesh, so its</span>
+<span class="c1">#: useful range sits far below the ERT/SRT regularization bounds; on a typical</span>
+<span class="c1">#: gravity survey chi2 = 1 lands near 1e-3. The estimate below makes the search</span>
+<span class="c1">#: scale free, and these bounds only stop it running away.</span>
+<span class="n">BETA_BOUNDS</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1e-12</span><span class="p">,</span> <span class="mf">1e8</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="estimate_beta0">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.inversion.html#PyHydroGeophysX.gravmag.estimate_beta0">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">estimate_beta0</span><span class="p">(</span><span class="n">dmis</span><span class="p">,</span> <span class="n">reg</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span>
+                   <span class="n">n_power</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Scale-free starting beta, as SimPEG's ``BetaEstimate_ByEig`` does it.</span>
+
+<span class="sd">    Power-iterate both Hessians and take the ratio of their largest eigenvalues,</span>
+<span class="sd">    so beta starts where the two objective terms are comparable regardless of</span>
+<span class="sd">    the data units or the mesh size.</span>
+<span class="sd">    """</span>
+    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">largest_eig</span><span class="p">(</span><span class="n">operator</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+        <span class="n">v</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">n_power</span><span class="p">)):</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">operator</span><span class="p">(</span><span class="n">v</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="n">norm</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">w</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">norm</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mf">0.0</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">w</span> <span class="o">/</span> <span class="n">norm</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">norm</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="n">top_d</span> <span class="o">=</span> <span class="n">largest_eig</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">dmis</span><span class="o">.</span><span class="n">deriv2</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span>
+    <span class="n">top_m</span> <span class="o">=</span> <span class="n">largest_eig</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">reg</span><span class="o">.</span><span class="n">deriv2</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">top_m</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">ratio</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">ratio</span><span class="p">)</span> <span class="o">*</span> <span class="n">top_d</span> <span class="o">/</span> <span class="n">top_m</span></div>
+
+
+
+<div class="viewcode-block" id="apply_sensitivity_weights">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.inversion.html#PyHydroGeophysX.gravmag.apply_sensitivity_weights">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_sensitivity_weights</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">dmis</span><span class="p">,</span> <span class="n">reg</span><span class="p">,</span> <span class="n">m</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+                              <span class="n">power</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">floor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-8</span><span class="p">,</span>
+                              <span class="n">log</span><span class="p">:</span> <span class="n">LogFn</span> <span class="o">=</span> <span class="n">_noop</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Weight the regularization by each cell's sensitivity, and say if it worked.</span>
+
+<span class="sd">    Potential-field sensitivity falls off sharply with depth, so an unweighted</span>
+<span class="sd">    smallness term buys its misfit reduction most cheaply at the surface: the</span>
+<span class="sd">    recovered body ends up plastered against the top of the mesh whatever its</span>
+<span class="sd">    real depth. Weighting the model term by ``sqrt(diag(J^T W^T W J))`` is the</span>
+<span class="sd">    standard correction (Li and Oldenburg, 1996) and is what SimPEG's</span>
+<span class="sd">    ``UpdateSensitivityWeights`` directive applies on the iterative path.</span>
+
+<span class="sd">    Measured on a 0.7 g/cc block buried 60-160 m: unweighted the peak sits at</span>
+<span class="sd">    12 m, weighted it sits at 88 m.</span>
+<span class="sd">    """</span>
+    <span class="n">diagonal</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>  <span class="c1"># SimPEG can give the diagonal without forming the full Jacobian</span>
+        <span class="n">diagonal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">getJtJdiag</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">W</span><span class="o">=</span><span class="n">dmis</span><span class="o">.</span><span class="n">W</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - fall back to the dense sensitivities</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">jac</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">getJ</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="n">dmis</span><span class="o">.</span><span class="n">W</span><span class="o">.</span><span class="n">diagonal</span><span class="p">()</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">dmis</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="s2">"diagonal"</span><span class="p">)</span> <span class="k">else</span> <span class="n">dmis</span><span class="o">.</span><span class="n">W</span>
+            <span class="n">scaled</span> <span class="o">=</span> <span class="n">jac</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">diagonal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s2">"ij,ij-&gt;j"</span><span class="p">,</span> <span class="n">scaled</span><span class="p">,</span> <span class="n">scaled</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - weighting is best effort</span>
+            <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  sensitivity weighting unavailable (</span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">); "</span>
+                <span class="s2">"the model may collect at the surface"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">diagonal</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">diagonal</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">m</span><span class="o">.</span><span class="n">size</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">diagonal</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">diagonal</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">top</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">((</span><span class="n">diagonal</span> <span class="o">/</span> <span class="n">top</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">power</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">floor</span><span class="p">))</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">reg</span><span class="o">.</span><span class="n">set_weights</span><span class="p">(</span><span class="n">sensitivity</span><span class="o">=</span><span class="n">values</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - older regularization API</span>
+        <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  could not attach sensitivity weights (</span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  sensitivity weights applied: </span><span class="si">{</span><span class="n">values</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2"> .. </span><span class="si">{</span><span class="n">values</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">values</span></div>
+
+
+
+<div class="viewcode-block" id="solve_tikhonov">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.inversion.html#PyHydroGeophysX.gravmag.solve_tikhonov">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">solve_tikhonov</span><span class="p">(</span><span class="n">dmis</span><span class="p">,</span> <span class="n">reg</span><span class="p">,</span> <span class="n">m_ref</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">beta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+                   <span class="n">bounds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">cg_maxiter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">400</span><span class="p">,</span> <span class="n">cg_tol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-8</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Minimize ``phi_d(m) + beta * phi_m(m)`` for a linear forward operator.</span>
+
+<span class="sd">    Potential-field sensitivities do not depend on the model, so the objective</span>
+<span class="sd">    is quadratic and a single Newton step from any point is the exact minimizer;</span>
+<span class="sd">    there is no Gauss-Newton loop and no line search to run. The step is taken by</span>
+<span class="sd">    conjugate gradients on SimPEG's own ``deriv``/``deriv2``, which keeps every</span>
+<span class="sd">    weighting convention identical to the directive-driven path.</span>
+
+<span class="sd">    ``bounds`` are applied by clipping. That is a projection onto the box, not a</span>
+<span class="sd">    constrained optimum, so the returned model is only the true minimizer when it</span>
+<span class="sd">    lies inside; ``clipped`` in the result says whether the bound bit.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.sparse.linalg</span><span class="w"> </span><span class="kn">import</span> <span class="n">LinearOperator</span><span class="p">,</span> <span class="n">cg</span>
+
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">m_ref</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+    <span class="n">gradient</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dmis</span><span class="o">.</span><span class="n">deriv</span><span class="p">(</span><span class="n">m_ref</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+                <span class="o">+</span> <span class="nb">float</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">reg</span><span class="o">.</span><span class="n">deriv</span><span class="p">(</span><span class="n">m_ref</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">matvec</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dmis</span><span class="o">.</span><span class="n">deriv2</span><span class="p">(</span><span class="n">m_ref</span><span class="p">,</span> <span class="n">v</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+                <span class="o">+</span> <span class="nb">float</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">reg</span><span class="o">.</span><span class="n">deriv2</span><span class="p">(</span><span class="n">m_ref</span><span class="p">,</span> <span class="n">v</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+
+    <span class="n">operator</span> <span class="o">=</span> <span class="n">LinearOperator</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span> <span class="n">matvec</span><span class="o">=</span><span class="n">matvec</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>  <span class="c1"># SciPy renamed the tolerance argument</span>
+        <span class="n">step</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">cg</span><span class="p">(</span><span class="n">operator</span><span class="p">,</span> <span class="o">-</span><span class="n">gradient</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">cg_tol</span><span class="p">),</span>
+                        <span class="n">maxiter</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">cg_maxiter</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - older SciPy</span>
+        <span class="n">step</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">cg</span><span class="p">(</span><span class="n">operator</span><span class="p">,</span> <span class="o">-</span><span class="n">gradient</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">cg_tol</span><span class="p">),</span>
+                        <span class="n">maxiter</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">cg_maxiter</span><span class="p">))</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">m_ref</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">clipped</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">bounds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">bounds</span><span class="p">)),</span> <span class="nb">float</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">bounds</span><span class="p">))</span>
+        <span class="n">limited</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">)</span>
+        <span class="n">clipped</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">limited</span> <span class="o">!=</span> <span class="n">model</span><span class="p">))</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">limited</span>
+    <span class="k">return</span> <span class="n">model</span><span class="p">,</span> <span class="p">{</span><span class="s2">"cg_info"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">info</span><span class="p">),</span> <span class="s2">"clipped"</span><span class="p">:</span> <span class="n">clipped</span><span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="sweep_beta_for_chi2">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.inversion.html#PyHydroGeophysX.gravmag.sweep_beta_for_chi2">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sweep_beta_for_chi2</span><span class="p">(</span><span class="n">dmis</span><span class="p">,</span> <span class="n">reg</span><span class="p">,</span> <span class="n">m_ref</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">n_data</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+                        <span class="n">beta0</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">target_chi2</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+                        <span class="n">chi2_tolerance</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span> <span class="n">max_trials</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
+                        <span class="n">bounds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                        <span class="n">beta_bounds</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">BETA_BOUNDS</span><span class="p">,</span>
+                        <span class="n">cg_maxiter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">400</span><span class="p">,</span> <span class="n">cg_tol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-8</span><span class="p">,</span>
+                        <span class="n">log</span><span class="p">:</span> <span class="n">LogFn</span> <span class="o">=</span> <span class="n">_noop</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Find the beta whose chi2 lands on ``target_chi2``.</span>
+
+<span class="sd">    Each trial is one linear solve rather than a whole nonlinear inversion, so</span>
+<span class="sd">    unlike the ERT and travel-time searches this one can afford to be thorough,</span>
+<span class="sd">    and there is nothing to warm start: the minimizer for a given beta does not</span>
+<span class="sd">    depend on where the solve began.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.lambda_search</span><span class="w"> </span><span class="kn">import</span> <span class="n">search_lambda_for_chi2</span>
+
+    <span class="n">solved</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">trials</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">chi2_of</span><span class="p">(</span><span class="n">beta</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="n">model</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">solve_tikhonov</span><span class="p">(</span><span class="n">dmis</span><span class="p">,</span> <span class="n">reg</span><span class="p">,</span> <span class="n">m_ref</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">bounds</span><span class="p">,</span>
+                                     <span class="n">cg_maxiter</span><span class="o">=</span><span class="n">cg_maxiter</span><span class="p">,</span> <span class="n">cg_tol</span><span class="o">=</span><span class="n">cg_tol</span><span class="p">)</span>
+        <span class="c1"># SimPEG's L2DataMisfit is ||W (dpred - dobs)||^2 with no half factor,</span>
+        <span class="c1"># measured directly rather than assumed.</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">dmis</span><span class="p">(</span><span class="n">model</span><span class="p">))</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">n_data</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">solved</span><span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">beta</span><span class="p">)]</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="n">trials</span><span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">beta</span><span class="p">)]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"beta"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">beta</span><span class="p">),</span> <span class="s2">"chi2"</span><span class="p">:</span> <span class="n">value</span><span class="p">,</span>
+                               <span class="s2">"clipped"</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">"clipped"</span><span class="p">])}</span>
+        <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  beta </span><span class="si">{</span><span class="n">beta</span><span class="si">:</span><span class="s2">.4g</span><span class="si">}</span><span class="s2"> -&gt; chi2 </span><span class="si">{</span><span class="n">value</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span>
+            <span class="o">+</span> <span class="p">(</span><span class="s2">"  (bounds active)"</span> <span class="k">if</span> <span class="n">info</span><span class="p">[</span><span class="s2">"clipped"</span><span class="p">]</span> <span class="k">else</span> <span class="s2">""</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="n">start_chi2</span> <span class="o">=</span> <span class="n">chi2_of</span><span class="p">(</span><span class="n">beta0</span><span class="p">)</span>
+    <span class="n">search</span> <span class="o">=</span> <span class="n">search_lambda_for_chi2</span><span class="p">(</span>
+        <span class="n">chi2_of</span><span class="p">,</span> <span class="n">start_lambda</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">beta0</span><span class="p">),</span> <span class="n">start_chi2</span><span class="o">=</span><span class="n">start_chi2</span><span class="p">,</span>
+        <span class="n">target_chi2</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">target_chi2</span><span class="p">),</span> <span class="n">tolerance</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">chi2_tolerance</span><span class="p">),</span>
+        <span class="n">max_trials</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">max_trials</span><span class="p">),</span> <span class="n">bounds</span><span class="o">=</span><span class="n">beta_bounds</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">log</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">best</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">search</span><span class="p">[</span><span class="s2">"lam"</span><span class="p">])</span>
+    <span class="n">ordered</span> <span class="o">=</span> <span class="p">[</span><span class="n">trials</span><span class="p">[</span><span class="n">b</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">trials</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"beta"</span><span class="p">:</span> <span class="n">best</span><span class="p">,</span>
+        <span class="s2">"beta0"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">beta0</span><span class="p">),</span>
+        <span class="s2">"model"</span><span class="p">:</span> <span class="n">solved</span><span class="p">[</span><span class="n">best</span><span class="p">],</span>
+        <span class="s2">"chi2"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">search</span><span class="p">[</span><span class="s2">"chi2"</span><span class="p">]),</span>
+        <span class="s2">"status"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">search</span><span class="p">[</span><span class="s2">"status"</span><span class="p">]),</span>
+        <span class="s2">"reason"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">search</span><span class="p">[</span><span class="s2">"reason"</span><span class="p">]),</span>
+        <span class="s2">"trials"</span><span class="p">:</span> <span class="n">ordered</span><span class="p">,</span>
+        <span class="s2">"clipped"</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span><span class="n">trials</span><span class="p">[</span><span class="n">best</span><span class="p">][</span><span class="s2">"clipped"</span><span class="p">]),</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"BETA_BOUNDS"</span><span class="p">,</span>
+    <span class="s2">"InversionBackendUnavailable"</span><span class="p">,</span>
+    <span class="s2">"apply_sensitivity_weights"</span><span class="p">,</span>
+    <span class="s2">"backend_status"</span><span class="p">,</span>
+    <span class="s2">"estimate_beta0"</span><span class="p">,</span>
+    <span class="s2">"invert_gravmag"</span><span class="p">,</span>
+    <span class="s2">"solve_tikhonov"</span><span class="p">,</span>
+    <span class="s2">"sweep_beta_for_chi2"</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

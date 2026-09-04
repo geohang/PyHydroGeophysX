@@ -1,0 +1,1244 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Desktop Studio (Qt) &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'agents/desktop_studio';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/agents/desktop_studio.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Quick Start Guide" href="quick_start.html" />
+    <link rel="prev" title="Agent Web App" href="webapp.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="webapp.html">Agent Web App</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Desktop Studio (Qt)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quick_start.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="workflows.html">Common Workflow Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="agent_reference.html">Agent Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">System Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">System Architecture</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Agents, Web App and Desktop</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Desktop Studio (Qt)</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="desktop-studio-qt">
+<h1>Desktop Studio (Qt)<a class="headerlink" href="#desktop-studio-qt" title="Link to this heading">#</a></h1>
+<p>PyHydroGeophysX ships two complementary front ends:</p>
+<ul class="simple">
+<li><p>The <strong>Streamlit web app</strong> (<a class="reference internal" href="webapp.html"><span class="doc">Agent Web App</span></a>) is the agent, report, tutorial, and
+deployment portal. It runs in a browser and can be hosted remotely.</p></li>
+<li><p>The <strong>Qt desktop studio</strong> (<code class="docutils literal notranslate"><span class="pre">PyHydroGeophysX/qt_apps/</span></code>) is a local desktop
+application for hands-on mouse interaction: data processing, first-arrival picking,
+electrode geometry editing, hydro-to-geophysics profile selection, mesh building,
+and forward modeling and inversion.</p></li>
+</ul>
+<p>The two exchange small JSON files on disk (the “bridge”), so you can set up a run in
+the browser and finish the interactive work on the desktop.</p>
+<nav class="contents local" id="on-this-page">
+<p class="topic-title">On this page</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#studio-at-a-glance" id="id3">Studio at a Glance</a></p></li>
+<li><p><a class="reference internal" href="#download-the-desktop-app" id="id4">Download the Desktop App</a></p></li>
+<li><p><a class="reference internal" href="#install-and-run-from-source" id="id5">Install and Run from Source</a></p></li>
+<li><p><a class="reference internal" href="#start-without-a-terminal" id="id6">Start Without a Terminal</a></p>
+<ul>
+<li><p><a class="reference internal" href="#choosing-pip-or-conda" id="id7">Choosing pip or conda</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#your-first-studio-run-ert-inversion" id="id8">Your First Studio Run: ERT Inversion</a></p>
+<ul>
+<li><p><a class="reference internal" href="#step-1-open-the-ert-module" id="id9">Step 1 – open the ERT module</a></p></li>
+<li><p><a class="reference internal" href="#step-2-load-and-inspect-data" id="id10">Step 2 – load and inspect data</a></p></li>
+<li><p><a class="reference internal" href="#step-3-apply-qc-filters" id="id11">Step 3 – apply QC filters</a></p></li>
+<li><p><a class="reference internal" href="#step-4-configure-and-run-the-inversion" id="id12">Step 4 – configure and run the inversion</a></p></li>
+<li><p><a class="reference internal" href="#step-5-edit-geometry-and-export" id="id13">Step 5 – edit geometry and export</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#time-lapse-ert" id="id14">Time-Lapse ERT</a></p></li>
+<li><p><a class="reference internal" href="#module-by-module-workflows" id="id15">Module-by-Module Workflows</a></p></li>
+<li><p><a class="reference internal" href="#using-aquah-chat-safely" id="id16">Using AQUAH Chat Safely</a></p></li>
+<li><p><a class="reference internal" href="#letting-aquah-see-a-result" id="id17">Letting AQUAH See a Result</a></p></li>
+<li><p><a class="reference internal" href="#saving-exporting-and-reopening-work" id="id18">Saving, Exporting, and Reopening Work</a></p>
+<ul>
+<li><p><a class="reference internal" href="#what-unsaved-means-on-disk" id="id19">What “unsaved” means on disk</a></p></li>
+<li><p><a class="reference internal" href="#csv-output" id="id20">CSV Output</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#modules" id="id21">Modules</a></p></li>
+<li><p><a class="reference internal" href="#how-the-streamlit-qt-bridge-works" id="id22">How the Streamlit / Qt Bridge Works</a></p></li>
+<li><p><a class="reference internal" href="#remote-servers-and-download-mode" id="id23">Remote Servers and Download Mode</a></p></li>
+<li><p><a class="reference internal" href="#persistence-and-troubleshooting" id="id24">Persistence and Troubleshooting</a></p></li>
+<li><p><a class="reference internal" href="#building-the-bundles-yourself" id="id25">Building the Bundles Yourself</a></p></li>
+</ul>
+</nav>
+<section id="studio-at-a-glance">
+<h2><a class="toc-backref" href="#id3" role="doc-backlink">Studio at a Glance</a><a class="headerlink" href="#studio-at-a-glance" title="Link to this heading">#</a></h2>
+<figure class="align-center" id="id1">
+<a class="reference internal image-reference" href="../_images/studio_overview.png"><img alt="PyHydroGeophysX Professional Studio main window" src="../_images/studio_overview.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">The Studio home screen. The project tree is on the left, the active
+scientific module is in the center, AQUAH Chat and Properties are on the
+right, and the activity log is at the bottom.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<p>The main window has six working areas:</p>
+<ol class="arabic simple">
+<li><p><strong>Project tree</strong> – select Seismic, ERT, 3D Mesh Builder, EM,
+Gravity / Magnetics, Hydro -&gt; Geophysics, Seismic -&gt; Structure, or
+ERT -&gt; Water Content. Multiple tree entries under Hydro -&gt; Geophysics open
+different stages of the same guided module.</p></li>
+<li><p><strong>Module workspace</strong> – plots, maps, model viewers, and step-by-step controls
+for the selected method.</p></li>
+<li><p><strong>AQUAH Chat / Properties</strong> – ask the assistant to prepare an action, or
+inspect the current context and module results as JSON.</p></li>
+<li><p><strong>Toolbar</strong> – Open, Save, Select, Pan, Zoom, Pick, Delete, and Export. Pick
+and Delete act on compatible plots in the active module.</p></li>
+<li><p><strong>Log</strong> – progress messages, loaded-file summaries, warnings, output paths,
+and backend errors. Check this panel first when a run does not start.</p></li>
+<li><p><strong>Status bar</strong> – the current module and whether the interface is ready or
+busy.</p></li>
+</ol>
+</section>
+<section id="download-the-desktop-app">
+<h2><a class="toc-backref" href="#id4" role="doc-backlink">Download the Desktop App</a><a class="headerlink" href="#download-the-desktop-app" title="Link to this heading">#</a></h2>
+<p>Prebuilt bundles for Windows and macOS are published on GitHub Releases. Each platform
+has two variants, so you can pick what fits your machine:</p>
+<p><span class="sd-d-grid"><a class="sd-sphinx-override sd-btn sd-text-wrap sd-btn-primary reference external" href="https://github.com/geohang/PyHydroGeophysX/releases/latest"><span>Download the Desktop Studio (Windows / macOS)</span></a></span></p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 42.0%" />
+<col style="width: 58.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Bundle</p></th>
+<th class="head"><p>What it includes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PyHydroGeophysX-Studio-windows-light.zip</span></code></p></td>
+<td><p>Windows. Load, view, QC, pick, edit geometry, and export data in every module.
+Small download; starts fast.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PyHydroGeophysX-Studio-windows-full.zip</span></code></p></td>
+<td><p>Windows. Everything in light, plus the geophysics engines (PyGIMLi, SimPEG,
+PyVista/VTK): forward modeling, inversion, and the 3D mesh viewer work out of
+the box. Much larger download.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PyHydroGeophysX-Studio-macos-light.zip</span></code></p></td>
+<td><p>macOS. Same feature set as the Windows light build.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PyHydroGeophysX-Studio-macos-full.zip</span></code></p></td>
+<td><p>macOS. Same feature set as the Windows full build.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>After unzipping, run <code class="docutils literal notranslate"><span class="pre">PyHydroGeophysX-Studio.exe</span></code> inside the extracted folder
+(Windows) or open <code class="docutils literal notranslate"><span class="pre">PyHydroGeophysX-Studio.app</span></code> (macOS).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In the <strong>light</strong> bundles the heavy engines are left out on purpose, so forward
+modeling, inversion, and the 3D mesh viewer show an install message instead of
+running. Choose the <strong>full</strong> bundle, or <a class="reference internal" href="#desktop-install-source"><span class="std std-ref">install from source</span></a>, for the complete feature set.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The macOS bundles are not code-signed. If macOS blocks the first launch,
+right-click the app and choose <strong>Open</strong> once, or clear the quarantine flag with
+<code class="docutils literal notranslate"><span class="pre">xattr</span> <span class="pre">-cr</span> <span class="pre">PyHydroGeophysX-Studio.app</span></code>.</p>
+</div>
+</section>
+<section id="install-and-run-from-source">
+<span id="desktop-install-source"></span><h2><a class="toc-backref" href="#id5" role="doc-backlink">Install and Run from Source</a><a class="headerlink" href="#install-and-run-from-source" title="Link to this heading">#</a></h2>
+<p>The studio needs PySide6 and pyqtgraph in addition to numpy and pandas:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements-desktop.txt
+<span class="c1"># or, as an extra:</span>
+pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"pyhydrogeophysx[desktop]"</span>
+</pre></div>
+</div>
+<p>Optional packages add features:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pygimli</span></code>: real forward modeling and inversion (ERT, SRT, TDEM, FDEM, gravity).
+Without it, the Hydro module still exports a survey configuration JSON.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pyvista</span></code>, <code class="docutils literal notranslate"><span class="pre">pyvistaqt</span></code>, <code class="docutils literal notranslate"><span class="pre">vtk</span></code>: the 3D mesh viewer.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">simpeg</span></code>: gravity and magnetics 3D inversion.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scipy</span></code>: gridding and interpolation in several modules.</p></li>
+</ul>
+<p>Launch the studio:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>PyHydroGeophysX.qt_apps.launcher
+
+<span class="c1"># open directly into a module:</span>
+python<span class="w"> </span>-m<span class="w"> </span>PyHydroGeophysX.qt_apps.launcher<span class="w"> </span>--module<span class="w"> </span>hydro_geophysics
+
+<span class="c1"># attach to a bridge context written by Streamlit:</span>
+python<span class="w"> </span>-m<span class="w"> </span>PyHydroGeophysX.qt_apps.launcher<span class="w"> </span>--context<span class="w"> </span>results/streamlit_workflow/qt_bridge/full_studio_context.json
+</pre></div>
+</div>
+<p>If the package is installed (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pyhydrogeophysx[desktop]</span></code>), the
+<code class="docutils literal notranslate"><span class="pre">pyhydrogeophysx-studio</span></code> command starts the same application.</p>
+</section>
+<section id="start-without-a-terminal">
+<h2><a class="toc-backref" href="#id6" role="doc-backlink">Start Without a Terminal</a><a class="headerlink" href="#start-without-a-terminal" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">examples/start_studio.bat</span></code> opens the studio from a double-click in
+Explorer, the desktop counterpart of <code class="docutils literal notranslate"><span class="pre">start_webapp.bat</span></code>. It needs no activated
+environment and no <code class="docutils literal notranslate"><span class="pre">PATH</span></code> entry: it looks for a Python that already has PySide6
+and pyqtgraph, checking its own reusable environment, <code class="docutils literal notranslate"><span class="pre">PYHYDROGEOPHYSX_PYTHON</span></code>,
+an inherited conda environment, the <code class="docutils literal notranslate"><span class="pre">py</span></code> launcher, and the usual per-user conda
+installation folders. Finding none, it creates <code class="docutils literal notranslate"><span class="pre">.venv-studio</span></code> beside the
+repository and installs the <code class="docutils literal notranslate"><span class="pre">desktop</span></code> extra there, leaving existing environments
+untouched. That first run takes several minutes; later runs reuse it.</p>
+<p>The console window it opens is the log: startup messages and any error stay
+visible there, and it closes when the studio does.</p>
+<p><code class="docutils literal notranslate"><span class="pre">examples/start_studio.sh</span></code> is the macOS / Linux counterpart. Copy it to
+<code class="docutils literal notranslate"><span class="pre">start_studio.command</span></code> to make it double-clickable from Finder. Unlike the
+Windows launcher it installs nothing, reporting the <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span></code> command
+instead when the dependencies are missing.</p>
+<p>Both forward their arguments, so a shortcut can open a specific module:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">start_studio</span><span class="o">.</span><span class="n">bat</span> <span class="o">--</span><span class="n">module</span> <span class="n">hydro_geophysics</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">desktop</span></code> extra installs the interface only. Two groups are separate
+because they are large: <code class="docutils literal notranslate"><span class="pre">desktop-3d</span></code> (<code class="docutils literal notranslate"><span class="pre">pyvista</span></code>, <code class="docutils literal notranslate"><span class="pre">pyvistaqt</span></code>, <code class="docutils literal notranslate"><span class="pre">vtk</span></code>)
+for the 3D viewers, and <code class="docutils literal notranslate"><span class="pre">geophysics</span></code> for forward modeling and inversion.
+Without them those panels show an install message and the rest of the
+studio is unaffected.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"pyhydrogeophysx[desktop,desktop-3d,geophysics]"</span>
+</pre></div>
+</div>
+</div>
+<section id="choosing-pip-or-conda">
+<h3><a class="toc-backref" href="#id7" role="doc-backlink">Choosing pip or conda</a><a class="headerlink" href="#choosing-pip-or-conda" title="Link to this heading">#</a></h3>
+<p>Install with whichever tool already manages the packages in the environment.
+That is not always the tool that created it: an environment made with <code class="docutils literal notranslate"><span class="pre">conda</span>
+<span class="pre">create</span></code> whose scientific packages were then installed with pip is a pip
+environment for this purpose. Ask it directly:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>list<span class="w"> </span>numpy
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">pypi</span></code> in the channel column means pip owns the packages, so use the <code class="docutils literal notranslate"><span class="pre">pip</span>
+<span class="pre">install</span></code> line above. A conda channel such as <code class="docutils literal notranslate"><span class="pre">conda-forge</span></code> means conda owns
+them, so install the 3D stack from conda-forge instead:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>pyvista<span class="w"> </span>pyvistaqt
+</pre></div>
+</div>
+<p>The distinction matters most for <code class="docutils literal notranslate"><span class="pre">vtk</span></code>. Reaching for the other tool installs a
+second VTK build alongside the first, and which one loads then depends on path
+order. PySide6 also ships its own Qt, so pulling <code class="docutils literal notranslate"><span class="pre">qt6-main</span></code> in from conda-forge
+next to a pip-installed PySide6 puts two Qt runtimes in one environment.</p>
+<p>Module keys for <code class="docutils literal notranslate"><span class="pre">--module</span></code>: <code class="docutils literal notranslate"><span class="pre">home</span></code>, <code class="docutils literal notranslate"><span class="pre">seismic</span></code>, <code class="docutils literal notranslate"><span class="pre">ert</span></code>, <code class="docutils literal notranslate"><span class="pre">mesh3d</span></code>, <code class="docutils literal notranslate"><span class="pre">em</span></code>,
+<code class="docutils literal notranslate"><span class="pre">gravmag</span></code>, <code class="docutils literal notranslate"><span class="pre">hydro_geophysics</span></code>, <code class="docutils literal notranslate"><span class="pre">geo_hydrology</span></code>, <code class="docutils literal notranslate"><span class="pre">seismic3d</span></code>.</p>
+</section>
+</section>
+<section id="your-first-studio-run-ert-inversion">
+<h2><a class="toc-backref" href="#id8" role="doc-backlink">Your First Studio Run: ERT Inversion</a><a class="headerlink" href="#your-first-studio-run-ert-inversion" title="Link to this heading">#</a></h2>
+<p>This walkthrough uses the ERT module because it demonstrates the complete
+Studio pattern: load, inspect, QC, configure, run, evaluate, and export. From
+a source checkout, use <code class="docutils literal notranslate"><span class="pre">examples/data/ERT/Bert/fielddataline2.dat</span></code>. You can use
+your own BERT/unified, E4D, Syscal, or other supported resistivity file instead.</p>
+<figure class="align-center" id="id2">
+<a class="reference internal image-reference" href="../_images/studio_ert.png"><img alt="ERT Processing module in the Qt Studio" src="../_images/studio_ert.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">The ERT Processing module before a file is loaded. Data and result tabs are
+on the left; loading, filtering, inversion, editing, and export controls are
+in the scrollable center panel.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<section id="step-1-open-the-ert-module">
+<h3><a class="toc-backref" href="#id9" role="doc-backlink">Step 1 – open the ERT module</a><a class="headerlink" href="#step-1-open-the-ert-module" title="Link to this heading">#</a></h3>
+<p>Select <strong>Geophysical Data Processing &gt; ERT</strong> in the project tree, or launch
+directly with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>PyHydroGeophysX.qt_apps.launcher<span class="w"> </span>--module<span class="w"> </span>ert
+</pre></div>
+</div>
+</section>
+<section id="step-2-load-and-inspect-data">
+<h3><a class="toc-backref" href="#id10" role="doc-backlink">Step 2 – load and inspect data</a><a class="headerlink" href="#step-2-load-and-inspect-data" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p>Under <strong>Load resistivity data</strong>, select the matching <strong>Instrument / format</strong>.
+For the bundled file, choose <strong>BERT / Unified (.ohm/.dat)</strong>.</p></li>
+<li><p>Click <strong>Add files…</strong> and select one file. Loading runs in a worker thread;
+the UI remains responsive and the Log reports the number of electrodes and
+measurements.</p></li>
+<li><p>Use the <strong>Electrodes</strong> tab to check positions and elevation. Use
+<strong>Pseudosection</strong> to inspect spatial coverage and apparent-resistivity
+outliers.</p></li>
+<li><p>If electrode positions are stored separately, click <strong>Electrode file
+(optional)…</strong>. The Studio accepts an <code class="docutils literal notranslate"><span class="pre">x,</span> <span class="pre">z</span></code> table.</p></li>
+</ol>
+</section>
+<section id="step-3-apply-qc-filters">
+<h3><a class="toc-backref" href="#id11" role="doc-backlink">Step 3 – apply QC filters</a><a class="headerlink" href="#step-3-apply-qc-filters" title="Link to this heading">#</a></h3>
+<p>Set <strong>Min rhoa</strong>, <strong>Max rhoa</strong>, and optionally <strong>Max error</strong>, then click
+<strong>Apply filter</strong>. A Max error value of zero disables the error filter. The Log
+reports how many measurements were retained and removed. Click <strong>Reset</strong> to
+return to the original loaded data before trying different thresholds.</p>
+<p>Do not use a narrow resistivity range simply to make a smooth-looking plot.
+Check suspicious points against acquisition notes, reciprocal error, contact
+resistance, and neighboring measurements before deleting them.</p>
+</section>
+<section id="step-4-configure-and-run-the-inversion">
+<h3><a class="toc-backref" href="#id12" role="doc-backlink">Step 4 – configure and run the inversion</a><a class="headerlink" href="#step-4-configure-and-run-the-inversion" title="Link to this heading">#</a></h3>
+<p>The defaults provide a reasonable first diagnostic run:</p>
+<ul class="simple">
+<li><p><strong>Lambda = 20</strong> controls spatial smoothness. Increase it for a smoother model;
+decrease it only when the data quality and coverage justify more structure.</p></li>
+<li><p><strong>Max iterations = 15</strong> limits the Gauss-Newton iterations.</p></li>
+<li><p><strong>Relative error = 0.05</strong> assigns a 5% data error for weighting.</p></li>
+<li><p><strong>Mesh quality = 34</strong> controls the inversion triangulation.</p></li>
+</ul>
+<p>Click <strong>Run inversion</strong>. Follow progress in the bottom Log. When the run
+finishes, inspect:</p>
+<ul class="simple">
+<li><p><strong>Resistivity model</strong> for the recovered section and coverage-aware opacity;</p></li>
+<li><p><strong>Inversion quality</strong> for observed-versus-predicted behavior and convergence;</p></li>
+<li><p>the Log for the final chi-squared value and saved intermediate paths.</p></li>
+</ul>
+</section>
+<section id="step-5-edit-geometry-and-export">
+<h3><a class="toc-backref" href="#id13" role="doc-backlink">Step 5 – edit geometry and export</a><a class="headerlink" href="#step-5-edit-geometry-and-export" title="Link to this heading">#</a></h3>
+<p>Use <strong>Add electrode (click to place)</strong> or <strong>Edit (click select, click move)</strong>
+only when the geometry needs correction. Right-click an electrode to delete it
+or change its label. Then export one or more of:</p>
+<ul class="simple">
+<li><p><strong>Export electrode file…</strong> for the corrected coordinate table;</p></li>
+<li><p><strong>Export survey geometry JSON…</strong> for a reusable survey definition;</p></li>
+<li><p><strong>Export resistivity model…</strong> for <code class="docutils literal notranslate"><span class="pre">model_cells.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">.npy</span></code>, PyGIMLi
+<code class="docutils literal notranslate"><span class="pre">.bms</span></code>, and VTK files.</p></li>
+</ul>
+<p><strong>File &gt; Export Results…</strong> (<code class="docutils literal notranslate"><span class="pre">Ctrl+E</span></code>) reaches the same exports without
+hunting for the button that belongs to the tab you are on. It asks the open
+module what it can write; when there is more than one answer it offers a choice.</p>
+</section>
+</section>
+<section id="time-lapse-ert">
+<h2><a class="toc-backref" href="#id14" role="doc-backlink">Time-Lapse ERT</a><a class="headerlink" href="#time-lapse-ert" title="Link to this heading">#</a></h2>
+<p>The ERT loader also manages an ordered time series:</p>
+<ol class="arabic simple">
+<li><p>Click <strong>Add files…</strong> and select two or more ERT files. Each file represents
+one time step.</p></li>
+<li><p>Verify that the list is chronological. Use the up and down arrow buttons to
+reorder selected rows. Clicking a row previews that time step.</p></li>
+<li><p>Check <strong>Time-lapse (multiple ERT files)</strong>. The temporal controls appear.</p></li>
+<li><p>Set <strong>Alpha (temporal)</strong>, then choose <strong>L2</strong> for smooth changes, <strong>L1</strong> for
+blockier changes, or <strong>L1L2</strong> for the hybrid formulation.</p></li>
+<li><p>For long sequences, enable <strong>Windowed (sliding window)</strong> and choose a window
+size, or enable <strong>Low memory (sparse)</strong>. Low-memory mode is also selected
+automatically for sufficiently large problems.</p></li>
+<li><p>Click <strong>Run time-lapse inversion</strong>. After completion, select time steps in
+the Resistivity model tab and click <strong>Export results (VTK + npy + mesh)…</strong>
+to save combined and per-step VTK files, <code class="docutils literal notranslate"><span class="pre">final_models.npy</span></code>, the mesh,
+acquisition times, and the result figure.</p></li>
+</ol>
+</section>
+<section id="module-by-module-workflows">
+<h2><a class="toc-backref" href="#id15" role="doc-backlink">Module-by-Module Workflows</a><a class="headerlink" href="#module-by-module-workflows" title="Link to this heading">#</a></h2>
+<p>Each module follows the same left-to-right logic. The shortest reliable path
+through each one is summarized below.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 23.0%" />
+<col style="width: 50.0%" />
+<col style="width: 27.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Module</p></th>
+<th class="head"><p>Recommended sequence</p></th>
+<th class="head"><p>Main outputs</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Seismic Processing</strong></p></td>
+<td><p>Load a gather; load positions/topography if available; set shot and
+receiver geometry; adjust gain, clipping, polarity, normalization, and
+AGC; auto-pick or manually pick first arrivals; inspect the Travel-time
+tab; run <strong>SRT inversion</strong>.</p></td>
+<td><p>Picks CSV, PyGIMLi travel-time <code class="docutils literal notranslate"><span class="pre">.dat</span></code>, velocity <code class="docutils literal notranslate"><span class="pre">.npy</span></code>, mesh, VTK,
+and inversion-quality plots.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>3D Mesh Builder</strong></p></td>
+<td><p>Choose surface-grid, borehole, or crosshole geometry; select mesh engine
+and topography; set domain and refinement; click <strong>1. Preview sensors</strong>;
+then <strong>2. Generate mesh</strong>; inspect the 3D viewer.</p></td>
+<td><p>BMS, VTK, sensor CSV, and a reusable survey/mesh configuration.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>EM Processing</strong></p></td>
+<td><p>Select FDEM or TDEM; load one or multiple soundings; load line geometry
+when available; confirm system geometry; configure the 1D Occam
+inversion; click <strong>Run inversion</strong>; compare Sounding, Resistivity model,
+and Inversion quality tabs.</p></td>
+<td><p>Recovered model <code class="docutils literal notranslate"><span class="pre">.npy</span></code>/CSV, line sections, and plan-view depth slices.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Gravity / Magnetics</strong></p></td>
+<td><p>Load <code class="docutils literal notranslate"><span class="pre">x,</span> <span class="pre">y,</span> <span class="pre">value</span></code> station data; select gravity or magnetics; inspect
+Observed, Regional, and Residual products in <strong>Data QC</strong>; configure the
+model grid and errors; click <strong>Run 3D inversion</strong>.</p></td>
+<td><p>Corrected/QC data, density or susceptibility model, NPZ/VTK, and
+convergence history.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Hydro -&gt; Geophysics</strong></p></td>
+<td><p><strong>Data:</strong> use example/context data or select the hydrologic-output folder.
+<strong>Profile:</strong> pick two map points. <strong>Methods:</strong> select ERT, SRT, EM, or
+gravity. <strong>Parameters:</strong> review petrophysics and survey settings.
+<strong>Run:</strong> confirm the readiness checklist and run forward modeling.</p></td>
+<td><p>Extracted profile, survey configurations, synthetic responses, models,
+and figures for each selected method.</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Seismic -&gt; Structure</strong></p></td>
+<td><p>Load velocity sections and line coordinates; set interface threshold;
+preview the first interface; configure interpolation/grid options; check
+Readiness; click <strong>Build 3D model</strong>.</p></td>
+<td><p>Bedrock surface, 3D velocity/structure volume, configuration JSON, and a
+direct handoff to ERT -&gt; Water Content.</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>ERT -&gt; Water Content</strong></p></td>
+<td><p>Load a model folder containing <code class="docutils literal notranslate"><span class="pre">mesh_res.bms</span></code>, <code class="docutils literal notranslate"><span class="pre">resmodel.npy</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">index_marker.npy</span></code>; verify layers; choose water-content/porosity
+products and targets; set Monte Carlo parameters; check Readiness; click
+<strong>Run water-content estimation</strong>.</p></td>
+<td><p>Mean, standard deviation, percentile models, layer summaries,
+monitoring-point time series, and petrophysics configuration JSON.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="using-aquah-chat-safely">
+<h2><a class="toc-backref" href="#id16" role="doc-backlink">Using AQUAH Chat Safely</a><a class="headerlink" href="#using-aquah-chat-safely" title="Link to this heading">#</a></h2>
+<p>The right-side <strong>AQUAH Chat</strong> tab can navigate modules, load example data,
+change parameters, and start supported actions.</p>
+<ol class="arabic simple">
+<li><p>Select OpenAI, Anthropic, or an OpenAI-compatible provider and model.</p></li>
+<li><p>Paste an API key for the current session or set the provider’s environment
+variable before launch.</p></li>
+<li><p>Describe one concrete task, for example: <code class="docutils literal notranslate"><span class="pre">Open</span> <span class="pre">ERT,</span> <span class="pre">load</span> <span class="pre">the</span> <span class="pre">bundled</span> <span class="pre">BERT</span>
+<span class="pre">line,</span> <span class="pre">set</span> <span class="pre">lambda</span> <span class="pre">to</span> <span class="pre">20,</span> <span class="pre">and</span> <span class="pre">prepare</span> <span class="pre">an</span> <span class="pre">inversion</span></code>.</p></li>
+<li><p>Review every proposed tool action. Click <strong>Approve</strong> only when the file,
+parameters, output directory, and operation are correct; otherwise click
+<strong>Reject</strong> and revise the request.</p></li>
+<li><p>Confirm completion in the module itself and in the Log. Chat does not replace
+inspection of the data or inversion-quality plots.</p></li>
+</ol>
+</section>
+<section id="letting-aquah-see-a-result">
+<h2><a class="toc-backref" href="#id17" role="doc-backlink">Letting AQUAH See a Result</a><a class="headerlink" href="#letting-aquah-see-a-result" title="Link to this heading">#</a></h2>
+<p>With a model that reads images (every listed OpenAI and Anthropic model does),
+the status line under the model selector shows <code class="docutils literal notranslate"><span class="pre">can</span> <span class="pre">see</span> <span class="pre">panels</span></code> and one extra
+action becomes available: <code class="docutils literal notranslate"><span class="pre">capture_view</span></code> takes a picture of a panel in the
+open module and sends it to the model. Ask for it in words, for example
+<code class="docutils literal notranslate"><span class="pre">capture</span> <span class="pre">the</span> <span class="pre">resistivity</span> <span class="pre">model</span> <span class="pre">and</span> <span class="pre">tell</span> <span class="pre">me</span> <span class="pre">whether</span> <span class="pre">the</span> <span class="pre">deep</span> <span class="pre">structure</span> <span class="pre">is</span> <span class="pre">real</span></code>
+or, during a paused pick review, <code class="docutils literal notranslate"><span class="pre">look</span> <span class="pre">at</span> <span class="pre">the</span> <span class="pre">gather</span> <span class="pre">and</span> <span class="pre">say</span> <span class="pre">which</span> <span class="pre">traces</span> <span class="pre">are</span>
+<span class="pre">mispicked</span></code>.</p>
+<p>What this changes in practice:</p>
+<ul class="simple">
+<li><p>The picture is also shown in the chat transcript, so you see exactly what the
+model was given.</p></li>
+<li><p>Screenshots are the most expensive thing in a conversation. Only the two most
+recent are kept in context; older ones are replaced by a short note, and a
+capture costs roughly as much as a long message, so ask for one when a result
+is worth judging visually rather than after every step.</p></li>
+<li><p>A model reading a plot can be wrong in ways it states confidently. Treat its
+reading as a second opinion on your own inspection of the figure, and check
+any specific claim (a trace number, a depth, a resistivity value) against the
+module itself.</p></li>
+<li><p>The OpenAI-compatible provider is text-only with its default <code class="docutils literal notranslate"><span class="pre">deepseek-chat</span></code>
+model. Point it at a vision-capable model to get the same behavior.</p></li>
+</ul>
+</section>
+<section id="saving-exporting-and-reopening-work">
+<h2><a class="toc-backref" href="#id18" role="doc-backlink">Saving, Exporting, and Reopening Work</a><a class="headerlink" href="#saving-exporting-and-reopening-work" title="Link to this heading">#</a></h2>
+<p><strong>A computation is not recorded until you save it.</strong> A finished run is held as
+“unsaved” and joins the Project’s history only on your say-so.</p>
+<ul class="simple">
+<li><p><strong>File &gt; Save Runs to Project</strong> (<code class="docutils literal notranslate"><span class="pre">Ctrl+S</span></code>), or the <strong>Save</strong> button on the
+toolbar, adds every finished run from this session to the Project. The status
+bar shows how many are waiting; hover it for the list.</p></li>
+<li><p><strong>File &gt; Discard Unsaved Runs…</strong> deletes their folders instead.</p></li>
+<li><p>Closing the studio, or switching Project, asks what to do with anything
+still unsaved: <strong>Save</strong>, <strong>Discard</strong>, or <strong>Cancel</strong>.</p></li>
+<li><p>The Model Viewer lists unsaved runs first, under <strong>Unsaved (this session)</strong>,
+with <strong>Save to Project</strong> and <strong>Discard</strong> for the selected one. Label and notes
+typed before saving are kept with it.</p></li>
+<li><p><strong>File &gt; Export Results…</strong> (<code class="docutils literal notranslate"><span class="pre">Ctrl+E</span></code>) writes the open module’s results to a
+folder you choose. Each module offers what it can write; if it has several
+exports, you pick from a list. This is the same set of exports the module’s own
+buttons run. Exporting is independent of saving: a run can be exported without
+being kept, and kept without being exported.</p></li>
+<li><p>Module-specific Export buttons remain where they were, next to the results they
+belong to.</p></li>
+<li><p><strong>File &gt; New Project…</strong>, <strong>Open Project…</strong> — the Project folder is also the
+output folder. Both check that the folder is writable before anything runs, and
+the status bar shows which one is active.</p></li>
+<li><p><strong>File &gt; Import Existing Results…</strong> registers an older results directory in
+place, without moving the files.</p></li>
+<li><p><strong>File &gt; Streamlit Bridge &gt;</strong> holds the commands that serve the web app rather
+than the person at the keyboard: <strong>Save Studio Result</strong> (writes
+<code class="docutils literal notranslate"><span class="pre">full_studio_result.json</span></code> for the bridge), <strong>Export Module Result (JSON)</strong>
+(the current module’s JSON summary, which carries no arrays), <strong>Open Project
+Context…</strong> (reopen a bridge context JSON), and <strong>Rebuild Run Index</strong> (rescan
+the Project’s run folders).</p></li>
+<li><p>Window geometry and dock positions persist between sessions. Use
+<strong>View &gt; Reset Layout</strong> if a dock is hidden or misplaced.</p></li>
+</ul>
+<section id="what-unsaved-means-on-disk">
+<h3><a class="toc-backref" href="#id19" role="doc-backlink">What “unsaved” means on disk</a><a class="headerlink" href="#what-unsaved-means-on-disk" title="Link to this heading">#</a></h3>
+<p>A solver has to write its outputs somewhere while it runs, so a run does get a
+folder under <code class="docutils literal notranslate"><span class="pre">&lt;project&gt;/runs/</span></code> from the moment it starts. What it does not get
+is <code class="docutils literal notranslate"><span class="pre">run.json</span></code>, the record that puts it in the history. Until you save, the
+folder holds a file named <code class="docutils literal notranslate"><span class="pre">UNSAVED</span></code> and:</p>
+<ul class="simple">
+<li><p>the run does not appear in the Model Viewer’s saved history;</p></li>
+<li><p>it is absent from <code class="docutils literal notranslate"><span class="pre">phgx_results_index.json</span></code>;</p></li>
+<li><p>another session opening the Project does not see it at all.</p></li>
+</ul>
+<p>Saving writes <code class="docutils literal notranslate"><span class="pre">run.json</span></code> and <code class="docutils literal notranslate"><span class="pre">result.json</span></code> and removes the marker. Nothing
+moves, so a path captured while the run was computing still resolves afterwards.</p>
+<p>If a session ends without answering — a crash, or a forced quit — the marked
+folder is left behind. Opening that Project again reports how many such folders
+there are and offers to delete them, because nothing else would ever list them.</p>
+</section>
+<section id="csv-output">
+<h3><a class="toc-backref" href="#id20" role="doc-backlink">CSV Output</a><a class="headerlink" href="#csv-output" title="Link to this heading">#</a></h3>
+<p>Every model export also writes <code class="docutils literal notranslate"><span class="pre">model_cells.csv</span></code>: one row per mesh cell or
+voxel, each carrying its own coordinate, so a section can be replotted without
+PyGIMLi, SimPEG, or knowledge of the cell ordering.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span><span class="o">,</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="n">cells</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">"model_cells.csv"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tricontourf</span><span class="p">(</span><span class="n">cells</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">cells</span><span class="o">.</span><span class="n">z</span><span class="p">,</span> <span class="n">cells</span><span class="o">.</span><span class="n">resistivity_ohm_m</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Column names carry their units (<code class="docutils literal notranslate"><span class="pre">resistivity_ohm_m</span></code>, <code class="docutils literal notranslate"><span class="pre">velocity_m_per_s</span></code>,
+<code class="docutils literal notranslate"><span class="pre">density_contrast_g_per_cc</span></code>, <code class="docutils literal notranslate"><span class="pre">susceptibility_SI</span></code>). A time-lapse run gets one
+value column per step, named from the step labels where they exist. Coverage or
+ray density is written alongside when the inversion produced it, and a cell whose
+value is not finite is left as an empty field rather than as <code class="docutils literal notranslate"><span class="pre">nan</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">mesh_nodes.csv</span></code> and <code class="docutils literal notranslate"><span class="pre">mesh_cell_nodes.csv</span></code> accompany the mesh-based exports
+for anyone who wants the true cell polygons instead of an interpolation through
+the centroids. The rectilinear gravity and magnetics grids instead carry each
+voxel’s <code class="docutils literal notranslate"><span class="pre">x_min</span></code>/<code class="docutils literal notranslate"><span class="pre">x_max</span></code> extent on its own row, and layered EM models are
+written as one row per layer per sounding.</p>
+</section>
+</section>
+<section id="modules">
+<h2><a class="toc-backref" href="#id21" role="doc-backlink">Modules</a><a class="headerlink" href="#modules" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 70.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Module</p></th>
+<th class="head"><p>What it does</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Seismic Processing</p></td>
+<td><p>Load 2D shot gathers (SEG-Y, Geometrics DAT), apply gain / AGC / normalization,
+pick first arrivals (assisted auto-picking plus manual and line picking),
+QC travel times, and run SRT travel-time tomography. Pre-picked travel-time
+files can be uploaded and inverted directly.</p></td>
+</tr>
+<tr class="row-odd"><td><p>ERT Processing</p></td>
+<td><p>Load resistivity files by instrument format (BERT / unified, E4D, Syscal,
+and more), edit electrodes, QC the apparent-resistivity pseudosection, filter
+data, and run single or time-lapse inversion with per-step results.</p></td>
+</tr>
+<tr class="row-even"><td><p>3D Mesh Builder</p></td>
+<td><p>Build ERT meshes (surface grid, borehole, crosshole arrays; flat, tilted,
+Gaussian-hill, file-based, or custom topography), view meshes in 3D with a
+clipping plane, and run 3D ERT forward modeling on the generated mesh.</p></td>
+</tr>
+<tr class="row-odd"><td><p>EM Processing</p></td>
+<td><p>Load TDEM / FDEM soundings (single or multi-sounding line files), invert one
+sounding or a whole line into a stitched resistivity section, and view
+plan-view depth-slice maps on survey coordinates.</p></td>
+</tr>
+<tr class="row-even"><td><p>Gravity / Magnetics</p></td>
+<td><p>Load station data, remove regional trends, and run SimPEG 3D inversion with an
+interactive model viewer.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Hydro -&gt; Geophysics</p></td>
+<td><p>Load hydrologic model outputs (water content, porosity, surfaces), pick a
+profile, set petrophysical parameters, and run forward modeling for the
+selected geophysical methods.</p></td>
+</tr>
+<tr class="row-even"><td><p>ERT -&gt; Water Content</p></td>
+<td><p>Invert ERT results into water content estimates.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Seismic -&gt; Structure</p></td>
+<td><p>Derive 3D structural surfaces from seismic lines.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The studio also includes <strong>AQUAH Chat</strong>, an in-app assistant that can drive the
+modules through natural language (OpenAI, Anthropic, or any OpenAI-compatible
+provider; bring your own API key). Every proposed action shows an Approve / Reject
+button before it runs.</p>
+</section>
+<section id="how-the-streamlit-qt-bridge-works">
+<h2><a class="toc-backref" href="#id22" role="doc-backlink">How the Streamlit / Qt Bridge Works</a><a class="headerlink" href="#how-the-streamlit-qt-bridge-works" title="Link to this heading">#</a></h2>
+<p>The bridge directory is <code class="docutils literal notranslate"><span class="pre">&lt;output_dir&gt;/qt_bridge/</span></code> (default
+<code class="docutils literal notranslate"><span class="pre">results/streamlit_workflow/qt_bridge/</span></code>).</p>
+<ol class="arabic simple">
+<li><p>In the web app’s <strong>Professional Studio</strong> tab, a launch button writes
+<code class="docutils literal notranslate"><span class="pre">full_studio_context.json</span></code> (project root, output directory, hydro data
+directory, current workflow configuration and result, and the Python executable
+to reuse).</p></li>
+<li><p>Streamlit starts the Qt studio as a separate process and passes that context path.</p></li>
+<li><p>The Qt app reads the context on startup, so it points at the same project and data.</p></li>
+<li><p>When you save in the Qt app (File -&gt; Streamlit Bridge -&gt; Save Studio Result,
+or after a forward run), it writes <code class="docutils literal notranslate"><span class="pre">full_studio_result.json</span></code> with the
+per-module results.</p></li>
+<li><p>Back in the browser, the results panel reads that file and displays it.</p></li>
+</ol>
+<p>Modules can also export their own files (model cell tables in CSV, picks CSV,
+electrode geometry JSON, processed EM curves, corrected gravity data, survey
+configuration JSON, figures) into a folder you choose.</p>
+</section>
+<section id="remote-servers-and-download-mode">
+<h2><a class="toc-backref" href="#id23" role="doc-backlink">Remote Servers and Download Mode</a><a class="headerlink" href="#remote-servers-and-download-mode" title="Link to this heading">#</a></h2>
+<p>A Qt window opens on the machine where the Python process runs. When Streamlit is
+hosted on a remote server, that server has no display attached to your screen, so the
+<strong>Professional Studio</strong> tab switches to <strong>download mode</strong> and shows the download
+links above instead of launch buttons. The default links point at the latest GitHub
+Release and can be overridden with environment variables:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">PHGX_QT_DOWNLOAD_WINDOWS</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PHGX_QT_DOWNLOAD_MACOS</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PHGX_QT_DOWNLOAD_LINUX</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PHGX_QT_DOWNLOAD_SOURCE</span></code></p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">PHGX_FORCE_REMOTE_MODE=1</span></code> forces download mode; <code class="docutils literal notranslate"><span class="pre">PHGX_ENABLE_LOCAL_QT=1</span></code> opts in
+to a local launch when PySide6 is present.</p>
+</section>
+<section id="persistence-and-troubleshooting">
+<h2><a class="toc-backref" href="#id24" role="doc-backlink">Persistence and Troubleshooting</a><a class="headerlink" href="#persistence-and-troubleshooting" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Window size and dock layout persist between sessions via <code class="docutils literal notranslate"><span class="pre">QSettings</span></code>
+(organization “PyHydroGeophysX”, application “Studio”). Delete that settings key
+to reset the layout to defaults.</p></li>
+<li><p>Uncaught errors show a dialog with a copyable traceback instead of closing the app
+silently; the same text also goes to stderr and can be reported as a GitHub issue.</p></li>
+<li><p>If a module page shows a “could not be loaded” message, it names the missing
+optional package and the install command; the rest of the studio is unaffected.</p></li>
+</ul>
+</section>
+<section id="building-the-bundles-yourself">
+<h2><a class="toc-backref" href="#id25" role="doc-backlink">Building the Bundles Yourself</a><a class="headerlink" href="#building-the-bundles-yourself" title="Link to this heading">#</a></h2>
+<p>The PyInstaller configuration lives at <code class="docutils literal notranslate"><span class="pre">packaging/pyinstaller_studio.spec</span></code>. The
+<code class="docutils literal notranslate"><span class="pre">PHGX_BUILD_VARIANT</span></code> environment variable selects <code class="docutils literal notranslate"><span class="pre">light</span></code> (default) or <code class="docutils literal notranslate"><span class="pre">full</span></code>.
+Helper scripts build and zip a bundle in one step:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Windows (PowerShell)</span>
+scripts/build_studio_exe.ps1<span class="w"> </span>light
+
+<span class="c1"># macOS / Linux</span>
+bash<span class="w"> </span>scripts/build_studio_exe.sh<span class="w"> </span>light
+</pre></div>
+</div>
+<p>The GitHub Actions workflow <code class="docutils literal notranslate"><span class="pre">.github/workflows/build-desktop.yml</span></code> builds all four
+bundles and attaches them to the Release for every version tag.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="webapp.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Agent Web App</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="quick_start.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Quick Start Guide</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#studio-at-a-glance">Studio at a Glance</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#download-the-desktop-app">Download the Desktop App</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#install-and-run-from-source">Install and Run from Source</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#start-without-a-terminal">Start Without a Terminal</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#choosing-pip-or-conda">Choosing pip or conda</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#your-first-studio-run-ert-inversion">Your First Studio Run: ERT Inversion</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-open-the-ert-module">Step 1 – open the ERT module</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-load-and-inspect-data">Step 2 – load and inspect data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-apply-qc-filters">Step 3 – apply QC filters</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-4-configure-and-run-the-inversion">Step 4 – configure and run the inversion</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-5-edit-geometry-and-export">Step 5 – edit geometry and export</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#time-lapse-ert">Time-Lapse ERT</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-by-module-workflows">Module-by-Module Workflows</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#using-aquah-chat-safely">Using AQUAH Chat Safely</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#letting-aquah-see-a-result">Letting AQUAH See a Result</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#saving-exporting-and-reopening-work">Saving, Exporting, and Reopening Work</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-unsaved-means-on-disk">What “unsaved” means on disk</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#csv-output">CSV Output</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#modules">Modules</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-the-streamlit-qt-bridge-works">How the Streamlit / Qt Bridge Works</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#remote-servers-and-download-mode">Remote Servers and Download Mode</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#persistence-and-troubleshooting">Persistence and Troubleshooting</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#building-the-bundles-yourself">Building the Bundles Yourself</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/agents/desktop_studio.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/agents/desktop_studio.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,1139 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>PyHydroGeophysX.Hydro_modular package &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/PyHydroGeophysX.Hydro_modular';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/api/PyHydroGeophysX.Hydro_modular.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.Geophy_modular.html">PyHydroGeophysX.Geophy_modular package</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">PyHydroGeophysX.Hydro_modular package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.agents.html">PyHydroGeophysX.agents package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.analysis.html">PyHydroGeophysX.analysis package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.assimilation.html">PyHydroGeophysX.assimilation package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.core.html">PyHydroGeophysX.core package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.data_access.html">PyHydroGeophysX.data_access package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.data_processing.html">PyHydroGeophysX.data_processing package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.forward.html">PyHydroGeophysX.forward package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.inversion.html">PyHydroGeophysX.inversion package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.llm.html">PyHydroGeophysX.llm package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.model_output.html">PyHydroGeophysX.model_output package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.petrophysics.html">PyHydroGeophysX.petrophysics package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.solvers.html">PyHydroGeophysX.solvers package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.uncertainty.html">PyHydroGeophysX.uncertainty package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.visualization.html">PyHydroGeophysX.visualization package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.workflows.html">PyHydroGeophysX.workflows package</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.Hydro_modular package</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="pyhydrogeophysx-hydro-modular-package">
+<h1>PyHydroGeophysX.Hydro_modular package<a class="headerlink" href="#pyhydrogeophysx-hydro-modular-package" title="Link to this heading">#</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">#</a></h2>
+</section>
+<section id="module-PyHydroGeophysX.Hydro_modular.hydro_to_ert">
+<span id="pyhydrogeophysx-hydro-modular-hydro-to-ert-module"></span><h2>PyHydroGeophysX.Hydro_modular.hydro_to_ert module<a class="headerlink" href="#module-PyHydroGeophysX.Hydro_modular.hydro_to_ert" title="Link to this heading">#</a></h2>
+<p>Module for converting hydrologic model output to ERT apparent resistivity.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_ert.hydro_to_ert">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.hydro_to_ert.</span></span><span class="sig-name descname"><span class="pre">hydro_to_ert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pygimli.Mesh</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile_interpolator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="core.html#PyHydroGeophysX.core.interpolation.ProfileInterpolator" title="PyHydroGeophysX.core.interpolation.ProfileInterpolator"><span class="pre">ProfileInterpolator</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">structure</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marker_labels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_parameters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electrode_spacing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electrode_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_electrodes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">72</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scheme_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'wa'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">abs_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rel_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh_markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">pygimli.DataContainer</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_ert.html#hydro_to_ert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_ert.hydro_to_ert" title="Link to this definition">#</a></dt>
+<dd><p>Convert hydrologic model output to ERT apparent resistivity.</p>
+<p>This function performs the complete workflow from water content to synthetic ERT data:
+1. Interpolates water content to mesh
+2. Calculates saturation
+3. Converts saturation to resistivity using petrophysical models
+4. Creates electrode array along surface profile
+5. Performs forward modeling to generate synthetic ERT data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content array (nlay, ny, nx) or mesh values</p></li>
+<li><p><strong>porosity</strong> – Porosity array (nlay, ny, nx) or mesh values</p></li>
+<li><p><strong>mesh</strong> – PyGIMLI mesh</p></li>
+<li><p><strong>profile_interpolator</strong> – ProfileInterpolator for surface interpolation</p></li>
+<li><p><strong>marker_labels</strong> – Layer marker labels [top, middle, bottom]</p></li>
+<li><p><strong>rho_parameters</strong> – <p>Dictionary of resistivity parameters:
+{</p>
+<blockquote>
+<div><p>’rho_sat’: [100, 500, 2400],  # Saturated resistivity values
+‘n’: [2.2, 1.8, 2.5],         # Cementation exponents
+‘sigma_s’: [1/500, 0, 0]      # Surface conductivity values</p>
+</div></blockquote>
+<p>}</p>
+</p></li>
+<li><p><strong>electrode_spacing</strong> – Spacing between electrodes</p></li>
+<li><p><strong>electrode_start</strong> – Starting position of electrode array</p></li>
+<li><p><strong>num_electrodes</strong> – Number of electrodes</p></li>
+<li><p><strong>scheme_name</strong> – ERT scheme name (‘wa’, ‘dd’, etc.)</p></li>
+<li><p><strong>noise_level</strong> – Relative noise level for synthetic data</p></li>
+<li><p><strong>abs_error</strong> – Absolute error for data estimation</p></li>
+<li><p><strong>rel_error</strong> – Relative error for data estimation</p></li>
+<li><p><strong>save_path</strong> – Path to save synthetic data (None = don’t save)</p></li>
+<li><p><strong>mesh_markers</strong> – Mesh cell markers (None = get from mesh)</p></li>
+<li><p><strong>verbose</strong> – Whether to display verbose information</p></li>
+<li><p><strong>seed</strong> – Random seed for noise generation</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (synthetic ERT data container, resistivity model)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-PyHydroGeophysX.Hydro_modular.hydro_to_fdem">
+<span id="pyhydrogeophysx-hydro-modular-hydro-to-fdem-module"></span><h2>PyHydroGeophysX.Hydro_modular.hydro_to_fdem module<a class="headerlink" href="#module-PyHydroGeophysX.Hydro_modular.hydro_to_fdem" title="Link to this heading">#</a></h2>
+<p>Hydrologic-to-FDEM conversion helpers for 2D profile workflows.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_fdem.hydro_to_fdem">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.hydro_to_fdem.</span></span><span class="sig-name descname"><span class="pre">hydro_to_fdem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frequencies</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_w</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">receiver_location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">receiver_orientation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'z'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">receiver_component</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'secondary'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">waveform_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'dipole'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.03</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_thickness</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_fdem.html#hydro_to_fdem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_fdem.hydro_to_fdem" title="Link to this definition">#</a></dt>
+<dd><p>Simulate pseudo-2D FDEM response from one hydrologic profile.</p>
+<p>A 1D FDEM sounding is simulated at each profile station and stacked into a
+response matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content matrix, shape (n_layers, n_stations).</p></li>
+<li><p><strong>porosity</strong> – Porosity matrix, same shape as water_content.</p></li>
+<li><p><strong>layer_boundaries</strong> – Elevation matrix for layer interfaces,
+shape (n_layers + 1, n_stations), or 1D (n_layers + 1).</p></li>
+<li><p><strong>frequencies</strong> – FDEM frequencies.</p></li>
+<li><p><strong>sigma_w</strong> – Pore-water conductivity (S/m).</p></li>
+<li><p><strong>m</strong> – Cementation exponent.</p></li>
+<li><p><strong>n</strong> – Saturation exponent.</p></li>
+<li><p><strong>sigma_s</strong> – Surface conductivity (S/m).</p></li>
+<li><p><strong>source_location</strong> – Source location [x, y, z].</p></li>
+<li><p><strong>receiver_location</strong> – Receiver location [x, y, z].</p></li>
+<li><p><strong>source_radius</strong> – Source loop radius (m).</p></li>
+<li><p><strong>receiver_orientation</strong> – Receiver orientation.</p></li>
+<li><p><strong>receiver_component</strong> – ‘secondary’, ‘total’, or ‘both’.</p></li>
+<li><p><strong>waveform_type</strong> – ‘dipole’ or ‘loop’.</p></li>
+<li><p><strong>noise_level</strong> – Relative noise level.</p></li>
+<li><p><strong>seed</strong> – Random seed.</p></li>
+<li><p><strong>min_thickness</strong> – Lower bound for finite layer thicknesses (m).</p></li>
+<li><p><strong>verbose</strong> – Print progress.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Shape (n_stations, n_frequencies), complex.
+clean_data: Shape (n_stations, n_frequencies), complex.
+uncertainty: Shape (n_stations, n_frequencies), float.
+conductivity: Shape (n_layers, n_stations), float.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>noisy_data</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-PyHydroGeophysX.Hydro_modular.hydro_to_geophysics">
+<span id="pyhydrogeophysx-hydro-modular-hydro-to-geophysics-module"></span><h2>PyHydroGeophysX.Hydro_modular.hydro_to_geophysics module<a class="headerlink" href="#module-PyHydroGeophysX.Hydro_modular.hydro_to_geophysics" title="Link to this heading">#</a></h2>
+<p>Hydro -&gt; multi-geophysics forward pipeline for the desktop studio.</p>
+<p>This module is a thin, parameterized re-use of
+<code class="docutils literal notranslate"><span class="pre">examples/Ex_hydro_to_multigeophys.py</span></code>. It is deliberately Qt-free so it can run
+inside a worker thread (or be unit-tested) without a QApplication.</p>
+<p>Two layers:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">extract_profile</span></code> / <code class="docutils literal notranslate"><span class="pre">build_survey_config</span></code> – numpy + scipy only. These work
+even when pygimli is not installed, so “Generate profile” and “Export survey
+config” never depend on the heavy backend.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">run_hydro_forward</span></code> – the real forward run. It imports pygimli and the
+<code class="docutils literal notranslate"><span class="pre">hydro_to_*</span></code> wrappers lazily; if anything is missing or fails it raises
+<code class="docutils literal notranslate"><span class="pre">BackendUnavailable</span></code> so the caller can fall back to config export.</p></li>
+</ul>
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.assign_three_layer_markers">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.</span></span><span class="sig-name descname"><span class="pre">assign_three_layer_markers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_marker</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mid_marker</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bot_marker</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_geophysics.html#assign_three_layer_markers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.assign_three_layer_markers" title="Link to this definition">#</a></dt>
+<dd><p>Assign top/middle/bottom markers from two interface lines.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.build_survey_config">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.</span></span><span class="sig-name descname"><span class="pre">build_survey_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">methods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">point1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">point2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_geophysics.html#build_survey_config"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.build_survey_config" title="Link to this definition">#</a></dt>
+<dd><p>Build a complete, JSON-serializable survey configuration.</p>
+<p>If a previously extracted <code class="docutils literal notranslate"><span class="pre">profile</span></code> dict is supplied, a downsampled copy of
+the sampled profile is embedded so the config is useful even without a
+forward run.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.extract_profile">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.</span></span><span class="sig-name descname"><span class="pre">extract_profile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">context:</span> <span class="pre">~typing.Dict[str,</span> <span class="pre">~typing.Any],</span> <span class="pre">params:</span> <span class="pre">~typing.Dict[str,</span> <span class="pre">~typing.Any],</span> <span class="pre">point1:</span> <span class="pre">~typing.Sequence[float],</span> <span class="pre">point2:</span> <span class="pre">~typing.Sequence[float],</span> <span class="pre">log:</span> <span class="pre">~typing.Callable[[str],</span> <span class="pre">None]</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">noop&gt;</span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_geophysics.html#extract_profile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.extract_profile" title="Link to this definition">#</a></dt>
+<dd><p>Extract the 2D hydro profile between two clicked points.</p>
+<p>Returns a dict with <code class="docutils literal notranslate"><span class="pre">L_profile</span></code>, <code class="docutils literal notranslate"><span class="pre">structure</span></code> (layer boundaries),
+<code class="docutils literal notranslate"><span class="pre">water_content_profile</span></code> and <code class="docutils literal notranslate"><span class="pre">porosity_profile</span></code> plus bookkeeping. This
+only needs numpy + scipy via <code class="docutils literal notranslate"><span class="pre">ProfileInterpolator</span></code> and works without
+pygimli.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.fill_profile_nans">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.</span></span><span class="sig-name descname"><span class="pre">fill_profile_nans</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_geophysics.html#fill_profile_nans"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.fill_profile_nans" title="Link to this definition">#</a></dt>
+<dd><p>Fill NaNs along the profile direction for each layer.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.find_hydro_files">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.</span></span><span class="sig-name descname"><span class="pre">find_hydro_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_geophysics.html#find_hydro_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.find_hydro_files" title="Link to this definition">#</a></dt>
+<dd><p>Return the resolved path for each expected hydro file (or None).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.get_mesh_xy">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.</span></span><span class="sig-name descname"><span class="pre">get_mesh_xy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_geophysics.html#get_mesh_xy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.get_mesh_xy" title="Link to this definition">#</a></dt>
+<dd><p>Return mesh cell-center x/y arrays.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.interpolate_profile_to_mesh">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.</span></span><span class="sig-name descname"><span class="pre">interpolate_profile_to_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">profile_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_profile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_geophysics.html#interpolate_profile_to_mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.interpolate_profile_to_mesh" title="Link to this definition">#</a></dt>
+<dd><p>Interpolate a (layers x distance) profile matrix onto mesh cells.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.run_hydro_forward">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.</span></span><span class="sig-name descname"><span class="pre">run_hydro_forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">context:</span> <span class="pre">~typing.Dict[str,</span> <span class="pre">~typing.Any],</span> <span class="pre">params:</span> <span class="pre">~typing.Dict[str,</span> <span class="pre">~typing.Any],</span> <span class="pre">methods:</span> <span class="pre">~typing.Sequence[str],</span> <span class="pre">point1:</span> <span class="pre">~typing.Sequence[float],</span> <span class="pre">point2:</span> <span class="pre">~typing.Sequence[float],</span> <span class="pre">log:</span> <span class="pre">~typing.Callable[[str],</span> <span class="pre">None]</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">noop&gt;</span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_geophysics.html#run_hydro_forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.run_hydro_forward" title="Link to this definition">#</a></dt>
+<dd><p>Run the real hydro-&gt;geophysics forward pipeline.</p>
+<p>Raises <code class="docutils literal notranslate"><span class="pre">BackendUnavailable</span></code> if pygimli / the hydro_to_* wrappers cannot be
+imported, and propagates any other exception from the forward run so the
+caller can fall back to config export.</p>
+</dd></dl>
+
+</section>
+<section id="module-PyHydroGeophysX.Hydro_modular.hydro_to_gravity">
+<span id="pyhydrogeophysx-hydro-modular-hydro-to-gravity-module"></span><h2>PyHydroGeophysX.Hydro_modular.hydro_to_gravity module<a class="headerlink" href="#module-PyHydroGeophysX.Hydro_modular.hydro_to_gravity" title="Link to this heading">#</a></h2>
+<p>Hydrologic-to-gravity conversion helpers for 2D profile workflows.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_gravity.hydro_to_gravity">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.hydro_to_gravity.</span></span><span class="sig-name descname"><span class="pre">hydro_to_gravity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">station_positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_matrix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2650.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_water</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_air</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.225</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensor_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh_nx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">80</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh_nz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">60</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_width_y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">12.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_gravity.html#hydro_to_gravity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_gravity.hydro_to_gravity" title="Link to this definition">#</a></dt>
+<dd><p>Simulate gravity response from a 2D hydrologic profile using SimPEG.</p>
+<p>The 2D profile is interpolated to a thin 3D TensorMesh (single y strip),
+then <code class="docutils literal notranslate"><span class="pre">Simulation3DIntegral</span></code> is used to compute <code class="docutils literal notranslate"><span class="pre">gz</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content matrix, shape (n_layers, n_stations).</p></li>
+<li><p><strong>porosity</strong> – Porosity matrix, same shape as water_content.</p></li>
+<li><p><strong>layer_boundaries</strong> – Elevation matrix for layer interfaces,
+shape (n_layers + 1, n_stations), or 1D (n_layers + 1).</p></li>
+<li><p><strong>station_positions</strong> – Profile x coordinates.</p></li>
+<li><p><strong>rho_matrix</strong> – Grain density (kg/m^3).</p></li>
+<li><p><strong>rho_water</strong> – Water density (kg/m^3).</p></li>
+<li><p><strong>rho_air</strong> – Air density (kg/m^3).</p></li>
+<li><p><strong>sensor_height</strong> – Sensor height above ground (m).</p></li>
+<li><p><strong>noise_level</strong> – Relative noise level.</p></li>
+<li><p><strong>seed</strong> – Random seed.</p></li>
+<li><p><strong>mesh_nx</strong> – Number of mesh cells in x.</p></li>
+<li><p><strong>mesh_nz</strong> – Number of mesh cells in z.</p></li>
+<li><p><strong>model_width_y</strong> – Width of the single y strip (m).</p></li>
+<li><p><strong>verbose</strong> – Print progress.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>Gravity anomaly with noise (mGal), shape (n_stations,).
+clean_data: Noise-free gravity anomaly (mGal), shape (n_stations,).
+uncertainty: Data uncertainty (mGal), shape (n_stations,).
+density_contrast: Profile density contrast model (kg/m^3),</p>
+<blockquote>
+<div><p>shape (n_layers, n_stations).</p>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>noisy_data</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-PyHydroGeophysX.Hydro_modular.hydro_to_srt">
+<span id="pyhydrogeophysx-hydro-modular-hydro-to-srt-module"></span><h2>PyHydroGeophysX.Hydro_modular.hydro_to_srt module<a class="headerlink" href="#module-PyHydroGeophysX.Hydro_modular.hydro_to_srt" title="Link to this heading">#</a></h2>
+<p>Module for converting hydrologic model output to seismic travel times.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_srt.hydro_to_srt">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.hydro_to_srt.</span></span><span class="sig-name descname"><span class="pre">hydro_to_srt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pygimli.Mesh</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile_interpolator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="core.html#PyHydroGeophysX.core.interpolation.ProfileInterpolator" title="PyHydroGeophysX.core.interpolation.ProfileInterpolator"><span class="pre">ProfileInterpolator</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">structure</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marker_labels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vel_parameters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensor_spacing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensor_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_sensors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">72</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shot_distance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_abs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1e-05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh_markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">pygimli.DataContainer</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_srt.html#hydro_to_srt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_srt.hydro_to_srt" title="Link to this definition">#</a></dt>
+<dd><p>Convert hydrologic model output to seismic travel times.</p>
+<p>This function performs the complete workflow from water content to synthetic SRT data:</p>
+<ol class="arabic simple">
+<li><p>Interpolates water content to mesh</p></li>
+<li><p>Calculates saturation</p></li>
+<li><p>Converts saturation to seismic velocities using petrophysical models</p></li>
+<li><p>Creates sensor array along surface profile</p></li>
+<li><p>Performs forward modeling to generate synthetic travel time data</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content array (nlay, ny, nx) or mesh values</p></li>
+<li><p><strong>porosity</strong> – Porosity array (nlay, ny, nx) or mesh values</p></li>
+<li><p><strong>mesh</strong> – PyGIMLI mesh</p></li>
+<li><p><strong>profile_interpolator</strong> – ProfileInterpolator for surface interpolation</p></li>
+<li><p><strong>marker_labels</strong> – Layer marker labels [top, middle, bottom]</p></li>
+<li><p><strong>vel_parameters</strong> – Dictionary of velocity parameters containing
+‘top’: {‘bulk_modulus’: 30.0, ‘shear_modulus’: 20.0, ‘mineral_density’: 2650, ‘depth’: 1.0},
+‘mid’: {‘bulk_modulus’: 50.0, ‘shear_modulus’: 35.0, ‘mineral_density’: 2670, ‘aspect_ratio’: 0.05},
+‘bot’: {‘bulk_modulus’: 55.0, ‘shear_modulus’: 50.0, ‘mineral_density’: 2680, ‘aspect_ratio’: 0.03}</p></li>
+<li><p><strong>sensor_spacing</strong> – Spacing between sensors</p></li>
+<li><p><strong>sensor_start</strong> – Starting position of sensor array</p></li>
+<li><p><strong>num_sensors</strong> – Number of sensors</p></li>
+<li><p><strong>shot_distance</strong> – Distance between shot points</p></li>
+<li><p><strong>noise_level</strong> – Relative noise level for synthetic data</p></li>
+<li><p><strong>noise_abs</strong> – Absolute noise level for synthetic data</p></li>
+<li><p><strong>save_path</strong> – Path to save synthetic data (None = don’t save)</p></li>
+<li><p><strong>mesh_markers</strong> – Mesh cell markers (None = get from mesh)</p></li>
+<li><p><strong>verbose</strong> – Whether to display verbose information</p></li>
+<li><p><strong>seed</strong> – Random seed for noise generation</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (synthetic SRT data container, velocity model)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-PyHydroGeophysX.Hydro_modular.hydro_to_tdem">
+<span id="pyhydrogeophysx-hydro-modular-hydro-to-tdem-module"></span><h2>PyHydroGeophysX.Hydro_modular.hydro_to_tdem module<a class="headerlink" href="#module-PyHydroGeophysX.Hydro_modular.hydro_to_tdem" title="Link to this heading">#</a></h2>
+<p>Hydrologic-to-TDEM conversion helpers for 2D profile workflows.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_tdem.hydro_to_tdem">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.hydro_to_tdem.</span></span><span class="sig-name descname"><span class="pre">hydro_to_tdem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_w</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.03</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_thickness</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_tdem.html#hydro_to_tdem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_tdem.hydro_to_tdem" title="Link to this definition">#</a></dt>
+<dd><p>Simulate pseudo-2D TDEM response from one hydrologic profile.</p>
+<p>The input is a 2D section (layers x profile stations). A 1D TDEM sounding is
+simulated at each profile station and stacked into a response matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content matrix, shape (n_layers, n_stations).</p></li>
+<li><p><strong>porosity</strong> – Porosity matrix, same shape as water_content.</p></li>
+<li><p><strong>layer_boundaries</strong> – Elevation matrix for layer interfaces,
+shape (n_layers + 1, n_stations), or 1D (n_layers + 1).</p></li>
+<li><p><strong>times</strong> – TDEM time channels.</p></li>
+<li><p><strong>sigma_w</strong> – Pore-water conductivity (S/m).</p></li>
+<li><p><strong>m</strong> – Cementation exponent.</p></li>
+<li><p><strong>n</strong> – Saturation exponent.</p></li>
+<li><p><strong>sigma_s</strong> – Surface conductivity (S/m).</p></li>
+<li><p><strong>source_radius</strong> – Source loop radius (m).</p></li>
+<li><p><strong>noise_level</strong> – Relative noise level.</p></li>
+<li><p><strong>seed</strong> – Random seed.</p></li>
+<li><p><strong>min_thickness</strong> – Lower bound for finite layer thicknesses (m).</p></li>
+<li><p><strong>verbose</strong> – Print progress.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Shape (n_stations, n_times).
+clean_data: Shape (n_stations, n_times).
+uncertainty: Shape (n_stations, n_times).
+conductivity: Shape (n_layers, n_stations).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>noisy_data</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-PyHydroGeophysX.Hydro_modular">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-PyHydroGeophysX.Hydro_modular" title="Link to this heading">#</a></h2>
+<p>Hydro_modular package for hydrologic to geophysical conversion utilities.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_ert">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.</span></span><span class="sig-name descname"><span class="pre">hydro_to_ert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pygimli.Mesh</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile_interpolator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="core.html#PyHydroGeophysX.core.interpolation.ProfileInterpolator" title="PyHydroGeophysX.core.interpolation.ProfileInterpolator"><span class="pre">ProfileInterpolator</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">structure</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marker_labels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_parameters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electrode_spacing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">electrode_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_electrodes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">72</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scheme_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'wa'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">abs_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rel_error</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh_markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">pygimli.DataContainer</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_ert.html#hydro_to_ert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_ert" title="Link to this definition">#</a></dt>
+<dd><p>Convert hydrologic model output to ERT apparent resistivity.</p>
+<p>This function performs the complete workflow from water content to synthetic ERT data:
+1. Interpolates water content to mesh
+2. Calculates saturation
+3. Converts saturation to resistivity using petrophysical models
+4. Creates electrode array along surface profile
+5. Performs forward modeling to generate synthetic ERT data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content array (nlay, ny, nx) or mesh values</p></li>
+<li><p><strong>porosity</strong> – Porosity array (nlay, ny, nx) or mesh values</p></li>
+<li><p><strong>mesh</strong> – PyGIMLI mesh</p></li>
+<li><p><strong>profile_interpolator</strong> – ProfileInterpolator for surface interpolation</p></li>
+<li><p><strong>marker_labels</strong> – Layer marker labels [top, middle, bottom]</p></li>
+<li><p><strong>rho_parameters</strong> – <p>Dictionary of resistivity parameters:
+{</p>
+<blockquote>
+<div><p>’rho_sat’: [100, 500, 2400],  # Saturated resistivity values
+‘n’: [2.2, 1.8, 2.5],         # Cementation exponents
+‘sigma_s’: [1/500, 0, 0]      # Surface conductivity values</p>
+</div></blockquote>
+<p>}</p>
+</p></li>
+<li><p><strong>electrode_spacing</strong> – Spacing between electrodes</p></li>
+<li><p><strong>electrode_start</strong> – Starting position of electrode array</p></li>
+<li><p><strong>num_electrodes</strong> – Number of electrodes</p></li>
+<li><p><strong>scheme_name</strong> – ERT scheme name (‘wa’, ‘dd’, etc.)</p></li>
+<li><p><strong>noise_level</strong> – Relative noise level for synthetic data</p></li>
+<li><p><strong>abs_error</strong> – Absolute error for data estimation</p></li>
+<li><p><strong>rel_error</strong> – Relative error for data estimation</p></li>
+<li><p><strong>save_path</strong> – Path to save synthetic data (None = don’t save)</p></li>
+<li><p><strong>mesh_markers</strong> – Mesh cell markers (None = get from mesh)</p></li>
+<li><p><strong>verbose</strong> – Whether to display verbose information</p></li>
+<li><p><strong>seed</strong> – Random seed for noise generation</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (synthetic ERT data container, resistivity model)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_fdem">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.</span></span><span class="sig-name descname"><span class="pre">hydro_to_fdem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frequencies</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_w</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">receiver_location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">receiver_orientation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'z'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">receiver_component</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'secondary'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">waveform_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'dipole'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.03</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_thickness</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_fdem.html#hydro_to_fdem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_fdem" title="Link to this definition">#</a></dt>
+<dd><p>Simulate pseudo-2D FDEM response from one hydrologic profile.</p>
+<p>A 1D FDEM sounding is simulated at each profile station and stacked into a
+response matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content matrix, shape (n_layers, n_stations).</p></li>
+<li><p><strong>porosity</strong> – Porosity matrix, same shape as water_content.</p></li>
+<li><p><strong>layer_boundaries</strong> – Elevation matrix for layer interfaces,
+shape (n_layers + 1, n_stations), or 1D (n_layers + 1).</p></li>
+<li><p><strong>frequencies</strong> – FDEM frequencies.</p></li>
+<li><p><strong>sigma_w</strong> – Pore-water conductivity (S/m).</p></li>
+<li><p><strong>m</strong> – Cementation exponent.</p></li>
+<li><p><strong>n</strong> – Saturation exponent.</p></li>
+<li><p><strong>sigma_s</strong> – Surface conductivity (S/m).</p></li>
+<li><p><strong>source_location</strong> – Source location [x, y, z].</p></li>
+<li><p><strong>receiver_location</strong> – Receiver location [x, y, z].</p></li>
+<li><p><strong>source_radius</strong> – Source loop radius (m).</p></li>
+<li><p><strong>receiver_orientation</strong> – Receiver orientation.</p></li>
+<li><p><strong>receiver_component</strong> – ‘secondary’, ‘total’, or ‘both’.</p></li>
+<li><p><strong>waveform_type</strong> – ‘dipole’ or ‘loop’.</p></li>
+<li><p><strong>noise_level</strong> – Relative noise level.</p></li>
+<li><p><strong>seed</strong> – Random seed.</p></li>
+<li><p><strong>min_thickness</strong> – Lower bound for finite layer thicknesses (m).</p></li>
+<li><p><strong>verbose</strong> – Print progress.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Shape (n_stations, n_frequencies), complex.
+clean_data: Shape (n_stations, n_frequencies), complex.
+uncertainty: Shape (n_stations, n_frequencies), float.
+conductivity: Shape (n_layers, n_stations), float.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>noisy_data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_gravity">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.</span></span><span class="sig-name descname"><span class="pre">hydro_to_gravity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">station_positions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_matrix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2650.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_water</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_air</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.225</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensor_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh_nx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">80</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh_nz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">60</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_width_y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">12.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_gravity.html#hydro_to_gravity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_gravity" title="Link to this definition">#</a></dt>
+<dd><p>Simulate gravity response from a 2D hydrologic profile using SimPEG.</p>
+<p>The 2D profile is interpolated to a thin 3D TensorMesh (single y strip),
+then <code class="docutils literal notranslate"><span class="pre">Simulation3DIntegral</span></code> is used to compute <code class="docutils literal notranslate"><span class="pre">gz</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content matrix, shape (n_layers, n_stations).</p></li>
+<li><p><strong>porosity</strong> – Porosity matrix, same shape as water_content.</p></li>
+<li><p><strong>layer_boundaries</strong> – Elevation matrix for layer interfaces,
+shape (n_layers + 1, n_stations), or 1D (n_layers + 1).</p></li>
+<li><p><strong>station_positions</strong> – Profile x coordinates.</p></li>
+<li><p><strong>rho_matrix</strong> – Grain density (kg/m^3).</p></li>
+<li><p><strong>rho_water</strong> – Water density (kg/m^3).</p></li>
+<li><p><strong>rho_air</strong> – Air density (kg/m^3).</p></li>
+<li><p><strong>sensor_height</strong> – Sensor height above ground (m).</p></li>
+<li><p><strong>noise_level</strong> – Relative noise level.</p></li>
+<li><p><strong>seed</strong> – Random seed.</p></li>
+<li><p><strong>mesh_nx</strong> – Number of mesh cells in x.</p></li>
+<li><p><strong>mesh_nz</strong> – Number of mesh cells in z.</p></li>
+<li><p><strong>model_width_y</strong> – Width of the single y strip (m).</p></li>
+<li><p><strong>verbose</strong> – Print progress.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>Gravity anomaly with noise (mGal), shape (n_stations,).
+clean_data: Noise-free gravity anomaly (mGal), shape (n_stations,).
+uncertainty: Data uncertainty (mGal), shape (n_stations,).
+density_contrast: Profile density contrast model (kg/m^3),</p>
+<blockquote>
+<div><p>shape (n_layers, n_stations).</p>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>noisy_data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_srt">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.</span></span><span class="sig-name descname"><span class="pre">hydro_to_srt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pygimli.Mesh</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile_interpolator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="core.html#PyHydroGeophysX.core.interpolation.ProfileInterpolator" title="PyHydroGeophysX.core.interpolation.ProfileInterpolator"><span class="pre">ProfileInterpolator</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">structure</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marker_labels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vel_parameters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensor_spacing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensor_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_sensors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">72</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shot_distance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_abs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1e-05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh_markers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">pygimli.DataContainer</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_srt.html#hydro_to_srt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_srt" title="Link to this definition">#</a></dt>
+<dd><p>Convert hydrologic model output to seismic travel times.</p>
+<p>This function performs the complete workflow from water content to synthetic SRT data:</p>
+<ol class="arabic simple">
+<li><p>Interpolates water content to mesh</p></li>
+<li><p>Calculates saturation</p></li>
+<li><p>Converts saturation to seismic velocities using petrophysical models</p></li>
+<li><p>Creates sensor array along surface profile</p></li>
+<li><p>Performs forward modeling to generate synthetic travel time data</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content array (nlay, ny, nx) or mesh values</p></li>
+<li><p><strong>porosity</strong> – Porosity array (nlay, ny, nx) or mesh values</p></li>
+<li><p><strong>mesh</strong> – PyGIMLI mesh</p></li>
+<li><p><strong>profile_interpolator</strong> – ProfileInterpolator for surface interpolation</p></li>
+<li><p><strong>marker_labels</strong> – Layer marker labels [top, middle, bottom]</p></li>
+<li><p><strong>vel_parameters</strong> – Dictionary of velocity parameters containing
+‘top’: {‘bulk_modulus’: 30.0, ‘shear_modulus’: 20.0, ‘mineral_density’: 2650, ‘depth’: 1.0},
+‘mid’: {‘bulk_modulus’: 50.0, ‘shear_modulus’: 35.0, ‘mineral_density’: 2670, ‘aspect_ratio’: 0.05},
+‘bot’: {‘bulk_modulus’: 55.0, ‘shear_modulus’: 50.0, ‘mineral_density’: 2680, ‘aspect_ratio’: 0.03}</p></li>
+<li><p><strong>sensor_spacing</strong> – Spacing between sensors</p></li>
+<li><p><strong>sensor_start</strong> – Starting position of sensor array</p></li>
+<li><p><strong>num_sensors</strong> – Number of sensors</p></li>
+<li><p><strong>shot_distance</strong> – Distance between shot points</p></li>
+<li><p><strong>noise_level</strong> – Relative noise level for synthetic data</p></li>
+<li><p><strong>noise_abs</strong> – Absolute noise level for synthetic data</p></li>
+<li><p><strong>save_path</strong> – Path to save synthetic data (None = don’t save)</p></li>
+<li><p><strong>mesh_markers</strong> – Mesh cell markers (None = get from mesh)</p></li>
+<li><p><strong>verbose</strong> – Whether to display verbose information</p></li>
+<li><p><strong>seed</strong> – Random seed for noise generation</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (synthetic SRT data container, velocity model)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.Hydro_modular.hydro_to_tdem">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.Hydro_modular.</span></span><span class="sig-name descname"><span class="pre">hydro_to_tdem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">water_content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_w</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_radius</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noise_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.03</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_thickness</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/Hydro_modular/hydro_to_tdem.html#hydro_to_tdem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.Hydro_modular.hydro_to_tdem" title="Link to this definition">#</a></dt>
+<dd><p>Simulate pseudo-2D TDEM response from one hydrologic profile.</p>
+<p>The input is a 2D section (layers x profile stations). A 1D TDEM sounding is
+simulated at each profile station and stacked into a response matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>water_content</strong> – Water content matrix, shape (n_layers, n_stations).</p></li>
+<li><p><strong>porosity</strong> – Porosity matrix, same shape as water_content.</p></li>
+<li><p><strong>layer_boundaries</strong> – Elevation matrix for layer interfaces,
+shape (n_layers + 1, n_stations), or 1D (n_layers + 1).</p></li>
+<li><p><strong>times</strong> – TDEM time channels.</p></li>
+<li><p><strong>sigma_w</strong> – Pore-water conductivity (S/m).</p></li>
+<li><p><strong>m</strong> – Cementation exponent.</p></li>
+<li><p><strong>n</strong> – Saturation exponent.</p></li>
+<li><p><strong>sigma_s</strong> – Surface conductivity (S/m).</p></li>
+<li><p><strong>source_radius</strong> – Source loop radius (m).</p></li>
+<li><p><strong>noise_level</strong> – Relative noise level.</p></li>
+<li><p><strong>seed</strong> – Random seed.</p></li>
+<li><p><strong>min_thickness</strong> – Lower bound for finite layer thicknesses (m).</p></li>
+<li><p><strong>verbose</strong> – Print progress.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Shape (n_stations, n_times).
+clean_data: Shape (n_stations, n_times).
+uncertainty: Shape (n_stations, n_times).
+conductivity: Shape (n_layers, n_stations).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>noisy_data</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#submodules">Submodules</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-PyHydroGeophysX.Hydro_modular.hydro_to_ert">PyHydroGeophysX.Hydro_modular.hydro_to_ert module</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_ert.hydro_to_ert"><code class="docutils literal notranslate"><span class="pre">hydro_to_ert()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-PyHydroGeophysX.Hydro_modular.hydro_to_fdem">PyHydroGeophysX.Hydro_modular.hydro_to_fdem module</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_fdem.hydro_to_fdem"><code class="docutils literal notranslate"><span class="pre">hydro_to_fdem()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-PyHydroGeophysX.Hydro_modular.hydro_to_geophysics">PyHydroGeophysX.Hydro_modular.hydro_to_geophysics module</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.assign_three_layer_markers"><code class="docutils literal notranslate"><span class="pre">assign_three_layer_markers()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.build_survey_config"><code class="docutils literal notranslate"><span class="pre">build_survey_config()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.extract_profile"><code class="docutils literal notranslate"><span class="pre">extract_profile()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.fill_profile_nans"><code class="docutils literal notranslate"><span class="pre">fill_profile_nans()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.find_hydro_files"><code class="docutils literal notranslate"><span class="pre">find_hydro_files()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.get_mesh_xy"><code class="docutils literal notranslate"><span class="pre">get_mesh_xy()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.interpolate_profile_to_mesh"><code class="docutils literal notranslate"><span class="pre">interpolate_profile_to_mesh()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_geophysics.run_hydro_forward"><code class="docutils literal notranslate"><span class="pre">run_hydro_forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-PyHydroGeophysX.Hydro_modular.hydro_to_gravity">PyHydroGeophysX.Hydro_modular.hydro_to_gravity module</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_gravity.hydro_to_gravity"><code class="docutils literal notranslate"><span class="pre">hydro_to_gravity()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-PyHydroGeophysX.Hydro_modular.hydro_to_srt">PyHydroGeophysX.Hydro_modular.hydro_to_srt module</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_srt.hydro_to_srt"><code class="docutils literal notranslate"><span class="pre">hydro_to_srt()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-PyHydroGeophysX.Hydro_modular.hydro_to_tdem">PyHydroGeophysX.Hydro_modular.hydro_to_tdem module</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_tdem.hydro_to_tdem"><code class="docutils literal notranslate"><span class="pre">hydro_to_tdem()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-PyHydroGeophysX.Hydro_modular">Module contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_ert"><code class="docutils literal notranslate"><span class="pre">hydro_to_ert()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_fdem"><code class="docutils literal notranslate"><span class="pre">hydro_to_fdem()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_gravity"><code class="docutils literal notranslate"><span class="pre">hydro_to_gravity()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_srt"><code class="docutils literal notranslate"><span class="pre">hydro_to_srt()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.Hydro_modular.hydro_to_tdem"><code class="docutils literal notranslate"><span class="pre">hydro_to_tdem()</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/api/PyHydroGeophysX.Hydro_modular.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/api/PyHydroGeophysX.Hydro_modular.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

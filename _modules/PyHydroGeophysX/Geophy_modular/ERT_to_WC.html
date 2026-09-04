@@ -1,0 +1,1084 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.Geophy_modular.ERT_to_WC &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/Geophy_modular/ERT_to_WC';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/Geophy_modular/ERT_to_WC.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../../PyHydroGeophysX.html" class="nav-link">PyHydroGeophysX</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.Geophy_modular.ERT_to_WC</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.Geophy_modular.ERT_to_WC</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Geophysics -&gt; hydrology inverse pipeline for the desktop studio.</span>
+
+<span class="sd">This is the inverse counterpart to ``hydro_pipeline.py``. It takes an</span>
+<span class="sd">already-inverted (time-lapse) ERT resistivity model on a mesh and converts it to</span>
+<span class="sd">volumetric water content (and, optionally, saturated-zone porosity) with</span>
+<span class="sd">Monte Carlo uncertainty. It is a thin, parameterized re-use of</span>
+<span class="sd">``examples/Ex_MC_Hydro.py`` and the petrophysics in</span>
+<span class="sd">``PyHydroGeophysX.petrophysics.resistivity_models``. It is deliberately Qt-free so</span>
+<span class="sd">it can run inside a worker thread (or be unit-tested) without a QApplication.</span>
+
+<span class="sd">Two layers:</span>
+
+<span class="sd">* ``extract_model_summary`` / ``build_petro_config`` / ``extract_point_series`` --</span>
+<span class="sd">  numpy only. These work even when pygimli is not installed, so loading the</span>
+<span class="sd">  inverted model bundle, inspecting its layers, exporting the petrophysics</span>
+<span class="sd">  configuration, and reading monitoring-point time series never depend on the</span>
+<span class="sd">  heavy backend.</span>
+<span class="sd">* ``run_ert_to_wc`` -- the real Monte Carlo run. It imports pygimli lazily to load</span>
+<span class="sd">  the mesh and render the section figures; if anything is missing or fails it</span>
+<span class="sd">  raises ``BackendUnavailable`` so the caller can fall back to config export.</span>
+
+<span class="sd">The petrophysical conversion itself (``resistivity_to_saturation`` /</span>
+<span class="sd">``resistivity_to_porosity``) is pure numpy/scipy and is reused directly from the</span>
+<span class="sd">library rather than re-implemented here.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.data_processing</span><span class="w"> </span><span class="kn">import</span> <span class="n">table_io</span> <span class="k">as</span> <span class="n">io_utils</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX._internal.optional_dependencies</span><span class="w"> </span><span class="kn">import</span> <span class="n">BackendUnavailable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX._internal.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">noop</span> <span class="k">as</span> <span class="n">_noop</span><span class="p">,</span> <span class="n">utc_now</span> <span class="k">as</span> <span class="n">_utc_now</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.Geophy_modular.ert_to_wc_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">ERTtoWC</span><span class="p">,</span> <span class="n">plot_time_series</span>
+
+<span class="n">LogFn</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span>
+
+<span class="c1">#: The four files of an inverted-model bundle. ``markers`` and ``coverage`` are</span>
+<span class="c1">#: optional; everything else is required for a real run.</span>
+<span class="n">MODEL_FILES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"mesh"</span><span class="p">:</span> <span class="s2">"mesh_res.bms"</span><span class="p">,</span>
+    <span class="s2">"resistivity"</span><span class="p">:</span> <span class="s2">"resmodel.npy"</span><span class="p">,</span>
+    <span class="s2">"markers"</span><span class="p">:</span> <span class="s2">"index_marker.npy"</span><span class="p">,</span>
+    <span class="s2">"coverage"</span><span class="p">:</span> <span class="s2">"all_coverage.npy"</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">PRODUCTS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"water_content"</span><span class="p">,</span> <span class="s2">"porosity"</span><span class="p">)</span>
+
+<span class="c1">#: Fallback per-layer petrophysics distributions, matching the two layers of the</span>
+<span class="c1">#: bundled Treeline demo in ``Ex_MC_Hydro.py`` (marker 3 = regolith, 2 = bedrock).</span>
+<span class="n">DEFAULT_LAYER_DISTRIBUTIONS</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="mi">3</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Regolith"</span><span class="p">,</span>
+        <span class="s2">"m"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"mean"</span><span class="p">:</span> <span class="mf">1.3</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">},</span>
+        <span class="s2">"rho_fluid"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"mean"</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">},</span>
+        <span class="s2">"n"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"mean"</span><span class="p">:</span> <span class="mf">2.1</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">},</span>
+        <span class="s2">"sigma_sur"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"mean"</span><span class="p">:</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="mf">200.0</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">:</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="mf">200.0</span><span class="p">},</span>
+        <span class="s2">"porosity"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"mean"</span><span class="p">:</span> <span class="mf">0.42</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">},</span>
+    <span class="p">},</span>
+    <span class="mi">2</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Bedrock"</span><span class="p">,</span>
+        <span class="s2">"m"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"mean"</span><span class="p">:</span> <span class="mf">1.9</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">},</span>
+        <span class="s2">"rho_fluid"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"mean"</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">},</span>
+        <span class="s2">"n"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"mean"</span><span class="p">:</span> <span class="mf">1.7</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">},</span>
+        <span class="s2">"sigma_sur"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"mean"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">},</span>
+        <span class="s2">"porosity"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"mean"</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">:</span> <span class="mf">0.15</span><span class="p">},</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+
+<span class="c1"># Petrophysics parameter keys sampled per layer (porosity only for water content).</span>
+<span class="n">_DIST_KEYS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"m"</span><span class="p">,</span> <span class="s2">"rho_fluid"</span><span class="p">,</span> <span class="s2">"n"</span><span class="p">,</span> <span class="s2">"sigma_sur"</span><span class="p">,</span> <span class="s2">"porosity"</span><span class="p">)</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Directory / file resolution (numpy only)</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_model_dir</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Pick the inverted-model directory from params override or bridge context."""</span>
+    <span class="n">candidate</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model_data_dir"</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"geo_data_dir"</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model_data_dir"</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">candidate</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"No inverted-model directory available. Select a folder containing "</span>
+            <span class="s2">"mesh_res.bms, resmodel.npy, index_marker.npy."</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="find_model_files">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.Geophy_modular.html#PyHydroGeophysX.Geophy_modular.ERT_to_WC.find_model_files">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">find_model_files</span><span class="p">(</span><span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Return the resolved path for each expected bundle file (or None)."""</span>
+    <span class="n">found</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">MODEL_FILES</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">candidate</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">name</span>
+        <span class="n">found</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">candidate</span> <span class="k">if</span> <span class="n">candidate</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">found</span></div>
+
+
+
+<div class="viewcode-block" id="derive_markers_from_interface">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.Geophy_modular.html#PyHydroGeophysX.Geophy_modular.ERT_to_WC.derive_markers_from_interface">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">derive_markers_from_interface</span><span class="p">(</span>
+    <span class="n">context</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">interface_xz</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">top_marker</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">bot_marker</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">log</span><span class="p">:</span> <span class="n">LogFn</span> <span class="o">=</span> <span class="n">_noop</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Classify the model mesh into layers using a (seismic) bedrock interface.</span>
+
+<span class="sd">    Cells whose center elevation is at or above the interface get ``top_marker``</span>
+<span class="sd">    (e.g. regolith); cells below get ``bot_marker`` (e.g. bedrock). The result is</span>
+<span class="sd">    written as ``index_marker.npy`` in the model directory so the rest of the</span>
+<span class="sd">    Geophysics -&gt; Hydro workflow can use it. Requires pygimli to load the</span>
+<span class="sd">    mesh.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
+        <span class="k">raise</span> <span class="n">BackendUnavailable</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span>
+
+    <span class="n">data_dir</span> <span class="o">=</span> <span class="n">_resolve_model_dir</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="n">find_model_files</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">files</span><span class="p">[</span><span class="s2">"mesh"</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Missing </span><span class="si">{</span><span class="n">MODEL_FILES</span><span class="p">[</span><span class="s1">'mesh'</span><span class="p">]</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">data_dir</span><span class="si">}</span><span class="s2">; cannot classify cells."</span><span class="p">)</span>
+
+    <span class="n">iface</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">interface_xz</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">iface</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">iface</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"interface_xz must be an (N, 2) array of [x, z] points."</span><span class="p">)</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">iface</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="n">ix</span><span class="p">,</span> <span class="n">iz</span> <span class="o">=</span> <span class="n">iface</span><span class="p">[</span><span class="n">order</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">iface</span><span class="p">[</span><span class="n">order</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="s2">"mesh"</span><span class="p">]))</span>
+    <span class="n">centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">cx</span><span class="p">,</span> <span class="n">cz</span> <span class="o">=</span> <span class="n">centers</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">iface_z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">cx</span><span class="p">,</span> <span class="n">ix</span><span class="p">,</span> <span class="n">iz</span><span class="p">)</span>  <span class="c1"># clamps outside the interface x-range</span>
+    <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">cz</span> <span class="o">&gt;=</span> <span class="n">iface_z</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">top_marker</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">bot_marker</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+    <span class="c1"># Write a sidecar artifact in the output dir (never overwrite the bundle's own</span>
+    <span class="c1"># index_marker.npy); the module keeps the markers in memory as an override.</span>
+    <span class="n">out_path</span> <span class="o">=</span> <span class="n">_output_root</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"index_marker_from_structure.npy"</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span> <span class="n">markers</span><span class="p">)</span>
+    <span class="n">unique</span><span class="p">,</span> <span class="n">counts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">markers</span><span class="p">,</span> <span class="n">return_counts</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Derived markers from interface: "</span>
+        <span class="o">+</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="p">)</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">m</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">unique</span><span class="p">,</span> <span class="n">counts</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"markers"</span><span class="p">:</span> <span class="n">markers</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+        <span class="s2">"markers_path"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">out_path</span><span class="p">),</span>
+        <span class="s2">"n_cells"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">markers</span><span class="o">.</span><span class="n">size</span><span class="p">),</span>
+        <span class="s2">"counts"</span><span class="p">:</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="p">):</span> <span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">unique</span><span class="p">,</span> <span class="n">counts</span><span class="p">)},</span>
+        <span class="s2">"top_marker"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">top_marker</span><span class="p">),</span>
+        <span class="s2">"bot_marker"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">bot_marker</span><span class="p">),</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_output_root</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"output_dir"</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"output_dir"</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"geo_output_dir"</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="s2">"."</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">io_utils</span><span class="o">.</span><span class="n">ensure_dir</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">base</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"qt_geo_inverse"</span><span class="p">)</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Model summary (numpy only -- no pygimli required)</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_load_resistivity</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Load the inverted resistivity model as a 2D ``(n_cells, n_time)`` array."""</span>
+    <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Resistivity model must be 1D or 2D (n_cells, n_time); got shape </span><span class="si">{</span><span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">."</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">arr</span>
+
+
+<div class="viewcode-block" id="extract_model_summary">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.Geophy_modular.html#PyHydroGeophysX.Geophy_modular.ERT_to_WC.extract_model_summary">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_model_summary</span><span class="p">(</span>
+    <span class="n">context</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">log</span><span class="p">:</span> <span class="n">LogFn</span> <span class="o">=</span> <span class="n">_noop</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Inspect the inverted-model bundle without loading the mesh.</span>
+
+<span class="sd">    Returns shapes, the unique layer markers with per-marker cell counts, and a</span>
+<span class="sd">    few resistivity statistics. Powers the Data and Layers steps with no pygimli</span>
+<span class="sd">    dependency (the inverse analog of ``hydro_pipeline.extract_profile``).</span>
+<span class="sd">    """</span>
+    <span class="n">data_dir</span> <span class="o">=</span> <span class="n">_resolve_model_dir</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="n">find_model_files</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">files</span><span class="p">[</span><span class="s2">"resistivity"</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Missing </span><span class="si">{</span><span class="n">MODEL_FILES</span><span class="p">[</span><span class="s1">'resistivity'</span><span class="p">]</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">data_dir</span><span class="si">}</span><span class="s2">."</span>
+        <span class="p">)</span>
+
+    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Reading inverted resistivity from </span><span class="si">{</span><span class="n">data_dir</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">resistivity</span> <span class="o">=</span> <span class="n">_load_resistivity</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="s2">"resistivity"</span><span class="p">])</span>
+    <span class="n">n_cells</span><span class="p">,</span> <span class="n">n_time</span> <span class="o">=</span> <span class="n">resistivity</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="n">override</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"markers_override"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">override</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">override</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">markers_source</span> <span class="o">=</span> <span class="s2">"derived from structure"</span>
+    <span class="k">elif</span> <span class="n">files</span><span class="p">[</span><span class="s2">"markers"</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="s2">"markers"</span><span class="p">]),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">markers_source</span> <span class="o">=</span> <span class="n">MODEL_FILES</span><span class="p">[</span><span class="s2">"markers"</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Fallback: a single layer covering every cell.</span>
+        <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_cells</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">markers_source</span> <span class="o">=</span> <span class="s2">"fallback (single layer)"</span>
+    <span class="k">if</span> <span class="n">markers</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">n_cells</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Marker count (</span><span class="si">{</span><span class="n">markers</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2">) does not match resistivity cell count "</span>
+            <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">n_cells</span><span class="si">}</span><span class="s2">)."</span>
+        <span class="p">)</span>
+
+    <span class="n">unique</span><span class="p">,</span> <span class="n">counts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">markers</span><span class="p">,</span> <span class="n">return_counts</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">layers</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span><span class="s2">"marker"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="s2">"n_cells"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">),</span>
+         <span class="s2">"name"</span><span class="p">:</span> <span class="n">DEFAULT_LAYER_DISTRIBUTIONS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Layer </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)}</span>
+        <span class="k">for</span> <span class="n">m</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">unique</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">counts</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+    <span class="p">]</span>
+
+    <span class="n">coverage_shape</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">files</span><span class="p">[</span><span class="s2">"coverage"</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">coverage_shape</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="s2">"coverage"</span><span class="p">]))</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - coverage is optional</span>
+            <span class="n">coverage_shape</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">finite</span> <span class="o">=</span> <span class="n">resistivity</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">resistivity</span><span class="p">)]</span>
+    <span class="n">res_stats</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"min"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">finite</span><span class="p">))</span> <span class="k">if</span> <span class="n">finite</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">),</span>
+        <span class="s2">"max"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">finite</span><span class="p">))</span> <span class="k">if</span> <span class="n">finite</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">),</span>
+        <span class="s2">"p10"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">finite</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span> <span class="k">if</span> <span class="n">finite</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">),</span>
+        <span class="s2">"p50"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">finite</span><span class="p">,</span> <span class="mi">50</span><span class="p">))</span> <span class="k">if</span> <span class="n">finite</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">),</span>
+        <span class="s2">"p90"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">finite</span><span class="p">,</span> <span class="mi">90</span><span class="p">))</span> <span class="k">if</span> <span class="n">finite</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">),</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"data_dir"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">data_dir</span><span class="p">),</span>
+        <span class="s2">"n_cells"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_cells</span><span class="p">),</span>
+        <span class="s2">"n_timesteps"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_time</span><span class="p">),</span>
+        <span class="s2">"markers_source"</span><span class="p">:</span> <span class="n">markers_source</span><span class="p">,</span>
+        <span class="s2">"layers"</span><span class="p">:</span> <span class="n">layers</span><span class="p">,</span>
+        <span class="s2">"coverage_shape"</span><span class="p">:</span> <span class="n">coverage_shape</span><span class="p">,</span>
+        <span class="s2">"resistivity_stats"</span><span class="p">:</span> <span class="n">res_stats</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Parameter helpers</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_layers_from_params</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Normalize the per-layer distribution list from the UI params dict.</span>
+
+<span class="sd">    Falls back to :data:`DEFAULT_LAYER_DISTRIBUTIONS` when none are supplied.</span>
+<span class="sd">    """</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"layers"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">raw</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="p">{</span><span class="s2">"marker"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">marker</span><span class="p">),</span> <span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="n">v</span>
+                                       <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">dist</span><span class="o">.</span><span class="n">items</span><span class="p">()}}</span>
+            <span class="k">for</span> <span class="n">marker</span><span class="p">,</span> <span class="n">dist</span> <span class="ow">in</span> <span class="n">DEFAULT_LAYER_DISTRIBUTIONS</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">]</span>
+    <span class="n">layers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">raw</span><span class="p">:</span>
+        <span class="n">layer</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"marker"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"marker"</span><span class="p">]),</span>
+                 <span class="s2">"name"</span><span class="p">:</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Layer </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s1">'marker'</span><span class="p">])</span><span class="si">}</span><span class="s2">"</span><span class="p">)}</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_DIST_KEYS</span><span class="p">:</span>
+            <span class="n">dist</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">{</span><span class="s2">"mean"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">})</span>
+            <span class="n">layer</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"mean"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"mean"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)),</span>
+                          <span class="s2">"std"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"std"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))}</span>
+        <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">layers</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Monitoring-point time series (numpy only)</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="extract_point_series">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.Geophy_modular.html#PyHydroGeophysX.Geophy_modular.ERT_to_WC.extract_point_series">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_point_series</span><span class="p">(</span>
+    <span class="n">cell_centers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">positions</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Nearest-cell time series at monitoring ``(x, y)`` positions.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        cell_centers: ``(n_cells, &gt;=2)`` mesh cell-center coordinates.</span>
+<span class="sd">        values: ``(n_cells, n_time)`` per-cell field (e.g. mean water content).</span>
+<span class="sd">        positions: list of ``(x, y)`` tuples.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ``(series, cell_indices)`` where ``series`` is ``(n_positions, n_time)``.</span>
+<span class="sd">    """</span>
+    <span class="n">centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">cell_centers</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">field</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">field</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">centers</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">field</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">centers</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="n">field</span> <span class="o">=</span> <span class="n">field</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">indices</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">x_pos</span><span class="p">,</span> <span class="n">y_pos</span> <span class="ow">in</span> <span class="n">positions</span><span class="p">:</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">(</span><span class="n">centers</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="n">x_pos</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="n">y_pos</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">d</span><span class="p">)))</span>
+    <span class="n">series</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">field</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">series</span><span class="p">,</span> <span class="n">indices</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Config export (numpy only -- no pygimli required)</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="build_petro_config">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.Geophy_modular.html#PyHydroGeophysX.Geophy_modular.ERT_to_WC.build_petro_config">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_petro_config</span><span class="p">(</span>
+    <span class="n">context</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Build a complete, JSON-serializable petrophysics inversion configuration."""</span>
+    <span class="n">layers</span> <span class="o">=</span> <span class="n">_layers_from_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">products</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"products"</span><span class="p">,</span> <span class="p">[</span><span class="s2">"water_content"</span><span class="p">])</span> <span class="k">if</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">PRODUCTS</span><span class="p">]</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"created_time"</span><span class="p">:</span> <span class="n">_utc_now</span><span class="p">(),</span>
+        <span class="s2">"model_data_dir"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model_data_dir"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"geo_data_dir"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)),</span>
+        <span class="s2">"direction"</span><span class="p">:</span> <span class="s2">"geophysics_to_hydrology"</span><span class="p">,</span>
+        <span class="s2">"method"</span><span class="p">:</span> <span class="s2">"ERT"</span><span class="p">,</span>
+        <span class="s2">"products"</span><span class="p">:</span> <span class="n">products</span><span class="p">,</span>
+        <span class="s2">"n_realizations"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"n_realizations"</span><span class="p">,</span> <span class="mi">100</span><span class="p">)),</span>
+        <span class="s2">"seed"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"seed"</span><span class="p">,</span> <span class="mi">7</span><span class="p">)),</span>
+        <span class="s2">"saturation_value"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"saturation_value"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)),</span>
+        <span class="s2">"tortuosity_a"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"tortuosity_a"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)),</span>
+        <span class="s2">"coverage_threshold"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"coverage_threshold"</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">)),</span>
+        <span class="s2">"preview_timestep"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"preview_timestep"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
+        <span class="s2">"wc_color_range"</span><span class="p">:</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"wc_cmin"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)),</span>
+                           <span class="nb">float</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"wc_cmax"</span><span class="p">,</span> <span class="mf">0.32</span><span class="p">))],</span>
+        <span class="s2">"layers"</span><span class="p">:</span> <span class="n">layers</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Monte Carlo conversion core (numpy/scipy only)</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_run_monte_carlo</span><span class="p">(</span>
+    <span class="n">resistivity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">markers</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">layers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+    <span class="n">products</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">n_realizations</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">saturation_value</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">tortuosity_a</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">timestep_indices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span>
+    <span class="n">log</span><span class="p">:</span> <span class="n">LogFn</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Compatibility wrapper around the canonical seeded implementation."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics.monte_carlo</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+        <span class="n">run_petrophysics_monte_carlo</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">run_petrophysics_monte_carlo</span><span class="p">(</span>
+        <span class="n">resistivity</span><span class="p">,</span>
+        <span class="n">markers</span><span class="p">,</span>
+        <span class="n">layers</span><span class="p">,</span>
+        <span class="n">products</span><span class="o">=</span><span class="n">products</span><span class="p">,</span>
+        <span class="n">n_realizations</span><span class="o">=</span><span class="n">n_realizations</span><span class="p">,</span>
+        <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
+        <span class="n">saturation_value</span><span class="o">=</span><span class="n">saturation_value</span><span class="p">,</span>
+        <span class="n">tortuosity_a</span><span class="o">=</span><span class="n">tortuosity_a</span><span class="p">,</span>
+        <span class="n">timestep_indices</span><span class="o">=</span><span class="n">timestep_indices</span><span class="p">,</span>
+        <span class="n">progress</span><span class="o">=</span><span class="n">log</span><span class="p">,</span>
+    <span class="p">)[</span><span class="s2">"statistics"</span><span class="p">]</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Full inverse run (requires pygimli for the mesh + figures)</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="run_ert_to_wc">
+<a class="viewcode-back" href="../../../api/PyHydroGeophysX.Geophy_modular.html#PyHydroGeophysX.Geophy_modular.ERT_to_WC.run_ert_to_wc">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_ert_to_wc</span><span class="p">(</span>
+    <span class="n">context</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">log</span><span class="p">:</span> <span class="n">LogFn</span> <span class="o">=</span> <span class="n">_noop</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Run the real ERT -&gt; water content / porosity Monte Carlo inversion.</span>
+
+<span class="sd">    Raises ``BackendUnavailable`` if pygimli cannot be imported (needed to load</span>
+<span class="sd">    the ``.bms`` mesh and render the section figures), and propagates any other</span>
+<span class="sd">    exception so the caller can fall back to config export.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib</span>
+        <span class="n">matplotlib</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s2">"Agg"</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ioff</span><span class="p">()</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># ImportError or pygimli init failure</span>
+        <span class="k">raise</span> <span class="n">BackendUnavailable</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span>
+
+    <span class="n">data_dir</span> <span class="o">=</span> <span class="n">_resolve_model_dir</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="n">find_model_files</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">MODEL_FILES</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"mesh"</span><span class="p">,</span> <span class="s2">"resistivity"</span><span class="p">)</span> <span class="k">if</span> <span class="n">files</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Missing required file(s) in </span><span class="si">{</span><span class="n">data_dir</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+
+    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Loading inverted model from </span><span class="si">{</span><span class="n">data_dir</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="s2">"mesh"</span><span class="p">]))</span>
+    <span class="n">resistivity</span> <span class="o">=</span> <span class="n">_load_resistivity</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="s2">"resistivity"</span><span class="p">])</span>
+    <span class="n">n_cells</span><span class="p">,</span> <span class="n">n_time</span> <span class="o">=</span> <span class="n">resistivity</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">if</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span> <span class="o">!=</span> <span class="n">n_cells</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Mesh cell count (</span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span><span class="si">}</span><span class="s2">) does not match resistivity "</span>
+            <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">n_cells</span><span class="si">}</span><span class="s2">)."</span>
+        <span class="p">)</span>
+
+    <span class="n">override</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"markers_override"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">override</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">override</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">files</span><span class="p">[</span><span class="s2">"markers"</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="s2">"markers"</span><span class="p">]),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_cells</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">coverage</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">files</span><span class="p">[</span><span class="s2">"coverage"</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">coverage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">files</span><span class="p">[</span><span class="s2">"coverage"</span><span class="p">]),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - coverage is optional</span>
+            <span class="n">coverage</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">layers</span> <span class="o">=</span> <span class="n">_layers_from_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">products</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"products"</span><span class="p">,</span> <span class="p">[</span><span class="s2">"water_content"</span><span class="p">])</span> <span class="k">if</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">PRODUCTS</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">products</span><span class="p">:</span>
+        <span class="n">products</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"water_content"</span><span class="p">]</span>
+    <span class="n">n_real</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"n_realizations"</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
+    <span class="n">seed</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"seed"</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+    <span class="n">sat_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"saturation_value"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"tortuosity_a"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
+    <span class="n">cov_thr</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"coverage_threshold"</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">))</span>
+    <span class="n">preview_t</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"preview_timestep"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">n_time</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">cmin</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"wc_cmin"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+    <span class="n">cmax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"wc_cmax"</span><span class="p">,</span> <span class="mf">0.32</span><span class="p">))</span>
+    <span class="n">timestep_indices</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"timestep_indices"</span><span class="p">)</span>  <span class="c1"># optional speed knob</span>
+
+    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Monte Carlo: </span><span class="si">{</span><span class="n">n_real</span><span class="si">}</span><span class="s2"> realizations, products=</span><span class="si">{</span><span class="n">products</span><span class="si">}</span><span class="s2">, "</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span><span class="si">}</span><span class="s2"> layer(s)"</span><span class="p">)</span>
+    <span class="n">stats</span> <span class="o">=</span> <span class="n">_run_monte_carlo</span><span class="p">(</span>
+        <span class="n">resistivity</span><span class="p">,</span> <span class="n">markers</span><span class="p">,</span> <span class="n">layers</span><span class="p">,</span> <span class="n">products</span><span class="p">,</span> <span class="n">n_real</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="n">sat_value</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span>
+        <span class="n">timestep_indices</span><span class="p">,</span> <span class="n">log</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">out_dir</span> <span class="o">=</span> <span class="n">_output_root</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+    <span class="n">figure_paths</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">stats_paths</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">display_paths</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># When a timestep subset was used, the preview index refers to the subset.</span>
+    <span class="n">eff_t</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n_time</span><span class="p">))</span> <span class="k">if</span> <span class="n">timestep_indices</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">timestep_indices</span><span class="p">)</span>
+    <span class="n">preview_col</span> <span class="o">=</span> <span class="n">eff_t</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">preview_t</span><span class="p">)</span> <span class="k">if</span> <span class="n">preview_t</span> <span class="ow">in</span> <span class="n">eff_t</span> <span class="k">else</span> <span class="mi">0</span>
+    <span class="n">cov_row</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">coverage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">coverage</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">coverage</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">preview_t</span><span class="p">:</span>
+            <span class="n">cov_row</span> <span class="o">=</span> <span class="n">coverage</span><span class="p">[</span><span class="n">preview_t</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">cov_thr</span>
+        <span class="k">elif</span> <span class="n">coverage</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">cov_row</span> <span class="o">=</span> <span class="n">coverage</span> <span class="o">&gt;</span> <span class="n">cov_thr</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_mesh_map</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">fname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                  <span class="n">cmap</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">vmin</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">vmax</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">8.2</span><span class="p">,</span> <span class="mf">4.4</span><span class="p">))</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+        <span class="n">show_kw</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="n">vmax</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
+                       <span class="n">logScale</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cov_row</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">show_kw</span><span class="p">[</span><span class="s2">"coverage"</span><span class="p">]</span> <span class="o">=</span> <span class="n">cov_row</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="o">**</span><span class="n">show_kw</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - coverage masking can fail; retry plain</span>
+            <span class="n">show_kw</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"coverage"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+            <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="o">**</span><span class="n">show_kw</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"Distance (m)"</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"Elevation (m)"</span><span class="p">)</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="n">fname</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">180</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s2">"tight"</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+        <span class="n">figure_paths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">"water_content"</span> <span class="ow">in</span> <span class="n">stats</span><span class="p">:</span>
+        <span class="n">wc</span> <span class="o">=</span> <span class="n">stats</span><span class="p">[</span><span class="s2">"water_content"</span><span class="p">]</span>
+        <span class="n">display_paths</span><span class="p">[</span><span class="s2">"water_content"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"mean"</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">,</span> <span class="s2">"p10"</span><span class="p">,</span> <span class="s2">"p50"</span><span class="p">,</span> <span class="s2">"p90"</span><span class="p">):</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">wc</span><span class="p">[</span><span class="n">key</span><span class="p">][:,</span> <span class="n">preview_col</span><span class="p">]</span>
+            <span class="n">is_std</span> <span class="o">=</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">"std"</span>
+            <span class="n">title</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">"mean"</span><span class="p">:</span> <span class="s2">"mean"</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">:</span> <span class="s2">"standard deviation"</span><span class="p">,</span>
+                <span class="s2">"p10"</span><span class="p">:</span> <span class="s2">"P10"</span><span class="p">,</span> <span class="s2">"p50"</span><span class="p">:</span> <span class="s2">"P50 (median)"</span><span class="p">,</span> <span class="s2">"p90"</span><span class="p">:</span> <span class="s2">"P90"</span><span class="p">,</span>
+            <span class="p">}[</span><span class="n">key</span><span class="p">]</span>
+            <span class="n">vmax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">values</span><span class="p">)))</span> <span class="k">if</span> <span class="n">is_std</span> <span class="k">else</span> <span class="n">cmax</span>
+            <span class="n">display_paths</span><span class="p">[</span><span class="s2">"water_content"</span><span class="p">][</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">_mesh_map</span><span class="p">(</span>
+                <span class="n">values</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"Water content (</span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2">), t=</span><span class="si">{</span><span class="n">preview_t</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                <span class="s2">"Std water content (-)"</span> <span class="k">if</span> <span class="n">is_std</span> <span class="k">else</span> <span class="s2">"Water content (-)"</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"wc_</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">_map.png"</span><span class="p">,</span>
+                <span class="s2">"magma"</span> <span class="k">if</span> <span class="n">is_std</span> <span class="k">else</span> <span class="s2">"viridis"</span><span class="p">,</span>
+                <span class="mf">0.0</span> <span class="k">if</span> <span class="n">is_std</span> <span class="k">else</span> <span class="n">cmin</span><span class="p">,</span>
+                <span class="n">vmax</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"water_content_</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">.npy"</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">wc</span><span class="p">[</span><span class="n">key</span><span class="p">]);</span> <span class="n">stats_paths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="s2">"porosity"</span> <span class="ow">in</span> <span class="n">stats</span><span class="p">:</span>
+        <span class="n">por</span> <span class="o">=</span> <span class="n">stats</span><span class="p">[</span><span class="s2">"porosity"</span><span class="p">]</span>
+        <span class="n">display_paths</span><span class="p">[</span><span class="s2">"porosity"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"mean"</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">,</span> <span class="s2">"p10"</span><span class="p">,</span> <span class="s2">"p50"</span><span class="p">,</span> <span class="s2">"p90"</span><span class="p">):</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">por</span><span class="p">[</span><span class="n">key</span><span class="p">][:,</span> <span class="n">preview_col</span><span class="p">]</span>
+            <span class="n">is_std</span> <span class="o">=</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">"std"</span>
+            <span class="n">title</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">"mean"</span><span class="p">:</span> <span class="s2">"mean"</span><span class="p">,</span> <span class="s2">"std"</span><span class="p">:</span> <span class="s2">"standard deviation"</span><span class="p">,</span>
+                <span class="s2">"p10"</span><span class="p">:</span> <span class="s2">"P10"</span><span class="p">,</span> <span class="s2">"p50"</span><span class="p">:</span> <span class="s2">"P50 (median)"</span><span class="p">,</span> <span class="s2">"p90"</span><span class="p">:</span> <span class="s2">"P90"</span><span class="p">,</span>
+            <span class="p">}[</span><span class="n">key</span><span class="p">]</span>
+            <span class="n">vmax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">values</span><span class="p">)))</span> <span class="k">if</span> <span class="n">is_std</span> <span class="k">else</span> <span class="mf">0.5</span>
+            <span class="n">display_paths</span><span class="p">[</span><span class="s2">"porosity"</span><span class="p">][</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">_mesh_map</span><span class="p">(</span>
+                <span class="n">values</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"Porosity (</span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2">), t=</span><span class="si">{</span><span class="n">preview_t</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                <span class="s2">"Std porosity (-)"</span> <span class="k">if</span> <span class="n">is_std</span> <span class="k">else</span> <span class="s2">"Porosity (-)"</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"porosity_</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">_map.png"</span><span class="p">,</span>
+                <span class="s2">"magma"</span> <span class="k">if</span> <span class="n">is_std</span> <span class="k">else</span> <span class="s2">"viridis"</span><span class="p">,</span>
+                <span class="mf">0.0</span><span class="p">,</span>
+                <span class="n">vmax</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"porosity_</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">.npy"</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">por</span><span class="p">[</span><span class="n">key</span><span class="p">]);</span> <span class="n">stats_paths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+    <span class="c1"># Always write the petrophysics config alongside the figures.</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">build_petro_config</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+    <span class="n">config_path</span> <span class="o">=</span> <span class="n">out_dir</span> <span class="o">/</span> <span class="s2">"petro_config.json"</span>
+    <span class="n">io_utils</span><span class="o">.</span><span class="n">write_json</span><span class="p">(</span><span class="n">config_path</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+
+    <span class="n">cell_centers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="n">result</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"status"</span><span class="p">:</span> <span class="s2">"ok"</span><span class="p">,</span>
+        <span class="s2">"direction"</span><span class="p">:</span> <span class="s2">"geophysics_to_hydrology"</span><span class="p">,</span>
+        <span class="s2">"products"</span><span class="p">:</span> <span class="n">products</span><span class="p">,</span>
+        <span class="s2">"n_realizations"</span><span class="p">:</span> <span class="n">n_real</span><span class="p">,</span>
+        <span class="s2">"mesh_cells"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()),</span>
+        <span class="s2">"n_timesteps"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_time</span><span class="p">),</span>
+        <span class="s2">"preview_timestep"</span><span class="p">:</span> <span class="n">preview_t</span><span class="p">,</span>
+        <span class="s2">"layers"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"marker"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">l</span><span class="p">[</span><span class="s2">"marker"</span><span class="p">]),</span> <span class="s2">"name"</span><span class="p">:</span> <span class="n">l</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)}</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">layers</span><span class="p">],</span>
+        <span class="s2">"figure_paths"</span><span class="p">:</span> <span class="n">figure_paths</span><span class="p">,</span>
+        <span class="s2">"display_paths"</span><span class="p">:</span> <span class="n">display_paths</span><span class="p">,</span>
+        <span class="s2">"stats_paths"</span><span class="p">:</span> <span class="n">stats_paths</span><span class="p">,</span>
+        <span class="s2">"config_path"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">config_path</span><span class="p">),</span>
+        <span class="s2">"output_dir"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">out_dir</span><span class="p">),</span>
+        <span class="c1"># In-process payload for the Results monitoring-point feature (numpy</span>
+        <span class="c1"># arrays; not serialized into module_results JSON).</span>
+        <span class="s2">"_cell_centers"</span><span class="p">:</span> <span class="n">cell_centers</span><span class="p">,</span>
+        <span class="s2">"_wc_mean"</span><span class="p">:</span> <span class="n">stats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"water_content"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"mean"</span><span class="p">),</span>
+        <span class="s2">"_wc_std"</span><span class="p">:</span> <span class="n">stats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"water_content"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"std"</span><span class="p">),</span>
+        <span class="s2">"_timestep_indices"</span><span class="p">:</span> <span class="n">eff_t</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

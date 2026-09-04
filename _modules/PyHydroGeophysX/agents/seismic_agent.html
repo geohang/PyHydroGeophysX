@@ -1,0 +1,1056 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.agents.seismic_agent &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/agents/seismic_agent';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/agents/seismic_agent.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../../PyHydroGeophysX.html" class="nav-link">PyHydroGeophysX</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.agents.seismic_agent</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.agents.seismic_agent</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""</span>
+<span class="sd">Seismic Data Processing Agent</span>
+
+<span class="sd">Specialized agent for processing seismic refraction data and extracting velocity structures.</span>
+<span class="sd">Supports standalone seismic refraction tomography (SRT) inversion workflows.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.base_agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentResult</span><span class="p">,</span> <span class="n">BaseAgent</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Seismic Agent</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="SeismicAgent">
+<a class="viewcode-back" href="../../../api/agents.html#PyHydroGeophysX.SeismicAgent">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SeismicAgent</span><span class="p">(</span><span class="n">BaseAgent</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Agent specialized in seismic refraction tomography (SRT) processing.</span>
+<span class="sd">    </span>
+<span class="sd">    Uses PyGIMLI and PyHydroGeophysX seismic processing modules to invert </span>
+<span class="sd">    seismic travel time data and extract velocity interfaces for structural constraints.</span>
+<span class="sd">    </span>
+<span class="sd">    Supports two modes:</span>
+<span class="sd">    - 'inversion': Load seismic data file and run SRT inversion</span>
+<span class="sd">    - 'interface': Extract velocity interfaces from existing velocity model</span>
+<span class="sd">    </span>
+<span class="sd">    Example:</span>
+<span class="sd">        &gt;&gt;&gt; agent = SeismicAgent()</span>
+<span class="sd">        &gt;&gt;&gt; result = agent.execute({</span>
+<span class="sd">        ...     'seismic_file': 'seismic_data.dat',</span>
+<span class="sd">        ...     'velocity_threshold': 1200,</span>
+<span class="sd">        ...     'output_dir': 'results/seismic'</span>
+<span class="sd">        ... })</span>
+<span class="sd">    """</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">api_key</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">llm_provider</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"openai"</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Initialize Seismic Agent."""</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">"seismic_processor"</span><span class="p">,</span> <span class="n">api_key</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">llm_provider</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">system_message</span> <span class="o">=</span> <span class="s2">"""You are an expert in seismic refraction tomography (SRT). </span>
+<span class="s2">Your role is to process seismic travel time data, perform velocity inversions, and </span>
+<span class="s2">extract geological structure interfaces. You understand velocity-depth relationships </span>
+<span class="s2">and how to identify layer boundaries. You can interpret velocity models in terms of </span>
+<span class="s2">geological materials: weathered regolith (&lt;1200 m/s), fractured bedrock (1200-3000 m/s), </span>
+<span class="s2">and fresh bedrock (&gt;3000 m/s)."""</span>
+    
+<div class="viewcode-block" id="SeismicAgent.execute">
+<a class="viewcode-back" href="../../../api/agents.html#PyHydroGeophysX.SeismicAgent.execute">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Process seismic data and extract velocity structure.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            input_data: Dictionary containing ``seismic_file`` or</span>
+<span class="sd">                pre-loaded ``seismic_data``, optional velocity thresholds,</span>
+<span class="sd">                inversion parameters, an output directory, and an</span>
+<span class="sd">                ``extract_interfaces`` flag. Supported inversion parameters</span>
+<span class="sd">                include ``lam``, ``zWeight``, ``vTop``, ``vBottom``,</span>
+<span class="sd">                ``paraDepth``, ``paraMaxCellSize``, and ``limits``.</span>
+<span class="sd">                </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary containing velocity model, mesh, interfaces, and visualizations</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Starting seismic data processing"</span><span class="p">)</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">seismic_file</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'seismic_file'</span><span class="p">)</span>
+            <span class="n">raw_seismic_file</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'raw_seismic_file'</span><span class="p">)</span>
+            <span class="n">seismic_data</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'seismic_data'</span><span class="p">)</span>
+            <span class="n">velocity_threshold</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'velocity_threshold'</span><span class="p">,</span> <span class="mi">1200</span><span class="p">)</span>
+            <span class="n">velocity_thresholds</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'velocity_thresholds'</span><span class="p">,</span> <span class="p">[</span><span class="n">velocity_threshold</span><span class="p">])</span>
+            <span class="n">inversion_params</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'inversion_params'</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">output_dir</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'output_dir'</span><span class="p">,</span> <span class="s1">'results/seismic'</span><span class="p">)</span>
+            <span class="n">extract_interfaces</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'extract_interfaces'</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">raw_seismic_file</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">seismic_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">seismic_file</span><span class="p">))</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">'.sgy'</span><span class="p">,</span> <span class="s1">'.segy'</span><span class="p">}:</span>
+                    <span class="n">raw_seismic_file</span> <span class="o">=</span> <span class="n">seismic_file</span>
+
+            <span class="k">if</span> <span class="n">raw_seismic_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">validation_error</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate_input_file</span><span class="p">(</span>
+                    <span class="n">raw_seismic_file</span><span class="p">,</span>
+                    <span class="n">supported_extensions</span><span class="o">=</span><span class="p">[</span><span class="s2">".sgy"</span><span class="p">,</span> <span class="s2">".segy"</span><span class="p">],</span>
+                    <span class="n">field_name</span><span class="o">=</span><span class="s2">"raw_seismic_file"</span><span class="p">,</span>
+                    <span class="n">max_size_mb</span><span class="o">=</span><span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"max_file_size_mb"</span><span class="p">),</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">validation_error</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">validation_error</span>
+            <span class="k">elif</span> <span class="n">seismic_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">validation_error</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate_input_file</span><span class="p">(</span>
+                    <span class="n">seismic_file</span><span class="p">,</span>
+                    <span class="n">supported_extensions</span><span class="o">=</span><span class="p">[</span><span class="s2">".dat"</span><span class="p">,</span> <span class="s2">".txt"</span><span class="p">],</span>
+                    <span class="n">field_name</span><span class="o">=</span><span class="s2">"seismic_file"</span><span class="p">,</span>
+                    <span class="n">max_size_mb</span><span class="o">=</span><span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"max_file_size_mb"</span><span class="p">),</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">validation_error</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">validation_error</span>
+
+            <span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">pygimli.physics.traveltime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tt</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">pygimli.physics</span><span class="w"> </span><span class="kn">import</span> <span class="n">TravelTimeManager</span>
+
+            <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.mesh_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+                <span class="n">createTriangles</span><span class="p">,</span>
+                <span class="n">extract_velocity_interface</span><span class="p">,</span>
+                <span class="n">fill_holes_2d</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">raw_artifacts</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+            <span class="k">if</span> <span class="n">raw_seismic_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Processing raw SEG-Y data from </span><span class="si">{</span><span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">raw_seismic_file</span><span class="p">))</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="n">seismic_file</span><span class="p">,</span> <span class="n">raw_artifacts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_raw_segy_to_traveltime</span><span class="p">(</span>
+                    <span class="n">raw_seismic_file</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">raw_seismic_file</span><span class="p">),</span>
+                    <span class="n">output_dir</span><span class="o">=</span><span class="n">output_dir</span><span class="p">,</span>
+                    <span class="n">input_data</span><span class="o">=</span><span class="n">input_data</span><span class="p">,</span>
+                <span class="p">)</span>
+            
+            <span class="c1"># Load seismic data from file if provided</span>
+            <span class="k">if</span> <span class="n">seismic_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">seismic_file_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">seismic_file</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">seismic_file_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                    <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Seismic file not found: </span><span class="si">{</span><span class="n">seismic_file</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Loading seismic data from </span><span class="si">{</span><span class="n">seismic_file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="n">seismic_data</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">seismic_file_path</span><span class="p">))</span>
+            
+            <span class="k">if</span> <span class="n">seismic_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"seismic_file or seismic_data is required"</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Processing seismic tomography"</span><span class="p">)</span>
+            
+            <span class="c1"># Get number of shots and receivers</span>
+            <span class="n">n_shots</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">seismic_data</span><span class="p">(</span><span class="s1">'s'</span><span class="p">)))</span>
+            <span class="n">n_receivers</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">seismic_data</span><span class="o">.</span><span class="n">sensors</span><span class="p">())</span>
+            <span class="n">n_data</span> <span class="o">=</span> <span class="n">seismic_data</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Data: </span><span class="si">{</span><span class="n">n_shots</span><span class="si">}</span><span class="s2"> shots, </span><span class="si">{</span><span class="n">n_receivers</span><span class="si">}</span><span class="s2"> sensors, </span><span class="si">{</span><span class="n">n_data</span><span class="si">}</span><span class="s2"> travel times"</span><span class="p">)</span>
+            
+            <span class="c1"># Get LLM recommendations for inversion parameters if needed</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">inversion_params</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Requesting LLM recommendations for seismic inversion"</span><span class="p">)</span>
+                <span class="n">inversion_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_recommended_params</span><span class="p">(</span><span class="n">seismic_data</span><span class="p">)</span>
+            
+            <span class="c1"># Set default parameters</span>
+            <span class="n">lam</span> <span class="o">=</span> <span class="n">inversion_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'lam'</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span>
+            <span class="n">zWeight</span> <span class="o">=</span> <span class="n">inversion_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'zWeight'</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">)</span>
+            <span class="n">vTop</span> <span class="o">=</span> <span class="n">inversion_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'vTop'</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>
+            <span class="n">vBottom</span> <span class="o">=</span> <span class="n">inversion_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'vBottom'</span><span class="p">,</span> <span class="mi">5000</span><span class="p">)</span>
+            <span class="n">paraDepth</span> <span class="o">=</span> <span class="n">inversion_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'paraDepth'</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">)</span>
+            <span class="n">paraMaxCellSize</span> <span class="o">=</span> <span class="n">inversion_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'paraMaxCellSize'</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">quality</span> <span class="o">=</span> <span class="n">inversion_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'quality'</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span>
+            <span class="n">limits</span> <span class="o">=</span> <span class="n">inversion_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'limits'</span><span class="p">,</span> <span class="p">[</span><span class="mf">300.</span><span class="p">,</span> <span class="mf">8000.</span><span class="p">])</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Inversion parameters: lam=</span><span class="si">{</span><span class="n">lam</span><span class="si">}</span><span class="s2">, zWeight=</span><span class="si">{</span><span class="n">zWeight</span><span class="si">}</span><span class="s2">, vTop=</span><span class="si">{</span><span class="n">vTop</span><span class="si">}</span><span class="s2">, vBottom=</span><span class="si">{</span><span class="n">vBottom</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            
+            <span class="c1"># Create travel time manager and mesh</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Creating inversion mesh..."</span><span class="p">)</span>
+            <span class="n">TT</span> <span class="o">=</span> <span class="n">TravelTimeManager</span><span class="p">()</span>
+            <span class="n">mesh_inv</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">seismic_data</span><span class="p">,</span> <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="n">paraMaxCellSize</span><span class="p">,</span> 
+                                     <span class="n">quality</span><span class="o">=</span><span class="n">quality</span><span class="p">,</span> <span class="n">paraDepth</span><span class="o">=</span><span class="n">paraDepth</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Mesh created: </span><span class="si">{</span><span class="n">mesh_inv</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span><span class="si">}</span><span class="s2"> cells"</span><span class="p">)</span>
+            
+            <span class="c1"># Run inversion</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Running seismic inversion (this may take a few minutes)..."</span><span class="p">)</span>
+            <span class="n">TT</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span><span class="n">seismic_data</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">mesh_inv</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="n">lam</span><span class="p">,</span> <span class="n">zWeight</span><span class="o">=</span><span class="n">zWeight</span><span class="p">,</span>
+                     <span class="n">vTop</span><span class="o">=</span><span class="n">vTop</span><span class="p">,</span> <span class="n">vBottom</span><span class="o">=</span><span class="n">vBottom</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">limits</span><span class="o">=</span><span class="n">limits</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Seismic inversion completed"</span><span class="p">)</span>
+            
+            <span class="c1"># Get velocity model and coverage</span>
+            <span class="n">velocity_model</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">coverage</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">standardizedCoverage</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="n">coverage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">mesh_inv</span><span class="o">.</span><span class="n">cellCount</span><span class="p">())</span>
+            
+            <span class="n">velocity_range</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">velocity_model</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">velocity_model</span><span class="p">)]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Velocity range: </span><span class="si">{</span><span class="n">velocity_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">velocity_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> m/s"</span><span class="p">)</span>
+            
+            <span class="c1"># Save velocity model</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'velocity_model.npy'</span><span class="p">),</span> <span class="n">velocity_model</span><span class="p">)</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'coverage.npy'</span><span class="p">),</span> <span class="n">coverage</span><span class="p">)</span>
+            <span class="n">mesh_inv</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'seismic_mesh.bms'</span><span class="p">))</span>
+            
+            <span class="c1"># Extract velocity interfaces if requested</span>
+            <span class="n">interfaces</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="n">extract_interfaces</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Extracting velocity interfaces..."</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">threshold</span> <span class="ow">in</span> <span class="n">velocity_thresholds</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Extracting interface at </span><span class="si">{</span><span class="n">threshold</span><span class="si">}</span><span class="s2"> m/s"</span><span class="p">)</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span> <span class="o">=</span> <span class="n">extract_velocity_interface</span><span class="p">(</span>
+                            <span class="n">mesh_inv</span><span class="p">,</span> <span class="n">velocity_model</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">,</span> <span class="n">interval</span><span class="o">=</span><span class="mi">5</span>
+                        <span class="p">)</span>
+                        <span class="n">interfaces</span><span class="p">[</span><span class="n">threshold</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'x'</span><span class="p">:</span> <span class="n">smooth_x</span><span class="p">,</span> <span class="s1">'z'</span><span class="p">:</span> <span class="n">smooth_z</span><span class="p">}</span>
+                        <span class="c1"># Save interface</span>
+                        <span class="n">interface_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s1">'interface_</span><span class="si">{</span><span class="n">threshold</span><span class="si">}</span><span class="s1">ms.txt'</span><span class="p">)</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">interface_file</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">smooth_x</span><span class="p">,</span> <span class="n">smooth_z</span><span class="p">],</span> 
+                                  <span class="n">header</span><span class="o">=</span><span class="sa">f</span><span class="s2">"X(m) Z(m) - Velocity interface at </span><span class="si">{</span><span class="n">threshold</span><span class="si">}</span><span class="s2"> m/s"</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Interface saved with </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">smooth_x</span><span class="p">)</span><span class="si">}</span><span class="s2"> points"</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Could not extract interface at </span><span class="si">{</span><span class="n">threshold</span><span class="si">}</span><span class="s2"> m/s: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s1">'WARNING'</span><span class="p">)</span>
+            
+            <span class="c1"># Generate visualization</span>
+            <span class="n">vis_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_velocity_plot</span><span class="p">(</span>
+                <span class="n">TT</span><span class="p">,</span> <span class="n">mesh_inv</span><span class="p">,</span> <span class="n">velocity_model</span><span class="p">,</span> <span class="n">coverage</span><span class="p">,</span> <span class="n">seismic_data</span><span class="p">,</span> 
+                <span class="n">interfaces</span><span class="p">,</span> <span class="n">velocity_thresholds</span><span class="p">,</span> <span class="n">output_dir</span>
+            <span class="p">)</span>
+            
+            <span class="c1"># Get LLM interpretation</span>
+            <span class="n">interpretation</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Generating interpretation of seismic results"</span><span class="p">)</span>
+                <span class="n">interpretation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interpret_velocity_results</span><span class="p">(</span>
+                    <span class="n">velocity_model</span><span class="p">,</span> <span class="n">velocity_range</span><span class="p">,</span> <span class="n">interfaces</span><span class="p">,</span> <span class="n">n_shots</span><span class="p">,</span> <span class="n">n_receivers</span>
+                <span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">'status'</span><span class="p">:</span> <span class="s1">'success'</span><span class="p">,</span>
+                <span class="s1">'velocity_model'</span><span class="p">:</span> <span class="n">velocity_model</span><span class="p">,</span>
+                <span class="s1">'mesh'</span><span class="p">:</span> <span class="n">mesh_inv</span><span class="p">,</span>
+                <span class="s1">'coverage'</span><span class="p">:</span> <span class="n">coverage</span><span class="p">,</span>
+                <span class="s1">'velocity_range'</span><span class="p">:</span> <span class="n">velocity_range</span><span class="p">,</span>
+                <span class="s1">'interfaces'</span><span class="p">:</span> <span class="n">interfaces</span><span class="p">,</span>
+                <span class="s1">'velocity_thresholds'</span><span class="p">:</span> <span class="n">velocity_thresholds</span><span class="p">,</span>
+                <span class="s1">'n_shots'</span><span class="p">:</span> <span class="n">n_shots</span><span class="p">,</span>
+                <span class="s1">'n_receivers'</span><span class="p">:</span> <span class="n">n_receivers</span><span class="p">,</span>
+                <span class="s1">'n_data'</span><span class="p">:</span> <span class="n">n_data</span><span class="p">,</span>
+                <span class="s1">'interpretation'</span><span class="p">:</span> <span class="n">interpretation</span><span class="p">,</span>
+                <span class="s1">'visualization_file'</span><span class="p">:</span> <span class="n">vis_file</span><span class="p">,</span>
+                <span class="s1">'output_dir'</span><span class="p">:</span> <span class="n">output_dir</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">raw_artifacts</span><span class="p">,</span>
+            <span class="p">}</span>
+            
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span>
+            
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Error during seismic processing: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s1">'ERROR'</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="n">AgentResult</span><span class="p">(</span>
+                <span class="n">status</span><span class="o">=</span><span class="s2">"failed"</span><span class="p">,</span>
+                <span class="n">summary</span><span class="o">=</span><span class="s2">"Seismic data could not be processed."</span><span class="p">,</span>
+                <span class="n">data</span><span class="o">=</span><span class="p">{},</span>
+                <span class="n">error</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">),</span>
+                <span class="n">error_fix_hint</span><span class="o">=</span><span class="s2">"Check that seismic_file exists, has a supported extension, and matches the expected travel-time format."</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_process_raw_segy_to_traveltime</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">raw_seismic_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">input_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">"""Convert raw SEG-Y traces into PyGIMLi travel-time input."""</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.data_processing.seismic</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+            <span class="n">SeismicDataset</span><span class="p">,</span>
+            <span class="n">apply_agc</span><span class="p">,</span>
+            <span class="n">bandpass_filter</span><span class="p">,</span>
+            <span class="n">export_first_breaks</span><span class="p">,</span>
+            <span class="n">first_breaks_to_traveltime</span><span class="p">,</span>
+            <span class="n">pick_first_breaks</span><span class="p">,</span>
+            <span class="n">read_segy</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">first_break_params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"first_break_params"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span>
+        <span class="n">max_traces</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"raw_max_traces"</span><span class="p">,</span> <span class="n">first_break_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"max_traces"</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">max_traces</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">max_traces</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">elif</span> <span class="n">max_traces</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">max_traces</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">max_traces</span><span class="p">)</span>
+
+        <span class="n">dataset</span> <span class="o">=</span> <span class="n">read_segy</span><span class="p">(</span><span class="n">raw_seismic_file</span><span class="p">,</span> <span class="n">max_traces</span><span class="o">=</span><span class="n">max_traces</span><span class="p">)</span>
+        <span class="n">traces</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">traces</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">sample_interval_s</span>
+
+        <span class="n">agc_window</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">first_break_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"agc_window"</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">agc_window</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">traces</span> <span class="o">=</span> <span class="n">apply_agc</span><span class="p">(</span><span class="n">traces</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="n">dt</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="n">agc_window</span><span class="p">)</span>
+
+        <span class="n">bandpass</span> <span class="o">=</span> <span class="n">first_break_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"bandpass"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">bandpass</span><span class="p">:</span>
+            <span class="n">traces</span> <span class="o">=</span> <span class="n">bandpass_filter</span><span class="p">(</span>
+                <span class="n">traces</span><span class="p">,</span>
+                <span class="n">dt</span><span class="o">=</span><span class="n">dt</span><span class="p">,</span>
+                <span class="n">f1</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">bandpass</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                <span class="n">f2</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">bandpass</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                <span class="n">f3</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">bandpass</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
+                <span class="n">f4</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">bandpass</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span>
+            <span class="p">)</span>
+
+        <span class="n">processed</span> <span class="o">=</span> <span class="n">SeismicDataset</span><span class="p">(</span>
+            <span class="n">path</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">path</span><span class="p">,</span>
+            <span class="n">traces</span><span class="o">=</span><span class="n">traces</span><span class="p">,</span>
+            <span class="n">time</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">time</span><span class="p">,</span>
+            <span class="n">headers</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">picks</span> <span class="o">=</span> <span class="n">pick_first_breaks</span><span class="p">(</span>
+            <span class="n">processed</span><span class="p">,</span>
+            <span class="n">threshold</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">first_break_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"threshold"</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">)),</span>
+            <span class="n">noise_multiplier</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">first_break_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"noise_multiplier"</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">)),</span>
+            <span class="n">min_time</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">first_break_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"min_time"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)),</span>
+            <span class="n">max_time</span><span class="o">=</span><span class="n">first_break_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"max_time"</span><span class="p">,</span> <span class="mf">0.15</span><span class="p">),</span>
+            <span class="n">polarity</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">first_break_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"polarity"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)),</span>
+        <span class="p">)</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span>
+        <span class="n">picks_csv</span> <span class="o">=</span> <span class="n">export_first_breaks</span><span class="p">(</span><span class="n">picks</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">output</span> <span class="o">/</span> <span class="s2">"first_break_picks.csv"</span><span class="p">))</span>
+        <span class="n">traveltime_file</span> <span class="o">=</span> <span class="n">first_breaks_to_traveltime</span><span class="p">(</span>
+            <span class="n">picks</span><span class="p">,</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">output</span> <span class="o">/</span> <span class="s2">"seismic_traveltime_from_segy.dat"</span><span class="p">),</span>
+            <span class="n">receiver_spacing</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">first_break_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"receiver_spacing"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)),</span>
+            <span class="n">shot_spacing</span><span class="o">=</span><span class="n">first_break_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"shot_spacing"</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Raw SEG-Y processing exported </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">picks</span><span class="p">)</span><span class="si">}</span><span class="s2"> picks to </span><span class="si">{</span><span class="n">Path</span><span class="p">(</span><span class="n">traveltime_file</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">traveltime_file</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s2">"raw_seismic_file"</span><span class="p">:</span> <span class="n">raw_seismic_file</span><span class="p">,</span>
+            <span class="s2">"traveltime_file"</span><span class="p">:</span> <span class="n">traveltime_file</span><span class="p">,</span>
+            <span class="s2">"first_break_picks_file"</span><span class="p">:</span> <span class="n">picks_csv</span><span class="p">,</span>
+            <span class="s2">"segy_metadata"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"sample_interval_us"</span><span class="p">:</span> <span class="n">dataset</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">sample_interval_us</span><span class="p">,</span>
+                <span class="s2">"samples_per_trace"</span><span class="p">:</span> <span class="n">dataset</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">samples_per_trace</span><span class="p">,</span>
+                <span class="s2">"format_code"</span><span class="p">:</span> <span class="n">dataset</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">format_code</span><span class="p">,</span>
+                <span class="s2">"trace_count"</span><span class="p">:</span> <span class="n">dataset</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">trace_count</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">}</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_recommended_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seismic_data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Get LLM recommendations for seismic inversion parameters.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            seismic_data: Seismic travel time data</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Recommended parameters dictionary</span>
+<span class="sd">        """</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">data_info</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"""</span>
+<span class="s2">            Seismic Data Characteristics:</span>
+<span class="s2">            - Data type: Travel time data</span>
+<span class="s2">            - Expected geology: Regolith over bedrock</span>
+<span class="s2">            """</span>
+            
+            <span class="n">prompt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"""Based on typical seismic refraction surveys over regolith-bedrock </span>
+<span class="s2">systems, recommend inversion parameters:</span>
+
+<span class="si">{</span><span class="n">data_info</span><span class="si">}</span>
+
+<span class="s2">Provide recommendations for:</span>
+<span class="s2">1. Lambda (regularization): typical range 20-100</span>
+<span class="s2">2. zWeight (vertical regularization): typical range 0.1-0.5</span>
+<span class="s2">3. vTop (top velocity): typical 300-800 m/s for soil/regolith</span>
+<span class="s2">4. vBottom (bottom velocity): typical 3000-6000 m/s for bedrock</span>
+
+<span class="s2">Return as: lam=XX, zWeight=XX, vTop=XX, vBottom=XX"""</span>
+            
+            <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_llm</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">system_message</span><span class="p">,</span> <span class="n">temperature</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">max_tokens</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+            
+            <span class="c1"># Parse response with robust error handling</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'lam'</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">'zWeight'</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span> <span class="s1">'vTop'</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span> <span class="s1">'vBottom'</span><span class="p">:</span> <span class="mi">5000</span><span class="p">}</span>  <span class="c1"># defaults</span>
+            
+            <span class="k">try</span><span class="p">:</span>
+                <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+                <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">'lam'</span><span class="p">,</span> <span class="s1">'zWeight'</span><span class="p">,</span> <span class="s1">'vTop'</span><span class="p">,</span> <span class="s1">'vBottom'</span><span class="p">]:</span>
+                    <span class="n">pattern</span> <span class="o">=</span> <span class="sa">rf</span><span class="s1">'</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">[=:\s]+(\d+\.?\d*)'</span>
+                    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+                        <span class="n">params</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not parse LLM response: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">, using defaults"</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"LLM recommended parameters: </span><span class="si">{</span><span class="n">params</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            
+            <span class="k">return</span> <span class="n">params</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not get LLM recommendations: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">, using defaults"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">'lam'</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">'zWeight'</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span> <span class="s1">'vTop'</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span> <span class="s1">'vBottom'</span><span class="p">:</span> <span class="mi">5000</span><span class="p">}</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_generate_velocity_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">TT</span><span class="p">,</span> <span class="n">mesh_inv</span><span class="p">,</span> <span class="n">velocity_model</span><span class="p">,</span> <span class="n">coverage</span><span class="p">,</span> <span class="n">seismic_data</span><span class="p">,</span>
+                                  <span class="n">interfaces</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">thresholds</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Generate publication-quality velocity tomogram visualization.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            TT: TravelTimeManager with inversion results</span>
+<span class="sd">            mesh_inv: Inversion mesh</span>
+<span class="sd">            velocity_model: Velocity values array</span>
+<span class="sd">            coverage: Coverage array</span>
+<span class="sd">            seismic_data: Seismic data container</span>
+<span class="sd">            interfaces: Dict of extracted interfaces {threshold: {'x': [...], 'z': [...]}}</span>
+<span class="sd">            thresholds: List of velocity thresholds</span>
+<span class="sd">            output_dir: Output directory</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Path to saved visualization file</span>
+<span class="sd">        """</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.mesh_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">createTriangles</span><span class="p">,</span> <span class="n">fill_holes_2d</span>
+        
+        <span class="n">matplotlib</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">'font.family'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'Arial'</span>
+        <span class="n">matplotlib</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">'font.size'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">12</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Try to use BlueDarkRed colormap if available</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">palettable.lightbartlein.diverging</span><span class="w"> </span><span class="kn">import</span> <span class="n">BlueDarkRed18_18</span>
+            <span class="n">cmap</span> <span class="o">=</span> <span class="n">BlueDarkRed18_18</span><span class="o">.</span><span class="n">mpl_colormap</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="n">cmap</span> <span class="o">=</span> <span class="s1">'viridis'</span>
+        
+        <span class="c1"># Calculate dynamic colormap limits</span>
+        <span class="n">vel_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">velocity_model</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">vel_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">velocity_model</span><span class="p">,</span> <span class="mi">98</span><span class="p">)</span>
+        <span class="n">cMin</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">300</span><span class="p">,</span> <span class="n">vel_min</span> <span class="o">*</span> <span class="mf">0.9</span><span class="p">)</span>
+        <span class="n">cMax</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mi">8000</span><span class="p">,</span> <span class="n">vel_max</span> <span class="o">*</span> <span class="mf">1.1</span><span class="p">)</span>
+        
+        <span class="c1"># Fill holes in coverage for better visualization</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh_inv</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">())</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">filled_cov</span> <span class="o">=</span> <span class="n">fill_holes_2d</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">coverage</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">filled_cov</span> <span class="o">=</span> <span class="n">coverage</span>
+        
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        
+        <span class="c1"># Plot velocity model</span>
+        <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">,</span> <span class="n">velocity_model</span><span class="p">,</span> <span class="n">cMap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">coverage</span><span class="o">=</span><span class="n">filled_cov</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+                <span class="n">label</span><span class="o">=</span><span class="s1">'Velocity (m/s)'</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">'Distance (m)'</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">'Elevation (m)'</span><span class="p">,</span>
+                <span class="n">pad</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="n">cMin</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="n">cMax</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="s1">'vertical'</span><span class="p">)</span>
+        
+        <span class="c1"># Add contour lines for velocity thresholds</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">createTriangles</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">)</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">meshtools</span><span class="o">.</span><span class="n">cellDataToNodeData</span><span class="p">(</span><span class="n">mesh_inv</span><span class="p">,</span> <span class="n">velocity_model</span><span class="p">)</span>
+            
+            <span class="n">linestyles</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'--'</span><span class="p">,</span> <span class="s1">'-'</span><span class="p">,</span> <span class="s1">'-.'</span><span class="p">,</span> <span class="s1">':'</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">threshold</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">thresholds</span><span class="p">):</span>
+                <span class="n">ls</span> <span class="o">=</span> <span class="n">linestyles</span><span class="p">[</span><span class="n">i</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">linestyles</span><span class="p">)]</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">tricontour</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="p">[</span><span class="n">threshold</span><span class="p">],</span> 
+                             <span class="n">linewidths</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">colors</span><span class="o">=</span><span class="s1">'k'</span><span class="p">,</span> <span class="n">linestyles</span><span class="o">=</span><span class="n">ls</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not add contours: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s1">'WARNING'</span><span class="p">)</span>
+        
+        <span class="c1"># Plot extracted interfaces</span>
+        <span class="k">if</span> <span class="n">interfaces</span><span class="p">:</span>
+            <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'white'</span><span class="p">,</span> <span class="s1">'cyan'</span><span class="p">,</span> <span class="s1">'yellow'</span><span class="p">,</span> <span class="s1">'magenta'</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">threshold</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">interfaces</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+                <span class="n">color</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="n">i</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">)]</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">'x'</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s1">'z'</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span>
+                       <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">threshold</span><span class="si">}</span><span class="s1"> m/s interface'</span><span class="p">)</span>
+        
+        <span class="c1"># Draw sensors</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">pg</span><span class="o">.</span><span class="n">viewer</span><span class="o">.</span><span class="n">mpl</span><span class="o">.</span><span class="n">drawSensors</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">seismic_data</span><span class="o">.</span><span class="n">sensors</span><span class="p">(),</span> <span class="n">diam</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span>
+                                      <span class="n">facecolor</span><span class="o">=</span><span class="s1">'black'</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">'white'</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">pass</span>
+        
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">'Distance (m)'</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">'Elevation (m)'</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">'Seismic Refraction Tomography - Velocity Model'</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">interfaces</span><span class="p">:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">'lower right'</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        
+        <span class="n">vis_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'seismic_velocity_model.png'</span><span class="p">)</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">vis_file</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">'tight'</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Velocity plot saved: </span><span class="si">{</span><span class="n">vis_file</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">vis_file</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_interpret_velocity_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">velocity_model</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">velocity_range</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                                    <span class="n">interfaces</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">n_shots</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_receivers</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Get LLM interpretation of seismic velocity results.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            velocity_model: Array of velocity values</span>
+<span class="sd">            velocity_range: [min, max] velocity</span>
+<span class="sd">            interfaces: Dict of extracted interfaces</span>
+<span class="sd">            n_shots: Number of shot points</span>
+<span class="sd">            n_receivers: Number of receiver positions</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Interpretation string</span>
+<span class="sd">        """</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">interface_summary</span> <span class="o">=</span> <span class="s2">""</span>
+            <span class="k">for</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">interfaces</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">z_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">'z'</span><span class="p">])</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">'z'</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="s1">'N/A'</span>
+                <span class="n">z_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">'z'</span><span class="p">])</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">'z'</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="s1">'N/A'</span>
+                <span class="n">interface_summary</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  - </span><span class="si">{</span><span class="n">threshold</span><span class="si">}</span><span class="s2"> m/s interface: depth range </span><span class="si">{</span><span class="n">z_min</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">z_max</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> m"</span>
+            
+            <span class="n">results_summary</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"""</span>
+<span class="s2">Seismic Refraction Inversion Results:</span>
+<span class="s2">- Survey: </span><span class="si">{</span><span class="n">n_shots</span><span class="si">}</span><span class="s2"> shots, </span><span class="si">{</span><span class="n">n_receivers</span><span class="si">}</span><span class="s2"> sensors</span>
+<span class="s2">- Velocity range: </span><span class="si">{</span><span class="n">velocity_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">velocity_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> m/s</span>
+<span class="s2">- Extracted interfaces: </span><span class="si">{</span><span class="n">interface_summary</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">interface_summary</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">'None extracted'</span><span class="si">}</span>
+<span class="s2">"""</span>
+            
+            <span class="n">prompt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"""Interpret these seismic refraction tomography results:</span>
+
+<span class="si">{</span><span class="n">results_summary</span><span class="si">}</span>
+
+<span class="s2">Geological context:</span>
+<span class="s2">- Velocities &lt; 1200 m/s typically indicate weathered soil/regolith</span>
+<span class="s2">- Velocities 1200-3000 m/s suggest fractured rock</span>
+<span class="s2">- Velocities &gt; 3000 m/s indicate competent bedrock</span>
+
+<span class="s2">Provide a concise interpretation (2-3 sentences) covering:</span>
+<span class="s2">1. The subsurface geological structure revealed by the velocity model</span>
+<span class="s2">2. The significance of the extracted interfaces for hydrogeological applications</span>
+<span class="s2">3. Data quality assessment based on velocity range and interface extraction"""</span>
+            
+            <span class="n">interpretation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_llm</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">system_message</span><span class="p">,</span> 
+                                          <span class="n">temperature</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">max_tokens</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">interpretation</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not generate interpretation: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s1">'WARNING'</span><span class="p">)</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">"Seismic inversion completed. Velocity range: </span><span class="si">{</span><span class="n">velocity_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">velocity_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> m/s. "</span> \
+                   <span class="sa">f</span><span class="s2">"Extracted </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">interfaces</span><span class="p">)</span><span class="si">}</span><span class="s2"> velocity interfaces for structural analysis."</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_interpret_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">TT_manager</span><span class="p">,</span> <span class="n">interface_data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Legacy method for backward compatibility.</span>
+<span class="sd">        """</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">velocity_model</span> <span class="o">=</span> <span class="n">TT_manager</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+            <span class="n">velocity_range</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">velocity_model</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">velocity_model</span><span class="p">)]</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interpret_velocity_results</span><span class="p">(</span><span class="n">velocity_model</span><span class="p">,</span> <span class="n">velocity_range</span><span class="p">,</span> <span class="p">{},</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">"Could not generate interpretation"</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_log_execution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'INFO'</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Log execution message."""</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">] [</span><span class="si">{</span><span class="n">level</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

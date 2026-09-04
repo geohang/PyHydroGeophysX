@@ -1,0 +1,1002 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.agents.structure_constraint_agent &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/agents/structure_constraint_agent';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/agents/structure_constraint_agent.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../quickstart.html">
+    Quickstart
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials/Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../auto_examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agents + Web App
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="../../PyHydroGeophysX.html" class="nav-link">PyHydroGeophysX</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.agents.structure_constraint_agent</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.agents.structure_constraint_agent</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""</span>
+<span class="sd">Structure Constraint Agent</span>
+
+<span class="sd">Applies seismic velocity interfaces as structural constraints to ERT inversion.</span>
+<span class="sd">Implements the workflow from Ex_Structure_resinv.py for creating structure-constrained</span>
+<span class="sd">resistivity models.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.base_agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseAgent</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Structure Constraint Agent</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<div class="viewcode-block" id="StructureConstraintAgent">
+<a class="viewcode-back" href="../../../api/agents.html#PyHydroGeophysX.agents.structure_constraint_agent.StructureConstraintAgent">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">StructureConstraintAgent</span><span class="p">(</span><span class="n">BaseAgent</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Agent for applying structural constraints from seismic data to ERT inversion.</span>
+<span class="sd">    </span>
+<span class="sd">    This agent creates ERT meshes that honor geological boundaries derived from</span>
+<span class="sd">    seismic velocity interfaces, leading to more accurate resistivity models</span>
+<span class="sd">    that preserve sharp layer contrasts.</span>
+<span class="sd">    """</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">api_key</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">llm_provider</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"openai"</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Initialize Structure Constraint Agent."""</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">"structure_constraint"</span><span class="p">,</span> <span class="n">api_key</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">llm_provider</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">system_message</span> <span class="o">=</span> <span class="s2">"""You are an expert in structure-constrained geophysical inversion.</span>
+<span class="s2">You understand how to incorporate a priori geological information from seismic data into</span>
+<span class="s2">ERT inversions to improve layer boundary resolution and reduce artifacts."""</span>
+    
+<div class="viewcode-block" id="StructureConstraintAgent.execute">
+<a class="viewcode-back" href="../../../api/agents.html#PyHydroGeophysX.agents.structure_constraint_agent.StructureConstraintAgent.execute">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Execute structure-constrained ERT inversion.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            input_data: Dictionary containing:</span>
+<span class="sd">                - ert_data: ERT measurement data</span>
+<span class="sd">                - seismic_data: (Optional) Seismic traveltime data for interface extraction</span>
+<span class="sd">                - interface_coords: (Optional) Tuple of (x, z) coordinates from seismic</span>
+<span class="sd">                - velocity_threshold: (Optional) Velocity threshold for interface extraction</span>
+<span class="sd">                - seismic_params: (Optional) Parameters for seismic inversion</span>
+<span class="sd">                - inversion_params: ERT inversion parameters</span>
+<span class="sd">                - output_dir: Directory for saving results</span>
+<span class="sd">                - mesh_quality: Mesh quality parameter (default: 31)</span>
+<span class="sd">                </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary containing constrained resistivity model and mesh</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Starting structure-constrained ERT inversion"</span><span class="p">)</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">pygimli.physics.traveltime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tt</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">pygimli.physics</span><span class="w"> </span><span class="kn">import</span> <span class="n">ert</span>
+
+            <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.mesh_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+                <span class="n">add_velocity_interface</span><span class="p">,</span>
+                <span class="n">extract_velocity_interface</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Extract parameters</span>
+            <span class="n">ert_data</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'ert_data'</span><span class="p">)</span>
+            <span class="n">seismic_data</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'seismic_data'</span><span class="p">)</span>  <span class="c1"># Optional traveltime data</span>
+            <span class="n">interface_coords</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'interface_coords'</span><span class="p">)</span>  <span class="c1"># Optional pre-computed</span>
+            <span class="n">velocity_threshold</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'velocity_threshold'</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+            <span class="n">seismic_params</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'seismic_params'</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">inversion_params</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'inversion_params'</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">output_dir</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'output_dir'</span><span class="p">,</span> <span class="s1">'results/structure_constrained'</span><span class="p">)</span>
+            <span class="n">mesh_quality</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'mesh_quality'</span><span class="p">,</span> <span class="mi">31</span><span class="p">)</span>
+            <span class="n">mesh_params</span> <span class="o">=</span> <span class="n">input_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'mesh_params'</span><span class="p">,</span> <span class="p">{})</span>
+            
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">ert_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"ert_data is required"</span><span class="p">)</span>
+            
+            <span class="c1"># Check if we need to extract interface from seismic data</span>
+            <span class="k">if</span> <span class="n">interface_coords</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">seismic_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Either interface_coords or seismic_data is required"</span><span class="p">)</span>
+                
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"No interface_coords provided, will extract from seismic data"</span><span class="p">)</span>
+                
+                <span class="c1"># Step 1: Create initial mesh for seismic inversion</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Creating initial mesh for seismic inversion"</span><span class="p">)</span>
+                <span class="n">ert1</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">ert_data</span><span class="p">)</span>
+                <span class="n">grid</span> <span class="o">=</span> <span class="n">ert1</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span>
+                    <span class="n">data</span><span class="o">=</span><span class="n">ert_data</span><span class="p">,</span>
+                    <span class="n">quality</span><span class="o">=</span><span class="n">mesh_quality</span><span class="p">,</span>
+                    <span class="n">paraDX</span><span class="o">=</span><span class="n">mesh_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'paraDX'</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">),</span>
+                    <span class="n">paraMaxCellSize</span><span class="o">=</span><span class="n">mesh_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'paraMaxCellSize'</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                    <span class="n">boundaryMaxCellSize</span><span class="o">=</span><span class="n">mesh_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'boundaryMaxCellSize'</span><span class="p">,</span> <span class="mi">3000</span><span class="p">),</span>
+                    <span class="n">smooth</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
+                    <span class="n">paraBoundary</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+                    <span class="n">paraDepth</span><span class="o">=</span><span class="n">mesh_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'paraDepth'</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">initial_mesh</span> <span class="o">=</span> <span class="n">ert1</span><span class="o">.</span><span class="n">fop</span><span class="o">.</span><span class="n">paraDomain</span>
+                <span class="n">initial_mesh</span><span class="o">.</span><span class="n">setCellMarkers</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">initial_mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()))</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+                
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Created initial mesh with </span><span class="si">{</span><span class="n">initial_mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span><span class="si">}</span><span class="s2"> cells (quality=</span><span class="si">{</span><span class="n">mesh_quality</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+                
+                <span class="c1"># Step 2: Run seismic inversion</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Running seismic travel time inversion..."</span><span class="p">)</span>
+                <span class="n">TT</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">TravelTimeManager</span><span class="p">()</span>
+                <span class="n">TT</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">initial_mesh</span><span class="p">)</span>
+                <span class="n">TT</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span>
+                    <span class="n">seismic_data</span><span class="p">,</span>
+                    <span class="n">lam</span><span class="o">=</span><span class="n">seismic_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'lam'</span><span class="p">,</span> <span class="mi">50</span><span class="p">),</span>
+                    <span class="n">zWeight</span><span class="o">=</span><span class="n">seismic_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'zWeight'</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">),</span>
+                    <span class="n">vTop</span><span class="o">=</span><span class="n">seismic_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'vTop'</span><span class="p">,</span> <span class="mi">500</span><span class="p">),</span>
+                    <span class="n">vBottom</span><span class="o">=</span><span class="n">seismic_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'vBottom'</span><span class="p">,</span> <span class="mi">8000</span><span class="p">),</span>
+                    <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="n">limits</span><span class="o">=</span><span class="p">[</span><span class="mf">500.</span><span class="p">,</span><span class="mf">10000.</span><span class="p">]</span>
+                <span class="p">)</span>
+                
+                <span class="n">velocity_model</span> <span class="o">=</span> <span class="n">TT</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">array</span><span class="p">()</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">seismic_predicted</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">TT</span><span class="o">.</span><span class="n">inv</span><span class="o">.</span><span class="n">response</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="n">seismic_predicted</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">seismic_chi2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">TT</span><span class="o">.</span><span class="n">inv</span><span class="o">.</span><span class="n">chi2</span><span class="p">())</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="n">seismic_chi2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Seismic inversion completed"</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Velocity range: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">velocity_model</span><span class="p">)</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">velocity_model</span><span class="p">)</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> m/s"</span><span class="p">)</span>
+                
+                <span class="c1"># Step 3: Extract interface at velocity threshold</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Extracting velocity interface at </span><span class="si">{</span><span class="n">velocity_threshold</span><span class="si">}</span><span class="s2"> m/s threshold..."</span><span class="p">)</span>
+                <span class="n">interface_x</span><span class="p">,</span> <span class="n">interface_z</span> <span class="o">=</span> <span class="n">extract_velocity_interface</span><span class="p">(</span>
+                    <span class="n">initial_mesh</span><span class="p">,</span>
+                    <span class="n">velocity_model</span><span class="p">,</span>
+                    <span class="n">threshold</span><span class="o">=</span><span class="n">velocity_threshold</span><span class="p">,</span>
+                    <span class="n">interval</span><span class="o">=</span><span class="mi">5</span>
+                <span class="p">)</span>
+                
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Interface extracted with </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">interface_x</span><span class="p">)</span><span class="si">}</span><span class="s2"> points"</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Depth range: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">interface_z</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">interface_z</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+                
+                <span class="c1"># Store for output</span>
+                <span class="n">interface_coords</span> <span class="o">=</span> <span class="p">(</span><span class="n">interface_x</span><span class="p">,</span> <span class="n">interface_z</span><span class="p">)</span>
+                
+                <span class="c1"># Store seismic results</span>
+                <span class="n">seismic_results</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">'velocity_model'</span><span class="p">:</span> <span class="n">velocity_model</span><span class="p">,</span>
+                    <span class="s1">'mesh'</span><span class="p">:</span> <span class="n">initial_mesh</span><span class="p">,</span>
+                    <span class="s1">'coverage'</span><span class="p">:</span> <span class="n">TT</span><span class="o">.</span><span class="n">standardizedCoverage</span><span class="p">(),</span>
+                    <span class="s1">'predicted'</span><span class="p">:</span> <span class="n">seismic_predicted</span><span class="p">,</span>
+                    <span class="s1">'chi2'</span><span class="p">:</span> <span class="n">seismic_chi2</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">interface_x</span><span class="p">,</span> <span class="n">interface_z</span> <span class="o">=</span> <span class="n">interface_coords</span>
+                <span class="n">seismic_results</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Using provided interface coordinates with </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">interface_x</span><span class="p">)</span><span class="si">}</span><span class="s2"> points"</span><span class="p">)</span>
+            
+            <span class="c1"># Step 4: Create structure-constrained mesh</span>
+            
+            <span class="c1"># Step 4: Create structure-constrained mesh</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Interface has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">interface_x</span><span class="p">)</span><span class="si">}</span><span class="s2"> points"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Creating mesh with structural constraints"</span><span class="p">)</span>
+            
+            <span class="c1"># Create mesh with velocity interface</span>
+            <span class="c1"># Pass mesh parameters if provided</span>
+            <span class="n">mesh_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="s1">'paraDepth'</span> <span class="ow">in</span> <span class="n">mesh_params</span><span class="p">:</span>
+                <span class="n">mesh_kwargs</span><span class="p">[</span><span class="s1">'paraDepth'</span><span class="p">]</span> <span class="o">=</span> <span class="n">mesh_params</span><span class="p">[</span><span class="s1">'paraDepth'</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Using paraDepth: </span><span class="si">{</span><span class="n">mesh_params</span><span class="p">[</span><span class="s1">'paraDepth'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s1">'paraDX'</span> <span class="ow">in</span> <span class="n">mesh_params</span><span class="p">:</span>
+                <span class="n">mesh_kwargs</span><span class="p">[</span><span class="s1">'paraDX'</span><span class="p">]</span> <span class="o">=</span> <span class="n">mesh_params</span><span class="p">[</span><span class="s1">'paraDX'</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Using paraDX: </span><span class="si">{</span><span class="n">mesh_params</span><span class="p">[</span><span class="s1">'paraDX'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s1">'paraMaxCellSize'</span> <span class="ow">in</span> <span class="n">mesh_params</span><span class="p">:</span>
+                <span class="n">mesh_kwargs</span><span class="p">[</span><span class="s1">'paraMaxCellSize'</span><span class="p">]</span> <span class="o">=</span> <span class="n">mesh_params</span><span class="p">[</span><span class="s1">'paraMaxCellSize'</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Using paraMaxCellSize: </span><span class="si">{</span><span class="n">mesh_params</span><span class="p">[</span><span class="s1">'paraMaxCellSize'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            
+            <span class="n">markers</span><span class="p">,</span> <span class="n">mesh_with_interface</span> <span class="o">=</span> <span class="n">add_velocity_interface</span><span class="p">(</span>
+                <span class="n">ert_data</span><span class="p">,</span>
+                <span class="n">interface_x</span><span class="p">,</span>
+                <span class="n">interface_z</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">mesh_kwargs</span>
+            <span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Created constrained mesh with </span><span class="si">{</span><span class="n">mesh_with_interface</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span><span class="si">}</span><span class="s2"> cells"</span><span class="p">)</span>
+            
+            <span class="c1"># Step 5: Run structure-constrained ERT inversion</span>
+            <span class="c1"># Get LLM recommendations for inversion parameters if needed</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">inversion_params</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Requesting LLM recommendations for constrained inversion"</span><span class="p">)</span>
+                <span class="n">inversion_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_recommended_params</span><span class="p">(</span><span class="n">ert_data</span><span class="p">,</span> <span class="n">mesh_with_interface</span><span class="p">)</span>
+            
+            <span class="c1"># Set default parameters</span>
+            <span class="n">lam</span> <span class="o">=</span> <span class="n">inversion_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'lambda'</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">)</span>
+            <span class="n">max_iterations</span> <span class="o">=</span> <span class="n">inversion_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'max_iterations'</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+            <span class="n">limits</span> <span class="o">=</span> <span class="n">inversion_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'limits'</span><span class="p">,</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">10000.0</span><span class="p">])</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Inversion parameters: lambda=</span><span class="si">{</span><span class="n">lam</span><span class="si">}</span><span class="s2">, max_iter=</span><span class="si">{</span><span class="n">max_iterations</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            
+            <span class="c1"># Calculate geometric factors if not present (required for field data)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ert_data</span><span class="o">.</span><span class="n">allNonZero</span><span class="p">(</span><span class="s1">'k'</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Calculating geometric factors for field data"</span><span class="p">)</span>
+                <span class="n">ert_data</span><span class="p">[</span><span class="s1">'k'</span><span class="p">]</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">createGeometricFactors</span><span class="p">(</span><span class="n">ert_data</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Geometric factors calculated: min=</span><span class="si">{</span><span class="nb">min</span><span class="p">(</span><span class="n">ert_data</span><span class="p">[</span><span class="s1">'k'</span><span class="p">])</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, max=</span><span class="si">{</span><span class="nb">max</span><span class="p">(</span><span class="n">ert_data</span><span class="p">[</span><span class="s1">'k'</span><span class="p">])</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Geometric factors already present in data"</span><span class="p">)</span>
+            
+            <span class="c1"># Set default error estimates if not present or invalid (required for field data)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ert_data</span><span class="o">.</span><span class="n">allNonZero</span><span class="p">(</span><span class="s1">'err'</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">min</span><span class="p">(</span><span class="n">ert_data</span><span class="p">[</span><span class="s1">'err'</span><span class="p">])</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Setting default error estimates for field data (5% + 0.5 Ohm)"</span><span class="p">)</span>
+                <span class="n">ert_data</span><span class="p">[</span><span class="s1">'err'</span><span class="p">]</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">estimateError</span><span class="p">(</span><span class="n">ert_data</span><span class="p">,</span> <span class="n">absoluteError</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">relativeError</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Error estimates set: min=</span><span class="si">{</span><span class="nb">min</span><span class="p">(</span><span class="n">ert_data</span><span class="p">[</span><span class="s1">'err'</span><span class="p">])</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, max=</span><span class="si">{</span><span class="nb">max</span><span class="p">(</span><span class="n">ert_data</span><span class="p">[</span><span class="s1">'err'</span><span class="p">])</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Error estimates already present in data"</span><span class="p">)</span>
+            
+            <span class="c1"># Run constrained inversion</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Running ERT inversion with structural constraints"</span><span class="p">)</span>
+            <span class="n">mgr_constrained</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">()</span>
+            <span class="n">mgr_constrained</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span>
+                <span class="n">data</span><span class="o">=</span><span class="n">ert_data</span><span class="p">,</span>
+                <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">lam</span><span class="o">=</span><span class="n">lam</span><span class="p">,</span>
+                <span class="n">mesh</span><span class="o">=</span><span class="n">mesh_with_interface</span><span class="p">,</span>
+                <span class="n">limits</span><span class="o">=</span><span class="n">limits</span><span class="p">,</span>
+                <span class="n">maxIter</span><span class="o">=</span><span class="n">max_iterations</span>
+            <span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Constrained inversion completed successfully"</span><span class="p">)</span>
+            
+            <span class="c1"># Get results</span>
+            <span class="n">resistivity_model</span> <span class="o">=</span> <span class="n">mgr_constrained</span><span class="o">.</span><span class="n">model</span>
+            <span class="n">para_domain</span> <span class="o">=</span> <span class="n">mgr_constrained</span><span class="o">.</span><span class="n">paraDomain</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">ert_predicted</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mgr_constrained</span><span class="o">.</span><span class="n">inv</span><span class="o">.</span><span class="n">response</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="n">ert_predicted</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span>
+                    <span class="n">mgr_constrained</span><span class="o">.</span><span class="n">fop</span><span class="o">.</span><span class="n">response</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span>
+                <span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">ert_chi2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">mgr_constrained</span><span class="o">.</span><span class="n">inv</span><span class="o">.</span><span class="n">chi2</span><span class="p">())</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="n">ert_chi2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">)</span>
+            
+            <span class="c1"># Calculate coverage - coverage() returns numeric values for ERT</span>
+            <span class="n">coverage</span> <span class="o">=</span> <span class="n">mgr_constrained</span><span class="o">.</span><span class="n">coverage</span><span class="p">()</span>
+            <span class="n">coverage_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">coverage</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Coverage array shape: </span><span class="si">{</span><span class="n">coverage_array</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, dtype: </span><span class="si">{</span><span class="n">coverage_array</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Coverage range: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">coverage_array</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">coverage_array</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            
+            <span class="c1"># Get coverage for para_domain cells only</span>
+            <span class="c1"># Para domain markers should be &gt;= 0 for valid cells</span>
+            <span class="n">markers_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">para_domain</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">())</span>
+            <span class="n">valid_mask</span> <span class="o">=</span> <span class="n">markers_array</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+            <span class="n">coverage_filtered</span> <span class="o">=</span> <span class="n">coverage_array</span><span class="p">[</span><span class="n">valid_mask</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Filtered coverage: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">coverage_filtered</span><span class="p">)</span><span class="si">}</span><span class="s2"> cells from </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">coverage_array</span><span class="p">)</span><span class="si">}</span><span class="s2"> total"</span><span class="p">)</span>
+            
+            <span class="c1"># Map layer markers from mesh to para_domain (will be done later in the code)</span>
+            <span class="c1"># For now, save the original markers</span>
+            
+            <span class="c1"># Save results</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'resistivity_model.npy'</span><span class="p">),</span> 
+                   <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">))</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'coverage.npy'</span><span class="p">),</span> 
+                   <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">coverage_filtered</span><span class="p">))</span>
+            <span class="c1"># Save original para_domain cell IDs for reference</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'para_cell_ids.npy'</span><span class="p">),</span>
+                   <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">para_domain</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">()))</span>
+            <span class="c1"># Save mesh markers for reference</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'mesh_cell_markers.npy'</span><span class="p">),</span>
+                   <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh_with_interface</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">()))</span>
+            <span class="n">mesh_with_interface</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'constrained_mesh.bms'</span><span class="p">))</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Results saved to disk"</span><span class="p">)</span>
+            
+            <span class="c1"># Get LLM interpretation</span>
+            <span class="n">interpretation</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="s2">"Generating interpretation of constrained inversion"</span><span class="p">)</span>
+                <span class="n">interpretation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interpret_results</span><span class="p">(</span>
+                    <span class="n">resistivity_model</span><span class="p">,</span>
+                    <span class="n">markers</span><span class="p">,</span>
+                    <span class="n">interface_coords</span>
+                <span class="p">)</span>
+            
+            <span class="c1"># Calculate statistics</span>
+            <span class="n">res_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">)</span>
+            <span class="n">res_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">)</span>
+            <span class="n">res_range</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">)]</span>
+            
+            <span class="c1"># Map layer markers from mesh_with_interface to para_domain</span>
+            <span class="c1"># para_domain has unique cell IDs, not layer markers</span>
+            <span class="c1"># mesh_with_interface has layer markers (2=regolith, 3=fractured bedrock)</span>
+            
+            <span class="n">mesh_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh_with_interface</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Mesh with interface: </span><span class="si">{</span><span class="n">mesh_with_interface</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span><span class="si">}</span><span class="s2"> cells, markers: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">mesh_markers</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Para domain: </span><span class="si">{</span><span class="n">para_domain</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span><span class="si">}</span><span class="s2"> cells"</span><span class="p">)</span>
+            
+            <span class="c1"># Map layer markers to para_domain cells based on cell center positions</span>
+            <span class="n">para_layer_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">para_domain</span><span class="o">.</span><span class="n">cellCount</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+            
+            <span class="c1"># Get cell centers</span>
+            <span class="n">para_centers</span> <span class="o">=</span> <span class="n">para_domain</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">()</span>
+            <span class="n">mesh_centers</span> <span class="o">=</span> <span class="n">mesh_with_interface</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">()</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Mapping layer markers from mesh to para_domain..."</span><span class="p">)</span>
+            
+            <span class="c1"># For each para_domain cell, find closest mesh cell and copy its marker</span>
+            <span class="c1"># Only copy markers 2 and 3 (layer markers), ignore 1 (background)</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">cKDTree</span>
+            <span class="n">tree</span> <span class="o">=</span> <span class="n">cKDTree</span><span class="p">(</span><span class="n">mesh_centers</span><span class="p">)</span>
+            
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">para_domain</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()):</span>
+                <span class="n">para_center</span> <span class="o">=</span> <span class="n">para_centers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="c1"># Find closest mesh cell</span>
+                <span class="n">dist</span><span class="p">,</span> <span class="n">idx</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">para_center</span><span class="p">)</span>
+                <span class="n">mesh_marker</span> <span class="o">=</span> <span class="n">mesh_markers</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+                
+                <span class="c1"># Map mesh markers to para domain</span>
+                <span class="c1"># mesh marker 1 (background) -&gt; para marker 2 (will be simplified later)</span>
+                <span class="c1"># mesh marker 2 (regolith) -&gt; para marker 2</span>
+                <span class="c1"># mesh marker 3 (fractured bedrock) -&gt; para marker 3</span>
+                <span class="k">if</span> <span class="n">mesh_marker</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="n">para_layer_markers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">para_layer_markers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+            
+            <span class="n">unique_para_markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">para_layer_markers</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Mapped para_domain layer markers: </span><span class="si">{</span><span class="n">unique_para_markers</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Marker 2 (regolith): </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">para_layer_markers</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2"> cells"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Marker 3 (bedrock): </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">para_layer_markers</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2"> cells"</span><span class="p">)</span>
+            
+            <span class="c1"># Save mapped layer markers</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">'cell_markers.npy'</span><span class="p">),</span> <span class="n">para_layer_markers</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Saved mapped layer markers to </span><span class="si">{</span><span class="n">output_dir</span><span class="si">}</span><span class="s2">/cell_markers.npy"</span><span class="p">)</span>
+            
+            <span class="c1"># Verify shapes match</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">para_layer_markers</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"WARNING: Size mismatch! resistivity: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">)</span><span class="si">}</span><span class="s2">, markers: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">para_layer_markers</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s1">'WARN'</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">'status'</span><span class="p">:</span> <span class="s1">'success'</span><span class="p">,</span>
+                <span class="s1">'resistivity_model'</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">),</span>
+                <span class="s1">'mesh'</span><span class="p">:</span> <span class="n">para_domain</span><span class="p">,</span>
+                <span class="s1">'constrained_mesh'</span><span class="p">:</span> <span class="n">mesh_with_interface</span><span class="p">,</span>
+                <span class="s1">'coverage'</span><span class="p">:</span> <span class="n">coverage_filtered</span><span class="p">,</span>
+                <span class="s1">'predicted'</span><span class="p">:</span> <span class="n">ert_predicted</span><span class="p">,</span>
+                <span class="s1">'chi2'</span><span class="p">:</span> <span class="n">ert_chi2</span><span class="p">,</span>
+                <span class="s1">'cell_markers'</span><span class="p">:</span> <span class="n">para_layer_markers</span><span class="p">,</span>  <span class="c1"># Mapped layer markers (2, 3) matching resistivity_model size</span>
+                <span class="s1">'interface_coords'</span><span class="p">:</span> <span class="n">interface_coords</span><span class="p">,</span>
+                <span class="s1">'seismic_results'</span><span class="p">:</span> <span class="n">seismic_results</span><span class="p">,</span>  <span class="c1"># Include seismic results if computed</span>
+                <span class="s1">'velocity_threshold'</span><span class="p">:</span> <span class="n">velocity_threshold</span><span class="p">,</span>  <span class="c1"># Store threshold used</span>
+                <span class="s1">'inversion_params'</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s1">'lambda'</span><span class="p">:</span> <span class="n">lam</span><span class="p">,</span>
+                    <span class="s1">'max_iterations'</span><span class="p">:</span> <span class="n">max_iterations</span><span class="p">,</span>
+                    <span class="s1">'limits'</span><span class="p">:</span> <span class="n">limits</span>
+                <span class="p">},</span>
+                <span class="s1">'statistics'</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s1">'mean_resistivity'</span><span class="p">:</span> <span class="n">res_mean</span><span class="p">,</span>
+                    <span class="s1">'std_resistivity'</span><span class="p">:</span> <span class="n">res_std</span><span class="p">,</span>
+                    <span class="s1">'resistivity_range'</span><span class="p">:</span> <span class="n">res_range</span><span class="p">,</span>
+                    <span class="s1">'num_cells'</span><span class="p">:</span> <span class="n">para_domain</span><span class="o">.</span><span class="n">cellCount</span><span class="p">(),</span>  <span class="c1"># Use para_domain count (matches resistivity)</span>
+                    <span class="s1">'num_layers'</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">para_layer_markers</span><span class="p">))</span>
+                <span class="p">},</span>
+                <span class="s1">'interpretation'</span><span class="p">:</span> <span class="n">interpretation</span><span class="p">,</span>
+                <span class="s1">'output_dir'</span><span class="p">:</span> <span class="n">output_dir</span>
+            <span class="p">}</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Resistivity range: </span><span class="si">{</span><span class="n">res_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">res_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> Ohm-m"</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Number of layers: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">markers</span><span class="p">))</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span>
+            
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Error during constrained inversion: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s1">'ERROR'</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">'status'</span><span class="p">:</span> <span class="s1">'failed'</span><span class="p">,</span>
+                <span class="s1">'error'</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+            <span class="p">}</span>
+            <span class="k">raise</span></div>
+
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_recommended_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ert_data</span><span class="p">,</span> <span class="n">mesh</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Get LLM recommendations for constrained inversion parameters.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            ert_data: ERT measurement data</span>
+<span class="sd">            mesh: Constrained mesh</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Recommended parameters dictionary</span>
+<span class="sd">        """</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">data_info</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"""</span>
+<span class="s2">            ERT Data Characteristics:</span>
+<span class="s2">            - Number of electrodes: </span><span class="si">{</span><span class="n">ert_data</span><span class="o">.</span><span class="n">sensorCount</span><span class="p">()</span><span class="si">}</span>
+<span class="s2">            - Number of measurements: </span><span class="si">{</span><span class="n">ert_data</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span>
+<span class="s2">            - Mesh cells: </span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span><span class="si">}</span>
+<span class="s2">            - With structural constraints from seismic</span>
+<span class="s2">            """</span>
+            
+            <span class="n">prompt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"""Recommend inversion parameters for structure-constrained ERT inversion:</span>
+
+<span class="si">{</span><span class="n">data_info</span><span class="si">}</span>
+
+<span class="s2">Structure-constrained inversions can typically use lower regularization than unconstrained</span>
+<span class="s2">inversions because the structural boundaries provide additional information.</span>
+
+<span class="s2">Provide recommendations for:</span>
+<span class="s2">1. Lambda (regularization): Consider 5-20 for constrained inversions</span>
+<span class="s2">2. Max iterations: typical 15-25</span>
+<span class="s2">3. Resistivity limits: typical [1, 10000] Ωm</span>
+
+<span class="s2">Return as: lambda=XX, max_iterations=XX, limits=[XX, XX]"""</span>
+            
+            <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_llm</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">system_message</span><span class="p">,</span> 
+                                     <span class="n">temperature</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">max_tokens</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+            
+            <span class="c1"># Parse response with robust error handling</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'lambda'</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span> <span class="s1">'max_iterations'</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span> <span class="s1">'limits'</span><span class="p">:</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">10000.0</span><span class="p">]}</span>  <span class="c1"># defaults</span>
+            
+            <span class="k">try</span><span class="p">:</span>
+                <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+
+                <span class="c1"># Parse lambda</span>
+                <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">'lambda[=:\s]+(\d+\.?\d*)'</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+                    <span class="n">params</span><span class="p">[</span><span class="s1">'lambda'</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+                
+                <span class="c1"># Parse max_iterations</span>
+                <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">'max[_\s]*iterations[=:\s]+(\d+)'</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+                    <span class="n">params</span><span class="p">[</span><span class="s1">'max_iterations'</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+                
+                <span class="c1"># Parse limits</span>
+                <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">'limits[=:\s]*\[(\d+\.?\d*)[,\s]+(\d+\.?\d*)\]'</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+                    <span class="n">params</span><span class="p">[</span><span class="s1">'limits'</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)),</span> <span class="nb">float</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))]</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not parse LLM response: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">, using defaults"</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"LLM recommended parameters: </span><span class="si">{</span><span class="n">params</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            
+            <span class="k">return</span> <span class="n">params</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log_execution</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not get LLM recommendations: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">, using defaults"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">'lambda'</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span> <span class="s1">'max_iterations'</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span> <span class="s1">'limits'</span><span class="p">:</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">10000.0</span><span class="p">]}</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_interpret_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resistivity_model</span><span class="p">,</span> <span class="n">markers</span><span class="p">,</span> <span class="n">interface_coords</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Get LLM interpretation of constrained inversion results.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            resistivity_model: Inverted resistivity values</span>
+<span class="sd">            markers: Cell markers indicating layers</span>
+<span class="sd">            interface_coords: Interface coordinates</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Interpretation string</span>
+<span class="sd">        """</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">res_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">resistivity_model</span><span class="p">)</span>
+            <span class="n">interface_x</span><span class="p">,</span> <span class="n">interface_z</span> <span class="o">=</span> <span class="n">interface_coords</span>
+            
+            <span class="n">results_summary</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"""</span>
+<span class="s2">            Structure-Constrained ERT Inversion Results:</span>
+<span class="s2">            - Resistivity range: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">res_array</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">res_array</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> Ωm</span>
+<span class="s2">            - Number of layers: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">markers</span><span class="p">))</span><span class="si">}</span>
+<span class="s2">            - Interface depth range: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">interface_z</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">interface_z</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> m</span>
+<span class="s2">            - Interface lateral extent: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">interface_x</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">interface_x</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> m</span>
+<span class="s2">            """</span>
+            
+            <span class="n">prompt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"""Interpret these structure-constrained ERT inversion results:</span>
+
+<span class="si">{</span><span class="n">results_summary</span><span class="si">}</span>
+
+<span class="s2">Provide a brief interpretation (2-3 sentences) about:</span>
+<span class="s2">1. The advantages of using structural constraints in this case</span>
+<span class="s2">2. What the resistivity values suggest about subsurface properties"""</span>
+            
+            <span class="n">interpretation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_llm</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">system_message</span><span class="p">,</span>
+                                           <span class="n">temperature</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">max_tokens</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">interpretation</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">"Structure-constrained inversion completed with seismic-derived boundaries"</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_log_execution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'INFO'</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Log execution message."""</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">] [</span><span class="si">{</span><span class="n">level</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
