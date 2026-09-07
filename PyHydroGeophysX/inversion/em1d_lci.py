@@ -30,9 +30,11 @@ routine in :mod:`PyHydroGeophysX.inversion.em1d` so that ``smoothness`` and
 from __future__ import annotations
 
 import contextlib
+import inspect
 import math
 import os
 import time
+import warnings
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, Tuple
@@ -304,12 +306,42 @@ def _single_threaded_blas() -> Iterator[None]:
 def _map_soundings(executor: Optional[ThreadPoolExecutor], fn, count: int) -> list:
     """``fn`` over every sounding index, in order, on the pool if there is one.
 
-    ``executor.map`` yields results in submission order, so the caller gets the
-    same list either way and nothing downstream has to know which path ran.
+    The work is split into one contiguous chunk per worker rather than handed
+    out a station at a time. Both give the same list, since the chunks are
+    collected in order, but the chunked form keeps a station on the same thread
+    from one pass to the next, and that is what makes the thread-local forward
+    operators pay. A station's operator depends on its own transmitter-receiver
+    distance, so a line presents many distinct operators: 134 on a 140-station
+    survey. Handing stations out dynamically walks every thread through all of
+    them, evicting each before it is reused, and the pass then rebuilds about
+    half the operators it needs. Measured on that survey, one forward pass took
+    4.4 s against 2.5 s of actual forward calls.
+
+    Equal chunks assume the stations cost about the same, which holds when they
+    share a layer grid and differ only in how many gates survived. A survey
+    where that fails would want dynamic hand-out and a cache large enough to
+    hold the line instead.
     """
     if executor is None or count < 2:
         return [fn(s) for s in range(count)]
-    return list(executor.map(fn, range(count)))
+    workers = int(getattr(executor, "_max_workers", 0) or 1)
+    if workers < 2 or workers >= count:
+        return list(executor.map(fn, range(count)))
+
+    def run(start: int, stop: int) -> list:
+        return [fn(s) for s in range(start, stop)]
+
+    size, extra = divmod(count, workers)
+    futures, start = [], 0
+    for index in range(workers):
+        stop = start + size + (1 if index < extra else 0)
+        if stop > start:
+            futures.append(executor.submit(run, start, stop))
+        start = stop
+    results: list = []
+    for future in futures:
+        results.extend(future.result())
+    return results
 
 
 def _forward_line(blocks: Sequence[SoundingBlock], x: np.ndarray, n_layers: int,
@@ -364,13 +396,62 @@ def _misfit(blocks: Sequence[SoundingBlock],
 
 
 def _solve_normal_equations(gram, rhs: np.ndarray) -> np.ndarray:
+    """Solve ``gram x = rhs`` for the block-tridiagonal LCI normal matrix.
+
+    Two details the obvious version gets wrong. ``spsolve`` does not raise on a
+    singular matrix: it warns "Matrix is exactly singular" and returns an array
+    of NaN, so a bare ``try/except`` never fires for the case it exists for and
+    the NaN travels on into the model update. The finiteness of the result is
+    what has to be checked.
+
+    And the fallback has to stay a symmetric solve. ``gram`` is already the
+    normal matrix, so handing it to ``lsqr`` makes that routine work on
+    ``gram^T gram``, squaring an already poor condition number; MINRES applies
+    ``gram`` once and is the right shape of tool for a symmetric system.
+    """
     from scipy.sparse import linalg as splinalg
 
-    try:
-        return np.asarray(splinalg.spsolve(gram.tocsc(), rhs), dtype=float)
-    except Exception:  # noqa: BLE001 - fall back to an iterative least squares
-        out = splinalg.lsqr(gram, rhs, atol=1e-10, btol=1e-10)[0]
-        return np.asarray(out, dtype=float)
+    with warnings.catch_warnings():
+        # The singular case is detected below, from the result itself.
+        warnings.simplefilter("ignore", splinalg.MatrixRankWarning)
+        try:
+            out = np.asarray(splinalg.spsolve(gram.tocsc(), rhs), dtype=float)
+        except (ValueError, RuntimeError, np.linalg.LinAlgError):
+            out = np.full(np.shape(rhs), np.nan, dtype=float)
+
+    if np.all(np.isfinite(out)):
+        return out
+
+    # SciPy renamed this keyword from 'tol' to 'rtol' in 1.12 and removed 'tol'
+    # in 1.14; pyproject pins scipy>=1.8,<3.0, which straddles both.
+    rtol_kw = "rtol" if "rtol" in inspect.signature(splinalg.minres).parameters else "tol"
+    minres_out, info = splinalg.minres(
+        gram, np.asarray(rhs, dtype=float).ravel(),
+        maxiter=2000, **{rtol_kw: 1e-10},
+    )
+    minres_out = np.asarray(minres_out, dtype=float)
+    # info == 0 is not enough. On a system that is singular AND inconsistent,
+    # MINRES reports success while the component along the null direction runs
+    # away; a 3x3 probe returned 1.4e15 there. The residual is the honest test
+    # of whether the system was actually solved.
+    rhs_flat = np.asarray(rhs, dtype=float).ravel()
+    rhs_norm = float(np.linalg.norm(rhs_flat))
+    residual = float(np.linalg.norm(gram @ minres_out - rhs_flat))
+    solved = (
+        info == 0
+        and np.all(np.isfinite(minres_out))
+        and residual <= 1e-6 * max(rhs_norm, 1.0)
+    )
+    if not solved:
+        raise np.linalg.LinAlgError(
+            "The LCI normal matrix is singular to working precision and neither "
+            "the sparse LU nor MINRES produced a usable update (relative "
+            "residual {0:.3e}). Raise the lateral or vertical smoothing weight, "
+            "or drop the soundings with no usable gates.".format(
+                residual / max(rhs_norm, 1e-300)
+            )
+        )
+    return minres_out
 
 
 def _sounding_median(values) -> float:

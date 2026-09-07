@@ -17,9 +17,12 @@ from scipy.signal import savgol_filter
 def create_mesh_from_layers(surface: np.ndarray,
                           line1: np.ndarray,
                           line2: np.ndarray,
-                          bottom_depth: float = 30.0,
+                          bottom_depth: Optional[float] = None,
                           quality: float = 28,
-                          area: float = 40) -> Tuple[pg.Mesh, np.ndarray, np.ndarray]:
+                          area: float = 40, *,
+                          bottom_elevation: Optional[float] = None,
+                          markers: Optional[List[int]] = None,
+                          ) -> Tuple[pg.Mesh, np.ndarray, np.ndarray, pg.Mesh]:
     """
     Create mesh from layer boundaries and get cell centers and markers.
     
@@ -27,7 +30,10 @@ def create_mesh_from_layers(surface: np.ndarray,
         surface: Surface coordinates [[x,z],...] 
         line1: First layer boundary coordinates 
         line2: Second layer boundary coordinates 
-        bottom_depth: Depth below surface minimum for mesh bottom
+        bottom_depth: Legacy alias for bottom_elevation. Supply only one of them.
+        bottom_elevation: Absolute bottom elevation in the input datum (default
+            30.0 when neither argument is supplied), below both interfaces.
+        markers: Three integer region markers, from top to bottom (default [2, 3, 2]).
         quality: Mesh quality parameter
         area: Maximum cell area
         
@@ -35,10 +41,23 @@ def create_mesh_from_layers(surface: np.ndarray,
         mesh: PyGIMLI mesh
         mesh_centers: Array of cell center coordinates
         markers: Array of cell markers
+        geom: Geometry used to generate the mesh (fourth tuple element).
     """
-    # Calculate bottom elevation from normalized surface
-    min_surface_elev = np.nanmin(surface[:,1])
-    bottom_elev = bottom_depth #min_surface_elev - bottom_depth
+    if bottom_depth is not None and bottom_elevation is not None:
+        raise ValueError("Supply only one of bottom_depth and bottom_elevation")
+    bottom_elev = bottom_elevation if bottom_elevation is not None else bottom_depth
+    bottom_elev = 30.0 if bottom_elev is None else float(bottom_elev)
+    surface, line1, line2 = (np.asarray(points, dtype=float) for points in (surface, line1, line2))
+    for points in (surface, line1, line2):
+        if points.ndim != 2 or points.shape[1] != 2 or len(points) < 2 or not np.isfinite(points).all():
+            raise ValueError("Boundaries must be finite (n, 2) coordinate arrays with n >= 2")
+        if np.any(np.diff(points[:, 0]) <= 0):
+            raise ValueError("Boundary x coordinates must be strictly increasing")
+    if not np.isfinite(bottom_elev) or bottom_elev >= np.min(line2[:, 1]):
+        raise ValueError("Bottom elevation must lie below the lower interface")
+    region_markers = [2, 3, 2] if markers is None else list(markers)
+    if len(region_markers) != 3 or any(not isinstance(m, (int, np.integer)) for m in region_markers):
+        raise ValueError("markers must contain three integers, ordered top to bottom")
     
     # Create reversed lines for polygon creation
     line1r = line1.copy()
@@ -50,17 +69,21 @@ def create_mesh_from_layers(surface: np.ndarray,
     line2r[:,1] = np.flip(line2[:,1])
     
     # Create surface layer
-    layer1 = mt.createPolygon(surface,
-                             isClosed=False, 
-                             marker=2, 
-                             boundaryMarker=-1,
+    layer1 = mt.createPolygon(np.vstack((surface, line1r)),
+                             isClosed=True,
+                             marker=int(region_markers[0]),
+                             boundaryMarker=1,
                              interpolate='linear', 
                              area=0.1)
+    # Only the surface is a free boundary; do not mark the layer's side and
+    # interface edges as surface boundaries when closing the polygon.
+    for edge in list(layer1.boundaries())[:len(surface) - 1]:
+        edge.setMarker(-1)
     
     # Create middle layer
     Gline1 = mt.createPolygon(np.vstack((line1, line2r)),
                              isClosed=True, 
-                             marker=3, 
+                             marker=int(region_markers[1]),
                              boundaryMarker=1,
                              interpolate='linear', 
                              area=1)
@@ -71,19 +94,17 @@ def create_mesh_from_layers(surface: np.ndarray,
                               [line2[-1,0], bottom_elev],
                               [surface[-1,0], surface[-1,1]]],
                              isClosed=False, 
-                             marker=2, 
+                             marker=int(region_markers[2]),
                              boundaryMarker=1,
                              interpolate='linear', 
                              area=2)
     
     # Create bottom layer
     layer2 = mt.createPolygon(np.vstack((line2r,
-                                        [[line2[0,0], line2[0,1]],
-                                         [line2[0,0], bottom_elev],
-                                         [line2[-1,0], bottom_elev],
-                                         [line2[-1,0], line2[-1,1]]])),
+                                        [[line2[0,0], bottom_elev],
+                                         [line2[-1,0], bottom_elev]])),
                              isClosed=True, 
-                             marker=2, 
+                             marker=int(region_markers[2]),
                              area=2, 
                              boundaryMarker=1)
     
@@ -136,9 +157,14 @@ def extract_velocity_interface(
     z_coords = cell_centers[:, 1]
     
     # Get x-range for complete boundary if not provided
-    if x_min is None or x_max is None:
-        x_min, x_max = np.min(x_coords), np.max(x_coords)
+    if x_min is None:
+        x_min = np.min(x_coords)
+    if x_max is None:
+        x_max = np.max(x_coords)
     
+    if not np.isfinite(interval) or interval <= 0:
+        raise ValueError("interval must be finite and positive")
+
     # Create bins across the entire x-range
     x_bins = np.arange(x_min, x_max + interval, interval)
     
@@ -179,28 +205,29 @@ def extract_velocity_interface(
                     interface_z.append(interface_depth)
                     break
     
-    # Ensure we have interface points for the entire range
-    if len(interface_x) > 0 and interface_x[0] > x_min + interval:
+    if not interface_x:
+        raise ValueError("No velocity threshold crossing was found in the selected range")
+    # Calculate slopes from detected samples before extending either boundary.
+    left_slope = right_slope = 0.0
+    if len(interface_x) >= 2:
+        left_slope = (interface_z[1] - interface_z[0]) / (interface_x[1] - interface_x[0])
+        right_slope = (interface_z[-1] - interface_z[-2]) / (interface_x[-1] - interface_x[-2])
+    if interface_x[0] > x_min + interval:
+        left_z = interface_z[0] + left_slope * (x_min - interface_x[0])
         interface_x.insert(0, x_min)
-        if len(interface_x) > 2:
-            slope = (interface_z[1] - interface_z[0]) / (interface_x[1] - interface_x[0])
-            interface_z.insert(0, interface_z[0] - slope * (interface_x[1] - x_min))
-        else:
-            interface_z.insert(0, interface_z[0])
-    
-    if len(interface_x) > 0 and interface_x[-1] < x_max - interval:
+        interface_z.insert(0, left_z)
+    if interface_x[-1] < x_max - interval:
+        right_z = interface_z[-1] + right_slope * (x_max - interface_x[-1])
         interface_x.append(x_max)
-        if len(interface_x) > 2:
-            slope = (interface_z[-1] - interface_z[-2]) / (interface_x[-1] - interface_x[-2])
-            interface_z.append(interface_z[-1] + slope * (x_max - interface_x[-1]))
-        else:
-            interface_z.append(interface_z[-1])
-    
+        interface_z.append(right_z)
+
     # Create a dense interpolation grid for smoothing
     x_dense = np.linspace(x_min, x_max, 500)  # 500 points for smooth curve
     
     # Apply cubic interpolation for smoother interface
-    if len(interface_x) > 3:
+    if len(interface_x) == 1:
+        z_dense = np.full_like(x_dense, interface_z[0])
+    elif len(interface_x) > 3:
         try:
             interp_func = interp1d(interface_x, interface_z, kind='cubic', 
                                    bounds_error=False, fill_value="extrapolate")
@@ -459,50 +486,37 @@ class MeshCreator:
     
     def create_from_layers(self, surface: np.ndarray, 
                           layers: List[np.ndarray],
-                          bottom_depth: float = 30.0,
-                          markers: List[int] = None) -> pg.Mesh:
+                          bottom_depth: Optional[float] = None,
+                          markers: List[int] = None, *,
+                          bottom_elevation: Optional[float] = None) -> Tuple[pg.Mesh, pg.Mesh]:
         """
         Create a mesh from surface and layer boundaries.
         
         Args:
             surface: Surface coordinates [[x,z],...]
-            layers: List of layer boundary coordinates
-            bottom_depth: Depth below surface minimum for mesh bottom
-            markers: List of markers for each layer (default: [2, 3, 2, ...])
+            layers: Exactly two arrays of layer-boundary coordinates, in the
+                same (x, elevation) coordinate system as surface.
+            bottom_depth: Legacy alias for bottom_elevation; retains elevation semantics.
+            bottom_elevation: Absolute bottom elevation, default 30.0. Supply only
+                one of bottom_depth and bottom_elevation.
+            markers: Three integer region markers, top to bottom (default [2, 3, 2]).
             
         Returns:
-            PyGIMLI mesh
+            Tuple of (PyGIMLi mesh, geometry).
         """
         if len(layers) < 1:
             raise ValueError("At least one layer boundary is required")
             
-        # Create default markers if not provided
-        if markers is None:
-            markers = [2] * (len(layers) + 1)
-            if len(layers) > 0:
-                markers[1] = 3  # Middle layer
-        
-        # Normalize elevation by maximum elevation
-        max_ele = np.nanmax(surface[:,1])
-        surface_norm = surface.copy()
-        surface_norm[:,1] = surface_norm[:,1]  #- max_ele
-        
-        layers_norm = []
-        for layer in layers:
-            layer_norm = layer.copy()
-            layer_norm[:,1] = layer_norm[:,1] # - max_ele
-            layers_norm.append(layer_norm)
-        
-        # Create mesh using specific implementation
+        # The builder reads inputs without changing their elevation datum.
         if len(layers) == 2:
             mesh, centers, markers_array,geom = create_mesh_from_layers(
-                surface_norm, layers_norm[0], layers_norm[1], 
-                bottom_depth, self.quality, self.area
+                surface, layers[0], layers[1],
+                bottom_depth, self.quality, self.area,
+                bottom_elevation=bottom_elevation, markers=markers,
             )
             return mesh,geom
         else:
-            # Implement custom mesh creation for different number of layers
-            raise NotImplementedError("Currently only 2-layer mesh creation is implemented")
+            raise NotImplementedError("Currently exactly two layer boundaries are supported")
     
     def create_from_ert_data(self, data, max_depth: float = 30.0, quality: float = 34):
         """
@@ -510,12 +524,14 @@ class MeshCreator:
         
         Args:
             data: PyGIMLI ERT data object
-            max_depth: Maximum depth of the mesh
+            max_depth: Positive parameter-domain depth forwarded as paraDepth.
             quality: Mesh quality parameter
             
         Returns:
             PyGIMLI mesh for ERT inversion
         """
         from pygimli.physics import ert
+        if not np.isfinite(max_depth) or max_depth <= 0:
+            raise ValueError("max_depth must be finite and positive")
         ert_manager = ert.ERTManager(data)
-        return ert_manager.createMesh(data=data, quality=quality)
+        return ert_manager.createMesh(data=data, quality=quality, paraDepth=max_depth)

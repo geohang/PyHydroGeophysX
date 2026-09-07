@@ -18,12 +18,12 @@ import argparse
 import csv
 import json
 import math
-import sqlite3
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 import numpy as np
 
+from PyHydroGeophysX.data_processing import temcompany_project
 from PyHydroGeophysX.forward.em1d import _tdem_config, _tdem_geometry
 from PyHydroGeophysX.workflows import em1d
 from PyHydroGeophysX.forward.tdem_forward import TDEMForwardModeling
@@ -77,9 +77,9 @@ def compare(
     sample_per_line: int = 3,
     max_iterations: int = 8,
 ) -> Dict[str, Any]:
-    database = project / "project.db"
+    database = temcompany_project.project_file(project)
     if not database.exists():
-        raise ValueError(f"TEMcompany database not found: {database}")
+        raise ValueError(f"TEMcompany project not found under: {project}")
     output.mkdir(parents=True, exist_ok=True)
 
     sounding = em1d.load_sounding(str(project), "TDEM", moment=moment)
@@ -89,17 +89,20 @@ def compare(
     independent_scale = em1d.estimate_data_scale(
         str(project), "TDEM", geom, max_soundings=8)
 
-    con = sqlite3.connect(database)
-    con.row_factory = sqlite3.Row
-    model_rows = list(con.execute(
-        "SELECT m.AverageDataID, m.LineNumber, m.UTMx, m.UTMy, "
-        "m.DataFit, m.Resistivity, m.Thickness, m.Datasets, "
-        "s.StationId "
-        "FROM InversionModel m "
-        "LEFT JOIN StationStackData s ON s.AveragedDataId = m.AverageDataID "
-        "ORDER BY m.LineNumber, m.AverageDataID"
-    ))
-    con.close()
+    con = temcompany_project.open_project(database)
+    try:
+        stations = {
+            row["AveragedDataId"]: row
+            for row in temcompany_project.read_station_stacks(con)
+        }
+        model_rows = [
+            {**dict(row),
+             "StationId": (stations[row["AverageDataID"]]["StationId"]
+                           if row["AverageDataID"] in stations else None)}
+            for row in temcompany_project.read_inversion_models(con)
+        ]
+    finally:
+        con.close()
 
     forward_rows: List[Dict[str, Any]] = []
     forward_logs: List[np.ndarray] = []

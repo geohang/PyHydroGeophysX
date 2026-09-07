@@ -17,10 +17,15 @@ from __future__ import annotations
 
 import json
 import hashlib
+from http.client import HTTPException
+import os
 import shutil
 import tempfile
+import threading
 import urllib.request
 import urllib.error
+from urllib.parse import quote
+from pathlib import PurePosixPath
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -190,7 +195,7 @@ class LocalHydroAccessor(BaseHydroAccessor):
     def materialize(
         self, required_files: List[str], target_dir: str
     ) -> str:
-        # Local accessor: data already on disk.  Just return the root.
+        # Local data is used in place; materialize does not copy into target_dir.
         return str(self.root)
 
 
@@ -213,7 +218,8 @@ class HttpHydroAccessor(BaseHydroAccessor):
     manifest_entry : dict
         A single dataset entry from manifest.json.
     cache_dir : str, optional
-        Directory for caching downloaded files.  Defaults to a temp directory.
+        Parent directory for caching downloaded files. Each dataset uses a
+        separate subdirectory; clear_cache only removes its manifest files.
     """
 
     def __init__(
@@ -230,31 +236,60 @@ class HttpHydroAccessor(BaseHydroAccessor):
             self.cache_dir = Path(cache_dir)
         else:
             self.cache_dir = Path(tempfile.gettempdir()) / "phgx_http_cache"
+        # A new namespace also avoids trusting partial files left by the old
+        # downloader, which wrote directly to the final cache location.
+        namespace = hashlib.sha256((str(self.dataset_id) + "\n" + self.base_url).encode()).hexdigest()
+        self.cache_dir = self.cache_dir / ("v2-" + namespace)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self._cache_lock = threading.Lock()
+        for filename in self.files:
+            self._validate_filename(filename)
+
+    @staticmethod
+    def _validate_filename(filename: str) -> None:
+        path = PurePosixPath(filename)
+        if (not filename or path.is_absolute() or ".." in path.parts
+                or "\\" in filename or ":" in filename or path == PurePosixPath(".")):
+            raise ValueError(f"Expected a relative dataset filename: {filename!r}")
 
     def _file_url(self, filename: str) -> str:
-        return f"{self.base_url}/{filename}"
+        self._validate_filename(filename)
+        return f"{self.base_url}/{quote(filename, safe='/')}"
 
     def _cached_path(self, filename: str) -> Path:
         stable = _stable_cache_filename(self._file_url(filename))
         return self.cache_dir / stable
 
     def _download_file(self, filename: str, dest: Path) -> None:
-        """Download a single file.  Raises on failure."""
+        """Publish a complete download atomically; never cache partial bytes."""
         url = self._file_url(filename)
         dest.parent.mkdir(parents=True, exist_ok=True)
+        temporary = None
         try:
-            urllib.request.urlretrieve(url, str(dest))
-        except urllib.error.URLError as exc:
+            with tempfile.NamedTemporaryFile(dir=dest.parent, suffix=".part", delete=False) as output:
+                temporary = Path(output.name)
+                with urllib.request.urlopen(url, timeout=30) as response:
+                    shutil.copyfileobj(response, output)
+                    expected = response.headers.get("Content-Length")
+                    if expected is not None and output.tell() != int(expected):
+                        raise OSError("Downloaded length does not match Content-Length")
+            os.replace(temporary, dest)
+        except (OSError, urllib.error.URLError, HTTPException, ValueError) as exc:
             raise RuntimeError(
                 f"Failed to download {url}: {exc}"
             ) from exc
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
 
     def _ensure_cached(self, filename: str) -> Path:
         """Return path to cached copy, downloading if missing."""
+        if filename not in self.files:
+            raise ValueError(f"Manifest does not list file: {filename}")
         cached = self._cached_path(filename)
-        if not cached.exists():
-            self._download_file(filename, cached)
+        with self._cache_lock:
+            if not cached.exists():
+                self._download_file(filename, cached)
         return cached
 
     def validate(self) -> Tuple[bool, Dict[str, Any], List[str]]:
@@ -329,16 +364,22 @@ class HttpHydroAccessor(BaseHydroAccessor):
         for fname in required_files:
             cached = self._ensure_cached(fname)
             dest = target / fname
+            try:
+                dest.resolve().relative_to(target.resolve())
+            except ValueError as exc:
+                raise ValueError(f"Dataset file escapes target directory: {fname}") from exc
             if not dest.exists():
+                dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(str(cached), str(dest))
 
         return str(target)
 
     def clear_cache(self) -> int:
-        """Remove all cached files.  Returns number of files removed."""
+        """Remove this dataset's manifest files, leaving other files intact."""
         count = 0
-        if self.cache_dir.exists():
-            for p in self.cache_dir.iterdir():
+        with self._cache_lock:
+            for filename in set(self.files):
+                p = self._cached_path(filename)
                 if p.is_file():
                     p.unlink()
                     count += 1

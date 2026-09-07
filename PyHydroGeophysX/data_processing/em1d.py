@@ -5,12 +5,15 @@ from __future__ import annotations
 import json
 import math
 import sqlite3
+import threading
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 import numpy as np
 
 from PyHydroGeophysX.data_processing import run_inputs, table_io
+from PyHydroGeophysX.data_processing import temcompany_project, temcompany_stb
 from PyHydroGeophysX.data_processing.ttem import is_ttem_source, load_ttem_sounding
 
 TEMCOMPANY_MOMENTS = ("LM+HM", "HM", "LM")
@@ -66,15 +69,34 @@ SOUNDING_CONTAINER_KIND = "em_soundings"
 def is_temcompany_source(path: str) -> bool:
     """Return whether *path* looks like a TEMcompany/TEM2Go export.
 
-    Both complete project directories and the self-describing ``*.xyz`` exports
-    written by TEMImage are accepted.
+    Complete project directories, under either the ``project.tiw`` layout that
+    TEMImage 3 writes or the ``project.db`` one earlier releases wrote, and the
+    self-describing ``*.xyz`` exports are all accepted. So is an acquisition
+    folder holding the instrument's own ``.stb`` raw stream, which needs no
+    import to be read.
     """
     source = Path(path)
     if source.is_dir():
         names = {item.name.lower() for item in source.iterdir() if item.is_file()}
-        return ("project.db" in names
+        return (any(name in names
+                    for name in temcompany_project.PROJECT_FILE_NAMES)
                 or any(name.endswith("_stationdata.xyz") for name in names)
-                or any(name.endswith("_rawdata.xyz") for name in names))
+                or any(name.endswith("_rawdata.xyz") for name in names)
+                or temcompany_stb.is_stb_folder(source))
+    if source.suffix.lower() in temcompany_project.PROJECT_SUFFIXES:
+        # A suffix is not enough: ``.db`` is a common name for any SQLite file.
+        # Opening it and looking for the survey tables costs one page read and
+        # keeps an unrelated database from being routed here.
+        if not source.is_file():
+            return False
+        try:
+            connection = temcompany_project.open_project(source)
+        except (OSError, ValueError, sqlite3.Error):
+            return False
+        try:
+            return not temcompany_project.missing_survey_tables(connection)
+        finally:
+            connection.close()
     if source.suffix.lower() != ".xyz" or not source.is_file():
         return False
     try:
@@ -125,83 +147,32 @@ def _temcompany_valid_channels(
     gate_rejection: str = "truncate",
     reject_negative: bool = True,
 ) -> "tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]":
-    """Drop the dummy values a file carries and, unless waived, its unused gates.
+    """Return usable TEMcompany gates in file order.
 
-    ``use_flags=False`` keeps every gate the file holds a finite, non-dummy value
-    for, including the ones its stored flags mark as unused. That is a deliberate
-    choice to re-do the gate editing here rather than inherit it: on a noisy
-    ground survey a file may leave only a quarter of its gates flagged in use,
-    and the inversion's own outlier rejection, which judges a gate by whether a
-    model can explain it, can be a better test than one applied before any model
-    existed. The gates come back with their recorded stack errors, so a gate that
-    was flagged out for being noisy still carries that noise in its weight.
+    Dummy/non-finite responses, nonpositive times and (when use_flags=True)
+    disabled gates are removed first. Input time/response arrays are flattened
+    and truncated to their shared length.
 
-    ``max_relative_std`` condemns a gate that is negative, or whose relative
-    stack error exceeds the cut. The stack error is the scatter of the repeat
-    transients averaged into that gate divided by their mean, so a value near or
-    above 0.3 says the gate's own repeats disagree by as much as the quantity
-    being measured. Such a gate constrains nothing and only supplies a direction
-    for the model to follow. ``None`` keeps every flagged gate.
+    max_relative_std enables the error check; None disables only that check.
+    reject_negative controls sign rejection independently of the error threshold.
+    With a threshold, gate_rejection="truncate" removes the first noisy gate
+    and all later eligible gates; "individual" removes only noisy gates.
+    reject_negative removes negative gates individually and overrides a noise
+    verdict when both apply. Sign is a selection policy, not proof that a
+    measurement is physically impossible; review instrument geometry and
+    polarity before choosing it.
 
-    ``reject_negative`` decides whether a negative gate is condemned along with a
-    noisy one, and the two tests are separate because they answer different
-    questions: one asks whether the gate was measured repeatably, the other
-    whether its sign is physical. Tying them together throws away good
-    measurements on an offset-loop system. Measured against one project's stored
-    inversion inputs, every gate this reader dropped that the reference kept was
-    dropped by the sign test and none by the error cut, and those gates carried a
-    median relative error of 0.16, well inside any sensible threshold.
+    Returns
+    -------
+    tuple
+        Filtered time centres (s), responses in the input units, and relative
+        standard deviations as fractions (or None when unavailable). Invalid
+        supplied standard deviations are represented as NaN.
 
-    The sign half of the test needs care. An offset-loop configuration genuinely
-    reverses sign at early time: while the diffusing current system is still
-    inside the transmitter-receiver offset, the vertical dB/dt at the receiver
-    carries the opposite sign, and it crosses over once that system has spread
-    past the offset. Whether that reversal reaches the gates being inverted is a
-    question with a number attached, because the crossing sits near an induction
-    number of order one,
-
-        theta * r ~ 1,   theta = sqrt(mu0 / (4 rho t)),
-
-    so a gate at time ``t`` sees the reversal only once the ground is more
-    conductive than ``rho ~ mu0 r**2 / (4 t)``. On a 15 m offset that is about
-    6 ohm-m at 12 us and about 1 ohm-m at 61 us; sweeping resistivity through
-    this operator puts the onset between 10 and 5 ohm-m at the earliest gate,
-    which is where the estimate says it should be. Weathered bedrock is two to
-    three orders of magnitude above that.
-
-    So before turning the cut off (``None``) on the grounds that the reversal is
-    real, put the site's resistivity and the gate time into that expression.
-    Where it says the crossing falls far earlier than the first gate, a negative
-    gate is not the early reversal: no layered earth the site could plausibly
-    have will produce one there, and an inversion handed such a gate can only
-    trade the rest of the sounding against a value it cannot reach.
-
-    ``gate_rejection`` decides what the noise cut removes, and the two answers
-    pull in opposite directions. It governs the noise test alone. A sign
-    reversal always removes its own gate and no other, because the argument for
-    truncation is about the decay having reached the noise floor and an
-    early-time reversal makes no claim about the gates after it. Coupling the
-    two costs whole soundings: the reversals on one ground survey fell between
-    12 and 61 us, so on any station where the first gate was reversed the
-    truncating rule discarded every gate the sounding had.
-
-    ``truncate`` ends the sounding at the first condemned gate and drops every
-    later one. The argument for it is that the transient decays monotonically
-    into the noise floor, so once one gate has crossed that floor the later ones
-    are below it too; a later gate that still looks clean is then a fluctuation,
-    and keeping it invites the inversion to fit noise at the depth that gate
-    appears to probe. This is the default, because it cannot keep a gate the
-    noise floor has already swallowed.
-
-    ``individual`` drops only the condemned gates and keeps the later ones. The
-    argument for it is that diffusion depth grows with time, so the latest usable
-    gate is what sets how deep the sounding can see at all, and discarding it for
-    a neighbour's fault costs depth no other gate can supply. It also fits the
-    case where one gate is spoiled by a local interference spike rather than by
-    the decay reaching the noise floor. Measured over one 929-station ground TDEM
-    survey the two rules differ little in volume, a mean of 4.68 gates per
-    station against 4.46, so the choice is about which gates survive rather than
-    how many.
+    Raises
+    ------
+    ValueError
+        No usable gates remain, or the rejection mode is unsupported.
     """
     status, std, _ = _gate_disposition(
         times, response, relative_std, flags, use_flags, max_relative_std,
@@ -214,8 +185,8 @@ def _temcompany_valid_channels(
     return t[mask], d[mask], (None if std is None else std[mask])
 
 
-#: Verdicts :func:`_gate_disposition` can return, worst-first after ``kept``.
-#: A gate carries exactly one, the first test it fails.
+#: Gate status labels. Dummy/file-flag exclusions take precedence; a sign
+#: verdict overrides a noise verdict when both tests apply.
 GATE_STATUS = (
     "kept",
     "dummy",             # non-finite, non-positive time, or a fill value
@@ -236,16 +207,13 @@ def _gate_disposition(
     gate_rejection: str = "truncate",
     reject_negative: bool = True,
 ) -> "tuple[np.ndarray, Optional[np.ndarray], np.ndarray]":
-    """Per-gate verdict of the selection, in file order.
+    """Classify gates without removing rows, using the same rules as the reader.
 
-    The selection itself is a mask, which is all an inversion needs. A reader
-    looking at a sounding wants the other half of it: which gates the file holds
-    that the run will not see, and which test removed each one. Both come from
-    here so that the two cannot drift apart, and the tests are applied in the
-    order :data:`GATE_STATUS` lists, each gate keeping the first verdict it earns.
-
-    Returns the verdicts, the cleaned relative errors over every gate (``None``
-    when the file carries none), and the raw values as read.
+    Returns (status, cleaned_relative_std, raw_response), truncated to the
+    shared time/response length. Missing errors produce None; invalid supplied
+    errors become NaN. Dummy and file-flag exclusions take precedence. The sign
+    check is independent of max_relative_std, and a negative
+    gate's "reversed sign" verdict overrides its noise verdict.
     """
     mode = _check_gate_rejection(gate_rejection)
     n = min(np.size(times), np.size(response))
@@ -265,18 +233,17 @@ def _gate_disposition(
         std = np.pad(std[:n], (0, max(0, n - std.size)), constant_values=np.nan)[:n]
         std[~np.isfinite(std) | (std < 0.0) | (std >= 9_000.0)] = np.nan
     live = status == "kept"
-    if max_relative_std is not None and live.any():
+    if live.any():
         kept = np.flatnonzero(live)                     # gate centres ascend
         errors = std[kept] if std is not None else np.full(kept.size, np.nan)
-        noisy = np.isfinite(errors) & (errors > float(max_relative_std))
+        noisy = (np.isfinite(errors) & (errors > float(max_relative_std))
+                 if max_relative_std is not None else np.zeros(kept.size, dtype=bool))
         reversed_sign = ((d[kept] < 0.0) if reject_negative
                          else np.zeros(kept.size, dtype=bool))
         carried = np.zeros(kept.size, dtype=bool)
         if mode == "truncate" and noisy.any():
-            # Truncation is an argument about the noise floor: the decay has
-            # reached it, and a later gate that still looks clean is a
-            # fluctuation above it rather than signal. So the noise test, and
-            # only the noise test, carries the rest of the sounding with it.
+            # Truncation applies a conservative noise-floor policy to later
+            # eligible gates. The sign test does not trigger truncation.
             first = int(np.argmax(noisy))
             carried[first:] = ~noisy[first:]
             noisy[first:] = True
@@ -431,21 +398,11 @@ def _temcompany_stored_thicknesses(
     """
     if int(n_layers) < 2:
         return None
-    try:
-        row = None
-        if inversion_name:
-            row = con.execute(
-                "SELECT Thickness FROM InversionModel WHERE InversionName = ? "
-                "LIMIT 1", (str(inversion_name),)).fetchone()
-        if row is None:
-            row = con.execute(
-                "SELECT Thickness FROM InversionModel LIMIT 1").fetchone()
-    except sqlite3.Error:
-        return None
-    if row is None or not row[0]:
+    raw = temcompany_project.read_stored_thicknesses(con, inversion_name)
+    if not raw:
         return None
     try:
-        stored = np.asarray(json.loads(row[0]), dtype=float).ravel()
+        stored = np.asarray(json.loads(raw), dtype=float).ravel()
     except (TypeError, ValueError, json.JSONDecodeError):
         return None
     # One thickness per layer but the last, which a fixed-layer model treats as
@@ -493,7 +450,17 @@ def _temcompany_auto_setting(
 
 
 def _temcompany_inversion_defaults(con: sqlite3.Connection) -> Dict[str, Any]:
-    """Read the inversion settings saved inside a TEMcompany project."""
+    """Read the inversion settings saved inside a TEMcompany project.
+
+    TEMImage 3 stores the solver input itself, so the settings a run used can be
+    read rather than reconstructed; see
+    :func:`PyHydroGeophysX.data_processing.temcompany_project.read_inversion_defaults`.
+    The block below is the older path, which reads a settings blob whose numbers
+    are sometimes inert.
+    """
+    from_solver = temcompany_project.read_inversion_defaults(con)
+    if from_solver:
+        return from_solver
     try:
         row = con.execute("SELECT * FROM UserSettingsJson ORDER BY 1 DESC LIMIT 1").fetchone()
         if row is None:
@@ -639,6 +606,15 @@ def _temcompany_protocol(folder: Path) -> Dict[str, Any]:
         value = number(name)
         if value is not None:
             result[key] = value
+    # The half-period of the bipolar cycle, in microseconds here and in seconds
+    # everywhere else. A project database carries it as {moment}WaveformPeriod
+    # and an XYZ export does not, so for an export this file is the only place
+    # the repetition correction can come from. See _temcompany_xyz_spec.
+    for key, name in (("period_lm", "LM_PeriodTime"),
+                      ("period_hm", "HM_PeriodTime")):
+        value = number(name)
+        if value is not None and value > 0.0:
+            result[key] = value * 1e-6
     if "AutoSignDetection" in values:
         result["auto_sign_detection"] = values["AutoSignDetection"]
     return result
@@ -953,119 +929,150 @@ def _temcompany_raw_lm_quality(row, spec):
     }
 
 
+#: How many surveys the two caches below keep, matching the project cache.
+_TEMCOMPANY_CACHE_LIMIT = temcompany_project.SURVEY_CACHE_LIMIT
+
+_TEMCOMPANY_DEFAULTS_CACHE: "OrderedDict[Any, Dict[str, Any]]" = OrderedDict()
+_TEMCOMPANY_SELECTION_CACHE: "OrderedDict[Any, List[Any]]" = OrderedDict()
+_TEMCOMPANY_CACHE_LOCK = threading.Lock()
+
+
+def clear_temcompany_caches() -> None:
+    """Forget every parsed and gate-selected survey.
+
+    For tests, and for a caller that rewrote a project between reads.
+    """
+    with _TEMCOMPANY_CACHE_LOCK:
+        _TEMCOMPANY_DEFAULTS_CACHE.clear()
+        _TEMCOMPANY_SELECTION_CACHE.clear()
+    temcompany_project.clear_survey_cache()
+
+
+def _remember(cache: "OrderedDict[Any, Any]", key: Any, value: Any) -> Any:
+    """Store *value* under *key*, dropping the oldest entry past the limit."""
+    with _TEMCOMPANY_CACHE_LOCK:
+        cache[key] = value
+        cache.move_to_end(key)
+        while len(cache) > _TEMCOMPANY_CACHE_LIMIT:
+            cache.popitem(last=False)
+    return value
+
+
+def _temcompany_survey(path: Path) -> "tuple[Dict[Any, Dict[str, Any]], List[Any], Dict[str, Any]]":
+    """Specs, station stacks and saved settings for a project, read once.
+
+    Every station of a line inversion asks for the same three things, and the
+    settings are the expensive one on a TEMImage 3 project: they are read out of
+    the solver input the run stored, which is a 1.4 MB JSON blob on a
+    140-station survey. Reading it once per station rather than once per survey
+    was measurable on its own.
+    """
+    specs, rows = temcompany_project.read_survey(path)
+    key = temcompany_project.file_key(temcompany_project.project_file(path))
+    defaults = _TEMCOMPANY_DEFAULTS_CACHE.get(key)
+    if defaults is None:
+        connection = temcompany_project.open_project(path)
+        try:
+            defaults = _temcompany_inversion_defaults(connection)
+        finally:
+            connection.close()
+        _remember(_TEMCOMPANY_DEFAULTS_CACHE, key, defaults)
+    return specs, rows, defaults
+
+
 def _load_temcompany_database(path: Path, sounding: int, moment: str,
                               use_flags: bool = True,
                               max_relative_std: Optional[float] = None,
                               gate_rejection: str = "truncate",
                               reject_negative: bool = False) -> Dict[str, Any]:
-    """Load one stacked sounding and project geometry from ``project.db``."""
+    """Load one stacked sounding and project geometry from a project file."""
     gate_rejection = _check_gate_rejection(gate_rejection)
-    uri = path.resolve().as_uri() + "?mode=ro"
-    con = sqlite3.connect(uri, uri=True)
-    con.row_factory = sqlite3.Row
-    try:
-        tables = {row[0] for row in con.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'")}
-        required = {"StationStackData", "RxTxSpecs"}
-        if not required.issubset(tables):
-            raise ValueError(
-                f"{path.name} is not a supported TEMcompany database "
-                f"(missing {', '.join(sorted(required - tables))}).")
-        specs = {
-            item["RxTxSpecsId"]: json.loads(item["RxTxSpecsJson"])
-            for item in con.execute("SELECT * FROM RxTxSpecs")
-            if item["RxTxSpecsJson"]
-        }
-        all_rows = list(con.execute(
-            "SELECT * FROM StationStackData "
-            "ORDER BY LineNumber, AveragedDataId"))
-        value_key = f"{moment}_VoltageValues"
-        rows = []
-        for candidate in all_rows:
-            if candidate[value_key] in (None, "", "[]"):
-                continue
-            candidate_spec = specs.get(
-                candidate["RxTxSpecsId"], next(iter(specs.values()), {}))
-            try:
-                _temcompany_valid_channels(
-                    np.asarray(candidate_spec.get(f"{moment}_GateCentreTime", []), dtype=float),
-                    _temcompany_json_array(candidate[value_key]),
-                    _temcompany_json_array(candidate[f"{moment}_VoltageValues_STD"]),
-                    _temcompany_json_array(candidate[f"{moment}_InUseFlags"]),
-                    use_flags, max_relative_std, gate_rejection,
-                    reject_negative,
-                )
-            except (ValueError, TypeError, json.JSONDecodeError):
-                continue
-            rows.append(candidate)
-        if not rows:
-            raise ValueError(f"No enabled {moment} station stacks were found in {path.name}.")
-        s = max(0, min(int(sounding), len(rows) - 1))
-        row = rows[s]
-        spec = specs.get(row["RxTxSpecsId"], next(iter(specs.values()), {}))
-        times = np.asarray(spec.get(f"{moment}_GateCentreTime", []), dtype=float)
-        response = _temcompany_json_array(row[value_key])
-        std = _temcompany_json_array(row[f"{moment}_VoltageValues_STD"])
-        flags = _temcompany_json_array(row[f"{moment}_InUseFlags"])
-        times, response, std = _temcompany_valid_channels(
-            times, response, std, flags, use_flags, max_relative_std,
-            gate_rejection, reject_negative)
+    specs, all_rows, saved_defaults = _temcompany_survey(path)
+    value_key = f"{moment}_VoltageValues"
+    rows = []
+    for candidate in all_rows:
+        if candidate[value_key] in (None, "", "[]"):
+            continue
+        candidate_spec = specs.get(
+            candidate["RxTxSpecsId"], next(iter(specs.values()), {}))
+        try:
+            _temcompany_valid_channels(
+                np.asarray(candidate_spec.get(f"{moment}_GateCentreTime", []), dtype=float),
+                _temcompany_json_array(candidate[value_key]),
+                _temcompany_json_array(candidate[f"{moment}_VoltageValues_STD"]),
+                _temcompany_json_array(candidate[f"{moment}_InUseFlags"]),
+                use_flags, max_relative_std, gate_rejection,
+                reject_negative,
+            )
+        except (ValueError, TypeError, json.JSONDecodeError):
+            continue
+        rows.append(candidate)
+    if not rows:
+        raise ValueError(f"No enabled {moment} station stacks were found in {path.name}.")
+    s = max(0, min(int(sounding), len(rows) - 1))
+    row = rows[s]
+    spec = specs.get(row["RxTxSpecsId"], next(iter(specs.values()), {}))
+    times = np.asarray(spec.get(f"{moment}_GateCentreTime", []), dtype=float)
+    response = _temcompany_json_array(row[value_key])
+    std = _temcompany_json_array(row[f"{moment}_VoltageValues_STD"])
+    flags = _temcompany_json_array(row[f"{moment}_InUseFlags"])
+    times, response, std = _temcompany_valid_channels(
+        times, response, std, flags, use_flags, max_relative_std,
+        gate_rejection, reject_negative)
 
-        x = np.asarray([item["UtmX"] for item in rows], dtype=float)
-        y = np.asarray([item["UtmY"] for item in rows], dtype=float)
-        elevation = _temcompany_column(rows, "Elevation")
-        heights = _temcompany_column(rows, "RxCoilHeight")
-        zone = spec.get("UTMZone")
-        zone_letter = str(spec.get("UTMZoneLetter", "") or "").strip()
-        coordinate_system = (
-            f"UTM zone {zone:g}{zone_letter}"
-            if isinstance(zone, (int, float)) else
-            f"UTM zone {zone}{zone_letter}" if zone not in (None, "") else "UTM"
-        )
-        protocol = _temcompany_protocol(path.parent)
-        system = _temcompany_system(spec, row)
-        result: Dict[str, Any] = {
-            "times": times,
-            "response": response,
-            "n_soundings": len(rows),
-            "sounding": s,
-            "relative_std": std,
-            "uniform_error": _temcompany_uniform_error(protocol),
-            "raw_lm_quality": _temcompany_raw_lm_quality(row, spec),
-            "positions": _temcompany_positions(x, y),
-            "x": x,
-            "y": y,
-            # Kept alongside the UTM pair so a map view can place imagery
-            # without a projection library (see visualization.basemap).
-            "longitude": _temcompany_column(rows, "Longitude"),
-            "latitude": _temcompany_column(rows, "Latitude"),
-            "elevation": elevation,
-            "heights": heights,
-            "line_numbers": np.asarray([item["LineNumber"] for item in rows], dtype=int),
-            "station_ids": np.asarray([str(item["StationId"]) for item in rows]),
-            "transmitter": _temcompany_transmitter(spec, moment),
-            "temcompany": True,
-            "tem_moment": moment,
-            "source_format": "TEMcompany project database",
-            "coordinate_system": coordinate_system,
-            "system": system,
-            "rx_tx_distances": _temcompany_column(rows, "RxTxDistance"),
-            "rx_heights": _temcompany_column(rows, "RxCoilHeight"),
-            "tx_heights": _temcompany_column(rows, "TxCoilHeight"),
-            "inversion_defaults": (_temcompany_inversion_defaults(con)
-                                   or suggest_layer_grid(times)),
-            "protocol": protocol,
-            "forward_metadata": _temcompany_forward_metadata(
-                spec, system, (moment,), protocol,
-                {"use_flags": bool(use_flags),
-                 "max_relative_std": max_relative_std,
-                 "gate_rejection": gate_rejection,
-                 "reject_negative": bool(reject_negative),
-                 "gates_kept": int(np.size(times))}),
-        }
-        return result
-    finally:
-        con.close()
+    x = np.asarray([item["UtmX"] for item in rows], dtype=float)
+    y = np.asarray([item["UtmY"] for item in rows], dtype=float)
+    elevation = _temcompany_column(rows, "Elevation")
+    heights = _temcompany_column(rows, "RxCoilHeight")
+    zone = spec.get("UTMZone")
+    zone_letter = str(spec.get("UTMZoneLetter", "") or "").strip()
+    coordinate_system = (
+        f"UTM zone {zone:g}{zone_letter}"
+        if isinstance(zone, (int, float)) else
+        f"UTM zone {zone}{zone_letter}" if zone not in (None, "") else "UTM"
+    )
+    protocol = _temcompany_protocol(path.parent)
+    system = _temcompany_system(spec, row)
+    result: Dict[str, Any] = {
+        "times": times,
+        "response": response,
+        "n_soundings": len(rows),
+        "sounding": s,
+        "relative_std": std,
+        "uniform_error": _temcompany_uniform_error(protocol),
+        "raw_lm_quality": _temcompany_raw_lm_quality(row, spec),
+        "positions": _temcompany_positions(x, y),
+        "x": x,
+        "y": y,
+        # Kept alongside the UTM pair so a map view can place imagery
+        # without a projection library (see visualization.basemap).
+        "longitude": _temcompany_column(rows, "Longitude"),
+        "latitude": _temcompany_column(rows, "Latitude"),
+        "elevation": elevation,
+        "heights": heights,
+        "line_numbers": np.asarray([item["LineNumber"] for item in rows], dtype=int),
+        "station_ids": np.asarray([str(item["StationId"]) for item in rows]),
+        "transmitter": _temcompany_transmitter(spec, moment),
+        "temcompany": True,
+        "tem_moment": moment,
+        "source_format": "TEMcompany project database",
+        "coordinate_system": coordinate_system,
+        "system": system,
+        "rx_tx_distances": _temcompany_column(rows, "RxTxDistance"),
+        "rx_heights": _temcompany_column(rows, "RxCoilHeight"),
+        "tx_heights": _temcompany_column(rows, "TxCoilHeight"),
+        "inversion_defaults": (saved_defaults
+                               or suggest_layer_grid(times)),
+        "protocol": protocol,
+        "forward_metadata": _temcompany_forward_metadata(
+            spec, system, (moment,), protocol,
+            {"use_flags": bool(use_flags),
+             "max_relative_std": max_relative_std,
+             "gate_rejection": gate_rejection,
+             "reject_negative": bool(reject_negative),
+             "gates_kept": int(np.size(times))}),
+    }
+    return result
 
 
 def _load_temcompany_joint_database(path: Path, sounding: int,
@@ -1091,21 +1098,24 @@ def _load_temcompany_joint_database(path: Path, sounding: int,
     gates, and left 7 of them with no data at all.
     """
     gate_rejection = _check_gate_rejection(gate_rejection)
-    uri = path.resolve().as_uri() + "?mode=ro"
-    con = sqlite3.connect(uri, uri=True)
-    con.row_factory = sqlite3.Row
-    try:
-        specs = {
-            item["RxTxSpecsId"]: json.loads(item["RxTxSpecsJson"])
-            for item in con.execute("SELECT * FROM RxTxSpecs")
-            if item["RxTxSpecsJson"]
-        }
-        protocol = _temcompany_protocol(path.parent)
-        uniform_error = _temcompany_uniform_error(protocol)
-        entries: List["tuple[sqlite3.Row, Dict[str, Dict[str, np.ndarray]]]"] = []
-        for row in con.execute(
-            "SELECT * FROM StationStackData ORDER BY LineNumber, AveragedDataId"
-        ):
+    specs, all_rows, saved_defaults = _temcompany_survey(path)
+    protocol = _temcompany_protocol(path.parent)
+    uniform_error = _temcompany_uniform_error(protocol)
+
+    # The gate selection below is a property of the survey and the settings, not
+    # of the station being asked for, and a line inversion asks 140 times for
+    # the same answer. Keyed on the file and on every setting that can change
+    # which gates survive.
+    selection_key = (
+        temcompany_project.file_key(temcompany_project.project_file(path)),
+        bool(use_flags), max_relative_std, gate_rejection,
+        bool(reject_negative),
+        tuple(sorted((min_gates_per_moment or {}).items())),
+    )
+    entries = _TEMCOMPANY_SELECTION_CACHE.get(selection_key)
+    if entries is None:
+        entries = []
+        for row in all_rows:
             spec = specs.get(row["RxTxSpecsId"], next(iter(specs.values()), {}))
             moments: Dict[str, Dict[str, np.ndarray]] = {}
             for selected in ("LM", "HM"):
@@ -1136,74 +1146,73 @@ def _load_temcompany_joint_database(path: Path, sounding: int,
                 }
             if moments:
                 entries.append((row, moments))
-        if not entries:
-            raise ValueError(f"No enabled LM/HM station stacks were found in {path.name}.")
+        _remember(_TEMCOMPANY_SELECTION_CACHE, selection_key, entries)
+    if not entries:
+        raise ValueError(f"No enabled LM/HM station stacks were found in {path.name}.")
 
-        index = max(0, min(int(sounding), len(entries) - 1))
-        row, moments = entries[index]
-        spec = specs.get(row["RxTxSpecsId"], next(iter(specs.values()), {}))
-        station_system = _temcompany_system(spec, row)
-        preview_name = "HM" if "HM" in moments else "LM"
-        preview = moments[preview_name]
-        rows = [entry[0] for entry in entries]
-        x = np.asarray([item["UtmX"] for item in rows], dtype=float)
-        y = np.asarray([item["UtmY"] for item in rows], dtype=float)
-        zone = spec.get("UTMZone")
-        zone_letter = str(spec.get("UTMZoneLetter", "") or "").strip()
-        coordinate_system = (
-            f"UTM zone {zone:g}{zone_letter}"
-            if isinstance(zone, (int, float)) else
-            f"UTM zone {zone}{zone_letter}" if zone not in (None, "") else "UTM"
-        )
-        return {
-            "times": preview["times"],
-            "response": preview["response"],
-            "relative_std": preview["relative_std"],
-            "uniform_error": uniform_error,
-            "moments": moments,
-            "raw_lm_quality": _temcompany_raw_lm_quality(row, spec),
-            "available_moments": tuple(moments),
-            "n_soundings": len(entries),
-            "sounding": index,
-            "positions": _temcompany_positions(x, y),
-            "x": x,
-            "y": y,
-            "longitude": _temcompany_column(rows, "Longitude"),
-            "latitude": _temcompany_column(rows, "Latitude"),
-            "elevation": _temcompany_column(rows, "Elevation"),
-            "heights": _temcompany_column(rows, "RxCoilHeight"),
-            "line_numbers": np.asarray([item["LineNumber"] for item in rows], dtype=int),
-            "station_ids": np.asarray([str(item["StationId"]) for item in rows]),
-            "average_data_ids": np.asarray(
-                [item["AveragedDataId"] for item in rows], dtype=int),
-            "temcompany": True,
-            "tem_moment": "LM+HM",
-            "source_format": "TEMcompany project database",
-            "coordinate_system": coordinate_system,
-            "system": station_system,
-            "rx_tx_distances": _temcompany_column(rows, "RxTxDistance"),
-            "rx_heights": _temcompany_column(rows, "RxCoilHeight"),
-            "tx_heights": _temcompany_column(rows, "TxCoilHeight"),
-            # The instrument's whole gate set, not this station's surviving
-            # subset, because the default grid is a property of the survey.
-            "inversion_defaults": (
-                _temcompany_inversion_defaults(con)
-                or suggest_layer_grid(np.concatenate([
-                    np.asarray(spec.get(f"{name}_GateCentreTime", []), dtype=float)
-                    for name in ("LM", "HM")
-                ] + [preview["times"]]))),
-            "protocol": protocol,
-            "forward_metadata": _temcompany_forward_metadata(
-                spec, station_system, tuple(moments), protocol,
-                {"use_flags": bool(use_flags),
-                 "max_relative_std": max_relative_std,
-                 "gate_rejection": gate_rejection,
-                 "reject_negative": bool(reject_negative),
-                 "gates_kept": {name: int(np.size(block["times"]))
-                                for name, block in moments.items()}}),
-        }
-    finally:
-        con.close()
+    index = max(0, min(int(sounding), len(entries) - 1))
+    row, moments = entries[index]
+    spec = specs.get(row["RxTxSpecsId"], next(iter(specs.values()), {}))
+    station_system = _temcompany_system(spec, row)
+    preview_name = "HM" if "HM" in moments else "LM"
+    preview = moments[preview_name]
+    rows = [entry[0] for entry in entries]
+    x = np.asarray([item["UtmX"] for item in rows], dtype=float)
+    y = np.asarray([item["UtmY"] for item in rows], dtype=float)
+    zone = spec.get("UTMZone")
+    zone_letter = str(spec.get("UTMZoneLetter", "") or "").strip()
+    coordinate_system = (
+        f"UTM zone {zone:g}{zone_letter}"
+        if isinstance(zone, (int, float)) else
+        f"UTM zone {zone}{zone_letter}" if zone not in (None, "") else "UTM"
+    )
+    return {
+        "times": preview["times"],
+        "response": preview["response"],
+        "relative_std": preview["relative_std"],
+        "uniform_error": uniform_error,
+        "moments": moments,
+        "raw_lm_quality": _temcompany_raw_lm_quality(row, spec),
+        "available_moments": tuple(moments),
+        "n_soundings": len(entries),
+        "sounding": index,
+        "positions": _temcompany_positions(x, y),
+        "x": x,
+        "y": y,
+        "longitude": _temcompany_column(rows, "Longitude"),
+        "latitude": _temcompany_column(rows, "Latitude"),
+        "elevation": _temcompany_column(rows, "Elevation"),
+        "heights": _temcompany_column(rows, "RxCoilHeight"),
+        "line_numbers": np.asarray([item["LineNumber"] for item in rows], dtype=int),
+        "station_ids": np.asarray([str(item["StationId"]) for item in rows]),
+        "average_data_ids": np.asarray(
+            [item["AveragedDataId"] for item in rows], dtype=int),
+        "temcompany": True,
+        "tem_moment": "LM+HM",
+        "source_format": "TEMcompany project database",
+        "coordinate_system": coordinate_system,
+        "system": station_system,
+        "rx_tx_distances": _temcompany_column(rows, "RxTxDistance"),
+        "rx_heights": _temcompany_column(rows, "RxCoilHeight"),
+        "tx_heights": _temcompany_column(rows, "TxCoilHeight"),
+        # The instrument's whole gate set, not this station's surviving
+        # subset, because the default grid is a property of the survey.
+        "inversion_defaults": (
+            saved_defaults
+            or suggest_layer_grid(np.concatenate([
+                np.asarray(spec.get(f"{name}_GateCentreTime", []), dtype=float)
+                for name in ("LM", "HM")
+            ] + [preview["times"]]))),
+        "protocol": protocol,
+        "forward_metadata": _temcompany_forward_metadata(
+            spec, station_system, tuple(moments), protocol,
+            {"use_flags": bool(use_flags),
+             "max_relative_std": max_relative_std,
+             "gate_rejection": gate_rejection,
+             "reject_negative": bool(reject_negative),
+             "gates_kept": {name: int(np.size(block["times"]))
+                            for name, block in moments.items()}}),
+    }
 
 
 def gate_report(
@@ -1229,78 +1238,67 @@ def gate_report(
     settings, so a station number here and one there mean the same station. A
     station the settings empty is absent from both.
     """
-    source = Path(path)
-    if source.is_dir():
-        source = source / "project.db"
+    try:
+        source = temcompany_project.project_file(path)
+    except ValueError as error:
+        raise FileNotFoundError(str(error)) from error
     if not source.exists():
-        raise FileNotFoundError(f"No TEMcompany project database at {source}.")
+        raise FileNotFoundError(f"No TEMcompany project file at {source}.")
     selected_moment = _normalise_temcompany_moment(moment)
     wanted = ("LM", "HM") if selected_moment == "LM+HM" else (selected_moment,)
     gate_rejection = _check_gate_rejection(gate_rejection)
 
-    uri = source.resolve().as_uri() + "?mode=ro"
-    con = sqlite3.connect(uri, uri=True)
-    con.row_factory = sqlite3.Row
-    try:
-        specs = {
-            item["RxTxSpecsId"]: json.loads(item["RxTxSpecsJson"])
-            for item in con.execute("SELECT * FROM RxTxSpecs")
-            if item["RxTxSpecsJson"]
-        }
-        kept_rows: List[Any] = []
-        for row in con.execute(
-            "SELECT * FROM StationStackData ORDER BY LineNumber, AveragedDataId"
-        ):
-            spec = specs.get(row["RxTxSpecsId"], next(iter(specs.values()), {}))
-            if any(_gate_verdicts(row, spec, name, use_flags, max_relative_std,
-                                  gate_rejection, reject_negative)[0] is not None
-                   for name in wanted):
-                kept_rows.append(row)
-        if not kept_rows:
-            raise ValueError(f"No enabled station stacks were found in {source.name}.")
-        index = max(0, min(int(sounding), len(kept_rows) - 1))
-        row = kept_rows[index]
+    specs, all_rows = temcompany_project.read_survey(source)
+    kept_rows: List[Any] = []
+    for row in all_rows:
         spec = specs.get(row["RxTxSpecsId"], next(iter(specs.values()), {}))
+        if any(_gate_verdicts(row, spec, name, use_flags, max_relative_std,
+                              gate_rejection, reject_negative)[0] is not None
+               for name in wanted):
+            kept_rows.append(row)
+    if not kept_rows:
+        raise ValueError(f"No enabled station stacks were found in {source.name}.")
+    index = max(0, min(int(sounding), len(kept_rows) - 1))
+    row = kept_rows[index]
+    spec = specs.get(row["RxTxSpecsId"], next(iter(specs.values()), {}))
 
-        moments: Dict[str, Dict[str, Any]] = {}
-        for name in wanted:
-            report, values = _gate_verdicts(
-                row, spec, name, use_flags, max_relative_std, gate_rejection,
-                reject_negative)
-            if report is None:
-                continue
-            status, std = report
-            moments[name] = {
-                "times": np.asarray(spec.get(f"{name}_GateCentreTime", []),
-                                    dtype=float)[:status.size],
-                "open": np.asarray(spec.get(f"{name}_GateOpenTime", []),
-                                   dtype=float)[:status.size],
-                "close": np.asarray(spec.get(f"{name}_GateCloseTime", []),
-                                    dtype=float)[:status.size],
-                "values": values,
-                "relative_std": (std if std is not None
-                                 else np.full(status.size, np.nan)),
-                "flags": _temcompany_json_array(row[f"{name}_InUseFlags"]),
-                "status": status,
-                "held": int(status.size),
-                "kept": int(np.count_nonzero(status == "kept")),
-            }
-        return {
-            "station": str(row["StationId"]),
-            "line": int(row["LineNumber"]),
-            "sounding": index,
-            "n_soundings": len(kept_rows),
-            "moments": moments,
-            "settings": {
-                "moment": selected_moment,
-                "use_flags": bool(use_flags),
-                "max_relative_std": max_relative_std,
-                "gate_rejection": gate_rejection,
-                "reject_negative": bool(reject_negative),
-            },
+    moments: Dict[str, Dict[str, Any]] = {}
+    for name in wanted:
+        report, values = _gate_verdicts(
+            row, spec, name, use_flags, max_relative_std, gate_rejection,
+            reject_negative)
+        if report is None:
+            continue
+        status, std = report
+        moments[name] = {
+            "times": np.asarray(spec.get(f"{name}_GateCentreTime", []),
+                                dtype=float)[:status.size],
+            "open": np.asarray(spec.get(f"{name}_GateOpenTime", []),
+                               dtype=float)[:status.size],
+            "close": np.asarray(spec.get(f"{name}_GateCloseTime", []),
+                                dtype=float)[:status.size],
+            "values": values,
+            "relative_std": (std if std is not None
+                             else np.full(status.size, np.nan)),
+            "flags": _temcompany_json_array(row[f"{name}_InUseFlags"]),
+            "status": status,
+            "held": int(status.size),
+            "kept": int(np.count_nonzero(status == "kept")),
         }
-    finally:
-        con.close()
+    return {
+        "station": str(row["StationId"]),
+        "line": int(row["LineNumber"]),
+        "sounding": index,
+        "n_soundings": len(kept_rows),
+        "moments": moments,
+        "settings": {
+            "moment": selected_moment,
+            "use_flags": bool(use_flags),
+            "max_relative_std": max_relative_std,
+            "gate_rejection": gate_rejection,
+            "reject_negative": bool(reject_negative),
+        },
+    }
 
 
 def _gate_verdicts(row, spec, moment, use_flags, max_relative_std,
@@ -1393,74 +1391,66 @@ def survey_summary(
     selected_moment = _normalise_temcompany_moment(moment)
     wanted = ("LM", "HM") if selected_moment == "LM+HM" else (selected_moment,)
     source = Path(path)
-    database = source if source.is_file() else source / "project.db"
+    try:
+        database = temcompany_project.project_file(source)
+    except ValueError as error:
+        raise ValueError(f"{source} holds no project file to summarise.") from error
     if not database.is_file():
-        raise ValueError(f"{source} holds no project.db to summarise.")
+        raise ValueError(f"{source} holds no project file to summarise.")
 
-    connection = sqlite3.connect(database.resolve().as_uri() + "?mode=ro", uri=True)
-    connection.row_factory = sqlite3.Row
     rows: List[Dict[str, Any]] = []
     held = kept = 0
-    try:
-        specs = {
-            item["RxTxSpecsId"]: json.loads(item["RxTxSpecsJson"])
-            for item in connection.execute("SELECT * FROM RxTxSpecs")
-            if item["RxTxSpecsJson"]
+    specs, all_rows = temcompany_project.read_survey(database)
+    for row in all_rows:
+        spec = specs.get(row["RxTxSpecsId"], next(iter(specs.values()), {}))
+        entry: Dict[str, Any] = {
+            "station": str(row["StationId"]),
+            "line": int(row["LineNumber"]),
+            "average_data_id": int(row["AveragedDataId"]),
+            "x": _temcompany_row_value(row, "UtmX"),
+            "y": _temcompany_row_value(row, "UtmY"),
+            "longitude": _temcompany_row_value(row, "Longitude"),
+            "latitude": _temcompany_row_value(row, "Latitude"),
+            "elevation": _temcompany_row_value(row, "Elevation"),
+            "rx_tx_distance": _temcompany_row_value(row, "RxTxDistance"),
+            "rx_height": _temcompany_row_value(row, "RxCoilHeight"),
+            "tx_height": _temcompany_row_value(row, "TxCoilHeight"),
         }
-        for row in connection.execute(
-            "SELECT * FROM StationStackData ORDER BY LineNumber, AveragedDataId"
-        ):
-            spec = specs.get(row["RxTxSpecsId"], next(iter(specs.values()), {}))
-            entry: Dict[str, Any] = {
-                "station": str(row["StationId"]),
-                "line": int(row["LineNumber"]),
-                "average_data_id": int(row["AveragedDataId"]),
-                "x": _temcompany_row_value(row, "UtmX"),
-                "y": _temcompany_row_value(row, "UtmY"),
-                "longitude": _temcompany_row_value(row, "Longitude"),
-                "latitude": _temcompany_row_value(row, "Latitude"),
-                "elevation": _temcompany_row_value(row, "Elevation"),
-                "rx_tx_distance": _temcompany_row_value(row, "RxTxDistance"),
-                "rx_height": _temcompany_row_value(row, "RxCoilHeight"),
-                "tx_height": _temcompany_row_value(row, "TxCoilHeight"),
-            }
-            total_kept = 0
-            for name in wanted:
-                stored = _temcompany_json_array(row[f"{name}_VoltageValues"])
-                entry[f"{name}_gates_held"] = int(stored.size)
-                held += int(stored.size)
-                gate_times = np.asarray(
-                    spec.get(f"{name}_GateCentreTime", []), dtype=float)
-                signal, noise, at = _reference_gate_signal(
-                    stored, _temcompany_json_array(row[f"{name}_VoltageValues_STD"]),
-                    gate_times, reference_gate)
-                entry[f"{name}_signal"] = signal
-                entry[f"{name}_noise"] = noise
-                entry[f"{name}_reference_time"] = at
-                try:
-                    times, _, std = _temcompany_valid_channels(
-                        np.asarray(spec.get(f"{name}_GateCentreTime", []), dtype=float),
-                        stored,
-                        _temcompany_json_array(row[f"{name}_VoltageValues_STD"]),
-                        _temcompany_json_array(row[f"{name}_InUseFlags"]),
-                        use_flags, max_relative_std, gate_rejection,
-                        reject_negative,
-                    )
-                except (ValueError, TypeError, json.JSONDecodeError):
-                    entry[f"{name}_gates_kept"] = 0
-                    entry[f"{name}_median_std"] = float("nan")
-                    continue
-                errors = np.asarray(std, dtype=float) if std is not None else np.array([])
-                errors = errors[np.isfinite(errors)]
-                entry[f"{name}_gates_kept"] = int(times.size)
-                entry[f"{name}_median_std"] = (float(np.median(errors))
-                                               if errors.size else float("nan"))
-                total_kept += int(times.size)
-                kept += int(times.size)
-            entry["gates_kept"] = total_kept
-            rows.append(entry)
-    finally:
-        connection.close()
+        total_kept = 0
+        for name in wanted:
+            stored = _temcompany_json_array(row[f"{name}_VoltageValues"])
+            entry[f"{name}_gates_held"] = int(stored.size)
+            held += int(stored.size)
+            gate_times = np.asarray(
+                spec.get(f"{name}_GateCentreTime", []), dtype=float)
+            signal, noise, at = _reference_gate_signal(
+                stored, _temcompany_json_array(row[f"{name}_VoltageValues_STD"]),
+                gate_times, reference_gate)
+            entry[f"{name}_signal"] = signal
+            entry[f"{name}_noise"] = noise
+            entry[f"{name}_reference_time"] = at
+            try:
+                times, _, std = _temcompany_valid_channels(
+                    np.asarray(spec.get(f"{name}_GateCentreTime", []), dtype=float),
+                    stored,
+                    _temcompany_json_array(row[f"{name}_VoltageValues_STD"]),
+                    _temcompany_json_array(row[f"{name}_InUseFlags"]),
+                    use_flags, max_relative_std, gate_rejection,
+                    reject_negative,
+                )
+            except (ValueError, TypeError, json.JSONDecodeError):
+                entry[f"{name}_gates_kept"] = 0
+                entry[f"{name}_median_std"] = float("nan")
+                continue
+            errors = np.asarray(std, dtype=float) if std is not None else np.array([])
+            errors = errors[np.isfinite(errors)]
+            entry[f"{name}_gates_kept"] = int(times.size)
+            entry[f"{name}_median_std"] = (float(np.median(errors))
+                                           if errors.size else float("nan"))
+            total_kept += int(times.size)
+            kept += int(times.size)
+        entry["gates_kept"] = total_kept
+        rows.append(entry)
 
     usable = sum(1 for item in rows if item["gates_kept"] > 0)
     return {
@@ -1526,6 +1516,72 @@ def _temcompany_baked_uniform_error(std: Optional[np.ndarray]) -> float:
     return floor if values.min() <= floor * (1.0 + 1e-3) else 0.0
 
 
+def _temcompany_xyz_spec(comments: List[str],
+                         protocol: Mapping[str, Any]) -> Dict[str, Any]:
+    """The instrument description an XYZ export carries, in the spec namespace.
+
+    A station export is not the thin thing it looks like. Its comment block
+    states the turn-off waveform of both moments as (time, amplitude) nodes, the
+    open, centre and close time of every gate, the receiver's first-order filter
+    corners, and the loop and coil geometry. That is everything
+    :func:`_temcompany_transmitter` and :func:`_temcompany_system` read out of a
+    project's ``RxTxSpecs``, under different names, so translating the names is
+    all that stands between an export and the same forward the project path
+    gets.
+
+    It was worth doing rather than leaving the export on a bare step-off. The
+    analog filter alone is 16 to 28 percent of the low moment's early amplitude,
+    and the gate window a further 3 to 6 percent, both measured in
+    ``local_plans/temcompany_forward_alignment.md``.
+
+    Two fields are not in the export and come from the ``.sts`` protocol beside
+    it: the half-period of the bipolar cycle, without which the repetition
+    correction cannot run, and the gate window shape and taper. A project copied
+    without its protocol therefore models no repetition and a centre-time gate,
+    which is what an export alone can support; ``forward_metadata`` records
+    which of the two happened.
+    """
+    spec: Dict[str, Any] = {}
+    for moment in ("LM", "HM"):
+        for key, label in (
+            (f"{moment}_GateOpenTime", f"{moment}_GateOpenTime"),
+            (f"{moment}_GateCentreTime", f"{moment}_GateCentreTime"),
+            (f"{moment}_GateCloseTime", f"{moment}_GateCloseTime"),
+            (f"{moment}WaveformTime", f"{moment}_WaveformTime"),
+            (f"{moment}WaveformAmplitude", f"{moment}_WaveformAmplitude"),
+        ):
+            values = _temcompany_comment_values(comments, label)
+            if values.size:
+                spec[key] = values
+        period = protocol.get(f"period_{moment.lower()}")
+        if period:
+            spec[f"{moment}WaveformPeriod"] = float(period)
+        spec[f"{moment}_GateTimeShift"] = 0.0
+
+    cutoffs = _temcompany_comment_values(comments, "Cutoff Frequencies")
+    if cutoffs.size:
+        spec["LPFilter_1order"] = cutoffs
+
+    area = _temcompany_comment_scalar(comments, "LoopArea (m2)", 0.0)
+    loop_x = _temcompany_comment_scalar(comments, "LoopX (m)", 0.0)
+    loop_y = _temcompany_comment_scalar(comments, "LoopY (m)", 0.0)
+    height = _temcompany_comment_scalar(comments, "LoopZ (m)", 0.0)
+    rx_x = _temcompany_comment_scalar(comments, "RXcoil X-Position (m)", 0.0)
+    if area <= 0.0:
+        area = abs(loop_x * loop_y)
+    spec["TxLoopArea"] = area
+    spec["TxLoopXYlength"] = [loop_x, loop_y]
+    spec["TxLoopXYZPos"] = [0.0, 0.0, height]
+    spec["RxCoilXYZPos"] = [rx_x, 0.0, height]
+    spec["NTurnsTxLoop"] = int(_temcompany_comment_scalar(comments, "LoopTurns", 1.0))
+    for key, name in (("GateShape", "gate_window_shape"),
+                      ("GateShapePar1", "gate_window_par")):
+        value = protocol.get(name)
+        if value is not None:
+            spec[key] = value
+    return spec
+
+
 def _load_temcompany_xyz(path: Path, sounding: int, moment: str) -> Dict[str, Any]:
     """Load TEMcompany station-stacked or raw ``*.xyz`` text exports."""
     lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
@@ -1547,6 +1603,14 @@ def _load_temcompany_xyz(path: Path, sounding: int, moment: str) -> Dict[str, An
         raise ValueError(f"No TEMcompany data records were found in {path.name}.")
     columns = {name.lower(): index for index, name in enumerate(header)}
     raw_export = "channel" in columns
+    joint = moment == "LM+HM"
+    if joint and raw_export:
+        raise ValueError(
+            f"{path.name} is a raw XYZ export, which stores one moment per "
+            "record, so LM and HM cannot be paired by station. Select HM or "
+            "LM, or use a *_StationData.xyz export.")
+    wanted = ("LM", "HM") if joint else (moment,)
+    preview_moment = "HM" if joint else moment
     if raw_export:
         channel_index = columns["channel"]
         records = [row for row in records if row[channel_index].upper() == moment]
@@ -1554,16 +1618,19 @@ def _load_temcompany_xyz(path: Path, sounding: int, moment: str) -> Dict[str, An
         std_names: List[str] = []
         station_name = "station-id"
     else:
-        gate_names = [name for name in header if name.lower().startswith(moment.lower() + "gate")]
-        std_names = [name for name in header if name.lower().startswith(moment.lower() + "std")]
+        gate_names = [name for name in header
+                      if name.lower().startswith(preview_moment.lower() + "gate")]
+        std_names = [name for name in header
+                     if name.lower().startswith(preview_moment.lower() + "std")]
         station_name = "station"
     if not records or not gate_names:
-        raise ValueError(f"No {moment} gates were found in {path.name}.")
+        raise ValueError(f"No {preview_moment} gates were found in {path.name}.")
     gate_names.sort(key=lambda name: int("".join(filter(str.isdigit, name)) or 0))
     std_names.sort(key=lambda name: int("".join(filter(str.isdigit, name)) or 0))
-    times = _temcompany_comment_values(comments, f"{moment}_GateCentreTime")
+    times = _temcompany_comment_values(comments, f"{preview_moment}_GateCentreTime")
     if not times.size:
-        raise ValueError(f"{moment} gate centre times are missing from {path.name}.")
+        raise ValueError(
+            f"{preview_moment} gate centre times are missing from {path.name}.")
 
     def numeric(name: str, row: List[str], default: float = np.nan) -> float:
         index = columns.get(name.lower())
@@ -1583,47 +1650,75 @@ def _load_temcompany_xyz(path: Path, sounding: int, moment: str) -> Dict[str, An
     earth_radius = 6_371_000.0
     x = np.deg2rad(lon - lon0) * earth_radius * math.cos(math.radians(lat0))
     y = np.deg2rad(lat - lat0) * earth_radius
-    s = max(0, min(int(sounding), len(records) - 1))
-    row = records[s]
-    response = np.asarray([numeric(name, row) for name in gate_names], dtype=float)
-    std = (np.asarray([numeric(name, row) for name in std_names], dtype=float)
-           if std_names else None)
-    times, response, std = _temcompany_valid_channels(times, response, std)
+    protocol = _temcompany_protocol(path.parent)
+    spec = _temcompany_xyz_spec(comments, protocol)
 
-    area = _temcompany_comment_scalar(comments, "LoopArea (m2)", 0.0)
-    loop_x = _temcompany_comment_scalar(comments, "LoopX (m)", 0.0)
-    loop_y = _temcompany_comment_scalar(comments, "LoopY (m)", 0.0)
-    if area <= 0.0:
-        area = abs(loop_x * loop_y)
-    rx_x = _temcompany_comment_scalar(comments, "RXcoil X-Position (m)", 0.0)
+    def gates_for(name: str, row: List[str]):
+        """One moment's surviving gates for one record, or ``None``."""
+        if raw_export:
+            picked, errors = gate_names, std_names
+        else:
+            picked = sorted(
+                (item for item in header
+                 if item.lower().startswith(name.lower() + "gate")),
+                key=lambda item: int("".join(filter(str.isdigit, item)) or 0))
+            errors = sorted(
+                (item for item in header
+                 if item.lower().startswith(name.lower() + "std")),
+                key=lambda item: int("".join(filter(str.isdigit, item)) or 0))
+        centres = _temcompany_comment_values(comments, f"{name}_GateCentreTime")
+        if not picked or not centres.size:
+            return None
+        values = np.asarray([numeric(item, row) for item in picked], dtype=float)
+        errs = (np.asarray([numeric(item, row) for item in errors], dtype=float)
+                if errors else None)
+        try:
+            return _temcompany_valid_channels(centres, values, errs)
+        except (ValueError, TypeError):
+            return None
+
+    # Which records carry something usable, so a station the export left empty
+    # is absent from the count and from the picker rather than selectable and
+    # broken. This mirrors what the project reader does.
+    usable = [index for index, item in enumerate(records)
+              if any(gates_for(name, item) is not None for name in wanted)]
+    if not usable:
+        raise ValueError(
+            f"No usable {' or '.join(wanted)} gates were found in {path.name}.")
+    s = max(0, min(int(sounding), len(usable) - 1))
+    row = records[usable[s]]
+    records = [records[index] for index in usable]
+    x, y, lat, lon, elevation = (value[usable] for value in
+                                 (x, y, lat, lon, elevation))
+
+    moments: Dict[str, Dict[str, Any]] = {}
+    for name in wanted:
+        found = gates_for(name, row)
+        if found is None:
+            continue
+        moment_times, moment_response, moment_std = found
+        moments[name] = {
+            "times": moment_times,
+            "response": moment_response,
+            "transmitter": _temcompany_transmitter(spec, name),
+            "relative_std": (np.asarray(moment_std, dtype=float)
+                             if moment_std is not None
+                             else np.array([], dtype=float)),
+            "uniform_error": _temcompany_baked_uniform_error(moment_std),
+        }
+    preview = moments.get(preview_moment) or next(iter(moments.values()))
+
     height = _temcompany_comment_scalar(comments, "LoopZ (m)", 0.0)
-    system = {
-        "source_radius": math.sqrt(area / math.pi) if area > 0.0 else 10.0,
-        "tx_rx_sep": abs(rx_x),
-        "height": height,
-        "orientation": "z",
-        "waveform": "step_off",
-        "receiver_type": "dbdt",
-        "response_sign": -1.0,
-        "data_scale": 1.0,
-        "auto_scale": False,
-        "loop_area": area,
-        "loop_turns": int(_temcompany_comment_scalar(comments, "LoopTurns", 1.0)),
-        # The export is dB/dt already divided by the transmitter moment
-        # (V/A/m^4), so the forward has to model a UNIT moment. Modelling the
-        # real moment on top counts it twice: on this instrument that is a
-        # factor turns * area = 1.59, and the inversion pays for it by raising
-        # every recovered resistivity to bring the amplitude back down.
-        "source_moment": 1.0,
-    }
+    system = _temcompany_system(spec, None)
     station_index = columns.get(station_name)
-    return {
-        "times": times,
-        "response": response,
+    result: Dict[str, Any] = {
+        "times": preview["times"],
+        "response": preview["response"],
         "n_soundings": len(records),
         "sounding": s,
-        "relative_std": std,
-        "uniform_error": _temcompany_baked_uniform_error(std),
+        "relative_std": preview["relative_std"],
+        "uniform_error": preview["uniform_error"],
+        "transmitter": preview["transmitter"],
         "positions": _temcompany_positions(x, y),
         "x": x,
         "y": y,
@@ -1642,9 +1737,173 @@ def _load_temcompany_xyz(path: Path, sounding: int, moment: str) -> Dict[str, An
         "source_format": "TEMcompany raw XYZ" if raw_export else "TEMcompany station XYZ",
         "coordinate_system": "local metric (from latitude/longitude)",
         "system": system,
+        "protocol": protocol,
         # A text export carries no inversion settings, so the grid is always the
         # one the gate range suggests.
-        "inversion_defaults": suggest_layer_grid(times),
+        "inversion_defaults": suggest_layer_grid(preview["times"]),
+        "forward_metadata": _temcompany_forward_metadata(
+            spec, system, tuple(moments), protocol,
+            {"use_flags": False, "max_relative_std": None,
+             "gate_rejection": "truncate", "reject_negative": False,
+             "gates_kept": {name: int(np.size(block["times"]))
+                            for name, block in moments.items()}}),
+    }
+    if joint:
+        result["moments"] = moments
+        result["available_moments"] = tuple(moments)
+        if "LM" in moments:
+            result["raw_lm_quality"] = {
+                "times": np.asarray(spec.get("LM_GateCentreTime", []), dtype=float),
+                "transmitter": moments["LM"]["transmitter"],
+                "response": np.asarray([
+                    numeric(item, row) for item in sorted(
+                        (name for name in header
+                         if name.lower().startswith("lmgate")),
+                        key=lambda name: int(
+                            "".join(filter(str.isdigit, name)) or 0))],
+                    dtype=float),
+                "relative_std": np.asarray([
+                    numeric(item, row) for item in sorted(
+                        (name for name in header
+                         if name.lower().startswith("lmstd")),
+                        key=lambda name: int(
+                            "".join(filter(str.isdigit, name)) or 0))],
+                    dtype=float),
+            }
+    return result
+
+
+def _load_temcompany_stb(folder: Path, sounding: int, moment: str,
+                         max_relative_std: Optional[float],
+                         gate_rejection: str, reject_negative: bool,
+                         min_gates_per_moment: Optional[Mapping[str, int]],
+                         ) -> Dict[str, Any]:
+    """Read an acquisition folder that has never been imported.
+
+    The raw stream is decoded, filtered and stacked by
+    :mod:`PyHydroGeophysX.data_processing.temcompany_stb`, then presented in the
+    shape a project read returns, so everything downstream is unchanged.
+
+    Two differences from a project read are worth stating. Station boundaries
+    are placed by distance travelled and can differ by a record from those an
+    import writes, which moves a station's position by a fraction of the
+    spacing. And there are no in-use flags to honour, because those are written
+    during import, so ``use_flags`` has nothing to act on and gate selection
+    falls to the arguments given here.
+    """
+    settings = temcompany_stb.ProcessingSettings()
+    survey = temcompany_stb.read_acquisition_folder(folder, settings)
+    spec = temcompany_stb.legacy_spec(survey["protocol"])
+    uniform_error = _temcompany_uniform_error(survey["protocol"])
+    selected = _normalise_temcompany_moment(moment)
+
+    paired: "OrderedDict[Tuple[Any, int], Dict[str, Any]]" = OrderedDict()
+    for station in survey["stations"]:
+        key = (station["line_number"], station["station_number"])
+        paired.setdefault(key, {})[station["moment_name"]] = station
+
+    wanted = ("LM", "HM") if selected == "LM+HM" else (selected,)
+    entries: List[Tuple[Dict[str, Any], Dict[str, Dict[str, Any]]]] = []
+    for key, group in paired.items():
+        moments: Dict[str, Dict[str, np.ndarray]] = {}
+        for name in wanted:
+            station = group.get(name)
+            if station is None:
+                continue
+            # A station gate is in use when nothing condemned it.
+            flags = np.asarray(station["filtered"], dtype=int) == 0
+            try:
+                times, response, std = _temcompany_valid_channels(
+                    np.asarray(station["times"], dtype=float),
+                    np.asarray(station["dbdt"], dtype=float),
+                    np.asarray(station["relative_std"], dtype=float),
+                    flags.astype(int), True, max_relative_std,
+                    gate_rejection, reject_negative)
+            except (ValueError, TypeError):
+                continue
+            if times.size < int((min_gates_per_moment or {}).get(name, 0)):
+                continue
+            moments[name] = {
+                "times": times,
+                "response": response,
+                "transmitter": _temcompany_transmitter(spec, name),
+                "relative_std": np.asarray(std, dtype=float)
+                if std is not None else np.array([], dtype=float),
+                "uniform_error": uniform_error,
+            }
+        if moments:
+            reference = group.get("HM") or group.get("LM")
+            entries.append(({
+                "UtmX": reference["x"], "UtmY": reference["y"],
+                "Longitude": reference["longitude"],
+                "Latitude": reference["latitude"],
+                "Elevation": reference["elevation"],
+                "RxTxDistance": reference["rx_tx_distance"],
+                "RxCoilHeight": None, "TxCoilHeight": None,
+                "LineNumber": reference["line_number"],
+                "StationId": f"{key[0]}-{key[1]}",
+                "AveragedDataId": len(entries),
+            }, moments))
+
+    if not entries:
+        raise ValueError(
+            f"No station stacks survived reading {folder}. The folder has a raw "
+            "stream but every station was filtered out; relax max_relative_std "
+            "or check the acquisition protocol.")
+
+    index = max(0, min(int(sounding), len(entries) - 1))
+    row, moments = entries[index]
+    rows = [entry[0] for entry in entries]
+    station_system = _temcompany_system(spec, row)
+    preview = moments["HM" if "HM" in moments else next(iter(moments))]
+    x = np.asarray([item["UtmX"] for item in rows], dtype=float)
+    y = np.asarray([item["UtmY"] for item in rows], dtype=float)
+    return {
+        "times": preview["times"],
+        "response": preview["response"],
+        "relative_std": preview["relative_std"],
+        "uniform_error": uniform_error,
+        "moments": moments,
+        "available_moments": tuple(moments),
+        "n_soundings": len(entries),
+        "sounding": index,
+        "positions": _temcompany_positions(x, y),
+        "x": x,
+        "y": y,
+        "longitude": _temcompany_column(rows, "Longitude"),
+        "latitude": _temcompany_column(rows, "Latitude"),
+        "elevation": _temcompany_column(rows, "Elevation"),
+        "heights": _temcompany_column(rows, "RxCoilHeight"),
+        "line_numbers": np.asarray([item["LineNumber"] for item in rows], dtype=int),
+        "station_ids": np.asarray([str(item["StationId"]) for item in rows]),
+        "average_data_ids": np.asarray(
+            [item["AveragedDataId"] for item in rows], dtype=int),
+        "temcompany": True,
+        "tem_moment": selected,
+        "source_format": "TEM2Go acquisition folder (.stb)",
+        "coordinate_system": "local metric (tangent plane)",
+        "system": station_system,
+        "rx_tx_distances": _temcompany_column(rows, "RxTxDistance"),
+        "rx_heights": _temcompany_column(rows, "RxCoilHeight"),
+        "tx_heights": _temcompany_column(rows, "TxCoilHeight"),
+        "inversion_defaults": suggest_layer_grid(np.concatenate([
+            np.asarray(spec.get(f"{name}_GateCentreTime", []), dtype=float)
+            for name in ("LM", "HM")] + [preview["times"]])),
+        "protocol": survey["protocol"],
+        "stb_survey": {
+            "n_records": survey["n_records"],
+            "n_records_on_a_line": survey["n_records_on_a_line"],
+            "n_stations": survey["n_stations"],
+            "lines": [item["line_number"] for item in survey["lines"]],
+            "files": survey["files"],
+        },
+        "forward_metadata": _temcompany_forward_metadata(
+            spec, station_system, tuple(moments), survey["protocol"],
+            {"use_flags": True, "max_relative_std": max_relative_std,
+             "gate_rejection": gate_rejection,
+             "reject_negative": bool(reject_negative),
+             "gates_kept": {name: int(np.size(block["times"]))
+                            for name, block in moments.items()}}),
     }
 
 
@@ -1664,8 +1923,8 @@ def load_temcompany_sounding(
     dummy, with 100 percent agreement. There is no further sign test: 87 low-
     moment and 251 high-moment datasets keep a non-positive gate. There is no
     further error cut either, and none is needed, because the largest relative
-    error among the kept gates is exactly 0.250, so TEMImage applied that cut
-    upstream when it wrote the flags. The selection is not even contiguous, so
+    error among the kept gates is exactly 0.250, so an equivalent cut is already
+    reflected in the stored flags. The selection is not even contiguous, so
     nor truncation: only 36 percent of the high-moment selections
     are a single run of gates.
 
@@ -1686,34 +1945,54 @@ def load_temcompany_sounding(
     """
     selected = _normalise_temcompany_moment(moment)
     source = Path(path)
+    project = None
     if source.is_dir():
-        databases = sorted(source.glob("*.db"))
-        project_db = next(
-            (item for item in databases if item.name.lower() == "project.db"),
-            databases[0] if len(databases) == 1 else None,
-        )
-        if project_db is not None:
-            if selected == "LM+HM":
-                return _load_temcompany_joint_database(
-                    project_db, sounding, use_flags, max_relative_std,
-                    gate_rejection, reject_negative, min_gates_per_moment)
-            return _load_temcompany_database(
-                project_db, sounding, selected, use_flags, max_relative_std,
-                gate_rejection, reject_negative)
+        try:
+            project = temcompany_project.project_file(source)
+        except ValueError:
+            project = None
+    elif (source.is_file()
+          and source.suffix.lower() in temcompany_project.PROJECT_SUFFIXES):
+        # A project file named directly. A folder holding a reprocessing beside
+        # the original, ``project2.tiw`` next to ``project.tiw``, can only be
+        # reached this way, since the folder lookup takes the standard name.
+        project = source
+    if project is not None:
+        if selected == "LM+HM":
+            return _load_temcompany_joint_database(
+                project, sounding, use_flags, max_relative_std,
+                gate_rejection, reject_negative, min_gates_per_moment)
+        return _load_temcompany_database(
+            project, sounding, selected, use_flags, max_relative_std,
+            gate_rejection, reject_negative)
+    if source.is_dir() and temcompany_stb.is_stb_folder(source):
+        # No project and no export, but the instrument's own raw stream is
+        # here, so read that instead of refusing the folder.
+        return _load_temcompany_stb(
+            source, sounding, selected, max_relative_std, gate_rejection,
+            reject_negative, min_gates_per_moment)
+    if source.is_dir():
+        # No project in the folder, so fall back to whatever the acquisition
+        # left behind. A station export carries both moments and the whole
+        # instrument description, so it inverts like a project does; a raw
+        # export carries one moment per record and does not.
         xyz = sorted(source.glob("*_StationData.xyz"))
         if not xyz:
             xyz = sorted(source.glob("*_RawData.xyz"))
+        if not xyz:
+            raise ValueError(
+                f"{source} holds nothing this reader can open. A TEMcompany "
+                "project has a project.tiw or a project.db; an unimported "
+                "acquisition folder has to be exported from TEMImage first, as "
+                "a *_StationData.xyz.")
         if len(xyz) != 1:
             raise ValueError(
-                "Select a TEMcompany project directory containing project.db or "
-                "one *_StationData.xyz file.")
+                f"{source} holds {len(xyz)} XYZ exports "
+                f"({', '.join(item.name for item in xyz)}); name the one to "
+                "read rather than the folder.")
         source = xyz[0]
     if not source.exists():
         raise ValueError(f"File not found: {source}")
-    if selected == "LM+HM":
-        raise ValueError(
-            "Joint LM+HM loading currently requires a TEMcompany project folder "
-            "containing project.db; select HM or LM for a standalone XYZ export.")
     return _load_temcompany_xyz(source, sounding, selected)
 
 
@@ -1759,6 +2038,28 @@ def load_sounding(
                                         gate_rejection=gate_rejection,
                                         reject_negative=reject_negative,
                                         min_gates_per_moment=min_gates_per_moment)
+    source = Path(path)
+    if source.is_dir() and any(source.glob("*.sts")):
+        # An acquisition folder carrying a protocol. A raw stream is read
+        # directly; without one there is nothing here this reader can use, and
+        # saying so beats the generic table reader's complaint about an
+        # unsupported extension, which names none of this.
+        if temcompany_stb.is_stb_folder(source):
+            if method != "TDEM":
+                raise ValueError(
+                    "TEM2Go acquisition folders are time-domain EM data; "
+                    "select TDEM.")
+            return load_temcompany_sounding(
+                source, sounding=sounding, moment=moment, use_flags=use_flags,
+                max_relative_std=max_relative_std,
+                gate_rejection=gate_rejection,
+                reject_negative=reject_negative,
+                min_gates_per_moment=min_gates_per_moment)
+        raise ValueError(
+            f"{source} looks like a TEM2Go acquisition folder, but it carries "
+            "no .stb raw stream, no project.tiw, no project.db and no "
+            "*_StationData.xyz, so there is nothing to read. Copy the Data "
+            "folder across as well, or export the station stacks as XYZ.")
     table = np.atleast_2d(table_io.load_2d_array(path)).astype(float)
     if table.shape[1] < 2:
         raise ValueError(f"Expected >= 2 columns, got shape {table.shape}.")

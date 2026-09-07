@@ -5,12 +5,12 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import sqlite3
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 import numpy as np
 
+from PyHydroGeophysX.data_processing import temcompany_project
 from PyHydroGeophysX.workflows import em1d
 
 
@@ -81,16 +81,14 @@ def compare(
     lines = np.asarray(
         sounding["line_numbers"], dtype=int)[:recovered.shape[0]]
 
-    con = sqlite3.connect(project / "project.db")
-    con.row_factory = sqlite3.Row
-    company_rows = {
-        int(row["AverageDataID"]): row
-        for row in con.execute(
-            "SELECT AverageDataID, LineNumber, DataFit, Resistivity, Thickness "
-            "FROM InversionModel"
-        )
-    }
-    con.close()
+    con = temcompany_project.open_project(project)
+    try:
+        company_rows = {
+            int(row["AverageDataID"]): row
+            for row in temcompany_project.read_inversion_models(con)
+        }
+    finally:
+        con.close()
 
     comparison_rows: List[Dict[str, Any]] = []
     layer_rows: List[Dict[str, Any]] = []

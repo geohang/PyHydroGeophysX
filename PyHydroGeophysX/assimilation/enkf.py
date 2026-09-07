@@ -5,6 +5,8 @@ from typing import Callable, Dict, List, Optional
 
 import numpy as np
 
+from PyHydroGeophysX.solvers.linear_solvers import spd_solve, symmetrize
+
 
 @dataclass
 class HydroGeophysObsOperator:
@@ -68,9 +70,15 @@ class EnsembleKalmanFilter:
         D = self._anomalies(Y)
 
         Pxy = (A @ D.T) / max(n_members - 1, 1)
-        Pyy = (D @ D.T) / max(n_members - 1, 1) + self.obs_cov
+        Pyy = symmetrize((D @ D.T) / max(n_members - 1, 1) + self.obs_cov)
 
-        K = Pxy @ np.linalg.pinv(Pyy)
+        # K = Pxy Pyy^-1, obtained by solving Pyy K^T = Pxy^T. Pyy is a sample
+        # covariance plus the observation covariance, so it is symmetric positive
+        # definite and a Cholesky solve is both the cheaper and the better
+        # conditioned route. Forming pinv(Pyy) instead costs an SVD and drops
+        # whichever directions fall under its rcond, which with a small ensemble
+        # and tight observation errors is where filter divergence starts.
+        K = spd_solve(Pyy, Pxy.T, what="the innovation covariance Pyy").T
 
         if rng is None:
             rng = np.random.default_rng()

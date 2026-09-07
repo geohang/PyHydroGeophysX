@@ -32,21 +32,22 @@ def WS_Model(
     sigma_s: Any = 0,
 ) -> Any:
     """
-    Convert water content to resistivity using Waxman-Smits model.
+    Convert saturation to resistivity using the implemented Waxman-Smits form.
 
-    Based on equation: σ = (S_w^n/F)σ_w + σ_s
-    where F = φ^(-m) (formation factor from Archie's law)
+    Uses σ = (S_w^n/F) * (σ_w + σ_s/S_w), where F = φ^(-m).
+    Here σ_s is inside the formation-factor scaling; it is not interchangeable
+    with the unscaled sigma_sur parameter used by the other converters.
 
     Args:
-        saturation (array): Saturation (S_w)
-        porosity (array): Porosity values (φ)
-        sigma_w (float): Pore water conductivity (σ_w)
+        saturation (array): Saturation fraction, clipped to [0.001, 1].
+        porosity (array): Porosity fraction (φ), positive and broadcast-compatible.
+        sigma_w (float): Pore water conductivity (S/m).
         m (float): Cementation exponent
         n (float): Saturation exponent
-        sigma_s (float): Surface conductivity (σ_s). Default is 0 (no surface effects).
+        sigma_s (float): Surface-conductivity coefficient (S/m). Default is 0.
 
     Returns:
-        array: Resistivity values
+        array: Resistivity in ohm-m, clipped to [0.1, 1e6].
     """
     # Clip saturation to physically meaningful range (avoid division by zero)
     saturation = np.clip(saturation, 0.001, 1.0)
@@ -142,8 +143,7 @@ def resistivity_to_water_content(
     # Calculate saturation. ``resistivity_to_saturation`` derives the saturated
     # resistivity from Archie's law (a * rho_fluid * porosity^-m); passing
     # rho_fluid=rhos with m=0 collapses that expression to the ``rhos`` given
-    # here, so the same Waxman-Smits solver applies unchanged. The previous
-    # positional call passed the wrong arguments and raised a TypeError.
+    # here, so the same Waxman-Smits solver applies.
     saturation = resistivity_to_saturation(
         resistivity,
         porosity=porosity,
@@ -238,7 +238,11 @@ def resistivity_to_saturation(
             return S0[i]
 
     # Compute saturation for each point
-    sat = np.array([_solve(i) for i in range(L)], dtype=float)
+    sat = S0.copy()
+    # The zero-surface-conductivity branch is already solved analytically.
+    # Keep the same scalar solver and tolerance for every remaining cell.
+    for i in np.flatnonzero(sigma_sur != 0):
+        sat[i] = _solve(i)
     sat = np.clip(sat, 0.0, 1.0)
 
     # Return scalar if inputs were scalar
@@ -281,7 +285,7 @@ def resistivity_to_porosity(
         array: Porosity values (fraction, 0-1)
     """
     # Convert inputs to arrays
-    resistivity_array = np.atleast_1d(resistivity)
+    resistivity_array = np.atleast_1d(resistivity).astype(float)
     saturation_array = np.atleast_1d(saturation)
     sigma_sur_array = np.atleast_1d(sigma_sur)
     n_array = np.atleast_1d(n)
@@ -306,6 +310,12 @@ def resistivity_to_porosity(
     
     # Initialize porosity array
     porosity = np.zeros_like(resistivity_array)
+
+    if np.all(sigma_sur_array == 0):
+        # Same Archie formula as the scalar loop; no root solving is needed.
+        porosity = np.clip(((a * rho_fluid) / (resistivity_array * saturation_array**n_array))
+                           ** (1.0 / m_array), 0.001, 0.99)
+        return float(porosity[0]) if np.isscalar(resistivity) and np.isscalar(saturation) else porosity
     
     # Solve for each resistivity-saturation pair
     for i in range(len(resistivity_array)):
@@ -387,7 +397,7 @@ def resistivity_to_saturation2(
         array: Saturation values
     """
     # Convert inputs to arrays
-    resistivity_array = np.atleast_1d(resistivity)
+    resistivity_array = np.atleast_1d(resistivity).astype(float)
     sigma_sur_array = np.atleast_1d(sigma_sur)
     n_array = np.atleast_1d(n)
     
@@ -406,10 +416,10 @@ def resistivity_to_saturation2(
     S_initial = np.clip(S_initial, 0.01, 1.0)
     
     # Initialize saturation array
-    saturation = np.zeros_like(resistivity_array)
+    saturation = S_initial.copy()
     
     # Solve for each resistivity value
-    for i in range(len(resistivity_array)):
+    for i in np.flatnonzero(sigma_sur_array != 0):
         if sigma_sur_array[i] == 0:
             # If no surface conductivity, use Archie's law
             saturation[i] = S_initial[i]

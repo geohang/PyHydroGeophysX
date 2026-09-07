@@ -164,7 +164,7 @@ print(f"Resistivity range: {resistivity.min():.1f} - {resistivity.max():.1f} Ohm
 fig, axes = plt.subplots(1, 4, figsize=(16, 6))
 
 # Cumulative depth for plotting - add extra depth for last layer (extends to infinity)
-# Use a reasonable plotting depth for the last layer
+# Truncate the half-space only for display; the forward model keeps it infinite.
 last_layer_thickness = 5.0  # Arbitrary thickness for plotting the last layer
 depths = np.cumsum(np.r_[0, layer_thicknesses, last_layer_thickness])
 

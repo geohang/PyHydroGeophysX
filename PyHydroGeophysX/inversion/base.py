@@ -13,10 +13,10 @@ This module defines:
 """
 
 
-import os  # For path manipulation in save/load
-from typing import Any, Dict, List, Optional, Tuple, Union  # Dict is used in InversionResult.meta
+import os
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-import matplotlib.pyplot as plt  # Used for plotting methods
+import matplotlib.pyplot as plt
 import numpy as np
 import pygimli as pg
 
@@ -62,14 +62,14 @@ class InversionResult:
         Args:
             filename (str): The base path (including filename without extension) to save the results.
                             The main data will be saved as `filename.pkl` (or just `filename` if user includes .pkl).
-                            The mesh will be saved as `filename.bms` or `filename.pkl.bms`.
-                            It's recommended to provide `filename` without `.pkl`.
+                            A trailing .pkl is removed before deriving the .bms
+                            mesh filename; other suffixes are retained.
 
         Raises:
-            IOError: If there's an error during file writing.
-            pickle.PicklingError: If an object cannot be pickled.
+            IOError: If writing or pickling the main data fails. Mesh-save
+                failures are printed as warnings and do not prevent saving data.
         """
-        import pickle  # Local import for a standard library module is fine.
+        import pickle
 
         # Ensure filename doesn't inadvertently include .pkl if we append it later.
         base_filename, ext = os.path.splitext(filename)
@@ -93,13 +93,11 @@ class InversionResult:
         
         # Save mesh separately using PyGIMLi's binary format if it exists
         if self.mesh is not None:
-            # Potential Issue: Appending '.bms' to a filename that might already have an extension
-            # (e.g. 'results.pkl') could lead to 'results.pkl.bms'.
-            # A cleaner way might be to derive mesh filename from the base filename.
+            # Use the base selected above so name.pkl and name share name.bms.
             mesh_specific_filename = mesh_save_filename_base + '.bms'
             try:
                 self.mesh.save(mesh_specific_filename)
-                data_to_save['mesh_file'] = mesh_specific_filename # Store relative path or just name
+                data_to_save['mesh_file'] = mesh_specific_filename  # Preserve the supplied path form.
                 print(f"Mesh saved to: {mesh_specific_filename}")
             except Exception as e:
                 # Log error but continue to save other data if possible
@@ -112,14 +110,16 @@ class InversionResult:
                 pickle.dump(data_to_save, f)
             print(f"Inversion results (excluding mesh) saved to: {pickle_filename}")
         except (IOError, pickle.PicklingError) as e:
-            # Clean up mesh file if main data saving fails to avoid partial save?
-            # For now, just raise the error.
+            # The mesh may already have been written; this is not a transactional save.
             raise IOError(f"Failed to save inversion results to '{pickle_filename}': {e}")
     
     @classmethod
     def load(cls, filename: str) -> 'InversionResult':
         """
         Load inversion results from a file previously saved by the `save` method.
+
+        Only load trusted pickle files. Missing or unreadable mesh sidecars
+        produce warnings and leave mesh unset.
 
         Args:
             filename (str): The base path to the saved results file.
@@ -130,7 +130,7 @@ class InversionResult:
                              populated with the loaded data.
         
         Raises:
-            FileNotFoundError: If the main data file or associated mesh file (if referenced) is not found.
+            FileNotFoundError: If the main data file is not found.
             IOError: If there's an error during file reading.
             pickle.UnpicklingError: If the file cannot be unpickled.
         """
@@ -155,7 +155,7 @@ class InversionResult:
         result_instance = cls()
 
         # Assign attributes from the loaded dictionary
-        # Use .get() for robustness against missing keys if format changes, though direct access is fine if format is fixed.
+        # Missing optional fields in older files retain empty/default values.
         result_instance.final_model = loaded_data.get('final_model')
         result_instance.predicted_data = loaded_data.get('predicted_data')
         result_instance.coverage = loaded_data.get('coverage')
@@ -183,7 +183,7 @@ class InversionResult:
 
         return result_instance
     
-    def plot_model(self, ax: Optional[plt.Axes] = None, cmap: str = 'viridis', # Changed default cmap
+    def plot_model(self, ax: Optional[plt.Axes] = None, cmap: str = 'viridis',
                    coverage_threshold: Optional[float] = None, **kwargs: Any) -> Tuple[plt.Figure, plt.Axes]:
         """
         Plot the final inverted model on its associated mesh.
@@ -304,16 +304,9 @@ class TimeLapseInversionResult(InversionResult):
         self.final_models: Optional[np.ndarray] = None  # Shape: (num_cells, num_timesteps)
         self.timesteps: Optional[np.ndarray] = None     # Timestamps corresponding to model slices
         self.all_coverage: List[np.ndarray] = []       # List of coverage arrays, one per timestep
-        self.all_chi2: List[Any] = [] # Could be List[List[float]] if each time step has its own convergence
-                                      # Or List[float] if it's a global chi2 for joint/sequential inversion.
-                                      # Original was List[float], implies one chi2 list for the whole process.
-                                      # If from windowed inversion, this might be a list of chi2 lists.
+        self.all_chi2: List[Any] = []  # Global iteration history, or per-window histories.
     
-    # Potential Improvement: Override save/load to handle time-lapse specific attributes if needed,
-    # especially if their structure is complex or requires special handling beyond what pickle does.
-    # For current attributes (mostly lists of NumPy arrays), default pickle should work if they are added to data_to_save dict.
-    # The current save/load in InversionResult does not handle these time-lapse specific attributes.
-    # This needs to be overridden.
+    # The overrides below also persist the time-axis arrays absent from the base class.
 
     def save(self, filename: str) -> None:
         """
@@ -527,9 +520,7 @@ class TimeLapseInversionResult(InversionResult):
 
 
         # Create the animation object
-        # blit=True optimizes drawing by only redrawing what has changed.
-        # However, blit=True can be tricky with complex plots or changing axis limits/titles.
-        # If issues occur, try blit=False.
+        # Redraw the full axes because pg.show and the title change each frame.
         ani = animation.FuncAnimation(
             fig, update_animation_frame, frames=num_timesteps,
             blit=False, # Set to False for safety with pg.show and title changes per frame
@@ -650,7 +641,7 @@ class InversionBase:
         Args:
             model (np.ndarray): The current model parameter vector for which to compute the Jacobian.
             
-        Returns:,
+        Returns:
             np.ndarray: The computed Jacobian matrix, typically of shape (n_data, n_model_params).
         """
         raise NotImplementedError("Jacobian computation (compute_jacobian) must be implemented in derived classes.")

@@ -20,6 +20,7 @@ class WorkflowDescriptor:
     module_key: str = ""
 
     def load_handler(self) -> WorkflowHandler:
+        """Import the module:attribute target on demand and require a callable."""
         module_name, separator, attribute = self.handler_path.partition(":")
         if not separator:
             raise ValueError(
@@ -44,6 +45,9 @@ _WORKFLOWS: Dict[str, WorkflowDescriptor] = {}
 
 
 def register_workflow(descriptor: WorkflowDescriptor, *, replace: bool = False) -> None:
+    """Register metadata without importing its handler; reject duplicate IDs
+    with KeyError unless replace=True. Mutates the process-local registry.
+    """
     existing = _WORKFLOWS.get(descriptor.workflow_id)
     if existing is not None and not replace:
         raise KeyError(f"Workflow {descriptor.workflow_id!r} is already registered.")
@@ -51,10 +55,12 @@ def register_workflow(descriptor: WorkflowDescriptor, *, replace: bool = False) 
 
 
 def list_workflows() -> Tuple[WorkflowDescriptor, ...]:
+    """Return registered descriptors ordered by workflow ID, without loading handlers."""
     return tuple(_WORKFLOWS[key] for key in sorted(_WORKFLOWS))
 
 
 def get_workflow(workflow_id: str) -> WorkflowDescriptor:
+    """Look up an exact workflow ID; raise KeyError listing available IDs if absent."""
     try:
         return _WORKFLOWS[str(workflow_id)]
     except KeyError as exc:

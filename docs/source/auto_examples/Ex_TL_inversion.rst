@@ -110,7 +110,7 @@ time steps while allowing for realistic changes.
     data_files = [os.path.join(data_dir, f) for f in ert_files]
 
     # Measurement times (can be timestamps or any sequential numbers representing time)
-    measurement_times = [1, 2, 3, 4, 5, 6, 7 ,8, 9, 10, 11, 12]  # Adjust based on your actual acquisition times
+    measurement_times = [1, 2, 3, 4, 5, 6, 7 ,8, 9, 10, 11, 12]  # Example time coordinates; replace with acquisition times in a consistent unit.
 
     # Create a mesh for the inversion (or load an existing one)
     data = ert.load(data_files[0])
@@ -191,7 +191,7 @@ Measurement times (can be timestamps or any sequential numbers representing time
 
 .. code-block:: Python
 
-    measurement_times = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]  # Adjust based on your actual acquisition times
+    measurement_times = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]  # Example time coordinates; replace with acquisition times in a consistent unit.
 
     # Create a mesh for the inversion (or load an existing one)
     data = ert.load(os.path.join(data_dir, ert_files[0]))
@@ -353,7 +353,7 @@ Full paths to data files
     data_files = [os.path.join(data_dir, f) for f in ert_files]
 
     # Measurement times (can be timestamps or any sequential numbers representing time)
-    measurement_times = [1, 2, 3, 4, 5, 6, 7 ,8, 9, 10, 11, 12]  # Adjust based on your actual acquisition times
+    measurement_times = [1, 2, 3, 4, 5, 6, 7 ,8, 9, 10, 11, 12]  # Example time coordinates; replace with acquisition times in a consistent unit.
 
     # Create a mesh for the inversion (or load an existing one)
     data = ert.load(data_files[0])

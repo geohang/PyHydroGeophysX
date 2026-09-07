@@ -18,13 +18,13 @@ def water_content_to_velocity(water_content: np.ndarray,
     """
     Convert water content to seismic P-wave velocity using empirical relationships.
     
-    This provides a simplified empirical relationship between water content 
-    and seismic velocity, suitable for shallow subsurface applications.
+    These are simplified mixing rules, not calibrated site predictions.
+    Saturation is clipped to [0, 1] and output velocity to [200, 8000] m/s.
     
     Args:
         water_content: Volumetric water content (θ), typically 0-porosity
-        v_dry: P-wave velocity when fully dry (m/s), default 3500
-        v_sat: P-wave velocity when fully saturated (m/s), default 4500
+        v_dry: Dry velocity for the linear model only (m/s), default 3500.
+        v_sat: Saturated velocity for the linear model only (m/s), default 4500.
         porosity: Porosity values (φ), can be scalar or array
         model: Velocity model type:
             - 'linear': Linear interpolation between dry and saturated velocities
@@ -578,7 +578,7 @@ def velDEM(
     Km (float): Initial bulk modulus of the material (GPa).
     Gm (float): Initial shear modulus of the material (GPa).
     rho_b (float): Density of the solid phase (kg/m^3).
-    Sat (float): Saturation level of the fluid in the cracks (0 to 1, where 1 is fully saturated).
+    Sat (array): Saturation fractions with one entry per phi value; scalars are not broadcast here.
     alpha (float): Crack aspect ratio.
 
     Returns:
@@ -622,7 +622,7 @@ def velDEM(
         else:
             raise ValueError(f"Root finding for Keff failed at index {ii}: {result_Keff.message}")
             
-        # Solve for effective shear modulus Geff using fsolve
+        # Solve for effective shear modulus with root(method="lm").
         def equation_Geff(Geff):
             if Geff < 0:
                 return 1e6
@@ -666,7 +666,7 @@ def vel_porous(
     Km (float): Bulk modulus of the solid phase (GPa).
     Gm (float): Shear modulus of the solid phase (GPa).
     rho_b (float): Density of the solid phase (kg/m^3).
-    Sat (float): Saturation level of the fluid in the pores (0 to 1, where 1 is fully saturated).
+    Sat (array): Saturation fractions with one entry per phi value; scalars are not broadcast here.
     depth (float): depth for pressure estimation (m)
 
     Returns:

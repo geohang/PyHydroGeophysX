@@ -50,8 +50,8 @@ def _sample_grid_along_profile(data: np.ndarray,
     When (X_grid, Y_grid) form a uniform regular grid -- the usual case for data
     produced by :func:`setup_profile_coordinates` -- this uses fast
     bilinear/nearest :func:`scipy.ndimage.map_coordinates` sampling, which is
-    exact for a regular grid and orders of magnitude faster than Delaunay-based
-    :func:`scipy.interpolate.griddata` on large grids. For irregular grids it
+    avoids constructing a Delaunay triangulation. Bilinear interpolation need
+    not equal triangulation-based linear interpolation. For irregular grids it
     falls back to ``griddata`` so the function remains general.
     """
     x_pro = np.asarray(X_pro, dtype=float).ravel()
@@ -231,12 +231,16 @@ def interpolate_to_mesh(
     Interpolate property values from profile to mesh with layer-specific handling.
     
     Args:
-        property_values: Property values array (n_points)
+        property_values: Array shaped (vertical samples, profile points);
+            must match depth_values[:14] in this legacy implementation.
         profile_distance: Distance along profile (n_points)
-        depth_values: Depth values array (n_layers, n_points)
+        depth_values: Vertical coordinates (layers, profile points), in
+            the same datum/units as mesh_y; only the first 14 layers are used.
         mesh_x: X coordinates of mesh cells
         mesh_y: Y coordinates of mesh cells
-        mesh_markers: Markers indicating different layers in mesh
+        mesh_markers: One layer marker per mesh cell. Cells outside
+            layer_markers retain zero in the output.
+        ID: Source layer labels shaped like property_values.
         layer_markers: List of marker values for each layer
     
     Returns:
@@ -245,35 +249,24 @@ def interpolate_to_mesh(
     # Initialize output array
     result = np.zeros_like(mesh_markers, dtype=float)
 
-    # print(profile_distance.shape)
-    # print(depth_values.shape)
-    # print(property_values.shape)
     L_profile_new = np.repeat(profile_distance.reshape(1,-1),property_values.shape[0],axis=0)
 
     Depth = depth_values[:14]
 
-    maxele = 0 # set 0 here
+    maxele = 0  # No elevation shift; source and mesh coordinates must agree.
 
     for marker in layer_markers:
-        # For each layer marker, interpolate property values to mesh grid
-        # Note: ID is used to identify which layer to interpolate for
-        # Interpolate property values to mesh grid for each layer
+        # Restrict interpolation to matching source/mesh layers; use nearest
+        # values where the linear interpolation lies outside the convex hull.
         grid_z1 = griddata((L_profile_new[ID==marker].ravel(),Depth[ID==marker].ravel()- maxele), property_values[ID==marker].ravel(), (mesh_x[mesh_markers==marker], mesh_y[mesh_markers==marker]), method='linear')
         temp_ID = np.isnan(grid_z1)
         grid_z2 = griddata((L_profile_new[ID==marker].ravel(),Depth[ID==marker].ravel()- maxele), property_values[ID==marker].ravel(), (mesh_x[mesh_markers==marker], mesh_y[mesh_markers==marker]), method='nearest')
         grid_z1[temp_ID] = grid_z2[temp_ID]
         result[mesh_markers==marker] = grid_z1.copy()
 
-    # # Interpolate property values to mesh grid for each layer
-    # grid_z1 = griddata((L_profile_new[ID==0].ravel(),Depth[ID==0].ravel()- maxele), property_values[ID==0].ravel(), (mesh_x[mesh_markers==0], mesh_y[mesh_markers==0]), method='linear')
-    # temp_ID = np.isnan(grid_z1)
-    # grid_z2 = griddata((L_profile_new[ID==0].ravel(),Depth[ID==0].ravel()- maxele), property_values[ID==0].ravel(), (mesh_x[mesh_markers==0], mesh_y[mesh_markers==0]), method='nearest')
-    # grid_z1[temp_ID] = grid_z2[temp_ID]
-    # result[mesh_markers==0] = grid_z1.copy()
 
 
 
-    #result =  griddata((L_profile_new.ravel(),depth_values[:14].ravel()), property_values.ravel(), (mesh_x, mesh_y), method='nearest')
 
 
     
@@ -362,9 +355,12 @@ class ProfileInterpolator:
         
         Args:
             property_values: Property values array (n_points or n_layers, n_points)
-            depth_values: Depth values array (n_layers, n_points)
+            depth_values: Vertical coordinates (layers, profile points), in
+            the same datum/units as mesh_y; only the first 14 layers are used.
             mesh_x, mesh_y: Coordinates of mesh cells
-            mesh_markers: Markers indicating different layers in mesh
+            mesh_markers: One layer marker per mesh cell. Cells outside
+            layer_markers retain zero in the output.
+        ID: Source layer labels shaped like property_values.
             layer_markers: List of marker values for each layer
         
         Returns:
@@ -409,10 +405,9 @@ def create_surface_lines(L_profile: np.ndarray,
     line1 = np.hstack((L_profile.reshape(-1,1), S2))
     line2 = np.hstack((L_profile.reshape(-1,1), S3))
     
-    # Normalize by maximum elevation
-    #maxele = np.nanmax(surface[:,1])
-    surface[:,1] = surface[:,1] #- maxele
-    line1[:,1] = line1[:,1] #- maxele
-    line2[:,1] = line2[:,1] #- maxele
+    # Preserve the input elevation datum; no vertical normalization is applied.
+    surface[:,1] = surface[:,1]
+    line1[:,1] = line1[:,1]
+    line2[:,1] = line2[:,1]
     
     return surface, line1, line2

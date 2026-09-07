@@ -60,7 +60,6 @@ from PyHydroGeophysX.core.mesh_utils import (
 from PyHydroGeophysX.inversion.srt_inversion import SRTInversion
 
 # Import PyHydroGeophysX modules
-from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent
 from PyHydroGeophysX.petrophysics.velocity_models import DEMModel, HertzMindlinModel
 
 # %%

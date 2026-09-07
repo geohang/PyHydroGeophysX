@@ -549,7 +549,7 @@ Provide a brief explanation (3-4 sentences) suitable for a user about:
         elif step_name == 'interface_extraction':
             # Get interface from previous seismic step results
             # CRITICAL: SeismicAgent.execute() already does interface extraction!
-            # We just need to extract the interface_coords from the previous results
+            # Reuse the interface coordinates already produced by the seismic step.
             step_results = workflow_results.get('step_results', {})
             seismic_results = step_results.get('seismic_inversion')
             
@@ -607,7 +607,7 @@ Provide a brief explanation (3-4 sentences) suitable for a user about:
                 if not ert_path.exists():
                     raise FileNotFoundError(f"ERT file not found: {ert_file}")
             
-            # Use PyGIMLi's direct ERT loader (more robust than RESIPY for BERT format)
+            # Read the BERT file with its native pyGIMLi loader.
             try:
                 ertData = pygimli_ert.load(str(ert_path))
                 self._log_execution(f"  Loaded using PyGIMLi's ert.load()")
@@ -694,7 +694,7 @@ Provide a brief explanation (3-4 sentences) suitable for a user about:
             if not ert_path.exists():
                 raise FileNotFoundError(f"ERT file not found: {ert_file}")
         
-        # Use PyGIMLi's direct ERT loader (more robust than RESIPY for BERT format)
+        # Read the BERT file with its native pyGIMLi loader.
         try:
             ertData = pygimli_ert.load(str(ert_path))
         except Exception as e:

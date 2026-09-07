@@ -118,7 +118,7 @@ plays a critical role in subsurface flow patterns.
 
     # Measurement times (can be timestamps or any sequential numbers representing time)
     # Measurement times (can be timestamps or any sequential numbers representing time)
-    measurement_times = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]  # Adjust based on your actual acquisition times
+    measurement_times = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]  # Example time coordinates; replace with acquisition times in a consistent unit.
 
     # Create a mesh for the inversion (or load an existing one)
     data = ert.load(os.path.join(data_dir, ert_files[0]))

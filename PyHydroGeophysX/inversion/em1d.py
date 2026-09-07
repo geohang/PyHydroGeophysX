@@ -571,12 +571,20 @@ _MODELER_CACHE = threading.local()
 #: every simulation it ever built.
 #:
 #: Eight was enough while a line shared one geometry. It is not enough now that
-#: the transmitter-receiver distance is read per station: a survey binned at
-#: :data:`~PyHydroGeophysX.workflows.em1d.STATION_DISTANCE_BIN_M` presents about
-#: twenty-five distinct distances, so two moments need fifty entries and a cache
-#: of eight evicts an operator before it is reused. That is the difference
-#: between fourteen seconds and twenty milliseconds per station.
-_MODELER_CACHE_SIZE = 64
+#: the transmitter-receiver distance is read per station, and modelled as
+#: recorded: a walking ground survey records a different distance at nearly
+#: every station, 794 distinct values over 929 stations on one line, so a line
+#: presents two operators per station and a small cache evicts each one before
+#: it is reused. That is the difference between fourteen seconds and twenty
+#: milliseconds per station.
+#:
+#: The bound is per thread and the dict grows only as far as a thread actually
+#: reaches, which under the chunked scheduling in
+#: :func:`~PyHydroGeophysX.inversion.em1d_lci._map_soundings` is one worker's
+#: share of the line. It is sized instead for a serial run, which sees the whole
+#: survey: 2,048 entries covers a 1,000-station line at both moments. A warmed
+#: operator measures about 50 kB, so a full cache is under 100 MB.
+_MODELER_CACHE_SIZE = 2048
 
 
 def _modeler_key(thick: np.ndarray, config: Any) -> tuple:

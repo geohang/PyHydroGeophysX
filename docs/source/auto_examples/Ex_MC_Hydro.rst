@@ -201,7 +201,7 @@ sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_MC_Hydro_fig_01.png'
             # Extract resistivity for this timestep
             resistivity_t = resistivity_values[:, t]
         
-            # Process each layer separately using the NEW resistivity_to_saturation function
+            # Convert each layer with its sampled Archie/Waxman-Smits parameters.
         
             # Layer 1 (marker 3) - Top layer
             mask_layer1 = cell_markers == 3
@@ -419,7 +419,7 @@ layer-specific uncertainty patterns in water content estimates.
 
 .. GENERATED FROM PYTHON SOURCE LINES 359-360
 
-Modified function to extract time series based on x AND y positions
+Extract a time series at the selected horizontal position and elevation.
 
 .. GENERATED FROM PYTHON SOURCE LINES 360-437
 

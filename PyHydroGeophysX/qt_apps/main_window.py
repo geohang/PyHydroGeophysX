@@ -57,13 +57,14 @@ class PyHydroGeophysXStudio(QMainWindow):
         self._log_panel = LogPanel()
         self._log_dock = self._make_dock("Log", self._log_panel, Qt.BottomDockWidgetArea)
 
-        # Center: branded header + stacked module pages.
+        # The home banner yields its space to results on processing pages.
         self._stack = QStackedWidget()
         container = QWidget()
         outer = QVBoxLayout(container)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
-        outer.addWidget(self._build_header())
+        self._header = self._build_header()
+        outer.addWidget(self._header)
         content = QWidget()
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(8, 8, 8, 8)
@@ -309,7 +310,7 @@ class PyHydroGeophysXStudio(QMainWindow):
         toolbar.setObjectName("main_toolbar")
         toolbar.setMovable(False)
         toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        toolbar.setIconSize(QSize(18, 18))
+        toolbar.setIconSize(QSize(16, 16))
         self.addToolBar(toolbar)
         # The toolbar carries the two commands a session actually repeats. The
         # bridge "Save" that used to sit here wrote a JSON manifest for the
@@ -350,6 +351,9 @@ class PyHydroGeophysXStudio(QMainWindow):
             self._stack.addWidget(page)
             self._pages[key] = page
         self._stack.setCurrentWidget(self._pages[key])
+        self._header.setVisible(key == "home")
+        if key == "project_map" and hasattr(self._pages[key], "refresh"):
+            self._pages[key].refresh()
         self.state.selected_module = key
         self._tree.select_module(key)
         if self._pick_action.isChecked():

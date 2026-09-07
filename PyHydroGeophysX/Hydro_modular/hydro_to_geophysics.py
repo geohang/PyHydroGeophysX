@@ -34,7 +34,7 @@ HYDRO_FILES = {
     "bot": "bot.npy",
 }
 
-# SRT velocity parameters are not exposed in the Pass-1 UI; use the same
+# Default SRT parameters when the caller does not provide overrides; use the
 # three-layer defaults as the reference example.
 DEFAULT_VEL_PARAMETERS: Dict[str, Dict[str, float]] = {
     "top": {"bulk_modulus": 30.0, "shear_modulus": 20.0, "mineral_density": 2650, "depth": 1.0},
@@ -46,7 +46,7 @@ ALL_METHODS = ["Profile", "ERT", "SRT", "TDEM", "FDEM", "Gravity"]
 
 
 # ---------------------------------------------------------------------------
-# Helpers copied from Ex_hydro_to_multigeophys.py (not part of the package API)
+# Profile helpers derived from this repository's Ex_hydro_to_multigeophys.py
 # ---------------------------------------------------------------------------
 def fill_profile_nans(values: Any) -> np.ndarray:
     """Fill NaNs along the profile direction for each layer."""

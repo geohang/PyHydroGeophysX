@@ -21,3 +21,5 @@ This section contains the complete API reference for PyHydroGeophysX.
    data_access
    uncertainty
    visualization
+   PyHydroGeophysX.workflows
+   PyHydroGeophysX.llm

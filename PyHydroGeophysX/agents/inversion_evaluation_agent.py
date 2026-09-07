@@ -56,7 +56,7 @@ optimal regularization parameter selection."""
             'minor_adjust': 1.2  # Fine-tune by 20%
         }
         
-        self.max_iterations = 3  # Default number of re-inversion attempts
+        self.max_iterations = 3  # Total evaluations, including the initial result.
         self.history = []  # Track evaluation history
     
     def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -71,7 +71,8 @@ optimal regularization parameter selection."""
                 - time_lapse_data: List of ERT datasets (for time-lapse)
                 - inversion_mode: 'standard' or 'time-lapse'
                 - auto_adjust: Whether to automatically adjust and re-run (default: True)
-                - max_attempts: Maximum re-inversion attempts (default: 3)
+                - max_attempts: Maximum total evaluations, including the initial
+                  result (default: 3, allowing at most two re-inversions)
                 - quality_threshold: Overall quality threshold (default: 70)
                 - progress_callback: Optional callback for transparent loop logs
                 - custom_thresholds: Optional custom quality thresholds

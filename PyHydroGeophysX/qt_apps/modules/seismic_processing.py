@@ -359,6 +359,7 @@ class SeismicProcessingModule(BaseModule):
         self._srt_export_btn.setEnabled(False)
         self._srt_export_btn.clicked.connect(self._export_velocity_model)
         runbox.addWidget(self._srt_export_btn)
+        runbox.addWidget(self.map_export_button())
         layout.addWidget(run)
         layout.addStretch(1)
 
@@ -1422,6 +1423,7 @@ class SeismicProcessingModule(BaseModule):
         self.report_result({"velocity_vtk": vtk, "num_traveltimes": result.get("n"),
                             "chi2": metrics.get("chi2"), "rrms": metrics.get("rrms"),
                             "iterations": metrics.get("iterations")})
+        self.offer_map_export()
 
     def _export_velocity_model(self) -> None:
         mgr = getattr(self, "_srt_mgr", None)
@@ -1474,6 +1476,7 @@ class SeismicProcessingModule(BaseModule):
     def export_actions(self):
         actions = []
         if getattr(self, "_srt_mgr", None) is not None:
+            actions.append(("Add to Project Map…", self.add_to_map))
             actions.append((
                 "Velocity model (CSV + npy + mesh + VTK)",
                 self._export_velocity_model,

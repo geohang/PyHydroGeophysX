@@ -203,10 +203,12 @@ def build_qss() -> str:
     /* Toolbar / menus */
     QToolBar {{ background-color: {p['card']}; border-bottom: 1px solid {p['border']}; spacing: 4px; padding: 4px; }}
     QToolButton {{ background: transparent; color: {p['primary']}; border-radius: 6px; padding: 5px 8px; font-weight: 600; }}
+    QToolBar#main_toolbar {{ spacing: 2px; padding: 1px 3px; }}
+    QToolBar#main_toolbar QToolButton {{ padding: 2px 6px; }}
     QToolButton:hover {{ background-color: {p['hover']}; }}
     QToolButton:pressed, QToolButton:checked {{ background-color: {p['select_bg']}; }}
     QMenuBar {{ background-color: {p['card']}; border-bottom: 1px solid {p['border']}; }}
-    QMenuBar::item {{ background: transparent; padding: 6px 10px; }}
+    QMenuBar::item {{ background: transparent; padding: 2px 8px; }}
     QMenuBar::item:selected {{ background-color: {p['hover']}; border-radius: 4px; }}
     QMenu {{ background-color: {p['card']}; border: 1px solid {p['border_blue']}; padding: 4px; }}
     QMenu::item {{ padding: 6px 22px; border-radius: 4px; }}

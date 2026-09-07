@@ -1,5 +1,6 @@
 include README.md
 include LICENSE
+include THIRD_PARTY_NOTICES.md
 include requirements*.txt
 recursive-include PyHydroGeophysX/data *
 recursive-include PyHydroGeophysX/examples *

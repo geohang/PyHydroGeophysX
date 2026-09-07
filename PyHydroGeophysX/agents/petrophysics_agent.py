@@ -441,10 +441,10 @@ different geological materials and quantify uncertainties."""
                 rho_sat_val = petrophysical_params.get('rho_sat', None)
                 
                 # When rho_sat is provided, use it directly instead of calculating via m
-                # This is more accurate: S = (rho_sat / rho)^(1/n)
+                # With zero surface conductivity, S = (rho_sat / rho)^(1/n).
                 if rho_sat_val:
-                    # Use much smaller uncertainty for rho_sat since it's a direct measurement
-                    # and has larger absolute value (uncertainty propagates non-linearly)
+                    # Heuristic prior: use one tenth of the generic relative
+                    # uncertainty for a supplied rho_sat; this is not a measured error.
                     rho_sat_uncertainty_scale = scale * 0.1
                     layer_params[int(layer_id)] = {
                         'n': {'mean': n_val, 'std': n_val * scale},

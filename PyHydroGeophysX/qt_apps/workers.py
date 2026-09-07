@@ -9,6 +9,7 @@ native-library probes and workflows in separate Python processes.
 from __future__ import annotations
 
 import json
+from concurrent.futures import CancelledError
 from pathlib import Path
 import re
 import sys
@@ -57,21 +58,26 @@ class TaskWorker(QThread):
     ``succeeded`` carries the return value, ``failed`` the error text, and
     ``logged`` optional progress strings. When ``with_log=True`` the callable is
     given a ``log`` keyword (a function taking one string) so it can report
-    progress. :meth:`cancel` requests a cooperative stop: short tasks finish
-    naturally and their result is simply dropped, so the UI is never updated
-    from a cancelled run.
+    progress. :meth:`cancel` requests interruption; it does not forcibly stop
+    the callable. The supplied log callback checks cancellation and raises
+    CancelledError at that checkpoint. With ``with_cancel=True``, the callable
+    also receives ``cancelled()``, which it can poll between expensive steps.
+    Completion/error and new progress emissions are suppressed after cancellation
+    is observed; signals already queued in Qt may still be delivered.
     """
 
     succeeded = Signal(object)
     failed = Signal(str)
     logged = Signal(str)
 
-    def __init__(self, fn: Callable[..., Any], *args: Any, with_log: bool = False, **kwargs: Any) -> None:
+    def __init__(self, fn: Callable[..., Any], *args: Any, with_log: bool = False,
+                 with_cancel: bool = False, **kwargs: Any) -> None:
         super().__init__()
         self._fn = fn
         self._args = args
         self._kwargs = kwargs
         self._with_log = with_log
+        self._with_cancel = with_cancel
         self._cancelled = False
 
     def cancel(self) -> None:
@@ -82,16 +88,25 @@ class TaskWorker(QThread):
         return self._cancelled or self.isInterruptionRequested()
 
     def run(self) -> None:  # noqa: D401 - QThread entry point
+        if self.is_cancelled():
+            return
         try:
             kwargs = dict(self._kwargs)
             if self._with_log:
-                kwargs.setdefault("log", lambda m: self.logged.emit(str(m)))
+                callback = kwargs.get("log", lambda m: self.logged.emit(str(m)))
+                def log(message):
+                    if self.is_cancelled():
+                        raise CancelledError()
+                    callback(message)
+                kwargs["log"] = log
+            if self._with_cancel:
+                kwargs.setdefault("cancelled", self.is_cancelled)
             result = self._fn(*self._args, **kwargs)
-            if self._cancelled:
+            if self.is_cancelled():
                 return
             self.succeeded.emit(result)
         except Exception as exc:  # noqa: BLE001
-            if not self._cancelled:
+            if not self.is_cancelled():
                 self.failed.emit(_error_message(exc))
 
 
@@ -116,8 +131,14 @@ class WorkflowWorker(QThread):
         return self._cancelled or self.isInterruptionRequested()
 
     def run(self) -> None:  # noqa: D401 - QThread entry point
+        if self.is_cancelled():
+            return
         try:
-            self._context.progress = lambda message: self.logged.emit(str(message))
+            def progress(message):
+                if self.is_cancelled():
+                    raise CancelledError()
+                self.logged.emit(str(message))
+            self._context.progress = progress
             self._context.cancelled = self.is_cancelled
             result = run_workflow(self._spec, self._context)
             if not self.is_cancelled():
@@ -400,6 +421,8 @@ class ProcessWorkflowWorker(QObject):
             self.process.kill()
 
     def _emit_output(self, raw: bytes) -> None:
+        if self._cancelled:
+            return
         text = raw.decode("utf-8", errors="replace")
         for line in text.splitlines():
             rendered = line.rstrip()

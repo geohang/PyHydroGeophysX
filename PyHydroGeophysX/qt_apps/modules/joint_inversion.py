@@ -1051,6 +1051,7 @@ class JointInversionModule(BaseModule):
                 )
         self.log(f"{result.methods[0]} + {result.methods[1]} joint inversion complete.", "success")
         self._go_to(5)
+        self.offer_map_export()
 
     def _on_failure(self, message: str) -> None:
         self.fail_persisted_run(message)
@@ -1078,6 +1079,7 @@ class JointInversionModule(BaseModule):
         self._export_button.setEnabled(False)
         self._export_button.clicked.connect(self._export_models_csv)
         header.addWidget(self._export_button)
+        header.addWidget(self.map_export_button())
         open_button = QPushButton("Open output folder"); open_button.clicked.connect(self._open_output)
         header.addWidget(open_button); layout.addLayout(header)
         self._result_tabs = QTabWidget(); layout.addWidget(self._result_tabs, stretch=1)
@@ -1300,7 +1302,8 @@ class JointInversionModule(BaseModule):
     def export_actions(self):
         if self._result is None:
             return []
-        return [("Joint models (CSV)", self._export_models_csv)]
+        return [("Add joint model to Project Map…", self.add_to_map),
+                ("Joint models (CSV)", self._export_models_csv)]
 
     def _export_models_csv(self) -> None:
         """Write each recovered model as a table that carries its own coordinates.

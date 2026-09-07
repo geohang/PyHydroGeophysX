@@ -260,8 +260,8 @@ class BaseAgent(ABC):
         Args:
             name: Name identifier for this agent
             api_key: LLM API key (uses provider-specific env var if not provided)
-            model: LLM model to use (default: gpt-4 for OpenAI, gemini-2.5-flash
-                   for Gemini, claude-sonnet-5 for Claude)
+            model: Model identifier. If omitted, use OPENAI_MODEL, GEMINI_MODEL
+                or CLAUDE_MODEL, then the provider fallback in this constructor.
             llm_provider: LLM provider to use ('openai', 'gemini', or 'claude')
         """
         self.name = name

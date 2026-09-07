@@ -13,14 +13,13 @@
 #
 #   light (default)
 #       Excludes the heavy engines (pygimli, SimPEG, resipy, pyvista/vtk) so the
-#       bundle stays small and reliable. The app degrades gracefully: loading,
-#       viewing, QC, picking, geometry editing, and export work in every module;
-#       forward modeling, inversion, and the 3D mesh viewer show an install
-#       message instead.
+#       bundle stays smaller. Features that require an excluded engine remain
+#       unavailable; individual panels report their missing dependencies.
 #
 #   full
-#       Bundles every engine that is installed in the build environment
-#       (collect_all over pygimli/pgcore, SimPEG, pyvista/vtk, resipy, ...).
+#       Collects the supported engines listed below when they are installed
+#       in the build environment (pygimli/pgcore, SimPEG, pyvista/vtk, ...).
+#       ResIPy requires explicit PHGX_BUNDLE_RESIPY=1; see THIRD_PARTY_NOTICES.md.
 #       Much larger output. Engines missing from the build environment are
 #       skipped with a warning and degrade gracefully at runtime, same as light.
 #
@@ -58,11 +57,14 @@ hiddenimports += collect_submodules(
 
 # Runtime data: the branded logo (theme._logo_path() checks <bundle root>/logo.png)
 # and the per-module input-format docs (read via Path(__file__).with_name(...)).
-datas = [(os.path.join(repo_root, "logo.png"), ".")]
-datas.append((
-    os.path.join(repo_root, "PyHydroGeophysX", "data", "qt_examples"),
-    "PyHydroGeophysX/data/qt_examples",
-))
+datas = [(os.path.join(repo_root, "logo.png"), "."),
+         (os.path.join(repo_root, "LICENSE"), "."),
+         (os.path.join(repo_root, "THIRD_PARTY_NOTICES.md"), ".")]
+_compact_examples = os.path.join(repo_root, "PyHydroGeophysX", "data", "qt_examples")
+if os.path.isdir(_compact_examples):
+    datas.append((_compact_examples, "PyHydroGeophysX/data/qt_examples"))
+else:
+    print("[studio spec] compact Qt examples absent; use external data in those panels")
 # Compact observations used by the two Joint Inversion tutorials.
 for _source, _target in (
     (("examples", "data", "ERT", "Bert", "fielddataline2.dat"), "examples/data/ERT/Bert"),
@@ -89,6 +91,12 @@ excludes = [
     "googleapiclient", "google", "grpc",
 ]
 
+# Installing an optional GPL package into the build environment must not
+# silently change the contents of the distributed desktop app.
+_bundle_resipy = os.environ.get("PHGX_BUNDLE_RESIPY", "0") == "1"
+if not _bundle_resipy:
+    excludes.append("resipy")
+
 if variant == "light":
     excludes += ["pygimli", "pgcore", "simpeg", "resipy", "pyvista", "pyvistaqt", "vtk", "vtkmodules"]
 else:
@@ -102,6 +110,8 @@ else:
         "pyvista", "pyvistaqt", "vtk", "vtkmodules",
         "resipy",
     ):
+        if _pkg == "resipy" and not _bundle_resipy:
+            continue
         try:
             _d, _b, _h = collect_all(_pkg)
         except Exception as _exc:  # noqa: BLE001 - engine absent from the build env

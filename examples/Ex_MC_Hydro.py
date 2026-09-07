@@ -162,7 +162,7 @@ for mc_idx in tqdm(range(n_realizations), desc="MC Realizations"):
         # Extract resistivity for this timestep
         resistivity_t = resistivity_values[:, t]
         
-        # Process each layer separately using the NEW resistivity_to_saturation function
+        # Convert each layer with its sampled Archie/Waxman-Smits parameters.
         
         # Layer 1 (marker 3) - Top layer
         mask_layer1 = cell_markers == 3
@@ -356,7 +356,7 @@ ax.plot([55],[1590],'*')
 # ### Function for analyze the time-series data
 
 # %%
-# Modified function to extract time series based on x AND y positions
+# Extract a time series at the selected horizontal position and elevation.
 def extract_mc_time_series(
     mesh: Any,
     values_all: Any,

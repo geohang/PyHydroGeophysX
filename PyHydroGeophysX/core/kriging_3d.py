@@ -228,7 +228,7 @@ def krige_seismic_velocity_3d(topography_file: Union[str, np.ndarray],
         save_results: Whether to save results to files
         
     Returns:
-        Tuple of (mesh, kriged_field, kriging_variance)
+        Tuple of (mesh, kriged_field, kriging_info).
         mesh: PyVista StructuredGrid with kriged velocity field
         kriged_field: Array of kriged velocity values
         kriging_info: Dictionary containing variogram info and validation results
@@ -349,41 +349,63 @@ def krige_seismic_velocity_3d(topography_file: Union[str, np.ndarray],
 def krige_from_2d_profiles(profile_velocities: Dict[str, np.ndarray],
                          topography_data: np.ndarray,
                          profile_locations: Dict[str, Tuple[Tuple[float, float], Tuple[float, float]]],
+                         *,
+                         profile_elevations: Optional[Dict[str, np.ndarray]] = None,
+                         profile_distances: Optional[Dict[str, np.ndarray]] = None,
                          **kwargs) -> Tuple[pv.StructuredGrid, np.ndarray, Dict]:
     """
     Perform 3D kriging from 2D seismic profile data.
     
     Args:
-        profile_velocities: Dictionary mapping profile names to velocity arrays
-        topography_data: Topography data array
-        profile_locations: Dictionary mapping profile names to (start_point, end_point) tuples
+        profile_velocities: Velocity in m/s, shaped (stations, vertical samples).
+        topography_data: Array of (x, y, elevation) in metres.
+        profile_locations: Profile endpoints (x, y), in the topography's projected
+            coordinate system, in metres. Profiles are straight lines.
+        profile_elevations: Required absolute elevations in metres, using the
+            topography's vertical datum. Each value is shaped like its velocity
+            array, or is a shared 1D vertical axis. Depth below ground must be
+            converted to elevation before calling; no synthetic depths are used.
+        profile_distances: Optional station distances in metres from the start
+            endpoint, increasing and within the endpoint separation. If omitted,
+            stations are uniformly spaced between the supplied endpoints.
         **kwargs: Additional arguments passed to krige_seismic_velocity_3d
         
     Returns:
         Same as krige_seismic_velocity_3d
     """
-    # Combine all profile data into 3D points
+    if not profile_velocities or profile_elevations is None:
+        raise ValueError("Provide profile velocities and their real profile_elevations.")
     all_points = []
     all_velocities = []
     
     for profile_name, velocities in profile_velocities.items():
+        velocities = np.asarray(velocities, dtype=float)
+        if velocities.ndim != 2 or not velocities.size or not np.all(np.isfinite(velocities)) or np.any(velocities <= 0):
+            raise ValueError(f"{profile_name}: velocities must be a positive finite (stations, samples) array.")
+        if profile_name not in profile_locations or profile_name not in profile_elevations:
+            raise ValueError(f"{profile_name}: missing locations or elevations.")
         start_point, end_point = profile_locations[profile_name]
-        
-        # Create points along profile
-        n_points = len(velocities)
-        x_coords = np.linspace(start_point[0], end_point[0], n_points)
-        y_coords = np.linspace(start_point[1], end_point[1], n_points)
-        
-        # Assume velocities have depth information or create synthetic depths
-        # This would need to be adapted based on actual data format
-        for i, vel_profile in enumerate(velocities):
-            if isinstance(vel_profile, np.ndarray) and vel_profile.ndim > 0:
-                depths = np.linspace(0, -30, len(vel_profile))  # Example depth range
-                for j, (depth, vel) in enumerate(zip(depths, vel_profile)):
-                    all_points.append([x_coords[i], y_coords[i], depth])
-                    all_velocities.append(vel)
+        endpoints = np.asarray([start_point, end_point], dtype=float)
+        if endpoints.shape != (2, 2) or not np.all(np.isfinite(endpoints)):
+            raise ValueError(f"{profile_name}: endpoints must be finite (x, y) pairs.")
+        length = np.linalg.norm(endpoints[1] - endpoints[0])
+        if length <= 0:
+            raise ValueError(f"{profile_name}: endpoints must differ.")
+        distances = (np.linspace(0, length, len(velocities)) if profile_distances is None
+                     else np.asarray(profile_distances[profile_name], dtype=float))
+        if (distances.shape != (len(velocities),) or not np.all(np.isfinite(distances))
+                or np.any(np.diff(distances) <= 0) or np.any(distances < 0) or np.any(distances > length)):
+            raise ValueError(f"{profile_name}: invalid station distances.")
+        elevations = np.asarray(profile_elevations[profile_name], dtype=float)
+        if elevations.shape == (velocities.shape[1],):
+            elevations = np.broadcast_to(elevations, velocities.shape)
+        if elevations.shape != velocities.shape or not np.all(np.isfinite(elevations)):
+            raise ValueError(f"{profile_name}: elevations must match the velocity samples.")
+        xy = endpoints[0] + (distances / length)[:, None] * (endpoints[1] - endpoints[0])
+        all_points.append(np.column_stack((np.repeat(xy, velocities.shape[1], axis=0), elevations.ravel())))
+        all_velocities.append(velocities.ravel())
     
     # Convert to arrays
-    velocity_data_3d = np.column_stack([np.array(all_points), np.array(all_velocities)])
+    velocity_data_3d = np.column_stack([np.concatenate(all_points), np.concatenate(all_velocities)])
     
     return krige_seismic_velocity_3d(topography_data, velocity_data_3d, **kwargs)

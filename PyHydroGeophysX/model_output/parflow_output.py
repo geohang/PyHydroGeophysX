@@ -238,8 +238,7 @@ class ParflowOutput(HydroModelOutput):
 
         # ParFlow PFB files usually store data in (nz, ny, nx) order.
         if data_array.ndim != 3:
-            # Potential Issue: If data is not 3D (e.g., 2D slice, or 1D output).
-            # This method assumes 3D output. Adapt if other dimensionalities are common.
+            # Report 1D/2D inputs with singleton leading axes; reject other ranks.
             print(f"Warning: PFB file '{pfb_file_path}' data is not 3-dimensional (shape: {data_array.shape}). Assuming (nz=1, ny=1, nx=shape[0]) or similar if 1D.")
             # Handle common cases for non-3D data to still return a 3-tuple.
             if data_array.ndim == 1: return (1, 1, data_array.shape[0])
@@ -267,8 +266,7 @@ class ParflowSaturation(ParflowOutput):
             run_name (str): The base name of the ParFlow run.
         """
         super().__init__(model_directory, run_name)
-        # Additional check: Ensure saturation files were indeed the source of timesteps if specific.
-        # For now, _get_available_timesteps is generic.
+        # Timestep discovery is shared with the other ParFlow output readers.
     
     def load_timestep(self, timestep_idx: int, **kwargs: Any) -> np.ndarray:
         """
@@ -310,11 +308,8 @@ class ParflowSaturation(ParflowOutput):
             FileNotFoundError: If the specific saturation PFB file cannot be found.
             ValueError: If there's an error reading or processing the PFB file.
         """
-        # Construct the expected saturation PFB filename.
-        # ParFlow typically zero-pads timestep numbers to 5 digits.
-        # Potential Issue: Padding might vary based on ParFlow version or settings.
-        # The original code tries 5-digit padding first, then without if not found.
-        # This seems like a reasonable fallback.
+        # Support five-digit and unpadded timestep filenames; prefer the
+        # padded file when both exist.
         satur_filename_padded = f"{self.run_name}.out.satur.{timestep_number:05d}.pfb"
         satur_file_path_padded = os.path.join(self.model_directory, satur_filename_padded)
 
@@ -334,11 +329,8 @@ class ParflowSaturation(ParflowOutput):
         try:
             saturation_data = self.read_pfb(chosen_path) # Use the instance's PFB reader
             
-            # ParFlow uses large negative numbers (e.g., -1.0E+39, -2.0E+39) to denote no-data or inactive cells.
-            # Replace these with NaN for more standard handling in NumPy/plotting.
-            # The threshold -1e38 is from the original code.
-            # Potential Improvement: This threshold might need to be more robust or configurable
-            # if ParFlow's no-data value representation varies.
+            # Treat values below the reader's -1e38 sentinel cutoff as missing.
+            # Other saturation values are returned without clipping.
             saturation_data[saturation_data < -1e38] = np.nan
             
             return saturation_data
@@ -396,7 +388,7 @@ class ParflowSaturation(ParflowOutput):
         timesteps_to_load_numbers = self.available_timesteps[start_idx:actual_end_idx]
 
         if not timesteps_to_load_numbers:
-            # This case should ideally be caught by actual_end_idx <= start_idx logic.
+            # Preserve the empty-series return shape if the selected slice is empty.
             # However, if slicing results in empty list for other reasons:
             # print(f"Warning: No timesteps selected for index range [{start_idx}, {actual_end_idx}).")
             # Determine spatial shape from the first available timestep for empty array structure
@@ -508,15 +500,13 @@ class ParflowPorosity(ParflowOutput):
             porosity_data = self.read_pfb(found_file_path)
             # Handle ParFlow's no-data values, similar to saturation.
             porosity_data[porosity_data < -1e38] = np.nan
-            # Potential Issue: Porosity should ideally be between 0 and 1.
-            # Add validation or clipping if ParFlow might output other values for active cells.
-            # e.g., np.clip(porosity_data, 0.0, 1.0) after NaNs are set.
-            # However, if -1e38 are truly no-data, they should remain NaN, not clipped to 0.
+            # Preserve non-sentinel values for downstream validation; this reader
+            # does not clip porosity into [0, 1].
             return porosity_data
         except Exception as e:
             raise ValueError(f"Error loading or processing porosity data from '{found_file_path}': {str(e)}")
     
-    def load_mask(self) -> np.ndarray: # Original name was load_porosity, but seems to load mask
+    def load_mask(self) -> np.ndarray:
         """
         Load the domain mask data from a ParFlow model.
         The mask file (.out.mask.pfb) indicates active (1) and inactive (0) cells.

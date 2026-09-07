@@ -40,6 +40,7 @@ _CHILD_ICONS = {
     "Seismic → Structure": "fa5s.cube",
     "ERT → Water Content": "fa5s.tint",
     "Saved Results": "fa5s.history",
+    "Map": "fa5s.map-marked-alt",
 }
 
 # (group label, [(child label, module key), ...]). Several Hydro children map to
@@ -79,6 +80,7 @@ TREE_STRUCTURE: List[Tuple[str, List[Tuple[str, str]]]] = [
         "Project",
         [
             ("Saved Results", "model_viewer"),
+            ("Map", "project_map"),
         ],
     ),
 ]

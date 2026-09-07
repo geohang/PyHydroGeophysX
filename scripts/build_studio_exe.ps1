@@ -8,9 +8,10 @@ Steps: install build dependencies, generate the app icons, run PyInstaller with
 the requested variant, and zip the bundle to
 dist\PyHydroGeophysX-Studio-windows-<variant>.zip
 
-The "full" variant bundles whichever geophysics engines (pygimli, SimPEG,
-pyvista/vtk, resipy) are installed in the current environment; install them
-first if you want them included.
+The "full" variant collects supported engines listed in the spec (including
+pygimli, SimPEG, pyvista/vtk) if installed in this environment; install them first if
+you want them included. ResIPy additionally requires PHGX_BUNDLE_RESIPY=1;
+see THIRD_PARTY_NOTICES.md before distributing that build.
 #>
 param(
     [ValidateSet("light", "full")]

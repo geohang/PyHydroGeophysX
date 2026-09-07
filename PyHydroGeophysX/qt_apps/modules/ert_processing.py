@@ -739,6 +739,7 @@ class ERTProcessingModule(BaseModule):
         ebox.addWidget(exp_e)
         ebox.addWidget(exp_g)
         ebox.addWidget(self._model_export_btn)
+        ebox.addWidget(self.map_export_button())
         layout.addWidget(exp)
 
         layout.addStretch(1)
@@ -788,6 +789,7 @@ class ERTProcessingModule(BaseModule):
         self._tl_export_btn.setEnabled(False)
         self._tl_export_btn.clicked.connect(self._export_tl_results)
         tlform.addRow(self._tl_export_btn)
+        tlform.addRow(self.map_export_button())
         self._tl_open = QPushButton("Open output folder")
         self._tl_open.setIcon(theme.icon("fa5s.folder-open"))
         self._tl_open.setEnabled(False)
@@ -1804,12 +1806,14 @@ class ERTProcessingModule(BaseModule):
                             "convergence_stop": result.get("convergence_stop", ""),
                             "convergence_track": track,
                             "fixed_lambda": dict(result.get("fixed_lambda") or {})})
+        self.offer_map_export()
 
     def _show_lambda_choice(self, index: int) -> None:
         """Display one of the kept single-inversion models (auto-λ or fixed λ)."""
         if not (0 <= index < len(self._inv_choices)):
             return
         choice = self._inv_choices[index]
+        self._map_result_kind = 'single'
         self._inv_mgr = choice["mgr"]
         if self._inv_mgr is not None:
             self._model_view.show_model(self._inv_mgr, kind="ert")
@@ -2244,6 +2248,7 @@ class ERTProcessingModule(BaseModule):
                 "info",
             )
         self.report_result(result)
+        self.offer_map_export()
 
     def _populate_tl_steps(self) -> None:
         """Fill the step selector from the loaded time-lapse models and show step 0."""
@@ -2276,6 +2281,7 @@ class ERTProcessingModule(BaseModule):
         if idx < 0 or idx >= models.shape[1]:
             return
         values = models[:, idx]
+        self._map_result_kind = 'timelapse'
         cov = None
         if self._tl_coverage is not None:
             cov_all = np.asarray(self._tl_coverage, dtype=float)
@@ -2602,6 +2608,8 @@ class ERTProcessingModule(BaseModule):
 
     def export_actions(self):
         actions = []
+        if getattr(self, "_inv_mgr", None) is not None or self._tl_result:
+            actions.append(("Add displayed result to Project Map…", self.add_to_map))
         if getattr(self, "_inv_mgr", None) is not None:
             actions.append((
                 "Resistivity model (CSV + npy + mesh + VTK)",

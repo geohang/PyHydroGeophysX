@@ -1,0 +1,75 @@
+# Refresh the download / traffic / visitor figures behind docs/source/usage.rst.
+#
+# The job rewrites docs/source/_static/stats/usage_stats.json, commits it when
+# the numbers moved, and then asks the Docs workflow to republish. The explicit
+# dispatch is needed because a push made with GITHUB_TOKEN does not trigger
+# other workflows, so the path filter in docs.yml would never fire on its own.
+
+name: Usage stats
+
+on:
+  schedule:
+    # 05:17 UTC on the 1st of every month.
+    #
+    # The download figures on the page do not depend on this cadence, because
+    # usage-stats.js queries the PyPI logs live on every page load. What this job
+    # refreshes is the snapshot that paints the page before that query returns,
+    # plus the two figures that need an API token and so cannot be read from the
+    # browser: GitHub traffic and documentation visits.
+    #
+    # Monthly rather than quarterly for one specific reason: GitHub disables a
+    # scheduled workflow in a public repository after 60 days with no repository
+    # activity, and does not re-enable it on its own. A quarterly run leaves a
+    # 90-day gap, so a quiet stretch would silently switch this job off. At
+    # monthly the job's own commit keeps the schedule alive.
+    - cron: "17 5 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: usage-stats
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Fetch the statistics
+        env:
+          # Repository stars and forks need no token; clone and view counts do.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Both are optional. Without them the visitor map stays hidden and the
+          # page shows its setup note instead.
+          GOATCOUNTER_SITE: ${{ secrets.GOATCOUNTER_SITE }}
+          GOATCOUNTER_TOKEN: ${{ secrets.GOATCOUNTER_TOKEN }}
+        run: python tools/fetch_usage_stats.py
+
+      - name: Commit when the numbers changed
+        id: commit
+        run: |
+          if git diff --quiet -- docs/source/_static/stats/; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No change in the statistics; nothing to publish."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/source/_static/stats/
+          git commit -m "docs: refresh usage statistics"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Republish the documentation
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run docs.yml --ref main

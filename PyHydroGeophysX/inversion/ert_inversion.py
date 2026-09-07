@@ -1666,6 +1666,7 @@ class ERTInversion(InversionBase):
             # a run that stops at dPhi = 1 % may still be descending.
             'target_chi_squared': 1.0,
             'convergence_tolerance': 0.005,
+            'min_iterations': 5,
             'verbose': True,
             'use_gpu': False,      # Add GPU acceleration option
             'parallel': False,     # Add parallel computation option
@@ -1746,8 +1747,13 @@ class ERTInversion(InversionBase):
         max_err = float(self.parameters.get('max_relative_error', 2.00))
         Delta_rhoa_rhoa = np.clip(np.asarray(Delta_rhoa_rhoa, dtype=float), min_err, max_err)
 
-        # Create data weighting matrix
-        self.Wdert = np.diag(1.0 / np.log(Delta_rhoa_rhoa + 1))
+        # Data weighting is diagonal, so hold it as a vector and apply it by
+        # broadcasting. Materializing it as a D-by-D array cost 0.27 GB at
+        # D = 6000 and turned 'Wdert.dot(Jr)' into an O(D^2 P) matmul where
+        # O(D P) does the same job. Wdert is kept as a scipy diagonal for any
+        # caller that reads the attribute; the hot paths below use the vector.
+        self.Wdert_diag = 1.0 / np.log(Delta_rhoa_rhoa + 1)
+        self.Wdert = diags(self.Wdert_diag)
         
         # Create model regularization matrix
         rm = self.fwd_operator.regionManager()
@@ -1757,8 +1763,10 @@ class ERTInversion(InversionBase):
         rm.fillConstraints(Ctmp)
         self.Wm_r = pg.utils.sparseMatrix2coo(Ctmp)
         cw = rm.constraintWeights().array()
-        self.Wm_r = diags(cw).dot(self.Wm_r)
-        self.Wm_r = self.Wm_r.todense()
+        # Left sparse. It holds about two nonzeros per row, so densifying it
+        # was roughly 300 MB of mostly zeros for a 5000-cell mesh, kept for the
+        # whole run. The one place that needs a dense copy makes it on the spot.
+        self.Wm_r = diags(cw).dot(self.Wm_r).tocsr()
     
     def run(self, initial_model: Optional[np.ndarray] = None,
             reference_model: Optional[np.ndarray] = None) -> InversionResult:
@@ -1832,6 +1840,14 @@ class ERTInversion(InversionBase):
         lam_val = float(self.parameters['lambda_val'])
         target_chi2 = float(self.parameters.get('target_chi_squared', 1.0))
         dphi_tol = float(self.parameters.get('convergence_tolerance', 0.005))
+        # A flat second iteration is normal while the line search finds its
+        # scale, so a plateau only counts as convergence after
+        # 'min_iterations'. The clamp keeps the guard from swallowing the
+        # plateau test outright when a caller asks for very few iterations.
+        min_iterations = min(
+            int(self.parameters.get('min_iterations', 5)),
+            max(int(self.parameters['max_iterations']) - 2, 0),
+        )
         verbose = bool(self.parameters.get('verbose', True))
         stop_reason = 'iteration_cap'
         line_search_failures = 0
@@ -1856,7 +1872,12 @@ class ERTInversion(InversionBase):
 
             # Data misfit calculation
             dataerror_ert = self.rhos1 - dr
-            fdert = (np.dot(self.Wdert, dataerror_ert)).T.dot(np.dot(self.Wdert, dataerror_ert))
+            # np.dot does not dispatch to a scipy sparse matrix, and the
+            # weighting is diagonal anyway, so apply it by broadcasting.
+            # Shape stays (1, 1), which the chi2 conversion below relies on.
+            weighted_err = self.Wdert_diag.reshape(-1, 1) * np.asarray(
+                dataerror_ert, dtype=float).reshape(-1, 1)
+            fdert = weighted_err.T.dot(weighted_err)
 
             # Model regularization term. The stacked system below solves the normal
             # equations of ||Wd (d - f(m))||^2 + lambda ||Wm (m - m_ref)||^2, so the
@@ -1889,20 +1910,33 @@ class ERTInversion(InversionBase):
             if chi2_ert < target_chi2:
                 stop_reason = 'target'
                 break
-            if nn > 0 and dPhi < dphi_tol:
+            if dPhi < dphi_tol and nn > min_iterations:
                 stop_reason = 'plateau'
                 break
 
-            # System matrix and gradient
-            gc_r = np.vstack((self.Wdert.dot(dr - self.rhos1), L_mr * self.Wm_r.dot(delta_mr)))
-            N11_R = np.vstack((self.Wdert.dot(Jr), L_mr * self.Wm_r))
+            # System matrix and gradient. 'wd' applies the diagonal data
+            # weights by broadcasting instead of through a D-by-D matmul.
+            wd = self.Wdert_diag.reshape(-1, 1)
+            data_residual = np.asarray(dr - self.rhos1, dtype=float).reshape(-1, 1)
+            reg_residual = np.asarray(
+                self.Wm_r.dot(delta_mr), dtype=float
+            ).reshape(-1, 1)
+            gc_r = np.vstack((wd * data_residual, L_mr * reg_residual))
+            # The stacked system is dense because Jr is, so densify the sparse
+            # regularization block here rather than storing a dense copy of it.
+            N11_R = np.vstack((wd * Jr, L_mr * self.Wm_r.toarray()))
             
             gc_r = np.array(gc_r)
             gc_r = gc_r.reshape(-1, 1)
             
             # Alternative gradient formulation
-            gc_r1 = Jr.T.dot(self.Wdert.T.dot(self.Wdert)).dot(dr - self.rhos1) + \
-                   (L_mr * self.Wm_r).T.dot( self.Wm_r).dot(delta_mr)
+            # L_mr stays at the first power here, as it was. This expression
+            # feeds only the Armijo test below, and rescaling it would change
+            # which step lengths are accepted.
+            reg_gradient = np.asarray(
+                self.Wm_r.T.dot(self.Wm_r.dot(delta_mr)), dtype=float
+            ).reshape(-1, 1)
+            gc_r1 = Jr.T.dot(wd ** 2 * data_residual) + L_mr * reg_gradient
             
             # Solve normal equations for update
             d_mr = generalized_solver(
@@ -1932,7 +1966,11 @@ class ERTInversion(InversionBase):
                 dr = dr.reshape(dr.shape[0], 1)
 
                 dataerror_ert = self.rhos1 - dr
-                fdert = (np.dot(self.Wdert, dataerror_ert)).T.dot(np.dot(self.Wdert, dataerror_ert))
+                # np.dot does not dispatch to a scipy sparse matrix, and the
+                # weighting is diagonal anyway, so apply it by broadcasting.
+                weighted_err = self.Wdert_diag.reshape(-1, 1) * np.asarray(
+                    dataerror_ert, dtype=float).reshape(-1, 1)
+                fdert = weighted_err.T.dot(weighted_err)
                 wm_trial = self.Wm_r * (mr1 - mr_R)
                 fmert = lam_val * wm_trial.T.dot(wm_trial)
 

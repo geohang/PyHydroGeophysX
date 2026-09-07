@@ -52,8 +52,9 @@ _START_COLOR = "#1f77b4"
 class EMOverviewView(QWidget):
     """Plan map plus resistivity section for one line-inversion result."""
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent=None, *, section_only=False) -> None:
         super().__init__(parent)
+        self._section_only = bool(section_only)
         from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
         from matplotlib.figure import Figure
 
@@ -119,8 +120,12 @@ class EMOverviewView(QWidget):
             "Width of the map column, against the section beside it. Scrolling "
             "over either panel zooms it about the cursor, dragging pans, and a "
             "double-click returns to the whole survey.")
-        row.addWidget(QLabel("Map"))
+        map_label = QLabel("Map")
+        row.addWidget(map_label)
         row.addWidget(self._map_share)
+        if self._section_only:
+            for control in (self._basemap, self._basemap_source, self._map_share, map_label):
+                control.hide()
         # Through the timer, and not straight to it: QTimer.start takes an
         # interval, so the slider's own value would become the delay.
         self._map_share.valueChanged.connect(lambda _v: self._resize_timer.start())
@@ -287,7 +292,7 @@ class EMOverviewView(QWidget):
         self._line.setCurrentIndex(0)
         self._line.blockSignals(False)
         self._line.setVisible(unique.size > 1)
-        self._row.setVisible(unique.size > 1 or available)
+        self._row.setVisible(self._section_only or unique.size > 1 or available)
         self._redraw()
 
     def _on_basemap_toggled(self, *_) -> None:
@@ -475,7 +480,7 @@ class EMOverviewView(QWidget):
         positions = np.asarray(result["positions"], dtype=float).ravel()[:selected.size]
         distance = positions[selected] - float(positions[selected][0])
         edges = self._cell_edges(distance)
-        has_map = self._x is not None and self._y is not None
+        has_map = not self._section_only and self._x is not None and self._y is not None
 
         log_scale = bool(result.get("log_scale", True))
         vmin, vmax = self._colour_range(log_scale)

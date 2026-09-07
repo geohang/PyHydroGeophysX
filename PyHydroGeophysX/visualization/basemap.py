@@ -98,9 +98,10 @@ def fit_local_transform(x, y, lon, lat) -> Optional["Tuple[complex, complex]"]:
     """Least-squares similarity from projected metres to Web Mercator metres.
 
     Returns ``(a, b)`` such that ``mx + i*my = a * (x + i*y) + b``. Written over
-    the complex plane because a complex multiply *is* a rotation plus a scale,
-    which is exactly the freedom a pair of conformal projections leaves; the fit
-    is then one two-column least squares.
+    the complex plane because a complex multiply represents rotation and scale.
+    This is a local approximation, not a general reprojection: projection scale
+    and rotation can vary across a larger survey. Residual checks below bound
+    the error at the supplied control stations.
 
     Returns ``None`` when fewer than three usable stations are given or the
     residual is too large to trust, so the caller can drop the basemap rather

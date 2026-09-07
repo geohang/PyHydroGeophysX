@@ -1,11 +1,19 @@
 """Read inversion results stored inside a TEMcompany project file.
 
-``project.db`` keeps more than the recorded transients. Where a survey has
-already been inverted, ``InversionModel`` holds the recovered model, the depth
-of investigation, the data fit, and a ``Datasets`` blob carrying, per moment,
-the gate windows used, the data the inversion was given (``InputData``), the
-uncertainty assigned to it (``InputSTD``) and the response computed for the
-recovered model (``ForwardData``).
+A project file keeps more than the recorded transients. Where a survey has
+already been inverted, it holds the recovered model, the depth of
+investigation, the data fit, and a per-moment record of the gate windows used,
+the data the inversion was given (``InputData``), the uncertainty assigned to it
+(``InputSTD``) and the response computed for the recovered model
+(``ForwardData``). Earlier releases of TEMImage kept those in
+``InversionModel.Datasets`` inside ``project.db``; TEMImage 3 keeps them in
+``StationModelTable.ModelData`` inside ``project.tiw``.
+:mod:`PyHydroGeophysX.data_processing.temcompany_project` reads either and
+returns the older shape, which is the shape this module works in.
+
+TEMImage 3 also keeps the solver's own input, output and log, which state the
+constraints a run used rather than only its result. Those are reached through
+:func:`PyHydroGeophysX.data_processing.temcompany_project.read_run_record`.
 
 This module reads those records so that results produced earlier can be loaded
 alongside the soundings they came from: plotted on a section, compared with a
@@ -28,65 +36,28 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 import numpy as np
 
+from PyHydroGeophysX.data_processing import temcompany_project
 from PyHydroGeophysX.data_processing.em1d import (
     _temcompany_json_array,
     _temcompany_protocol,
 )
 
-#: Moments a ``Datasets`` blob can name.
+#: Moments a reference block can name.
 REFERENCE_MOMENTS: Tuple[str, ...] = ("LM", "HM")
 
-
-def _project_database(path: str | Path) -> Path:
-    """The ``project.db`` inside *path*, or *path* itself when it is one."""
-    source = Path(path)
-    if source.is_file():
-        return source
-    databases = sorted(source.glob("*.db"))
-    named = [item for item in databases if item.name.lower() == "project.db"]
-    if named:
-        return named[0]
-    if len(databases) == 1:
-        return databases[0]
-    if not databases:
-        # A raw acquisition folder rather than an imported project. The two look
-        # alike from outside: both carry the .sts protocol and the line files.
-        raise ValueError(
-            f"{source} holds no database. A TEMcompany project has a project.db "
-            "beside its protocol; a raw acquisition folder does not, and so "
-            "holds no inversion results.")
-    raise ValueError(
-        f"{source} holds no project.db and more than one other database; "
-        "pass the file directly.")
-
-
-def _read_only(database: Path) -> sqlite3.Connection:
-    """Open *database* read-only, so reading cannot alter a survey."""
-    connection = sqlite3.connect(
-        database.resolve().as_uri() + "?mode=ro", uri=True)
-    connection.row_factory = sqlite3.Row
-    return connection
+#: Kept under the older name so callers that imported it keep working.
+_project_database = temcompany_project.project_file
+_read_only = temcompany_project.open_project
 
 
 def has_reference_models(path: str | Path) -> bool:
     """Whether *path* holds inversion results as well as soundings."""
     try:
-        database = _project_database(path)
-    except (OSError, ValueError):
-        return False
-    if not database.is_file():
+        connection = temcompany_project.open_project(path)
+    except (OSError, ValueError, sqlite3.Error):
         return False
     try:
-        connection = _read_only(database)
-    except sqlite3.Error:
-        return False
-    try:
-        names = {row[0] for row in connection.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'")}
-        if "InversionModel" not in names:
-            return False
-        return connection.execute(
-            "SELECT COUNT(*) FROM InversionModel").fetchone()[0] > 0
+        return temcompany_project.has_inversion_models(connection)
     except sqlite3.Error:
         return False
     finally:
@@ -96,25 +67,20 @@ def has_reference_models(path: str | Path) -> bool:
 def reference_inversion_names(path: str | Path) -> List[str]:
     """Every named inversion the project holds, the current one first.
 
-    "Current" is the project's own answer where it has one: ``InverseSettings``
-    records ``LastInversionName``, which is the run the application would show.
-    Only where that is missing does the order fall back to a guess, and the
-    guess is row count rather than timestamp because a later run is often a
-    re-inversion of a few stations while the one worth comparing against covers
-    the survey.
+    "Current" is the project's own answer where it has one. TEMImage 3
+    timestamps every run in ``InversionRunTable``, so the latest finished run is
+    the one the application would show; earlier releases record
+    ``LastInversionName`` in ``InverseSettings``. Only where neither is present
+    does the order fall back to a guess, and the guess is row count rather than
+    timestamp because a later run is often a re-inversion of a few stations
+    while the one worth comparing against covers the survey.
     """
-    database = _project_database(path)
-    connection = _read_only(database)
+    connection = temcompany_project.open_project(path)
     try:
-        rows = connection.execute(
-            "SELECT InversionName, COUNT(*) AS n FROM InversionModel "
-            "GROUP BY InversionName ORDER BY n DESC").fetchall()
-    except sqlite3.Error:
-        return []
+        names = temcompany_project.inversion_names(connection)
+        current = temcompany_project.last_inversion_name(connection)
     finally:
         connection.close()
-    names = [str(row[0]) for row in rows]
-    current = _last_inversion_name(database)
     if current in names:
         names.remove(current)
         names.insert(0, current)
@@ -122,30 +88,15 @@ def reference_inversion_names(path: str | Path) -> List[str]:
 
 
 def _last_inversion_name(database: Path) -> Optional[str]:
-    """The inversion the project's settings point at, if it names one."""
+    """The inversion the project's own record points at, if it names one."""
     try:
-        connection = _read_only(database)
-    except sqlite3.Error:
+        connection = temcompany_project.open_project(database)
+    except (OSError, ValueError, sqlite3.Error):
         return None
     try:
-        row = connection.execute(
-            "SELECT * FROM UserSettingsJson ORDER BY 1 DESC LIMIT 1").fetchone()
-    except sqlite3.Error:
-        return None
+        return temcompany_project.last_inversion_name(connection)
     finally:
         connection.close()
-    if row is None:
-        return None
-    raw = next((value for value in row
-                if isinstance(value, str) and value.lstrip().startswith("{")), None)
-    if not raw:
-        return None
-    try:
-        settings = json.loads(raw)
-    except (TypeError, ValueError, json.JSONDecodeError):
-        return None
-    name = dict(settings.get("InverseSettings", {})).get("LastInversionName")
-    return str(name) if name else None
 
 
 def _station_geometry(row: Optional[sqlite3.Row]) -> Dict[str, float]:
@@ -243,33 +194,16 @@ def iter_reference_stations(
     whichever name carries the most rows, which is the full-survey inversion in
     every project seen so far.
     """
-    database = _project_database(path)
-    connection = _read_only(database)
+    database = temcompany_project.project_file(path)
+    connection = temcompany_project.open_project(database)
     try:
-        specs = {
-            item["RxTxSpecsId"]: json.loads(item["RxTxSpecsJson"])
-            for item in connection.execute("SELECT * FROM RxTxSpecs")
-            if item["RxTxSpecsJson"]
-        }
+        specs = temcompany_project.read_specs(connection)
         stations = {
             item["AveragedDataId"]: item
-            for item in connection.execute("SELECT * FROM StationStackData")
+            for item in temcompany_project.read_station_stacks(connection)
         }
-        if inversion_name is None:
-            # The project's own pointer first; see reference_inversion_names.
-            inversion_name = _last_inversion_name(database)
-        if inversion_name is None:
-            available = connection.execute(
-                "SELECT InversionName, COUNT(*) AS n FROM InversionModel "
-                "GROUP BY InversionName ORDER BY n DESC LIMIT 1").fetchone()
-            inversion_name = str(available[0]) if available else None
-        query = "SELECT * FROM InversionModel"
-        parameters: Tuple[Any, ...] = ()
-        if inversion_name is not None:
-            query += " WHERE InversionName = ?"
-            parameters = (str(inversion_name),)
-        query += " ORDER BY LineNumber, AverageDataID"
-        for row in connection.execute(query, parameters):
+        for row in temcompany_project.read_inversion_models(
+                connection, inversion_name):
             moments = _parse_datasets(row["Datasets"])
             if not moments:
                 continue
@@ -298,7 +232,11 @@ def iter_reference_stations(
                 "line_number": int(row["LineNumber"]),
                 "x": float(row["UTMx"]),
                 "y": float(row["UTMy"]),
-                "elevation": float(row["Elevation"]),
+                # A project that never had a digital elevation model applied
+                # records the GPS altitude here and nothing under Elevation, so
+                # the fallback keeps a station rather than dropping it.
+                "elevation": float(row["Elevation"] if row["Elevation"]
+                                   is not None else row["UTMz"]),
                 "doi": (float(row["DOI"]) if row["DOI"] is not None
                         else float("nan")),
                 "data_fit": (float(row["DataFit"]) if row["DataFit"] is not None

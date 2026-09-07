@@ -194,13 +194,11 @@ def _selection_before_the_verdicts_existed(times, response, std, flags,
     return mask, kept_std
 
 
-def test_adding_the_verdicts_did_not_move_which_gates_a_run_sees():
-    """Every combination of the four switches, against the frozen rule.
+def test_gate_selection_preserves_legacy_rules_except_independent_sign_filter():
+    """Compare all switches with the frozen rule, allowing the explicit fix.
 
-    The same comparison over one 929-station project agreed on all 44,592
-    station-moment-setting combinations it holds; the random cases here cover
-    the corners that survey has no example of, such as a noisy gate the flags
-    left in.
+    A missing noise threshold now leaves sign rejection active. All other
+    selection behavior must continue to match the independent legacy reference.
     """
     rng = np.random.default_rng(20260829)
     times = np.logspace(-5, -3.5, 20)
@@ -215,6 +213,9 @@ def test_adding_the_verdicts_did_not_move_which_gates_a_run_sees():
         ):
             reference, reference_std = _selection_before_the_verdicts_existed(
                 times, values, std, flags, use_flags, cut, mode, negative)
+            if cut is None and negative:
+                reference_std = reference_std[values[reference] >= 0]
+                reference = reference & (values >= 0)
             status, _, _ = _gate_disposition(times, values, std, flags,
                                              use_flags, cut, mode, negative)
             mask = status == "kept"

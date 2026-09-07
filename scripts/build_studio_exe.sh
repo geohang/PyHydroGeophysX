@@ -8,9 +8,9 @@
 # with the requested variant, and zip the bundle to
 # dist/PyHydroGeophysX-Studio-<os>-<variant>.zip
 #
-# The "full" variant bundles whichever geophysics engines (pygimli, SimPEG,
-# pyvista/vtk, resipy) are installed in the current environment; install them
-# first if you want them included.
+# The "full" variant collects supported engines listed in the spec (including
+# pygimli, SimPEG, pyvista/vtk) if installed in this environment. ResIPy also requires
+# PHGX_BUNDLE_RESIPY=1; see THIRD_PARTY_NOTICES.md before distribution.
 set -euo pipefail
 
 variant="${1:-light}"

@@ -505,8 +505,11 @@ Modules
        clipping plane, and run 3D ERT forward modeling on the generated mesh.
    * - EM Processing
      - Load TDEM / FDEM soundings (single or multi-sounding line files), invert one
-       sounding or a whole line into a stitched resistivity section, and view
-       plan-view depth-slice maps on survey coordinates.
+       sounding or a whole line into a stitched resistivity section, and inspect
+       depth-of-investigation controls. Add results to Project Map for map views.
+   * - Project Map
+     - Manage survey layers across methods, inspect saved results, display EM
+       depth slices and gravity/magnetic model slices, and export map images.
    * - Gravity / Magnetics
      - Load station data, remove regional trends, and run SimPEG 3D inversion with an
        interactive model viewer.
@@ -523,6 +526,35 @@ The studio also includes **AQUAH Chat**, an in-app assistant that can drive the
 modules through natural language (OpenAI, Anthropic, or any OpenAI-compatible
 provider; bring your own API key). Every proposed action shows an Approve / Reject
 button before it runs.
+
+Managing Surveys in Project Map
+--------------------------------
+
+After a successful ERT, EM, seismic, gravity/magnetic, or joint inversion,
+choose **Add to Map…** or **Not now**. The latter keeps the result on its
+processing page, where **Add to Map…** remains available. For time-lapse ERT,
+the map receives the currently displayed step; joint inversion lets you choose
+the recovered model to add.
+
+Confirm the survey name, coordinates and coordinate reference system (CRS).
+Existing survey coordinates can be used directly. Profiles without coordinates
+can be placed using a start location and bearing, or a control-point CSV with
+``distance,x,y`` columns. Local coordinates must use the same project metre
+frame; they appear separately from geographic surveys and have no online basemap.
+
+Open **Project > Map** to show or hide layers, filter by method, rename surveys,
+and click a survey to inspect its result. The selected result has its own units
+and colour scale. EM provides line and DOI controls; recovered grids provide
+vertical slice selection. Use **Load basemap** for optional online imagery and
+**Export map PNG…** to save the overview. Results remain accessible offline.
+
+Other methods can use **Import point product CSV…** with ``x,y,value`` columns,
+a method name and physical units. **Add available result…** also accepts session
+models that include mesh or grid geometry.
+
+Adding a layer immediately saves an independent numeric snapshot in the project's
+``project_map`` directory. Reopening the project restores these layers. Removing
+a layer does not delete its source result or the retained snapshot data.
 
 How the Streamlit / Qt Bridge Works
 -----------------------------------

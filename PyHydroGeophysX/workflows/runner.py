@@ -12,7 +12,18 @@ def run_workflow(
     spec: WorkflowSpec | Mapping[str, Any],
     context: RunContext | None = None,
 ) -> WorkflowRunResult:
-    """Validate and execute one registered workflow."""
+    """Validate and execute one registered workflow synchronously.
+
+    spec may be a WorkflowSpec or its JSON-compatible mapping. Stochastic
+    workflows require an explicit seed. context supplies the project/output
+    paths, progress callback and cancellation predicate; a default context
+    writes under the current directory's workflow_results folder.
+
+    The output directory is created before calling the handler. Return a
+    WorkflowRunResult whose serializable view has been validated; optional
+    in-process objects remain on the result. Validation, import and handler
+    exceptions propagate to the caller rather than becoming a success result.
+    """
     if not isinstance(spec, WorkflowSpec):
         spec = WorkflowSpec.from_dict(spec)
     descriptor = get_workflow(spec.workflow_id)
@@ -32,4 +43,3 @@ def run_workflow(
 
 
 __all__ = ["run_workflow"]
-

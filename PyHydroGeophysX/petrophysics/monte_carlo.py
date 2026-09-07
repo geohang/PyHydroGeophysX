@@ -55,12 +55,13 @@ def _sample_layer(
 
 
 def _statistics(values: np.ndarray) -> Dict[str, np.ndarray]:
+    percentiles = np.percentile(values, [10, 50, 90], axis=0)
     return {
         "mean": np.mean(values, axis=0),
         "std": np.std(values, axis=0),
-        "p10": np.percentile(values, 10, axis=0),
-        "p50": np.percentile(values, 50, axis=0),
-        "p90": np.percentile(values, 90, axis=0),
+        "p10": percentiles[0],
+        "p50": percentiles[1],
+        "p90": percentiles[2],
     }
 
 
@@ -77,11 +78,58 @@ def run_petrophysics_monte_carlo(
     timestep_indices: Optional[Sequence[int]] = None,
     progress: ProgressFn = _noop,
     return_realizations: bool = False,
+    cell_chunk_size: int = 1024,
 ) -> Dict[str, Any]:
     """Run reproducible layer-wise petrophysical uncertainty propagation.
 
-    ``seed`` is mandatory at the workflow boundary and this function never
-    reads or mutates NumPy's global RNG state.
+    Parameters
+    ----------
+    resistivity : array_like
+        Positive, finite resistivity in ohm-m, shaped (cells, times) or (cells,).
+        A (times, cells) input is transposed only when its first axis cannot
+        match markers. Square arrays are always interpreted as (cells, times).
+    markers : array_like
+        Integer cell labels. Every label must have exactly one layer definition.
+    layers : sequence of mappings
+        Each mapping requires ``marker``. Parameters accept a scalar or a
+        normal distribution specified by ``mean`` and nonnegative ``std``.
+        Resistivities use ohm-m, sigma_sur uses S/m, porosity is a fraction.
+        Positive parameters are floored at 1e-6, sigma_sur at zero, and sampled
+        porosity is clipped to [0.01, 0.9]. One draw per layer and realization
+        is shared by all that layer's cells and timesteps.
+    products : sequence of str
+        Nonempty subset of ``water_content`` and ``porosity`` (volume fractions).
+    n_realizations : int
+        Positive number of independent parameter draws.
+    seed : int
+        Local random seed (default 7); NumPy's global RNG is never modified.
+    saturation_value : float
+        Assumed saturation for porosity estimation, in (0, 1].
+    tortuosity_a : float
+        Positive, dimensionless Archie tortuosity factor.
+    timestep_indices : sequence of int, optional
+        Selected zero-based columns, in output order; defaults to all columns.
+    progress : callable
+        Receives progress messages as strings.
+    return_realizations : bool
+        Also return samples shaped (realizations, cells, selected times).
+    cell_chunk_size : int
+        Maximum cells processed at once. Exact percentiles and the random
+        draws are independent of this setting. Full sample storage is only
+        allocated when return_realizations is True.
+
+    Returns
+    -------
+    dict
+        ``statistics`` maps products to mean, population std, p10, p50, p90
+        arrays shaped (cells, selected times). Also includes ``params_used``,
+        ``seed`` and ``timestep_indices``.
+
+    Raises
+    ------
+    ValueError
+        Invalid shapes, non-finite/nonpositive resistivity, missing or duplicate
+        layer labels, invalid distributions, or unsupported products.
     """
     from .resistivity_models import (
         resistivity_to_porosity,
@@ -90,7 +138,14 @@ def run_petrophysics_monte_carlo(
     )
 
     resistivity_array = np.atleast_2d(np.asarray(resistivity, dtype=float))
-    marker_array = np.asarray(markers, dtype=int).ravel()
+    raw_markers = np.asarray(markers, dtype=float).ravel()
+    if (not raw_markers.size or not np.all(np.isfinite(raw_markers))
+            or np.any(raw_markers != np.floor(raw_markers))):
+        raise ValueError("markers must contain finite integer labels.")
+    marker_array = raw_markers.astype(np.int64)
+    if (resistivity_array.ndim != 2 or not np.all(np.isfinite(resistivity_array))
+            or np.any(resistivity_array <= 0)):
+        raise ValueError("resistivity must be a positive finite 1D or 2D array.")
     if resistivity_array.shape[0] != marker_array.size:
         if resistivity_array.shape[1] == marker_array.size:
             resistivity_array = resistivity_array.T
@@ -99,8 +154,15 @@ def run_petrophysics_monte_carlo(
     if not layers:
         raise ValueError("At least one layer distribution is required.")
     count = int(n_realizations)
-    if count <= 0:
+    if count <= 0 or count != n_realizations:
         raise ValueError("n_realizations must be positive.")
+    chunk_size = int(cell_chunk_size)
+    if chunk_size <= 0 or chunk_size != cell_chunk_size:
+        raise ValueError("cell_chunk_size must be a positive integer.")
+    if not np.isfinite(saturation_value) or not 0 < saturation_value <= 1:
+        raise ValueError("saturation_value must be in (0, 1].")
+    if not np.isfinite(tortuosity_a) or tortuosity_a <= 0:
+        raise ValueError("tortuosity_a must be positive and finite.")
     time_indices = (
         list(range(resistivity_array.shape[1]))
         if timestep_indices is None
@@ -108,21 +170,37 @@ def run_petrophysics_monte_carlo(
     )
     if not time_indices:
         raise ValueError("timestep_indices cannot be empty.")
+    if timestep_indices is not None and any(i != raw for i, raw in zip(time_indices, timestep_indices)):
+        raise ValueError("timestep_indices must contain integers.")
     if min(time_indices) < 0 or max(time_indices) >= resistivity_array.shape[1]:
         raise IndexError("timestep_indices contains an out-of-range index.")
 
     normalized_layers = [dict(layer) for layer in layers]
-    layer_masks = {
-        int(layer["marker"]): marker_array == int(layer["marker"])
-        for layer in normalized_layers
-    }
+    layer_ids = []
+    for layer in normalized_layers:
+        marker = layer.get("marker")
+        if marker is None or not np.isfinite(marker) or int(marker) != marker:
+            raise ValueError("Each layer must have a finite integer marker.")
+        layer_ids.append(int(marker))
+        for key in ("m", "rho_fluid", "rho_sat", "rhos", "n", "sigma_sur", "porosity"):
+            if key in layer:
+                mean, std = _distribution(layer, key, 0.0)
+                if not np.isfinite(mean) or not np.isfinite(std) or std < 0:
+                    raise ValueError(f"Layer {marker}: {key} needs a finite mean and nonnegative std.")
+    if len(set(layer_ids)) != len(layer_ids):
+        raise ValueError("Layer markers must be unique.")
+    missing = set(marker_array) - set(layer_ids)
+    if missing:
+        raise ValueError(f"Missing layer definitions for markers: {sorted(missing)}")
     wanted = set(str(product) for product in products)
+    if not wanted or wanted - {"water_content", "porosity"}:
+        raise ValueError("products must contain water_content and/or porosity.")
     want_water = "water_content" in wanted
     want_porosity = "porosity" in wanted
     shape = (count, marker_array.size, len(time_indices))
-    water_all = np.zeros(shape, dtype=float) if want_water else None
-    saturation_all = np.zeros(shape, dtype=float)
-    porosity_all = np.zeros(shape, dtype=float) if want_porosity else None
+    water_all = np.empty(shape) if want_water and return_realizations else None
+    saturation_all = np.empty(shape) if return_realizations else None
+    porosity_all = np.empty(shape) if want_porosity and return_realizations else None
     parameter_names = (
         "m", "rho_fluid", "rho_sat", "n", "sigma_sur", "porosity", "use_rho_sat"
     )
@@ -134,75 +212,74 @@ def run_petrophysics_monte_carlo(
     }
 
     rng = np.random.default_rng(int(seed))
+    samples = []
     for realization in range(count):
-        if realization % max(1, count // 10) == 0:
-            progress(f"Monte Carlo realization {realization + 1}/{count}")
         sampled = {
             int(layer["marker"]): _sample_layer(rng, layer)
             for layer in normalized_layers
         }
-        porosity_cells = np.zeros(marker_array.size, dtype=float)
+        samples.append(sampled)
         for marker, parameters in sampled.items():
-            mask = layer_masks[marker]
-            porosity_cells[mask] = float(parameters["porosity"])
             for name in parameter_names:
                 value = parameters.get(name, 0.0)
                 params_used[marker][name][realization] = float(value)
 
-        for output_column, time_index in enumerate(time_indices):
-            resistivity_time = resistivity_array[:, time_index]
-            for marker, mask in layer_masks.items():
-                if not np.any(mask):
-                    continue
+    statistics = {
+        product: {key: np.empty(shape[1:]) for key in ("mean", "std", "p10", "p50", "p90")}
+        for product in sorted(wanted)
+    }
+    # Draw parameters before chunking, preserving the historical RNG sequence.
+    # Only exact per-cell statistics are reduced; no approximate quantiles.
+    for start in range(0, marker_array.size, chunk_size):
+        stop = min(start + chunk_size, marker_array.size)
+        progress(f"Monte Carlo cells {start + 1}-{stop}/{marker_array.size}")
+        block_shape = (count, stop - start, len(time_indices))
+        water = np.empty(block_shape) if want_water else None
+        porosity_block = np.empty(block_shape) if want_porosity else None
+        block_markers = marker_array[start:stop]
+        layer_indices = {int(m): np.flatnonzero(block_markers == m) for m in np.unique(block_markers)}
+        observations = resistivity_array[start:stop, :][:, time_indices]
+        for marker, indices in layer_indices.items():
+            rho = observations[indices].ravel()
+            local_shape = (indices.size, len(time_indices))
+            for realization, sampled in enumerate(samples):
                 parameters = sampled[marker]
-                if bool(parameters["use_rho_sat"]):
-                    saturation = resistivity_to_saturation2(
-                        resistivity_time[mask],
-                        float(parameters["rho_sat"]),
-                        float(parameters["n"]),
-                        float(parameters["sigma_sur"]),
-                    )
-                else:
-                    saturation = resistivity_to_saturation(
-                        resistivity=resistivity_time[mask],
-                        porosity=float(parameters["porosity"]),
-                        m=float(parameters["m"]),
-                        rho_fluid=float(parameters["rho_fluid"]),
-                        n=float(parameters["n"]),
-                        sigma_sur=float(parameters["sigma_sur"]),
-                        a=float(tortuosity_a),
-                    )
-                saturation_all[realization, mask, output_column] = np.asarray(
-                    saturation, dtype=float
-                )
-                if want_porosity:
+                if want_water or return_realizations:
                     if bool(parameters["use_rho_sat"]):
-                        porosity = np.full(
-                            int(mask.sum()), float(parameters["porosity"]), dtype=float
+                        saturation = resistivity_to_saturation2(
+                            rho, float(parameters["rho_sat"]),
+                            float(parameters["n"]), float(parameters["sigma_sur"]),
                         )
                     else:
-                        porosity = resistivity_to_porosity(
-                            resistivity=resistivity_time[mask],
-                            saturation=float(saturation_value),
-                            m=float(parameters["m"]),
-                            rho_fluid=float(parameters["rho_fluid"]),
-                            n=float(parameters["n"]),
-                            sigma_sur=float(parameters["sigma_sur"]),
-                            a=float(tortuosity_a),
+                        saturation = resistivity_to_saturation(
+                            rho, float(parameters["porosity"]), float(parameters["m"]),
+                            float(parameters["rho_fluid"]), float(parameters["n"]),
+                            float(parameters["sigma_sur"]), a=float(tortuosity_a),
                         )
-                    porosity_all[realization, mask, output_column] = np.asarray(
-                        porosity, dtype=float
-                    )
-            if want_water:
-                water_all[realization, :, output_column] = (
-                    saturation_all[realization, :, output_column] * porosity_cells
-                )
-
-    statistics: Dict[str, Dict[str, np.ndarray]] = {}
-    if want_water and water_all is not None:
-        statistics["water_content"] = _statistics(water_all)
-    if want_porosity and porosity_all is not None:
-        statistics["porosity"] = _statistics(porosity_all)
+                    saturation = np.asarray(saturation).reshape(local_shape)
+                    if saturation_all is not None:
+                        saturation_all[realization, start + indices, :] = saturation
+                    if water is not None:
+                        water[realization, indices, :] = saturation * float(parameters["porosity"])
+                if porosity_block is not None:
+                    if bool(parameters["use_rho_sat"]):
+                        porosity = np.full(local_shape, float(parameters["porosity"]))
+                    else:
+                        porosity = np.asarray(resistivity_to_porosity(
+                            rho, float(saturation_value), float(parameters["m"]),
+                            float(parameters["rho_fluid"]), float(parameters["n"]),
+                            float(parameters["sigma_sur"]), a=float(tortuosity_a),
+                        )).reshape(local_shape)
+                    porosity_block[realization, indices, :] = porosity
+        for product, values, full in (
+            ("water_content", water, water_all),
+            ("porosity", porosity_block, porosity_all),
+        ):
+            if values is not None:
+                for key, value in _statistics(values).items():
+                    statistics[product][key][start:stop] = value
+                if full is not None:
+                    full[:, start:stop, :] = values
     result: Dict[str, Any] = {
         "statistics": statistics,
         "params_used": params_used,

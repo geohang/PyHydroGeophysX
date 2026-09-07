@@ -53,7 +53,7 @@ try:
     )
     KRIGING_3D_AVAILABLE = True
 except ImportError:
-    # Define placeholder functions if dependencies not available
+    # Expose unavailable optional entries as None, not callable stubs.
     create_3d_structured_grid = None
     estimate_directional_variograms = None
     optimize_variogram_model = None

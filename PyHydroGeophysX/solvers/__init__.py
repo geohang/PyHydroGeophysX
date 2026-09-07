@@ -11,6 +11,8 @@ from PyHydroGeophysX.solvers.linear_solvers import (
     direct_solver,
     generalized_solver,
     get_optimal_solver,
+    spd_solve,
+    symmetrize,
 )
 
 __all__ = [
@@ -21,6 +23,8 @@ __all__ = [
     "RRLSQRSolver",
     "RRLSSolver",
     "direct_solver",
+    "spd_solve",
+    "symmetrize",
     "TikhonvRegularization",
     "IterativeRefinement",
     "get_optimal_solver",

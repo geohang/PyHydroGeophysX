@@ -443,6 +443,7 @@ class SRTInversion(InversionBase):
             # lambda rather than to where the iterations happened to stop.
             "target_chi_squared": 1.0,
             "convergence_tolerance": 0.005,
+            "min_iterations": 5,
             "verbose": True,
         }
         for key, value in defaults.items():
@@ -597,6 +598,14 @@ class SRTInversion(InversionBase):
         lam_rate = float(self.parameters.get("lambda_rate", 1.0))
         lam_min = float(self.parameters.get("lambda_min", lam))
         target_chi2 = float(self.parameters.get("target_chi_squared", 1.0))
+        # A flat second iteration is normal while the line search finds its
+        # scale, so a plateau only counts as convergence after
+        # 'min_iterations'. The clamp keeps the guard from swallowing the
+        # plateau test outright when a caller asks for very few iterations.
+        min_iterations = min(
+            int(self.parameters.get("min_iterations", 5)),
+            max(int(self.parameters["max_iterations"]) - 2, 0),
+        )
         # Was hard-coded at 0.01. A lambda search needs it configurable: a run
         # that stops on a 1 % plateau may still be descending, and its chi2 then
         # says more about the iteration budget than about lambda.
@@ -655,7 +664,7 @@ class SRTInversion(InversionBase):
                 if verbose:
                     print("Converged: chi2 target reached.")
                 break
-            if iteration > 0 and d_phi < dphi_tol:
+            if d_phi < dphi_tol and iteration > min_iterations:
                 stop_reason = "plateau"
                 if verbose:
                     print("Converged: the misfit has flattened.")

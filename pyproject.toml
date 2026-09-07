@@ -54,18 +54,17 @@ geophysics = [
     "pymatsolver>=0.2",
     "flopy>=3.5,<4.0",
     "pftools>=1.3",
-    # The coupled line inversion runs its soundings on a thread pool and needs
-    # this to hold BLAS to one thread inside each worker. Without it every
-    # worker opens its own BLAS pool and the machine ends up with roughly
-    # cores-squared threads competing for cores. The code degrades quietly
-    # rather than failing, so the cost shows up only as a slow line inversion;
+    # Limit supported native BLAS pools during parallel sounding solves to
+    # reduce CPU oversubscription. Without this optional control, inversion
+    # still runs but native libraries retain their configured thread counts;
     # see inversion.em1d_lci._single_threaded_blas.
     "threadpoolctl>=3.0",
 ]
 # ResIPy reads a wider set of ERT instrument formats than this package does on
 # its own, so it is preferred whenever it imports. It is GPL-3.0 and is kept as
 # a separate optional install rather than a hard dependency: installing it is
-# the user's choice, and nothing here is derived from it.
+# the user's choice. Desktop bundling requires a separate explicit opt-in;
+# see THIRD_PARTY_NOTICES.md for distribution and provenance tracking.
 ert = [
     "resipy>=3.4",
 ]
@@ -96,6 +95,7 @@ webapp = [
     "pyarrow>=14.0",
 ]
 desktop = [
+    "pyproj>=3.4",
     "PySide6>=6.5",
     "pyqtgraph>=0.13",
     "qtawesome>=1.2",
@@ -106,12 +106,10 @@ desktop = [
 # separate from `desktop` because vtk is a large binary wheel that a headless or
 # CI install has no use for.
 #
-# Install these with whichever tool already manages the environment's packages,
-# which is not always the one that created it: a conda-created environment whose
-# numpy came from pip is a pip environment for this purpose. `conda list numpy`
-# reports `pypi` in that case, and this extra is the right route. When it names a
-# conda channel instead, use `conda install -c conda-forge pyvista pyvistaqt`, so
-# only one VTK build ends up on the path.
+# Check existing Qt/VTK installations before mixing pip and Conda packages.
+# `conda list numpy` identifies NumPy's source, not every dependency's source.
+# For a Conda-managed scientific stack, the corresponding install command is
+# `conda install -c conda-forge pyvista pyvistaqt`.
 desktop-3d = [
     "pyvista>=0.40",
     "pyvistaqt>=0.10",
@@ -132,6 +130,7 @@ dev = [
     "flake8",
 ]
 all = [
+    "threadpoolctl>=3.0",
     "pygimli>=1.5.5,<2.0",
     "simpeg>=0.24,<1.0",
     "pymatsolver>=0.2",
@@ -166,7 +165,8 @@ where = ["."]
 include = ["PyHydroGeophysX*"]
 
 [tool.setuptools.package-data]
-# Ship the compact Qt examples; the larger examples/ tree remains checkout-only.
+# Include compact Qt resources when present; the larger examples/ tree is not
+# included by these package-data patterns.
 PyHydroGeophysX = [
     "data/*",
     "data/qt_examples/*.md",

@@ -3,15 +3,14 @@ channels:
   - gimli
   - conda-forge
   - nodefaults
-# NOTE: PyGIMLi's PyPI core wheels are Linux-only. On macOS, install its C++
-# core from the gimli Conda channel. Python 3.11 is the supported local-dev
-# combination for this package.
+# This development environment pins Python 3.11 and installs PyGIMLi through
+# the configured Conda channels, including its compiled core.
 dependencies:
   - python=3.11
   - pip
   - pygimli>=1.5.5,<2.0
   - pip:
-      # Web app and pure-Python/scientific packages install faster as wheels.
+      # Install the web app and remaining scientific dependencies through pip.
       - scipy>=1.8,<3.0
       - matplotlib>=3.5,<4.0
       - pandas>=1.3

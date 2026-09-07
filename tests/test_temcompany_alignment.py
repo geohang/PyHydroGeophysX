@@ -552,25 +552,31 @@ def test_per_station_geometry_can_be_switched_off() -> None:
     assert _station_geometry(geom, data)["tx_rx_sep"] == 15.0
 
 
-def test_per_station_geometry_is_on_and_bins_the_distance() -> None:
-    """On by default: the project records it per station and it costs nothing.
+def test_per_station_geometry_models_the_distance_the_file_records() -> None:
+    """On by default, and used as recorded rather than rounded.
 
     Replacing the measured column with the nominal 15 m moves one survey's
     low-moment response by 1.4 percent at the median and 18 percent at its
-    worst gate. Binning keeps the operator cache useful; a walking survey records
-    794 distinct distances over 929 stations.
+    worst gate, so the per-station value is read. It used to be rounded to a
+    quarter metre to keep the forward-operator cache small, and that rounding is
+    off: half a bin at 16.6 m moves the modelled response by 1.8 percent at its
+    worst gate, which is an offset the instrument did not report. A warmed
+    operator measures about 50 kB, so holding one per station costs little.
+
+    Rounding remains reachable through ``tx_rx_sep_bin`` for a caller that wants
+    it.
     """
     geom = {"tx_rx_sep": 15.0, "height": 0.9}
     data = {"system": {"tx_rx_sep": 12.44, "rx_height": 0.8, "tx_height": 0.85}}
 
     updated = _station_geometry(geom, data)
 
-    assert updated["tx_rx_sep"] == pytest.approx(12.5)      # quarter-metre bin
+    assert updated["tx_rx_sep"] == pytest.approx(12.44)     # as recorded
     assert updated["rx_height"] == pytest.approx(0.8)
     assert geom["tx_rx_sep"] == 15.0          # the caller's dict is untouched
 
-    exact = _station_geometry({**geom, "tx_rx_sep_bin": 0.0}, data)
-    assert exact["tx_rx_sep"] == pytest.approx(12.44)
+    binned = _station_geometry({**geom, "tx_rx_sep_bin": 0.25}, data)
+    assert binned["tx_rx_sep"] == pytest.approx(12.5)
 
 
 def test_a_caller_supplied_height_reaches_the_forward() -> None:
@@ -678,7 +684,18 @@ def test_the_reader_reproduces_the_stored_inversion_input_exactly() -> None:
     Not a tolerance: ``InputData`` in the project is the stored ``VoltageValues``
     unchanged and its ``InputSTD`` is the stored error column unchanged, so any
     scaling, sign change or extra gate test on our side shows up here.
+
+    The identity is asserted at the precision the file writes. A ``project.db``
+    stores both copies as doubles and they agree to the last bit. A
+    ``project.tiw`` writes the station stack with float32 round-trip precision
+    while its ``ModelData`` carries that float32 value widened to a double, so
+    the two agree exactly once both are narrowed to float32 and differ by up to
+    6e-8 relative otherwise. Measured over the 2,824 gates of one survey: 100
+    percent identical as float32, worst relative difference 5.8e-8, which is
+    float32 rounding and not a scaling. Comparing at double precision there
+    would fail on every gate while proving nothing.
     """
+    from PyHydroGeophysX.data_processing import temcompany_project
     from PyHydroGeophysX.data_processing.temcompany_reference import (
         has_reference_models,
         load_reference_models,
@@ -691,6 +708,16 @@ def test_the_reader_reproduces_the_stored_inversion_input_exactly() -> None:
         # against rather than a disagreement to report.
         pytest.skip(f"{project} carries no TEMcompany inversion")
 
+    connection = temcompany_project.open_project(project)
+    try:
+        stored_as_float32 = (temcompany_project.schema_of(connection)
+                             == temcompany_project.WORKSPACE_SCHEMA)
+    finally:
+        connection.close()
+
+    def as_stored(values: np.ndarray) -> np.ndarray:
+        return np.float32(values) if stored_as_float32 else values
+
     reference = load_reference_models(project)
     assert reference["n_stations"] > 0
 
@@ -701,9 +728,11 @@ def test_the_reader_reproduces_the_stored_inversion_input_exactly() -> None:
             if index.size != block["times"].size:
                 continue
             np.testing.assert_array_equal(
-                block["observed"], block["stored_response"][index])
+                as_stored(block["observed"]),
+                as_stored(block["stored_response"][index]))
             np.testing.assert_array_equal(
-                block["relative_std"], block["stored_std"][index])
+                as_stored(block["relative_std"]),
+                as_stored(block["stored_std"][index]))
             flags = block["stored_flags"] > 0
             finite = (np.isfinite(block["stored_response"])
                       & (np.abs(block["stored_response"]) < 9_000.0))

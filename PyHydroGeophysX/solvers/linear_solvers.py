@@ -509,6 +509,56 @@ def _spd_cg_solve(A, b, x=None, maxiter=200, tol=1e-8, damp=0.0, verbose=False,
 
 
 # ---------------------------------------------------------------------------
+# spd_solve
+# ---------------------------------------------------------------------------
+def spd_solve(A: Any, B: Any, what: Any = "matrix") -> Any:
+    """Solve ``A X = B`` for a symmetric positive definite ``A``.
+
+    Use this wherever the code would otherwise write ``inv(A) @ B`` or
+    ``pinv(A) @ B``. Three reasons it is the better default for a covariance or
+    a Gauss-Newton normal matrix:
+
+    * Cholesky solves the positive-definite system without constructing an
+      explicit SVD pseudoinverse. Runtime depends on size and BLAS backend.
+    * ``pinv`` discards singular values below its ``rcond`` without saying so.
+      On a normal matrix, whose condition number is already the square of the
+      Jacobian's, that cut can land inside the real spectrum.
+    * Finite-precision inverse construction can introduce asymmetry or small
+      negative eigenvalues in ill-conditioned covariance calculations.
+
+    A matrix that is genuinely not positive definite falls back to ``pinv`` with
+    a warning naming ``what``, so a caller learns which quantity degraded rather
+    than silently receiving a worse answer.
+    """
+    A_arr = np.asarray(A, dtype=float)
+    B_arr = np.asarray(B, dtype=float)
+    try:
+        return scipy.linalg.solve(A_arr, B_arr, assume_a="pos")
+    except (np.linalg.LinAlgError, ValueError):
+        warnings.warn(
+            "{0} is not positive definite to working precision; falling back to "
+            "a pseudo-inverse, which discards the directions it cannot resolve. "
+            "Treat the result as a lower bound on the uncertainty in those "
+            "directions.".format(what),
+            RuntimeWarning,
+            stacklevel=3,
+        )
+        return np.linalg.pinv(A_arr) @ B_arr
+
+
+def symmetrize(A: Any) -> Any:
+    """Return ``(A + A.T) / 2``.
+
+    A covariance or resolution matrix is symmetric in exact arithmetic. Products
+    of the form ``J^T C J`` accumulate asymmetry at the rounding level, and
+    ``np.random.Generator.multivariate_normal`` rejects the result outright, so
+    the halves are averaged before the matrix leaves the function that built it.
+    """
+    A_arr = np.asarray(A, dtype=float)
+    return (A_arr + A_arr.T) / 2.0
+
+
+# ---------------------------------------------------------------------------
 # generalized solver
 # ---------------------------------------------------------------------------
 def generalized_solver(
@@ -538,7 +588,8 @@ def generalized_solver(
         1. A stacked least-squares system, ``[W_d J; sqrt(lambda) W_m; ...]``,
            with a matching stacked right-hand side. Use a least-squares method.
         2. A Gauss-Newton normal matrix, ``J^T W_d^T W_d J + lambda W_m^T W_m
-           + ...``, which is square and symmetric positive definite, paired with
+           + ...``, which is square and symmetric (positive definite when the
+           combined operators constrain every model direction), paired with
            a gradient right-hand side ``-g``. Use an SPD method. A least-squares
            method applied to this case solves ``A^T A x = A^T b`` instead, which
            squares the condition number and spends two matrix-vector products
@@ -551,7 +602,7 @@ def generalized_solver(
         Iterative:  'lsqr', 'rrlsqr', 'cgls', 'rrls'
         SciPy:      'scipy_lsqr', 'scipy_lsmr', 'precond_lsmr'
         SPD, CPU-only, for a square symmetric positive definite ``A``:
-                    'spd_cholesky' (exact factorization), 'spd_cg' (iterative,
+                    'spd_cholesky' (direct factorization), 'spd_cg' (iterative,
                     for a matrix too large to factor)
     x : array_like, optional
         Initial guess for the solution. If None, zeros are used.
@@ -571,8 +622,9 @@ def generalized_solver(
         Number of parallel jobs (if parallel is True).
     overwrite_a : bool, optional
         Keyword-only. 'spd_cholesky' only. Factor in the caller's own buffer,
-        which allocates nothing but destroys ``A``. Set it only when ``A`` is
-        not needed after the call. Ignored by every other method.
+        allowing compatible input storage to be overwritten. SciPy may still
+        copy or allocate workspace. Set it only when ``A`` is not needed after
+        the call. Ignored by every other method.
 
     Returns:
     --------

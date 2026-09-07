@@ -42,7 +42,6 @@ if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
 # Import PyHydroGeophysX modules
-from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent
 from PyHydroGeophysX.core.interpolation import ProfileInterpolator, create_surface_lines
 from PyHydroGeophysX.core.mesh_utils import MeshCreator
 from PyHydroGeophysX.petrophysics.resistivity_models import water_content_to_resistivity
@@ -65,8 +64,6 @@ os.makedirs(appres_dir, exist_ok=True)
 
 # %%
 print("Step 1: Set up the ERT profiles like in the workflow example.")
-
-modflow_dir = os.path.join(data_dir, "modflow")
 
 # Load domain information from files
 # (Replace with your actual file paths)

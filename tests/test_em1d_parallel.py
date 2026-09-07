@@ -129,3 +129,57 @@ def test_analytic_and_numerical_jacobians_reach_the_same_model():
     analytic_res, analytic_chi2, _, _ = _occam_1d(*args, block.jacobian)
     assert np.allclose(analytic_res, numeric_res, rtol=1e-3)
     assert analytic_chi2 == pytest.approx(numeric_chi2, rel=1e-3)
+
+
+# ---------------------------------------------------------------------------
+# How the per-sounding work is handed to the pool
+# ---------------------------------------------------------------------------
+def test_chunked_scheduling_returns_every_result_in_order():
+    """The chunking is an optimisation; the list it produces must not change."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    from PyHydroGeophysX.inversion.em1d_lci import _map_soundings
+
+    for count in (0, 1, 2, 5, 7, 13, 64):
+        for workers in (1, 2, 3, 8, 20):
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                assert _map_soundings(pool, lambda s: s * s, count) == [
+                    s * s for s in range(count)]
+    assert _map_soundings(None, lambda s: s * s, 5) == [0, 1, 4, 9, 16]
+
+
+def test_each_sounding_stays_on_one_thread_within_a_pass():
+    """What makes the thread-local forward operators pay.
+
+    A station's operator depends on its own transmitter-receiver distance, so a
+    line presents many distinct ones: 134 over a 140-station survey. Handing
+    stations out one at a time walks every worker through all of them and
+    evicts each before it is reused. Chunking gives a worker a contiguous run,
+    so the set of operators it touches is its share of the line rather than the
+    whole of it.
+    """
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+
+    from PyHydroGeophysX.inversion.em1d_lci import _map_soundings
+
+    workers = 4
+    count = 40
+    owners: dict = {}
+
+    def record(index: int) -> int:
+        owners[index] = threading.get_ident()
+        return index
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        _map_soundings(pool, record, count)
+
+    per_thread: dict = {}
+    for index, owner in owners.items():
+        per_thread.setdefault(owner, []).append(index)
+    assert len(per_thread) <= workers
+    # Each worker saw a contiguous run, which is what keeps its working set
+    # small; dynamic hand-out would interleave them.
+    for indices in per_thread.values():
+        ordered = sorted(indices)
+        assert ordered == list(range(ordered[0], ordered[-1] + 1))

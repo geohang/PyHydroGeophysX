@@ -258,7 +258,7 @@ ERT inversions to improve layer boundary resolution and reduce artifacts."""
             self._log_execution(f"Filtered coverage: {len(coverage_filtered)} cells from {len(coverage_array)} total")
             
             # Map layer markers from mesh to para_domain (will be done later in the code)
-            # For now, save the original markers
+            # Retain pre-remapping markers for interpreting exported cells.
             
             # Save results
             np.save(os.path.join(output_dir, 'resistivity_model.npy'), 

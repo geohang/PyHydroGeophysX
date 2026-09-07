@@ -1,0 +1,155 @@
+{
+ "TimeLapseERTInversion": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.inversion.time_lapse",
+   "module_short": "PyHydroGeophysX.inversion.time_lapse",
+   "name": "TimeLapseERTInversion"
+  }
+ ],
+ "ert.ERTManager": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.physics.ert",
+   "module_short": "pygimli.physics.ert",
+   "name": "ERTManager"
+  }
+ ],
+ "ert.load": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pygimli.physics.ert",
+   "module_short": "pygimli.physics.ert",
+   "name": "load"
+  }
+ ],
+ "gc.collect": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "gc",
+   "module_short": "gc",
+   "name": "collect"
+  }
+ ],
+ "np.log10": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "log10"
+  }
+ ],
+ "os.getcwd": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os",
+   "module_short": "os",
+   "name": "getcwd"
+  }
+ ],
+ "os.path.abspath": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os.path",
+   "module_short": "os.path",
+   "name": "abspath"
+  }
+ ],
+ "os.path.dirname": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os.path",
+   "module_short": "os.path",
+   "name": "dirname"
+  }
+ ],
+ "os.path.exists": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os.path",
+   "module_short": "os.path",
+   "name": "exists"
+  }
+ ],
+ "os.path.join": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os.path",
+   "module_short": "os.path",
+   "name": "join"
+  }
+ ],
+ "plt.show": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "show"
+  }
+ ],
+ "plt.subplots": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "subplots"
+  }
+ ],
+ "plt.tight_layout": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "tight_layout"
+  }
+ ],
+ "psutil.Process": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "psutil",
+   "module_short": "psutil",
+   "name": "Process"
+  }
+ ],
+ "sys.path": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "sys",
+   "module_short": "sys",
+   "name": "path"
+  }
+ ],
+ "sys.path.append": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "sys.path",
+   "module_short": "sys.path",
+   "name": "append"
+  }
+ ],
+ "time.time": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "time",
+   "module_short": "time",
+   "name": "time"
+  }
+ ]
+}

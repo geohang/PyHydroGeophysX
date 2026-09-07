@@ -45,6 +45,34 @@ sphinx_gallery_conf = {
     'backreferences_dir': None,                  # Disable backreferences
 }
 
+# What the site does not build.
+#
+# documentation/ holds an older topic-by-topic guide whose pages are thin stubs
+# pointing at the gallery. Tutorials now covers the same ground by user task, so
+# building both publishes two guides competing in search while only one is
+# maintained. The files stay on disk.
+#
+# The api/ directory carries two parallel sets: hand-curated pages that
+# api/index.rst organises, and a sphinx-apidoc set named PyHydroGeophysX.*.rst
+# reachable only through modules.rst. Building both documents every symbol
+# twice, which is where the bulk of the duplicate-object warnings came from.
+# Only the apidoc pages that have a curated counterpart are dropped, so a module
+# documented in one place only, such as llm and workflows, keeps its page.
+_api_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'api')
+_curated = {
+    name[:-4] for name in os.listdir(_api_dir)
+    if name.endswith('.rst') and not name.startswith('PyHydroGeophysX')
+}
+exclude_patterns = ['documentation/**', 'api/modules.rst', 'api/PyHydroGeophysX.rst']
+exclude_patterns += [
+    'api/PyHydroGeophysX.%s.rst' % module
+    for module in (
+        name[len('PyHydroGeophysX.'):-4] for name in os.listdir(_api_dir)
+        if name.startswith('PyHydroGeophysX.') and name.endswith('.rst')
+    )
+    if module in _curated
+]
+
 # HTML theme
 if importlib.util.find_spec('pydata_sphinx_theme'):
     html_theme = 'pydata_sphinx_theme'
@@ -96,6 +124,36 @@ autodoc_mock_imports = [
 
 # GitHub Pages
 html_baseurl = 'https://geohang.github.io/PyHydroGeophysX/'
+
+# Usage and Downloads dashboard (docs/source/usage.rst). The assets read
+# _static/stats/*.json, which tools/fetch_usage_stats.py regenerates.
+html_css_files = ['usage-stats.css', 'site.css']
+html_js_files = ['usage-stats.js']
+
+# That page has no child documents, so its left sidebar renders an empty
+# "Section Navigation" block. Dropping it gives the world map the width it
+# needs; the right-hand "On this page" list still carries the in-page nav.
+html_sidebars = {'usage': [], 'index': []}
+
+# Optional privacy-friendly analytics for the visitor map on that page.
+# Set this to the GoatCounter subdomain (for example 'pyhydrogeophysx') to start
+# collecting page views; leave it empty and no tracking script is emitted at all.
+# The GOATCOUNTER_SITE environment variable overrides it, and the matching
+# GOATCOUNTER_TOKEN secret lets the stats workflow read the counts back.
+GOATCOUNTER_SITE = ''
+
+goatcounter_site = os.environ.get('GOATCOUNTER_SITE', GOATCOUNTER_SITE).strip()
+
+if goatcounter_site:
+    html_js_files.append(
+        (
+            'https://gc.zgo.at/count.js',
+            {
+                'data-goatcounter': f'https://{goatcounter_site}.goatcounter.com/count',
+                'async': 'async',
+            },
+        )
+    )
 
 # External links known to return 403 to automated linkcheck clients
 linkcheck_ignore = [

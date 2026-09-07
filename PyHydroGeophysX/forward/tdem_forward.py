@@ -435,8 +435,7 @@ def _first_order_filter_operator(times: np.ndarray, values: np.ndarray,
     The recurrence integrates a first-order-hold input exactly.  Unlike forming
     and multiplying dense N-by-N filter matrices, its work is O(N*M), where M
     is the much smaller number of SimPEG receiver samples.  NumPy performs each
-    row update in compiled code, so this is both faster and numerically cleaner
-    than moving the operation to a custom C++ extension.
+    row update in compiled code while retaining the first-order-hold formula.
     """
     sample_times = np.asarray(times, dtype=float)
     source = np.asarray(values, dtype=float)
@@ -875,14 +874,15 @@ class TDEMForwardModeling:
         Returns:
             Tuple of (noisy_data, clean_data, uncertainties)
         """
-        if seed is not None:
-            np.random.seed(seed)
+        # Local legacy generator preserves seeded noise values without changing
+        # the caller's global random stream.
+        rng = np.random.RandomState(seed)
         
         # Compute clean response
         clean_data = self.forward(conductivity, log_input=log_input)
         
         # Add noise
-        noise = noise_level * np.abs(clean_data) * np.random.randn(len(clean_data))
+        noise = noise_level * np.abs(clean_data) * rng.randn(len(clean_data))
         noisy_data = clean_data + noise
         
         # Compute uncertainties

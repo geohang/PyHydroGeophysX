@@ -294,6 +294,7 @@ class GravMagProcessingModule(BaseModule):
         self._export_btn.setEnabled(False)
         self._export_btn.clicked.connect(self._export_model)
         form.addRow(self._export_btn)
+        form.addRow(self.map_export_button())
         self._backend_label = QLabel()
         self._backend_label.setWordWrap(True)
         self._backend_label.setStyleSheet("font-size:8pt;")
@@ -345,8 +346,9 @@ class GravMagProcessingModule(BaseModule):
 
     def export_actions(self):
         if not self._inv_result:
-            return []
-        return [("3D model (CSV + npz)", self._export_model)]
+            return [("Add product to Project Map…", self.add_to_map)] if self._fields else []
+        return [("Add model to Project Map…", self.add_to_map),
+                ("3D model (CSV + npz)", self._export_model)]
 
     def _set_solver(self, value: str) -> None:
         index = self._solver.findData(str(value).strip().lower())
@@ -789,6 +791,7 @@ class GravMagProcessingModule(BaseModule):
             )
         self.report_result({"inversion_kind": result["kind"], "chi2": chi2,
                             "model_vtk": vtk, "n_cells": result["n_cells"]})
+        self.offer_map_export()
 
     def _on_inversion_failed(self, message: str) -> None:
         self.fail_persisted_run(message)

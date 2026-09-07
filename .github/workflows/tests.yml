@@ -7,6 +7,25 @@ on:
     branches: [main]
 
 jobs:
+  core-regressions:
+    name: "Core numerical and data regressions (py3.11)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -e . pytest
+      - name: Run numerical, input and cache regressions
+        run: >-
+          python -m pytest -q
+          tests/test_review_fixes.py
+          tests/test_desktop_packaging_policy.py
+          tests/test_linear_solvers_spd.py
+          tests/test_run_inputs.py
+          tests/test_model_csv.py
+          tests/test_em1d_lci_damping.py
+
   adtlert:
     name: "ADTLERT selection and CPU fallback (ubuntu, py3.11)"
     runs-on: ubuntu-latest
@@ -33,6 +52,9 @@ jobs:
           tests/test_ert_backend_selection.py
           tests/test_ert_adtlert_backend.py
           tests/test_ert_mesh_import.py
+
+      - name: Verify time-lapse SRT sparse Jacobian integration
+        run: python -m pytest -q tests/test_review_fixes.py -k time_lapse_srt
 
   adtlert-windows:
     name: "ADTLERT Windows metadata and engine fallback (py3.11)"
@@ -88,9 +110,8 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      # PySide6 wheels ship Qt but not the system libraries Qt links against,
-      # and QtGui loads libEGL/libGL even under the offscreen platform. The
-      # runner image carries neither.
+      # Install Qt's EGL/GL runtime dependencies explicitly for offscreen tests,
+      # so the tests do not rely on the runner image's preinstalled libraries.
       - name: Install the system libraries Qt links against
         run: |
           sudo apt-get update

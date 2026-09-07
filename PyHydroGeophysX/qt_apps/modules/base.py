@@ -56,6 +56,44 @@ class BaseModule(QWidget):
         """
         return []
 
+    def add_to_map(self) -> None:
+        """Save and open an explicitly located survey snapshot in Project Map."""
+        from PyHydroGeophysX.qt_apps.widgets.map_export import add_result_to_map
+        add_result_to_map(self)
+
+    def map_export_button(self):
+        from PySide6.QtWidgets import QPushButton
+        button = QPushButton("Add to Map…")
+        button.setToolTip("Save this recovered result as a survey in Project Map. Confirm its location before adding.")
+        button.clicked.connect(self.add_to_map)
+        return button
+
+    def offer_map_export(self) -> None:
+        """Offer opt-in map placement after a successful inversion is finalized."""
+        from PySide6.QtCore import QTimer
+        from PySide6.QtWidgets import QMessageBox
+        def offer():
+            dialog = QMessageBox(self)
+            dialog.setWindowTitle("Result ready")
+            dialog.setIcon(QMessageBox.Information)
+            dialog.setText("Add this result to Project Map?")
+            dialog.setInformativeText(
+                "Keep surveys together and reopen their results from the map. "
+                "You can confirm the location before adding.\n\n"
+                "Not now keeps the result here; Add to Map remains available on this page.")
+            add = dialog.addButton("Add to Map…", QMessageBox.AcceptRole)
+            later = dialog.addButton("Not now", QMessageBox.RejectRole)
+            dialog.setDefaultButton(later)
+            dialog.setEscapeButton(later)
+            dialog.finished.connect(lambda _: self.add_to_map() if dialog.clickedButton() is add else None)
+            dialog.finished.connect(dialog.deleteLater)
+            dialog.open()
+        timer = QTimer(self)
+        timer.setSingleShot(True)
+        timer.timeout.connect(offer)
+        timer.timeout.connect(timer.deleteLater)
+        timer.start(0)
+
     def begin_persisted_run(
         self, operation_id: str, workflow_id: str = "", *, label: str = ""
     ):

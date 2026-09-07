@@ -153,6 +153,9 @@ def extract_velocity_structure(
     # Get x-range for complete boundary
     x_min, x_max = np.min(x_coords), np.max(x_coords)
     
+    if not np.isfinite(interval) or interval <= 0:
+        raise ValueError("interval must be finite and positive")
+
     # Create bins across the entire x-range
     x_bins = np.arange(x_min, x_max + interval, interval)
     
@@ -193,32 +196,29 @@ def extract_velocity_structure(
                     interface_z.append(interface_depth)
                     break
     
-    # Ensure we have interface points for the entire range
-    # If first point is missing, extrapolate from the first available points
-    if len(interface_x) > 0 and interface_x[0] > x_min + interval:
+    if not interface_x:
+        raise ValueError("No velocity threshold crossing was found in the selected range")
+    # Calculate slopes from detected samples before extending either boundary.
+    left_slope = right_slope = 0.0
+    if len(interface_x) >= 2:
+        left_slope = (interface_z[1] - interface_z[0]) / (interface_x[1] - interface_x[0])
+        right_slope = (interface_z[-1] - interface_z[-2]) / (interface_x[-1] - interface_x[-2])
+    if interface_x[0] > x_min + interval:
+        left_z = interface_z[0] + left_slope * (x_min - interface_x[0])
         interface_x.insert(0, x_min)
-        # Use the slope of the first two points to extrapolate
-        if len(interface_x) > 2:
-            slope = (interface_z[1] - interface_z[0]) / (interface_x[1] - interface_x[0])
-            interface_z.insert(0, interface_z[0] - slope * (interface_x[1] - x_min))
-        else:
-            interface_z.insert(0, interface_z[0])
-    
-    # If last point is missing, extrapolate from the last available points
-    if len(interface_x) > 0 and interface_x[-1] < x_max - interval:
+        interface_z.insert(0, left_z)
+    if interface_x[-1] < x_max - interval:
+        right_z = interface_z[-1] + right_slope * (x_max - interface_x[-1])
         interface_x.append(x_max)
-        # Use the slope of the last two points to extrapolate
-        if len(interface_x) > 2:
-            slope = (interface_z[-1] - interface_z[-2]) / (interface_x[-1] - interface_x[-2])
-            interface_z.append(interface_z[-1] + slope * (x_max - interface_x[-1]))
-        else:
-            interface_z.append(interface_z[-1])
-    
+        interface_z.append(right_z)
+
     # Create a dense interpolation grid for smoothing
     x_dense = np.linspace(x_min, x_max, 500)  # 500 points for smooth curve
     
     # Apply cubic interpolation for smoother interface
-    if len(interface_x) > 3:
+    if len(interface_x) == 1:
+        z_dense = np.full_like(x_dense, interface_z[0])
+    elif len(interface_x) > 3:
         try:
             interp_func = interp1d(interface_x, interface_z, kind='cubic', 
                                   bounds_error=False, fill_value="extrapolate")

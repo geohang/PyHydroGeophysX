@@ -52,7 +52,7 @@ tmp/*_native/
 local_plans/v0.5.0_ert_ui_rendering_plan.md
 
 # Local-only tests, kept out of the published repository by choice.
-# CI runs `pytest -q`, so these do not run there; they are for local checks.
+# These files are absent from clean CI checkouts; they are for local checks.
 # Listed one by one rather than ignoring tests/ wholesale, so a new test file
 # still shows up in `git status` and gets a deliberate decision.
 tests/test_agent_vision_contract.py
@@ -128,3 +128,18 @@ cache/
 
 # Local engineering notes: kept on disk, not published.
 local_plans/
+
+# Markdown is local by default; explicitly publish only user-facing documents.
+*.md
+!/README.md
+!/CONTRIBUTING.md
+!/THIRD_PARTY_NOTICES.md
+!/PyHydroGeophysX/agents/README.md
+!/PyHydroGeophysX/qt_apps/modules/*_input_format.md
+!/docs/desktop_studio.md
+!/examples/QUICK_START.md
+!/examples/WEB_APP_GUIDE.md
+!/examples/data/EM/synthetic_tem_lci/README.md
+
+# Internal review data follows the same local-only policy as its report.
+docs/comment_review_inventory_*.csv

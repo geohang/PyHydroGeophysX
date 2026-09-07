@@ -191,6 +191,18 @@ _EXPORTS: Dict[str, Tuple[str, str]] = {
         "PyHydroGeophysX.data_processing.temcompany_reference",
         "load_reference_models",
     ),
+    "temcompany_project_file": (
+        "PyHydroGeophysX.data_processing.temcompany_project",
+        "project_file",
+    ),
+    "open_temcompany_project": (
+        "PyHydroGeophysX.data_processing.temcompany_project",
+        "open_project",
+    ),
+    "read_temcompany_run_record": (
+        "PyHydroGeophysX.data_processing.temcompany_project",
+        "read_run_record",
+    ),
     "load_line_geometry": (
         "PyHydroGeophysX.data_processing.em1d",
         "load_line_geometry",

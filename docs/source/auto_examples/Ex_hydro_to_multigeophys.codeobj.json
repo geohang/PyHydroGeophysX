@@ -1,13 +1,4 @@
 {
- "Any": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "typing",
-   "module_short": "typing",
-   "name": "Any"
-  }
- ],
  "MeshCreator": [
   {
    "is_class": false,
@@ -242,15 +233,6 @@
    "name": "logspace"
   }
  ],
- "np.max": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "numpy",
-   "module_short": "numpy",
-   "name": "max"
-  }
- ],
  "np.min": [
   {
    "is_class": false,
@@ -267,24 +249,6 @@
    "module": "numpy",
    "module_short": "numpy",
    "name": "nan"
-  }
- ],
- "np.nanmax": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "numpy",
-   "module_short": "numpy",
-   "name": "nanmax"
-  }
- ],
- "np.nanmin": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "numpy",
-   "module_short": "numpy",
-   "name": "nanmin"
   }
  ],
  "np.newaxis": [
@@ -359,6 +323,15 @@
    "name": "dirname"
   }
  ],
+ "os.path.exists": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "os.path",
+   "module_short": "os.path",
+   "name": "exists"
+  }
+ ],
  "os.path.join": [
   {
    "is_class": false,
@@ -393,15 +366,6 @@
    "module": "matplotlib.pyplot",
    "module_short": "matplotlib.pyplot",
    "name": "figure"
-  }
- ],
- "plt.savefig": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "matplotlib.pyplot",
-   "module_short": "matplotlib.pyplot",
-   "name": "savefig"
   }
  ],
  "plt.show": [

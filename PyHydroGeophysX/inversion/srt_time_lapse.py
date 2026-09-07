@@ -11,7 +11,7 @@ import numpy as np
 import pygimli as pg
 from pygimli.physics import TravelTimeManager
 from scipy.sparse import block_diag as sparse_block_diag
-from scipy.sparse import diags, issparse, lil_matrix
+from scipy.sparse import csr_matrix, diags, eye, issparse, kron
 
 from ..solvers.linear_solvers import generalized_solver
 from .base import InversionBase, TimeLapseInversionResult
@@ -191,6 +191,16 @@ class TimeLapseSRTInversion(InversionBase):
         velocity = v_top + depth_norm * (v_bottom - v_top)
         return np.clip(velocity, min_v, max_v)
 
+    @staticmethod
+    def _jacobian_to_csr(jacobian: Any):
+        """Keep ray-path sensitivities sparse across pyGIMLi matrix versions."""
+        if issparse(jacobian):
+            return jacobian.tocsr()
+        try:
+            return pg.utils.sparseMatrix2coo(jacobian).tocsr()
+        except (TypeError, AttributeError, ValueError):
+            return csr_matrix(np.asarray(pg.utils.gmat2numpy(jacobian), dtype=float))
+
     def _forward_and_jacobian(self, model_log_slowness: np.ndarray) -> Tuple[np.ndarray, Any]:
         if self.n_cells is None:
             raise RuntimeError("n_cells is undefined. Call setup() first.")
@@ -206,11 +216,8 @@ class TimeLapseSRTInversion(InversionBase):
             pred_blocks.append(pred_it)
 
             fop.createJacobian(pg.Vector(s_it))
-            J_it = np.asarray(pg.utils.gmat2numpy(fop.jacobian()), dtype=float)
-            if J_it.ndim == 1:
-                J_it = J_it.reshape(-1, 1)
-
-            J_log_it = J_it * s_it.reshape(1, -1)
+            J_it = self._jacobian_to_csr(fop.jacobian())
+            J_log_it = J_it.multiply(s_it.reshape(1, -1))
             jac_blocks.append(J_log_it)
 
         pred = np.vstack(pred_blocks)
@@ -286,19 +293,11 @@ class TimeLapseSRTInversion(InversionBase):
         self.n_cells = int(Wm_single.shape[1])
         self.Wm = sparse_block_diag([Wm_single] * self.n_times, format="csr")
 
-        Wt = lil_matrix((self.n_cells * (self.n_times - 1), self.n_cells * self.n_times), dtype=float)
-        for it in range(self.n_times - 1):
-            row0 = it * self.n_cells
-            row1 = (it + 1) * self.n_cells
-            col_a0 = it * self.n_cells
-            col_a1 = (it + 1) * self.n_cells
-            col_b0 = (it + 1) * self.n_cells
-            col_b1 = (it + 2) * self.n_cells
-
-            Wt[row0:row1, col_a0:col_a1] = np.eye(self.n_cells)
-            Wt[row0:row1, col_b0:col_b1] = -np.eye(self.n_cells)
-
-        self.Wt = Wt.tocsr()
+        # Adjacent-time differences without allocating dense cell-by-cell
+        # identity matrices just to insert diagonals into a sparse array.
+        differences = diags([np.ones(self.n_times - 1), -np.ones(self.n_times - 1)],
+                            [0, 1], shape=(self.n_times - 1, self.n_times))
+        self.Wt = kron(differences, eye(self.n_cells), format="csr")
         self._setup_complete = True
 
     def run(self, initial_model: Optional[np.ndarray] = None) -> TimeLapseInversionResult:
@@ -348,6 +347,10 @@ class TimeLapseSRTInversion(InversionBase):
         dphi_tol = float(self.parameters.get("convergence_tolerance", 0.01))
         min_iterations = int(self.parameters.get("min_iterations", 5))
 
+        # Geometry stays fixed during the run; only the scalar weights change.
+        spatial_gram = self.Wm.T.dot(self.Wm)
+        temporal_gram = self.Wt.T.dot(self.Wt)
+
         for iteration in range(int(self.parameters["max_iterations"])):
             pred, J = self._forward_and_jacobian(m)
             residual = self.t_obs - pred
@@ -381,7 +384,7 @@ class TimeLapseSRTInversion(InversionBase):
                 break
 
             H_data = J.T.dot(self.Wd_sq.dot(J))
-            H_reg = lam * self.Wm.T.dot(self.Wm) + alpha * self.Wt.T.dot(self.Wt)
+            H_reg = lam * spatial_gram + alpha * temporal_gram
             H = H_data + H_reg
 
             g_data = -J.T.dot(wd2 * residual)
@@ -440,10 +443,8 @@ class TimeLapseSRTInversion(InversionBase):
         for it, fop in enumerate(self.fops):
             s_it = np.exp(m2d[:, it])
             fop.createJacobian(pg.Vector(s_it))
-            J_it = np.asarray(pg.utils.gmat2numpy(fop.jacobian()), dtype=float)
-            if J_it.ndim == 1:
-                J_it = J_it.reshape(-1, 1)
-            all_coverage.append(np.sum(np.abs(J_it), axis=0))
+            J_it = self._jacobian_to_csr(fop.jacobian())
+            all_coverage.append(np.asarray(abs(J_it).sum(axis=0)).ravel())
 
         result = TimeLapseInversionResult()
         result.timesteps = self.measurement_times

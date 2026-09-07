@@ -667,3 +667,86 @@ def test_the_agent_can_still_set_a_single_height(panel):
     panel.agent_apply("set_params", {"params": {"rx_height": 1.5}})
     assert panel._collect_geom()["rx_height"] == pytest.approx(1.5)
     assert panel._collect_geom()["tx_height"] == pytest.approx(4.0)
+
+
+# ---------------------------------------------------------------------------
+# Choosing between several projects in one folder
+# ---------------------------------------------------------------------------
+def write_workspace_project(folder: Path) -> Path:
+    """A one-station ``project.tiw``, borrowed from the format tests.
+
+    Those tests own the fixture, and the tests directory is not a package, so it
+    is loaded by path rather than imported by name.
+    """
+    global _FORMAT_FIXTURES
+    if _FORMAT_FIXTURES is None:
+        import importlib.util
+
+        source = Path(__file__).with_name("test_temcompany_project_formats.py")
+        spec = importlib.util.spec_from_file_location(
+            "_temcompany_format_fixtures", source)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _FORMAT_FIXTURES = module
+    return _FORMAT_FIXTURES.write_workspace_project(folder)
+
+
+_FORMAT_FIXTURES = None
+
+
+def test_the_panel_offers_every_project_in_the_folder(panel, tmp_path,
+                                                      monkeypatch) -> None:
+    """The folder picker used to make every file but one unreachable.
+
+    A reprocessing lands beside the original as ``project2.tiw``, and the
+    reader takes the standard name when nobody asks, so the panel has to ask.
+    """
+    from PySide6.QtWidgets import QInputDialog
+
+    folder = tmp_path / "several"
+    folder.mkdir()
+    write_workspace_project(folder)
+    (folder / "project2.tiw").write_bytes((folder / "project.tiw").read_bytes())
+
+    offered = {}
+
+    def fake_get_item(parent, title, label, items, current, editable):
+        offered["items"] = list(items)
+        return items[1], True
+
+    monkeypatch.setattr(QInputDialog, "getItem", staticmethod(fake_get_item))
+    chosen = panel._choose_project_file(folder)
+
+    assert [item.split(" ")[0] for item in offered["items"]] == [
+        "project.tiw", "project2.tiw"]
+    assert chosen is not None and chosen.name == "project2.tiw"
+
+
+def test_one_project_in_the_folder_is_not_worth_asking_about(
+        panel, tmp_path, monkeypatch) -> None:
+    """And the folder is returned, so the reader keeps its own rule."""
+    from PySide6.QtWidgets import QInputDialog
+
+    folder = tmp_path / "single"
+    folder.mkdir()
+    write_workspace_project(folder)
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("the panel asked with nothing to choose between")
+
+    monkeypatch.setattr(QInputDialog, "getItem", staticmethod(refuse))
+    assert panel._choose_project_file(folder) == folder
+
+
+def test_cancelling_the_chooser_loads_nothing(panel, tmp_path,
+                                              monkeypatch) -> None:
+    from PySide6.QtWidgets import QInputDialog
+
+    folder = tmp_path / "cancelled"
+    folder.mkdir()
+    write_workspace_project(folder)
+    (folder / "project2.tiw").write_bytes((folder / "project.tiw").read_bytes())
+
+    monkeypatch.setattr(QInputDialog, "getItem",
+                        staticmethod(lambda *a, **k: ("", False)))
+    assert panel._choose_project_file(folder) is None

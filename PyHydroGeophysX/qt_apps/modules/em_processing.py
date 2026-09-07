@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QProgressBar,
@@ -59,7 +60,6 @@ from PyHydroGeophysX.qt_apps.widgets.em_survey_view import (
 )
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import Model3DView
-from PyHydroGeophysX.qt_apps.widgets.plan_slice_view import PlanSliceView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
 from PyHydroGeophysX.qt_apps.workers import TaskWorker, WorkflowWorker
 from PyHydroGeophysX.workflows import (
@@ -183,18 +183,13 @@ class EMProcessingModule(BaseModule):
         root = QHBoxLayout(self)
         self._tabs = QTabWidget()
         self._curve = CurveViewer()
-        # The "Resistivity model" tab adapts to the result: a 1D depth profile
-        # (single sounding), or — for a line — the map + section overview, a
-        # plan-view depth slice (a map you slice by depth), or the position x
-        # depth section on its own, chosen with "View".
+        # Result sections stay here; project-wide maps live in Project Map.
         self._inv_view = ZoomableImageView()       # page 0: single-sounding profile
-        self._overview_view = EMOverviewView()     # page 1: map + section overview
-        self._plan_view = PlanSliceView()          # page 2: plan-view depth slice
-        self._section_view = Model3DView()         # page 3: position x depth section
+        self._overview_view = EMOverviewView(section_only=True)
+        self._section_view = Model3DView()
         self._model_stack = QStackedWidget()
         self._model_stack.addWidget(self._inv_view)
         self._model_stack.addWidget(self._overview_view)
-        self._model_stack.addWidget(self._plan_view)
         self._model_stack.addWidget(self._section_view)
         self._model_tab = QWidget()
         mlay = QVBoxLayout(self._model_tab); mlay.setContentsMargins(0, 0, 0, 0)
@@ -203,11 +198,10 @@ class EMProcessingModule(BaseModule):
         vr.addWidget(QLabel("View:"))
         self._view_mode = QComboBox()
         self._view_mode.addItems(
-            ["Overview (map + section)", "Plan slice (map)", "Section"])
+            ["Section", "Volume view"])
         self._view_mode.setToolTip(
-            "Overview pairs the survey map with the selected line's resistivity "
-            "section. Plan slice maps one depth layer across the survey. Section "
-            "shows the position x depth model on its own.")
+            "View the recovered section or volume. Use Add to Map for survey "
+            "locations and depth slices in Project Map.")
         self._view_mode.currentIndexChanged.connect(self._on_view_mode)
         vr.addWidget(self._view_mode); vr.addStretch(1)
         self._view_row.setVisible(False)
@@ -255,7 +249,7 @@ class EMProcessingModule(BaseModule):
         self._on_method_changed()
 
     def _on_view_mode(self, idx: int) -> None:
-        pages = {0: self._overview_view, 1: self._plan_view}
+        pages = {0: self._overview_view, 1: self._section_view}
         self._model_stack.setCurrentWidget(pages.get(idx, self._section_view))
 
     # -- helpers -------------------------------------------------------------
@@ -1177,6 +1171,7 @@ class EMProcessingModule(BaseModule):
             "second copy to a chosen folder.")
         self._inv_export.clicked.connect(self._export_inversion)
         form.addRow(self._inv_export)
+        form.addRow(self.map_export_button())
         return box
 
     # -- method switch -------------------------------------------------------
@@ -1444,11 +1439,49 @@ class EMProcessingModule(BaseModule):
             result["lateral_weight_scale"] = float(defaults["lateral_weight_scale"])
         return result
 
+    def _choose_project_file(self, folder: Path) -> Optional[Path]:
+        """Which project file in *folder* to read, asking when there is a choice.
+
+        A folder often holds more than one. A project migrated from an earlier
+        TEMImage keeps its ``project.db`` beside the new ``project.tiw``, and a
+        reprocessing of the same survey is written under its own name, so
+        ``project2.tiw`` can sit beside ``project.tiw`` describing the same day
+        at a different stacking. The reader picks the standard name when nobody
+        asks, which made every other file in the folder unreachable from here.
+
+        Returns the folder itself when there is nothing to choose between, so
+        the reader keeps its own rule, and ``None`` when the operator cancels.
+        """
+        from PyHydroGeophysX.data_processing import temcompany_project
+
+        try:
+            candidates = temcompany_project.choosable_projects(folder)
+        except OSError:
+            return folder
+        if len(candidates) < 2:
+            return folder
+        labels = [temcompany_project.describe_project(item["path"])
+                  for item in candidates]
+        choice, accepted = QInputDialog.getItem(
+            self, "Select TEMcompany project",
+            f"{folder.name} holds {len(candidates)} projects:",
+            labels, 0, False)
+        if not accepted:
+            return None
+        if choice not in labels:
+            return folder
+        return Path(candidates[labels.index(choice)]["path"])
+
     # -- data ----------------------------------------------------------------
     def _load(self) -> None:
         if self._data_format.currentText() in _TEM_FORMATS:
             selected = select_directory(self, "Load EM project folder", Path.cwd())
-            path = str(selected) if selected else ""
+            if selected is None:
+                return
+            chosen = self._choose_project_file(selected)
+            if chosen is None:
+                return
+            path = str(chosen)
         else:
             path, _ = QFileDialog.getOpenFileName(self, "Load EM data", "", _FILE_FILTER)
         if not path:
@@ -2155,6 +2188,7 @@ class EMProcessingModule(BaseModule):
         self.report_result({"method": result["method"], "chi2": float(result["chi2"]),
                             "n_data": result.get("n_data"), "nfev": result.get("nfev"),
                             "n_layers": int(np.asarray(result["resistivity"]).size)})
+        self.offer_map_export()
 
     def _on_line_ok(self, result: dict) -> None:
         self._last_section = result
@@ -2172,11 +2206,10 @@ class EMProcessingModule(BaseModule):
         self._section_view.show_model(result["edges"], result["model3d"],
                                       label=result["label"], cmap=result["cmap"],
                                       log_scale=result.get("log_scale", True))
-        self._populate_plan(result)
         self._view_row.setVisible(True)
         self._view_mode.blockSignals(True); self._view_mode.setCurrentIndex(0)
         self._view_mode.blockSignals(False)
-        # The map + section overview is what a reader needs first, so open there.
+        # Open the section; maps are managed independently in Project Map.
         self._model_stack.setCurrentWidget(self._overview_view)
         self._tabs.setCurrentWidget(self._model_tab)
         rng = result.get("model_range", [float("nan"), float("nan")])
@@ -2297,6 +2330,7 @@ class EMProcessingModule(BaseModule):
                             "global_chi2": chi2,
                             "sounding_median_chi2": result.get("chi2_sounding_median"),
                             "section_npz": saved[0] if saved else None})
+        self.offer_map_export()
 
     def _finish_line_run(self, result: dict) -> None:
         self.finish_persisted_run({
@@ -2319,53 +2353,13 @@ class EMProcessingModule(BaseModule):
         }, "em.line_inversion")
 
     def _populate_overview(self, result: dict) -> None:
-        """Feed the map + section overview and save it beside the section data."""
-        n_pos = int(np.asarray(result["model3d"]).shape[0])
-        x = y = None
-        if (self._geom_x is not None and self._geom_y is not None
-                and self._geom_x.size >= n_pos and self._geom_y.size >= n_pos):
-            x, y = self._geom_x[:n_pos], self._geom_y[:n_pos]
-        # Geographic coordinates ride along only so the map can place tiles; the
-        # section and the axes stay in the projected metres of the survey.
-        lon = np.asarray((self._data or {}).get("longitude", []), dtype=float).ravel()
-        lat = np.asarray((self._data or {}).get("latitude", []), dtype=float).ravel()
-        self._overview_view.show_result(
-            result, x=x, y=y,
-            lon=lon[:n_pos] if lon.size >= n_pos else None,
-            lat=lat[:n_pos] if lat.size >= n_pos else None)
+        """Render and save the result section; Project Map owns result maps."""
+        self._overview_view.show_result(result)
         active = self.state.active_run(self.module_key, "em.line_inversion")
         out = active.outputs_dir if active is not None else self.state.ensure_results_store().scratch_dir(self.module_key)
-        saved = self._overview_view.save_figure(out / "em_line_overview.png")
+        saved = self._overview_view.save_figure(out / "em_line_section.png")
         if saved:
             result.setdefault("saved", []).append(saved)
-
-    def _populate_plan(self, result: dict) -> None:
-        """Feed the plan-view depth-slice map from a line-inversion result: each
-        sounding's map coordinate + its resistivity per depth layer."""
-        model = np.asarray(result["model3d"], dtype=float)[:, 0, :]  # (n_pos, n_layers), deepest-first
-        n_pos = model.shape[0]
-        depth_edges = np.asarray(result["depth_edges"], dtype=float)
-        depth_ctr = 0.5 * (depth_edges[:-1] + depth_edges[1:])       # surface-ordered
-        res_surface = model[:, ::-1].copy()                          # surface-ordered in depth
-        # The line result is no longer blanked at the source, so apply the same
-        # depth-of-investigation cut here; a plan slice below it would map
-        # regularization across the survey.
-        sensitivity = np.asarray(result.get("sensitivity", []), dtype=float)
-        if sensitivity.shape == res_surface.shape:
-            res_surface[sensitivity < float(
-                result.get("doi_threshold", DOI_SENSITIVITY_THRESHOLD))] = np.nan
-        if (self._geom_x is not None and self._geom_y is not None
-                and self._geom_x.size >= n_pos and self._geom_y.size >= n_pos):
-            xy = np.column_stack([self._geom_x[:n_pos], self._geom_y[:n_pos]])
-            x_label, y_label = "Easting (m)", "Northing (m)"
-        else:  # no map coordinates loaded: lay soundings along the distance axis
-            pos = np.asarray(result["positions"], dtype=float)[:n_pos]
-            xy = np.column_stack([pos, np.zeros_like(pos)])
-            x_label, y_label = "Distance along line (m)", ""
-        self._plan_view.show_slices(xy, res_surface, depth_ctr,
-                                    label=result.get("label", "resistivity (Ω·m)"),
-                                    log_scale=result.get("log_scale", True),
-                                    x_label=x_label, y_label=y_label)
 
     def _on_inversion_failed(self, message: str, backend: bool) -> None:
         self.fail_persisted_run(message, "em.inversion")
@@ -2455,9 +2449,11 @@ class EMProcessingModule(BaseModule):
 
     def export_actions(self):
         if getattr(self, "_last_section", None):
-            return [("Line section model (CSV)", self._export_inversion)]
+            return [("Add to Project Map…", self.add_to_map),
+                    ("Line section model (CSV)", self._export_inversion)]
         if self._last_result:
-            return [("Recovered sounding model (CSV + npy)", self._export_inversion)]
+            return [("Add to Project Map…", self.add_to_map),
+                    ("Recovered sounding model (CSV + npy)", self._export_inversion)]
         return []
 
     def _show_format_help(self) -> None:

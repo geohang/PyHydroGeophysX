@@ -16,6 +16,7 @@ The examples are organized to show the complete workflow from loading hydrologic
 
 * **Ex_Time_lapse_measurement.py**: Creating synthetic time-lapse ERT measurements
 * **Ex_TL_inversion.py**: Time-lapse ERT inversion techniques
+* **Ex_TL_inversion_memory.py**: Comparing memory-optimized and standard time-lapse ERT inversion
 * **Ex_structure_TLresinv.py**: Structure-constrained time-lapse inversion
 
 **Field Data Processing and Inversion:**
@@ -35,6 +36,7 @@ The examples are organized to show the complete workflow from loading hydrologic
 
 * **Ex_Structure_resinv.py**: Structure-constrained resistivity inversion
 * **Ex_joint_inversion.py**: Joint ERT-SRT inversion with cross-gradient coupling and geostatistical regularization
+* **Ex_hydro_to_multigeophys.py**: Converting one hydrological profile to ERT, SRT, TDEM, FDEM, and gravity responses
 * **Ex_MC_Hydro.py**: Monte Carlo uncertainty quantification for water content estimation
 
 Each example includes detailed comments and demonstrates best practices for watershed geophysical monitoring applications.
@@ -138,6 +140,23 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
+    <div class="sphx-glr-thumbcontainer" tooltip="This example compares the sparse lower-RAM solver path (``save_memory=True``) with the standard time-lapse inversion path (``save_memory=False``). Both runs use the same measurements, mesh, and inversion parameters so runtime, process memory, and recovered resistivity distributions can be compared directly.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_TL_inversion_memory_thumb.png
+    :alt:
+
+  :doc:`/auto_examples/Ex_TL_inversion_memory`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Memory-Optimized Time-Lapse ERT Inversion</div>
+    </div>
+
+
+.. raw:: html
+
     <div class="sphx-glr-thumbcontainer" tooltip="This example loads a VTEM line and its survey geometry, inspects measured decays, calibrates the response to a documented reference resistivity, and creates a stitched resistivity section from independent 1D inversions.">
 
 .. only:: html
@@ -206,23 +225,6 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example compares two joint inversion strategies using the same ERT/SRT data:">
-
-.. only:: html
-
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_joint_inversion_thumb.png
-    :alt:
-
-  :doc:`/auto_examples/Ex_joint_inversion`
-
-.. raw:: html
-
-      <div class="sphx-glr-thumbnail-title">Joint ERT-SRT Inversion: Cross-Gradient vs Geostatistics</div>
-    </div>
-
-
-.. raw:: html
-
     <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to perform a 2D seismic refraction tomography (SRT)  inversion and interpret the results to define subsurface structures.">
 
 .. only:: html
@@ -240,18 +242,18 @@ Each example includes detailed comments and demonstrates best practices for wate
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This example uses real hydrological model outputs from examples/data and builds one 2D profile (single snapshot). All geophysical methods are then simulated on the same profile:">
+    <div class="sphx-glr-thumbcontainer" tooltip="This example compares direct cross-gradient and geostatistical cross-gradient coupling using the same ERT and SRT field data. Data loading, shared settings, the two inversion runs, result saving, and visualization are presented as separate steps.">
 
 .. only:: html
 
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_hydro_to_multigeophys_thumb.png
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_joint_inversion_thumb.png
     :alt:
 
-  :doc:`/auto_examples/Ex_hydro_to_multigeophys`
+  :doc:`/auto_examples/Ex_joint_inversion`
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">Ex. Hydrology to Multi-Geophysics Responses (Single Snapshot, 2D Profile)</div>
+      <div class="sphx-glr-thumbnail-title">Joint ERT-SRT Inversion: Cross-Gradient and Geostatistical Coupling</div>
     </div>
 
 
@@ -269,6 +271,23 @@ Each example includes detailed comments and demonstrates best practices for wate
 .. raw:: html
 
       <div class="sphx-glr-thumbnail-title">Ex. TDEM Workflow: From Hydrological Models to EM Responses and Inversion</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example extracts one two-dimensional profile from a hydrological-model snapshot, builds a common mesh, and simulates ERT, SRT, TDEM, FDEM, and gravity responses. Each processing and forward-modeling stage is kept separate so the intermediate hydrological profiles and mesh properties can be inspected.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_hydro_to_multigeophys_thumb.png
+    :alt:
+
+  :doc:`/auto_examples/Ex_hydro_to_multigeophys`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Hydrology to Multi-Geophysics Responses</div>
     </div>
 
 
@@ -372,14 +391,15 @@ Each example includes detailed comments and demonstrates best practices for wate
    /auto_examples/Ex_Structure_resinv
    /auto_examples/Ex_TEM_LMHM_LCI
    /auto_examples/Ex_gravity_magnetics_inversion
+   /auto_examples/Ex_TL_inversion_memory
    /auto_examples/Ex_EM_line_section
    /auto_examples/Ex_ERT_single_inversion
    /auto_examples/Ex_structure_TLresinv
    /auto_examples/Ex_TL_inversion
-   /auto_examples/Ex_joint_inversion
    /auto_examples/Ex_SRT_inv
-   /auto_examples/Ex_hydro_to_multigeophys
+   /auto_examples/Ex_joint_inversion
    /auto_examples/Ex_TDEM_workflow
+   /auto_examples/Ex_hydro_to_multigeophys
    /auto_examples/EX_SRT_forward
    /auto_examples/Ex_Time_lapse_measurement
    /auto_examples/Ex_ERT_workflow

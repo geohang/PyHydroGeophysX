@@ -851,12 +851,19 @@ class ModelViewerModule(BaseModule):
         else:
             self._clear_visual("This run has no registered artifacts.")
 
-    def _clear_visual(self, message: str = "") -> None:
+    def _clear_visual(self, message: str = "") -> List[Any]:
+        """Empty the visual pane and release what it had open.
+
+        Returns the widgets scheduled for deletion so a caller that has to see
+        them gone, rather than merely queued, can flush those and only those.
+        """
+        retired: List[Any] = []
         while self._visual_layout.count():
             item = self._visual_layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
                 widget.deleteLater()
+                retired.append(widget)
         for resource in self._visual_resources:
             _close_array_resource(resource)
         self._visual_resources.clear()
@@ -865,6 +872,7 @@ class ModelViewerModule(BaseModule):
             label.setWordWrap(True)
             label.setAlignment(Qt.AlignCenter)
             self._visual_layout.addWidget(label)
+        return retired
 
     def _render_selected_artifact(self, _index: int) -> None:
         if self._current is None or self._store is None:
@@ -1154,8 +1162,14 @@ class ModelViewerModule(BaseModule):
         )
         if answer != QMessageBox.Yes:
             return
-        self._clear_visual()
-        QApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        # Windows refuses to unlink a file another handle still maps, so the
+        # view has to be gone before the run directory is removed, not merely
+        # queued for removal. Flush the widgets this call retired and no
+        # others: passing no receiver would deliver every pending deferred
+        # delete in the application, which reaches objects this module does not
+        # own and cannot reason about.
+        for widget in self._clear_visual():
+            QApplication.sendPostedEvents(widget, QEvent.DeferredDelete)
         QApplication.processEvents()
         gc.collect()
         try:

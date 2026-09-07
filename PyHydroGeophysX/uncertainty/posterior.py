@@ -4,6 +4,8 @@ from typing import Any, Callable, Dict, Optional
 
 import numpy as np
 
+from PyHydroGeophysX.solvers.linear_solvers import spd_solve, symmetrize
+
 
 def linearized_posterior(
     J: Any,
@@ -14,21 +16,35 @@ def linearized_posterior(
     Compute linearized Gaussian posterior covariance:
 
     Cm_post = (J^T Cd^-1 J + Cm_prior^-1)^-1
+
+    None of the three inverses in that expression is formed. Each is applied as
+    a Cholesky solve instead, and the result is symmetrized before it is
+    returned. This is a correctness matter, not a speed one: building the
+    posterior from chained pseudo-inverses returns a matrix that is not a
+    covariance. On a Jacobian with condition number 1e5 the old form came back
+    asymmetric with two negative eigenvalues out of sixty, and feeding it to
+    ``propagate_petro_uncertainty`` below made NumPy report "covariance is not
+    symmetric positive-semidefinite" and sample from it anyway.
     """
     J = np.asarray(J, dtype=float)
     Cd = np.asarray(Cd, dtype=float)
     Cm_prior = np.asarray(Cm_prior, dtype=float)
+    n_model = J.shape[1]
 
+    # J^T Cd^-1 J, without ever forming Cd^-1.
     if Cd.ndim == 1:
-        Cd_inv = np.diag(1.0 / np.clip(Cd, 1e-12, None))
+        jt_cdinv_j = J.T @ (J / np.clip(Cd, 1e-12, None)[:, None])
     else:
-        Cd_inv = np.linalg.pinv(Cd)
+        jt_cdinv_j = J.T @ spd_solve(Cd, J, what="the data covariance Cd")
 
-    Cm_prior_inv = np.linalg.pinv(Cm_prior)
+    prior_inv = spd_solve(
+        Cm_prior, np.eye(n_model), what="the prior covariance Cm_prior"
+    )
 
-    lhs = J.T @ Cd_inv @ J + Cm_prior_inv
-    Cm_post = np.linalg.pinv(lhs)
-    return Cm_post
+    lhs = symmetrize(jt_cdinv_j + prior_inv)
+    return symmetrize(
+        spd_solve(lhs, np.eye(n_model), what="the posterior precision matrix")
+    )
 
 
 def model_resolution_spread(

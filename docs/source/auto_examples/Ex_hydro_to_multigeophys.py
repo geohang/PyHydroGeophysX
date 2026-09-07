@@ -1,41 +1,38 @@
+"""Hydrology to Multi-Geophysics Responses
+========================================
+
+This example extracts one two-dimensional profile from a hydrological-model
+snapshot, builds a common mesh, and simulates ERT, SRT, TDEM, FDEM, and gravity
+responses. Each processing and forward-modeling stage is kept separate so the
+intermediate hydrological profiles and mesh properties can be inspected.
 """
-Ex. Hydrology to Multi-Geophysics Responses (Single Snapshot, 2D Profile)
-=========================================================================
-
-This example uses real hydrological model outputs from ``examples/data`` and
-builds one 2D profile (single snapshot). All geophysical methods are then
-simulated on the same profile:
-
-1. Extract one 2D hydro profile from MODFLOW outputs.
-2. Build one 2D mesh and interpolate hydrologic properties.
-3. Simulate ERT and SRT using ``hydro_to_ert`` and ``hydro_to_srt``.
-4. Simulate pseudo-2D TDEM, FDEM, and gravity using ``hydro_to_tdem``,
-   ``hydro_to_fdem``, and ``hydro_to_gravity``.
-"""
-
-# %%
-import os
-import sys
-from typing import Any
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pygimli as pg
-import pygimli.physics.traveltime as tt
-from pygimli.physics import ert
-from scipy.interpolate import griddata
-
-# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_hydro_to_multigeophys_fig_01.png'
 
 # %% [markdown]
-# ## Step 1: Imports
+# Step 1: Import packages and prepare the output folder
+# -----------------------------------------------------
 
+# %%
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_hydro_to_multigeophys_fig_01.png'
+
+import os
+import sys
+import numpy as np
+import matplotlib.pyplot as plt
+import pygimli as pg
+from pygimli.physics import ert
+import pygimli.physics.traveltime as tt
+from scipy.interpolate import griddata
 
 # Setup package path for development
 try:
     current_dir = os.path.dirname(os.path.abspath(__file__))
 except NameError:
     current_dir = os.getcwd()
+    if (
+        not os.path.exists(os.path.join(current_dir, "data"))
+        and os.path.exists(os.path.join(current_dir, "examples", "data"))
+    ):
+        current_dir = os.path.join(current_dir, "examples")
 
 parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
@@ -45,10 +42,10 @@ from PyHydroGeophysX.core.interpolation import ProfileInterpolator, create_surfa
 from PyHydroGeophysX.core.mesh_utils import MeshCreator
 from PyHydroGeophysX.Hydro_modular import (
     hydro_to_ert,
-    hydro_to_fdem,
-    hydro_to_gravity,
     hydro_to_srt,
     hydro_to_tdem,
+    hydro_to_fdem,
+    hydro_to_gravity,
 )
 
 # %%
@@ -57,127 +54,9 @@ os.makedirs(output_dir, exist_ok=True)
 
 rng_seed = 7
 
-
 # %% [markdown]
-# ## Step 2: Helper Functions
-
-# %%
-def fill_profile_nans(
-    values: Any,
-) -> Any:
-    """Fill NaNs along profile direction for each layer."""
-    arr = np.asarray(values, dtype=float).copy()
-    if arr.ndim != 2:
-        raise ValueError(f"Expected 2D array, got shape {arr.shape}.")
-
-    x = np.arange(arr.shape[1], dtype=float)
-    for i in range(arr.shape[0]):
-        row = arr[i, :]
-        valid = np.isfinite(row)
-        if np.any(valid):
-            if np.count_nonzero(valid) == 1:
-                row[~valid] = row[valid][0]
-            else:
-                row[~valid] = np.interp(x[~valid], x[valid], row[valid])
-        else:
-            raise RuntimeError("Profile interpolation failed: one layer is all NaN.")
-        arr[i, :] = row
-
-    return arr
-
-
-def get_mesh_xy(
-    mesh: Any,
-) -> Any:
-    """Return mesh cell-center x/y arrays."""
-    centers = np.asarray(mesh.cellCenters(), dtype=float)
-    if centers.ndim == 2 and centers.shape[1] >= 2:
-        return centers[:, 0], centers[:, 1]
-
-    x = np.array([float(c[0]) for c in mesh.cellCenters()], dtype=float)
-    y = np.array([float(c[1]) for c in mesh.cellCenters()], dtype=float)
-    return x, y
-
-
-def assign_three_layer_markers(
-    mesh: Any,
-    line1: Any,
-    line2: Any,
-    top_marker: Any = 0,
-    mid_marker: Any = 3,
-    bot_marker: Any = 2,
-) -> Any:
-    """Assign top/middle/bottom markers from two interface lines."""
-    x_cell, y_cell = get_mesh_xy(mesh)
-
-    y_line1 = np.interp(x_cell, line1[:, 0], line1[:, 1])
-    y_line2 = np.interp(x_cell, line2[:, 0], line2[:, 1])
-
-    markers = np.full(mesh.cellCount(), bot_marker, dtype=int)
-    markers[y_cell >= y_line2] = mid_marker
-    markers[y_cell >= y_line1] = top_marker
-
-    mesh.setCellMarkers(markers)
-    return markers
-
-
-def interpolate_profile_to_mesh(
-    profile_values: Any,
-    layer_boundaries: Any,
-    x_profile: Any,
-    mesh: Any,
-) -> Any:
-    """Interpolate profile matrix (layers x distance) to mesh cells."""
-    values = np.asarray(profile_values, dtype=float)
-    bounds = np.asarray(layer_boundaries, dtype=float)
-
-    n_layers, n_profile = values.shape
-    if bounds.shape != (n_layers + 1, n_profile):
-        raise ValueError(
-            f"layer_boundaries shape must be {(n_layers + 1, n_profile)}, got {bounds.shape}."
-        )
-
-    layer_centers = 0.5 * (bounds[:-1, :] + bounds[1:, :])
-    x2d = np.repeat(np.asarray(x_profile, dtype=float)[np.newaxis, :], n_layers, axis=0)
-
-    points = np.column_stack((x2d.ravel(), layer_centers.ravel()))
-    vals = values.ravel()
-
-    x_cell, y_cell = get_mesh_xy(mesh)
-    query = np.column_stack((x_cell, y_cell))
-
-    interp_linear = griddata(points, vals, query, method="linear")
-    interp_nearest = griddata(points, vals, query, method="nearest")
-
-    out = np.asarray(interp_linear, dtype=float)
-    nan_mask = ~np.isfinite(out)
-    out[nan_mask] = interp_nearest[nan_mask]
-    return out
-
-
-def relative_l2(
-    noisy: Any,
-    clean: Any,
-) -> Any:
-    """Compute the relative L2 error between noisy and reference arrays.
-
-    Args:
-        noisy: Perturbed or noisy array.
-        clean: Reference array.
-
-    Returns:
-        Relative L2 error, or ``np.nan`` when the reference norm is zero.
-    """
-    noisy_arr = np.asarray(noisy)
-    clean_arr = np.asarray(clean)
-    denom = np.linalg.norm(clean_arr)
-    if denom <= 0:
-        return np.nan
-    return float(np.linalg.norm(noisy_arr - clean_arr) / denom)
-
-
-# %% [markdown]
-# ## Step 3: Load Real Model Outputs and Build One 2D Profile
+# Step 2: Load one hydrological snapshot and extract a 2D profile
+# ---------------------------------------------------------------
 
 # %%
 data_dir = os.path.join(current_dir, "data")
@@ -187,10 +66,19 @@ top = np.loadtxt(os.path.join(data_dir, "top.txt"))
 bot = np.load(os.path.join(data_dir, "bot.npy"))
 
 snapshot_index = 5
-water_content_3d = np.asarray(water_content_4d[snapshot_index], dtype=float)
+water_content_3d = np.asarray(
+    water_content_4d[snapshot_index],
+    dtype=float,
+)
 
+print(f"Water-content snapshot: {water_content_3d.shape}")
+print(f"Porosity model:          {porosity_3d.shape}")
+print(f"Layer boundaries:        {bot.shape[0] + 1}")
+
+# %%
 point1 = [115, 70]
 point2 = [95, 180]
+
 interpolator = ProfileInterpolator(
     point1=point1,
     point2=point2,
@@ -202,20 +90,78 @@ interpolator = ProfileInterpolator(
     num_points=220,
 )
 
-structure = interpolator.interpolate_layer_data([top] + [bot[i] for i in range(bot.shape[0])])
+structure = interpolator.interpolate_layer_data(
+    [top] + [bot[index] for index in range(bot.shape[0])]
+)
 water_content_profile = interpolator.interpolate_3d_data(water_content_3d)
 porosity_profile = interpolator.interpolate_3d_data(porosity_3d)
 
-structure = fill_profile_nans(structure)
-water_content_profile = np.clip(fill_profile_nans(water_content_profile), 0.0, 0.8)
-porosity_profile = np.clip(fill_profile_nans(porosity_profile), 0.01, 0.6)
-
 L_profile = np.asarray(interpolator.L_profile, dtype=float)
+
+# %% [markdown]
+# Fill missing values along the profile
+# -------------------------------------
+#
+# Missing values are filled independently within each model layer using linear interpolation along the profile. A single valid value is extended across that layer.
+
+# %%
+profile_arrays = {
+    "structure": np.asarray(structure, dtype=float).copy(),
+    "water_content": np.asarray(water_content_profile, dtype=float).copy(),
+    "porosity": np.asarray(porosity_profile, dtype=float).copy(),
+}
+
+for profile_name, profile_values in profile_arrays.items():
+    if profile_values.ndim != 2:
+        raise ValueError(
+            f"{profile_name} must be 2D, got {profile_values.shape}."
+        )
+
+    profile_index = np.arange(profile_values.shape[1], dtype=float)
+
+    for layer_index in range(profile_values.shape[0]):
+        row = profile_values[layer_index]
+        valid = np.isfinite(row)
+
+        if not np.any(valid):
+            raise RuntimeError(
+                f"{profile_name} layer {layer_index} is entirely NaN."
+            )
+        if np.count_nonzero(valid) == 1:
+            row[~valid] = row[valid][0]
+        else:
+            row[~valid] = np.interp(
+                profile_index[~valid],
+                profile_index[valid],
+                row[valid],
+            )
+
+        profile_values[layer_index] = row
+
+    profile_arrays[profile_name] = profile_values
+
+structure = profile_arrays["structure"]
+water_content_profile = np.clip(
+    profile_arrays["water_content"],
+    0.0,
+    0.8,
+)
+porosity_profile = np.clip(
+    profile_arrays["porosity"],
+    0.01,
+    0.6,
+)
+
 n_layers, n_profile = water_content_profile.shape
 
-n_bounds = structure.shape[0]
-mid_idx = max(1, min(4, n_bounds // 3))
-bot_idx = max(mid_idx + 1, min(12, n_bounds - 2))
+# %% [markdown]
+# Step 3: Build the common 2D mesh
+# --------------------------------
+
+# %%
+n_boundaries = structure.shape[0]
+mid_idx = max(1, min(4, n_boundaries // 3))
+bot_idx = max(mid_idx + 1, min(12, n_boundaries - 2))
 
 surface, line1, line2 = create_surface_lines(
     L_profile=L_profile,
@@ -232,44 +178,164 @@ mesh, _ = mesh_creator.create_from_layers(
     bottom_depth=float(np.min(line2[:, 1]) - 10.0),
 )
 
-mesh_markers = assign_three_layer_markers(mesh, line1, line2, top_marker=0, mid_marker=3, bot_marker=2)
-
-wc_mesh = interpolate_profile_to_mesh(water_content_profile, structure, L_profile, mesh)
-porosity_mesh = interpolate_profile_to_mesh(porosity_profile, structure, L_profile, mesh)
-
-print(f"water_content_3d shape: {water_content_3d.shape}")
-print(f"porosity_3d shape:      {porosity_3d.shape}")
-print(f"Profile points:         {n_profile}")
-print(f"Mesh cells:             {mesh.cellCount()}")
-print(f"Water content range:    {np.nanmin(water_content_profile):.4f} - {np.nanmax(water_content_profile):.4f}")
-print(f"Porosity range:         {np.nanmin(porosity_profile):.4f} - {np.nanmax(porosity_profile):.4f}")
+print(f"Profile points: {n_profile}")
+print(f"Mesh cells:     {mesh.cellCount()}")
 
 # %%
-layer_centers = 0.5 * (structure[:-1, :] + structure[1:, :])
-X2D = np.repeat(L_profile[np.newaxis, :], n_layers, axis=0)
+mesh_centers = np.array(
+    [
+        [float(center[0]), float(center[1])]
+        for center in mesh.cellCenters()
+    ],
+    dtype=float,
+)
+x_cell = mesh_centers[:, 0]
+y_cell = mesh_centers[:, 1]
+
+y_line1 = np.interp(x_cell, line1[:, 0], line1[:, 1])
+y_line2 = np.interp(x_cell, line2[:, 0], line2[:, 1])
+
+layer_markers = [0, 3, 2]
+mesh_markers = np.full(
+    mesh.cellCount(),
+    layer_markers[2],
+    dtype=int,
+)
+mesh_markers[y_cell >= y_line2] = layer_markers[1]
+mesh_markers[y_cell >= y_line1] = layer_markers[0]
+
+mesh.setCellMarkers(mesh_markers)
+
+unique_markers, marker_counts = np.unique(
+    mesh_markers,
+    return_counts=True,
+)
+print(dict(zip(unique_markers, marker_counts)))
+
+# %% [markdown]
+# Interpolate water content and porosity to the mesh
+# --------------------------------------------------
+
+# %%
+mesh_profiles = {}
+
+for profile_name, profile_values in {
+    "water_content": water_content_profile,
+    "porosity": porosity_profile,
+}.items():
+    values = np.asarray(profile_values, dtype=float)
+    boundaries = np.asarray(structure, dtype=float)
+
+    expected_shape = (values.shape[0] + 1, values.shape[1])
+    if boundaries.shape != expected_shape:
+        raise ValueError(
+            f"Layer boundaries must have shape {expected_shape}, "
+            f"got {boundaries.shape}."
+        )
+
+    layer_centers = 0.5 * (
+        boundaries[:-1] + boundaries[1:]
+    )
+    x_profile_2d = np.repeat(
+        L_profile[np.newaxis, :],
+        values.shape[0],
+        axis=0,
+    )
+
+    interpolation_points = np.column_stack(
+        (x_profile_2d.ravel(), layer_centers.ravel())
+    )
+    query_points = np.column_stack((x_cell, y_cell))
+
+    mesh_values = griddata(
+        interpolation_points,
+        values.ravel(),
+        query_points,
+        method="linear",
+    )
+    nearest_values = griddata(
+        interpolation_points,
+        values.ravel(),
+        query_points,
+        method="nearest",
+    )
+
+    missing = ~np.isfinite(mesh_values)
+    mesh_values[missing] = nearest_values[missing]
+    mesh_profiles[profile_name] = mesh_values
+
+wc_mesh = mesh_profiles["water_content"]
+porosity_mesh = mesh_profiles["porosity"]
+
+# %%
+print(
+    "Water-content profile range: "
+    f"{water_content_profile.min():.4f} - "
+    f"{water_content_profile.max():.4f}"
+)
+print(
+    "Porosity profile range: "
+    f"{porosity_profile.min():.4f} - "
+    f"{porosity_profile.max():.4f}"
+)
+print(
+    "Water-content mesh range: "
+    f"{wc_mesh.min():.4f} - {wc_mesh.max():.4f}"
+)
+print(
+    "Porosity mesh range: "
+    f"{porosity_mesh.min():.4f} - {porosity_mesh.max():.4f}"
+)
+
+# %% [markdown]
+# Visualize the hydrological profile
+# ----------------------------------
+
+# %%
+layer_centers = 0.5 * (
+    structure[:-1] + structure[1:]
+)
+x_profile_2d = np.repeat(
+    L_profile[np.newaxis, :],
+    n_layers,
+    axis=0,
+)
 
 fig, ax = plt.subplots(figsize=(10, 4.5))
-cf = ax.contourf(X2D, layer_centers, water_content_profile, levels=25, cmap="YlGnBu")
-ax.plot(L_profile, structure[0, :], "k-", lw=1.2)
+image = ax.contourf(
+    x_profile_2d,
+    layer_centers,
+    water_content_profile,
+    levels=25,
+    cmap="YlGnBu",
+)
+ax.plot(L_profile, structure[0], "k-", linewidth=1.2)
 ax.set_title("Hydrologic 2D profile (water content)")
 ax.set_xlabel("Distance along profile (m)")
 ax.set_ylabel("Elevation (m)")
-cb = plt.colorbar(cf, ax=ax)
-cb.set_label("Water content (-)")
+
+colorbar = plt.colorbar(image, ax=ax)
+colorbar.set_label("Water content (-)")
+
 plt.tight_layout()
-plt.savefig(os.path.join(output_dir, "Ex_hydro_to_multigeophys_fig_01.png"), dpi=220, bbox_inches="tight")
+profile_path = os.path.join(
+    output_dir,
+    "Ex_hydro_to_multigeophys_fig_01.png",
+)
+fig.savefig(profile_path, dpi=220, bbox_inches="tight")
 plt.show()
 
-###############################################################################
-# The extracted MODFLOW snapshot preserves both topography and the vertical
-# water-content structure along the selected two-dimensional profile.
+# %% [markdown]
+# The extracted snapshot preserves topography and vertical water-content
+# structure along the selected profile.
 #
 # .. image:: /auto_examples/images/Ex_hydro_to_multigeophys_fig_01.png
-#    :align: center
 #    :width: 900px
+#    :align: center
 
 # %% [markdown]
-# ## Step 4: ERT and SRT from the Same 2D Profile (`hydro_to_ert`, `hydro_to_srt`)
+# Step 4: Simulate ERT and SRT on the common mesh
+# -----------------------------------------------
 
 # %%
 rho_parameters = {
@@ -299,8 +365,7 @@ vel_parameters = {
     },
 }
 
-layer_markers = [0, 3, 2]
-
+# %%
 srt_data, velocity_model = hydro_to_srt(
     water_content=wc_mesh,
     porosity=porosity_mesh,
@@ -321,6 +386,9 @@ srt_data, velocity_model = hydro_to_srt(
     seed=rng_seed,
 )
 
+print(f"SRT data count: {srt_data.size()}")
+
+# %%
 ert_data, resistivity_model = hydro_to_ert(
     water_content=wc_mesh,
     porosity=porosity_mesh,
@@ -343,10 +411,14 @@ ert_data, resistivity_model = hydro_to_ert(
 )
 
 print(f"ERT data count: {ert_data.size()}")
-print(f"SRT data count: {srt_data.size()}")
+
+# %% [markdown]
+# Compare the ERT and SRT models and responses
+# --------------------------------------------
 
 # %%
 fig = plt.figure(figsize=(14, 8))
+
 ax1 = fig.add_subplot(2, 2, 1)
 pg.show(
     mesh,
@@ -376,39 +448,52 @@ tt.drawFirstPicks(ax4, srt_data)
 ax4.set_title("Synthetic SRT first arrivals")
 
 plt.tight_layout()
-plt.savefig(
-    os.path.join(output_dir, "Ex_hydro_to_multigeophys_fig_02.png"),
-    dpi=220,
-    bbox_inches="tight",
+ert_srt_path = os.path.join(
+    output_dir,
+    "Ex_hydro_to_multigeophys_fig_02.png",
 )
+fig.savefig(ert_srt_path, dpi=220, bbox_inches="tight")
 plt.show()
 
-###############################################################################
-# The ERT and SRT models and measurements are generated from the same mesh and
-# hydrological state, making their structural relationship directly visible.
+# %% [markdown]
+# The ERT and SRT models and measurements come from the same mesh and
+# hydrological state.
 #
 # .. image:: /auto_examples/images/Ex_hydro_to_multigeophys_fig_02.png
-#    :align: center
 #    :width: 900px
+#    :align: center
 
 # %% [markdown]
-# ## Step 5: Pseudo-2D TDEM / FDEM / Gravity from the Same Profile
+# Step 5: Select profile stations for TDEM, FDEM, and gravity
+# -----------------------------------------------------------
 
 # %%
-step = max(1, n_profile // 24)
-station_idx = np.unique(np.r_[np.arange(0, n_profile, step), n_profile - 1])
+station_step = max(1, n_profile // 24)
+station_idx = np.unique(
+    np.r_[
+        np.arange(0, n_profile, station_step),
+        n_profile - 1,
+    ]
+)
 
 x_station = L_profile[station_idx]
 wc_station = water_content_profile[:, station_idx]
-por_station = porosity_profile[:, station_idx]
+porosity_station = porosity_profile[:, station_idx]
 structure_station = structure[:, station_idx]
 
 times = np.logspace(-5, -2, 28)
 frequencies = np.logspace(1, 4, 18)
 
+print(f"Profile stations: {len(x_station)}")
+
+# %% [markdown]
+# Simulate the pseudo-2D TDEM response
+# ------------------------------------
+
+# %%
 tdem_noisy, tdem_clean, tdem_unc, tdem_cond = hydro_to_tdem(
     water_content=wc_station,
-    porosity=por_station,
+    porosity=porosity_station,
     layer_boundaries=structure_station,
     times=times,
     sigma_w=0.05,
@@ -421,9 +506,24 @@ tdem_noisy, tdem_clean, tdem_unc, tdem_cond = hydro_to_tdem(
     verbose=False,
 )
 
+tdem_norm = np.linalg.norm(tdem_clean)
+tdem_relative_l2 = (
+    np.nan
+    if tdem_norm <= 0
+    else np.linalg.norm(tdem_noisy - tdem_clean) / tdem_norm
+)
+
+print(f"TDEM matrix shape: {tdem_clean.shape}")
+print(f"TDEM relative L2 noise: {tdem_relative_l2:.4f}")
+
+# %% [markdown]
+# Simulate the pseudo-2D FDEM response
+# ------------------------------------
+
+# %%
 fdem_noisy, fdem_clean, fdem_unc, fdem_cond = hydro_to_fdem(
     water_content=wc_station,
-    porosity=por_station,
+    porosity=porosity_station,
     layer_boundaries=structure_station,
     frequencies=frequencies,
     sigma_w=0.05,
@@ -439,9 +539,24 @@ fdem_noisy, fdem_clean, fdem_unc, fdem_cond = hydro_to_fdem(
     verbose=False,
 )
 
+fdem_norm = np.linalg.norm(fdem_clean)
+fdem_relative_l2 = (
+    np.nan
+    if fdem_norm <= 0
+    else np.linalg.norm(fdem_noisy - fdem_clean) / fdem_norm
+)
+
+print(f"FDEM matrix shape: {fdem_clean.shape}")
+print(f"FDEM relative L2 noise: {fdem_relative_l2:.4f}")
+
+# %% [markdown]
+# Simulate the pseudo-2D gravity response
+# ---------------------------------------
+
+# %%
 grav_noisy, grav_clean, grav_unc, density_contrast = hydro_to_gravity(
     water_content=wc_station,
-    porosity=por_station,
+    porosity=porosity_station,
     layer_boundaries=structure_station,
     station_positions=x_station,
     rho_matrix=2650.0,
@@ -453,14 +568,19 @@ grav_noisy, grav_clean, grav_unc, density_contrast = hydro_to_gravity(
     verbose=False,
 )
 
-print(f"TDEM matrix shape: {tdem_clean.shape}, relative L2 noise = {relative_l2(tdem_noisy, tdem_clean):.4f}")
-print(f"FDEM matrix shape: {fdem_clean.shape}, relative L2 noise = {relative_l2(fdem_noisy, fdem_clean):.4f}")
-print(f"Gravity range (mGal): {np.min(grav_clean):.5f} to {np.max(grav_clean):.5f}")
+print(
+    "Gravity range (mGal): "
+    f"{grav_clean.min():.5f} to {grav_clean.max():.5f}"
+)
+
+# %% [markdown]
+# Compare the TDEM, FDEM, and gravity responses
+# ---------------------------------------------
 
 # %%
 fig, axes = plt.subplots(1, 3, figsize=(16, 4.8))
 
-im0 = axes[0].pcolormesh(
+tdem_image = axes[0].pcolormesh(
     x_station,
     times,
     np.abs(tdem_clean).T,
@@ -471,10 +591,10 @@ axes[0].set_yscale("log")
 axes[0].set_xlabel("Distance along profile (m)")
 axes[0].set_ylabel("Time (s)")
 axes[0].set_title("Pseudo-2D TDEM |response|")
-cb0 = plt.colorbar(im0, ax=axes[0])
-cb0.set_label("|dB/dt| (arb.)")
+tdem_colorbar = plt.colorbar(tdem_image, ax=axes[0])
+tdem_colorbar.set_label("|dB/dt| (arb.)")
 
-im1 = axes[1].pcolormesh(
+fdem_image = axes[1].pcolormesh(
     x_station,
     frequencies,
     np.abs(np.imag(fdem_clean)).T,
@@ -485,11 +605,24 @@ axes[1].set_yscale("log")
 axes[1].set_xlabel("Distance along profile (m)")
 axes[1].set_ylabel("Frequency (Hz)")
 axes[1].set_title("Pseudo-2D FDEM |imag|")
-cb1 = plt.colorbar(im1, ax=axes[1])
-cb1.set_label("|H_imag| (arb.)")
+fdem_colorbar = plt.colorbar(fdem_image, ax=axes[1])
+fdem_colorbar.set_label("|H_imag| (arb.)")
 
-axes[2].plot(x_station, grav_clean, "k-", lw=1.8, label="Gravity clean")
-axes[2].plot(x_station, grav_noisy, "o", ms=3.8, alpha=0.75, label="Gravity noisy")
+axes[2].plot(
+    x_station,
+    grav_clean,
+    "k-",
+    linewidth=1.8,
+    label="Gravity clean",
+)
+axes[2].plot(
+    x_station,
+    grav_noisy,
+    "o",
+    markersize=3.8,
+    alpha=0.75,
+    label="Gravity noisy",
+)
 axes[2].set_xlabel("Distance along profile (m)")
 axes[2].set_ylabel("Gravity anomaly (mGal)")
 axes[2].set_title("Pseudo-2D gravity profile")
@@ -497,24 +630,23 @@ axes[2].grid(True, alpha=0.25)
 axes[2].legend(loc="best")
 
 plt.tight_layout()
-plt.savefig(
-    os.path.join(output_dir, "Ex_hydro_to_multigeophys_fig_03.png"),
-    dpi=220,
-    bbox_inches="tight",
+em_gravity_path = os.path.join(
+    output_dir,
+    "Ex_hydro_to_multigeophys_fig_03.png",
 )
+fig.savefig(em_gravity_path, dpi=220, bbox_inches="tight")
 plt.show()
 
-###############################################################################
+# %% [markdown]
 # The pseudo-2D panels summarize the TDEM, FDEM, and gravity responses along
 # the same hydrological profile.
 #
 # .. image:: /auto_examples/images/Ex_hydro_to_multigeophys_fig_03.png
-#    :align: center
 #    :width: 900px
+#    :align: center
 
 # %% [markdown]
-# Summary:
-# This workflow uses one real MODFLOW snapshot and one 2D extracted profile.
-# ERT and SRT are simulated directly from the same 2D profile.
-# TDEM, FDEM, and gravity are simulated along the same profile in a
-# pseudo-2D representation.
+# Summary
+# -------
+#
+# The same hydrological snapshot and profile now feed all five geophysical methods. Because preprocessing, mesh construction, individual forward models, and visualization are separated, any intermediate result can be inspected before continuing to the next method.

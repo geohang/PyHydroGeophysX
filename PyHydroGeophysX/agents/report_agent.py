@@ -1653,7 +1653,7 @@ Correlation between mean resistivity changes and climate variables:
                         coverage_data = coverage[cell_markers] if len(coverage) > len(cell_markers) else coverage
                         
                         # Apply baseline masking - mask poor coverage areas in baseline
-                        coverage_threshold = -0.5  # Optimized threshold from testing
+                        coverage_threshold = -0.5  # Legacy coverage cutoff; not a universal resolution criterion.
                         coverage_masked = coverage_data.copy()
                         coverage_masked[coverage_data <= coverage_threshold] = -9999  # Mark as invalid
                     else:
@@ -1734,7 +1734,7 @@ Correlation between mean resistivity changes and climate variables:
                         coverage_data = coverage[cell_markers] if len(coverage) > len(cell_markers) else coverage
                         
                         # Apply baseline masking - mask poor coverage areas
-                        coverage_threshold = -0.5  # Optimized threshold from testing
+                        coverage_threshold = -0.5  # Legacy coverage cutoff; not a universal resolution criterion.
                         coverage_masked = coverage_data.copy()
                         coverage_masked[coverage_data <= coverage_threshold] = -9999  # Mark as invalid
                     else:
@@ -1817,7 +1817,7 @@ Correlation between mean resistivity changes and climate variables:
                         coverage_data = coverage[cell_markers] if len(coverage) > len(cell_markers) else coverage
                         
                         # Apply baseline masking - mask poor coverage areas in baseline
-                        coverage_threshold = -0.5  # Optimized threshold from testing
+                        coverage_threshold = -0.5  # Legacy coverage cutoff; not a universal resolution criterion.
                         coverage_masked = coverage_data.copy()
                         coverage_masked[coverage_data <= coverage_threshold] = -9999  # Mark as invalid
                     else:
@@ -1921,7 +1921,7 @@ Correlation between mean resistivity changes and climate variables:
                         coverage_data = coverage[cell_markers] if len(coverage) > len(cell_markers) else coverage
                         
                         # Apply baseline masking - mask poor coverage areas in baseline
-                        coverage_threshold = -0.5  # Optimized threshold from testing
+                        coverage_threshold = -0.5  # Legacy coverage cutoff; not a universal resolution criterion.
                         coverage_masked = coverage_data.copy()
                         coverage_masked[coverage_data <= coverage_threshold] = -9999  # Mark as invalid
                     else:
@@ -2246,7 +2246,7 @@ Based on the time-lapse ERT monitoring and climate data integration:
     
     def _generate_time_labels(self, n_timesteps: int) -> list:
         """Generate time labels for plots."""
-        # This is a placeholder - ideally extract from actual dates
+        # No acquisition dates are supplied here; label by one-based step index.
         labels = []
         months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         for i in range(n_timesteps):

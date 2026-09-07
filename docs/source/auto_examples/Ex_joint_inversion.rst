@@ -17,42 +17,40 @@
 
 .. _sphx_glr_auto_examples_Ex_joint_inversion.py:
 
+Joint ERT-SRT Inversion: Cross-Gradient and Geostatistical Coupling
+=======================================================================
 
-Joint ERT-SRT Inversion: Cross-Gradient vs Geostatistics
-=========================================================
+This example compares direct cross-gradient and geostatistical cross-gradient
+coupling using the same ERT and SRT field data. Data loading, shared settings,
+the two inversion runs, result saving, and visualization are presented as
+separate steps.
 
-This example compares two joint inversion strategies using the same ERT/SRT data:
+.. GENERATED FROM PYTHON SOURCE LINES 11-12
 
-1. Cross-gradient joint inversion (smoothness + cross-gradient coupling).
-2. Geostatistical joint inversion (geostatistics-focused, cross-gradient off).
+sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_joint_inversion_fig_01.png'
 
-Error inputs use ``ert_relative_error`` / ``ert_absolute_u_error`` and
-``srt_relative_error`` / ``srt_absolute_error`` for both modalities.
-
-.. GENERATED FROM PYTHON SOURCE LINES 13-41
+.. GENERATED FROM PYTHON SOURCE LINES 12-38
 
 .. code-block:: Python
 
 
     import os
     import sys
-    from typing import Any
-
-    import matplotlib.pyplot as plt
     import numpy as np
+    import matplotlib.pyplot as plt
     import pygimli as pg
     import pygimli.physics.traveltime as tt
     from pygimli.physics import ert
-
-
 
     # Setup package path for development
     try:
         current_dir = os.path.dirname(os.path.abspath(__file__))
     except NameError:
         current_dir = os.getcwd()
-        if (not os.path.exists(os.path.join(current_dir, "data")) and
-                os.path.exists(os.path.join(current_dir, "examples", "data"))):
+        if (
+            not os.path.exists(os.path.join(current_dir, "data"))
+            and os.path.exists(os.path.join(current_dir, "examples", "data"))
+        ):
             current_dir = os.path.join(current_dir, "examples")
 
     parent_dir = os.path.dirname(current_dir)
@@ -62,20 +60,16 @@ Error inputs use ``ert_relative_error`` / ``ert_absolute_u_error`` and
     from PyHydroGeophysX.inversion import JointERTSRTInversion
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 43-45
+.. GENERATED FROM PYTHON SOURCE LINES 39-41
 
-Configure Inputs and Output Paths
----------------------------------
+Load the ERT and SRT field data
+-------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 47-68
+.. GENERATED FROM PYTHON SOURCE LINES 43-62
 
 .. code-block:: Python
 
-
-    def _as_bool_env(name, default=False):
-        val = os.environ.get(name, str(int(default))).strip().lower()
-        return val in {"1", "true", "yes", "y", "on"}
-
+    print("Step 1: Load the field datasets.")
 
     output_dir = os.path.join(current_dir, "results", "joint_inversion_compare")
     os.makedirs(output_dir, exist_ok=True)
@@ -88,27 +82,35 @@ Configure Inputs and Output Paths
     if not os.path.exists(srt_file):
         raise FileNotFoundError(f"SRT file not found: {srt_file}")
 
-    # Load once for plotting sensors.
     ert_data = ert.load(ert_file)
     srt_data = tt.load(srt_file)
 
+    print(f"ERT: {ert_data.sensorCount()} sensors, {ert_data.size()} measurements")
+    print(f"SRT: {srt_data.sensorCount()} sensors, {srt_data.size()} travel times")
 
-.. GENERATED FROM PYTHON SOURCE LINES 69-74
 
-Define the Two Joint-Inversion Cases
-------------------------------------
+.. GENERATED FROM PYTHON SOURCE LINES 63-67
 
-Both cases use the same data, mesh settings, bounds, and stopping criteria.
-Only the structural coupling strategy changes.
+Define the settings shared by both inversions
+---------------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 76-137
+The environment variables ``PHGX_JOINT_MAX_ITER`` and ``PHGX_JOINT_VERBOSE`` can be used for quick tests without editing the notebook.
+
+.. GENERATED FROM PYTHON SOURCE LINES 69-112
 
 .. code-block:: Python
 
-    max_iterations = int(os.environ.get("PHGX_JOINT_MAX_ITER", "20"))
-    verbose = _as_bool_env("PHGX_JOINT_VERBOSE", default=True)
+    print("Step 2: Define the common inversion settings.")
 
-    # Common parameters:
+    max_iterations = int(os.environ.get("PHGX_JOINT_MAX_ITER", "20"))
+    verbose = os.environ.get("PHGX_JOINT_VERBOSE", "1").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "y",
+        "on",
+    }
+
     common_params = {
         "max_iterations": max_iterations,
         "target_chi2": 1.5,
@@ -138,182 +140,186 @@ Only the structural coupling strategy changes.
         "verbose": verbose,
     }
 
-    cases = {
-        "cross_gradient_joint": {
-            "regularization_mode": "smoothness",
-            "lambda_ert": 10.0,
-            "lambda_srt": 10.0,
-            "lambda_cg_ert": 80.0,
-            "lambda_cg_srt": 80.0,
-            "cross_gradient_mode": "direct",
-            "cross_gradient_source": "smoothness",
-            "cross_gradient_threshold": 0.01,
-        },
-        "geostat_joint": {
-            # Geostatistical joint inversion: smoothness Wm + geostatistical
-            # covariance for cross-gradient neighborhood (RCM).
-            # Uses "spatial" mode to preserve continuous covariance weights
-            # (legacy: L_cgr=5000, L_cgs=40000).
-            "regularization_mode": "smoothness",
-            "lambda_ert": 10.0,
-            "lambda_srt": 10.0,
-            "lambda_cg_ert": 5000.0,
-            "lambda_cg_srt": 5000.0,
-            "cross_gradient_mode": "spatial",
-            "cross_gradient_source": "geostat",
-            "cross_gradient_corr_lengths": (4.0, 4.0),
-            "cross_gradient_threshold": 0.01,
-        },
-    }
+    print(f"Maximum iterations: {max_iterations}")
+    print(f"Verbose output: {verbose}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 138-140
+.. GENERATED FROM PYTHON SOURCE LINES 113-117
 
-Define a Reusable Case Runner
------------------------------
+Run the direct cross-gradient inversion
+---------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 142-217
+This case uses the model smoothness matrices to construct the cross-gradient coupling.
+
+.. GENERATED FROM PYTHON SOURCE LINES 119-158
 
 .. code-block:: Python
 
+    print("Step 3: Run the direct cross-gradient inversion.")
 
-    def run_case(
-        case_name: Any,
-        case_params: Any,
-    ) -> Any:
-        """Run one joint ERT-SRT inversion configuration and save its outputs.
+    cross_params = {
+        **common_params,
+        "regularization_mode": "smoothness",
+        "lambda_ert": 10.0,
+        "lambda_srt": 10.0,
+        "lambda_cg_ert": 80.0,
+        "lambda_cg_srt": 80.0,
+        "cross_gradient_mode": "direct",
+        "cross_gradient_source": "smoothness",
+        "cross_gradient_threshold": 0.01,
+    }
 
-        Args:
-            case_name: Label for the inversion scenario.
-            case_params: Scenario-specific inversion parameters.
+    cross_inv = JointERTSRTInversion(
+        ert_data=ert_file,
+        srt_data=srt_file,
+        **cross_params,
+    )
+    cross_result = cross_inv.run()
 
-        Returns:
-            Dictionary containing the result object, saved arrays, and run metadata.
-        """
-        print("")
-        print(f"==================== Running case: {case_name} ====================")
-        run_params = dict(common_params)
-        run_params.update(case_params)
+    cross = {
+        "result": cross_result,
+        "params": cross_params,
+        "ert_model": np.asarray(cross_result.ert_resistivity, dtype=float).ravel(),
+        "srt_model": np.asarray(cross_result.srt_velocity, dtype=float).ravel(),
+        "chi2_ert_hist": np.asarray(
+            [iteration["chi2_ert"] for iteration in cross_result.iteration_history],
+            dtype=float,
+        ),
+        "chi2_srt_hist": np.asarray(
+            [iteration["chi2_srt"] for iteration in cross_result.iteration_history],
+            dtype=float,
+        ),
+    }
 
-        inv = JointERTSRTInversion(
-            ert_data=ert_file,
-            srt_data=srt_file,
-            **run_params,
-        )
+    print(f"Final ERT chi2: {cross_result.chi2_ert:.4f}")
+    print(f"Final SRT chi2: {cross_result.chi2_srt:.4f}")
 
-        try:
-            result = inv.run()
-        except RuntimeError as exc:
-            if "GeostatisticConstraintsMatrix" in str(exc):
-                raise RuntimeError(
-                    "Geostatistical constraints require a PyGIMLi build with "
-                    "GeostatisticConstraintsMatrix support."
-                ) from exc
-            raise
 
+.. GENERATED FROM PYTHON SOURCE LINES 159-163
+
+Run the geostatistical joint inversion
+--------------------------------------
+
+This case uses continuous spatial covariance weights for the cross-gradient neighborhood.
+
+.. GENERATED FROM PYTHON SOURCE LINES 165-214
+
+.. code-block:: Python
+
+    print("Step 4: Run the geostatistical joint inversion.")
+
+    geo_params = {
+        **common_params,
+        "regularization_mode": "smoothness",
+        "lambda_ert": 10.0,
+        "lambda_srt": 10.0,
+        "lambda_cg_ert": 5000.0,
+        "lambda_cg_srt": 5000.0,
+        "cross_gradient_mode": "spatial",
+        "cross_gradient_source": "geostat",
+        "cross_gradient_corr_lengths": (4.0, 4.0),
+        "cross_gradient_threshold": 0.01,
+    }
+
+    geo_inv = JointERTSRTInversion(
+        ert_data=ert_file,
+        srt_data=srt_file,
+        **geo_params,
+    )
+
+    try:
+        geo_result = geo_inv.run()
+    except RuntimeError as exc:
+        if "GeostatisticConstraintsMatrix" in str(exc):
+            raise RuntimeError(
+                "Geostatistical constraints require a PyGIMLi build with "
+                "GeostatisticConstraintsMatrix support."
+            ) from exc
+        raise
+
+    geo = {
+        "result": geo_result,
+        "params": geo_params,
+        "ert_model": np.asarray(geo_result.ert_resistivity, dtype=float).ravel(),
+        "srt_model": np.asarray(geo_result.srt_velocity, dtype=float).ravel(),
+        "chi2_ert_hist": np.asarray(
+            [iteration["chi2_ert"] for iteration in geo_result.iteration_history],
+            dtype=float,
+        ),
+        "chi2_srt_hist": np.asarray(
+            [iteration["chi2_srt"] for iteration in geo_result.iteration_history],
+            dtype=float,
+        ),
+    }
+
+    print(f"Final ERT chi2: {geo_result.chi2_ert:.4f}")
+    print(f"Final SRT chi2: {geo_result.chi2_srt:.4f}")
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 215-219
+
+Save the inversion results
+--------------------------
+
+Each case gets its own folder containing the recovered models, chi-square histories, and a text summary.
+
+.. GENERATED FROM PYTHON SOURCE LINES 221-265
+
+.. code-block:: Python
+
+    print("Step 5: Save the inversion results.")
+
+    run_outputs = {
+        "cross_gradient_joint": cross,
+        "geostat_joint": geo,
+    }
+
+    for case_name, output in run_outputs.items():
         case_dir = os.path.join(output_dir, case_name)
         os.makedirs(case_dir, exist_ok=True)
 
-        ert_model = np.asarray(result.ert_resistivity, dtype=float).ravel()
-        srt_model = np.asarray(result.srt_velocity, dtype=float).ravel()
-        chi2_ert_hist = np.array([it["chi2_ert"] for it in result.iteration_history], dtype=float)
-        chi2_srt_hist = np.array([it["chi2_srt"] for it in result.iteration_history], dtype=float)
-
-        np.save(os.path.join(case_dir, "joint_ert_resistivity.npy"), ert_model)
-        np.save(os.path.join(case_dir, "joint_srt_velocity.npy"), srt_model)
-        np.save(os.path.join(case_dir, "joint_ert_chi2_history.npy"), chi2_ert_hist)
-        np.save(os.path.join(case_dir, "joint_srt_chi2_history.npy"), chi2_srt_hist)
+        np.save(
+            os.path.join(case_dir, "joint_ert_resistivity.npy"),
+            output["ert_model"],
+        )
+        np.save(
+            os.path.join(case_dir, "joint_srt_velocity.npy"),
+            output["srt_model"],
+        )
+        np.save(
+            os.path.join(case_dir, "joint_ert_chi2_history.npy"),
+            output["chi2_ert_hist"],
+        )
+        np.save(
+            os.path.join(case_dir, "joint_srt_chi2_history.npy"),
+            output["chi2_srt_hist"],
+        )
 
         summary_file = os.path.join(case_dir, "summary.txt")
-        with open(summary_file, "w", encoding="utf-8") as f:
-            f.write(f"Case: {case_name}\n")
-            f.write(f"ERT file: {ert_file}\n")
-            f.write(f"SRT file: {srt_file}\n")
-            f.write(f"Iterations: {len(result.iteration_history)}\n")
-            f.write(f"Final ERT chi2: {result.chi2_ert:.6f}\n")
-            f.write(f"Final SRT chi2: {result.chi2_srt:.6f}\n")
-            f.write("Parameters:\n")
-            for key in sorted(run_params.keys()):
-                f.write(f"  {key}: {run_params[key]}\n")
+        with open(summary_file, "w", encoding="utf-8") as summary:
+            summary.write(f"Case: {case_name}\n")
+            summary.write(f"ERT file: {ert_file}\n")
+            summary.write(f"SRT file: {srt_file}\n")
+            summary.write(
+                f"Iterations: {len(output['result'].iteration_history)}\n"
+            )
+            summary.write(f"Final ERT chi2: {output['result'].chi2_ert:.6f}\n")
+            summary.write(f"Final SRT chi2: {output['result'].chi2_srt:.6f}\n")
+            summary.write("Parameters:\n")
+            for key in sorted(output["params"]):
+                summary.write(f"  {key}: {output['params'][key]}\n")
 
-        print(f"Final ERT chi2 ({case_name}): {result.chi2_ert:.4f}")
-        print(f"Final SRT chi2 ({case_name}): {result.chi2_srt:.4f}")
-        print(f"Saved: {case_dir}")
-
-        return {
-            "name": case_name,
-            "result": result,
-            "params": run_params,
-            "ert_model": ert_model,
-            "srt_model": srt_model,
-            "chi2_ert_hist": chi2_ert_hist,
-            "chi2_srt_hist": chi2_srt_hist,
-        }
+        print(f"Saved {case_name}: {case_dir}")
 
 
+.. GENERATED FROM PYTHON SOURCE LINES 266-270
 
-.. GENERATED FROM PYTHON SOURCE LINES 218-220
-
-Run Both Inversions
--------------------
-
-.. GENERATED FROM PYTHON SOURCE LINES 222-227
-
-.. code-block:: Python
-
-    run_outputs = {name: run_case(name, cfg) for name, cfg in cases.items()}
-
-    cross = run_outputs["cross_gradient_joint"]
-    geo = run_outputs["geostat_joint"]
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 228-230
-
-Prepare Coverage-Aware Plotting Helpers
----------------------------------------
-
-.. GENERATED FROM PYTHON SOURCE LINES 232-263
-
-.. code-block:: Python
-
-    def ert_cov_mask(
-        result: Any,
-    ) -> Any:
-        """ERT coverage mask: log10(covTrans/paramSizes) > -1."""
-        cov = result.ert_coverage
-        if cov is None:
-            return None
-        return cov > -1
-
-    def srt_cov_mask(
-        result: Any,
-    ) -> Any:
-        """SRT coverage mask: standardizedCoverage (already 0/1)."""
-        cov = result.srt_coverage
-        if cov is None:
-            return None
-        return cov
-
-
-    def _draw_mesh(ax, mesh, data, cov, cmap, vmin, vmax, label, log=False):
-        """Draw model on ax using drawModel + addCoverageAlpha + colorbar."""
-        gci = pg.viewer.mpl.drawModel(ax, mesh, data,
-                                      cMap=cmap, cMin=vmin, cMax=vmax,
-                                      logScale=log)
-        if cov is not None:
-            pg.viewer.mpl.addCoverageAlpha(gci, cov)
-        cb = plt.colorbar(gci, ax=ax, orientation="vertical", shrink=0.9, pad=0.02)
-        cb.set_label(label)
-        return gci, cb
-
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 264-266
-
-Compare Models and Convergence Histories
+Compare the recovered ERT and SRT models
 ----------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 268-377
+The same color limits are used across the two coupling strategies. Coverage is applied as transparency to de-emphasize poorly constrained cells.
+
+.. GENERATED FROM PYTHON SOURCE LINES 272-295
 
 .. code-block:: Python
 
@@ -322,145 +328,251 @@ Compare Models and Convergence Histories
     ert_cmap = "Spectral_r"
     srt_cmap = BlueDarkRed18_18.mpl_colormap
 
-    ert_vmin = float(min(np.min(cross["ert_model"]), np.min(geo["ert_model"])))
-    ert_vmax = float(max(np.max(cross["ert_model"]), np.max(geo["ert_model"])))
-    srt_vmin = float(min(np.min(cross["srt_model"]), np.min(geo["srt_model"])))
-    srt_vmax = float(max(np.max(cross["srt_model"]), np.max(geo["srt_model"])))
+    ert_vmin = float(min(cross["ert_model"].min(), geo["ert_model"].min()))
+    ert_vmax = float(max(cross["ert_model"].max(), geo["ert_model"].max()))
+    srt_vmin = float(min(cross["srt_model"].min(), geo["srt_model"].min()))
+    srt_vmax = float(max(cross["srt_model"].max(), geo["srt_model"].max()))
+
+    cross_ert_cov = (
+        None
+        if cross_result.ert_coverage is None
+        else cross_result.ert_coverage > -1
+    )
+    geo_ert_cov = (
+        None
+        if geo_result.ert_coverage is None
+        else geo_result.ert_coverage > -1
+    )
+    cross_srt_cov = cross_result.srt_coverage
+    geo_srt_cov = geo_result.srt_coverage
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 296-376
+
+.. code-block:: Python
 
     fig, axes = plt.subplots(2, 3, figsize=(17, 8.5))
 
-    # --- Row 0: ERT resistivity ---
-    _draw_mesh(axes[0, 0], cross["result"].mesh, cross["ert_model"],
-               ert_cov_mask(cross["result"]), ert_cmap, ert_vmin, ert_vmax,
-               "Resistivity (Ohm-m)", log=True)
-    pg.viewer.mpl.drawSensors(axes[0, 0], ert_data.sensors(), diam=0.4, facecolor="k", edgecolor="k")
-    axes[0, 0].set_title(f"Cross-gradient ERT\nchi2={cross['result'].chi2_ert:.2f}")
-    axes[0, 0].set_xlabel("x (m)")
-    axes[0, 0].set_ylabel("z (m)")
+    ert_panels = [
+        (
+            axes[0, 0],
+            cross_result,
+            cross["ert_model"],
+            cross_ert_cov,
+            f"Cross-gradient ERT\nchi2={cross_result.chi2_ert:.2f}",
+        ),
+        (
+            axes[0, 1],
+            geo_result,
+            geo["ert_model"],
+            geo_ert_cov,
+            f"Geostat ERT\nchi2={geo_result.chi2_ert:.2f}",
+        ),
+    ]
 
-    _draw_mesh(axes[0, 1], geo["result"].mesh, geo["ert_model"],
-               ert_cov_mask(geo["result"]), ert_cmap, ert_vmin, ert_vmax,
-               "Resistivity (Ohm-m)", log=True)
-    pg.viewer.mpl.drawSensors(axes[0, 1], ert_data.sensors(), diam=0.4, facecolor="k", edgecolor="k")
-    axes[0, 1].set_title(f"Geostat ERT\nchi2={geo['result'].chi2_ert:.2f}")
-    axes[0, 1].set_xlabel("x (m)")
-    axes[0, 1].set_ylabel("z (m)")
+    for ax, result, model, coverage, title in ert_panels:
+        image = pg.viewer.mpl.drawModel(
+            ax,
+            result.mesh,
+            model,
+            cMap=ert_cmap,
+            cMin=ert_vmin,
+            cMax=ert_vmax,
+            logScale=True,
+        )
+        if coverage is not None:
+            pg.viewer.mpl.addCoverageAlpha(image, coverage)
+
+        colorbar = plt.colorbar(
+            image,
+            ax=ax,
+            orientation="vertical",
+            shrink=0.9,
+            pad=0.02,
+        )
+        colorbar.set_label("Resistivity (Ohm-m)")
+        pg.viewer.mpl.drawSensors(
+            ax,
+            ert_data.sensors(),
+            diam=0.4,
+            facecolor="k",
+            edgecolor="k",
+        )
+        ax.set_title(title)
+        ax.set_xlabel("x (m)")
+        ax.set_ylabel("z (m)")
 
     axes[0, 2].plot(
         np.arange(1, len(cross["chi2_ert_hist"]) + 1),
         cross["chi2_ert_hist"],
         "o-",
-        lw=1.5,
-        ms=4,
+        linewidth=1.5,
+        markersize=4,
         label="cross-gradient",
     )
     axes[0, 2].plot(
         np.arange(1, len(geo["chi2_ert_hist"]) + 1),
         geo["chi2_ert_hist"],
         "s-",
-        lw=1.5,
-        ms=4,
+        linewidth=1.5,
+        markersize=4,
         label="geostat",
     )
     axes[0, 2].axhline(
         common_params["target_chi2"],
         color="k",
-        ls="--",
-        lw=1.0,
+        linestyle="--",
+        linewidth=1,
         label="target",
     )
     axes[0, 2].set_title("ERT chi2 history")
     axes[0, 2].set_xlabel("Iteration")
     axes[0, 2].set_ylabel("chi2")
-    axes[0, 2].grid(True, alpha=0.3)
+    axes[0, 2].grid(alpha=0.3)
     axes[0, 2].legend(loc="best", fontsize=8)
 
-    # --- Row 1: SRT velocity ---
-    _draw_mesh(axes[1, 0], cross["result"].mesh, cross["srt_model"],
-               srt_cov_mask(cross["result"]), srt_cmap, srt_vmin, srt_vmax,
-               "Velocity (m/s)", log=False)
-    pg.viewer.mpl.drawSensors(axes[1, 0], srt_data.sensors(), diam=0.4, facecolor="k", edgecolor="k")
-    axes[1, 0].set_title(f"Cross-gradient SRT\nchi2={cross['result'].chi2_srt:.2f}")
-    axes[1, 0].set_xlabel("x (m)")
-    axes[1, 0].set_ylabel("z (m)")
 
-    _draw_mesh(axes[1, 1], geo["result"].mesh, geo["srt_model"],
-               srt_cov_mask(geo["result"]), srt_cmap, srt_vmin, srt_vmax,
-               "Velocity (m/s)", log=False)
-    pg.viewer.mpl.drawSensors(axes[1, 1], srt_data.sensors(), diam=0.4, facecolor="k", edgecolor="k")
-    axes[1, 1].set_title(f"Geostat SRT\nchi2={geo['result'].chi2_srt:.2f}")
-    axes[1, 1].set_xlabel("x (m)")
-    axes[1, 1].set_ylabel("z (m)")
+.. GENERATED FROM PYTHON SOURCE LINES 377-455
+
+.. code-block:: Python
+
+    srt_panels = [
+        (
+            axes[1, 0],
+            cross_result,
+            cross["srt_model"],
+            cross_srt_cov,
+            f"Cross-gradient SRT\nchi2={cross_result.chi2_srt:.2f}",
+        ),
+        (
+            axes[1, 1],
+            geo_result,
+            geo["srt_model"],
+            geo_srt_cov,
+            f"Geostat SRT\nchi2={geo_result.chi2_srt:.2f}",
+        ),
+    ]
+
+    for ax, result, model, coverage, title in srt_panels:
+        image = pg.viewer.mpl.drawModel(
+            ax,
+            result.mesh,
+            model,
+            cMap=srt_cmap,
+            cMin=srt_vmin,
+            cMax=srt_vmax,
+            logScale=False,
+        )
+        if coverage is not None:
+            pg.viewer.mpl.addCoverageAlpha(image, coverage)
+
+        colorbar = plt.colorbar(
+            image,
+            ax=ax,
+            orientation="vertical",
+            shrink=0.9,
+            pad=0.02,
+        )
+        colorbar.set_label("Velocity (m/s)")
+        pg.viewer.mpl.drawSensors(
+            ax,
+            srt_data.sensors(),
+            diam=0.4,
+            facecolor="k",
+            edgecolor="k",
+        )
+        ax.set_title(title)
+        ax.set_xlabel("x (m)")
+        ax.set_ylabel("z (m)")
 
     axes[1, 2].plot(
         np.arange(1, len(cross["chi2_srt_hist"]) + 1),
         cross["chi2_srt_hist"],
         "o-",
-        lw=1.5,
-        ms=4,
+        linewidth=1.5,
+        markersize=4,
         label="cross-gradient",
     )
     axes[1, 2].plot(
         np.arange(1, len(geo["chi2_srt_hist"]) + 1),
         geo["chi2_srt_hist"],
         "s-",
-        lw=1.5,
-        ms=4,
+        linewidth=1.5,
+        markersize=4,
         label="geostat",
     )
     axes[1, 2].axhline(
         common_params["target_chi2"],
         color="k",
-        ls="--",
-        lw=1.0,
+        linestyle="--",
+        linewidth=1,
         label="target",
     )
     axes[1, 2].set_title("SRT chi2 history")
     axes[1, 2].set_xlabel("Iteration")
     axes[1, 2].set_ylabel("chi2")
-    axes[1, 2].grid(True, alpha=0.3)
+    axes[1, 2].grid(alpha=0.3)
     axes[1, 2].legend(loc="best", fontsize=8)
 
+
+.. GENERATED FROM PYTHON SOURCE LINES 456-462
+
+.. code-block:: Python
+
     plt.tight_layout()
+
     fig_path = os.path.join(output_dir, "Ex_joint_inversion_fig_01.png")
     fig.savefig(fig_path, dpi=220, bbox_inches="tight")
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 378-385
+.. GENERATED FROM PYTHON SOURCE LINES 463-469
 
-The model panels compare recovered ERT resistivity and SRT velocity, while
-the history panels show how each coupling strategy approaches the target
-chi-squared value.
+The recovered models use common color limits, and the history panels show how
+each coupling strategy approaches the target chi-squared value.
 
 .. image:: /auto_examples/images/Ex_joint_inversion_fig_01.png
-   :align: center
    :width: 1000px
+   :align: center
 
-.. GENERATED FROM PYTHON SOURCE LINES 387-389
+.. GENERATED FROM PYTHON SOURCE LINES 471-473
 
-Save the Comparison Summary
----------------------------
+Write the comparison summary
+----------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 391-408
+.. GENERATED FROM PYTHON SOURCE LINES 475-506
 
 .. code-block:: Python
 
     comparison_file = os.path.join(output_dir, "comparison_summary.txt")
-    with open(comparison_file, "w", encoding="utf-8") as f:
-        f.write("Joint inversion comparison\n")
-        f.write("==========================\n")
-        for name, out in run_outputs.items():
-            f.write(f"{name}\n")
-            f.write(f"  final ERT chi2: {out['result'].chi2_ert:.6f}\n")
-            f.write(f"  final SRT chi2: {out['result'].chi2_srt:.6f}\n")
-            f.write(f"  iterations: {len(out['result'].iteration_history)}\n")
 
-    print("")
+    with open(comparison_file, "w", encoding="utf-8") as summary:
+        summary.write("Joint inversion comparison\n")
+        summary.write("==========================\n")
+        for case_name, output in run_outputs.items():
+            summary.write(f"{case_name}\n")
+            summary.write(
+                f"  final ERT chi2: {output['result'].chi2_ert:.6f}\n"
+            )
+            summary.write(
+                f"  final SRT chi2: {output['result'].chi2_srt:.6f}\n"
+            )
+            summary.write(
+                f"  iterations: {len(output['result'].iteration_history)}\n"
+            )
+
     print("Comparison complete.")
-    print(f"Cross-gradient final chi2: ERT={cross['result'].chi2_ert:.4f}, SRT={cross['result'].chi2_srt:.4f}")
-    print(f"Geostat final chi2:        ERT={geo['result'].chi2_ert:.4f}, SRT={geo['result'].chi2_srt:.4f}")
-    print(f"Saved figure: {fig_path}")
+    print(
+        "Cross-gradient final chi2: "
+        f"ERT={cross_result.chi2_ert:.4f}, "
+        f"SRT={cross_result.chi2_srt:.4f}"
+    )
+    print(
+        "Geostatistical final chi2: "
+        f"ERT={geo_result.chi2_ert:.4f}, "
+        f"SRT={geo_result.chi2_srt:.4f}"
+    )
+    print(f"Saved comparison figure: {fig_path}")
     print(f"Saved comparison summary: {comparison_file}")
     print(f"Saved outputs to: {output_dir}")
 

@@ -38,6 +38,7 @@ class StudioState:
     hydro_output_dir: Optional[Path] = None
     selected_points: List[List[float]] = field(default_factory=list)
     active_dataset: Optional[str] = None
+    map_selected_id: Optional[str] = None
     module_results: Dict[str, Any] = field(default_factory=dict)
     workflow_results: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     active_workflow_id: str = ""

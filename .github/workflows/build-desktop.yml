@@ -3,11 +3,11 @@
 #
 # - light: pip-only PySide6 stack; small, reliable; forward modeling / inversion /
 #   3D viewer show an install message (the app degrades gracefully).
-# - full: conda-forge engines (pygimli, pyvista/vtk) + SimPEG; best-effort
+# - full: gimli/conda-forge engines (pygimli, pyvista/vtk) + SimPEG; best-effort
 #   (continue-on-error) because freezing the compiled engine stack is fragile.
 #
-# The Streamlit app and the docs point users at .../releases/latest, so any
-# tagged release automatically becomes the live download target.
+# The Streamlit app and docs link to .../releases/latest. This workflow attaches
+# assets to the triggering version tag; the link's target is selected by GitHub.
 
 name: Build desktop apps
 
@@ -50,7 +50,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-desktop.txt scipy matplotlib pyinstaller pillow
 
-      # ---- full: conda-forge for the compiled engines ----
+      # ---- full: conda channels for the compiled engines ----
       - uses: conda-incubator/setup-miniconda@v3
         if: matrix.variant == 'full'
         with:
@@ -60,14 +60,12 @@ jobs:
 
       - name: Install dependencies (full)
         if: matrix.variant == 'full'
-        # pygimli is published on the project's own "gimli" channel, not
-        # conda-forge (same channel the installation docs use). On macOS the
-        # whole Qt stack must come from conda too: mixing pip PySide6 with the
-        # conda Qt pulled in by the engines produces a frozen app without the
-        # "offscreen" platform plugin. The pip/conda mix is fine on Windows.
+        # Use the gimli and conda-forge channels for compiled engines. On macOS,
+        # install Qt from conda as well to avoid mixing Qt distributions during
+        # freezing. The Windows branch installs the desktop dependencies via pip.
         run: |
           if [ "${{ runner.os }}" = "macOS" ]; then
-            conda install -y -c gimli -c conda-forge pygimli pyvista vtk pyside6 pyqtgraph qtawesome numpy pandas scipy matplotlib
+            conda install -y -c gimli -c conda-forge pygimli pyvista vtk pyside6 pyqtgraph qtawesome numpy pandas scipy matplotlib pyproj
             python -m pip install simpeg pymatsolver pyinstaller pillow
           else
             conda install -y -c gimli -c conda-forge pygimli pyvista vtk

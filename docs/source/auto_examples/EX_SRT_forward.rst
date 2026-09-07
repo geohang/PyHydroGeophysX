@@ -94,7 +94,7 @@ and interpretation of ERT data.
 
 ## 1. Follow the workflow to create the mesh and model
 
-.. GENERATED FROM PYTHON SOURCE LINES 66-110
+.. GENERATED FROM PYTHON SOURCE LINES 66-109
 
 .. code-block:: Python
 
@@ -102,7 +102,6 @@ and interpretation of ERT data.
 
     # These would be your actual data files
     data_dir = os.path.join(current_dir, "data")
-    modflow_dir = os.path.join(data_dir, "modflow")
 
     # Load domain information from files
     # (Replace with your actual file paths)
@@ -143,11 +142,11 @@ and interpretation of ERT data.
     porosity_profile = interpolator.interpolate_3d_data(porosity)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 111-112
+.. GENERATED FROM PYTHON SOURCE LINES 110-111
 
 ## Creating geometry for the seismic refraction survey
 
-.. GENERATED FROM PYTHON SOURCE LINES 114-143
+.. GENERATED FROM PYTHON SOURCE LINES 113-142
 
 .. code-block:: Python
 
@@ -181,11 +180,11 @@ and interpretation of ERT data.
     )
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 144-145
+.. GENERATED FROM PYTHON SOURCE LINES 143-144
 
 ## Interpolating data to mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 147-196
+.. GENERATED FROM PYTHON SOURCE LINES 146-195
 
 .. code-block:: Python
 
@@ -239,11 +238,11 @@ and interpretation of ERT data.
     saturation = wc_mesh / porosity_mesh
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 197-198
+.. GENERATED FROM PYTHON SOURCE LINES 196-197
 
 ## Convert to P wave velocity using petrophysical model
 
-.. GENERATED FROM PYTHON SOURCE LINES 200-268
+.. GENERATED FROM PYTHON SOURCE LINES 199-267
 
 .. code-block:: Python
 
@@ -316,7 +315,7 @@ and interpretation of ERT data.
     velocity_mesh[bot_mask] = Vp
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 269-273
+.. GENERATED FROM PYTHON SOURCE LINES 268-272
 
 .. code-block:: Python
 
@@ -325,7 +324,7 @@ and interpretation of ERT data.
     print(np.min(velocity_mesh[bot_mask]), np.max(velocity_mesh[bot_mask]))
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 274-283
+.. GENERATED FROM PYTHON SOURCE LINES 273-282
 
 .. code-block:: Python
 
@@ -339,7 +338,7 @@ and interpretation of ERT data.
             xlabel="Distance (m)", ylabel="Elevation (m)", 
             label='Velocity (m s$^{-1}$)', cMin=500, cMax=5500)
 
-.. GENERATED FROM PYTHON SOURCE LINES 284-295
+.. GENERATED FROM PYTHON SOURCE LINES 283-294
 
 P-Wave Velocity Model from Petrophysical Conversion
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -353,7 +352,7 @@ distinct velocity ranges appropriate for watershed environments.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 297-313
+.. GENERATED FROM PYTHON SOURCE LINES 296-312
 
 .. code-block:: Python
 
@@ -374,7 +373,7 @@ distinct velocity ranges appropriate for watershed environments.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 314-385
+.. GENERATED FROM PYTHON SOURCE LINES 313-384
 
 .. code-block:: Python
 
@@ -450,7 +449,7 @@ distinct velocity ranges appropriate for watershed environments.
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, "velocity_porosity_saturation.tiff"), dpi=300, bbox_inches='tight')
 
-.. GENERATED FROM PYTHON SOURCE LINES 386-399
+.. GENERATED FROM PYTHON SOURCE LINES 385-398
 
 Petrophysical Relationships Analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -466,11 +465,11 @@ computed values, confirming realistic petrophysical transformations.
 %% [markdown]
 ## Short distance seismic survey
 
-.. GENERATED FROM PYTHON SOURCE LINES 401-402
+.. GENERATED FROM PYTHON SOURCE LINES 400-401
 
 ################# Seismic data #####################
 
-.. GENERATED FROM PYTHON SOURCE LINES 402-433
+.. GENERATED FROM PYTHON SOURCE LINES 401-432
 
 .. code-block:: Python
 
@@ -506,7 +505,7 @@ computed values, confirming realistic petrophysical transformations.
     datasrt.save(os.path.join(output_dir, "synthetic_seismic_data.dat"))
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 434-440
+.. GENERATED FROM PYTHON SOURCE LINES 433-439
 
 .. code-block:: Python
 
@@ -517,7 +516,7 @@ computed values, confirming realistic petrophysical transformations.
     drawFirstPicks(ax, datasrt)
     fig.savefig(os.path.join(output_dir, "synthetic_seismic_data_first_picks_short.tiff"), dpi=300, bbox_inches='tight')
 
-.. GENERATED FROM PYTHON SOURCE LINES 441-454
+.. GENERATED FROM PYTHON SOURCE LINES 440-453
 
 Short Survey First-Arrival Travel Times  
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -533,7 +532,7 @@ indicating velocity interfaces at shallow depths.
 %% [markdown]
 ## Long distance seismic survey
 
-.. GENERATED FROM PYTHON SOURCE LINES 456-478
+.. GENERATED FROM PYTHON SOURCE LINES 455-477
 
 .. code-block:: Python
 
@@ -560,7 +559,7 @@ indicating velocity interfaces at shallow depths.
     scheme.setSensors(pos)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 479-486
+.. GENERATED FROM PYTHON SOURCE LINES 478-485
 
 .. code-block:: Python
 
@@ -572,11 +571,11 @@ indicating velocity interfaces at shallow depths.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 487-488
+.. GENERATED FROM PYTHON SOURCE LINES 486-487
 
 ## SRT one step from HM to GM
 
-.. GENERATED FROM PYTHON SOURCE LINES 490-609
+.. GENERATED FROM PYTHON SOURCE LINES 489-608
 
 .. code-block:: Python
 
@@ -700,7 +699,7 @@ indicating velocity interfaces at shallow depths.
 
     plt.tight_layout()
 
-.. GENERATED FROM PYTHON SOURCE LINES 610-621
+.. GENERATED FROM PYTHON SOURCE LINES 609-620
 
 One-Step Integrated Workflow Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -714,7 +713,7 @@ for tomographic inversion and interface extraction.
    :align: center
    :width: 800px
 
-.. GENERATED FROM PYTHON SOURCE LINES 623-630
+.. GENERATED FROM PYTHON SOURCE LINES 622-629
 
 Summary
 ~~~~~~~

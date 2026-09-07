@@ -57,13 +57,14 @@ class MODFLOWWaterContent(HydroModelOutput):
 
         Args:
             model_directory: Path to simulation workspace
-            idomain: Domain array indicating active cells
+            idomain: Two-dimensional (rows, columns) domain array; nonzero cells
+                receive consecutive UZF indices in row-major order.
         """
         super().__init__(model_directory)
         self.idomain = idomain
         self.nrows, self.ncols = idomain.shape
 
-        # Build reverse lookup dictionary (only for first layer as in original code)
+        # Map sequential UZF indices back to the supplied 2D active-cell grid.
         self.iuzno_dict_rev = {}
         iuzno = 0
         for i in range(self.nrows):

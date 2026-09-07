@@ -23,6 +23,7 @@ LogFn = Callable[..., None]
 
 # module key -> (submodule, class name, human title)
 MODULE_SPECS = {
+    "project_map": ("project_map", "ProjectMapModule", "Project Map"),
     "seismic": ("seismic_processing", "SeismicProcessingModule", "Seismic Processing"),
     "ert": ("ert_processing", "ERTProcessingModule", "ERT Processing"),
     "mesh3d": ("mesh3d_processing", "Mesh3DModule", "3D Mesh Builder"),
@@ -36,7 +37,7 @@ MODULE_SPECS = {
 }
 
 #: Order used to populate the central stack. ``home`` is always first.
-MODULE_ORDER: List[str] = ["home", "seismic", "ert", "mesh3d", "em", "gravmag", "joint_inversion", "hydro_geophysics", "geo_hydrology", "seismic3d", "model_viewer"]
+MODULE_ORDER: List[str] = ["home", "seismic", "ert", "mesh3d", "em", "gravmag", "joint_inversion", "hydro_geophysics", "geo_hydrology", "seismic3d", "project_map", "model_viewer"]
 
 #: Install commands for optional packages a module import may be missing.
 _INSTALL_HINTS = INSTALL_HINTS

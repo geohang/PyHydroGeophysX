@@ -321,7 +321,7 @@ domain_width = 20.0   # y-direction
 domain_depth = 14.0   # z-direction (matching MODFLOW nlay=14 layers)
 
 # MODFLOW grid offset (from analysis cells above)
-# This places the domain at col=67, row=85 which is 100% within active cells
+# Selected domain origin for this dataset; check idomain when using another grid.
 MODFLOW_X_OFFSET = 67  # column offset in MODFLOW grid
 MODFLOW_Y_OFFSET = 85  # row offset in MODFLOW grid
 
@@ -460,7 +460,7 @@ print("Creating 3D mesh with topography using mesh_3d.py...")
 depth_markers = {
     'shallow': (0, 5, 2),      # 0-5m depth: marker 2
     'middle': (5, 15, 3),      # 5-15m depth: marker 3  
-    'deep': (15, 30, 1)        # >15m depth: marker 1 (boundary)
+    'deep': (15, 30, 1)        # 15-30 m depth interval: marker 1 (boundary)
 }
 
 mesh = mesh_creator.create_3d_mesh_with_topography(
@@ -785,7 +785,7 @@ n = 2.0         # Saturation exponent
 sigma_s = 0.001 # Surface conductivity (S/m)
 
 # Convert to resistivity using Waxman-Smits model
-# res = 1 / (sigma_w * porosity^m * saturation^n + sigma_s)
+# WS_Model uses sigma = porosity**m * saturation**n * (sigma_w + sigma_s/saturation).
 resistivity_mesh = WS_Model(
     saturation_mesh,
     porosity_mesh,

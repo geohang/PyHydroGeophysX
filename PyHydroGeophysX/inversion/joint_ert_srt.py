@@ -66,6 +66,7 @@ class JointERTSRTInversion(InversionBase):
 
         defaults = {
             "max_iterations": 50,
+            "min_iterations": 5,
             "solver": "scipy_lsmr",
             "solver_maxiter": 400,
             "solver_tol": 1e-8,
@@ -608,6 +609,14 @@ class JointERTSRTInversion(InversionBase):
         max_iter = int(self.parameters["max_iterations"])
         target_chi2 = float(self.parameters["target_chi2"])
         dphi_tol = float(self.parameters["convergence_tolerance"])
+        # A flat second iteration is normal while the line search finds its
+        # scale, so a plateau only counts as convergence after
+        # 'min_iterations'. The clamp keeps the guard from swallowing the
+        # plateau test outright when a caller asks for very few iterations.
+        min_iterations = min(
+            int(self.parameters.get("min_iterations", 5)),
+            max(int(self.parameters["max_iterations"]) - 2, 0),
+        )
         verbose = bool(self.parameters.get("verbose", True))
 
         # Lambda cooling: start at initial values, reduce each iteration
@@ -781,7 +790,12 @@ class JointERTSRTInversion(InversionBase):
             # target; otherwise the inversion is stalling far from the
             # solution and should keep running up to max_iterations.
             chi2_close = (chi2_ert < 3.0 * target_chi2) and (chi2_srt < 3.0 * target_chi2)
-            if chi2_close and dphi_ert < dphi_tol and dphi_srt < dphi_tol:
+            if (
+                chi2_close
+                and dphi_ert < dphi_tol
+                and dphi_srt < dphi_tol
+                and iteration > min_iterations
+            ):
                 if verbose:
                     print("Converged: dPhi tolerance reached near target chi2.")
                 break

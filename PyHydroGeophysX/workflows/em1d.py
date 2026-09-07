@@ -134,10 +134,10 @@ def _line_chi2_summary(
     that sounding.  The line objective therefore weights it by the number of
     retained gates.  Equal-sounding mean and median values are useful QC
     summaries, but they are not substitutes for the objective used by the fit.
-    Aarhus software's per-model ``data residual`` is also reported on a
-    residual/RMS scale, hence the square-root values returned here as a useful
-    scale comparison. Its documented tTEM calculation uses log-data space, so
-    the two values need not be numerically identical.
+    Square-root values are returned alongside because misfit is often quoted on
+    a residual/RMS scale, which is the easier one to read against a target of
+    one. Any external number on that scale may use a different residual
+    definition, log-data space among them, so the two need not agree exactly.
     """
     values = np.asarray(chi2_per_sounding, dtype=float).ravel()
     counts = np.asarray(data_counts, dtype=float).ravel()
@@ -502,7 +502,21 @@ _STATION_GEOMETRY_KEYS = ("tx_rx_sep", "height", "rx_height", "tx_height")
 #: metre is 1.7 percent of a typical 15 m offset, which is well inside what the
 #: response can tell apart, and it takes one survey's 794 distinct distances
 #: down to 25.
-STATION_DISTANCE_BIN_M = 0.25
+#: Metres to round a station's measured transmitter-receiver distance to, or
+#: zero to model the distance the file records.
+#:
+#: Zero is the default. Rounding existed to keep the forward-operator cache
+#: small, and it is no longer needed for that: a warmed operator is about 50 kB,
+#: so even a survey presenting 1,600 distinct ones costs under 80 MB, and the
+#: chunked scheduling in
+#: :func:`~PyHydroGeophysX.inversion.em1d_lci._map_soundings` keeps each worker
+#: to its own share in any case.
+#:
+#: The rounding was not free. Half a bin at 16.6 m moved the modelled response
+#: by 0.4 percent at the median and 1.8 percent at its worst gate, and at 30.5 m
+#: by 2.8 percent at its worst. Those are small next to the gate errors, and
+#: they are also an offset the instrument did not report.
+STATION_DISTANCE_BIN_M = 0.0
 
 
 def _station_geometry(geom: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
@@ -524,9 +538,9 @@ def _station_geometry(geom: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, A
     column with the nominal 15 m moves one survey's low-moment response by 1.4
     percent at the median and 18 percent at its worst gate.
 
-    ``tx_rx_sep`` is still rounded to ``tx_rx_sep_bin`` metres, defaulting to
-    :data:`STATION_DISTANCE_BIN_M`, which keeps the operator cache useful for
-    little cost; set it to zero to pass the measured value through.
+    ``tx_rx_sep`` is passed through as the file records it. It used to be
+    rounded to :data:`STATION_DISTANCE_BIN_M`, which now defaults to zero; set
+    ``tx_rx_sep_bin`` to a positive number of metres to round again.
 
     A value the station did not record, or recorded as non-positive, leaves the
     survey-wide entry alone. That matters for ``tx_rx_sep``, where zero is how a

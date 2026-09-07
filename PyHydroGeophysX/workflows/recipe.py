@@ -24,6 +24,12 @@ def save_recipe(spec: WorkflowSpec, path: str | Path) -> Path:
 
 
 def load_recipe(path: str | Path) -> WorkflowSpec:
+    """Read UTF-8 JSON and validate its registered workflow and seed contract.
+
+    Returns a WorkflowSpec without executing it or resolving input artifacts.
+    Relative artifact paths are resolved later using the run's project root,
+    not the recipe file's parent directory. Read/JSON/validation errors propagate.
+    """
     source = Path(path)
     payload: Mapping[str, Any] = json.loads(source.read_text(encoding="utf-8"))
     spec = WorkflowSpec.from_dict(payload)
@@ -33,4 +39,3 @@ def load_recipe(path: str | Path) -> WorkflowSpec:
 
 
 __all__ = ["load_recipe", "save_recipe"]
-
