@@ -15,7 +15,7 @@ Install
 3D Mesh Builder GUI
 -------------------
 
-Build and export 3D ERT meshes interactively — no API key required:
+Build and export 3D ERT meshes interactively, with no API key required:
 
 .. code-block:: bash
 
@@ -28,7 +28,7 @@ Build and export 3D ERT meshes interactively — no API key required:
 The app opens three tabs: **Electrode View** (interactive 3D scatter), **Generate
 Mesh** (runs ``Mesh3DCreator``), and **Export** (.bms / .vtk download).
 
-For the full step-by-step guide see :ref:`agents/webapp:3D Mesh Builder App`.
+For the full step-by-step guide see :doc:`/agents/webapp`.
 
 Quick Petrophysics Check
 ------------------------

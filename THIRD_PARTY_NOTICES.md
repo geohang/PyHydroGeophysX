@@ -4,6 +4,17 @@ PyHydroGeophysX's own code is licensed under Apache-2.0; see LICENSE.
 Third-party packages and data retain their own licenses. This document does not
 relicense them or establish permissions that have not been verified.
 
+## Geophysics-informed MODFLOW example data
+
+`examples/data/modflow_informed/structure.npz` repackages four text arrays from
+Hang Chen's [Geophysics_informed_models](https://github.com/geohang/Geophysics_informed_models),
+revision `a23fff3c00c0033f479064cf3651e23b1d5bea07`, under Apache-2.0.
+The original license is retained beside the data; `provenance.json` records paths,
+hashes and the lossless repackaging. The new example follows the S4 notebook's
+interface construction but uses a simplified, illustrative groundwater model.
+The upstream project acknowledges the USGS MODFLOW Sagehen example; its complex
+SFR/UZF/MVR code is not copied into this compact example.
+
 ## Desktop builds
 
 The default light/full builds exclude ResIPy, even if installed in the build

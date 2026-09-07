@@ -138,72 +138,57 @@ VTK or Qt on the path. The GPU question is worse, because a CPU-only Torch wheel
 installs without complaint and the CUDA engine then quietly falls back.
 
 Paste the block below into Claude Code or Codex. It checks the machine, installs
-the matching build, and runs a 37 KB example before reporting success.
+the matching build, and runs a small example before reporting success.
 
 ```text
-Install PyHydroGeophysX from this repository into my current Python environment.
-Match the build to my hardware, then prove it works on a small example before you
-tell me it is done.
+Help me install PyHydroGeophysX and verify it on this computer.
+Repository: https://github.com/geohang/PyHydroGeophysX
+Official instructions: https://geohang.github.io/PyHydroGeophysX/installation.html
+Desktop guide: https://geohang.github.io/PyHydroGeophysX/agents/desktop_studio.html
 
-STEP 1 - which package manager owns this environment
-Run `conda list numpy`. If the channel column says `pypi`, use pip for
-everything. If it names a conda channel such as conda-forge, use conda for the
-binary packages. Do not mix the two: an environment created by conda can still be
-pip-managed, so go by that check rather than by how the environment was created.
+1. Inspect my OS, Python executable/version, available environment managers,
+   and existing NumPy, Qt, VTK and geophysical packages. Ask whether I want
+   Desktop Studio, Python workflows, or both, and which methods I need.
+   Do not assume Conda exists or infer all package origins from NumPy alone.
 
-STEP 2 - is there a usable CUDA GPU
-Run `nvidia-smi` and `python -c "import sys; print(sys.version_info[:2])"`.
-Report the GPU name and the "CUDA Version" in the nvidia-smi header, which is the
-highest CUDA the driver supports rather than what is installed.
+2. Read the current official installation instructions and package metadata.
+   Prefer a dedicated environment with a supported Python version. If I ask
+   to reuse an environment, inspect its binary dependencies first. Use its
+   existing package manager for those dependencies; avoid duplicate pip/Conda
+   Qt and VTK installations. Show the plan before changing the environment.
 
-  - No nvidia-smi, no NVIDIA GPU, or Python older than 3.11 -> CPU path.
-    Install `geophysics` only, skip every GPU package, and say plainly that you
-    chose CPU and why.
-  - NVIDIA GPU with driver CUDA 12 or newer, and Python 3.11 or newer -> CUDA path.
+3. Choose a released package or source checkout explicitly. For a release,
+   use python -m pip install with the appropriate extras from the official
+   instructions. For source, locate an existing checkout or download the
+   official repository into a new directory, then enter the directory that
+   contains pyproject.toml before using an editable install. Do not overwrite
+   an existing checkout. Every pip command must use the chosen interpreter.
 
-STEP 3 - install
-CPU path:
-  pip install -e ".[geophysics]"
+4. Start with the CPU setup unless GPU acceleration is needed and supported.
+   For CUDA, inspect the NVIDIA GPU, driver, OS, Python and dependency support.
+   nvidia-smi reports driver capability, not the installed CUDA toolkit.
+   Select a compatible PyTorch/CuPy/cuDSS combination using current official
+   instructions; do not assume any CUDA 12 driver supports every CUDA wheel.
+   Never install competing CuPy variants. If torch.cuda.is_available() is
+   False, inspect the wheel, driver and device availability before diagnosing
+   the cause. Report an unsupported GPU configuration and offer the CPU path.
 
-CUDA path, in this order. Torch goes first because the extra does not pull a
-CUDA build of it:
-  python -m pip install torch --index-url https://download.pytorch.org/whl/cu128
-  python -c "import torch; print(torch.cuda.is_available())"
-  pip install -e ".[geophysics,adtlert]"
+5. Verify imports, the installed version and required engines. Download only
+   the small example files needed for a check, using a downloader suitable
+   for this OS, into a new test directory. Run a short example and report
+   finite results, any warnings and the engine that actually executed.
+   If testing ADTLERT, use a compatible dataset without remote electrodes;
+   report a fallback rather than claiming that GPU execution succeeded.
 
-That torch check must print True before you continue. On Windows the default
-PyPI torch wheel is CPU-only, so a False there means you skipped the index-url.
-Never install cupy-cuda11x next to cupy-cuda12x; the `adtlert` and `gpu` extras
-both pin cupy-cuda12x. If PyGIMLi will not build under pip, run
-`conda install -c gimli pygimli` first, then repeat the pip line.
+6. For Desktop Studio, install the desktop extras and the engines needed for
+   my methods, then run:
+     python -m PyHydroGeophysX.qt_apps.launcher --self-test
+   Launch the application and give me the exact command to reopen it.
+   Report the environment name, installation path and any unverified features.
 
-STEP 4 - fetch one small example
-Do not clone examples/data, it is about 180 MB. Download these two files only,
-about 175 KB total:
-  curl -L -o line2.dat https://raw.githubusercontent.com/geohang/PyHydroGeophysX/main/examples/data/ERT/Bert/fielddataline2.dat
-  curl -L -o e4d.ohm   https://raw.githubusercontent.com/geohang/PyHydroGeophysX/main/examples/data/ERT/E4D/2021-10-08_1400.ohm
-
-STEP 5 - prove it runs, about 10 seconds on CPU
-  python -c "from PyHydroGeophysX.inversion.ert_inversion import run_ert_manager_inversion as r; d=r('line2.dat','out_cpu',max_iterations=4); print('engine',d['engine'],'chi2 %.3f'%d['chi2'])"
-Expect `engine pyhydro` and chi2 near 0.3.
-
-STEP 6 - CUDA path only: prove the GPU engine actually engages
-  python -c "from PyHydroGeophysX.inversion.ert_inversion import run_ert_manager_inversion as r; d=r('e4d.ohm','out_gpu',max_iterations=4,engine='adtlert'); print('requested',d['engine_requested'],'-> engine',d['engine'])"
-`requested adtlert -> engine adtlert` means the CUDA path is live. If it prints
-`-> engine pyhydro` the GPU engine fell back, so report which of Torch CUDA,
-CuPy CUDA 12 or cuDSS is missing instead of calling the install finished. Use
-e4d.ohm and not line2.dat for this check: line2.dat has remote electrodes with
-negative ABMN indices, which ADTLERT 0.1 cannot represent, so it falls back on
-that file even when the GPU stack is perfectly healthy.
-
-Rules: show me a dry run and what would change before you modify my environment.
-Do not accept any channel Terms of Service for me; if a package manager asks,
-stop and give me the exact command to run myself.
-
-Optional, for the desktop studio: also install the `desktop` and `desktop-3d`
-groups, then verify with
-  python -c "import PyHydroGeophysX, pygimli, PySide6, pyvista; print('ok')"
-  python -m PyHydroGeophysX.qt_apps.launcher --self-test
+Do not delete environments, overwrite projects, or accept third-party Terms
+of Service on my behalf. If a step needs my action, explain what to do.
+Do not report success while required verification is failing.
 ```
 
 ### Optional extras

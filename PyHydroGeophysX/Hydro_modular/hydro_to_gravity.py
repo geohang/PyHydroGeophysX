@@ -103,8 +103,7 @@ def hydro_to_gravity(
         noisy_data: Gravity anomaly with noise (mGal), shape (n_stations,).
         clean_data: Noise-free gravity anomaly (mGal), shape (n_stations,).
         uncertainty: Data uncertainty (mGal), shape (n_stations,).
-        density_contrast: Profile density contrast model (kg/m^3),
-            shape (n_layers, n_stations).
+        density_contrast: Profile density contrast model (kg/m^3), shape (n_layers, n_stations).
     """
     wc, phi, boundaries, x = _validate_profile_inputs(
         water_content=water_content,

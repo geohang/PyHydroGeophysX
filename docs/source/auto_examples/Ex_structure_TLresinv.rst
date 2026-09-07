@@ -19,7 +19,7 @@
 
 
 Ex. Structure-Constrained Time-Lapse Resistivity Inversion
-======================================================
+==========================================================
 
 This example demonstrates advanced time-lapse ERT inversion using structural
 constraints derived from seismic interpretation to monitor subsurface water 

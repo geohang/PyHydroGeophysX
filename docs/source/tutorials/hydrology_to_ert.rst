@@ -1,6 +1,15 @@
 Hydrology to ERT
 ================
 
+Workflow at a glance
+--------------------
+
+**Prepare:** Hydrological arrays, matching grid / mesh geometry and petrophysical parameters.
+
+**Produce:** A resistivity model and simulated ERT measurements. The short snippet below only loads and converts water content; use the linked full workflow to generate measurements.
+
+**Check / next step:** Compare predicted responses against the input model before trying time-lapse monitoring.
+
 This workflow converts hydrologic model states into resistivity and forward ERT responses.
 
 Steps

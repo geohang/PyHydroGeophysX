@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath('../../PyHydroGeophysX'))
 project = 'PyHydroGeophysX'
 copyright = '2025, Hang Chen'
 author = 'Hang Chen'
-release = '0.3.0'
+release = '0.4.0'
 
 # Extensions
 extensions = [
@@ -21,6 +21,26 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx_gallery.gen_gallery',
 ]
+
+
+def setup(app):
+    from docutils import nodes
+    from docutils.parsers.rst.roles import GenericRole
+    # PyGIMLi's inherited docstrings use this role; retain readable API names.
+    app.add_role('gimliapi', GenericRole('gimliapi', nodes.literal))
+    app.connect('builder-inited', _check_install_prompt)
+
+
+def _check_install_prompt(app):
+    from pathlib import Path
+    from sphinx.errors import SphinxError
+    root = Path(app.srcdir).parents[1]
+    readme = (root / 'README.md').read_text(encoding='utf-8')
+    section = readme.split('### With a coding agent', 1)[1]
+    prompt = section.split('```text\n', 1)[1].split('```', 1)[0]
+    published = (Path(app.srcdir) / '_static/install-agent-prompt.txt').read_text(encoding='utf-8')
+    if prompt.strip() != published.strip():
+        raise SphinxError('README and website installation prompts differ; update both before publishing.')
 
 # Optional extensions (build should still work if unavailable)
 for _ext in ['sphinx_copybutton', 'sphinx_design']:
@@ -63,7 +83,8 @@ _curated = {
     name[:-4] for name in os.listdir(_api_dir)
     if name.endswith('.rst') and not name.startswith('PyHydroGeophysX')
 }
-exclude_patterns = ['documentation/**', 'api/modules.rst', 'api/PyHydroGeophysX.rst']
+exclude_patterns = ['documentation/**', 'api/modules.rst', 'api/PyHydroGeophysX.rst',
+                    'agents/architecture.rst']
 exclude_patterns += [
     'api/PyHydroGeophysX.%s.rst' % module
     for module in (

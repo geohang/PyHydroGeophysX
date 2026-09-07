@@ -18,8 +18,8 @@
 .. _sphx_glr_auto_examples_Ex_MC_Hydro.py:
 
 
-Ex. Monte Carlo Uncertainty Quantification for Hydrologyic Properties Estimation
-====================================================================
+Ex. Monte Carlo Uncertainty Quantification for Hydrologic Properties Estimation
+===============================================================================
 
 This example demonstrates Monte Carlo uncertainty quantification for 
 converting ERT resistivity models to water content estimates.
@@ -579,8 +579,8 @@ Regolith Layer Water Content Uncertainty
  reasonable confidence intervals for practical applications.
 
  .. image:: /auto_examples/images/Ex_MC_Hydro_fig_03.png
-    :align: center
-    :width: 800px
+   :align: center
+   :width: 800px
  %%
 ## Fractured bedrock layer
 
@@ -842,7 +842,7 @@ If we know the water table and then use it to estimate the porosity
 .. GENERATED FROM PYTHON SOURCE LINES 734-747
 
 Unsaturated Zone Porosity Estimation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Cross-sectional porosity comparison in unsaturated zone (y=1600m) shows 
 good agreement between estimated (solid) and true (dashed) values. 

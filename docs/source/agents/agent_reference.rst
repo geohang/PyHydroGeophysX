@@ -71,8 +71,8 @@ This is not a processing agent but an orchestration layer that:
 
     execute_workflow(config, dry_run=False, resume=False)
     # Run the complete workflow.
-    # dry_run=True — validate, plan, and estimate cost without running agents.
-    # resume=True  — skip steps for which a checkpoint already exists.
+    # dry_run=True: validate, plan, and estimate cost without running agents.
+    # resume=True: skip steps for which a checkpoint already exists.
 
     preview_workflow(config)
     # Equivalent to execute_workflow(..., dry_run=True).
@@ -107,13 +107,13 @@ This is not a processing agent but an orchestration layer that:
     coordinator = AgentCoordinator(api_key=api_key, output_dir='./results')
     # ... register agents ...
 
-    # First attempt — may fail at step 3 of 5
+    # First attempt: may fail at step 3 of 5
     try:
         results = coordinator.execute_workflow(config)
     except Exception as exc:
         print(f"Workflow failed: {exc}")
 
-    # Resume — steps 1 and 2 are loaded from checkpoints
+    # Resume: steps 1 and 2 are loaded from checkpoints
     results = coordinator.execute_workflow(config, resume=True)
 
 **Dependency Pre-check**:
@@ -482,14 +482,14 @@ convenience function both delegate to this method.
 
 **Detection priority order**:
 
-1. ``tdem`` — config contains TDEM data/survey keys
-2. ``seismic`` — standalone seismic refraction (no ERT keys)
-3. ``model_output`` — hydrological model (MODFLOW/ParFlow) export
-4. ``time_lapse`` — multiple ERT datasets over time
-5. ``data_fusion`` — both ERT and seismic keys present
-6. ``ert_data_process`` — raw ERT file present but no inversion requested
-7. ``direct_ert`` — ERT data with inversion
-8. ``custom`` — fallback when no pattern matches
+1. ``tdem``: config contains TDEM data/survey keys
+2. ``seismic``: standalone seismic refraction (no ERT keys)
+3. ``model_output``: hydrological model (MODFLOW/ParFlow) export
+4. ``time_lapse``: multiple ERT datasets over time
+5. ``data_fusion``: both ERT and seismic keys present
+6. ``ert_data_process``: raw ERT file present but no inversion requested
+7. ``direct_ert``: ERT data with inversion
+8. ``custom``: fallback when no pattern matches
 
 **Inputs**: ``workflow_config`` dict (the same dict passed to
 ``AgentCoordinator.execute_workflow``).
@@ -525,8 +525,8 @@ This agent is primarily invoked through the **3D Mesh Builder Streamlit app**
         'depth': 30.0,
         'output_filename': 'ert_mesh',
     })
-    # result['mesh'] — PyGIMLi Mesh object
-    # result['mesh_path'] — path to saved .bms file
+    # result['mesh']: PyGIMLi Mesh object
+    # result['mesh_path']: path to saved .bms file
 
 **Supported array types**: ``surface_grid``, ``borehole``, ``crosshole``.
 

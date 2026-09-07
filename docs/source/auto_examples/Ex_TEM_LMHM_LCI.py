@@ -1,4 +1,5 @@
-"""Synthetic LM+HM line inversion with lateral constraints.
+"""Ex. Synthetic LM+HM Line Inversion with Lateral Constraints
+===========================================================
 
 This example loads the bundled nine-station SQLite project through the same
 TEMcompany/TEM2Go reader used by the Qt Studio. It jointly fits the LM and HM

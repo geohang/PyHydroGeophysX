@@ -1911,6 +1911,7 @@ def export_for_inversion(
 ) -> str:
     """
     Export to inversion-ready formats:
+
     - fmt='pgimli': Unified data format for pyGIMLi/BERT with electrode coordinates and measurements
     - fmt='resipy': return the RESIPY project directory for running prj.start().
     - export_strategy='default' (default): rebuild the raw survey in ResIPy,

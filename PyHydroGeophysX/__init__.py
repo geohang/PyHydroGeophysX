@@ -66,6 +66,23 @@ _EXPORTS.update(_exports(
     "ParflowSaturation",
     "ParflowPorosity",
 ))
+# The return leg: interpreted geophysics mapped onto a hydrological grid and
+# written as inputs for another simulation. Exported beside the readers above
+# so both directions of the coupling are reachable from the top level.
+_EXPORTS.update(_exports(
+    "PyHydroGeophysX.model_input.conversion",
+    "HydroGrid",
+    "MappedField",
+    "interpret_resistivity",
+    "saturation_to_pressure",
+    "map_to_hydro_grid",
+    "prepare_hydro_updates",
+))
+_EXPORTS.update(_exports(
+    "PyHydroGeophysX.model_input.writers",
+    "write_modflow6_inputs",
+    "write_parflow_inputs",
+))
 _EXPORTS.update(_exports(
     "PyHydroGeophysX.forward.ert_forward",
     "ERTForwardModeling",

@@ -6,7 +6,7 @@
 
 Computation times
 =================
-**00:00.000** total execution time for 15 files **from auto_examples**:
+**00:00.000** total execution time for 20 files **from auto_examples**:
 
 .. container::
 
@@ -38,6 +38,9 @@ Computation times
    * - :ref:`sphx_glr_auto_examples_Ex_3D_ERT_forward.py` (``Ex_3D_ERT_forward.py``)
      - 00:00.000
      - 0.0
+   * - :ref:`sphx_glr_auto_examples_Ex_EM_line_section.py` (``Ex_EM_line_section.py``)
+     - 00:00.000
+     - 0.0
    * - :ref:`sphx_glr_auto_examples_Ex_ERT_single_inversion.py` (``Ex_ERT_single_inversion.py``)
      - 00:00.000
      - 0.0
@@ -50,6 +53,9 @@ Computation times
    * - :ref:`sphx_glr_auto_examples_Ex_MC_Hydro.py` (``Ex_MC_Hydro.py``)
      - 00:00.000
      - 0.0
+   * - :ref:`sphx_glr_auto_examples_Ex_MODFLOW_geophysics_feedback.py` (``Ex_MODFLOW_geophysics_feedback.py``)
+     - 00:00.000
+     - 0.0
    * - :ref:`sphx_glr_auto_examples_Ex_SRT_inv.py` (``Ex_SRT_inv.py``)
      - 00:00.000
      - 0.0
@@ -59,16 +65,25 @@ Computation times
    * - :ref:`sphx_glr_auto_examples_Ex_TDEM_workflow.py` (``Ex_TDEM_workflow.py``)
      - 00:00.000
      - 0.0
+   * - :ref:`sphx_glr_auto_examples_Ex_TEM_LMHM_LCI.py` (``Ex_TEM_LMHM_LCI.py``)
+     - 00:00.000
+     - 0.0
    * - :ref:`sphx_glr_auto_examples_Ex_TL_inversion.py` (``Ex_TL_inversion.py``)
+     - 00:00.000
+     - 0.0
+   * - :ref:`sphx_glr_auto_examples_Ex_TL_inversion_memory.py` (``Ex_TL_inversion_memory.py``)
      - 00:00.000
      - 0.0
    * - :ref:`sphx_glr_auto_examples_Ex_Time_lapse_measurement.py` (``Ex_Time_lapse_measurement.py``)
      - 00:00.000
      - 0.0
-   * - :ref:`sphx_glr_auto_examples_Ex_joint_inversion.py` (``Ex_joint_inversion.py``)
+   * - :ref:`sphx_glr_auto_examples_Ex_gravity_magnetics_inversion.py` (``Ex_gravity_magnetics_inversion.py``)
      - 00:00.000
      - 0.0
    * - :ref:`sphx_glr_auto_examples_Ex_hydro_to_multigeophys.py` (``Ex_hydro_to_multigeophys.py``)
+     - 00:00.000
+     - 0.0
+   * - :ref:`sphx_glr_auto_examples_Ex_joint_inversion.py` (``Ex_joint_inversion.py``)
      - 00:00.000
      - 0.0
    * - :ref:`sphx_glr_auto_examples_Ex_model_output.py` (``Ex_model_output.py``)

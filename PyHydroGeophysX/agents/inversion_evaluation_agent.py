@@ -65,6 +65,7 @@ optimal regularization parameter selection."""
         
         Args:
             input_data: Dictionary containing:
+
                 - inversion_results: Results from ERTInversionAgent
                 - ert_data: Original ERT data
                 - inversion_params: Current inversion parameters
@@ -79,6 +80,7 @@ optimal regularization parameter selection."""
                 
         Returns:
             Dictionary containing:
+
                 - status: 'success', 'needs_review', or 'failed'
                 - quality_score: Overall quality score (0-100)
                 - quality_metrics: Detailed quality metrics

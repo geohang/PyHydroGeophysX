@@ -19,7 +19,7 @@
 
 
 Ex. Creating Synthetic Time-Lapse ERT Measurements
-==============================================
+==================================================
 
 This example demonstrates how to create synthetic time-lapse electrical 
 resistivity tomography (ERT) measurements for watershed monitoring applications.
@@ -692,7 +692,7 @@ modeling synthetic ERT measurements.
 .. GENERATED FROM PYTHON SOURCE LINES 594-606
 
 Animation and Advanced Visualization
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The code also generates an animated GIF showing the complete temporal evolution
 of water content throughout the year. This animation provides insights into:
@@ -707,7 +707,7 @@ The animation is saved as 'WCanimation.gif' in the results directory.
 .. GENERATED FROM PYTHON SOURCE LINES 608-639
 
 Summary and Applications
-~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 This example demonstrated the complete workflow for creating synthetic 
 time-lapse ERT measurements from hydrological model outputs:

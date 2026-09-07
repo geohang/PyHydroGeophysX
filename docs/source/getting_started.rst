@@ -10,3 +10,4 @@ For assistance setting up either, use the installation video and AI prompt.
    installation
    quickstart
    agent_install
+   data_and_processing

@@ -17,7 +17,8 @@
 
 .. _sphx_glr_auto_examples_Ex_TEM_LMHM_LCI.py:
 
-Synthetic LM+HM line inversion with lateral constraints.
+Ex. Synthetic LM+HM Line Inversion with Lateral Constraints
+===========================================================
 
 This example loads the bundled nine-station SQLite project through the same
 TEMcompany/TEM2Go reader used by the Qt Studio. It jointly fits the LM and HM
@@ -29,7 +30,7 @@ reports a log10 RMSE and a correlation against the truth, so a regression in the
 1D forward model or in the lateral constraint shows up as a number rather than
 as a section that merely looks plausible.
 
-.. GENERATED FROM PYTHON SOURCE LINES 13-102
+.. GENERATED FROM PYTHON SOURCE LINES 14-103
 
 .. code-block:: Python
 
@@ -123,7 +124,7 @@ as a section that merely looks plausible.
         plot_result(inversion_result, model_rmse, model_correlation)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 104-118
+.. GENERATED FROM PYTHON SOURCE LINES 105-119
 
 Recovered Section Against the Truth
 -----------------------------------

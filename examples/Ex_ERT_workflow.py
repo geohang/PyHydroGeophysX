@@ -1,7 +1,7 @@
 # %%
 """
 Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion
-====================================================================
+=========================================================================
 
 This example demonstrates the complete workflow for integrating hydrological 
 model outputs with ERT forward modeling and inversion using PyHydroGeophysX.
@@ -625,7 +625,7 @@ ax3.set_title("Inverted Resistivity Model (Pygimli)")
 plt.tight_layout()
 ###############################################################################
 # Inversion Results Comparison
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # Three-panel comparison showing: (1) true resistivity model from petrophysical 
 # conversion, (2) PyHydroGeophysX inversion result, and (3) PyGIMLi standard 
@@ -734,7 +734,7 @@ ert.showData(synth_data,  logscale=True)
 
 ###############################################################################
 # One-Step Integrated Workflow Results
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # The streamlined hydro-to-ERT workflow produces synthetic apparent resistivity 
 # data directly from MODFLOW outputs. This integrated approach demonstrates 

@@ -1,6 +1,6 @@
 """
 Ex. Time-Lapse ERT Inversion Techniques
-===================================
+=======================================
 
 This example demonstrates different approaches for time-lapse electrical 
 resistivity tomography (ERT) inversion using PyHydroGeophysX.
@@ -358,7 +358,7 @@ for i in range(12):
 
 ###############################################################################
 # Summary and Recommendations
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # This example demonstrated three approaches to time-lapse ERT inversion:
 #

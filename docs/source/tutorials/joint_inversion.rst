@@ -1,6 +1,15 @@
 Joint ERT + SRT Inversion
 =========================
 
+Workflow at a glance
+--------------------
+
+**Prepare:** Collocated ERT and seismic travel-time data with consistent geometry. Replace the illustrative file paths below with your files; they are not bundled dataset paths.
+
+**Produce:** Separate resistivity and velocity models coupled through structural constraints, with a data misfit for each method.
+
+**Check / next step:** Run each method independently first. Compare joint results against those baselines rather than judging only visual agreement.
+
 This workflow jointly inverts ERT and SRT data with structural coupling.
 It supports both smoothness regularization and geostatistical regularization.
 

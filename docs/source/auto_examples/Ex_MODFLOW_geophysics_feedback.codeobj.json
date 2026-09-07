@@ -1,0 +1,407 @@
+{
+ "Path": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pathlib",
+   "module_short": "pathlib",
+   "name": "Path"
+  }
+ ],
+ "__doc__": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "str"
+  }
+ ],
+ "__name__": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "str"
+  }
+ ],
+ "argparse.ArgumentParser": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "argparse",
+   "module_short": "argparse",
+   "name": "ArgumentParser"
+  }
+ ],
+ "flopy.mf6.MFSimulation": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "flopy.mf6",
+   "module_short": "flopy.mf6",
+   "name": "MFSimulation"
+  }
+ ],
+ "flopy.mf6.MFSimulation.load": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "flopy.mf6.MFSimulation",
+   "module_short": "flopy.mf6.MFSimulation",
+   "name": "load"
+  }
+ ],
+ "flopy.mf6.ModflowGwf": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "flopy.mf6",
+   "module_short": "flopy.mf6",
+   "name": "ModflowGwf"
+  }
+ ],
+ "flopy.mf6.ModflowGwfchd": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "flopy.mf6",
+   "module_short": "flopy.mf6",
+   "name": "ModflowGwfchd"
+  }
+ ],
+ "flopy.mf6.ModflowGwfdis": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "flopy.mf6",
+   "module_short": "flopy.mf6",
+   "name": "ModflowGwfdis"
+  }
+ ],
+ "flopy.mf6.ModflowGwfdrn": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "flopy.mf6",
+   "module_short": "flopy.mf6",
+   "name": "ModflowGwfdrn"
+  }
+ ],
+ "flopy.mf6.ModflowGwfic": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "flopy.mf6",
+   "module_short": "flopy.mf6",
+   "name": "ModflowGwfic"
+  }
+ ],
+ "flopy.mf6.ModflowGwfnpf": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "flopy.mf6",
+   "module_short": "flopy.mf6",
+   "name": "ModflowGwfnpf"
+  }
+ ],
+ "flopy.mf6.ModflowGwfoc": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "flopy.mf6",
+   "module_short": "flopy.mf6",
+   "name": "ModflowGwfoc"
+  }
+ ],
+ "flopy.mf6.ModflowGwfrcha": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "flopy.mf6",
+   "module_short": "flopy.mf6",
+   "name": "ModflowGwfrcha"
+  }
+ ],
+ "flopy.mf6.ModflowGwfsto": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "flopy.mf6",
+   "module_short": "flopy.mf6",
+   "name": "ModflowGwfsto"
+  }
+ ],
+ "flopy.mf6.ModflowIms": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "flopy.mf6",
+   "module_short": "flopy.mf6",
+   "name": "ModflowIms"
+  }
+ ],
+ "flopy.mf6.ModflowTdis": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "flopy.mf6",
+   "module_short": "flopy.mf6",
+   "name": "ModflowTdis"
+  }
+ ],
+ "get_modflow": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "flopy.utils",
+   "module_short": "flopy.utils",
+   "name": "get_modflow"
+  }
+ ],
+ "json.dumps": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "json",
+   "module_short": "json",
+   "name": "dumps"
+  }
+ ],
+ "matplotlib.use": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "use"
+  }
+ ],
+ "np.abs": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "abs"
+  }
+ ],
+ "np.any": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "any"
+  }
+ ],
+ "np.argmin": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "argmin"
+  }
+ ],
+ "np.argwhere": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "argwhere"
+  }
+ ],
+ "np.asarray": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "asarray"
+  }
+ ],
+ "np.broadcast_to": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "broadcast_to"
+  }
+ ],
+ "np.inf": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "inf"
+  }
+ ],
+ "np.isfinite": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "isfinite"
+  }
+ ],
+ "np.load": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "load"
+  }
+ ],
+ "np.max": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "max"
+  }
+ ],
+ "np.maximum": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "maximum"
+  }
+ ],
+ "np.mean": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "mean"
+  }
+ ],
+ "np.nan": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "nan"
+  }
+ ],
+ "np.nanmax": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "nanmax"
+  }
+ ],
+ "np.savez_compressed": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "savez_compressed"
+  }
+ ],
+ "np.stack": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "stack"
+  }
+ ],
+ "np.testing.assert_array_equal": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy.testing",
+   "module_short": "numpy.testing",
+   "name": "assert_array_equal"
+  }
+ ],
+ "np.unravel_index": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "unravel_index"
+  }
+ ],
+ "np.where": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "where"
+  }
+ ],
+ "plt.close": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "close"
+  }
+ ],
+ "plt.subplots": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "subplots"
+  }
+ ],
+ "re.findall": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "re",
+   "module_short": "re",
+   "name": "findall"
+  }
+ ],
+ "shutil.which": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "shutil",
+   "module_short": "shutil",
+   "name": "which"
+  }
+ ],
+ "tempfile.mkdtemp": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "tempfile",
+   "module_short": "tempfile",
+   "name": "mkdtemp"
+  }
+ ],
+ "write_modflow6_inputs": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.model_input",
+   "module_short": "PyHydroGeophysX.model_input",
+   "name": "write_modflow6_inputs"
+  }
+ ]
+}

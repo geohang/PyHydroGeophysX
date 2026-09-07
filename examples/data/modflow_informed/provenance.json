@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/geohang/Geophysics_informed_models",
+  "revision": "a23fff3c00c0033f479064cf3651e23b1d5bea07",
+  "license": "Apache-2.0",
+  "source_directory": "Hydrological models/TLnewtest2sfb2",
+  "files": {
+    "top.txt": "fa5bc1b06d6083371f8ceb900fea939025ec8b3d3e47b6378764a20b4db05c2b",
+    "id.txt": "6e1012c6dbfba7d869a49d7a47626799a43399a2064ab4ccf7ecd70359d0d156",
+    "regdep_new.txt": "f926bb3ec59466e67023acd0de982bb74ad9a111e7840dce6e542f0a0afc134a",
+    "fradep_new.txt": "eda4c71c8e8cab0123d92f129a2def56d40419d561170ae9a0ecd4130e245791"
+  },
+  "transformation": "Four original text arrays losslessly repackaged as compressed NumPy arrays; no resampling. Geometry conditioning occurs explicitly in the example.",
+  "dx_m": 5,
+  "dy_m": 5
+}

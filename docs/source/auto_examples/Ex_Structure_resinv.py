@@ -1,7 +1,7 @@
 # %%
 """
 Ex. Structure-Constrained Resistivity Inversion
-===========================================
+===============================================
 
 This example demonstrates how to incorporate structural information from 
 seismic velocity models into ERT inversion for improved subsurface imaging.

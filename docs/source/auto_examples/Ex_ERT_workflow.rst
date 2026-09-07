@@ -19,7 +19,7 @@
 
 
 Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion
-====================================================================
+=========================================================================
 
 This example demonstrates the complete workflow for integrating hydrological 
 model outputs with ERT forward modeling and inversion using PyHydroGeophysX.
@@ -768,7 +768,7 @@ Step 11: Run ERT inversion on synthetic data
 .. GENERATED FROM PYTHON SOURCE LINES 627-638
 
 Inversion Results Comparison
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Three-panel comparison showing: (1) true resistivity model from petrophysical 
 conversion, (2) PyHydroGeophysX inversion result, and (3) PyGIMLi standard 
@@ -893,7 +893,7 @@ Set up directories
 .. GENERATED FROM PYTHON SOURCE LINES 736-747
 
 One-Step Integrated Workflow Results
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The streamlined hydro-to-ERT workflow produces synthetic apparent resistivity 
 data directly from MODFLOW outputs. This integrated approach demonstrates 

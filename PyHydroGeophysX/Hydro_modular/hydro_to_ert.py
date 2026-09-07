@@ -49,7 +49,8 @@ def hydro_to_ert(
         mesh: PyGIMLI mesh
         profile_interpolator: ProfileInterpolator for surface interpolation
         marker_labels: Layer marker labels [top, middle, bottom]
-        rho_parameters: Dictionary of resistivity parameters:
+        rho_parameters: Dictionary of resistivity parameters::
+
             {
                 'rho_sat': [100, 500, 2400],  # Saturated resistivity values
                 'n': [2.2, 1.8, 2.5],         # Cementation exponents

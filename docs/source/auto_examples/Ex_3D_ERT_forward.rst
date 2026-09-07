@@ -18,8 +18,8 @@
 .. _sphx_glr_auto_examples_Ex_3D_ERT_forward.py:
 
 
-3D ERT Forward Modeling with MODFLOW Integration
-================================================
+Ex. 3D ERT Forward Modeling with MODFLOW Integration
+====================================================
 
 This example demonstrates the complete workflow for 3D ERT forward modeling
 using PyHydroGeophysX, integrating hydrological model outputs.
@@ -35,7 +35,7 @@ using PyHydroGeophysX, integrating hydrological model outputs.
 
 sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_3D_ERT_forward_fig_01.png'
 
-.. GENERATED FROM PYTHON SOURCE LINES 14-84
+.. GENERATED FROM PYTHON SOURCE LINES 14-87
 
 # 3D ERT Forward Modeling Workflow with Topography
 
@@ -61,54 +61,57 @@ for creating different types of 3D meshes. Here's a quick reference:
 
 ### Key Classes and Functions
 
-| Class/Function | Description |
-|----------------|-------------|
-| `Mesh3DCreator` | Main class for creating 3D meshes |
-| `create_surface_electrode_array()` | Create regular surface electrode grid |
-| `create_borehole_electrode_array()` | Create electrodes for borehole |
-| `create_crosshole_electrode_array()` | Create multi-borehole electrode setup |
-| `create_3d_mesh_with_topography()` | **Create mesh following topography** |
-| `apply_topography_to_electrodes()` | Apply surface elevation to electrodes |
-| `create_box_mesh()` | Create simple box mesh (flat surface) |
-| `create_prism_mesh_from_2d()` | Extrude 2D mesh to 3D prisms |
+::
+
+   | Class/Function | Description |
+   |----------------|-------------|
+   | `Mesh3DCreator` | Main class for creating 3D meshes |
+   | `create_surface_electrode_array()` | Create regular surface electrode grid |
+   | `create_borehole_electrode_array()` | Create electrodes for borehole |
+   | `create_crosshole_electrode_array()` | Create multi-borehole electrode setup |
+   | `create_3d_mesh_with_topography()` | **Create mesh following topography** |
+   | `apply_topography_to_electrodes()` | Apply surface elevation to electrodes |
+   | `create_box_mesh()` | Create simple box mesh (flat surface) |
+   | `create_prism_mesh_from_2d()` | Extrude 2D mesh to 3D prisms |
 
 ### Quick Start Examples
 
-```python
-from PyHydroGeophysX.core.mesh_3d import Mesh3DCreator
+.. code-block:: python
 
-# Initialize mesh creator
-creator = Mesh3DCreator(
-    mesh_directory='./meshes',
-    elec_refinement=0.5,    # Mesh size near electrodes
-    node_refinement=2.0,     # Mesh size at boundaries
-    attractor_distance=5.0   # Distance for mesh refinement
-)
+   from PyHydroGeophysX.core.mesh_3d import Mesh3DCreator
 
-# Example 1: Surface electrode array
-electrodes = creator.create_surface_electrode_array(
-    nx=10, ny=6,   # Grid size
-    dx=5.0, dy=5.0, # Spacing
-    x_offset=0, y_offset=0,
-    z=0.0  # Surface elevation
-)
+   # Initialize mesh creator
+   creator = Mesh3DCreator(
+       mesh_directory='./meshes',
+       elec_refinement=0.5,    # Mesh size near electrodes
+       node_refinement=2.0,     # Mesh size at boundaries
+       attractor_distance=5.0   # Distance for mesh refinement
+   )
 
-# Example 2: Apply topography to electrodes
-electrodes = creator.apply_topography_to_electrodes(
-    electrodes,
-    topography_func=lambda x, y: 100 + 0.1*x - 0.05*y  # Example
-)
+   # Example 1: Surface electrode array
+   electrodes = creator.create_surface_electrode_array(
+       nx=10, ny=6,   # Grid size
+       dx=5.0, dy=5.0, # Spacing
+       x_offset=0, y_offset=0,
+       z=0.0  # Surface elevation
+   )
 
-# Example 3: Create 3D mesh with topography
-mesh = creator.create_3d_mesh_with_topography(
-    electrode_positions=electrodes,
-    topography_func=lambda x, y: 100 + 0.1*x,
-    para_depth=20.0,
-    use_prism_mesh=True
-)
-```
+   # Example 2: Apply topography to electrodes
+   electrodes = creator.apply_topography_to_electrodes(
+       electrodes,
+       topography_func=lambda x, y: 100 + 0.1*x - 0.05*y  # Example
+   )
 
-.. GENERATED FROM PYTHON SOURCE LINES 84-87
+   # Example 3: Create 3D mesh with topography
+   mesh = creator.create_3d_mesh_with_topography(
+       electrode_positions=electrodes,
+       topography_func=lambda x, y: 100 + 0.1*x,
+       para_depth=20.0,
+       use_prism_mesh=True
+   )
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 87-90
 
 .. code-block:: Python
 
@@ -116,7 +119,7 @@ mesh = creator.create_3d_mesh_with_topography(
     import importlib
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 88-138
+.. GENERATED FROM PYTHON SOURCE LINES 91-141
 
 .. code-block:: Python
 
@@ -171,12 +174,12 @@ mesh = creator.create_3d_mesh_with_topography(
     print(f"Mesh3DCreator methods: {[m for m in dir(Mesh3DCreator) if not m.startswith('_')]}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 139-141
+.. GENERATED FROM PYTHON SOURCE LINES 142-144
 
 Analyze MODFLOW data to find regions with active cells (non-NaN)
 This helps us position the forward modeling domain optimally
 
-.. GENERATED FROM PYTHON SOURCE LINES 141-198
+.. GENERATED FROM PYTHON SOURCE LINES 144-201
 
 .. code-block:: Python
 
@@ -238,7 +241,7 @@ This helps us position the forward modeling domain optimally
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 199-207
+.. GENERATED FROM PYTHON SOURCE LINES 202-210
 
 MODFLOW Active Cells Analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -249,7 +252,7 @@ regions with >80% active cells, helping identify optimal domain placement.
 
 *Figure saved to: modflow_active_cells.png*
 
-.. GENERATED FROM PYTHON SOURCE LINES 207-222
+.. GENERATED FROM PYTHON SOURCE LINES 210-225
 
 .. code-block:: Python
 
@@ -261,7 +264,7 @@ regions with >80% active cells, helping identify optimal domain placement.
         center_row = (row_min + row_max) // 2
         center_col = (col_min + col_max) // 2
         print(f"\nCenter of high-activity region: row={center_row}, col={center_col}")
-    
+
         # Suggest a smaller domain size that fits well
         suggested_size = 25  # meters (smaller domain)
         print(f"\nSuggested domain placement for {suggested_size}m x {suggested_size}m area:")
@@ -269,12 +272,12 @@ regions with >80% active cells, helping identify optimal domain placement.
         print(f"  Y offset: {center_row - suggested_size//2} to {center_row + suggested_size//2}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 223-225
+.. GENERATED FROM PYTHON SOURCE LINES 226-228
 
 Find the optimal placement for a smaller domain that is 100% within active cells
 We need ALL cells in the domain to be active (non-NaN)
 
-.. GENERATED FROM PYTHON SOURCE LINES 225-288
+.. GENERATED FROM PYTHON SOURCE LINES 228-291
 
 .. code-block:: Python
 
@@ -290,25 +293,25 @@ We need ALL cells in the domain to be active (non-NaN)
         # Center of the fully active region
         center_row_full = int(np.median(rows_full))
         center_col_full = int(np.median(cols_full))
-    
+
         print(f"Fully active region stats:")
         print(f"  Number of fully active cells: {len(rows_full)}")
         print(f"  Center (median): row={center_row_full}, col={center_col_full}")
-    
+
         # Test different domain sizes at the center location
         for domain_size in [20, 25, 30]:
             half = domain_size // 2
             r1, r2 = center_row_full - half, center_row_full + half
             c1, c2 = center_col_full - half, center_col_full + half
-        
+
             # Ensure within bounds
             r1, c1 = max(0, r1), max(0, c1)
             r2, c2 = min(modflow_nrow, r2), min(modflow_ncol, c2)
-        
+
             # Check if this region is fully active
             region_active = fully_active[r1:r2, c1:c2]
             active_pct = np.mean(region_active) * 100
-        
+
             print(f"\n  {domain_size}m x {domain_size}m domain at center:")
             print(f"    Rows: {r1} to {r2}, Cols: {c1} to {c2}")
             print(f"    Active cell percentage: {active_pct:.1f}%")
@@ -326,8 +329,8 @@ We need ALL cells in the domain to be active (non-NaN)
     domain_size = 20
     half = domain_size // 2
     domain_rect = plt.Rectangle(
-        (center_col_full - half, center_row_full - half), 
-        domain_size, domain_size, 
+        (center_col_full - half, center_row_full - half),
+        domain_size, domain_size,
         fill=False, edgecolor='red', linewidth=3, linestyle='--'
     )
     ax.add_patch(domain_rect)
@@ -342,7 +345,7 @@ We need ALL cells in the domain to be active (non-NaN)
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 289-299
+.. GENERATED FROM PYTHON SOURCE LINES 292-302
 
 Proposed Domain Placement
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -355,7 +358,7 @@ indicates the 80% active cell boundary.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 299-310
+.. GENERATED FROM PYTHON SOURCE LINES 302-313
 
 .. code-block:: Python
 
@@ -371,24 +374,24 @@ indicates the 80% active cell boundary.
     print(f"  This gives 20m coverage with electrodes at x=[0, 4, 8, 12, 16] and y=[0, 4, 8, 12, 16]")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 311-315
+.. GENERATED FROM PYTHON SOURCE LINES 314-318
 
 ## Step 1: Define Domain Geometry and Create Electrodes on Topographic Surface
 
 We'll create a 3D domain with a surface electrode array that follows realistic topography.
 This is essential for accurate ERT modeling in areas with significant terrain variation.
 
-.. GENERATED FROM PYTHON SOURCE LINES 317-319
+.. GENERATED FROM PYTHON SOURCE LINES 320-322
 
 Define domain dimensions (in meters)
 Using smaller domain (20m x 20m) centered in the active MODFLOW region
 
-.. GENERATED FROM PYTHON SOURCE LINES 319-354
+.. GENERATED FROM PYTHON SOURCE LINES 322-357
 
 .. code-block:: Python
 
     domain_length = 20.0  # x-direction
-    domain_width = 20.0   # y-direction  
+    domain_width = 20.0   # y-direction
     domain_depth = 14.0   # z-direction (matching MODFLOW nlay=14 layers)
 
     # MODFLOW grid offset (from analysis cells above)
@@ -423,13 +426,13 @@ Using smaller domain (20m x 20m) centered in the active MODFLOW region
     print(electrode_positions.head(10))
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 355-358
+.. GENERATED FROM PYTHON SOURCE LINES 358-361
 
 Define topography function
 This example creates a sloping surface with some undulation
 Replace with your actual topography data or function
 
-.. GENERATED FROM PYTHON SOURCE LINES 358-390
+.. GENERATED FROM PYTHON SOURCE LINES 361-393
 
 .. code-block:: Python
 
@@ -440,7 +443,7 @@ Replace with your actual topography data or function
     ) -> Any:
         """
         Example topography function returning elevation for (x, y) coordinates.
-    
+
         This creates a surface sloping from ~105m at (0,0) to ~95m at (50,30)
         with some undulation for realism.
         """
@@ -448,10 +451,10 @@ Replace with your actual topography data or function
         base_elevation = 100.0
         slope_x = -0.1  # m/m slope in x direction
         slope_y = -0.05  # m/m slope in y direction
-    
+
         # Add some undulation for realism
         undulation = 0.5 * np.sin(x / 10.0) * np.cos(y / 8.0)
-    
+
         elevation = base_elevation + slope_x * x + slope_y * y + undulation
         return elevation
 
@@ -466,11 +469,11 @@ Replace with your actual topography data or function
     print(electrode_positions.head(10))
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 391-392
+.. GENERATED FROM PYTHON SOURCE LINES 394-395
 
 Visualize electrode layout with topography
 
-.. GENERATED FROM PYTHON SOURCE LINES 392-430
+.. GENERATED FROM PYTHON SOURCE LINES 395-433
 
 .. code-block:: Python
 
@@ -479,7 +482,7 @@ Visualize electrode layout with topography
     # 2D Layout
     ax1 = fig.add_subplot(121)
     scatter = ax1.scatter(
-        electrode_positions['x'], 
+        electrode_positions['x'],
         electrode_positions['y'],
         c=electrode_positions['z'],
         cmap='terrain',
@@ -495,7 +498,7 @@ Visualize electrode layout with topography
     # 3D Layout
     ax2 = fig.add_subplot(122, projection='3d')
     ax2.scatter(
-        electrode_positions['x'], 
+        electrode_positions['x'],
         electrode_positions['y'],
         electrode_positions['z'],
         c=electrode_positions['z'],
@@ -513,7 +516,7 @@ Visualize electrode layout with topography
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 431-441
+.. GENERATED FROM PYTHON SOURCE LINES 434-444
 
 Electrode Layout with Topography
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -526,7 +529,7 @@ illustrates how electrodes follow the topographic surface.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 443-452
+.. GENERATED FROM PYTHON SOURCE LINES 446-455
 
 ## Step 2: Create 3D Mesh with Topography Using mesh_3d.py
 
@@ -538,12 +541,12 @@ in terrain with elevation changes.
 - `use_prism_mesh=True`: Creates efficient prism mesh (good for layered structures)
 - `use_prism_mesh=False`: Creates tetrahedral mesh using PyGIMLi's PLC approach
 
-.. GENERATED FROM PYTHON SOURCE LINES 454-456
+.. GENERATED FROM PYTHON SOURCE LINES 457-459
 
 Method 1: Create 3D mesh WITH topography using mesh_3d.py
 This creates a mesh that follows the surface elevation
 
-.. GENERATED FROM PYTHON SOURCE LINES 456-484
+.. GENERATED FROM PYTHON SOURCE LINES 459-487
 
 .. code-block:: Python
 
@@ -553,7 +556,7 @@ This creates a mesh that follows the surface elevation
     # Define marker regions based on depth below surface
     depth_markers = {
         'shallow': (0, 5, 2),      # 0-5m depth: marker 2
-        'middle': (5, 15, 3),      # 5-15m depth: marker 3  
+        'middle': (5, 15, 3),      # 5-15m depth: marker 3
         'deep': (15, 30, 1)        # 15-30 m depth interval: marker 1 (boundary)
     }
 
@@ -576,11 +579,11 @@ This creates a mesh that follows the surface elevation
     print(f"  Boundaries: {mesh.boundaryCount()}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 485-486
+.. GENERATED FROM PYTHON SOURCE LINES 488-489
 
 Create ERT data container using mesh_3d.py helper function
 
-.. GENERATED FROM PYTHON SOURCE LINES 486-499
+.. GENERATED FROM PYTHON SOURCE LINES 489-502
 
 .. code-block:: Python
 
@@ -598,11 +601,11 @@ Create ERT data container using mesh_3d.py helper function
     print(f"Geometric factors calculated for 3D")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 500-501
+.. GENERATED FROM PYTHON SOURCE LINES 503-504
 
 Save mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 501-505
+.. GENERATED FROM PYTHON SOURCE LINES 504-508
 
 .. code-block:: Python
 
@@ -611,7 +614,7 @@ Save mesh
     print(f"Mesh saved to {output_dir}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 506-511
+.. GENERATED FROM PYTHON SOURCE LINES 509-514
 
 ## Step 3: Load and Prepare Hydrological Data
 
@@ -619,12 +622,12 @@ Load MODFLOW output (water content, porosity) and prepare for interpolation
 to the 3D mesh. The data needs to be defined in the same coordinate system
 as the mesh, with z-values relative to the topographic surface.
 
-.. GENERATED FROM PYTHON SOURCE LINES 513-515
+.. GENERATED FROM PYTHON SOURCE LINES 516-518
 
 Load hydrological data (example using synthetic data)
 Replace with actual MODFLOW data loading
 
-.. GENERATED FROM PYTHON SOURCE LINES 515-601
+.. GENERATED FROM PYTHON SOURCE LINES 518-604
 
 .. code-block:: Python
 
@@ -639,87 +642,87 @@ Replace with actual MODFLOW data loading
         else:
             water_content_3d = water_content_full
         porosity_3d = np.load(os.path.join(data_dir, "Porosity.npy"))
-    
+
         print("Loaded actual MODFLOW data")
         print(f"Full water content shape: {water_content_3d.shape}")
         print(f"Full porosity shape: {porosity_3d.shape}")
         USE_REAL_DATA = True
-    
+
         # Use the optimal MODFLOW offset from domain setup cell
         # MODFLOW_X_OFFSET and MODFLOW_Y_OFFSET define where our domain starts
         x_start = MODFLOW_X_OFFSET
         x_end = MODFLOW_X_OFFSET + int(domain_length)
         y_start = MODFLOW_Y_OFFSET
         y_end = MODFLOW_Y_OFFSET + int(domain_width)
-    
+
         # Get the original dimensions
         modflow_nlay, modflow_nrow, modflow_ncol = water_content_3d.shape
-    
+
         # Ensure bounds are within the data
         x_start = max(0, x_start)
         x_end = min(modflow_ncol, x_end)
         y_start = max(0, y_start)
         y_end = min(modflow_nrow, y_end)
-    
+
         # Crop to region of interest - this region is 100% within active cells
         water_content_3d = water_content_3d[:, y_start:y_end, x_start:x_end]
         porosity_3d = porosity_3d[:, y_start:y_end, x_start:x_end]
-    
+
         print(f"\nCropped to domain region: {water_content_3d.shape}")
         print(f"MODFLOW X range: {x_start} to {x_end} (domain X: 0 to {x_end-x_start} m)")
         print(f"MODFLOW Y range: {y_start} to {y_end} (domain Y: 0 to {y_end-y_start} m)")
-    
+
         # Check for NaN values in cropped region
         nan_count_wc = np.sum(np.isnan(water_content_3d))
         nan_count_por = np.sum(np.isnan(porosity_3d))
         total_cells = water_content_3d.size
-    
+
         print(f"\nData quality check:")
         print(f"  Water content NaN count: {nan_count_wc} / {total_cells} ({nan_count_wc/total_cells*100:.1f}%)")
         print(f"  Porosity NaN count: {nan_count_por} / {total_cells} ({nan_count_por/total_cells*100:.1f}%)")
-    
+
         # Update dimensions for interpolation
         nlay, nrow, ncol = water_content_3d.shape
         print(f"\nFinal dimensions: nlay={nlay}, nrow={nrow}, ncol={ncol}")
-    
+
     except FileNotFoundError:
         print("Creating synthetic hydrological data for demonstration...")
         USE_REAL_DATA = False
-    
+
         # Create synthetic 3D water content field
         # Dimensions matching our domain
         nlay, nrow, ncol = int(domain_depth), int(domain_width), int(domain_length)
-    
+
         # Create coordinate arrays
         x = np.linspace(0, domain_length, ncol)
         y = np.linspace(0, domain_width, nrow)
         z = np.linspace(-domain_depth, 0, nlay)  # Depth relative to surface
-    
+
         X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
-    
+
         # Synthetic water content (higher near surface, varies laterally)
         water_content_3d = 0.15 + 0.15 * np.exp(Z.T / 5.0)
         water_content_3d += 0.05 * np.sin(X.T / 10.0) * np.cos(Y.T / 8.0)
         water_content_3d = np.clip(water_content_3d, 0.05, 0.45)
-    
+
         # Synthetic porosity (decreases with depth, some lateral variation)
         porosity_3d = 0.35 + 0.1 * np.exp(Z.T / 10.0)
         porosity_3d += 0.02 * np.sin(X.T / 15.0)
         porosity_3d = np.clip(porosity_3d, 0.1, 0.45)
-    
+
         # Transpose to (nlay, nrow, ncol) format like MODFLOW
         water_content_3d = np.transpose(water_content_3d, (2, 1, 0))
         porosity_3d = np.transpose(porosity_3d, (2, 1, 0))
-    
+
         print(f"Synthetic water content shape: {water_content_3d.shape}")
         print(f"Synthetic porosity shape: {porosity_3d.shape}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 602-603
+.. GENERATED FROM PYTHON SOURCE LINES 605-606
 
 Visualize a vertical slice of the synthetic data
 
-.. GENERATED FROM PYTHON SOURCE LINES 603-636
+.. GENERATED FROM PYTHON SOURCE LINES 606-639
 
 .. code-block:: Python
 
@@ -757,7 +760,7 @@ Visualize a vertical slice of the synthetic data
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 637-647
+.. GENERATED FROM PYTHON SOURCE LINES 640-650
 
 Hydrological Data Slices
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -770,7 +773,7 @@ mesh and converted to resistivity using the Waxman-Smits model.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 649-654
+.. GENERATED FROM PYTHON SOURCE LINES 652-657
 
 ## Step 4: Interpolate Hydrological Properties to 3D Mesh
 
@@ -778,7 +781,7 @@ Interpolate the MODFLOW data to mesh cell centers. Since our mesh follows
 topography, we need to account for the local surface elevation when
 determining the depth of each mesh cell.
 
-.. GENERATED FROM PYTHON SOURCE LINES 656-674
+.. GENERATED FROM PYTHON SOURCE LINES 659-677
 
 .. code-block:: Python
 
@@ -801,12 +804,12 @@ determining the depth of each mesh cell.
     print(f"\nCell depths range: {cell_depths.min():.2f} to {cell_depths.max():.2f} m")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 675-677
+.. GENERATED FROM PYTHON SOURCE LINES 678-680
 
 Create grid coordinates for interpolation
 Using depth-relative coordinates (depth below local surface)
 
-.. GENERATED FROM PYTHON SOURCE LINES 677-713
+.. GENERATED FROM PYTHON SOURCE LINES 680-716
 
 .. code-block:: Python
 
@@ -819,14 +822,14 @@ Using depth-relative coordinates (depth below local surface)
         x_max = domain_length
         y_min = 0.0
         y_max = domain_width
-    
+
         # Grid spacing (1m for MODFLOW)
         dx = domain_length / ncol
         dy = domain_width / nrow
-    
+
         # Assume depth is domain_depth spread across nlay layers
         dz = domain_depth / nlay
-    
+
         # Cell center coordinates (cell centers, not edges)
         x_coords = np.linspace(dx/2, domain_length - dx/2, ncol)
         y_coords = np.linspace(dy/2, domain_width - dy/2, nrow)
@@ -836,7 +839,7 @@ Using depth-relative coordinates (depth below local surface)
         dx = domain_length / ncol
         dy = domain_width / nrow
         dz = domain_depth / nlay
-    
+
         x_coords = np.linspace(dx/2, domain_length - dx/2, ncol)
         y_coords = np.linspace(dy/2, domain_width - dy/2, nrow)
         depth_coords = np.linspace(dz/2, domain_depth - dz/2, nlay)
@@ -847,12 +850,12 @@ Using depth-relative coordinates (depth below local surface)
     print(f"  Depth: {depth_coords[0]:.2f} to {depth_coords[-1]:.2f} ({nlay} points)")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 714-716
+.. GENERATED FROM PYTHON SOURCE LINES 717-719
 
 Create interpolators for water content and porosity
 Handle NaN values in MODFLOW data (inactive cells)
 
-.. GENERATED FROM PYTHON SOURCE LINES 716-774
+.. GENERATED FROM PYTHON SOURCE LINES 719-777
 
 .. code-block:: Python
 
@@ -915,18 +918,18 @@ Handle NaN values in MODFLOW data (inactive cells)
     print(f"  Saturation: min={saturation_mesh.min():.3f}, max={saturation_mesh.max():.3f}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 775-779
+.. GENERATED FROM PYTHON SOURCE LINES 778-782
 
 ## Step 5: Convert Water Content to Resistivity
 
 Use the Waxman-Smits petrophysical model to convert saturation and
 porosity to electrical resistivity.
 
-.. GENERATED FROM PYTHON SOURCE LINES 781-782
+.. GENERATED FROM PYTHON SOURCE LINES 784-785
 
 Petrophysical parameters (Waxman-Smits model)
 
-.. GENERATED FROM PYTHON SOURCE LINES 782-803
+.. GENERATED FROM PYTHON SOURCE LINES 785-806
 
 .. code-block:: Python
 
@@ -952,11 +955,11 @@ Petrophysical parameters (Waxman-Smits model)
     print(f"Resistivity on mesh: min={resistivity_mesh.min():.1f} Ohm-m, max={resistivity_mesh.max():.1f} Ohm-m")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 804-805
+.. GENERATED FROM PYTHON SOURCE LINES 807-808
 
 Visualize resistivity distribution
 
-.. GENERATED FROM PYTHON SOURCE LINES 805-815
+.. GENERATED FROM PYTHON SOURCE LINES 808-818
 
 .. code-block:: Python
 
@@ -971,7 +974,7 @@ Visualize resistivity distribution
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 816-826
+.. GENERATED FROM PYTHON SOURCE LINES 819-829
 
 Resistivity Distribution
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -984,15 +987,15 @@ x-axis reveals the range of resistivity values in the model.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 828-829
+.. GENERATED FROM PYTHON SOURCE LINES 831-832
 
 ## Step 6: Perform 3D ERT Forward Modeling
 
-.. GENERATED FROM PYTHON SOURCE LINES 831-832
+.. GENERATED FROM PYTHON SOURCE LINES 834-835
 
 Create forward modeling operator
 
-.. GENERATED FROM PYTHON SOURCE LINES 832-840
+.. GENERATED FROM PYTHON SOURCE LINES 835-843
 
 .. code-block:: Python
 
@@ -1005,11 +1008,11 @@ Create forward modeling operator
     print(f"  Model cells: {mesh.cellCount()}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 841-842
+.. GENERATED FROM PYTHON SOURCE LINES 844-845
 
 Perform forward modeling
 
-.. GENERATED FROM PYTHON SOURCE LINES 842-847
+.. GENERATED FROM PYTHON SOURCE LINES 845-850
 
 .. code-block:: Python
 
@@ -1019,11 +1022,11 @@ Perform forward modeling
     print(f"Response: min={np.min(response):.2f}, max={np.max(response):.2f} Ohm-m")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 848-849
+.. GENERATED FROM PYTHON SOURCE LINES 851-852
 
 Add noise to create synthetic "measured" data
 
-.. GENERATED FROM PYTHON SOURCE LINES 849-863
+.. GENERATED FROM PYTHON SOURCE LINES 852-866
 
 .. code-block:: Python
 
@@ -1042,11 +1045,11 @@ Add noise to create synthetic "measured" data
     print(f"Synthetic data with {noise_level*100:.0f}% noise added")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 864-865
+.. GENERATED FROM PYTHON SOURCE LINES 867-868
 
 Save synthetic data
 
-.. GENERATED FROM PYTHON SOURCE LINES 865-868
+.. GENERATED FROM PYTHON SOURCE LINES 868-871
 
 .. code-block:: Python
 
@@ -1054,15 +1057,15 @@ Save synthetic data
     print(f"Synthetic data saved to {output_dir}/synthetic_3d_data.dat")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 869-870
+.. GENERATED FROM PYTHON SOURCE LINES 872-873
 
 ## Step 7: Visualize Results
 
-.. GENERATED FROM PYTHON SOURCE LINES 872-873
+.. GENERATED FROM PYTHON SOURCE LINES 875-876
 
 Visualize apparent resistivity data
 
-.. GENERATED FROM PYTHON SOURCE LINES 873-888
+.. GENERATED FROM PYTHON SOURCE LINES 876-891
 
 .. code-block:: Python
 
@@ -1082,7 +1085,7 @@ Visualize apparent resistivity data
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 889-899
+.. GENERATED FROM PYTHON SOURCE LINES 892-902
 
 Apparent Resistivity Matrix
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1095,34 +1098,34 @@ pair vs MN measurement pair) in the dipole-dipole survey.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 901-902
+.. GENERATED FROM PYTHON SOURCE LINES 904-905
 
 3D visualization with PyVista (if available)
 
-.. GENERATED FROM PYTHON SOURCE LINES 902-991
+.. GENERATED FROM PYTHON SOURCE LINES 905-994
 
 .. code-block:: Python
 
     if PYVISTA_AVAILABLE:
         # Add resistivity to mesh for visualization
         mesh['resistivity'] = resistivity_mesh
-    
+
         # Convert PyGIMLi mesh to PyVista
         mesh.exportVTK(os.path.join(output_dir, 'mesh_with_res.vtk'))
         pv_mesh = pv.read(os.path.join(output_dir, 'mesh_with_res.vtk'))
-    
+
         # Get data ranges for better color scaling
         res_min, res_max = np.percentile(resistivity_mesh, [5, 95])
         print(f"Resistivity range (5-95 percentile): {res_min:.1f} - {res_max:.1f} Ohm-m")
-    
+
         # Create plotter with better window size
         pl = pv.Plotter(window_size=(1200, 900))
-    
+
         # Add clipped mesh to see internal structure
         # Clip at y = center to show cross-section
         mesh_center = pv_mesh.center
         clipped = pv_mesh.clip(normal='y', origin=mesh_center, crinkle=True)
-    
+
         pl.add_mesh(
             clipped,
             scalars='resistivity',
@@ -1142,11 +1145,11 @@ pair vs MN measurement pair) in the dipole-dipole survey.
                 'label_font_size': 12
             }
         )
-    
+
         # Add surface mesh with transparency to show topography
         surface = pv_mesh.extract_surface()
         pl.add_mesh(
-            surface, 
+            surface,
             scalars='resistivity',
             cmap='Spectral_r',
             clim=[res_min, res_max],
@@ -1154,16 +1157,16 @@ pair vs MN measurement pair) in the dipole-dipole survey.
             opacity=0.3,
             show_scalar_bar=False
         )
-    
+
         # Add electrode positions with labels
         electrode_points = electrode_positions[['x', 'y', 'z']].values
         pl.add_points(
-            electrode_points, 
-            color='red', 
+            electrode_points,
+            color='red',
             point_size=12,
             render_points_as_spheres=True
         )
-    
+
         # Add axes and bounds
         pl.show_bounds(
             grid='back',
@@ -1173,13 +1176,13 @@ pair vs MN measurement pair) in the dipole-dipole survey.
             zlabel='Elevation (m)',
             font_size=12
         )
-    
+
         # Set camera for better view angle
         pl.camera_position = 'iso'
         pl.camera.azimuth = 45
         pl.camera.elevation = 25
         pl.camera.zoom(1.2)
-    
+
         # Add title
         pl.add_text(
             '3D Resistivity Model (Clipped at Y-center)',
@@ -1187,13 +1190,13 @@ pair vs MN measurement pair) in the dipole-dipole survey.
             font_size=14,
             color='black'
         )
-    
+
         # Save screenshot
         pl.screenshot(os.path.join(output_dir, '3d_resistivity_model.png'))
         pl.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 992-1002
+.. GENERATED FROM PYTHON SOURCE LINES 995-1005
 
 3D Resistivity Model
 ~~~~~~~~~~~~~~~~~~~~
@@ -1206,7 +1209,7 @@ electrode positions on the topographic surface.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 1002-1007
+.. GENERATED FROM PYTHON SOURCE LINES 1005-1010
 
 .. code-block:: Python
 
@@ -1216,11 +1219,11 @@ electrode positions on the topographic surface.
         print("Install with: pip install pyvista")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1008-1009
+.. GENERATED FROM PYTHON SOURCE LINES 1011-1012
 
 Create 2D slices for visualization - Multiple cross-sections
 
-.. GENERATED FROM PYTHON SOURCE LINES 1009-1119
+.. GENERATED FROM PYTHON SOURCE LINES 1012-1122
 
 .. code-block:: Python
 
@@ -1230,29 +1233,29 @@ Create 2D slices for visualization - Multiple cross-sections
         mesh['porosity'] = porosity_mesh
         mesh['saturation'] = saturation_mesh
         mesh['resistivity'] = resistivity_mesh
-    
+
         mesh.exportVTK(os.path.join(output_dir, 'mesh_with_all_data.vtk'))
         pv_mesh = pv.read(os.path.join(output_dir, 'mesh_with_all_data.vtk'))
-    
+
         # Get data ranges for better color scaling
         wc_range = [np.percentile(wc_mesh, 5), np.percentile(wc_mesh, 95)]
         por_range = [np.percentile(porosity_mesh, 5), np.percentile(porosity_mesh, 95)]
         sat_range = [np.percentile(saturation_mesh, 5), np.percentile(saturation_mesh, 95)]
         res_range = [np.percentile(resistivity_mesh, 5), np.percentile(resistivity_mesh, 95)]
-    
+
         # Create multi-view visualization with better layout
         pl = pv.Plotter(shape=(2, 2), window_size=(1600, 1200))
-    
+
         # Get mesh bounds and electrode bounds for slice positions
         bounds = pv_mesh.bounds
         elec_y_min = electrode_positions['y'].min()
         elec_y_max = electrode_positions['y'].max()
         mesh_center = pv_mesh.center
-    
+
         # Create Y-normal slice at electrode center (shows X-Z cross-section)
         y_slice_pos = (elec_y_min + elec_y_max) / 2
         slice_y = pv_mesh.slice(normal='y', origin=[mesh_center[0], y_slice_pos, mesh_center[2]])
-    
+
         # Common scalar bar settings
         sbar_args = {
             'vertical': False,
@@ -1264,12 +1267,12 @@ Create 2D slices for visualization - Multiple cross-sections
             'label_font_size': 10,
             'n_labels': 5
         }
-    
+
         # Plot 1: Water Content (top-left)
         pl.subplot(0, 0)
         pl.add_mesh(
-            slice_y.copy(), 
-            scalars='water_content', 
+            slice_y.copy(),
+            scalars='water_content',
             cmap='Blues',
             clim=wc_range,
             show_edges=False,
@@ -1283,12 +1286,12 @@ Create 2D slices for visualization - Multiple cross-sections
         pl.add_text('Water Content\n(Y-slice at center)', position='upper_left', font_size=11)
         pl.view_xz()
         pl.camera.zoom(1.3)
-    
+
         # Plot 2: Porosity (top-right)
         pl.subplot(0, 1)
         pl.add_mesh(
-            slice_y.copy(), 
-            scalars='porosity', 
+            slice_y.copy(),
+            scalars='porosity',
             cmap='viridis',
             clim=por_range,
             show_edges=False,
@@ -1297,12 +1300,12 @@ Create 2D slices for visualization - Multiple cross-sections
         pl.add_text('Porosity\n(Y-slice at center)', position='upper_left', font_size=11)
         pl.view_xz()
         pl.camera.zoom(1.3)
-    
+
         # Plot 3: Saturation (bottom-left)
         pl.subplot(1, 0)
         pl.add_mesh(
-            slice_y.copy(), 
-            scalars='saturation', 
+            slice_y.copy(),
+            scalars='saturation',
             cmap='RdYlBu_r',
             clim=sat_range,
             show_edges=False,
@@ -1311,12 +1314,12 @@ Create 2D slices for visualization - Multiple cross-sections
         pl.add_text('Saturation\n(Y-slice at center)', position='upper_left', font_size=11)
         pl.view_xz()
         pl.camera.zoom(1.3)
-    
+
         # Plot 4: Resistivity (bottom-right)
         pl.subplot(1, 1)
         pl.add_mesh(
-            slice_y.copy(), 
-            scalars='resistivity', 
+            slice_y.copy(),
+            scalars='resistivity',
             cmap='Spectral_r',
             clim=res_range,
             log_scale=True,
@@ -1326,16 +1329,16 @@ Create 2D slices for visualization - Multiple cross-sections
         pl.add_text('Resistivity\n(Y-slice at center)', position='upper_left', font_size=11)
         pl.view_xz()
         pl.camera.zoom(1.3)
-    
+
         # Link all cameras so they move together
         pl.link_views()
-    
+
         # Save and show
         pl.screenshot(os.path.join(output_dir, '2d_slices_properties.png'))
         pl.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1120-1130
+.. GENERATED FROM PYTHON SOURCE LINES 1123-1133
 
 2D Property Slices
 ~~~~~~~~~~~~~~~~~~
@@ -1348,7 +1351,7 @@ of the electrode array to show the vertical distribution of properties.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 1130-1175
+.. GENERATED FROM PYTHON SOURCE LINES 1133-1178
 
 .. code-block:: Python
    :dedent: 1
@@ -1356,17 +1359,17 @@ of the electrode array to show the vertical distribution of properties.
 
         # === Additional: Multiple X-Z slices at different Y positions ===
         print("\nCreating multiple cross-section visualization...")
-    
+
         # Use 3 Y positions - electrodes are at Y = 2, 6, 10, 14, 18
         y_positions = [6.0, 10.0, 14.0]
-    
+
         pl2 = pv.Plotter(shape=(1, 3), window_size=(1800, 600))
-    
+
         for i, y_pos in enumerate(y_positions):
             pl2.subplot(0, i)
             # Slice at this Y position
             slice_at_y = pv_mesh.slice(normal='y', origin=[mesh_center[0], y_pos, mesh_center[2]])
-        
+
             # Only add mesh if slice has data
             if slice_at_y.n_cells > 0:
                 pl2.add_mesh(
@@ -1377,8 +1380,8 @@ of the electrode array to show the vertical distribution of properties.
                     log_scale=True,
                     show_edges=False,
                     scalar_bar_args={
-                        'vertical': True, 
-                        'title': 'Ωm', 
+                        'vertical': True,
+                        'title': 'Ωm',
                         'position_x': 0.85,
                         'height': 0.6,
                         'width': 0.08,
@@ -1388,18 +1391,18 @@ of the electrode array to show the vertical distribution of properties.
                 # Add electrodes near this Y position
                 elec_near = electrode_positions[abs(electrode_positions['y'] - y_pos) < 1]
                 if len(elec_near) > 0:
-                    pl2.add_points(elec_near[['x', 'y', 'z']].values, color='red', 
+                    pl2.add_points(elec_near[['x', 'y', 'z']].values, color='red',
                                   point_size=10, render_points_as_spheres=True)
             pl2.add_text(f'Y = {y_pos:.1f} m', position='upper_left', font_size=12)
             pl2.view_xz()
             pl2.camera.zoom(1.2)
-    
+
         # Don't link views here - let each panel have its own view
         pl2.screenshot(os.path.join(output_dir, '2d_slices_multi_y.png'))
         pl2.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1176-1186
+.. GENERATED FROM PYTHON SOURCE LINES 1179-1189
 
 Multiple Y Cross-Sections
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1412,7 +1415,7 @@ along the electrode array.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 1186-1190
+.. GENERATED FROM PYTHON SOURCE LINES 1189-1193
 
 .. code-block:: Python
 
@@ -1421,7 +1424,7 @@ along the electrode array.
         print("PyVista not available for slice visualization.")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1191-1209
+.. GENERATED FROM PYTHON SOURCE LINES 1194-1212
 
 ## Step 8: Alternative Mesh Creation Methods
 
@@ -1442,12 +1445,12 @@ The `mesh_3d.py` module supports multiple mesh creation approaches:
 
 Below we show the manual approach for comparison:
 
-.. GENERATED FROM PYTHON SOURCE LINES 1211-1213
+.. GENERATED FROM PYTHON SOURCE LINES 1214-1216
 
 Alternative: Manual 2D mesh creation for prism extrusion
 This gives you more control over the 2D base mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 1213-1233
+.. GENERATED FROM PYTHON SOURCE LINES 1216-1236
 
 .. code-block:: Python
 
@@ -1472,11 +1475,11 @@ This gives you more control over the 2D base mesh
     print(f"2D base mesh: {mesh2d_with_bnd}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1234-1235
+.. GENERATED FROM PYTHON SOURCE LINES 1237-1238
 
 Visualize 2D mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 1235-1244
+.. GENERATED FROM PYTHON SOURCE LINES 1238-1247
 
 .. code-block:: Python
 
@@ -1490,7 +1493,7 @@ Visualize 2D mesh
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1245-1255
+.. GENERATED FROM PYTHON SOURCE LINES 1248-1258
 
 2D Base Mesh for Prism Extrusion
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1503,11 +1506,11 @@ near electrodes and coarser at boundaries.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 1257-1258
+.. GENERATED FROM PYTHON SOURCE LINES 1260-1261
 
 Create z-discretization vector
 
-.. GENERATED FROM PYTHON SOURCE LINES 1258-1268
+.. GENERATED FROM PYTHON SOURCE LINES 1261-1271
 
 .. code-block:: Python
 
@@ -1522,11 +1525,11 @@ Create z-discretization vector
     print(f"Z-vector: {len(z_vec)} levels from {z_vec.min():.1f} to {z_vec.max():.1f}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1269-1270
+.. GENERATED FROM PYTHON SOURCE LINES 1272-1273
 
 Create 3D prism mesh using mesh_3d.py
 
-.. GENERATED FROM PYTHON SOURCE LINES 1270-1293
+.. GENERATED FROM PYTHON SOURCE LINES 1273-1296
 
 .. code-block:: Python
 
@@ -1554,7 +1557,7 @@ Create 3D prism mesh using mesh_3d.py
     print(f"Prism mesh saved to {output_dir}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1294-1337
+.. GENERATED FROM PYTHON SOURCE LINES 1297-1344
 
 ## Summary
 
@@ -1574,24 +1577,28 @@ This notebook demonstrated:
 
 ### Mesh3DCreator Methods
 
-| Method | Description |
-|--------|-------------|
-| `create_surface_electrode_array(nx, ny, dx, dy, ...)` | Regular grid of surface electrodes |
-| `create_borehole_electrode_array(x, y, z_positions)` | Single borehole electrodes |
-| `create_crosshole_electrode_array(borehole_positions, z_positions)` | Multiple boreholes |
-| `apply_topography_to_electrodes(electrodes, topography_func)` | Set electrode z from topography |
-| `create_3d_mesh_with_topography(electrodes, topography_func, ...)` | **Main method for terrain-following mesh** |
-| `create_box_mesh(length, width, height, electrodes)` | Simple flat box mesh |
-| `create_prism_mesh_from_2d(mesh2d, z_vector)` | Extrude 2D mesh to prisms |
-| `visualize_mesh(mesh, electrode_positions)` | 3D visualization with PyVista |
+::
+
+   | Method | Description |
+   |--------|-------------|
+   | `create_surface_electrode_array(nx, ny, dx, dy, ...)` | Regular grid of surface electrodes |
+   | `create_borehole_electrode_array(x, y, z_positions)` | Single borehole electrodes |
+   | `create_crosshole_electrode_array(borehole_positions, z_positions)` | Multiple boreholes |
+   | `apply_topography_to_electrodes(electrodes, topography_func)` | Set electrode z from topography |
+   | `create_3d_mesh_with_topography(electrodes, topography_func, ...)` | **Main method for terrain-following mesh** |
+   | `create_box_mesh(length, width, height, electrodes)` | Simple flat box mesh |
+   | `create_prism_mesh_from_2d(mesh2d, z_vector)` | Extrude 2D mesh to prisms |
+   | `visualize_mesh(mesh, electrode_positions)` | 3D visualization with PyVista |
 
 ### Helper Functions
 
-| Function | Description |
-|----------|-------------|
-| `create_3d_ert_data_container(electrodes, scheme, dim)` | Create ERT data with 3D geometric factors |
-| `interpolate_modflow_to_3d_mesh(mesh, data, grid)` | Interpolate MODFLOW data to mesh |
-| `export_electrodes_to_csv(electrodes, path)` | Save electrodes to CSV |
+::
+
+   | Function | Description |
+   |----------|-------------|
+   | `create_3d_ert_data_container(electrodes, scheme, dim)` | Create ERT data with 3D geometric factors |
+   | `interpolate_modflow_to_3d_mesh(mesh, data, grid)` | Interpolate MODFLOW data to mesh |
+   | `export_electrodes_to_csv(electrodes, path)` | Save electrodes to CSV |
 
 ### Next Steps
 
@@ -1600,7 +1607,7 @@ This notebook demonstrated:
 - Analyze resolution and sensitivity
 - Time-lapse monitoring applications
 
-.. GENERATED FROM PYTHON SOURCE LINES 1339-1357
+.. GENERATED FROM PYTHON SOURCE LINES 1346-1364
 
 .. code-block:: Python
 

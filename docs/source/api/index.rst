@@ -8,6 +8,7 @@ This section contains the complete API reference for PyHydroGeophysX.
 
    data_processing
    model_output
+   model_input
    petrophysics
    forward
    inversion

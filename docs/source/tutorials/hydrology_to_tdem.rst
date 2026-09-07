@@ -1,6 +1,15 @@
 Hydrology to EM (TDEM and FDEM)
 ===============================
 
+Workflow at a glance
+--------------------
+
+**Prepare:** Layer thicknesses, water-content / saturation information, petrophysical parameters and EM survey geometry.
+
+**Produce:** Synthetic EM responses and a recovered layered model in the full examples. The snippet below only constructs forward operators.
+
+**Check / next step:** Start with a single sounding, then move to line data and lateral constraints in the EM examples.
+
 Use this workflow to map hydrologic outputs to conductivity profiles and EM responses.
 
 Steps

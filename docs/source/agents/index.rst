@@ -3,7 +3,7 @@ Agents, Web App and Desktop
 
 PyHydroGeophysX includes a multi-agent system for natural-language hydrogeophysical workflows,
 plus a Qt desktop studio for hands-on interactive work.
-Start with the hosted app or quick start guide; the architecture page is contributor documentation.
+Start with the hosted app or quick start guide.
 The agent stack includes dedicated support for SRT, FDEM, and joint ERT+SRT inversion orchestration.
 
 .. grid:: 1 2 2 2
@@ -46,4 +46,3 @@ The agent stack includes dedicated support for SRT, FDEM, and joint ERT+SRT inve
    agent_reference
    troubleshooting
    overview
-   architecture

@@ -19,7 +19,7 @@
 
 
 Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation
-=======================================================================
+===========================================================================
 
 This example demonstrates how to perform a 2D seismic refraction tomography (SRT) 
 inversion and interpret the results to define subsurface structures.
@@ -506,7 +506,7 @@ exported as text files for integration with hydrogeological models.
 .. GENERATED FROM PYTHON SOURCE LINES 425-436
 
 Short Profile Multi-Scale Comparison
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Short profile provides enhanced shallow resolution (0-30m depth) with 
 detailed regolith characterization. Higher ray density improves near-surface 

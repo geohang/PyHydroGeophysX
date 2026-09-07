@@ -182,7 +182,7 @@ resume** so a run that fails mid-way can continue from the last completed step:
 
     coordinator = AgentCoordinator(api_key=api_key, output_dir='./results')
 
-    # First run — saves a pickle checkpoint after each step
+    # First run: saves a pickle checkpoint after each step
     results = coordinator.execute_workflow(config)
 
     # If a step fails, restart with resume=True to skip completed steps

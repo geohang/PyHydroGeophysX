@@ -17,8 +17,8 @@
 
 .. _sphx_glr_auto_examples_Ex_TL_inversion_memory.py:
 
-Memory-Optimized Time-Lapse ERT Inversion
-==========================================
+Ex. Memory-Optimized Time-Lapse ERT Inversion
+================================================
 
 This example compares the sparse lower-RAM solver path
 (``save_memory=True``) with the standard time-lapse inversion path

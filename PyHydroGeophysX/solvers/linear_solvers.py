@@ -602,8 +602,8 @@ def generalized_solver(
         Iterative:  'lsqr', 'rrlsqr', 'cgls', 'rrls'
         SciPy:      'scipy_lsqr', 'scipy_lsmr', 'precond_lsmr'
         SPD, CPU-only, for a square symmetric positive definite ``A``:
-                    'spd_cholesky' (direct factorization), 'spd_cg' (iterative,
-                    for a matrix too large to factor)
+        'spd_cholesky' (direct factorization), 'spd_cg' (iterative,
+        for a matrix too large to factor)
     x : array_like, optional
         Initial guess for the solution. If None, zeros are used.
     maxiter : int, optional

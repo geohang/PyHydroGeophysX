@@ -1,6 +1,6 @@
 """
-3D ERT Forward Modeling with MODFLOW Integration
-================================================
+Ex. 3D ERT Forward Modeling with MODFLOW Integration
+====================================================
 
 This example demonstrates the complete workflow for 3D ERT forward modeling
 using PyHydroGeophysX, integrating hydrological model outputs.
@@ -12,12 +12,12 @@ from typing import Any
 
 # %% [markdown]
 # # 3D ERT Forward Modeling Workflow with Topography
-# 
+#
 # This example demonstrates 3D ERT forward modeling using PyHydroGeophysX,
 # integrating MODFLOW hydrological model outputs with realistic topography.
-# 
+#
 # ## Workflow Overview
-# 
+#
 # 1. **Tutorial**: Learn how to use `mesh_3d.py` module
 # 2. Load MODFLOW water content and porosity data
 # 3. Create 3D mesh with topography and electrode positions
@@ -25,62 +25,65 @@ from typing import Any
 # 5. Convert water content to resistivity using petrophysical relationships
 # 6. Perform 3D ERT forward modeling
 # 7. Visualize results
-# 
+#
 # ---
-# 
+#
 # ## Tutorial: Using `mesh_3d.py` for 3D Mesh Creation
-# 
+#
 # The `mesh_3d.py` module provides a `Mesh3DCreator` class with several methods
 # for creating different types of 3D meshes. Here's a quick reference:
-# 
+#
 # ### Key Classes and Functions
-# 
-# | Class/Function | Description |
-# |----------------|-------------|
-# | `Mesh3DCreator` | Main class for creating 3D meshes |
-# | `create_surface_electrode_array()` | Create regular surface electrode grid |
-# | `create_borehole_electrode_array()` | Create electrodes for borehole |
-# | `create_crosshole_electrode_array()` | Create multi-borehole electrode setup |
-# | `create_3d_mesh_with_topography()` | **Create mesh following topography** |
-# | `apply_topography_to_electrodes()` | Apply surface elevation to electrodes |
-# | `create_box_mesh()` | Create simple box mesh (flat surface) |
-# | `create_prism_mesh_from_2d()` | Extrude 2D mesh to 3D prisms |
-# 
+#
+# ::
+#
+#    | Class/Function | Description |
+#    |----------------|-------------|
+#    | `Mesh3DCreator` | Main class for creating 3D meshes |
+#    | `create_surface_electrode_array()` | Create regular surface electrode grid |
+#    | `create_borehole_electrode_array()` | Create electrodes for borehole |
+#    | `create_crosshole_electrode_array()` | Create multi-borehole electrode setup |
+#    | `create_3d_mesh_with_topography()` | **Create mesh following topography** |
+#    | `apply_topography_to_electrodes()` | Apply surface elevation to electrodes |
+#    | `create_box_mesh()` | Create simple box mesh (flat surface) |
+#    | `create_prism_mesh_from_2d()` | Extrude 2D mesh to 3D prisms |
+#
 # ### Quick Start Examples
-# 
-# ```python
-# from PyHydroGeophysX.core.mesh_3d import Mesh3DCreator
-# 
-# # Initialize mesh creator
-# creator = Mesh3DCreator(
-#     mesh_directory='./meshes',
-#     elec_refinement=0.5,    # Mesh size near electrodes
-#     node_refinement=2.0,     # Mesh size at boundaries
-#     attractor_distance=5.0   # Distance for mesh refinement
-# )
-# 
-# # Example 1: Surface electrode array
-# electrodes = creator.create_surface_electrode_array(
-#     nx=10, ny=6,   # Grid size
-#     dx=5.0, dy=5.0, # Spacing
-#     x_offset=0, y_offset=0,
-#     z=0.0  # Surface elevation
-# )
-# 
-# # Example 2: Apply topography to electrodes
-# electrodes = creator.apply_topography_to_electrodes(
-#     electrodes,
-#     topography_func=lambda x, y: 100 + 0.1*x - 0.05*y  # Example
-# )
-# 
-# # Example 3: Create 3D mesh with topography
-# mesh = creator.create_3d_mesh_with_topography(
-#     electrode_positions=electrodes,
-#     topography_func=lambda x, y: 100 + 0.1*x,
-#     para_depth=20.0,
-#     use_prism_mesh=True
-# )
-# ```
+#
+# .. code-block:: python
+#
+#    from PyHydroGeophysX.core.mesh_3d import Mesh3DCreator
+#
+#    # Initialize mesh creator
+#    creator = Mesh3DCreator(
+#        mesh_directory='./meshes',
+#        elec_refinement=0.5,    # Mesh size near electrodes
+#        node_refinement=2.0,     # Mesh size at boundaries
+#        attractor_distance=5.0   # Distance for mesh refinement
+#    )
+#
+#    # Example 1: Surface electrode array
+#    electrodes = creator.create_surface_electrode_array(
+#        nx=10, ny=6,   # Grid size
+#        dx=5.0, dy=5.0, # Spacing
+#        x_offset=0, y_offset=0,
+#        z=0.0  # Surface elevation
+#    )
+#
+#    # Example 2: Apply topography to electrodes
+#    electrodes = creator.apply_topography_to_electrodes(
+#        electrodes,
+#        topography_func=lambda x, y: 100 + 0.1*x - 0.05*y  # Example
+#    )
+#
+#    # Example 3: Create 3D mesh with topography
+#    mesh = creator.create_3d_mesh_with_topography(
+#        electrode_positions=electrodes,
+#        topography_func=lambda x, y: 100 + 0.1*x,
+#        para_depth=20.0,
+#        use_prism_mesh=True
+#    )
+#
 
 import importlib
 
@@ -212,7 +215,7 @@ if len(rows_active) > 0 and len(cols_active) > 0:
     center_row = (row_min + row_max) // 2
     center_col = (col_min + col_max) // 2
     print(f"\nCenter of high-activity region: row={center_row}, col={center_col}")
-    
+
     # Suggest a smaller domain size that fits well
     suggested_size = 25  # meters (smaller domain)
     print(f"\nSuggested domain placement for {suggested_size}m x {suggested_size}m area:")
@@ -234,25 +237,25 @@ if len(rows_full) > 0:
     # Center of the fully active region
     center_row_full = int(np.median(rows_full))
     center_col_full = int(np.median(cols_full))
-    
+
     print(f"Fully active region stats:")
     print(f"  Number of fully active cells: {len(rows_full)}")
     print(f"  Center (median): row={center_row_full}, col={center_col_full}")
-    
+
     # Test different domain sizes at the center location
     for domain_size in [20, 25, 30]:
         half = domain_size // 2
         r1, r2 = center_row_full - half, center_row_full + half
         c1, c2 = center_col_full - half, center_col_full + half
-        
+
         # Ensure within bounds
         r1, c1 = max(0, r1), max(0, c1)
         r2, c2 = min(modflow_nrow, r2), min(modflow_ncol, c2)
-        
+
         # Check if this region is fully active
         region_active = fully_active[r1:r2, c1:c2]
         active_pct = np.mean(region_active) * 100
-        
+
         print(f"\n  {domain_size}m x {domain_size}m domain at center:")
         print(f"    Rows: {r1} to {r2}, Cols: {c1} to {c2}")
         print(f"    Active cell percentage: {active_pct:.1f}%")
@@ -270,8 +273,8 @@ plt.colorbar(im, ax=ax, label='Active fraction')
 domain_size = 20
 half = domain_size // 2
 domain_rect = plt.Rectangle(
-    (center_col_full - half, center_row_full - half), 
-    domain_size, domain_size, 
+    (center_col_full - half, center_row_full - half),
+    domain_size, domain_size,
     fill=False, edgecolor='red', linewidth=3, linestyle='--'
 )
 ax.add_patch(domain_rect)
@@ -309,7 +312,7 @@ print(f"  This gives 20m coverage with electrodes at x=[0, 4, 8, 12, 16] and y=[
 
 # %% [markdown]
 # ## Step 1: Define Domain Geometry and Create Electrodes on Topographic Surface
-# 
+#
 # We'll create a 3D domain with a surface electrode array that follows realistic topography.
 # This is essential for accurate ERT modeling in areas with significant terrain variation.
 
@@ -317,7 +320,7 @@ print(f"  This gives 20m coverage with electrodes at x=[0, 4, 8, 12, 16] and y=[
 # Define domain dimensions (in meters)
 # Using smaller domain (20m x 20m) centered in the active MODFLOW region
 domain_length = 20.0  # x-direction
-domain_width = 20.0   # y-direction  
+domain_width = 20.0   # y-direction
 domain_depth = 14.0   # z-direction (matching MODFLOW nlay=14 layers)
 
 # MODFLOW grid offset (from analysis cells above)
@@ -362,7 +365,7 @@ def topography_function(
 ) -> Any:
     """
     Example topography function returning elevation for (x, y) coordinates.
-    
+
     This creates a surface sloping from ~105m at (0,0) to ~95m at (50,30)
     with some undulation for realism.
     """
@@ -370,10 +373,10 @@ def topography_function(
     base_elevation = 100.0
     slope_x = -0.1  # m/m slope in x direction
     slope_y = -0.05  # m/m slope in y direction
-    
+
     # Add some undulation for realism
     undulation = 0.5 * np.sin(x / 10.0) * np.cos(y / 8.0)
-    
+
     elevation = base_elevation + slope_x * x + slope_y * y + undulation
     return elevation
 
@@ -394,7 +397,7 @@ fig = plt.figure(figsize=(14, 5))
 # 2D Layout
 ax1 = fig.add_subplot(121)
 scatter = ax1.scatter(
-    electrode_positions['x'], 
+    electrode_positions['x'],
     electrode_positions['y'],
     c=electrode_positions['z'],
     cmap='terrain',
@@ -410,7 +413,7 @@ plt.colorbar(scatter, ax=ax1, label='Elevation (m)')
 # 3D Layout
 ax2 = fig.add_subplot(122, projection='3d')
 ax2.scatter(
-    electrode_positions['x'], 
+    electrode_positions['x'],
     electrode_positions['y'],
     electrode_positions['z'],
     c=electrode_positions['z'],
@@ -441,11 +444,11 @@ plt.show()
 
 # %% [markdown]
 # ## Step 2: Create 3D Mesh with Topography Using mesh_3d.py
-# 
+#
 # We use the `create_3d_mesh_with_topography()` method from `Mesh3DCreator` to create
 # a mesh that follows our topographic surface. This ensures accurate ERT modeling
 # in terrain with elevation changes.
-# 
+#
 # **Key options:**
 # - `use_prism_mesh=True`: Creates efficient prism mesh (good for layered structures)
 # - `use_prism_mesh=False`: Creates tetrahedral mesh using PyGIMLi's PLC approach
@@ -459,7 +462,7 @@ print("Creating 3D mesh with topography using mesh_3d.py...")
 # Define marker regions based on depth below surface
 depth_markers = {
     'shallow': (0, 5, 2),      # 0-5m depth: marker 2
-    'middle': (5, 15, 3),      # 5-15m depth: marker 3  
+    'middle': (5, 15, 3),      # 5-15m depth: marker 3
     'deep': (15, 30, 1)        # 15-30 m depth interval: marker 1 (boundary)
 }
 
@@ -504,7 +507,7 @@ print(f"Mesh saved to {output_dir}")
 
 # %% [markdown]
 # ## Step 3: Load and Prepare Hydrological Data
-# 
+#
 # Load MODFLOW output (water content, porosity) and prepare for interpolation
 # to the 3D mesh. The data needs to be defined in the same coordinate system
 # as the mesh, with z-values relative to the topographic surface.
@@ -523,78 +526,78 @@ try:
     else:
         water_content_3d = water_content_full
     porosity_3d = np.load(os.path.join(data_dir, "Porosity.npy"))
-    
+
     print("Loaded actual MODFLOW data")
     print(f"Full water content shape: {water_content_3d.shape}")
     print(f"Full porosity shape: {porosity_3d.shape}")
     USE_REAL_DATA = True
-    
+
     # Use the optimal MODFLOW offset from domain setup cell
     # MODFLOW_X_OFFSET and MODFLOW_Y_OFFSET define where our domain starts
     x_start = MODFLOW_X_OFFSET
     x_end = MODFLOW_X_OFFSET + int(domain_length)
     y_start = MODFLOW_Y_OFFSET
     y_end = MODFLOW_Y_OFFSET + int(domain_width)
-    
+
     # Get the original dimensions
     modflow_nlay, modflow_nrow, modflow_ncol = water_content_3d.shape
-    
+
     # Ensure bounds are within the data
     x_start = max(0, x_start)
     x_end = min(modflow_ncol, x_end)
     y_start = max(0, y_start)
     y_end = min(modflow_nrow, y_end)
-    
+
     # Crop to region of interest - this region is 100% within active cells
     water_content_3d = water_content_3d[:, y_start:y_end, x_start:x_end]
     porosity_3d = porosity_3d[:, y_start:y_end, x_start:x_end]
-    
+
     print(f"\nCropped to domain region: {water_content_3d.shape}")
     print(f"MODFLOW X range: {x_start} to {x_end} (domain X: 0 to {x_end-x_start} m)")
     print(f"MODFLOW Y range: {y_start} to {y_end} (domain Y: 0 to {y_end-y_start} m)")
-    
+
     # Check for NaN values in cropped region
     nan_count_wc = np.sum(np.isnan(water_content_3d))
     nan_count_por = np.sum(np.isnan(porosity_3d))
     total_cells = water_content_3d.size
-    
+
     print(f"\nData quality check:")
     print(f"  Water content NaN count: {nan_count_wc} / {total_cells} ({nan_count_wc/total_cells*100:.1f}%)")
     print(f"  Porosity NaN count: {nan_count_por} / {total_cells} ({nan_count_por/total_cells*100:.1f}%)")
-    
+
     # Update dimensions for interpolation
     nlay, nrow, ncol = water_content_3d.shape
     print(f"\nFinal dimensions: nlay={nlay}, nrow={nrow}, ncol={ncol}")
-    
+
 except FileNotFoundError:
     print("Creating synthetic hydrological data for demonstration...")
     USE_REAL_DATA = False
-    
+
     # Create synthetic 3D water content field
     # Dimensions matching our domain
     nlay, nrow, ncol = int(domain_depth), int(domain_width), int(domain_length)
-    
+
     # Create coordinate arrays
     x = np.linspace(0, domain_length, ncol)
     y = np.linspace(0, domain_width, nrow)
     z = np.linspace(-domain_depth, 0, nlay)  # Depth relative to surface
-    
+
     X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
-    
+
     # Synthetic water content (higher near surface, varies laterally)
     water_content_3d = 0.15 + 0.15 * np.exp(Z.T / 5.0)
     water_content_3d += 0.05 * np.sin(X.T / 10.0) * np.cos(Y.T / 8.0)
     water_content_3d = np.clip(water_content_3d, 0.05, 0.45)
-    
+
     # Synthetic porosity (decreases with depth, some lateral variation)
     porosity_3d = 0.35 + 0.1 * np.exp(Z.T / 10.0)
     porosity_3d += 0.02 * np.sin(X.T / 15.0)
     porosity_3d = np.clip(porosity_3d, 0.1, 0.45)
-    
+
     # Transpose to (nlay, nrow, ncol) format like MODFLOW
     water_content_3d = np.transpose(water_content_3d, (2, 1, 0))
     porosity_3d = np.transpose(porosity_3d, (2, 1, 0))
-    
+
     print(f"Synthetic water content shape: {water_content_3d.shape}")
     print(f"Synthetic porosity shape: {porosity_3d.shape}")
 
@@ -647,7 +650,7 @@ plt.show()
 
 # %% [markdown]
 # ## Step 4: Interpolate Hydrological Properties to 3D Mesh
-# 
+#
 # Interpolate the MODFLOW data to mesh cell centers. Since our mesh follows
 # topography, we need to account for the local surface elevation when
 # determining the depth of each mesh cell.
@@ -683,14 +686,14 @@ if USE_REAL_DATA:
     x_max = domain_length
     y_min = 0.0
     y_max = domain_width
-    
+
     # Grid spacing (1m for MODFLOW)
     dx = domain_length / ncol
     dy = domain_width / nrow
-    
+
     # Assume depth is domain_depth spread across nlay layers
     dz = domain_depth / nlay
-    
+
     # Cell center coordinates (cell centers, not edges)
     x_coords = np.linspace(dx/2, domain_length - dx/2, ncol)
     y_coords = np.linspace(dy/2, domain_width - dy/2, nrow)
@@ -700,7 +703,7 @@ else:
     dx = domain_length / ncol
     dy = domain_width / nrow
     dz = domain_depth / nlay
-    
+
     x_coords = np.linspace(dx/2, domain_length - dx/2, ncol)
     y_coords = np.linspace(dy/2, domain_width - dy/2, nrow)
     depth_coords = np.linspace(dz/2, domain_depth - dz/2, nlay)
@@ -773,7 +776,7 @@ print(f"  Saturation: min={saturation_mesh.min():.3f}, max={saturation_mesh.max(
 
 # %% [markdown]
 # ## Step 5: Convert Water Content to Resistivity
-# 
+#
 # Use the Waxman-Smits petrophysical model to convert saturation and
 # porosity to electrical resistivity.
 
@@ -902,23 +905,23 @@ plt.show()
 if PYVISTA_AVAILABLE:
     # Add resistivity to mesh for visualization
     mesh['resistivity'] = resistivity_mesh
-    
+
     # Convert PyGIMLi mesh to PyVista
     mesh.exportVTK(os.path.join(output_dir, 'mesh_with_res.vtk'))
     pv_mesh = pv.read(os.path.join(output_dir, 'mesh_with_res.vtk'))
-    
+
     # Get data ranges for better color scaling
     res_min, res_max = np.percentile(resistivity_mesh, [5, 95])
     print(f"Resistivity range (5-95 percentile): {res_min:.1f} - {res_max:.1f} Ohm-m")
-    
+
     # Create plotter with better window size
     pl = pv.Plotter(window_size=(1200, 900))
-    
+
     # Add clipped mesh to see internal structure
     # Clip at y = center to show cross-section
     mesh_center = pv_mesh.center
     clipped = pv_mesh.clip(normal='y', origin=mesh_center, crinkle=True)
-    
+
     pl.add_mesh(
         clipped,
         scalars='resistivity',
@@ -938,11 +941,11 @@ if PYVISTA_AVAILABLE:
             'label_font_size': 12
         }
     )
-    
+
     # Add surface mesh with transparency to show topography
     surface = pv_mesh.extract_surface()
     pl.add_mesh(
-        surface, 
+        surface,
         scalars='resistivity',
         cmap='Spectral_r',
         clim=[res_min, res_max],
@@ -950,16 +953,16 @@ if PYVISTA_AVAILABLE:
         opacity=0.3,
         show_scalar_bar=False
     )
-    
+
     # Add electrode positions with labels
     electrode_points = electrode_positions[['x', 'y', 'z']].values
     pl.add_points(
-        electrode_points, 
-        color='red', 
+        electrode_points,
+        color='red',
         point_size=12,
         render_points_as_spheres=True
     )
-    
+
     # Add axes and bounds
     pl.show_bounds(
         grid='back',
@@ -969,13 +972,13 @@ if PYVISTA_AVAILABLE:
         zlabel='Elevation (m)',
         font_size=12
     )
-    
+
     # Set camera for better view angle
     pl.camera_position = 'iso'
     pl.camera.azimuth = 45
     pl.camera.elevation = 25
     pl.camera.zoom(1.2)
-    
+
     # Add title
     pl.add_text(
         '3D Resistivity Model (Clipped at Y-center)',
@@ -983,7 +986,7 @@ if PYVISTA_AVAILABLE:
         font_size=14,
         color='black'
     )
-    
+
     # Save screenshot
     pl.screenshot(os.path.join(output_dir, '3d_resistivity_model.png'))
     pl.show()
@@ -1012,29 +1015,29 @@ if PYVISTA_AVAILABLE:
     mesh['porosity'] = porosity_mesh
     mesh['saturation'] = saturation_mesh
     mesh['resistivity'] = resistivity_mesh
-    
+
     mesh.exportVTK(os.path.join(output_dir, 'mesh_with_all_data.vtk'))
     pv_mesh = pv.read(os.path.join(output_dir, 'mesh_with_all_data.vtk'))
-    
+
     # Get data ranges for better color scaling
     wc_range = [np.percentile(wc_mesh, 5), np.percentile(wc_mesh, 95)]
     por_range = [np.percentile(porosity_mesh, 5), np.percentile(porosity_mesh, 95)]
     sat_range = [np.percentile(saturation_mesh, 5), np.percentile(saturation_mesh, 95)]
     res_range = [np.percentile(resistivity_mesh, 5), np.percentile(resistivity_mesh, 95)]
-    
+
     # Create multi-view visualization with better layout
     pl = pv.Plotter(shape=(2, 2), window_size=(1600, 1200))
-    
+
     # Get mesh bounds and electrode bounds for slice positions
     bounds = pv_mesh.bounds
     elec_y_min = electrode_positions['y'].min()
     elec_y_max = electrode_positions['y'].max()
     mesh_center = pv_mesh.center
-    
+
     # Create Y-normal slice at electrode center (shows X-Z cross-section)
     y_slice_pos = (elec_y_min + elec_y_max) / 2
     slice_y = pv_mesh.slice(normal='y', origin=[mesh_center[0], y_slice_pos, mesh_center[2]])
-    
+
     # Common scalar bar settings
     sbar_args = {
         'vertical': False,
@@ -1046,12 +1049,12 @@ if PYVISTA_AVAILABLE:
         'label_font_size': 10,
         'n_labels': 5
     }
-    
+
     # Plot 1: Water Content (top-left)
     pl.subplot(0, 0)
     pl.add_mesh(
-        slice_y.copy(), 
-        scalars='water_content', 
+        slice_y.copy(),
+        scalars='water_content',
         cmap='Blues',
         clim=wc_range,
         show_edges=False,
@@ -1065,12 +1068,12 @@ if PYVISTA_AVAILABLE:
     pl.add_text('Water Content\n(Y-slice at center)', position='upper_left', font_size=11)
     pl.view_xz()
     pl.camera.zoom(1.3)
-    
+
     # Plot 2: Porosity (top-right)
     pl.subplot(0, 1)
     pl.add_mesh(
-        slice_y.copy(), 
-        scalars='porosity', 
+        slice_y.copy(),
+        scalars='porosity',
         cmap='viridis',
         clim=por_range,
         show_edges=False,
@@ -1079,12 +1082,12 @@ if PYVISTA_AVAILABLE:
     pl.add_text('Porosity\n(Y-slice at center)', position='upper_left', font_size=11)
     pl.view_xz()
     pl.camera.zoom(1.3)
-    
+
     # Plot 3: Saturation (bottom-left)
     pl.subplot(1, 0)
     pl.add_mesh(
-        slice_y.copy(), 
-        scalars='saturation', 
+        slice_y.copy(),
+        scalars='saturation',
         cmap='RdYlBu_r',
         clim=sat_range,
         show_edges=False,
@@ -1093,12 +1096,12 @@ if PYVISTA_AVAILABLE:
     pl.add_text('Saturation\n(Y-slice at center)', position='upper_left', font_size=11)
     pl.view_xz()
     pl.camera.zoom(1.3)
-    
+
     # Plot 4: Resistivity (bottom-right)
     pl.subplot(1, 1)
     pl.add_mesh(
-        slice_y.copy(), 
-        scalars='resistivity', 
+        slice_y.copy(),
+        scalars='resistivity',
         cmap='Spectral_r',
         clim=res_range,
         log_scale=True,
@@ -1108,10 +1111,10 @@ if PYVISTA_AVAILABLE:
     pl.add_text('Resistivity\n(Y-slice at center)', position='upper_left', font_size=11)
     pl.view_xz()
     pl.camera.zoom(1.3)
-    
+
     # Link all cameras so they move together
     pl.link_views()
-    
+
     # Save and show
     pl.screenshot(os.path.join(output_dir, '2d_slices_properties.png'))
     pl.show()
@@ -1130,17 +1133,17 @@ if PYVISTA_AVAILABLE:
 
     # === Additional: Multiple X-Z slices at different Y positions ===
     print("\nCreating multiple cross-section visualization...")
-    
+
     # Use 3 Y positions - electrodes are at Y = 2, 6, 10, 14, 18
     y_positions = [6.0, 10.0, 14.0]
-    
+
     pl2 = pv.Plotter(shape=(1, 3), window_size=(1800, 600))
-    
+
     for i, y_pos in enumerate(y_positions):
         pl2.subplot(0, i)
         # Slice at this Y position
         slice_at_y = pv_mesh.slice(normal='y', origin=[mesh_center[0], y_pos, mesh_center[2]])
-        
+
         # Only add mesh if slice has data
         if slice_at_y.n_cells > 0:
             pl2.add_mesh(
@@ -1151,8 +1154,8 @@ if PYVISTA_AVAILABLE:
                 log_scale=True,
                 show_edges=False,
                 scalar_bar_args={
-                    'vertical': True, 
-                    'title': 'Ωm', 
+                    'vertical': True,
+                    'title': 'Ωm',
                     'position_x': 0.85,
                     'height': 0.6,
                     'width': 0.08,
@@ -1162,12 +1165,12 @@ if PYVISTA_AVAILABLE:
             # Add electrodes near this Y position
             elec_near = electrode_positions[abs(electrode_positions['y'] - y_pos) < 1]
             if len(elec_near) > 0:
-                pl2.add_points(elec_near[['x', 'y', 'z']].values, color='red', 
+                pl2.add_points(elec_near[['x', 'y', 'z']].values, color='red',
                               point_size=10, render_points_as_spheres=True)
         pl2.add_text(f'Y = {y_pos:.1f} m', position='upper_left', font_size=12)
         pl2.view_xz()
         pl2.camera.zoom(1.2)
-    
+
     # Don't link views here - let each panel have its own view
     pl2.screenshot(os.path.join(output_dir, '2d_slices_multi_y.png'))
     pl2.show()
@@ -1189,22 +1192,22 @@ else:
 
 # %% [markdown]
 # ## Step 8: Alternative Mesh Creation Methods
-# 
+#
 # The `mesh_3d.py` module supports multiple mesh creation approaches:
-# 
+#
 # ### Option A: Prism Mesh (used above)
 # - Created with `create_3d_mesh_with_topography(use_prism_mesh=True)`
 # - Efficient for layered structures
 # - Triangular prisms extruded from 2D mesh
-# 
+#
 # ### Option B: Tetrahedral Mesh
 # - Created with `create_3d_mesh_with_topography(use_prism_mesh=False)`
 # - Uses PyGIMLi's `createParaMeshPLC3D`
 # - Better for complex 3D structures
-# 
+#
 # ### Option C: Manual Prism Mesh
 # - Use `create_prism_mesh_from_2d(mesh2d, z_vector)` for custom control
-# 
+#
 # Below we show the manual approach for comparison:
 
 # %%
@@ -1292,9 +1295,9 @@ print(f"Prism mesh saved to {output_dir}")
 
 # %% [markdown]
 # ## Summary
-# 
+#
 # This notebook demonstrated:
-# 
+#
 # 1. **mesh_3d.py Module Tutorial**: Learned how to use the `Mesh3DCreator` class
 # 2. **Electrode Layout with Topography**: Created surface electrodes following terrain
 # 3. **3D Mesh with Topography**: Used `create_3d_mesh_with_topography()` for realistic terrain
@@ -1302,34 +1305,38 @@ print(f"Prism mesh saved to {output_dir}")
 # 5. **Petrophysics**: Converted water content/saturation to resistivity using Waxman-Smits
 # 6. **Forward Modeling**: Computed synthetic 3D ERT response
 # 7. **Visualization**: Created 3D visualizations using PyVista
-# 
+#
 # ---
-# 
+#
 # ## mesh_3d.py Quick Reference
-# 
+#
 # ### Mesh3DCreator Methods
-# 
-# | Method | Description |
-# |--------|-------------|
-# | `create_surface_electrode_array(nx, ny, dx, dy, ...)` | Regular grid of surface electrodes |
-# | `create_borehole_electrode_array(x, y, z_positions)` | Single borehole electrodes |
-# | `create_crosshole_electrode_array(borehole_positions, z_positions)` | Multiple boreholes |
-# | `apply_topography_to_electrodes(electrodes, topography_func)` | Set electrode z from topography |
-# | `create_3d_mesh_with_topography(electrodes, topography_func, ...)` | **Main method for terrain-following mesh** |
-# | `create_box_mesh(length, width, height, electrodes)` | Simple flat box mesh |
-# | `create_prism_mesh_from_2d(mesh2d, z_vector)` | Extrude 2D mesh to prisms |
-# | `visualize_mesh(mesh, electrode_positions)` | 3D visualization with PyVista |
-# 
+#
+# ::
+#
+#    | Method | Description |
+#    |--------|-------------|
+#    | `create_surface_electrode_array(nx, ny, dx, dy, ...)` | Regular grid of surface electrodes |
+#    | `create_borehole_electrode_array(x, y, z_positions)` | Single borehole electrodes |
+#    | `create_crosshole_electrode_array(borehole_positions, z_positions)` | Multiple boreholes |
+#    | `apply_topography_to_electrodes(electrodes, topography_func)` | Set electrode z from topography |
+#    | `create_3d_mesh_with_topography(electrodes, topography_func, ...)` | **Main method for terrain-following mesh** |
+#    | `create_box_mesh(length, width, height, electrodes)` | Simple flat box mesh |
+#    | `create_prism_mesh_from_2d(mesh2d, z_vector)` | Extrude 2D mesh to prisms |
+#    | `visualize_mesh(mesh, electrode_positions)` | 3D visualization with PyVista |
+#
 # ### Helper Functions
-# 
-# | Function | Description |
-# |----------|-------------|
-# | `create_3d_ert_data_container(electrodes, scheme, dim)` | Create ERT data with 3D geometric factors |
-# | `interpolate_modflow_to_3d_mesh(mesh, data, grid)` | Interpolate MODFLOW data to mesh |
-# | `export_electrodes_to_csv(electrodes, path)` | Save electrodes to CSV |
-# 
+#
+# ::
+#
+#    | Function | Description |
+#    |----------|-------------|
+#    | `create_3d_ert_data_container(electrodes, scheme, dim)` | Create ERT data with 3D geometric factors |
+#    | `interpolate_modflow_to_3d_mesh(mesh, data, grid)` | Interpolate MODFLOW data to mesh |
+#    | `export_electrodes_to_csv(electrodes, path)` | Save electrodes to CSV |
+#
 # ### Next Steps
-# 
+#
 # - Perform 3D ERT inversion using `ert.ERTManager`
 # - Compare inverted model with true model
 # - Analyze resolution and sensitivity

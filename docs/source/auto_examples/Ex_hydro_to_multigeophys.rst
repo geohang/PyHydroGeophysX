@@ -17,8 +17,8 @@
 
 .. _sphx_glr_auto_examples_Ex_hydro_to_multigeophys.py:
 
-Hydrology to Multi-Geophysics Responses
-========================================
+Ex. Hydrology to Multi-Geophysics Responses
+==============================================
 
 This example extracts one two-dimensional profile from a hydrological-model
 snapshot, builds a common mesh, and simulates ERT, SRT, TDEM, FDEM, and gravity

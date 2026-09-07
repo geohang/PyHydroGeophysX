@@ -3,8 +3,8 @@ Agent Web App
 
 PyHydroGeophysX ships two interactive Streamlit applications:
 
-1. **Geophysics Workflow App** – natural-language orchestration of ERT/SRT/TDEM/FDEM workflows.
-2. **3D Mesh Builder** – graphical tool for building and exporting 3D ERT meshes (new in v0.3).
+1. **Geophysics Workflow App**: natural-language orchestration of ERT/SRT/TDEM/FDEM workflows.
+2. **3D Mesh Builder**: graphical tool for building and exporting 3D ERT meshes (new in v0.3).
 
 .. tip::
 
@@ -25,6 +25,18 @@ PyHydroGeophysX ships two interactive Streamlit applications:
 Geophysics Workflow App
 -----------------------
 
+Watch the browser-based agent walkthrough:
+
+.. raw:: html
+
+   <div class="setup-video">
+     <iframe src="https://www.youtube-nocookie.com/embed/d4lgs_hQqDo"
+       title="PyHydroGeophysX web agent walkthrough"
+       loading="lazy" allow="fullscreen; picture-in-picture" allowfullscreen></iframe>
+   </div>
+
+`Watch on YouTube <https://www.youtube.com/watch?v=d4lgs_hQqDo>`_.
+
 Open the App
 ^^^^^^^^^^^^
 
@@ -41,7 +53,7 @@ Open the App
 What It Does
 ^^^^^^^^^^^^
 
-- Starts in demo mode with bundled cached ERT and joint ERT+SRT results — no API
+- Starts in demo mode with bundled cached ERT and joint ERT+SRT results: no API
   key required for a first click-through.
 - Collects workflow goals and optional context in natural language.
 - Shows the parsed configuration for review before running on user data.
@@ -96,9 +108,9 @@ The app is organized into three tabs:
   Visualizes electrode positions in an interactive 3D scatter plot (Plotly).
   Supports three array configurations:
 
-  - *Surface Grid* — rectangular grid of surface electrodes.
-  - *Borehole* — single vertical borehole electrode string.
-  - *Crosshole* — two parallel boreholes for crosshole tomography.
+  - *Surface Grid*: rectangular grid of surface electrodes.
+  - *Borehole*: single vertical borehole electrode string.
+  - *Crosshole*: two parallel boreholes for crosshole tomography.
 
   Four topography types are available: Flat, Linear Tilt, Gaussian Hill, and
   Custom Expression (any valid Python/NumPy expression using ``x`` and ``y``).
@@ -111,8 +123,8 @@ The app is organized into three tabs:
 **Export**
   Downloads the generated mesh as:
 
-  - ``.bms`` — native PyGIMLi binary mesh format.
-  - ``.vtk`` — VTK format for ParaView or other 3D visualizers.
+  - ``.bms``: native PyGIMLi binary mesh format.
+  - ``.vtk``: VTK format for ParaView or other 3D visualizers.
 
 Sidebar Controls
 ^^^^^^^^^^^^^^^^

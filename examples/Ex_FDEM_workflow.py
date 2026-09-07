@@ -1,6 +1,6 @@
 """
-FDEM Forward + Inversion Workflow
-=================================
+Ex. FDEM Forward + Inversion Workflow
+=====================================
 
 This example demonstrates a complete 1D FDEM workflow:
 1. Build synthetic FDEM data from hydrological properties.

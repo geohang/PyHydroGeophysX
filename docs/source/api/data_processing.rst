@@ -395,7 +395,7 @@ For time-lapse monitoring, process each timestep separately:
 See Also
 ~~~~~~~~
 
-* :doc:`../documentation/getting_started`: Getting started guide
+* :doc:`/getting_started`: Getting started guide
 * :doc:`inversion`: ERT inversion module
 
 Acknowledgments

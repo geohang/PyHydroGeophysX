@@ -1,0 +1,48 @@
+Help me install PyHydroGeophysX and verify it on this computer.
+Repository: https://github.com/geohang/PyHydroGeophysX
+Official instructions: https://geohang.github.io/PyHydroGeophysX/installation.html
+Desktop guide: https://geohang.github.io/PyHydroGeophysX/agents/desktop_studio.html
+
+1. Inspect my OS, Python executable/version, available environment managers,
+   and existing NumPy, Qt, VTK and geophysical packages. Ask whether I want
+   Desktop Studio, Python workflows, or both, and which methods I need.
+   Do not assume Conda exists or infer all package origins from NumPy alone.
+
+2. Read the current official installation instructions and package metadata.
+   Prefer a dedicated environment with a supported Python version. If I ask
+   to reuse an environment, inspect its binary dependencies first. Use its
+   existing package manager for those dependencies; avoid duplicate pip/Conda
+   Qt and VTK installations. Show the plan before changing the environment.
+
+3. Choose a released package or source checkout explicitly. For a release,
+   use python -m pip install with the appropriate extras from the official
+   instructions. For source, locate an existing checkout or download the
+   official repository into a new directory, then enter the directory that
+   contains pyproject.toml before using an editable install. Do not overwrite
+   an existing checkout. Every pip command must use the chosen interpreter.
+
+4. Start with the CPU setup unless GPU acceleration is needed and supported.
+   For CUDA, inspect the NVIDIA GPU, driver, OS, Python and dependency support.
+   nvidia-smi reports driver capability, not the installed CUDA toolkit.
+   Select a compatible PyTorch/CuPy/cuDSS combination using current official
+   instructions; do not assume any CUDA 12 driver supports every CUDA wheel.
+   Never install competing CuPy variants. If torch.cuda.is_available() is
+   False, inspect the wheel, driver and device availability before diagnosing
+   the cause. Report an unsupported GPU configuration and offer the CPU path.
+
+5. Verify imports, the installed version and required engines. Download only
+   the small example files needed for a check, using a downloader suitable
+   for this OS, into a new test directory. Run a short example and report
+   finite results, any warnings and the engine that actually executed.
+   If testing ADTLERT, use a compatible dataset without remote electrodes;
+   report a fallback rather than claiming that GPU execution succeeded.
+
+6. For Desktop Studio, install the desktop extras and the engines needed for
+   my methods, then run:
+     python -m PyHydroGeophysX.qt_apps.launcher --self-test
+   Launch the application and give me the exact command to reopen it.
+   Report the environment name, installation path and any unverified features.
+
+Do not delete environments, overwrite projects, or accept third-party Terms
+of Service on my behalf. If a step needs my action, explain what to do.
+Do not report success while required verification is failing.

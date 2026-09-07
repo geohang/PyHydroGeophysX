@@ -17,8 +17,8 @@
 
 .. _sphx_glr_auto_examples_Ex_joint_inversion.py:
 
-Joint ERT-SRT Inversion: Cross-Gradient and Geostatistical Coupling
-=======================================================================
+Ex. Joint ERT-SRT Inversion: Cross-Gradient and Geostatistical Coupling
+==========================================================================
 
 This example compares direct cross-gradient and geostatistical cross-gradient
 coupling using the same ERT and SRT field data. Data loading, shared settings,

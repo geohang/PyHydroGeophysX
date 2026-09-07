@@ -27,7 +27,7 @@ Quick Reference
 +-------------------------------------------+-----------------------------------------------------+
 | Time-lapse monitoring                     | :doc:`/agents/workflows`                            |
 +-------------------------------------------+-----------------------------------------------------+
-| Architecture deep-dive                    | :doc:`/agents/architecture`                         |
+| Agent setup guide                         | :doc:`/agents/quick_start`                          |
 +-------------------------------------------+-----------------------------------------------------+
 | Agent API reference                       | :doc:`/agents/agent_reference`                      |
 +-------------------------------------------+-----------------------------------------------------+
@@ -36,7 +36,7 @@ Quick Reference
 
 .. _tut-mesh3d:
 
-Tutorial 1 — Interactive 3D Mesh Builder
+Tutorial 1: Interactive 3D Mesh Builder
 -----------------------------------------
 
 The 3D Mesh Builder is a standalone Streamlit app.  No API key is required.
@@ -56,7 +56,7 @@ The 3D Mesh Builder is a standalone Streamlit app.  No API key is required.
 1. Open the sidebar and choose **Surface Grid** as the Electrode Array Type.
 2. Set **Grid Nx = 10**, **Grid Ny = 5**, **Spacing = 5 m**.
 3. Select **Linear Tilt** topography to simulate gently sloping terrain.
-4. Click the **Electrode View** tab — a 3D scatter plot confirms electrode positions.
+4. Click the **Electrode View** tab: a 3D scatter plot confirms electrode positions.
 5. Increase **Max Cell Size** to 5 m for a quick first mesh (lower values = finer).
 6. Click the **Generate Mesh** tab, then press **Generate 3D Mesh**.
    Cell count, node count, and a quality histogram appear below.
@@ -72,12 +72,12 @@ The 3D Mesh Builder is a standalone Streamlit app.  No API key is required.
 5. Generate and export as ``.bms`` for use with PyGIMLi crosshole inversion.
 
 **Requirements:** ``pygimli``, ``gmsh`` on PATH, ``plotly``, ``streamlit``.
-See :ref:`agents/troubleshooting:3D Mesh Generation Fails (gmsh not found)` if
+See :doc:`/agents/troubleshooting` if
 GMSH is missing.
 
 .. _tut-basic-ert:
 
-Tutorial 2 — First ERT Workflow in Code
+Tutorial 2: First ERT Workflow in Code
 -----------------------------------------
 
 This tutorial runs a complete ERT inversion and water-content conversion without
@@ -128,7 +128,7 @@ the web app.
         },
     }
 
-    # 4. (Optional) Dry-run — validates files and estimates cost without running
+    # 4. (Optional) Dry-run: validates files and estimates cost without running
     preview = coordinator.execute_workflow(config, dry_run=True)
     print("Execution plan:   ", preview['data']['execution_plan'])
     print("Dep. warnings:    ", preview['data']['validation_warnings'])
@@ -148,7 +148,7 @@ the web app.
 
 .. _tut-resume:
 
-Tutorial 3 — Resuming a Failed Workflow
+Tutorial 3: Resuming a Failed Workflow
 -----------------------------------------
 
 Long workflows can be interrupted (network drop, out-of-memory, server restart).
@@ -157,13 +157,13 @@ and only the failed/skipped steps run again.
 
 .. code-block:: python
 
-    # First run — crashes at step 3 of 5
+    # First run: crashes at step 3 of 5
     try:
         results = coordinator.execute_workflow(config)
     except Exception as exc:
         print(f"Failed: {exc}")
 
-    # Restart — steps 1 & 2 loaded from ./results/checkpoints/
+    # Restart: steps 1 & 2 loaded from ./results/checkpoints/
     results = coordinator.execute_workflow(config, resume=True)
 
 Checkpoint files are stored as:
@@ -183,11 +183,11 @@ To force a clean restart delete the checkpoints folder:
 
     rm -rf ./results/checkpoints/
 
-See also: :ref:`agents/troubleshooting:Resuming a Failed or Interrupted Workflow`
+See also: :doc:`/agents/troubleshooting`
 
 .. _tut-cost:
 
-Tutorial 4 — Tracking LLM Cost and Token Usage
+Tutorial 4: Tracking LLM Cost and Token Usage
 ------------------------------------------------
 
 Every LLM call is recorded in each agent's ``llm_usage_ledger`` and aggregated
@@ -223,7 +223,7 @@ by ``AgentCoordinator``.
 
 Cost rates are defined in ``PyHydroGeophysX/agents/_pricing.py``.
 
-Tutorial 5 — Natural Language to Workflow
+Tutorial 5: Natural Language to Workflow
 ------------------------------------------
 
 Skip manual config dictionaries and let ``ContextInputAgent`` parse a plain
@@ -254,7 +254,7 @@ Further Reading
 
 * Full workflow patterns: :doc:`/agents/workflows`
 * Agent API: :doc:`/agents/agent_reference`
-* Architecture: :doc:`/agents/architecture`
+* Agent setup: :doc:`/agents/quick_start`
 * Hosted app & 3D Mesh Builder: :doc:`/agents/webapp`
 * Troubleshooting: :doc:`/agents/troubleshooting`
 

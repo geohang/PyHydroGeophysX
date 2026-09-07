@@ -59,7 +59,7 @@ Pattern A: Basic ERT Processing
         'inversion_params': {'lambda': 20},
     }
 
-    # Run — checkpoints saved after each step
+    # Run: checkpoints saved after each step
     results = coordinator.execute_workflow(config)
 
     # Review cost and token usage

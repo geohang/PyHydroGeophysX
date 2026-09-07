@@ -1,6 +1,15 @@
 Field ERT Data QC
 =================
 
+Workflow at a glance
+--------------------
+
+**Prepare:** A supported instrument export and its electrode geometry.
+
+**Produce:** Checked measurements exported for inversion.
+
+**Check / next step:** Inspect units, electrode locations and rejected data before starting the single-survey inversion.
+
 Use this workflow when starting from field resistivity files and preparing data for inversion.
 
 Steps

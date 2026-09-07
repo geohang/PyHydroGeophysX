@@ -3,6 +3,22 @@ Installation
 
 PyHydroGeophysX requires Python 3.8 or higher.
 
+Installation video
+------------------
+
+Follow the manual installation walkthrough, using the commands below for the
+current package. For guided setup, see :doc:`agent_install`.
+
+.. raw:: html
+
+   <div class="setup-video">
+     <iframe src="https://www.youtube-nocookie.com/embed/jaqfjqq7SN0"
+       title="PyHydroGeophysX manual installation walkthrough"
+       loading="lazy" allow="fullscreen; picture-in-picture" allowfullscreen></iframe>
+   </div>
+
+`Watch on YouTube <https://www.youtube.com/watch?v=jaqfjqq7SN0>`_.
+
 Install from PyPI
 -----------------
 
@@ -16,6 +32,24 @@ Install with geophysics engines (recommended)
 .. code-block:: bash
 
    pip install "pyhydrogeophysx[geophysics]"
+
+.. _adert-speed-comparison:
+
+ADERT speed comparison
+----------------------
+
+Watch the speed comparison, then see the ADTLERT backend setup below.
+Runtime depends on the hardware, dataset and solver settings.
+
+.. raw:: html
+
+   <div class="setup-video">
+     <iframe src="https://www.youtube-nocookie.com/embed/25FvGltrHpE"
+       title="ADERT speed comparison"
+       loading="lazy" allow="fullscreen; picture-in-picture" allowfullscreen></iframe>
+   </div>
+
+`Watch on YouTube <https://www.youtube.com/watch?v=25FvGltrHpE>`_.
 
 Install the optional ADTLERT ERT backend
 ----------------------------------------

@@ -19,7 +19,7 @@
 
 
 Ex. Seismic Refraction Tomography (SRT) Forward Modeling
-====================================================
+========================================================
 
 This example demonstrates seismic refraction tomography forward modeling
 for watershed structure characterization using PyHydroGeophysX.
@@ -702,7 +702,7 @@ indicating velocity interfaces at shallow depths.
 .. GENERATED FROM PYTHON SOURCE LINES 609-620
 
 One-Step Integrated Workflow Results
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The integrated hydro-to-seismic workflow produces consistent results: velocity 
 model (top) shows realistic layering from petrophysical conversion, while 

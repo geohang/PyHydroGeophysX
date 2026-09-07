@@ -1,6 +1,6 @@
 """
-Ex. Monte Carlo Uncertainty Quantification for Hydrologyic Properties Estimation
-====================================================================
+Ex. Monte Carlo Uncertainty Quantification for Hydrologic Properties Estimation
+===============================================================================
 
 This example demonstrates Monte Carlo uncertainty quantification for 
 converting ERT resistivity models to water content estimates.
@@ -496,8 +496,8 @@ plt.savefig(os.path.join(structure_output_dir, "regolith_WC.tiff"), dpi=300, bbo
 # reasonable confidence intervals for practical applications.
 #
 # .. image:: /auto_examples/images/Ex_MC_Hydro_fig_03.png
-#    :align: center
-#    :width: 800px
+#   :align: center
+#   :width: 800px
 # %%
 ### Fractured bedrock layer
 
@@ -732,7 +732,7 @@ plt.ylabel('Porosity (-)')
 plt.legend(frameon=False)
 ###############################################################################
 # Unsaturated Zone Porosity Estimation
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # Cross-sectional porosity comparison in unsaturated zone (y=1600m) shows 
 # good agreement between estimated (solid) and true (dashed) values. 

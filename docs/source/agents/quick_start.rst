@@ -57,7 +57,7 @@ A dedicated interactive GUI for building 3D ERT meshes ships with the package:
 
 .. code-block:: bash
 
-    # Recommended — via the package launcher
+    # Recommended: via the package launcher
     python -m PyHydroGeophysX.gui_mesh3d
 
     # Or run directly with Streamlit
@@ -65,7 +65,7 @@ A dedicated interactive GUI for building 3D ERT meshes ships with the package:
 
 The app opens in your browser with three tabs: **Electrode View** (interactive
 3D preview), **Generate Mesh** (runs ``Mesh3DCreator``), and **Export** (.bms /
-.vtk download). See :ref:`agents/webapp:3D Mesh Builder App` for the full
+.vtk download). See :doc:`/agents/webapp` for the full
 step-by-step guide.
 
 Dry-Run / Preview Workflow
@@ -228,6 +228,6 @@ Combining seismic and ERT data with structural constraints:
 Next Steps
 ----------
 
-* Read the :doc:`architecture` document for detailed system design
+* Read :doc:`quick_start` for agent setup instructions
 * Explore :doc:`agent_reference` for individual agent documentation
 * See :doc:`workflows` for common workflow patterns

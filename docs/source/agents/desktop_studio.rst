@@ -20,6 +20,18 @@ the browser and finish the interactive work on the desktop.
 Studio at a Glance
 ---------------------
 
+Watch the updated Qt interface walkthrough:
+
+.. raw:: html
+
+   <div class="setup-video">
+     <iframe src="https://www.youtube-nocookie.com/embed/cSUEGBFGxrI"
+       title="PyHydroGeophysX Qt Desktop Studio walkthrough"
+       loading="lazy" allow="fullscreen; picture-in-picture" allowfullscreen></iframe>
+   </div>
+
+`Watch on YouTube <https://www.youtube.com/watch?v=cSUEGBFGxrI>`_.
+
 .. figure:: /_static/studio_overview.png
    :alt: PyHydroGeophysX Professional Studio main window
    :align: center
@@ -422,7 +434,7 @@ Saving, Exporting, and Reopening Work
   being kept, and kept without being exported.
 - Module-specific Export buttons remain where they were, next to the results they
   belong to.
-- **File > New Project...**, **Open Project...** — the Project folder is also the
+- **File > New Project...**, **Open Project...**: the Project folder is also the
   output folder. Both check that the folder is writable before anything runs, and
   the status bar shows which one is active.
 - **File > Import Existing Results...** registers an older results directory in
@@ -451,7 +463,7 @@ folder holds a file named ``UNSAVED`` and:
 Saving writes ``run.json`` and ``result.json`` and removes the marker. Nothing
 moves, so a path captured while the run was computing still resolves afterwards.
 
-If a session ends without answering — a crash, or a forced quit — the marked
+If a session ends without answering (a crash, or a forced quit), the marked
 folder is left behind. Opening that Project again reports how many such folders
 there are and offers to delete them, because nothing else would ever list them.
 

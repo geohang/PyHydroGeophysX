@@ -1,6 +1,6 @@
 """
 Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation
-=======================================================================
+===========================================================================
 
 This example demonstrates how to perform a 2D seismic refraction tomography (SRT) 
 inversion and interpret the results to define subsurface structures.
@@ -423,7 +423,7 @@ pg.viewer.mpl.drawSensors(ax1, ttData.sensors(), diam=0.8,
 fig.savefig(os.path.join(output_dir, 'seismic_velocity_short.tiff'), dpi=300, bbox_inches='tight')
 ###############################################################################
 # Short Profile Multi-Scale Comparison
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # Short profile provides enhanced shallow resolution (0-30m depth) with 
 # detailed regolith characterization. Higher ray density improves near-surface 
