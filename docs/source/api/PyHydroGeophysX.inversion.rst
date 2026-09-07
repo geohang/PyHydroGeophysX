@@ -28,6 +28,22 @@ PyHydroGeophysX.inversion.em1d module
    :show-inheritance:
    :undoc-members:
 
+PyHydroGeophysX.inversion.em1d\_lci module
+------------------------------------------
+
+.. automodule:: PyHydroGeophysX.inversion.em1d_lci
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.inversion.em1d\_priors module
+---------------------------------------------
+
+.. automodule:: PyHydroGeophysX.inversion.em1d_priors
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.inversion.ert\_inversion module
 -----------------------------------------------
 
@@ -92,6 +108,14 @@ PyHydroGeophysX.inversion.joint\_gravity\_magnetics module
    :show-inheritance:
    :undoc-members:
 
+PyHydroGeophysX.inversion.lambda\_search module
+-----------------------------------------------
+
+.. automodule:: PyHydroGeophysX.inversion.lambda_search
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.inversion.metrics module
 ----------------------------------------
 
@@ -104,6 +128,14 @@ PyHydroGeophysX.inversion.multi\_method module
 ----------------------------------------------
 
 .. automodule:: PyHydroGeophysX.inversion.multi_method
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.inversion.robust\_errors module
+-----------------------------------------------
+
+.. automodule:: PyHydroGeophysX.inversion.robust_errors
    :members:
    :show-inheritance:
    :undoc-members:

@@ -43,7 +43,7 @@ interfaces at 5 m spacing. Its integrated UZF/SFR/MVR catchment model is replace
 here with prescribed recharge, drains and a fixed-head outlet for a short test.
 See data/modflow_informed/provenance.json for exact source files and hashes.
 
-.. GENERATED FROM PYTHON SOURCE LINES 27-175
+.. GENERATED FROM PYTHON SOURCE LINES 27-176
 
 .. code-block:: Python
 
@@ -195,6 +195,26 @@ See data/modflow_informed/provenance.json for exact source files and hashes.
             args.output = Path(tempfile.mkdtemp(prefix='modflow-feedback-',dir=root))/'run'
         print(json.dumps(run_example(args.output,mf6=args.mf6,download=args.download_mf6,
                                      write_only=args.write_only),indent=2))
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 177-193
+
+What the comparison shows
+-------------------------
+
+The run writes these three panels to ``comparison.png``. The left panel is
+the interpreted fractured-zone depth that sets the layer geometry. The
+middle panel is the final head difference between the informed run and the
+uniform-thickness run, which isolates the effect of that geometry. The right
+panel plots drain discharge for both runs over the simulated period.
+
+Read the difference as sensitivity to the interpreted structure. The
+hydraulic properties and forcing here are illustrative, so neither run is
+calibrated and neither is the better prediction.
+
+.. image:: /auto_examples/images/Ex_MODFLOW_geophysics_feedback_fig_01.png
+   :width: 1000px
+   :align: center
 
 
 .. _sphx_glr_download_auto_examples_Ex_MODFLOW_geophysics_feedback.py:

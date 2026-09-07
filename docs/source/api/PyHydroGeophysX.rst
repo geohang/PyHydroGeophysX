@@ -18,6 +18,7 @@ Subpackages
    PyHydroGeophysX.forward
    PyHydroGeophysX.inversion
    PyHydroGeophysX.llm
+   PyHydroGeophysX.model_input
    PyHydroGeophysX.model_output
    PyHydroGeophysX.petrophysics
    PyHydroGeophysX.solvers

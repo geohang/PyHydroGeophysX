@@ -166,17 +166,34 @@ def test_a_semidefinite_matrix_is_rescued_by_the_ridge(quiet_advisory) -> None:
     assert abs(float(got.ravel()[2])) < 1e-6
 
 
-def test_the_ridge_is_not_charged_to_a_matrix_that_factors(quiet_advisory) -> None:
+def test_the_ridge_is_not_charged_to_a_matrix_that_factors(
+    quiet_advisory, monkeypatch
+) -> None:
     """The ridge is a rescue, not a default.
 
     Applying it unconditionally is measurably wrong: on a matrix with a
     condition number of 1e12 the ridge is a few percent of the smallest
-    eigenvalue and costs three to four orders of magnitude of accuracy. Assert
-    the result is bit-comparable to a plain unridged Cholesky.
+    eigenvalue and costs three to four orders of magnitude of accuracy. Check
+    the factorization input directly and compare with an unridged solve using
+    the same triangle. Upper and lower Cholesky can round differently on this
+    ill-conditioned matrix, depending on the BLAS/LAPACK implementation.
     """
     A, _, b = _system(60, 1e12)
+    cho_factor = scipy.linalg.cho_factor
+    factor_inputs = []
+
+    def record_factor_input(matrix, *args, **kwargs):
+        factor_inputs.append(matrix.copy())
+        return cho_factor(matrix, *args, **kwargs)
+
+    monkeypatch.setattr(scipy.linalg, "cho_factor", record_factor_input)
     got = generalized_solver(A.copy(), b, method="spd_cholesky")
-    want = scipy.linalg.cho_solve(scipy.linalg.cho_factor(A.copy()), b)
+    assert len(factor_inputs) == 1
+    np.testing.assert_array_equal(factor_inputs[0], A)
+    want = scipy.linalg.cho_solve(
+        cho_factor(np.array(A, order="F", copy=True), lower=True, overwrite_a=True),
+        b.ravel(),
+    )
     np.testing.assert_allclose(got.ravel(), want.ravel(), rtol=1e-12, atol=0.0)
 
 

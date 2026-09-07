@@ -132,6 +132,14 @@ PyHydroGeophysX.agents.structure\_constraint\_agent module
    :show-inheritance:
    :undoc-members:
 
+PyHydroGeophysX.agents.studio\_tools module
+-------------------------------------------
+
+.. automodule:: PyHydroGeophysX.agents.studio_tools
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.agents.tdem\_agent module
 -----------------------------------------
 
@@ -144,14 +152,6 @@ PyHydroGeophysX.agents.water\_content\_agent module
 ---------------------------------------------------
 
 .. automodule:: PyHydroGeophysX.agents.water_content_agent
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-PyHydroGeophysX.agents.studio\_tools module
-----------------------------------------------
-
-.. automodule:: PyHydroGeophysX.agents.studio_tools
    :members:
    :show-inheritance:
    :undoc-members:

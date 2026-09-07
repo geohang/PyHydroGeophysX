@@ -12,6 +12,14 @@ PyHydroGeophysX.visualization.animation module
    :show-inheritance:
    :undoc-members:
 
+PyHydroGeophysX.visualization.basemap module
+--------------------------------------------
+
+.. automodule:: PyHydroGeophysX.visualization.basemap
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.visualization.ert\_style module
 -----------------------------------------------
 

@@ -20,6 +20,14 @@ PyHydroGeophysX.data\_processing.ert\_data\_agent module
    :show-inheritance:
    :undoc-members:
 
+PyHydroGeophysX.data\_processing.ert\_formats module
+----------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.ert_formats
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.data\_processing.ert\_io module
 -----------------------------------------------
 
@@ -52,6 +60,22 @@ PyHydroGeophysX.data\_processing.joint\_io module
    :show-inheritance:
    :undoc-members:
 
+PyHydroGeophysX.data\_processing.model\_csv module
+--------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.model_csv
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.run\_inputs module
+---------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.run_inputs
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.data\_processing.seismic module
 -----------------------------------------------
 
@@ -64,6 +88,38 @@ PyHydroGeophysX.data\_processing.table\_io module
 -------------------------------------------------
 
 .. automodule:: PyHydroGeophysX.data_processing.table_io
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.temcompany\_project module
+-----------------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.temcompany_project
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.temcompany\_reference module
+-------------------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.temcompany_reference
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.temcompany\_stb module
+-------------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.temcompany_stb
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.ttem module
+--------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.ttem
    :members:
    :show-inheritance:
    :undoc-members:
