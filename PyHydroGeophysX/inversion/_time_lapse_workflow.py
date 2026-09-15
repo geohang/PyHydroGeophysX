@@ -125,11 +125,15 @@ def default_times(n: int) -> List[int]:
     return list(range(1, int(n) + 1))
 
 
-def _step_titles(labels: Sequence[str], times: Sequence[float], n_time: int) -> List[str]:
+def _step_titles(labels: Sequence[str], times: Sequence[float], n_time: int,
+                 time_unit: str = "") -> List[str]:
     """Clear per-step titles so the panel always says what the number means:
     a parsed date stays as the date; a plain 1..n sequence becomes "Time step N";
-    any other numeric time becomes "t = <value>"."""
+    any other numeric time becomes "t = <value>", carrying ``time_unit`` when the
+    caller knows it — a bare number on a section leaves the reader guessing
+    whether it counts hours, days or surveys."""
     labels = list(labels or [])
+    unit = f" {time_unit.strip()}" if str(time_unit).strip() else ""
     is_dated = any("-" in str(lbl) for lbl in labels)
     is_sequence = labels == [str(i + 1) for i in range(n_time)]
     titles: List[str] = []
@@ -141,7 +145,8 @@ def _step_titles(labels: Sequence[str], times: Sequence[float], n_time: int) -> 
             titles.append(f"Time step {i + 1}")
         else:
             t = times[i] if i < len(times) else (i + 1)
-            titles.append(f"t = {t:g}" if isinstance(t, (int, float)) else f"t = {lbl}")
+            titles.append(f"t = {t:g}{unit}" if isinstance(t, (int, float))
+                          else f"t = {lbl}{unit}")
     return titles
 
 
@@ -176,8 +181,17 @@ def run_timelapse_ert(
     params: Dict[str, Any],
     out_dir: str,
     log: LogFn = _noop,
+    time_labels: Optional[Sequence[str]] = None,
+    time_unit: str = "",
 ) -> Dict[str, Any]:
     """Run a full temporal-regularized time-lapse ERT inversion.
+
+    ``time_labels`` is what the per-step panel titles read — acquisition dates,
+    typically. Pass them whenever ``measurement_times`` is given: the times alone
+    are bare numbers, and a caller that staged its files under generated names
+    (the Studio writes them as ``step_0000.*``) is the only place the original
+    dates still exist. ``time_unit`` labels the numbers when there is nothing
+    better to show, e.g. ``"d"``.
 
     Raises ``BackendUnavailable`` if pygimli / the inversion cannot be imported,
     and propagates other exceptions so the caller can fall back to config export.
@@ -239,9 +253,19 @@ def run_timelapse_ert(
     # labels; otherwise fall back to a sequential 1..n.
     if measurement_times is not None and len(measurement_times) == len(source_files):
         times = [float(t) for t in measurement_times]
-        labels = [f"{t:g}" for t in times]
+        # Prefer the caller's labels. Deriving them here from the numbers instead
+        # is what used to turn a dated survey into a panel headed "t = 0.276065":
+        # by this point the files may be staged under generated names, so the
+        # dates cannot be recovered and have to be handed in.
+        if time_labels is not None and len(time_labels) == len(source_files):
+            labels = [str(lbl) for lbl in time_labels]
+        else:
+            labels = [f"{t:g}" for t in times]
     else:
         times, labels = ert_load.measurement_times_for(source_files)
+        # Times read off the filenames are elapsed days from the first survey, so
+        # here the unit is known even when the caller did not say.
+        time_unit = time_unit or "d"
 
     # Load every file through the robust device-aware loader and re-write it as a
     # clean pygimli file. Raw ``ert.load`` cannot parse index-prefixed / header-less
@@ -346,7 +370,7 @@ def run_timelapse_ert(
     # Per-step titles: a parsed date is shown as-is (already unambiguous); a plain
     # sequence reads "Time step N"; any other numeric time reads "t = <value>" so
     # the panel always says what the number means.
-    panel_titles = _step_titles(labels, times, n_time)
+    panel_titles = _step_titles(labels, times, n_time, time_unit)
 
     # Resistivity-evolution panel. Use the same per-model, logarithmic ERT
     # rendering convention as the interactive Resistivity model view.
@@ -402,7 +426,10 @@ def run_timelapse_ert(
         out / "measurement_times.csv",
         [(i, float(times[i]), labels[i] if i < len(labels) else "",
           Path(source_files[i]).name if i < len(source_files) else "") for i in range(n_time)],
-        header=["index", "time", "label", "source_file"])
+        # Name the unit in the header rather than leaving a column of bare
+        # numbers that only the code knows how to read.
+        header=["index", f"time[{time_unit}]" if time_unit else "time",
+                "label", "source_file"])
     data_paths.append(str(out / "measurement_times.csv"))
     mesh_path = out / "timelapse_mesh.bms"
     try:
@@ -466,6 +493,7 @@ def run_timelapse_ert(
         "n_data": n_data_total,
         "measurement_times": [float(t) for t in times],
         "time_labels": list(labels),
+        "time_unit": str(time_unit),
         "resistivity_range": [rho_min, rho_max],
         "figure_paths": figure_paths,
         "data_paths": data_paths,

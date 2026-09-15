@@ -12,6 +12,14 @@ PyHydroGeophysX.core.interpolation module
    :show-inheritance:
    :undoc-members:
 
+PyHydroGeophysX.core.plan\_interpolation module
+-----------------------------------------------
+
+.. automodule:: PyHydroGeophysX.core.plan_interpolation
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.core.kriging\_3d module
 ---------------------------------------
 

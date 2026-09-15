@@ -112,6 +112,7 @@ class ERTProcessingModule(BaseModule):
         self._n_meas = 0
         self._ert_data = None        # pygimli DataContainerERT for inversion (filtered)
         self._ert_data_full = None   # unfiltered original
+        self._data_note = ""         # why the loaded file has no usable container
         self._qc_mask: Optional[List[bool]] = None
         self._inv_worker: Optional[Any] = None
         self._inv_busy: Optional[BusyStateController] = None
@@ -237,6 +238,19 @@ class ERTProcessingModule(BaseModule):
         self._tl_next_btn.setToolTip("Next time step")
         self._tl_next_btn.clicked.connect(lambda: self._step_tl(1))
         step_bar.addWidget(self._tl_prev_btn); step_bar.addWidget(self._tl_next_btn)
+        # Absolute resistivity is dominated by the static structure, which is the
+        # same in every step; the change against the first survey is what the
+        # repeat measurement was made to see.
+        step_bar.addWidget(QLabel("Show:"))
+        self._tl_view_mode = QComboBox()
+        self._tl_view_mode.addItem("Resistivity", "model")
+        self._tl_view_mode.addItem("% change from baseline", "change")
+        self._tl_view_mode.setToolTip(
+            "Resistivity shows the inverted model. “% change from baseline” shows "
+            "100 × (ρ − ρ₀) / ρ₀ against the first time step, on a diverging scale "
+            "centred on zero.")
+        self._tl_view_mode.currentIndexChanged.connect(self._on_tl_view_mode_changed)
+        step_bar.addWidget(self._tl_view_mode)
         self._tl_step_row.setVisible(False)
         model_layout.addWidget(self._tl_step_row)
         # When the auto-λ search settles on a different λ than the one typed, both
@@ -928,11 +942,12 @@ class ERTProcessingModule(BaseModule):
         warning = ""
         reader, reason = "ResIPy", ""
         if instrument is None:  # defensive: the dropdown has no auto/None option
-            elec, pseudo, nmeas, data = self._load_pygimli(path)
+            elec, pseudo, nmeas, data, note = self._load_pygimli(path)
             reader = "PyGIMLi"
         else:
             try:
-                elec, pseudo, nmeas, data = self._load_resipy(path, instrument, out_dir, elec_file, spacing)
+                elec, pseudo, nmeas, data, note = self._load_resipy(
+                    path, instrument, out_dir, elec_file, spacing)
             except NotImplementedError:
                 # No reader for this format. PyGIMLi's reader would accept the
                 # file and return a quadrupole table built from the wrong
@@ -941,10 +956,11 @@ class ERTProcessingModule(BaseModule):
                 raise
             except Exception as exc:  # noqa: BLE001
                 warning = f"{instrument} loader failed ({exc}); fell back to pygimli's native reader."
-                elec, pseudo, nmeas, data = self._load_pygimli(path)
+                elec, pseudo, nmeas, data, note = self._load_pygimli(path)
                 reader, reason = "PyGIMLi", "ResIPy could not parse this file"
         return {"elec": elec, "pseudo": pseudo, "nmeas": nmeas, "data": data,
-                "warning": warning, "reader": reader, "reader_reason": reason}
+                "warning": warning, "reader": reader, "reader_reason": reason,
+                "data_note": note}
 
     def _on_ert_loaded(self, path: str, res: dict) -> None:
         if res.get("warning"):
@@ -962,11 +978,25 @@ class ERTProcessingModule(BaseModule):
         self._n_meas = nmeas
         self._ert_data = data
         self._ert_data_full = data
-        self._qc_mask = [True] * int(data.size())
+        # A file can parse into electrodes and readings and still not convert
+        # into a pygimli container — no pygimli, or quadrupoles that cite
+        # electrodes the file never defines. The pseudosection is still drawn
+        # from the raw values, so say here what has been lost rather than
+        # leaving the module looking loaded until an inversion asks for it.
+        self._qc_mask = [True] * int(data.size()) if data is not None else []
+        self._data_note = ""
+        if data is None:
+            cause = str(res.get("data_note") or
+                        "this file could not be converted for inversion.")
+            self._data_note = cause  # _refresh puts it on the panel as well
+            self.log(
+                f"{Path(path).name}: {cause} The pseudosection below is drawn "
+                "from the raw values, but QC filtering and inversion are "
+                "unavailable for it.", "warn")
         # Which extra criteria this file can support is a property of the file,
         # so it is settled here rather than being rechecked on every Apply.
         self._refresh_qc_availability()
-        if hasattr(self.state, "register_geophysical_resource"):
+        if data is not None and hasattr(self.state, "register_geophysical_resource"):
             self.state.register_geophysical_resource(
                 "ERT", "observed_data", data,
                 label=f"ERT observations · {Path(path).name}", path=str(path),
@@ -977,7 +1007,9 @@ class ERTProcessingModule(BaseModule):
         self._draw_pseudosection()
         if pseudo:
             self._tabs.setCurrentWidget(self._pseudo_widget)
-        if nmeas == 0:
+        if data is None:
+            pass  # already reported above, naming the specific cause
+        elif nmeas == 0:
             self.log(f"{Path(path).name}: parsed {len(self._x)} electrodes but 0 measurements — "
                      f"the Instrument / format is probably wrong for this file.", "warn")
         else:
@@ -1018,7 +1050,7 @@ class ERTProcessingModule(BaseModule):
         rhoa = np.asarray(data["rhoa"], dtype=float) if data.haveData("rhoa") else np.full(data.size(), np.nan)
         elec = [(float(x[i]), float(z[i])) for i in range(len(x))]
         pseudo = self._build_pseudo_from_indices(x, a, b, m, nn, rhoa)
-        return elec, pseudo, int(data.size()), data
+        return elec, pseudo, int(data.size()), data, ""
 
     def _load_resipy(self, path: str, instrument: str, out_dir, electrode_file, spacing):
         from PyHydroGeophysX.data_processing.ert_data_agent import load_ert_resipy
@@ -1032,10 +1064,12 @@ class ERTProcessingModule(BaseModule):
         elev = self._electrode_elevation(electrodes)
         elec = [(float(e.x), float(elev[i])) for i, e in enumerate(electrodes)]
         data = self._standard_to_pg(std)
+        note = ""
         if data is not None:
             # Use the corrected apparent resistivity (rhoa = R * k) for QC display.
             pseudo = self._pseudo_from_data(data)
         else:
+            note = self._container_failure_reason(std)
             # Fallback when pygimli is unavailable: plot raw observation values.
             x_by_id = {int(e.id): float(e.x) for e in electrodes}
             pseudo = []
@@ -1047,7 +1081,46 @@ class ERTProcessingModule(BaseModule):
                 if np.isfinite(xs).all():
                     span = float(np.max(xs) - np.min(xs))
                     pseudo.append((float(np.mean(xs)), max(span * 0.19, 0.01), float(obs.app_res)))
-        return elec, pseudo, len(std.observations or []), data
+        return elec, pseudo, len(std.observations or []), data, note
+
+    @staticmethod
+    def _container_failure_reason(std) -> str:
+        """Why a parsed file did not become a pygimli container.
+
+        Worth distinguishing: a missing pygimli is fixed by an install, whereas
+        quadrupoles that cite electrodes the file never defines almost always
+        mean the Instrument setting does not match the file — and the reader is
+        happy to parse the wrong columns without complaint.
+        """
+        try:
+            import pygimli  # noqa: F401
+        except Exception:  # noqa: BLE001
+            return ("pygimli is not installed, so the file can be plotted but "
+                    "not inverted.")
+        observations = list(std.observations or [])
+        if not observations:
+            return "no measurements were parsed from it."
+        with_res = [obs for obs in observations if obs.app_res is not None]
+        if not with_res:
+            return ("no measurement carries an apparent resistivity, and none "
+                    "could be rebuilt from the columns that were read.")
+        known = {int(e.id) for e in (std.electrodes or [])}
+        keys = ("A", "B", "M", "N")
+        matched = [
+            obs for obs in with_res
+            if all(int(getattr(obs.quad, key)) in known for key in keys)
+        ]
+        if matched:
+            return "the measurements could not be matched to the electrode table."
+        if not known:
+            return ("it defines no electrodes, so its quadrupoles cannot be "
+                    "placed. The Instrument setting is probably wrong for this "
+                    "file.")
+        cited = sorted({int(getattr(obs.quad, key)) for obs in with_res for key in keys})
+        return (f"its measurements cite electrodes {cited[0]}–{cited[-1]}, which "
+                f"the electrode table ({min(known)}–{max(known)}) does not "
+                "define, so no quadrupole can be placed. The Instrument setting "
+                "is probably wrong for this file.")
 
     # Geometry/topography + StandardERT->pygimli conversion live in the shared
     # ``ert_load`` module so the single-inversion loader and the time-lapse
@@ -2104,6 +2177,11 @@ class ERTProcessingModule(BaseModule):
                     metadata={"step_count": len(self._tl_files)},
                 ),
                 "measurement_times": list(times or range(len(self._tl_files))),
+                # The bundle renames the files, so the acquisition dates parsed
+                # from the originals have to travel with the times or the panels
+                # end up headed by a bare elapsed-day number.
+                "time_labels": list(self._tl_labels),
+                "time_unit": "d" if times is not None else "",
             },
             parameters=params,
             metadata={"source": "qt", "sequence_order_persisted": True},
@@ -2264,7 +2342,11 @@ class ERTProcessingModule(BaseModule):
             self._tl_step_combo.addItem(f"{i + 1}/{n}  ·  {title}", i)
         self._tl_step_combo.setCurrentIndex(0)
         self._tl_step_combo.blockSignals(False)
+        self._tl_view_mode.blockSignals(True)
+        self._tl_view_mode.setCurrentIndex(0)
+        self._tl_view_mode.blockSignals(False)
         self._tl_step_row.setVisible(n > 1)
+        self._seed_tl_color_range()
         self._show_tl_step(0)
         self._tabs.setCurrentWidget(self._model_tab)
 
@@ -2273,6 +2355,58 @@ class ERTProcessingModule(BaseModule):
         if n:
             self._tl_step_combo.setCurrentIndex((self._tl_step_combo.currentIndex() + delta) % n)
 
+    def _on_tl_view_mode_changed(self, _index: int) -> None:
+        """Switch between absolute resistivity and change from the baseline."""
+        self._seed_tl_color_range()
+        self._show_tl_step(self._tl_step_combo.currentIndex())
+
+    @staticmethod
+    def _percent_change(models, idx: int):
+        """Percentage change of step ``idx`` against the first survey.
+
+        Cells whose baseline is zero or non-finite become NaN rather than a
+        spike: a division artefact placed next to real change reads as change.
+        """
+        import numpy as np
+        baseline = models[:, 0]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            change = 100.0 * (models[:, idx] - baseline) / np.abs(baseline)
+        return np.where(np.isfinite(change), change, np.nan)
+
+    def _seed_tl_color_range(self) -> None:
+        """Put every time step on one colour scale, for the mode on screen.
+
+        The viewer sees a single step at a time, so left alone it autoscales each
+        one to its own extremes and the change between steps is rescaled away.
+        Limits come from the whole series at the 2–98 percentile, matching the
+        exported summary figure, so a handful of poorly covered cells cannot
+        flatten everything else.
+        """
+        import numpy as np
+        if self._tl_models is None:
+            return
+        models = np.asarray(self._tl_models, dtype=float)
+        if models.ndim != 2 or models.shape[1] == 0:
+            return
+        if self._tl_view_mode.currentData() == "change":
+            with np.errstate(divide="ignore", invalid="ignore"):
+                change = 100.0 * (models - models[:, [0]]) / np.abs(models[:, [0]])
+            finite = change[np.isfinite(change)]
+            if finite.size == 0:
+                return
+            span = float(np.nanpercentile(np.abs(finite), 98.0))
+            if span > 0.0:
+                self._model_view.set_color_range(-span, span)
+            return
+        finite = models[np.isfinite(models) & (models > 0.0)]
+        if finite.size == 0:
+            return
+        low = float(np.nanpercentile(finite, 2.0))
+        high = float(np.nanpercentile(finite, 98.0))
+        if high <= low:
+            high = low * 1.01
+        self._model_view.set_color_range(low, high)
+
     def _show_tl_step(self, idx: int) -> None:
         import numpy as np
         if self._tl_models is None or self._tl_mesh is None:
@@ -2280,15 +2414,21 @@ class ERTProcessingModule(BaseModule):
         models = np.asarray(self._tl_models, dtype=float)
         if idx < 0 or idx >= models.shape[1]:
             return
-        values = models[:, idx]
         self._map_result_kind = 'timelapse'
         cov = None
         if self._tl_coverage is not None:
             cov_all = np.asarray(self._tl_coverage, dtype=float)
-            if cov_all.ndim == 2 and idx < cov_all.shape[0] and cov_all.shape[1] == values.size:
+            if cov_all.ndim == 2 and idx < cov_all.shape[0] and cov_all.shape[1] == models.shape[0]:
                 cov = cov_all[idx]  # raw log-coverage, matching ERTManager.coverage()
         title = self._tl_step_titles[idx] if idx < len(self._tl_step_titles) else f"Time step {idx + 1}"
-        self._model_view.show_field(self._tl_mesh, values, kind="ert", coverage=cov, title=title)
+        if self._tl_view_mode.currentData() == "change":
+            baseline = (self._tl_step_titles[0] if self._tl_step_titles
+                        else "Time step 1")
+            values, kind = self._percent_change(models, idx), "change"
+            title = f"{title} − {baseline}" if idx else f"{title} (baseline)"
+        else:
+            values, kind = models[:, idx], "ert"
+        self._model_view.show_field(self._tl_mesh, values, kind=kind, coverage=cov, title=title)
 
     def _on_tl_failed(self, message: str, backend: bool) -> None:
         self.fail_persisted_run(message, "ert.timelapse_inversion")
@@ -2520,9 +2660,18 @@ class ERTProcessingModule(BaseModule):
             vals = vals[np.isfinite(vals) & (vals > 0)]
             if vals.size:
                 rhoa_txt = f"<br>ρa: {vals.min():.0f}–{vals.max():.0f} Ω·m"
+        # A file read under the wrong format still fills this panel with a
+        # plausible electrode and measurement count, so the reason it cannot be
+        # inverted belongs next to those numbers and not only in the log.
+        note_txt = ""
+        if self._data_note:
+            note_txt = (f"<br><span style='color:#b42318'>Not usable for "
+                        f"inversion: {self._data_note} Check the Instrument / "
+                        f"format setting.</span>")
         self._info.setText(
             f"Electrodes: {len(self._x)} &nbsp; Measurements: {self._n_meas}"
             f"<br>Data: {self._data_path.name if self._data_path else '—'}{rhoa_txt}"
+            f"{note_txt}"
         )
         self._publish()
 

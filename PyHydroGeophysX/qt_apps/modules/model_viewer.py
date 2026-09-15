@@ -1105,6 +1105,13 @@ class ModelViewerModule(BaseModule):
                         cov = coverage[:, value] if coverage.ndim > 1 and coverage.shape[0] == mesh.cellCount() else coverage[value] if coverage.ndim > 1 else coverage
                     view.show_field(mesh, values, coverage=cov, title=f"Time step {value + 1}")
                 step.valueChanged.connect(show); show(0)
+                # One scale over the whole series, so stepping through compares
+                # the models instead of comparing each one with itself.
+                finite = model[np.isfinite(model) & (model > 0.0)]
+                if finite.size:
+                    low = float(np.nanpercentile(finite, 2.0))
+                    high = float(np.nanpercentile(finite, 98.0))
+                    view.set_color_range(low, max(high, low * 1.01))
                 row = QHBoxLayout(); row.addWidget(QLabel("Time step:")); row.addWidget(step); row.addStretch(1)
                 layout.addLayout(row); layout.addWidget(view, stretch=1)
                 self._replace_visual(host)

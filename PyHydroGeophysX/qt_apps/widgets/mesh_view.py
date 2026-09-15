@@ -113,6 +113,33 @@ class MeshResultView(QWidget):
         self._hide_uncovered.setVisible(False)  # shown once an SRT result arrives
         bar.addWidget(self._hide_uncovered)
 
+        # Colour limits. Autoscaling every result to its own extremes is right
+        # for a single model and wrong for a series: each time step gets its own
+        # scale, so the change everyone is looking for is exactly what the
+        # rescaling hides. Locking freezes the limits across steps.
+        self._lock_range = QCheckBox("Lock range")
+        self._lock_range.setToolTip(
+            "Freeze the colour limits instead of rescaling to each result. Time "
+            "steps can only be compared on one scale; without this, every step "
+            "is stretched to its own min/max and the change between them cannot "
+            "be read off the colours.")
+        self._lock_range.toggled.connect(self._on_lock_toggled)
+        bar.addWidget(self._lock_range)
+
+        self._cmin = QDoubleSpinBox()
+        self._cmax = QDoubleSpinBox()
+        for box, name in ((self._cmin, "Lower"), (self._cmax, "Upper")):
+            box.setRange(-1.0e9, 1.0e9)
+            box.setDecimals(3)
+            box.setMaximumWidth(96)
+            box.setKeyboardTracking(False)  # redraw on commit, not per keystroke
+            box.setEnabled(False)
+            box.setToolTip(f"{name} colour limit, applied when “Lock range” is "
+                           "ticked. While it is unticked these track the result "
+                           "on screen, so ticking the box keeps what you see.")
+            box.valueChanged.connect(self._on_limit_changed)
+            bar.addWidget(box)
+
         self._cov_note = QLabel("")
         self._cov_note.setWordWrap(True)
 
@@ -130,12 +157,34 @@ class MeshResultView(QWidget):
         self._coverage = None
         self._kind = kind
         self._title = ""
+        # A standalone model is a new quantity on a new mesh, so limits carried
+        # over from whatever was shown before would be meaningless.
+        self._lock_range.setChecked(False)
         self._sync_controls()
         self._redraw()
 
+    def set_color_range(self, vmin: float, vmax: float, lock: bool = True) -> None:
+        """Fix the colour limits — e.g. to the range over every time step.
+
+        Callers that hold a whole series use this to put each step on one scale;
+        the viewer on its own only ever sees one step and cannot know the range
+        of the others.
+        """
+        lo, hi = float(vmin), float(vmax)
+        if not (hi > lo):
+            return
+        self._set_limit_boxes(lo, hi)
+        self._lock_range.setChecked(bool(lock))
+        if self._lock_range.isChecked():
+            self._redraw()  # setChecked is a no-op when it was already ticked
+
     def show_field(self, mesh, values, kind: str = "ert", coverage=None, title: str = "") -> None:
         """Display a raw ``(mesh, per-cell values)`` pair — e.g. one time step of a
-        time-lapse result, where there is no single pyGIMLi manager to hold it."""
+        time-lapse result, where there is no single pyGIMLi manager to hold it.
+
+        ``kind='change'`` renders a signed percentage change rather than a model:
+        a diverging map on a linear scale, centred on zero.
+        """
         import numpy as np
         self._mgr = None
         self._mesh = mesh
@@ -277,10 +326,24 @@ class MeshResultView(QWidget):
             cmap, log_scale, label = "turbo", False, "Velocity (m/s)"
             show_kw = dict(ax=ax, colorBar=False, cMap=cmap, logScale=log_scale,
                            showMesh=self._show_mesh.isChecked())
+        elif self._kind == "change":
+            # A signed change reads off a diverging map centred on zero; on an
+            # off-centre scale the sign is decided by the colours rather than by
+            # the numbers.
+            label = "Change from baseline (%)"
+            show_kw = dict(ax=ax, colorBar=False, cMap="RdBu_r", logScale=False,
+                           showMesh=self._show_mesh.isChecked())
+            span = self._symmetric_span(values)
+            if span is not None:
+                show_kw["cMin"], show_kw["cMax"] = -span, span
         else:
             label = ERT_RESISTIVITY_LABEL
             show_kw = ert_model_plot_kwargs(show_mesh=self._show_mesh.isChecked())
             show_kw.update(ax=ax, colorBar=False)
+
+        # The sensitivity view is a different quantity in different units, so a
+        # lock set on the model must not follow it there.
+        self._apply_color_limits(show_kw, values, lockable=not show_coverage)
 
         try:
             # Draw the model on the mesh via pyGIMLi but build the colorbar with
@@ -317,6 +380,74 @@ class MeshResultView(QWidget):
                     transform=ax.transAxes, wrap=True)
             ax.axis("off")
         self._canvas.draw_idle()
+
+    # -- colour limits -------------------------------------------------------
+
+    def _on_lock_toggled(self, locked: bool) -> None:
+        self._cmin.setEnabled(locked)
+        self._cmax.setEnabled(locked)
+        self._redraw()
+
+    def _on_limit_changed(self, _value: float) -> None:
+        if self._lock_range.isChecked():
+            self._redraw()
+
+    def _set_limit_boxes(self, lo: float, hi: float) -> None:
+        """Write the limit boxes without provoking a redraw from their signals."""
+        span = abs(hi - lo)
+        step = max(span / 50.0, 1.0e-6)
+        for box, value in ((self._cmin, lo), (self._cmax, hi)):
+            box.blockSignals(True)
+            box.setSingleStep(step)
+            box.setValue(float(value))
+            box.blockSignals(False)
+
+    @staticmethod
+    def _symmetric_span(values):
+        """Half-width of a zero-centred scale, robust to a few extreme cells."""
+        import numpy as np
+        finite = np.asarray(values, dtype=float)
+        finite = finite[np.isfinite(finite)]
+        if finite.size == 0:
+            return None
+        span = float(np.nanpercentile(np.abs(finite), 98.0))
+        return span if span > 0.0 else None
+
+    def _apply_color_limits(self, show_kw: dict, values, lockable: bool) -> None:
+        """Honour a locked range, or track the displayed one when unlocked.
+
+        Keeping the boxes in step with the autoscale while unlocked is what makes
+        the checkbox mean "keep this": whatever is on screen is already in them.
+        """
+        import numpy as np
+
+        if not self._lock_range.isChecked():
+            finite = np.asarray(values, dtype=float)
+            finite = finite[np.isfinite(finite)]
+            if finite.size:
+                lo = float(show_kw.get("cMin", np.nanmin(finite)))
+                hi = float(show_kw.get("cMax", np.nanmax(finite)))
+                if hi > lo:
+                    self._set_limit_boxes(lo, hi)
+            return
+        if not lockable:
+            # Locked, but this view is not the locked quantity. Leave the boxes
+            # as they are: overwriting them here would hand the model back a
+            # range in coverage units when the reader unticks "Sensitivity".
+            return
+
+        lo, hi = float(self._cmin.value()), float(self._cmax.value())
+        if hi <= lo:
+            return  # an inverted range would raise rather than draw
+        if show_kw.get("logScale") and lo <= 0.0:
+            # A log colour scale cannot start at or below zero; keep the upper
+            # limit the user set and pull the lower one just above zero.
+            positive = np.asarray(values, dtype=float)
+            positive = positive[np.isfinite(positive) & (positive > 0.0)]
+            lo = float(np.nanmin(positive)) if positive.size else hi / 1000.0
+            if lo >= hi:
+                return
+        show_kw["cMin"], show_kw["cMax"] = lo, hi
 
     def _sync_controls(self) -> None:
         """Show the controls that mean something for the result on screen.

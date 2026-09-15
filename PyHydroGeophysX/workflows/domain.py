@@ -263,8 +263,13 @@ def run_ert_timelapse(spec: WorkflowSpec, context: RunContext) -> WorkflowRunRes
         else:
             files = list(inputs.get("data_files") or [])
         times = list(inputs.get("measurement_times") or range(len(files)))
+        # The bundle staged the files under generated names, so the acquisition
+        # dates survive only in the labels the caller recorded alongside them.
+        labels = [str(lbl) for lbl in (inputs.get("time_labels") or [])]
         result = run_timelapse_ert(
             files, times, parameters, str(context.output_dir), log=context.progress,
+            time_labels=labels or None,
+            time_unit=str(inputs.get("time_unit") or ""),
         )
     return _legacy_result(spec, context, result)
 

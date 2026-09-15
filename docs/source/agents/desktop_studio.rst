@@ -528,7 +528,9 @@ Modules
        depth-of-investigation controls. Add results to Project Map for map views.
    * - Project Map
      - Manage survey layers across methods, inspect saved results, display EM
-       depth slices and gravity/magnetic model slices, and export map images.
+       depth slices and gravity/magnetic model slices, interpolate any slice into
+       a plan-view image by kriging or a deterministic method, and export map
+       images or the interpolated grid.
    * - Gravity / Magnetics
      - Load station data, remove regional trends, and run SimPEG 3D inversion with an
        interactive model viewer.
@@ -570,6 +572,52 @@ vertical slice selection. Use **Load basemap** for optional online imagery and
 Other methods can use **Import point product CSV…** with ``x,y,value`` columns,
 a method name and physical units. **Add available result…** also accepts session
 models that include mesh or grid geometry.
+
+Plan-View Interpolation of a Slice
+-----------------------------------
+
+A TEM/AEM depth slice, a recovered grid layer and an imported point product are
+all one value per map position, so the **Surface** row on the map interpolates
+any of them into a continuous plan image instead of coloured station markers.
+Pick a slice, then a method:
+
+- **Kriging (ordinary)** estimates an omnidirectional semivariogram, fits
+  spherical, exponential and Gaussian models and uses the best of them. Press
+  **Variogram…** to see the experimental cloud against the fitted model with its
+  nugget, sill and range before trusting the picture.
+- **Inverse distance**, **Linear**, **Cubic**, **Nearest neighbour** and
+  **Thin-plate spline** are deterministic alternatives, useful as a check on
+  what the kriging assumptions are contributing.
+
+Resistivity is interpolated in log space and returned in Ω·m; signed products
+such as gravity and magnetics are interpolated in their own units.
+
+A survey drawn as a surface loses its own station markers and line traces: the
+surface already carries those values, and the markers would only cover the
+image. Other surveys on the map keep theirs, so the interpolated one still sits
+in its surroundings. Tick **Stations** to draw them back on top, in which case
+the markers and the surface share one colour scale and one colour bar, so what
+is measured and what is filled in read alike. The line selector in the result
+panel below the map changes lines whether or not the markers are drawn.
+
+Two controls decide how much the map is allowed to claim. Cells outside the
+convex hull of the stations are always blank, and **blanking** additionally
+removes cells farther than a stated distance from any station, which is what
+stops a wide line spacing from reading as coverage. The **cells** control sets
+the number of square cells across the longer map axis. Soundings that lie on a
+single line are refused rather than smeared: a filled plan map of one line shows
+the interpolator, not the survey, so use the section view for those.
+
+**Export grid…** (also under the module's export menu) writes the displayed
+surface as an ESRI ASCII raster (``.asc``, ready for QGIS/ArcGIS in the survey's
+own frame) or as an ``x,y,value`` CSV of the cells that were not blanked. The
+same gridding is available outside the studio through
+:func:`PyHydroGeophysX.core.plan_interpolation.plan_grid`.
+
+Separations are measured in the frame the layer is drawn in. Web Mercator metres
+are stretched by ``1/cos(latitude)``, so a variogram range reported for a
+geographic survey reads larger than the ground distance it represents; local
+project coordinates are in true metres.
 
 Adding a layer immediately saves an independent numeric snapshot in the project's
 ``project_map`` directory. Reopening the project restores these layers. Removing

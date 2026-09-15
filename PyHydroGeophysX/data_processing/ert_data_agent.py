@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import io
 import json
 import re
@@ -124,6 +125,32 @@ except Exception as e:
     _RESIPY_ERROR = str(e)
     _notify(f"[PyHydroGeophysX] ResIPy is installed but failed to import: {e}. "
             "Using this package's own readers.")
+
+def quiet_resipy(func):
+    """Silence pandas deprecation noise raised from inside ResIPy.
+
+    ``Project.computeFineMeshDepth`` runs ``df[['a','b','m','n']].replace(...)``
+    and casts the result straight to int, so the silent downcasting pandas warns
+    about cannot change what ResIPy computes. The warning still fires on every
+    single load, names a line in a package we do not maintain, and there is
+    nothing the reader of a Studio log can do about it — which is the definition
+    of noise in a log people are meant to read.
+
+    Scoped to the ResIPy call rather than installed at import: a library that
+    edits the process-wide warning filters hides the same class of warning in
+    its caller's code too.
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=r"Downcasting behavior in `replace` is deprecated",
+                category=FutureWarning,
+            )
+            return func(*args, **kwargs)
+    return wrapper
+
 
 # Try pygimli as additional fallback
 try:
@@ -1246,6 +1273,7 @@ def _load_ert_pygimli(
 # ---------------------------
 # Loader
 # ---------------------------
+@quiet_resipy
 def load_ert_resipy(
     project_dir: str,
     data_file: str,
@@ -1897,6 +1925,7 @@ def calculate_reciprocal_errors(ert: StandardERT) -> pd.DataFrame:
 
     return pd.DataFrame.from_records(records)
 
+@quiet_resipy
 def export_for_inversion(
     ert: StandardERT,
     outdir: str = "examples/results/ert",

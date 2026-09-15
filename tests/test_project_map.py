@@ -284,3 +284,172 @@ def test_basemap_fetch_is_off_ui_thread_and_failure_leaves_survey_visible(app, t
     assert threads and threads[0] != threading.get_ident()
     assert page._artists and 'unavailable' in page._note.text()
     page.close()
+
+
+def em_grid_example(lines=5, stations=7, layers=4, spacing=60., seed=2):
+    """A TEM survey that actually spreads in 2D, so a plan slice is meaningful."""
+    generator = np.random.default_rng(seed)
+    x, y = np.meshgrid(np.arange(lines) * spacing * 2, np.arange(stations) * spacing,
+                       indexing='ij')
+    x, y = x.ravel(), y.ravel()
+    depth = np.arange(layers) * 8.
+    rho = 40 * 10 ** (.5 * np.sin(x / 200.) * np.cos(y / 180.))[:, None] * (1 + depth / 40.)
+    return {'model3d': rho[:, ::-1][:, None, :], 'positions': np.arange(float(len(x))),
+            'depth_edges': np.arange(layers + 1) * 8., 'line_numbers': np.repeat(
+                np.arange(lines), stations).astype(float),
+            'sensitivity': np.ones((len(x), layers)),
+            'doi_threshold': .5, 'x': x, 'y': y, 'method': 'TDEM'}
+
+
+def map_page(state_root, snapshot, name):
+    from PyHydroGeophysX.qt_apps.state import StudioState
+    from PyHydroGeophysX.qt_apps.modules.project_map import ProjectMapModule
+    state = StudioState(output_dir=state_root)
+    state.set_results_store(state_root)
+    meta, arrays = snapshot
+    entry = ProjectMapStore(state_root).add(meta, arrays, arrays['survey_xy'], 'LOCAL', name)
+    state.map_selected_id = entry['id']
+    page = ProjectMapModule(state, lambda *_: None)
+    page.refresh()
+    return page, entry
+
+
+def surfaces(page):
+    from matplotlib.collections import QuadMesh
+    return [a for a in page._ax.collections if isinstance(a, QuadMesh)]
+
+
+def test_plan_interpolation_fills_an_em_depth_slice_and_replaces_its_markers(app, tmp_path):
+    page, _ = map_page(tmp_path, em_snapshot(em_grid_example()), 'TEM block')
+    page._depth.setCurrentIndex(2)
+    assert not surfaces(page), 'Points only must not interpolate anything'
+    assert page._ax.lines and page._ax.collections, 'Points only draws lines and stations'
+    assert not page._export_grid.isEnabled() and not page._variogram_button.isEnabled()
+    page._interp.setCurrentIndex(page._interp.findData('kriging'))
+    mesh = surfaces(page)
+    assert len(mesh) == 1
+    result = page._surface[1]
+    assert result['method'] == 'kriging' and result['log_values']
+    # The surface carries these values, so stamping the same survey's stations
+    # and line traces on top of it would only hide the image.
+    assert not page._ax.lines
+    assert list(page._ax.collections) == mesh
+    assert page._fig.axes[-1].get_ylabel().startswith('Resistivity')
+    assert page._export_grid.isEnabled() and page._variogram_button.isEnabled()
+    assert 'Kriging' in page._note.text() and 'variogram' in page._note.text()
+    page.close()
+
+
+def test_stations_can_be_put_back_over_the_surface_and_share_its_colour_scale(app, tmp_path):
+    page, _ = map_page(tmp_path, em_snapshot(em_grid_example()), 'TEM block')
+    page._depth.setCurrentIndex(2)
+    page._interp.setCurrentIndex(page._interp.findData('kriging'))
+    page._stations.setChecked(True)
+    mesh = surfaces(page)
+    assert len(mesh) == 1 and page._ax.lines
+    coloured = [a for a in page._ax.collections if a is not mesh[0] and a.get_array() is not None]
+    # One colour bar has to read the same for interpolated cells and soundings.
+    assert coloured and coloured[-1].norm is mesh[0].norm
+    assert len([a for a in page._fig.axes if a is not page._ax]) == 1
+    page._stations.setChecked(False)
+    assert not page._ax.lines
+    page.close()
+
+
+def test_an_unselected_survey_keeps_its_line_traces_while_another_is_interpolated(app, tmp_path):
+    from PyHydroGeophysX.qt_apps.state import StudioState
+    from PyHydroGeophysX.qt_apps.modules.project_map import ProjectMapModule
+    store = ProjectMapStore(tmp_path)
+    meta, arrays = em_snapshot(em_grid_example())
+    chosen = store.add(meta, arrays, arrays['survey_xy'], 'LOCAL', 'TEM block')
+    other_meta, other = em_snapshot(em_grid_example(seed=9))
+    store.add(other_meta, other, other['survey_xy'] + 2000., 'LOCAL', 'Neighbour block')
+    state = StudioState(output_dir=tmp_path)
+    state.set_results_store(tmp_path)
+    state.map_selected_id = chosen['id']
+    page = ProjectMapModule(state, lambda *_: None)
+    page.refresh()
+    page._depth.setCurrentIndex(1)
+    page._interp.setCurrentIndex(page._interp.findData('idw'))
+    # Hiding markers is about the survey the surface belongs to, not the map.
+    assert len(surfaces(page)) == 1
+    assert page._ax.lines and page._artists
+    assert all(page._artists[a][0] != chosen['id'] for a in page._artists)
+    page.close()
+
+
+def test_plan_interpolation_serves_any_method_not_just_em(app, tmp_path):
+    generator = np.random.default_rng(4)
+    xy = generator.uniform(0, 400, (60, 2))
+    page, _ = map_page(tmp_path, point_snapshot(xy, generator.normal(0, 3, 60), 'Gravity', 'mGal'),
+                       'Bouguer stations')
+    page._interp.setCurrentIndex(page._interp.findData('idw'))
+    assert len(surfaces(page)) == 1
+    # A signed potential-field product must not be pushed through a log scale.
+    assert page._surface[1]['log_values'] is False
+    assert page._fig.axes[-1].get_ylabel() == 'mGal'
+    page._interp.setCurrentIndex(page._interp.findData('kriging'))
+    assert page._variogram_button.isEnabled()
+    page.close()
+
+
+def test_blanking_distance_and_resolution_reach_the_drawn_surface(app, tmp_path):
+    page, _ = map_page(tmp_path, em_snapshot(em_grid_example()), 'TEM block')
+    page._depth.setCurrentIndex(1)
+    page._interp.setCurrentIndex(page._interp.findData('idw'))
+    wide = page._surface[1]
+    page._interp_res.setValue(60)
+    assert page._surface[1]['cell_size'] > wide['cell_size']
+    page._interp_blank.setValue(20)
+    assert page._surface[1]['coverage'] < wide['coverage']
+    assert page._surface[1]['max_distance'] == 20.
+    page.close()
+
+
+def test_a_single_em_line_is_refused_without_losing_the_survey(app, tmp_path):
+    page, _ = map_page(tmp_path, em_snapshot(em_grid_example(lines=1, stations=12)), 'One line')
+    page._depth.setCurrentIndex(1)
+    page._interp.setCurrentIndex(page._interp.findData('kriging'))
+    assert not surfaces(page)
+    assert 'single line' in page._note.text()
+    assert page._artists and not page._export_grid.isEnabled()
+    page.close()
+
+
+def test_the_drawn_plan_grid_exports_to_an_ascii_raster(app, tmp_path, monkeypatch):
+    from PyHydroGeophysX.qt_apps.modules import project_map
+    page, _ = map_page(tmp_path, em_snapshot(em_grid_example()), 'TEM block')
+    page._depth.setCurrentIndex(1)
+    page._interp.setCurrentIndex(page._interp.findData('kriging'))
+    target = tmp_path / 'slice.asc'
+    monkeypatch.setattr(project_map.QFileDialog, 'getSaveFileName',
+                        staticmethod(lambda *a, **k: (str(target), '')))
+    page._export_surface()
+    header = dict(line.split() for line in target.read_text().splitlines()[:6])
+    assert int(header['ncols']) == page._surface[1]['x'].size
+    assert float(header['cellsize']) > 0
+    assert str(target) in page._note.text()
+    page.close()
+
+
+def test_the_variogram_dialog_plots_the_experimental_cloud_against_the_model(app, tmp_path):
+    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+    from PyHydroGeophysX.qt_apps.modules.project_map import VariogramDialog
+    page, _ = map_page(tmp_path, em_snapshot(em_grid_example()), 'TEM block')
+    page._depth.setCurrentIndex(1)
+    page._interp.setCurrentIndex(page._interp.findData('kriging'))
+    result = page._surface[1]
+    fit = result['variogram']
+    assert fit['model'] in ('spherical', 'exponential', 'gaussian')
+    assert fit['range'] > 0 and fit['sill'] > 0
+    dialog = VariogramDialog(result, page._entry(), page._depth.currentText(), page)
+    axes = dialog.findChild(FigureCanvasQTAgg).figure.axes[0]
+    # Resistivity is kriged in log space, and the axis has to say so.
+    assert 'log10' in axes.get_ylabel()
+    experimental, model = axes.lines[0], axes.lines[1]
+    np.testing.assert_allclose(experimental.get_ydata(), fit['gamma'])
+    # The fitted curve has to level off at the sill it reports.
+    assert model.get_ydata()[-1] <= fit['sill'] * 1.001
+    assert fit['model'] in model.get_label()
+    dialog.close()
+    page.close()

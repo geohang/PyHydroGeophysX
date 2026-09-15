@@ -95,5 +95,10 @@ can be loaded automatically.
 - Use the line selector, **Depth / Elevation**, and DOI controls to inspect the
   section. DOI display changes do not require another inversion.
 - Choose **Add to Map…** to locate and save the result in **Project → Map**.
+  There, pick a depth under **Slice** and an interpolator under **Surface** to
+  read that layer as a plan-view resistivity image (ordinary kriging with a
+  fitted variogram, inverse distance, triangulation or a thin-plate spline)
+  rather than as coloured soundings. Soundings on a single line have no plan
+  view; the interpolation needs lines that spread in two dimensions.
 - **Export recovered model (csv)…** exports layer values and station summaries.
   Below-DOI values are retained and flagged.

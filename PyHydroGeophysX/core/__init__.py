@@ -42,6 +42,18 @@ except ImportError:
     interpolate_to_mesh = None
     create_surface_lines = None
 
+# Import plan-view gridding (numpy/scipy only, no optional dependency)
+from PyHydroGeophysX.core.plan_interpolation import (
+    plan_grid,
+    write_plan_grid,
+    ordinary_kriging,
+    inverse_distance,
+    empirical_variogram,
+    fit_variogram,
+    auto_variogram,
+    variogram_function,
+)
+
 # Import 3D kriging utilities (optional, requires gstools and pyvista)
 try:
     from PyHydroGeophysX.core.kriging_3d import (
@@ -104,7 +116,17 @@ __all__ = [
     'prepare_2D_profile_data',
     'interpolate_to_mesh',
     'create_surface_lines',
-    
+
+    # Plan-view (map) gridding
+    'plan_grid',
+    'write_plan_grid',
+    'ordinary_kriging',
+    'inverse_distance',
+    'empirical_variogram',
+    'fit_variogram',
+    'auto_variogram',
+    'variogram_function',
+
     # 3D kriging utilities
     'create_3d_structured_grid',
     'estimate_directional_variograms',
