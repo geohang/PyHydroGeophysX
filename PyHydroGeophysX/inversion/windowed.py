@@ -346,6 +346,8 @@ class WindowedTimeLapseERTInversion:
     def _load_adtlert_series(self):
         paths = [os.path.join(self.data_dir, name) for name in self.ert_files]
         datasets = [ert.load(path) for path in paths]
+        from PyHydroGeophysX.data_processing.ert_io import align_timelapse_abmn
+        datasets = align_timelapse_abmn(datasets)
         reference_sensors, reference_abmn = self._survey_arrays(datasets[0])
         observed_rows = []
         error_rows = []
@@ -404,7 +406,7 @@ class WindowedTimeLapseERTInversion:
                     resistance, 1.0e-12
                 )
             observed_rows.append(observed)
-            error_rows.append(np.clip(errors, 0.01, 0.50))
+            error_rows.append(np.maximum(errors, 0.01))
 
         return datasets, np.vstack(observed_rows), np.vstack(error_rows)
 

@@ -713,6 +713,25 @@ def _best_starting_resistivity(blocks, n_layers: int, workers: int, *,
     return best_rho
 
 
+def _neighboring_starts(raw, positions, lines, bounds):
+    """Local log-median starts, without crossing lines or large spatial gaps."""
+    raw = np.asarray(raw, dtype=float)
+    result = raw.copy()
+    for line in np.unique(lines):
+        ids = np.flatnonzero(np.asarray(lines) == line)
+        ids = ids[np.argsort(np.asarray(positions)[ids], kind="stable")]
+        gaps = np.diff(np.asarray(positions)[ids])
+        positive = gaps[gaps > 0]
+        limit = 3 * np.median(positive) if positive.size else np.inf
+        for group in np.split(ids, np.flatnonzero(gaps > limit) + 1):
+            for j, index in enumerate(group):
+                local = raw[group[max(0, j-2):j+3]]
+                valid = local[np.isfinite(local) & (local > bounds[0]) & (local < bounds[1])]
+                if valid.size >= 2:
+                    result[index] = 10 ** np.median(np.log10(valid))
+    return result
+
+
 def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any],
                 *, spacing: float = 50.0, positions: Optional[np.ndarray] = None,
                 heights: Optional[np.ndarray] = None, max_soundings: int = 12,
@@ -879,6 +898,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     workers = resolve_worker_count(n_pos, int(inv.get("parallel_workers", 0)))
     lci_supplies_model = (simultaneous or sequential) and (use_warm_models or use_common_lci_start)
     prior_context = bool(inv.get("shallow_prior_enabled", False))
+    neighbor_start = method.upper() == "TDEM" and bool(inv.get("auto_starting_model", True))
 
     def prepare(s: int):
         """Read one station, and fit it unless the LCI will supply its model.
@@ -902,7 +922,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
             geom_s = _station_geometry(geom, data)
             if hts is not None and s < hts.size:
                 geom_s = _with_sensor_height(geom_s, hts[s])
-            if lci_supplies_model or prior_context:
+            if lci_supplies_model or prior_context or neighbor_start:
                 return s, data, geom_s, None, None
             # Quiet inside the worker: the inner per-iteration lines would
             # interleave across stations. The caller logs one line per station,
@@ -983,6 +1003,35 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     longitude, latitude = _per_sounding("longitude"), _per_sounding("latitude")
     station_ids = _per_sounding("station_ids", dtype=object)
 
+    neighbor_starts = None
+    if neighbor_start:
+        from PyHydroGeophysX.inversion.em1d import tdem_moment_blocks
+        from PyHydroGeophysX.inversion.em1d_lci import SoundingBlock
+        raw_starts = np.full(n_pos, np.nan)
+        for s, data in enumerate(datasets):
+            if data is None:
+                continue
+            try:
+                blocks = tdem_moment_blocks(data, geometries[s], inv, thick)
+                from PyHydroGeophysX.inversion.em1d import _moment_forward, _moment_jacobian
+                block = SoundingBlock(
+                    forward=_moment_forward(blocks),
+                    jacobian=_moment_jacobian(blocks),
+                    dobs=np.concatenate([b["observed"] for b in blocks]),
+                    uncertainty=np.concatenate([b["uncertainty"] for b in blocks]),
+                    position=float(pos_lci[s]), line=int(line_numbers[s]))
+                raw_starts[s] = _best_starting_resistivity(
+                    [block], n_layers, 1,
+                    default=float(inv.get("starting_resistivity", 100.)), log=_noop)
+            except Exception as exc:
+                log(f"  sounding {s+1} initial scan unavailable: {exc}")
+        bounds = (float(inv.get("rho_min", 1.)), float(inv.get("rho_max", 1e5)))
+        neighbor_starts = _neighboring_starts(raw_starts, pos_lci, line_numbers, bounds)
+        if sequential and not use_warm_models:
+            valid_starts = np.isfinite(neighbor_starts) & (neighbor_starts > 0)
+            surface_models[valid_starts] = neighbor_starts[valid_starts, None]
+        log("Automatic starts use local log-medians of up to five same-line stations; large gaps split neighborhoods.")
+
     from PyHydroGeophysX.inversion.em1d_priors import shallow_prior_scores
     quality_rows = None
     if prior_context and any(data and "raw_lm_quality" in data for data in datasets):
@@ -1005,6 +1054,8 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
 
     def station_inv(s):
         options = {**inv, "_shallow_prior_score": float(prior_scores[s])}
+        if neighbor_starts is not None and np.isfinite(neighbor_starts[s]):
+            options["neighbor_starting_resistivity"] = float(neighbor_starts[s])
         if use_warm_models:
             # The automatic soft target follows the model that actually starts
             # this station, not a stale project fallback value.
@@ -1014,7 +1065,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                     10. ** np.mean(np.log10(valid)))
         return options
 
-    if prior_context:
+    if prior_context or neighbor_start:
         if quality_rows is None and inv.get("shallow_prior_mode", "quality_trend") == "quality_trend":
             log("  Resistive-background prior uses imported LM quality; raw fixed-gate signal/noise "
                 "checks are unavailable for this input. Re-import a TEMcompany project "
@@ -1138,10 +1189,16 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                 f"{lateral:g}, vertical={float(inv.get('smoothness', 0.3)):g}")
             warm = (surface_models[kept] if use_warm_models else None)
             start_resistivity = float(inv.get("starting_resistivity", 100.0))
-            if warm is None and bool(inv.get("auto_starting_model", True)):
+            if bool(inv.get("auto_starting_model", True)):
                 start_resistivity = _best_starting_resistivity(
                     sounding_blocks, n_layers, workers,
                     default=start_resistivity, log=log)
+            if neighbor_starts is not None:
+                selected_starts = neighbor_starts[kept]
+                valid_starts = np.isfinite(selected_starts) & (selected_starts > 0)
+                selected_starts = np.where(valid_starts, selected_starts, start_resistivity)
+                if warm is None:
+                    warm = np.repeat(selected_starts[:, None], n_layers, axis=1)
             if prior_context:
                 # Block construction precedes the data-driven starting-model
                 # search. Rebuild only the cheap prior vectors here, using the
@@ -1176,6 +1233,8 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                         f"{prior_report['target_resistivity']:.0f} ohm-m")
                 log(f"  Background soft tendency: {target_description} "
                     "(capped by rho_max; all layers, not a depth estimate).")
+            log(f"Model damping ratio: {float(inv.get('model_damping', DEFAULT_INVERSION['model_damping'])):g}; "
+                f"reference half-space: {start_resistivity:.6g} ohm-m.")
             lci_kwargs = dict(
                 solver=str(inv.get("lci_solver", "trf")),
                 trf_max_nfev=int(inv.get("lci_max_nfev", 90)),
@@ -1186,7 +1245,9 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                 lateral_smoothness=lateral * lateral_weight_scale,
                 reference_distance=reference_distance,
                 lateral_distance_power=lateral_distance_power,
-                model_damping=float(inv.get("model_damping", 0.0)),
+                model_damping=float(inv.get("model_damping", DEFAULT_INVERSION["model_damping"])),
+                reference_model=(np.repeat(selected_starts[:, None], n_layers, axis=1)
+                                 if neighbor_starts is not None else None),
                 starting_resistivity=start_resistivity,
                 max_iterations=int(inv.get("max_iterations", 20)),
                 convergence_tolerance=float(inv.get("convergence_tolerance", 0.02)),
@@ -1518,6 +1579,12 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         for value in chi2_list
     ]
     result = {
+        "initialization": {
+            "neighbor_starting_resistivity": (neighbor_starts.tolist()
+                                               if neighbor_starts is not None else None),
+            "raw_starting_resistivity": (raw_starts.tolist() if neighbor_start else None),
+            "strategy": "same_line_local_log_median" if neighbor_start else "configured",
+        },
         "method": method, "edges": (ex, ey, ez), "model3d": model,
         "label": "resistivity (Ω·m)", "cmap": "turbo", "log_scale": True,
         "positions": pos, "depth_edges": depth_edges, "thickness": thick,

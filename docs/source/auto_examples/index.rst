@@ -14,6 +14,11 @@ The central theme is the interaction between geophysical data and hydrological
 models: predicting observations from model states and interpreting data as
 hydrological information. See :doc:`/tutorials/hydro_geophysical_interaction`.
 
+Open the notebooks in JupyterLab or VS Code and run the cells in order: inspect
+the data, edit parameters, run the model, then view the results. Every scientific
+example has a companion ``.ipynb``; the ``.py`` versions use ``# %%`` cells for
+editors and website generation.
+
 This gallery contains Python scripts and notebook downloads. It spans
 hydrological model access, petrophysical conversion, multi-method responses,
 field inversion, time-lapse monitoring, joint inversion and uncertainty analysis.
@@ -35,6 +40,23 @@ dependencies before running it; the site uses pre-generated figures.
     <div class="sphx-glr-thumbnails">
 
 .. thumbnail-parent-div-open
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example loads the bundled nine-station SQLite project through the same TEMcompany/TEM2Go reader used by the Qt Studio. It jointly fits the LM and HM gates, applies same-line L2 lateral constraints, and compares the recovered section with the known synthetic resistivity model.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_TEM_LMHM_LCI_thumb.png
+    :alt:
+
+  :doc:`/auto_examples/Ex_TEM_LMHM_LCI`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Ex. Synthetic LM+HM Line Inversion with Lateral Constraints</div>
+    </div>
+
 
 .. raw:: html
 
@@ -84,23 +106,6 @@ dependencies before running it; the site uses pre-generated figures.
 .. raw:: html
 
       <div class="sphx-glr-thumbnail-title">Ex. Structure-Constrained Resistivity Inversion</div>
-    </div>
-
-
-.. raw:: html
-
-    <div class="sphx-glr-thumbcontainer" tooltip="This example loads the bundled nine-station SQLite project through the same TEMcompany/TEM2Go reader used by the Qt Studio. It jointly fits the LM and HM gates, applies same-line L2 lateral constraints, and compares the recovered section with the known synthetic resistivity model.">
-
-.. only:: html
-
-  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_TEM_LMHM_LCI_thumb.png
-    :alt:
-
-  :doc:`/auto_examples/Ex_TEM_LMHM_LCI`
-
-.. raw:: html
-
-      <div class="sphx-glr-thumbnail-title">Ex. Synthetic LM+HM Line Inversion with Lateral Constraints</div>
     </div>
 
 
@@ -386,10 +391,10 @@ dependencies before running it; the site uses pre-generated figures.
 .. toctree::
    :hidden:
 
+   /auto_examples/Ex_TEM_LMHM_LCI
    /auto_examples/Ex_FDEM_workflow
    /auto_examples/Ex_model_output
    /auto_examples/Ex_Structure_resinv
-   /auto_examples/Ex_TEM_LMHM_LCI
    /auto_examples/Ex_gravity_magnetics_inversion
    /auto_examples/Ex_TL_inversion_memory
    /auto_examples/Ex_EM_line_section

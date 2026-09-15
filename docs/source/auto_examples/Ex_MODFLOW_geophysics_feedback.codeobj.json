@@ -8,31 +8,13 @@
    "name": "Path"
   }
  ],
- "__doc__": [
+ "Path.cwd": [
   {
    "is_class": false,
    "is_explicit": false,
-   "module": "builtins",
-   "module_short": "builtins",
-   "name": "str"
-  }
- ],
- "__name__": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "builtins",
-   "module_short": "builtins",
-   "name": "str"
-  }
- ],
- "argparse.ArgumentParser": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "argparse",
-   "module_short": "argparse",
-   "name": "ArgumentParser"
+   "module": "pathlib.Path",
+   "module_short": "pathlib.Path",
+   "name": "cwd"
   }
  ],
  "flopy.mf6.MFSimulation": [
@@ -168,15 +150,6 @@
    "module": "json",
    "module_short": "json",
    "name": "dumps"
-  }
- ],
- "matplotlib.use": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "matplotlib",
-   "module_short": "matplotlib",
-   "name": "use"
   }
  ],
  "np.abs": [
@@ -350,13 +323,13 @@
    "name": "where"
   }
  ],
- "plt.close": [
+ "plt.show": [
   {
    "is_class": false,
    "is_explicit": false,
    "module": "matplotlib.pyplot",
    "module_short": "matplotlib.pyplot",
-   "name": "close"
+   "name": "show"
   }
  ],
  "plt.subplots": [

@@ -1,5 +1,5 @@
 """Small real-data example: input integrity and optional actual solver check."""
-import importlib.util
+import json
 import os
 from pathlib import Path
 
@@ -7,18 +7,25 @@ import numpy as np
 import pytest
 
 
-def example():
-    path = Path(__file__).parents[1]/'examples/Ex_MODFLOW_geophysics_feedback.py'
-    spec = importlib.util.spec_from_file_location('feedback_example',path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def example(output, monkeypatch, *, mf6=None, write_only=False):
+    """Run the notebook cells with test settings, without a script-only __file__."""
+    path = Path(__file__).parents[1]/'examples/Ex_MODFLOW_geophysics_feedback.ipynb'
+    monkeypatch.chdir(path.parent)
+    notebook = json.loads(path.read_text(encoding='utf-8'))
+    namespace = {}
+    for index, cell in enumerate(notebook['cells']):
+        if cell['cell_type'] != 'code':
+            continue
+        source = ''.join(cell['source'])
+        exec(compile(source, f'{path.name}:cell{index}', 'exec'), namespace)
+        if source.lstrip().startswith('mf6 = None'):
+            namespace.update(output=output, mf6=mf6, download=False, write_only=write_only)
+    return namespace['summary']
 
 
-def test_structure_example_writes_consistent_models(tmp_path):
+def test_structure_example_writes_consistent_models(tmp_path, monkeypatch):
     flopy = pytest.importorskip('flopy')
-    demo = example()
-    summary = demo.run_example(tmp_path/'demo',write_only=True)
+    summary = example(tmp_path/'demo', monkeypatch, write_only=True)
     assert summary['status'] == 'inputs_written_not_run'
     models = [flopy.mf6.MFSimulation.load(sim_ws=str(tmp_path/'demo'/name),verbosity_level=0).get_model()
               for name in ['baseline','informed']]
@@ -31,9 +38,9 @@ def test_structure_example_writes_consistent_models(tmp_path):
 
 
 @pytest.mark.skipif(not os.environ.get('MF6_EXE'),reason='Set MF6_EXE to run the MODFLOW integration test')
-def test_structure_example_solver(tmp_path):
+def test_structure_example_solver(tmp_path, monkeypatch):
     pytest.importorskip('flopy')
-    summary = example().run_example(tmp_path/'run',mf6=os.environ['MF6_EXE'])
+    summary = example(tmp_path/'run', monkeypatch, mf6=os.environ['MF6_EXE'])
     assert summary['steps'] == 30
     assert summary['max_budget_discrepancy_percent'] <= .1
     assert summary['max_head_change_m'] > 0

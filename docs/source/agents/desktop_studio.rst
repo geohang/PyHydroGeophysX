@@ -340,7 +340,14 @@ through each one is summarized below.
      - Select FDEM or TDEM; load one or multiple soundings; load line geometry
        when available; confirm system geometry; configure the 1D Occam
        inversion; click **Run inversion**; compare Sounding, Resistivity model,
-       and Inversion quality tabs.
+       and Inversion quality tabs. Start defaults to **auto**, which searches
+       uniform half-spaces before fitting. **Model damping** defaults to 0.4
+       relative to vertical smoothness and holds the reference fixed during
+       refits. Both apply to single-sounding and line inversions. Set damping
+       to zero to disable it; zero smoothness also removes this penalty.
+       Automatic TEM line starts use the local log-median of up to five nearby
+       stations on the same survey line; large gaps split neighborhoods. This
+       stabilizes initialization without smoothing the recovered model afterward.
      - Recovered model ``.npy``/CSV, line sections, and plan-view depth slices.
    * - **Gravity / Magnetics**
      - Load ``x, y, value`` station data; select gravity or magnetics; inspect

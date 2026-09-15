@@ -362,6 +362,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Standard fork → feature branch → PR 
 
 ---
 
+## Acknowledgments
+
+We gratefully acknowledge **Craig Ulrich** (Lawrence Berkeley National Laboratory)
+for valuable feedback and continued support during the development of
+PyHydroGeophysX.
+
+---
+
 ## Citation
 
 If you use PyHydroGeophysX, please cite:

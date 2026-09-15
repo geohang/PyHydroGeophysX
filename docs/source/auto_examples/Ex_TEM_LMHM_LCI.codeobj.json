@@ -8,15 +8,6 @@
    "name": "LogNorm"
   }
  ],
- "__name__": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "builtins",
-   "module_short": "builtins",
-   "name": "str"
-  }
- ],
  "em1d.DEFAULT_INVERSION": [
   {
    "is_class": false,

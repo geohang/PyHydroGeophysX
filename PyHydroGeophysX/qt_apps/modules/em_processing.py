@@ -574,7 +574,7 @@ class EMProcessingModule(BaseModule):
         self._start_res.setToolTip(
             "Uniform resistivity assigned to every layer at the start of the "
             "inversion. It sets the optimizer's initial model and does not "
-            "constrain the final resistivity.\n\n"
+            "also supplies the reference for model damping.\n\n"
             "auto tries a set of uniform half-spaces on a sample of the "
             "soundings and starts from the one whose forward response comes "
             "closest to the data. Where a run starts decides which minimum it "
@@ -628,7 +628,14 @@ class EMProcessingModule(BaseModule):
             "multiplier on this value rather than a second control, so the "
             "effective weight is the product of the two; it stays at 1.0 and "
             "this is the number to change.")
+        self._model_damping = self._dspin(d["model_damping"], 0.0, 10.0, 0.1, 2)
+        self._model_damping.setToolTip(
+            "Pull log resistivity toward the starting reference model. "
+            "Weight relative to vertical smoothness; default 0.4, zero disables it. "
+            "With automatic start, the reference is chosen from the data. "
+            "Applies to single soundings and line inversions; zero smoothness disables this term.")
         form.addRow("Smoothness", self._smooth)
+        form.addRow("Model damping", self._model_damping)
         form.addRow("Lateral smoothness", self._lateral_smooth)
         form.addRow("Max iterations", self._max_iter)
         form.addRow("DOI sensitivity", self._doi_threshold)
@@ -641,6 +648,7 @@ class EMProcessingModule(BaseModule):
         return {
             "n_layers": self._n_layers, "min_thickness": self._min_thick,
             "max_thickness": self._max_thick, "smoothness": self._smooth,
+            "model_damping": self._model_damping,
             "lateral_smoothness": self._lateral_smooth,
             "max_iterations": self._max_iter, "rel_error": self._rel_err,
             "min_rel_error": self._err_floor, "rho_min": self._rho_min,
@@ -1369,6 +1377,7 @@ class EMProcessingModule(BaseModule):
             "min_thickness": self._min_thick.value(),
             "max_thickness": self._max_thick.value(),
             "smoothness": self._smooth.value(),
+            "model_damping": self._model_damping.value(),
             "lateral_smoothness": self._lateral_smooth.value(),
             "lci_mode": str(self._lci_mode.currentData()),
             "lci_passes": self._lci_passes.value(),
@@ -2535,6 +2544,8 @@ class EMProcessingModule(BaseModule):
                           "robust_passes, robust_max_error_factor (>=1). "
                           "Start: auto_starting_model (bool; pick the starting half-space "
                           "from the data before inverting). "
+                          "model_damping (reference-model penalty relative to smoothness; "
+                          "default 0.4, zero disables). "
                           "Speed: parallel_workers (threads for the per-sounding "
                           "forward and Jacobian; 0 sizes it from the machine, and "
                           "the result is identical either way).")},
@@ -2749,6 +2760,7 @@ class EMProcessingModule(BaseModule):
             "max_thickness": lambda v: self._max_thick.setValue(float(v)),
             "starting_resistivity": lambda v: self._start_res.setValue(float(v)),
             "smoothness": lambda v: self._smooth.setValue(float(v)),
+            "model_damping": lambda v: self._model_damping.setValue(float(v)),
             "lateral_smoothness": lambda v: self._lateral_smooth.setValue(float(v)),
             "lci_mode": lambda v: self._set_lci_mode(str(v)),
             "lci_solver": lambda v: self._set_lci_solver(str(v)),

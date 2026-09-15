@@ -175,6 +175,8 @@ def test_real_joint_line_keeps_all_gates_and_exports_auditable_errors(tmp_path, 
     result = workflow.invert_line(str(PROJECT), "TDEM", geom, inv, max_soundings=count,
                                   lines=[3], doi_blank=False, out_dir=tmp_path)
     info = result["robust"]
+    starts = result["initialization"]["neighbor_starting_resistivity"]
+    assert starts is not None and np.isfinite(starts).all()
     assert info["enabled"] and info["kept"] > 0 and info["dropped"] == 0
     assert not result["outliers"]["enabled"]
     if mode == "off" or count == 1:

@@ -23,7 +23,7 @@ LogFn = Callable[[str], None]
 
 DEFAULT_INVERSION = {
     "n_layers": 15, "min_thickness": 1.0, "max_thickness": 40.0,
-    "starting_resistivity": 100.0, "max_iterations": 30,
+    "starting_resistivity": 100.0, "auto_starting_model": True, "max_iterations": 30,
     "rel_error": 0.05, "noise_floor": 1e-14, "smoothness": 0.3,
     "lateral_smoothness": 0.0, "lci_passes": 1,
     # Line inversion. ``lci_mode`` picks how neighbouring soundings are tied
@@ -341,6 +341,11 @@ def _occam_1d(forward_vec: Callable[[np.ndarray], np.ndarray], dobs_vec: np.ndar
     else:
         lateral_log = np.array([], dtype=float)
     unc_vec = np.clip(unc_vec, 1e-30, None)
+    damping = max(float(inv.get("model_damping", 0.4)), 0.0) * max(lam, 0.0)
+    reference = np.asarray(inv.get("reference_model", np.full(n_layers, start_res)), dtype=float)
+    if reference.shape != (n_layers,) or not np.all(np.isfinite(reference)) or np.any(reference <= 0):
+        raise ValueError("reference_model must contain one positive finite resistivity per layer")
+    reference_log = np.clip(np.log10(reference), lo, hi)
     from .em1d_priors import shallow_prior_terms
     prior_lower, prior_weights = shallow_prior_terms(inv, _inversion_layer_thicknesses(
         {**inv, "n_layers": n_layers}))
@@ -356,17 +361,17 @@ def _occam_1d(forward_vec: Callable[[np.ndarray], np.ndarray], dobs_vec: np.ndar
             if lateral_log.size else np.array([], dtype=float)
         )
         prior = prior_weights * np.maximum(prior_lower - logres, 0.)
-        return np.concatenate([data_res, smooth, lateral, prior])
+        smallness = damping * (logres - reference_log)
+        return np.concatenate([data_res, smooth, lateral, prior, smallness])
 
-    # The two regularization blocks are linear in logres, so their rows are the
-    # same matrix at every model and are built once here. Only the data rows
-    # need the forward operator.
+    # Smoothness, lateral ties and smallness are linear in log resistivity.
+    # The one-sided prior activates only below its target.
     smooth_rows = lam * (np.eye(n_layers, k=1) - np.eye(n_layers))[:n_layers - 1]
     lateral_rows = (lateral_weight * np.eye(n_layers) if lateral_log.size
                     else np.zeros((0, n_layers)))
 
     def jacobian(logres: np.ndarray) -> np.ndarray:
-        """d(residual) / d(log10 resistivity), all three blocks.
+        """d(residual) / d(log10 resistivity), including every penalty block.
 
         The chain rule through ``sigma = 10**(-logres)`` contributes
         ``d sigma / d logres = -ln(10) * sigma``, the same factor the coupled
@@ -380,7 +385,8 @@ def _occam_1d(forward_vec: Callable[[np.ndarray], np.ndarray], dobs_vec: np.ndar
                 f"expected {(dobs_vec.size, n_layers)}.")
         data_rows = (jac * (-_LN10 * sigma)[None, :]) / unc_vec[:, None]
         prior_rows = np.diag(-prior_weights * (logres < prior_lower))
-        return np.vstack([data_rows, smooth_rows, lateral_rows, prior_rows])
+        return np.vstack([data_rows, smooth_rows, lateral_rows, prior_rows,
+                          damping * np.eye(n_layers)])
 
     # SciPy's ``max_nfev`` is the number of outer residual evaluations. Numerical
     # Jacobian probes are additional calls, so multiplying by ``n_layers`` here
@@ -438,6 +444,62 @@ def _occam_with_optional_rejection(
     unc_vec = np.asarray(unc_vec, dtype=float).ravel()
     if dobs_vec.size != unc_vec.size:
         raise ValueError("observed data and uncertainty must have the same length.")
+    inv = dict(inv)
+    neighbor = inv.get("neighbor_starting_resistivity")
+    if bool(inv.get("auto_starting_model", True)) and neighbor is not None:
+        neighbor = float(neighbor)
+        if not np.isfinite(neighbor) or neighbor <= 0:
+            raise ValueError("neighbor_starting_resistivity must be positive and finite")
+        lo, hi = _log_resistivity_bounds(inv)
+        inv["starting_resistivity"] = float(np.clip(neighbor, 10**lo, 10**hi))
+        log(f"Automatic neighboring-station start: {inv['starting_resistivity']:.6g} ohm-m.")
+    elif bool(inv.get("auto_starting_model", True)):
+        lo, hi = _log_resistivity_bounds(inv)
+        candidates = np.unique(np.r_[np.logspace(lo, hi, 21),
+            np.clip(float(inv.get("starting_resistivity", 100.0)), 10**lo, 10**hi)])
+        scores = []
+        for rho in candidates:
+            predicted = np.asarray(forward_vec(np.full(n_layers, 1.0 / rho)), dtype=float).ravel()
+            score = float(np.mean(((predicted - dobs_vec) / np.maximum(unc_vec, 1e-30)) ** 2))
+            scores.append(score if np.isfinite(score) else np.inf)
+        if not np.isfinite(scores).any():
+            raise ValueError("Automatic starting-model search produced no finite response.")
+        inv["starting_resistivity"] = float(candidates[int(np.argmin(scores))])
+        if int(np.argmin(scores)) in (0, len(candidates) - 1):
+            # An optimum on a search boundary is not a trustworthy background.
+            # Compare short layered fits under one fixed reference, rather than
+            # permanently anchoring the damping to the best half-space bound.
+            reference = float(np.clip(inv.get("starting_resistivity_fallback", 100.0), 10**lo, 10**hi))
+            best = None
+            for start in np.unique(np.r_[np.logspace(lo, hi, 6), reference]):
+                options = {**inv, "starting_resistivity": float(start),
+                           "reference_model": inv.get("reference_model", np.full(n_layers, reference)),
+                           "max_iterations": 12}
+                options.pop("starting_model", None)
+                fitted = _occam_1d(forward_vec, dobs_vec, unc_vec, n_layers,
+                                   options, _noop, jacobian_vec)
+                if np.isfinite(fitted[1]) and (best is None or fitted[1] < best[0]):
+                    best = (fitted[1], float(start), fitted[0])
+            if best is not None:
+                inv["starting_resistivity"] = best[1]
+                inv["starting_model"] = best[2]
+                inv.setdefault("reference_model", np.full(n_layers, reference))
+                log("Boundary half-space replaced by a short multi-start layered fit; "
+                    f"fixed damping reference={reference:g} ohm-m.")
+        log(f"Automatic starting half-space: {inv['starting_resistivity']:.6g} ohm-m "
+            f"({len(candidates)} screening candidates).")
+    # The reference stays fixed across robust refits; a warm start is only an iterate.
+    inv.setdefault("reference_model", np.full(n_layers, float(inv.get("starting_resistivity", 100.0))))
+    initialization = {
+        "auto_starting_model": bool(inv.get("auto_starting_model", True)),
+        "neighbor_starting_resistivity": neighbor,
+        "starting_resistivity": float(inv.get("starting_resistivity", 100.0)),
+        "model_damping": float(inv.get("model_damping", 0.4)),
+        "reference_model": np.asarray(inv["reference_model"], dtype=float).tolist(),
+    }
+    reference_values = np.asarray(inv["reference_model"], dtype=float)
+    log(f"Model damping ratio: {float(inv.get('model_damping', 0.4)):g}; "
+        f"reference resistivity: {reference_values.min():.6g}–{reference_values.max():.6g} ohm-m.")
     keep = np.ones(dobs_vec.size, dtype=bool)
     if bool(inv.get("robust_errors", False)):
         from .robust_errors import reweight_errors, robust_error_options
@@ -466,7 +528,8 @@ def _occam_with_optional_rejection(
         # metric so increasing errors cannot masquerade as a better raw fit.
         info = {"enabled": False, "n_start": int(keep.size), "kept": int(keep.size),
                 "dropped": 0, "passes": [], "robust": robust,
-                "stopped_because": "robust error weighting; no hard rejection"}
+                "stopped_because": "robust error weighting; no hard rejection",
+                "initialization": initialization}
         return fitted[0], robust["chi2_original"], total_nfev, histories, keep, info
     enabled = bool(inv.get("reject_outliers", False))
     threshold = float(inv.get("outlier_threshold", 3.0))
@@ -476,6 +539,7 @@ def _occam_with_optional_rejection(
     floor = min(dobs_vec.size, max(
         int(math.ceil(fraction * dobs_vec.size)), min(min_gates, dobs_vec.size)))
     info: Dict[str, Any] = {
+        "initialization": initialization,
         "enabled": enabled,
         "threshold": threshold,
         "n_start": int(dobs_vec.size),

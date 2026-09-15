@@ -252,7 +252,7 @@ def run_timelapse_ert(
         + (f" (instrument: {instrument})" if instrument else " (auto-detect)") + " …")
     clean_dir, basenames, containers = ert_load.normalize_for_timelapse(
         source_files, instrument, out_dir, log=log,
-        max_error=p.get("max_error"))
+        max_error=p.get("max_error"), engine=engine)
     files = [os.path.join(clean_dir, b) for b in basenames]
 
     log(f"Building mesh from {Path(source_files[0]).name} (quality {p['mesh_quality']})")

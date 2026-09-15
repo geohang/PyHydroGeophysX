@@ -28,13 +28,11 @@ compares uniform layer thicknesses with spatially varying interpreted interfaces
 Hydraulic properties and forcing are illustrative, not the paper's calibration.
 It does not perform seismic inversion or infer conductivity from velocity.
 
-Install ``flopy``, ``numpy``, ``matplotlib`` and PyHydroGeophysX, then run::
-
-    python examples/Ex_MODFLOW_geophysics_feedback.py --download-mf6
-
-Or pass ``--mf6 /path/to/mf6``. ``--write-only`` prepares both input decks without
-a solver. Each default run creates a new folder under examples/results. No
-ParFlow, GPU, pyGIMLi or GIS installation is needed.
+Open the companion notebook and run its cells in order. Install ``flopy``,
+``numpy``, ``matplotlib`` and PyHydroGeophysX first. Set the executable path
+in the settings cell, or enable its optional download. Set ``write_only=True``
+to inspect inputs without running a solver. No ParFlow, GPU, pyGIMLi or GIS
+installation is needed.
 
 Source: https://github.com/geohang/Geophysics_informed_models
 Revision: a23fff3c00c0033f479064cf3651e23b1d5bea07 (Apache-2.0).
@@ -43,71 +41,169 @@ interfaces at 5 m spacing. Its integrated UZF/SFR/MVR catchment model is replace
 here with prescribed recharge, drains and a fixed-head outlet for a short test.
 See data/modflow_informed/provenance.json for exact source files and hashes.
 
-.. GENERATED FROM PYTHON SOURCE LINES 27-176
+.. GENERATED FROM PYTHON SOURCE LINES 28-30
+
+1. Imports and example directory
+--------------------------------
+
+.. GENERATED FROM PYTHON SOURCE LINES 32-50
 
 .. code-block:: Python
 
     from pathlib import Path
-    import argparse
     import json
     import re
     import shutil
     import tempfile
-
     import numpy as np
-
+    import flopy
+    import matplotlib.pyplot as plt
     from PyHydroGeophysX.model_input import write_modflow6_inputs
 
-
-    def load_structure():
-        """Condition the original interfaces explicitly; keep inactive cells finite."""
-        with np.load(Path(__file__).parent / 'data/modflow_informed/structure.npz') as data:
-            top = data['top'].copy()
-            active = data['active'].astype(bool)
-            reg = data['regolith_depth'].copy()
-            fractured = data['fractured_depth'].copy()
-        if not all(np.isfinite(a[active]).all() for a in (top, reg, fractured)):
-            raise ValueError('Active source cells must have finite structure data.')
-        # Same thin-layer conditioning as S4; no inferred conductivity conversion.
-        reg = np.where(active, np.where(reg <= .1, .15, reg), 1.)
-        fractured = np.where(active, np.where(fractured <= reg+.1, reg+.15, fractured), 10.)
-        top[~active] = np.mean(top[active])
-        # Same base in both cases so only internal layer geometry changes.
-        base = top - np.maximum(fractured+30., np.mean(fractured[active])+1.)
-        informed = np.stack([top-reg, top-fractured, base])
-        baseline = np.stack([top-np.mean(reg[active]), top-np.mean(fractured[active]), base])
-        return top, active, baseline, informed
+    current_dir = Path(__file__).resolve().parent if "__file__" in globals() else Path.cwd()
+    if not (current_dir / "data/modflow_informed/structure.npz").is_file():
+        current_dir = current_dir / "examples"
+    data_path = current_dir / "data/modflow_informed/structure.npz"
+    if not data_path.is_file():
+        raise FileNotFoundError("Open the notebook from examples/ or the repository root.")
 
 
-    def build_baseline(workspace, executable):
-        import flopy
-        top, active, baseline, informed = load_structure()
-        sim = flopy.mf6.MFSimulation(sim_name='structure_demo', sim_ws=str(workspace), exe_name=executable)
-        flopy.mf6.ModflowTdis(sim, time_units='DAYS', nper=3,
-                             perioddata=[(10.,10,1.)]*3)
-        flopy.mf6.ModflowIms(sim, complexity='MODERATE', linear_acceleration='BICGSTAB',
-                            outer_dvclose=1e-7, inner_dvclose=1e-8, rcloserecord=1e-6)
-        model = flopy.mf6.ModflowGwf(sim, modelname='catchment', save_flows=True)
-        shape = baseline.shape
-        flopy.mf6.ModflowGwfdis(model, length_units='METERS', nlay=3,
-            nrow=shape[1], ncol=shape[2], delr=5., delc=5., top=top,
-            botm=baseline, idomain=np.broadcast_to(active,shape).astype(int))
-        flopy.mf6.ModflowGwfnpf(model, icelltype=0, k=[1.,.1,.001], k33=[.1,.01,.0001], save_flows=True)
-        flopy.mf6.ModflowGwfic(model, strt=np.broadcast_to(top+.1,shape))
-        # Confined storage is intentional: this small linear comparison does not model UZF.
-        flopy.mf6.ModflowGwfsto(model, iconvert=0, ss=1e-4, sy=.1, transient={0:True})
-        row, col = np.unravel_index(np.argmin(np.where(active,top,np.inf)),top.shape)
-        flopy.mf6.ModflowGwfchd(model, stress_period_data=[((0,int(row),int(col)),float(top[row,col]))], save_flows=True)
-        drains = [((0,int(r),int(c)),float(top[r,c]),1.) for r,c in np.argwhere(active)
-                  if (r,c)!=(row,col)]
-        flopy.mf6.ModflowGwfdrn(model, stress_period_data=drains, save_flows=True)
-        flopy.mf6.ModflowGwfrcha(model, recharge={i:np.where(active,rate,0.)
-                               for i,rate in enumerate([.001,.003,.001])}, save_flows=True)
-        flopy.mf6.ModflowGwfoc(model, head_filerecord='catchment.hds', budget_filerecord='catchment.cbc',
-            saverecord=[('HEAD','ALL'),('BUDGET','ALL')], printrecord=[('BUDGET','ALL')])
-        sim.write_simulation(silent=True)
-        return sim, active, informed
 
+.. GENERATED FROM PYTHON SOURCE LINES 51-53
+
+2. Settings
+-----------
+
+.. GENERATED FROM PYTHON SOURCE LINES 55-61
+
+.. code-block:: Python
+
+    mf6 = None  # Set to your mf6 executable path, or leave None to search PATH.
+    download = False  # Set True to download the official executable with FloPy.
+    write_only = False  # Set True to prepare inputs without running MODFLOW.
+    output = None  # None creates a unique folder; otherwise supply a new directory.
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 62-64
+
+3. Convert interpreted depths to hydrological interfaces
+--------------------------------------------------------
+
+.. GENERATED FROM PYTHON SOURCE LINES 66-85
+
+.. code-block:: Python
+
+    with np.load(data_path) as data:
+        top = data['top'].copy()
+        active = data['active'].astype(bool)
+        reg = data['regolith_depth'].copy()
+        fractured = data['fractured_depth'].copy()
+    if not all(np.isfinite(a[active]).all() for a in (top, reg, fractured)):
+        raise ValueError('Active source cells must have finite structure data.')
+    # Same thin-layer conditioning as S4; no inferred conductivity conversion.
+    reg = np.where(active, np.where(reg <= .1, .15, reg), 1.)
+    fractured = np.where(active, np.where(fractured <= reg+.1, reg+.15, fractured), 10.)
+    top[~active] = np.mean(top[active])
+    # Same base in both cases so only internal layer geometry changes.
+    base = top - np.maximum(fractured+30., np.mean(fractured[active])+1.)
+    informed = np.stack([top-reg, top-fractured, base])
+    baseline = np.stack([top-np.mean(reg[active]), top-np.mean(fractured[active]), base])
+
+    print(f"Grid: {top.shape}; active cells per layer: {active.sum()}")
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 86-88
+
+4. Prepare the output folder and executable
+-------------------------------------------
+
+.. GENERATED FROM PYTHON SOURCE LINES 90-108
+
+.. code-block:: Python
+
+    executable = str(Path(mf6).expanduser().resolve()) if mf6 else shutil.which('mf6')
+    if not write_only and executable is None and not download:
+        raise FileNotFoundError("Set mf6 or download=True in cell 2; write_only=True needs no solver.")
+    if output is None:
+        results = current_dir / 'results'
+        results.mkdir(exist_ok=True)
+        output = Path(tempfile.mkdtemp(prefix='modflow-feedback-', dir=results)) / 'run'
+    output = Path(output).resolve()
+    output.mkdir(parents=True, exist_ok=False)
+    if not write_only and executable is None and download:
+        from flopy.utils import get_modflow
+        binary = output / 'bin'
+        binary.mkdir()
+        get_modflow(str(binary), subset='mf6', quiet=True)
+        executable = str(next(binary.glob('mf6*')))
+    print(f"Results: {output}")
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 109-111
+
+5. Build the uniform-thickness baseline
+---------------------------------------
+
+.. GENERATED FROM PYTHON SOURCE LINES 113-139
+
+.. code-block:: Python
+
+    sim = flopy.mf6.MFSimulation(sim_name='structure_demo', sim_ws=str(output / 'baseline'), exe_name=executable or 'mf6')
+    flopy.mf6.ModflowTdis(sim, time_units='DAYS', nper=3,
+                         perioddata=[(10.,10,1.)]*3)
+    flopy.mf6.ModflowIms(sim, complexity='MODERATE', linear_acceleration='BICGSTAB',
+                        outer_dvclose=1e-7, inner_dvclose=1e-8, rcloserecord=1e-6)
+    model = flopy.mf6.ModflowGwf(sim, modelname='catchment', save_flows=True)
+    shape = baseline.shape
+    flopy.mf6.ModflowGwfdis(model, length_units='METERS', nlay=3,
+        nrow=shape[1], ncol=shape[2], delr=5., delc=5., top=top,
+        botm=baseline, idomain=np.broadcast_to(active,shape).astype(int))
+    flopy.mf6.ModflowGwfnpf(model, icelltype=0, k=[1.,.1,.001], k33=[.1,.01,.0001], save_flows=True)
+    flopy.mf6.ModflowGwfic(model, strt=np.broadcast_to(top+.1,shape))
+    # Confined storage is intentional: this small linear comparison does not model UZF.
+    flopy.mf6.ModflowGwfsto(model, iconvert=0, ss=1e-4, sy=.1, transient={0:True})
+    row, col = np.unravel_index(np.argmin(np.where(active,top,np.inf)),top.shape)
+    flopy.mf6.ModflowGwfchd(model, stress_period_data=[((0,int(row),int(col)),float(top[row,col]))], save_flows=True)
+    drains = [((0,int(r),int(c)),float(top[r,c]),1.) for r,c in np.argwhere(active)
+              if (r,c)!=(row,col)]
+    flopy.mf6.ModflowGwfdrn(model, stress_period_data=drains, save_flows=True)
+    flopy.mf6.ModflowGwfrcha(model, recharge={i:np.where(active,rate,0.)
+                           for i,rate in enumerate([.001,.003,.001])}, save_flows=True)
+    flopy.mf6.ModflowGwfoc(model, head_filerecord='catchment.hds', budget_filerecord='catchment.cbc',
+        saverecord=[('HEAD','ALL'),('BUDGET','ALL')], printrecord=[('BUDGET','ALL')])
+    sim.write_simulation(silent=True)
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 140-144
+
+6. Write the geophysics-informed geometry
+-----------------------------------------
+
+The base, hydraulic properties and forcing stay the same in both models.
+
+.. GENERATED FROM PYTHON SOURCE LINES 146-150
+
+.. code-block:: Python
+
+    write_modflow6_inputs(sim, output / 'informed', {'bottom_elevation': informed})
+    print('Both model input decks are ready.')
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 151-155
+
+7. Run each model and check its water budget
+--------------------------------------------
+
+This helper applies identical solver and output checks to both cases.
+
+.. GENERATED FROM PYTHON SOURCE LINES 157-178
+
+.. code-block:: Python
 
     def run_case(folder, executable, active):
         import flopy
@@ -130,22 +226,17 @@ See data/modflow_informed/provenance.json for exact source files and hashes.
         return heads, np.asarray(times), np.asarray(discharge), max(discrepancy)
 
 
-    def run_example(output, *, mf6=None, download=False, write_only=False):
-        output = Path(output).resolve()
-        output.mkdir(parents=True,exist_ok=False)
-        executable = str(Path(mf6).resolve()) if mf6 else shutil.which('mf6')
-        if not write_only and executable is None and download:
-            from flopy.utils import get_modflow
-            binary = output/'bin'
-            binary.mkdir()
-            get_modflow(str(binary),subset='mf6',quiet=True)
-            executable = str(next(binary.glob('mf6*')))
-        if not write_only and executable is None:
-            raise FileNotFoundError('Supply --mf6 or use --download-mf6; --write-only needs no executable.')
-        sim, active, informed = build_baseline(output/'baseline',executable or 'mf6')
-        write_modflow6_inputs(sim,output/'informed',{'bottom_elevation':informed})
-        if write_only:
-            return {'output':str(output),'status':'inputs_written_not_run'}
+
+.. GENERATED FROM PYTHON SOURCE LINES 179-181
+
+8. Compare heads and drain discharge
+------------------------------------
+
+.. GENERATED FROM PYTHON SOURCE LINES 183-202
+
+.. code-block:: Python
+
+    if not write_only:
         base_head, times, base_q, base_error = run_case(output/'baseline',executable,active)
         informed_head, informed_times, informed_q, informed_error = run_case(output/'informed',executable,active)
         np.testing.assert_array_equal(times,informed_times)
@@ -157,11 +248,27 @@ See data/modflow_informed/provenance.json for exact source files and hashes.
         (output/'summary.json').write_text(json.dumps(summary,indent=2),encoding='utf-8')
         np.savez_compressed(output/'comparison.npz',baseline_head=base_head,informed_head=informed_head,
                             time_days=times,baseline_drain_m3_day=base_q,informed_drain_m3_day=informed_q,active=active)
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
+
+        print(json.dumps(summary, indent=2))
+    else:
+        summary = {"output": str(output), "status": "inputs_written_not_run"}
+        print(summary)
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 203-207
+
+9. Plot the hydrological response
+---------------------------------
+
+Read the differences as sensitivity to structure, not evidence of improved prediction.
+
+.. GENERATED FROM PYTHON SOURCE LINES 209-227
+
+.. code-block:: Python
+
+    if not write_only:
         fig, axes = plt.subplots(1,3,figsize=(13,4),layout='constrained')
-        top, _, _, _ = load_structure()
         artist = axes[0].imshow(np.where(active,top-informed[1],np.nan),cmap='viridis')
         axes[0].set_title('Interpreted fractured-zone depth')
         fig.colorbar(artist,ax=axes[0],label='m below ground')
@@ -177,44 +284,7 @@ See data/modflow_informed/provenance.json for exact source files and hashes.
         axes[2].set(xlabel='Time (days)',ylabel='Drain discharge (m³/day)',title='Hydrological response')
         axes[2].legend()
         fig.savefig(output/'comparison.png',dpi=150)
-        plt.close(fig)
-        return summary
-
-
-    if __name__ == '__main__':
-        parser = argparse.ArgumentParser(description=__doc__)
-        parser.add_argument('--mf6',help='Path to MODFLOW 6 executable')
-        parser.add_argument('--download-mf6',action='store_true',help='Download official executable using FloPy')
-        parser.add_argument('--write-only',action='store_true')
-        parser.add_argument('--output',type=Path,help='New output directory; existing paths are refused')
-        args = parser.parse_args()
-        if args.output is None:
-            root = Path(__file__).parent/'results'
-            root.mkdir(exist_ok=True)
-            # Reserve a unique parent; run_example creates the model directory below it.
-            args.output = Path(tempfile.mkdtemp(prefix='modflow-feedback-',dir=root))/'run'
-        print(json.dumps(run_example(args.output,mf6=args.mf6,download=args.download_mf6,
-                                     write_only=args.write_only),indent=2))
-
-
-.. GENERATED FROM PYTHON SOURCE LINES 177-193
-
-What the comparison shows
--------------------------
-
-The run writes these three panels to ``comparison.png``. The left panel is
-the interpreted fractured-zone depth that sets the layer geometry. The
-middle panel is the final head difference between the informed run and the
-uniform-thickness run, which isolates the effect of that geometry. The right
-panel plots drain discharge for both runs over the simulated period.
-
-Read the difference as sensitivity to the interpreted structure. The
-hydraulic properties and forcing here are illustrative, so neither run is
-calibrated and neither is the better prediction.
-
-.. image:: /auto_examples/images/Ex_MODFLOW_geophysics_feedback_fig_01.png
-   :width: 1000px
-   :align: center
+        plt.show()
 
 
 .. _sphx_glr_download_auto_examples_Ex_MODFLOW_geophysics_feedback.py:

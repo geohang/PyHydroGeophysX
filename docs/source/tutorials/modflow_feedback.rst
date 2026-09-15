@@ -18,16 +18,17 @@ install the small example dependencies into that environment:
 
 .. code-block:: console
 
-   python -m pip install flopy numpy matplotlib
-   python examples/Ex_MODFLOW_geophysics_feedback.py --download-mf6
+   python -m pip install flopy numpy matplotlib jupyterlab
+   jupyter lab examples/Ex_MODFLOW_geophysics_feedback.ipynb
 
-``--download-mf6`` explicitly downloads the official executable through FloPy.
-If already installed, pass ``--mf6 /path/to/mf6`` or put it on PATH. To inspect
-inputs without running a solver, use ``--write-only``. Each default invocation
-creates a new output folder; an explicit ``--output`` must name a new directory.
+Run the notebook cells in order. In the settings cell, set ``mf6`` to your
+executable path or ``download=True`` to download the official executable through
+FloPy. Leaving ``mf6=None`` searches PATH. Set ``write_only=True`` to inspect
+inputs without running a solver. ``output=None`` creates a new output folder;
+an explicit output path must name a new directory.
 
-For a standalone script download, extract the :download:`small data archive
-</_static/modflow_feedback_data.zip>` beside the script; it supplies
+For a standalone notebook or script download, extract the :download:`small data archive
+</_static/modflow_feedback_data.zip>` beside it; the archive supplies
 ``data/modflow_informed/``. A source checkout already includes these files.
 The executable download needs internet; the model itself runs offline.
 

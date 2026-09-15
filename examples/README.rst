@@ -12,6 +12,11 @@ The central theme is the interaction between geophysical data and hydrological
 models: predicting observations from model states and interpreting data as
 hydrological information. See :doc:`/tutorials/hydro_geophysical_interaction`.
 
+Open the notebooks in JupyterLab or VS Code and run the cells in order: inspect
+the data, edit parameters, run the model, then view the results. Every scientific
+example has a companion ``.ipynb``; the ``.py`` versions use ``# %%`` cells for
+editors and website generation.
+
 This gallery contains Python scripts and notebook downloads. It spans
 hydrological model access, petrophysical conversion, multi-method responses,
 field inversion, time-lapse monitoring, joint inversion and uncertainty analysis.

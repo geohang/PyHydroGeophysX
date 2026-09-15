@@ -233,7 +233,6 @@ class TimeLapseERTInversion(InversionBase):
         # Load all datasets and process
         rhos = []
         dataerr = []
-        k = []
         
         for i, fname in enumerate(self.data_files):
             # Load data
@@ -242,11 +241,8 @@ class TimeLapseERTInversion(InversionBase):
             
             # Handle geometric factors
             if np.all(dataert['k'] == 0.0):
-                if len(k) == 0:
-                    dataert['k'] = ert.createGeometricFactors(dataert, numerical=True)
-                    k = dataert['k'].array()
-                else:
-                    dataert['k'] = k
+                dataert['k'] = ert.createGeometricFactors(dataert, numerical=True)
+            k = dataert['k'].array()
             
             # Get apparent resistivity
             if np.all(dataert['rhoa']) != 0.0:
@@ -279,10 +275,7 @@ class TimeLapseERTInversion(InversionBase):
             self.fwd_operators.append(fwd_operator)
         
         # Stack all data
-        rhos = np.array(rhos)
-        rhos_temp = rhos[0]
-        for i in range(self.size - 1):
-            rhos_temp = np.hstack((rhos_temp, rhos[i + 1]))
+        rhos_temp = np.concatenate(rhos)
         
         rhos_temp = rhos_temp.reshape((-1, 1)).astype(self.dtype, copy=False)
         self.rhos1 = np.log(rhos_temp).astype(self.dtype, copy=False)
@@ -291,8 +284,7 @@ class TimeLapseERTInversion(InversionBase):
         del rhos  # Delete after use
 
         # Data error and weighting matrix
-        dataerr = np.array(dataerr)
-        err_temp = np.hstack(dataerr)
+        err_temp = np.concatenate(dataerr)
         data_weights = (1.0 / np.log(err_temp + 1)).astype(self.dtype, copy=False)
         # Wd is diagonal by construction, so keep it diagonal on both paths.
         # The dense branch used to build a D-by-D array to hold D numbers and

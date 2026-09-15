@@ -339,7 +339,7 @@ def test_adtlert_windowed_timelapse_reuses_one_forward_context(
     assert np.all(np.isfinite(result.predicted_data))
 
 
-def test_timelapse_normalization_applies_one_common_quality_mask(
+def test_timelapse_normalization_filters_each_native_survey(
     adtlert_timelapse_case, tmp_path: Path
 ) -> None:
     root, files, datasets, _ = adtlert_timelapse_case
@@ -360,16 +360,8 @@ def test_timelapse_normalization_applies_one_common_quality_mask(
 
     assert Path(clean_dir).is_dir()
     assert len(names) == len(normalized) == 3
-    assert {int(data.size()) for data in normalized} == {
-        int(datasets[0].size()) - 1
-    }
-    layouts = [
-        np.column_stack(
-            [np.asarray(data[key]) for key in ("a", "b", "m", "n")]
-        )
-        for data in normalized
-    ]
-    assert all(np.array_equal(layouts[0], layout) for layout in layouts[1:])
+    count = int(datasets[0].size())
+    assert [int(data.size()) for data in normalized] == [count, count - 1, count]
 
 
 @requires_adtlert_cuda
@@ -390,7 +382,7 @@ def test_adtlert_windowed_rejects_multiprocess_gpu_contexts(
 
 
 @requires_adtlert_cuda
-def test_adtlert_windowed_requires_common_abmn_order(
+def test_adtlert_windowed_aligns_missing_abmn(
     adtlert_timelapse_case, tmp_path: Path
 ) -> None:
     root, files, _, mesh = adtlert_timelapse_case
@@ -406,8 +398,12 @@ def test_adtlert_windowed_requires_common_abmn_order(
         mesh=mesh,
         engine="adtlert",
     )
-    with pytest.raises(ValueError, match="identical ABMN ordering"):
-        inversion.run()
+    datasets, observed, errors = inversion._load_adtlert_series()
+    assert observed.shape == errors.shape == (2, datasets[0].size())
+    assert errors[1, 0] == 1.0
+    result = inversion.run()
+    assert np.all(np.isfinite(result.final_models))
+    assert result.predicted_data.shape == observed.shape
 
 
 @requires_adtlert_cuda

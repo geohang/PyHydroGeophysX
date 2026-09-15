@@ -329,93 +329,114 @@ def save_edited_ert_container(
 # ---------------------------------------------------------------------------
 # Normalize a sequence into clean pygimli files for the core inversion
 # ---------------------------------------------------------------------------
-def normalize_for_timelapse(files: Sequence[str], instrument: Optional[str],
-                            out_dir: str, log: LogFn = _noop,
-                            max_error: Optional[float] = None):
-    """Load each file robustly and write a clean pygimli ``.dat`` into one folder.
+def align_timelapse_abmn(containers, log: LogFn = _noop):
+    """Align the ABMN union for ADTLERT; missing rows get relative error 1.0.
 
-    The core :class:`TimeLapseERTInversion` reloads files with ``ert.load``; the
-    normalized files are written in pygimli's native unified format (proper token
-    headers, geometric factors, ``rhoa = R*k``, topography in ``z``) so that
-    reload is correct. As in the published AD-TLERT real-data workflow, one
-    common quality mask is intersected across every time step before anything
-    is written. This guarantees that every window sees the same ABMN rows and
-    prevents a datum that is bad at one time from changing the inverse problem
-    only at that time. Returns ``(clean_dir, basenames, containers)``; all clean
-    files share one folder so the windowed inversion (which takes a directory +
-    filenames) works directly.
+    Electrode numbering must describe the same positions. Exact ABMN tuples
+    are matched, without merging reciprocal or reversed-polarity measurements.
+    Missing rhoa uses the median of available values for that tuple. A 100%
+    error downweights these placeholders; it does not give them zero weight.
     """
-    base = Path(out_dir) / "qt_ert_timelapse" / "normalized"
-    base.mkdir(parents=True, exist_ok=True)
-    for stale in base.glob("step_*.dat"):
-        try:
-            stale.unlink()
-        except OSError:
-            pass
-    containers = [
-        load_ert_container(f, instrument=instrument, log=log)
-        for f in files
-    ]
+    import pygimli as pg
+
     if not containers:
-        raise ValueError("Time-lapse normalization needs at least one ERT file.")
-
-    def _layout(data):
-        sensors = np.asarray(
-            [[float(pos[0]), float(pos[1])] for pos in data.sensorPositions()],
-            dtype=float,
-        )
-        abmn = np.column_stack(
-            [
-                np.asarray(data[key], dtype=np.int64)
-                for key in ("a", "b", "m", "n")
-            ]
-        )
-        return sensors, abmn
-
-    reference_sensors, reference_abmn = _layout(containers[0])
-    common_mask = np.ones(reference_abmn.shape[0], dtype=bool)
+        raise ValueError("Time-lapse alignment needs at least one ERT dataset.")
+    reference = np.asarray(containers[0].sensorPositions(), dtype=float)
+    layouts, lookup, samples = [], {}, {}
     for index, data in enumerate(containers):
-        sensors, abmn = _layout(data)
-        if sensors.shape != reference_sensors.shape or not np.allclose(
-            sensors, reference_sensors, rtol=0.0, atol=1.0e-8
+        sensors = np.asarray(data.sensorPositions(), dtype=float)
+        if sensors.shape != reference.shape or not np.allclose(
+            sensors, reference, rtol=0.0, atol=1.e-8
         ):
             raise ValueError(
-                "Time-lapse ERT requires identical electrode positions; "
-                f"step {index} differs from the first file."
+                f"ADTLERT requires identical electrode positions; step {index} differs."
             )
-        if not np.array_equal(abmn, reference_abmn):
-            raise ValueError(
-                "Time-lapse ERT requires identical ABMN ordering; "
-                f"step {index} differs from the first file."
-            )
+        rows = [tuple(row) for row in np.column_stack([
+            np.asarray(data[key], dtype=np.int64) for key in ("a", "b", "m", "n")
+        ])]
+        if len(set(rows)) != len(rows):
+            raise ValueError(f"Duplicate ABMN measurements in step {index}; alignment is ambiguous.")
+        layouts.append({key: row for row, key in enumerate(rows)})
+        for row, key in enumerate(rows):
+            lookup.setdefault(key, (index, row))
+            value = float(data["rhoa"][row])
+            if np.isfinite(value) and value > 0:
+                samples.setdefault(key, []).append(value)
+    keys = list(lookup)
+    if any(key not in samples for key in keys):
+        raise ValueError("Cannot fill ABMN without any positive finite apparent resistivity.")
+    fields = [{str(token): np.asarray(data[str(token)]).copy()
+               for token in data.dataMap().keys()} for data in containers]
+    tokens = set().union(*(field.keys() for field in fields))
+    aligned = []
+    for index, data in enumerate(containers):
+        result = pg.DataContainerERT(data)
+        result.resize(len(keys))
+        # Copy every field using the same row mapping, including auxiliary data.
+        for token in tokens:
+            values = []
+            for key in keys:
+                src_index, row = (index, layouts[index][key]) if key in layouts[index] else lookup[key]
+                source = fields[src_index]
+                values.append(float(source[token][row]) if token in source else 0.0)
+            result[token] = values
+        missing = np.asarray([key not in layouts[index] for key in keys])
+        rhoa = np.asarray(result["rhoa"]).copy()
+        errors = np.asarray(result["err"]).copy()
+        for row in np.flatnonzero(missing):
+            rhoa[row] = np.median(samples[keys[row]])
+        errors[missing] = 1.0
+        result["rhoa"], result["err"] = rhoa, errors
+        result["valid"] = np.ones(len(keys))
+        if any(source.haveData("r") for source in containers):
+            resistance = np.asarray(result["r"]).copy()
+            factors = np.asarray(result["k"])
+            safe = missing & (factors != 0)
+            resistance[safe] = rhoa[safe] / factors[safe]
+            result["r"] = resistance
+        aligned.append(result)
+        log(f"ADTLERT alignment step {index}: {len(keys)} ABMN rows, "
+            f"{int(missing.sum())} filled with 100% relative error")
+    return aligned
+
+
+def normalize_for_timelapse(files: Sequence[str], instrument: Optional[str],
+                            out_dir: str, log: LogFn = _noop,
+                            max_error: Optional[float] = None,
+                            engine: str = "pyhydro"):
+    """Write native files, filtering each survey independently.
+
+    PyHydro keeps each survey's own measurement count and ordering. ADTLERT
+    aligns the union of surviving ABMN rows and fills missing rows at 100% error.
+    """
+    if engine not in ("pyhydro", "adtlert"):
+        raise ValueError(f"Unsupported time-lapse engine: {engine}")
+    base = Path(out_dir) / "qt_ert_timelapse" / "normalized"
+    base.mkdir(parents=True, exist_ok=True)
+    containers = [load_ert_container(f, instrument=instrument, log=log) for f in files]
+    if not containers:
+        raise ValueError("Time-lapse normalization needs at least one ERT file.")
+    for index, data in enumerate(containers):
         rhoa = np.asarray(data["rhoa"], dtype=float)
         quality = np.isfinite(rhoa) & (rhoa > 0.0)
         if data.haveData("valid"):
             quality &= np.asarray(data["valid"], dtype=float) > 0.0
         if data.haveData("err"):
             errors = np.asarray(data["err"], dtype=float)
-            quality &= np.isfinite(errors)
+            quality &= np.isfinite(errors) & (errors > 0.0)
             if max_error is not None:
                 quality &= errors <= float(max_error)
-        common_mask &= quality
-
-    kept = int(common_mask.sum())
-    if kept < 4:
-        raise ValueError(
-            "Need at least four measurements in the common time-lapse "
-            "quality mask."
-        )
-    removed = int(common_mask.size - kept)
-    log(
-        f"Common time-lapse quality mask: {kept}/{common_mask.size} "
-        f"measurements retained across {len(containers)} steps"
-        + (f" ({removed} removed)" if removed else "")
-    )
-
+        if int(quality.sum()) < 4:
+            raise ValueError(f"Need at least four valid measurements in time-lapse step {index}.")
+        if not quality.all():
+            data.remove(~quality)
+        log(f"Time-lapse quality step {index}: {int(quality.sum())}/{len(quality)} retained")
+    if engine == "adtlert":
+        containers = align_timelapse_abmn(containers, log=log)
+    for stale in base.glob("step_*.dat"):
+        stale.unlink()
     basenames: List[str] = []
     for i, (f, data) in enumerate(zip(files, containers)):
-        if removed:
-            data.remove(~common_mask)
         name = f"step_{i:03d}.dat"
         data.save(str(base / name))
         basenames.append(name)
