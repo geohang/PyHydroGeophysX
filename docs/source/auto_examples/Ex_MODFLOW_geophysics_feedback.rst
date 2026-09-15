@@ -41,12 +41,20 @@ interfaces at 5 m spacing. Its integrated UZF/SFR/MVR catchment model is replace
 here with prescribed recharge, drains and a fixed-head outlet for a short test.
 See data/modflow_informed/provenance.json for exact source files and hashes.
 
-.. GENERATED FROM PYTHON SOURCE LINES 28-30
+.. GENERATED FROM PYTHON SOURCE LINES 25-27
+
+.. code-block:: Python
+   :dedent: 1
+
+
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 29-31
 
 1. Imports and example directory
 --------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 32-50
+.. GENERATED FROM PYTHON SOURCE LINES 33-51
 
 .. code-block:: Python
 
@@ -69,12 +77,12 @@ See data/modflow_informed/provenance.json for exact source files and hashes.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 51-53
+.. GENERATED FROM PYTHON SOURCE LINES 52-54
 
 2. Settings
 -----------
 
-.. GENERATED FROM PYTHON SOURCE LINES 55-61
+.. GENERATED FROM PYTHON SOURCE LINES 56-62
 
 .. code-block:: Python
 
@@ -85,12 +93,12 @@ See data/modflow_informed/provenance.json for exact source files and hashes.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 62-64
+.. GENERATED FROM PYTHON SOURCE LINES 63-65
 
 3. Convert interpreted depths to hydrological interfaces
 --------------------------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 66-85
+.. GENERATED FROM PYTHON SOURCE LINES 67-86
 
 .. code-block:: Python
 
@@ -114,12 +122,12 @@ See data/modflow_informed/provenance.json for exact source files and hashes.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 86-88
+.. GENERATED FROM PYTHON SOURCE LINES 87-89
 
 4. Prepare the output folder and executable
 -------------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 90-108
+.. GENERATED FROM PYTHON SOURCE LINES 91-109
 
 .. code-block:: Python
 
@@ -142,12 +150,12 @@ See data/modflow_informed/provenance.json for exact source files and hashes.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 109-111
+.. GENERATED FROM PYTHON SOURCE LINES 110-112
 
 5. Build the uniform-thickness baseline
 ---------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 113-139
+.. GENERATED FROM PYTHON SOURCE LINES 114-140
 
 .. code-block:: Python
 
@@ -178,14 +186,14 @@ See data/modflow_informed/provenance.json for exact source files and hashes.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 140-144
+.. GENERATED FROM PYTHON SOURCE LINES 141-145
 
 6. Write the geophysics-informed geometry
 -----------------------------------------
 
 The base, hydraulic properties and forcing stay the same in both models.
 
-.. GENERATED FROM PYTHON SOURCE LINES 146-150
+.. GENERATED FROM PYTHON SOURCE LINES 147-151
 
 .. code-block:: Python
 
@@ -194,14 +202,14 @@ The base, hydraulic properties and forcing stay the same in both models.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 151-155
+.. GENERATED FROM PYTHON SOURCE LINES 152-156
 
 7. Run each model and check its water budget
 --------------------------------------------
 
 This helper applies identical solver and output checks to both cases.
 
-.. GENERATED FROM PYTHON SOURCE LINES 157-178
+.. GENERATED FROM PYTHON SOURCE LINES 158-179
 
 .. code-block:: Python
 
@@ -227,12 +235,12 @@ This helper applies identical solver and output checks to both cases.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 179-181
+.. GENERATED FROM PYTHON SOURCE LINES 180-182
 
 8. Compare heads and drain discharge
 ------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 183-202
+.. GENERATED FROM PYTHON SOURCE LINES 184-203
 
 .. code-block:: Python
 
@@ -256,14 +264,14 @@ This helper applies identical solver and output checks to both cases.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 203-207
+.. GENERATED FROM PYTHON SOURCE LINES 204-208
 
 9. Plot the hydrological response
 ---------------------------------
 
 Read the differences as sensitivity to structure, not evidence of improved prediction.
 
-.. GENERATED FROM PYTHON SOURCE LINES 209-227
+.. GENERATED FROM PYTHON SOURCE LINES 210-229
 
 .. code-block:: Python
 
@@ -285,6 +293,18 @@ Read the differences as sensitivity to structure, not evidence of improved predi
         axes[2].legend()
         fig.savefig(output/'comparison.png',dpi=150)
         plt.show()
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 230-238
+
+The interpreted fractured-zone depth (left) sets where the two models differ;
+the head difference (centre) and the drain hydrographs (right) show how that
+structure propagates into the simulated response. The figure is produced with
+``write_only = False``.
+
+.. image:: /auto_examples/images/Ex_MODFLOW_geophysics_feedback_fig_01.png
+   :align: center
+   :width: 900px
 
 
 .. _sphx_glr_download_auto_examples_Ex_MODFLOW_geophysics_feedback.py:

@@ -8,6 +8,7 @@ native-library probes and workflows in separate Python processes.
 
 from __future__ import annotations
 
+import codecs
 import json
 from concurrent.futures import CancelledError
 from pathlib import Path
@@ -353,6 +354,11 @@ class ProcessWorkflowWorker(QObject):
         self.result_path = Path(result_path).resolve()
         self._cancelled = False
         self._finished = False
+        self._output_decoders = {
+            stream: codecs.getincrementaldecoder("utf-8")(errors="replace")
+            for stream in ("stdout", "stderr")
+        }
+        self._output_pending = {"stdout": "", "stderr": ""}
 
         self.process = QProcess(self)
         self.process.setWorkingDirectory(str(self.project_root))
@@ -390,11 +396,12 @@ class ProcessWorkflowWorker(QObject):
         self.process.finished.connect(self._on_finished)
 
     def start(self) -> None:
-        self.result_path.parent.mkdir(parents=True, exist_ok=True)
         try:
-            self.result_path.unlink()
-        except FileNotFoundError:
-            pass
+            self.result_path.parent.mkdir(parents=True, exist_ok=True)
+            self.result_path.unlink(missing_ok=True)
+        except OSError as exc:
+            self._finish_with_error(f"Could not prepare workflow result {self.result_path}: {exc}")
+            return
         self.process.start()
 
     def cancel(self) -> None:
@@ -420,11 +427,15 @@ class ProcessWorkflowWorker(QObject):
         if self.isRunning():
             self.process.kill()
 
-    def _emit_output(self, raw: bytes) -> None:
+    def _emit_output(self, raw: bytes, stream: str = "stdout", *, final: bool = False) -> None:
         if self._cancelled:
             return
-        text = raw.decode("utf-8", errors="replace")
-        for line in text.splitlines():
+        text = self._output_pending[stream] + self._output_decoders[stream].decode(raw, final=final)
+        lines = text.splitlines(keepends=True)
+        self._output_pending[stream] = ""
+        if lines and not final and not lines[-1].endswith(("\n", "\r")):
+            self._output_pending[stream] = lines.pop()
+        for line in lines:
             rendered = line.rstrip()
             if not rendered.strip():
                 continue
@@ -443,7 +454,7 @@ class ProcessWorkflowWorker(QObject):
         self._emit_output(bytes(self.process.readAllStandardOutput()))
 
     def _read_stderr(self) -> None:
-        self._emit_output(bytes(self.process.readAllStandardError()))
+        self._emit_output(bytes(self.process.readAllStandardError()), "stderr")
 
     def _on_process_error(self, error: QProcess.ProcessError) -> None:
         if error == QProcess.ProcessError.FailedToStart and not self._finished:
@@ -466,11 +477,13 @@ class ProcessWorkflowWorker(QObject):
             return
         self._read_stdout()
         self._read_stderr()
+        self._emit_output(b"", "stdout", final=True)
+        self._emit_output(b"", "stderr", final=True)
         if self._cancelled:
             self._finished = True
             self.finished.emit()
             return
-        if int(exit_code) != 0:
+        if int(exit_code) != 0 or _exit_status == QProcess.ExitStatus.CrashExit:
             unsigned = int(exit_code) & 0xFFFFFFFF
             self._finish_with_error(
                 f"Workflow process exited with code {int(exit_code)} "

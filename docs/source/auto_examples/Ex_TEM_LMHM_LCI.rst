@@ -126,7 +126,7 @@ as a section that merely looks plausible.
 5. Plot the true and recovered sections
 ---------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 86-118
+.. GENERATED FROM PYTHON SOURCE LINES 86-119
 
 .. code-block:: Python
 
@@ -162,6 +162,18 @@ as a section that merely looks plausible.
     fig.suptitle(
         f"log10 RMSE={log_rmse:.3f}; log10 correlation={correlation:.3f}")
     plt.show()
+
+
+.. GENERATED FROM PYTHON SOURCE LINES 120-128
+
+The two panels share a colour scale, so the recovery is read against the
+truth directly: the lateral constraint keeps the layer boundaries continuous
+along the line, and the reported log10 RMSE and correlation quantify how
+close the recovered section is.
+
+.. image:: /auto_examples/images/Ex_TEM_LMHM_LCI_fig_01.png
+   :align: center
+   :width: 800px
 
 
 .. _sphx_glr_download_auto_examples_Ex_TEM_LMHM_LCI.py:

@@ -593,13 +593,22 @@ class GravMagProcessingModule(BaseModule):
             table = io_utils.load_xyz_table(path, min_cols=3)
         except Exception as exc:  # noqa: BLE001
             return {"status": "failed", "error": f"Could not load example: {exc}"}
-        self._set_station_data(table, path)
+        if not self._set_station_data(table, path):
+            return {"status": "failed", "error": "Wait for the current inversion before replacing station data."}
         self.log(f"Loaded {kind} example: {path.name}", "success")
         return {"status": "ok", "example": kind, "stations": int(table.shape[0]),
                 "path": str(path)}
 
-    def _set_station_data(self, table: np.ndarray, path: Path) -> None:
+    def _set_station_data(self, table: np.ndarray, path: Path) -> bool:
         """Store a three- or four-column station table and update all previews."""
+        if self._inv_worker is not None and self._inv_worker.isRunning():
+            self.log("Wait for the current inversion before replacing station data.", "warn")
+            return False
+        self._inv_result = None
+        self._export_btn.setEnabled(False)
+        self._quality_view.clear()
+        for view in (self._model_view, self._quality_view):
+            self._tabs.setTabEnabled(self._tabs.indexOf(view), False)
         self._x = np.asarray(table[:, 0], dtype=float)
         self._y = np.asarray(table[:, 1], dtype=float)
         self._z = np.asarray(table[:, 3], dtype=float) if table.shape[1] >= 4 else None
@@ -636,6 +645,7 @@ class GravMagProcessingModule(BaseModule):
                 resource_id=f"{method.lower()}:observed_data:gravmag",
             )
         self._publish()
+        return True
 
     def _effective_z(self) -> np.ndarray:
         """Return per-station elevation, preferring the optional z_m column."""
@@ -738,6 +748,8 @@ class GravMagProcessingModule(BaseModule):
     def _on_inversion_ok(self, result: dict) -> None:
         self._inv_result = result
         self._export_btn.setEnabled(True)
+        for view in (self._model_view, self._quality_view):
+            self._tabs.setTabEnabled(self._tabs.indexOf(view), True)
         self._model_view.show_model(result["edges"], result["model3d"],
                                     label=result["label"], cmap=result["cmap"],
                                     log_scale=result.get("log_scale", False))
@@ -893,7 +905,8 @@ class GravMagProcessingModule(BaseModule):
             table = io_utils.load_xyz_table(str(p), min_cols=3)
         except Exception as exc:  # noqa: BLE001
             return {"status": "failed", "error": f"Could not load data: {exc}"}
-        self._set_station_data(table, Path(p))
+        if not self._set_station_data(table, Path(p)):
+            return {"status": "failed", "error": "Wait for the current inversion before replacing station data."}
         return {"status": "ok", "stations": int(self._x.size), "has_station_elevation": self._z is not None}
 
     def _agent_use_example(self, kind: Any) -> Dict[str, Any]:

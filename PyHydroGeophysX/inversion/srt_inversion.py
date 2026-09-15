@@ -498,15 +498,15 @@ class SRTInversion(InversionBase):
         return centers
 
     def _estimate_data_errors(self, t_obs: np.ndarray) -> np.ndarray:
-        if "err" in self.data.dataMap():
-            err = np.asarray(self.data["err"].array(), dtype=float).ravel()
-            valid = np.all(np.isfinite(err)) and np.any(err > 0)
-            if valid and err.size == t_obs.size:
-                return np.clip(err, 1e-12, None)
-
         rel = float(self.parameters["relativeError"])
         abs_err = float(self.parameters.get("absoluteUError", self.parameters.get("absoluteError", 0.001)))
-        return np.sqrt((rel * np.abs(t_obs)) ** 2 + abs_err**2)
+        fallback = np.sqrt((rel * np.abs(t_obs)) ** 2 + abs_err**2)
+        if "err" in self.data.dataMap():
+            err = np.asarray(self.data["err"].array(), dtype=float).ravel()
+            if err.size == t_obs.size:
+                valid = np.isfinite(err) & (err > 0)
+                return np.maximum(np.where(valid, err, fallback), 1e-12)
+        return np.maximum(fallback, 1e-12)
 
     def _build_initial_velocity(self, n_model: int) -> np.ndarray:
         min_v, max_v = self.parameters["model_constraints"]

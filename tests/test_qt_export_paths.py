@@ -11,6 +11,41 @@ import os
 import pytest
 
 
+@pytest.mark.parametrize("running", [False, True])
+def test_loading_gravmag_stations_does_not_export_a_previous_model(running):
+    from pathlib import Path
+    from types import SimpleNamespace
+    import numpy as np
+
+    _require_qt()
+    from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QTabWidget, QWidget
+    from PyHydroGeophysX.qt_apps.modules.gravmag_processing import GravMagProcessingModule
+    app = QApplication.instance() or QApplication([])
+    tabs, model, quality = QTabWidget(), QWidget(), QWidget()
+    quality.clear = lambda: None
+    tabs.addTab(model, "Model")
+    tabs.addTab(quality, "Quality")
+    button = QPushButton()
+    old_result = {"model3d": "previous survey"}
+    page = SimpleNamespace(
+        _inv_worker=SimpleNamespace(isRunning=lambda: running), _inv_result=old_result,
+        _export_btn=button, _quality_view=quality, _model_view=model, _tabs=tabs,
+        _elevation_source=QLabel(), _info=QLabel(), state=SimpleNamespace(),
+        log=lambda *args: None, _refresh_scatter=lambda: None,
+        _refresh_qc=lambda: None, _publish=lambda: None,
+    )
+    accepted = GravMagProcessingModule._set_station_data(page, np.array([[1., 2., 3.]]), Path("new.csv"))
+    assert accepted is (not running)
+    if running:
+        assert page._inv_result is old_result
+        assert not hasattr(page, "_source_path")
+    else:
+        assert page._inv_result is None
+        assert not button.isEnabled()
+        assert not tabs.isTabEnabled(0) and not tabs.isTabEnabled(1)
+    tabs.close()
+
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 

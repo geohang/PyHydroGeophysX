@@ -120,6 +120,48 @@ def test_process_worker_forwards_structured_progress(tmp_path: Path) -> None:
     assert logged == ["ADTLERT window 2/8 complete, chi2 1.100"]
 
 
+def test_process_worker_buffers_split_unicode_and_progress(tmp_path: Path) -> None:
+    Worker, _ = _process_worker_dependencies()
+    worker = Worker(tmp_path / "recipe.json", tmp_path, tmp_path, tmp_path / "result.json")
+    logged, progressed = [], []
+    worker.logged.connect(logged.append)
+    worker.progressed.connect(lambda *args: progressed.append(args))
+    payload = "[progress 1/2] 测量完成 χ²\n".encode("utf-8")
+    for byte in payload:
+        worker._emit_output(bytes([byte]))
+    worker._emit_output(b"last", "stdout")
+    worker._emit_output(b"warning\n", "stderr")
+    worker._emit_output(b"", "stdout", final=True)
+    assert progressed == [(1, 2, "测量完成 χ²")]
+    assert logged == ["测量完成 χ²", "warning", "last"]
+
+
+def test_process_worker_reports_result_preparation_failure(tmp_path: Path) -> None:
+    Worker, _ = _process_worker_dependencies()
+    parent_file = tmp_path / "blocked"
+    parent_file.write_text("file, not directory")
+    worker = Worker(tmp_path / "recipe.json", tmp_path, tmp_path, parent_file / "result.json")
+    failed, finished = [], []
+    worker.failed.connect(failed.append)
+    worker.finished.connect(lambda: finished.append(True))
+    worker.start()
+    assert len(failed) == 1 and "Could not prepare workflow result" in failed[0]
+    assert finished == [True]
+    assert not worker.isRunning()
+
+
+def test_process_worker_rejects_crash_even_with_zero_exit_code(tmp_path: Path) -> None:
+    Worker, QProcess = _process_worker_dependencies()
+    result_path = tmp_path / "result.json"
+    result_path.write_text(json.dumps(WorkflowRunResult(status="success").to_dict()))
+    worker = Worker(tmp_path / "recipe.json", tmp_path, tmp_path, result_path)
+    failed, succeeded = [], []
+    worker.failed.connect(failed.append)
+    worker.succeeded.connect(succeeded.append)
+    worker._on_finished(0, QProcess.ExitStatus.CrashExit)
+    assert failed and not succeeded
+
+
 def test_isolated_ert_cli_does_not_load_unused_pyarrow(
     monkeypatch, tmp_path: Path
 ) -> None:

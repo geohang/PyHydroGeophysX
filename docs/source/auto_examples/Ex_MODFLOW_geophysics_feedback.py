@@ -23,6 +23,7 @@ here with prescribed recharge, drains and a fixed-head outlet for a short test.
 See data/modflow_informed/provenance.json for exact source files and hashes.
 """
 
+# sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_MODFLOW_geophysics_feedback_fig_01.png'
 
 ###############################################################################
 # 1. Imports and example directory
@@ -224,3 +225,13 @@ if not write_only:
     axes[2].legend()
     fig.savefig(output/'comparison.png',dpi=150)
     plt.show()
+
+###############################################################################
+# The interpreted fractured-zone depth (left) sets where the two models differ;
+# the head difference (centre) and the drain hydrographs (right) show how that
+# structure propagates into the simulated response. The figure is produced with
+# ``write_only = False``.
+#
+# .. image:: /auto_examples/images/Ex_MODFLOW_geophysics_feedback_fig_01.png
+#    :align: center
+#    :width: 900px

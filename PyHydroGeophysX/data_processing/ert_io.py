@@ -170,14 +170,14 @@ def _via_instrument(path: str, instrument: str, electrode_file: Optional[str],
     except Exception as exc:  # noqa: BLE001
         log(f"ert_data_agent unavailable ({exc}).")
         return None
-    proj = tempfile.mkdtemp(prefix="phgx_resipy_")
     try:
-        std = load_ert_resipy(project_dir=proj, data_file=str(path), instrument=instrument,
-                              spacing=spacing, electrode_file=electrode_file)
+        with tempfile.TemporaryDirectory(prefix="phgx_resipy_") as proj:
+            std = load_ert_resipy(project_dir=proj, data_file=str(path), instrument=instrument,
+                                  spacing=spacing, electrode_file=electrode_file)
+            return standard_to_pg(std)
     except Exception as exc:  # noqa: BLE001
         log(f"Instrument '{instrument}' loader error: {exc}")
         return None
-    return standard_to_pg(std)
 
 
 def _via_native(path: str, log: LogFn):
@@ -236,22 +236,17 @@ def load_ert_container(path: str, instrument: Optional[str] = None,
 # ---------------------------------------------------------------------------
 # Measurement times from filenames
 # ---------------------------------------------------------------------------
-_DATE_PATTERNS: List[Tuple[re.Pattern, bool]] = [
-    (re.compile(r"(\d{4})[-_]?(\d{2})[-_]?(\d{2})[-_ ]?(\d{2})(\d{2})"), True),   # ...YYYY-MM-DD_HHMM
-    (re.compile(r"(\d{4})[-_]?(\d{2})[-_]?(\d{2})"), False),                      # ...YYYY-MM-DD
-]
+_DATE_PATTERN = re.compile(
+    r"(?<!\d)(\d{4})[-_]?(\d{2})[-_]?(\d{2})"
+    r"(?:[T_ -]?(\d{2})[:_-]?(\d{2})(?:[:_-]?(\d{2}))?)?(?!\d)"
+)
 
 
 def _parse_date(stem: str) -> Optional[_dt.datetime]:
-    for pattern, has_time in _DATE_PATTERNS:
-        m = pattern.search(stem)
-        if not m:
-            continue
+    for m in _DATE_PATTERN.finditer(stem):
         try:
-            if has_time:
-                return _dt.datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)),
-                                    int(m.group(4)), int(m.group(5)))
-            return _dt.datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+            return _dt.datetime(*(int(value) if value is not None else 0
+                                  for value in m.groups()))
         except ValueError:
             continue
     return None
@@ -260,15 +255,17 @@ def _parse_date(stem: str) -> Optional[_dt.datetime]:
 def measurement_times_for(files: Sequence[str]) -> Tuple[List[float], List[str]]:
     """Derive numeric measurement times + display labels from filenames.
 
-    When every filename embeds a distinct date, times are elapsed days from the
-    first acquisition and labels are ``YYYY-MM-DD``. Otherwise falls back to a
+    When every filename embeds a distinct timestamp, times are elapsed days from
+    the earliest acquisition. Labels retain time when acquisitions share a date.
+    Otherwise falls back to a
     sequential ``1..n`` with index labels.
     """
     dates = [_parse_date(Path(f).stem) for f in files]
     if files and all(d is not None for d in dates):
         t0 = min(dates)
-        times = [round((d - t0).total_seconds() / 86400.0, 4) for d in dates]
-        labels = [d.strftime("%Y-%m-%d") for d in dates]
+        times = [(d - t0).total_seconds() / 86400.0 for d in dates]
+        show_time = len({d.date() for d in dates}) != len(dates)
+        labels = [d.strftime("%Y-%m-%d %H:%M:%S" if show_time else "%Y-%m-%d") for d in dates]
         if len(set(times)) == len(times):  # distinct -> usable as a time axis
             return times, labels
     n = len(files)

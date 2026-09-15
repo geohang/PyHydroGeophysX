@@ -60,47 +60,55 @@ def save_npy_atomic(path: PathLike, array: Any) -> Path:
     This does not defeat a lock: replacing a file another process holds mapped
     still raises, by design. It makes that failure clean rather than destructive.
     """
+    import tempfile
+
     target = Path(path)
-    staging = target.with_name(target.name + ".partial")
-    produced = staging
+    ensure_dir(target.parent)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=target.name + ".", suffix=".partial", dir=str(target.parent)
+    )
     try:
-        np.save(staging, array)
-        if not staging.exists():
-            # np.save appends .npy when the name lacks it.
-            produced = staging.with_suffix(staging.suffix + ".npy")
-        os.replace(produced, target)
-    except OSError:
-        for leftover in {staging, produced}:
-            try:
-                leftover.unlink(missing_ok=True)
-            except OSError:
-                pass
+        with os.fdopen(descriptor, "wb") as handle:
+            np.save(handle, array)
+        os.replace(temporary_name, target)
+    except Exception:
+        try:
+            os.unlink(temporary_name)
+        except OSError:
+            pass
         raise
     return target
 
 
 def _load_text_matrix(path: Path) -> np.ndarray:
-    """Load a numeric text matrix, tolerating a header row."""
-    for delimiter in (",", None):
+    """Read numeric tables with an optional header, without dropping columns."""
+    import csv
+    import io
+
+    lines = [line for line in path.read_text(encoding="utf-8-sig").splitlines()
+             if line.strip() and not line.lstrip().startswith("#")]
+    if not lines:
+        raise ValueError(f"'{path.name}' contains no numeric rows.")
+    first = lines[0].split("#", 1)[0]
+    delimiter = next((sep for sep in (",", ";", "\t") if sep in first), None)
+    fields = next(csv.reader([first], delimiter=delimiter)) if delimiter else first.split()
+    def is_number(value):
         try:
-            return np.atleast_2d(np.loadtxt(path, delimiter=delimiter))
-        except Exception:
-            continue
+            float(value)
+            return True
+        except ValueError:
+            return False
+    # A header must consist entirely of labels. A damaged first measurement
+    # (one bad cell beside numeric coordinates) must never be silently skipped.
+    if fields and not any(is_number(value) for value in fields):
+        lines = lines[1:]
+    if not lines:
+        raise ValueError(f"'{path.name}' contains a header but no numeric rows.")
     try:
-        import pandas as pd
-    except Exception as exc:  # pragma: no cover - pandas is a base dependency
-        raise ValueError(
-            f"Could not parse '{path.name}' and pandas is unavailable: {exc}"
-        ) from exc
-    for header in ("infer", None):
-        try:
-            frame = pd.read_csv(path, header=header)
-            numeric = frame.select_dtypes(include=[np.number])
-            if numeric.size:
-                return np.atleast_2d(numeric.to_numpy(dtype=float))
-        except Exception:
-            continue
-    raise ValueError(f"Could not parse '{path.name}' as a numeric matrix.")
+        return np.loadtxt(io.StringIO("\n".join(lines)), delimiter=delimiter,
+                          quotechar='"', ndmin=2)
+    except ValueError as exc:
+        raise ValueError(f"Could not parse numeric table '{path.name}': {exc}") from exc
 
 
 def load_2d_array(path: PathLike) -> np.ndarray:

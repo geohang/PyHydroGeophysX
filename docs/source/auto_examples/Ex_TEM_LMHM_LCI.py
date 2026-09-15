@@ -115,3 +115,13 @@ fig.colorbar(image, ax=axes, label="Resistivity (ohm m)")
 fig.suptitle(
     f"log10 RMSE={log_rmse:.3f}; log10 correlation={correlation:.3f}")
 plt.show()
+
+###############################################################################
+# The two panels share a colour scale, so the recovery is read against the
+# truth directly: the lateral constraint keeps the layer boundaries continuous
+# along the line, and the reported log10 RMSE and correlation quantify how
+# close the recovered section is.
+#
+# .. image:: /auto_examples/images/Ex_TEM_LMHM_LCI_fig_01.png
+#    :align: center
+#    :width: 800px
