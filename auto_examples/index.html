@@ -1,0 +1,652 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Examples Gallery &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../_static/site.css?v=ab8241cd" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=6c02275b"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'auto_examples/index';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/index.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/desktop_studio.html">
+    Desktop Studio
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../agents/index.html">
+    AI + Web App
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../usage.html">
+    Usage and Downloads
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/desktop_studio.html">
+    Desktop Studio
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    AI + Web App
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../usage.html">
+    Usage and Downloads
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Examples Gallery</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="examples-gallery">
+<h1>Examples Gallery<a class="headerlink" href="#examples-gallery" title="Link to this heading">#</a></h1>
+<p>For categories, outcomes and a recommended starting point, open
+<a class="reference internal" href="../examples/index.html"><span class="doc">Examples by task</span></a>.</p>
+<p>For a compact model–data interaction with actual hydrological solver execution,
+start with <a class="reference internal" href="../tutorials/modflow_feedback.html"><span class="doc">Run MODFLOW with geophysical structure</span></a> and
+<a class="reference internal" href="Ex_MODFLOW_geophysics_feedback.html"><span class="doc">Ex. Geophysical structure → MODFLOW → hydrological response</span></a>.</p>
+<p>The central theme is the interaction between geophysical data and hydrological
+models: predicting observations from model states and interpreting data as
+hydrological information. See <a class="reference internal" href="../tutorials/hydro_geophysical_interaction.html"><span class="doc">Connecting geophysical data and hydrological models</span></a>.</p>
+<p>Open the notebooks in JupyterLab or VS Code and run the cells in order: inspect
+the data, edit parameters, run the model, then view the results. Every scientific
+example has a companion <code class="docutils literal notranslate"><span class="pre">.ipynb</span></code>; the <code class="docutils literal notranslate"><span class="pre">.py</span></code> versions use <code class="docutils literal notranslate"><span class="pre">#</span> <span class="pre">%%</span></code> cells for
+editors and website generation.</p>
+<p>This gallery contains Python scripts and notebook downloads. It spans
+hydrological model access, petrophysical conversion, multi-method responses,
+field inversion, time-lapse monitoring, joint inversion and uncertainty analysis.</p>
+<p>Start with <a class="reference internal" href="Ex_model_output.html"><span class="doc">Ex. Loading and Processing Hydrological Model Outputs</span></a>, then
+<a class="reference internal" href="Ex_ERT_workflow.html"><span class="doc">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</span></a>. Use
+<a class="reference internal" href="Ex_hydro_to_multigeophys.html"><span class="doc">Ex. Hydrology to Multi-Geophysics Responses</span></a> to see how one hydrological profile
+connects to several geophysical methods. Review each script’s input paths and
+dependencies before running it; the site uses pre-generated figures.</p>
+<div id='sg-tag-list' class='sphx-glr-tag-list'></div><div class="sphx-glr-thumbnails"><div class="sphx-glr-thumbcontainer" tooltip="This example loads the bundled nine-station SQLite project through the same TEMcompany/TEM2Go reader used by the Qt Studio. It jointly fits the LM and HM gates, applies same-line L2 lateral constraints, and compares the recovered section with the known synthetic resistivity model."><img alt="" src="../_images/sphx_glr_Ex_TEM_LMHM_LCI_thumb.png" />
+<p><a class="reference internal" href="Ex_TEM_LMHM_LCI.html"><span class="doc">Ex. Synthetic LM+HM Line Inversion with Lateral Constraints</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Synthetic LM+HM Line Inversion with Lateral Constraints</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates a complete 1D FDEM workflow: 1. Build synthetic FDEM data from hydrological properties. 2. Invert the synthetic data with FDEMInversion."><img alt="" src="../_images/sphx_glr_Ex_FDEM_workflow_thumb.png" />
+<p><a class="reference internal" href="Ex_FDEM_workflow.html"><span class="doc">Ex. FDEM Forward + Inversion Workflow</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. FDEM Forward + Inversion Workflow</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to load and process outputs from different  hydrological models using PyHydroGeophysX. We show examples for both  ParFlow and MODFLOW models."><img alt="" src="../_images/sphx_glr_Ex_model_output_thumb.png" />
+<p><a class="reference internal" href="Ex_model_output.html"><span class="doc">Ex. Loading and Processing Hydrological Model Outputs</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Loading and Processing Hydrological Model Outputs</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to incorporate structural information from  seismic velocity models into ERT inversion for improved subsurface imaging."><img alt="" src="../_images/sphx_glr_Ex_Structure_resinv_thumb.png" />
+<p><a class="reference internal" href="Ex_Structure_resinv.html"><span class="doc">Ex. Structure-Constrained Resistivity Inversion</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Structure-Constrained Resistivity Inversion</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example uses the promoted, Qt-free potential-field API to inspect field datasets, separate regional and residual anomalies, evaluate analytic body responses, and run compact 3D SimPEG inversions."><img alt="" src="../_images/sphx_glr_Ex_gravity_magnetics_inversion_thumb.png" />
+<p><a class="reference internal" href="Ex_gravity_magnetics_inversion.html"><span class="doc">Ex. Gravity and Magnetics Processing and Inversion</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Gravity and Magnetics Processing and Inversion</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example compares the sparse lower-RAM solver path (``save_memory=True``) with the standard time-lapse inversion path (``save_memory=False``). Both runs use the same measurements, mesh, and inversion parameters so runtime, process memory, and recovered resistivity distributions can be compared directly."><img alt="" src="../_images/sphx_glr_Ex_TL_inversion_memory_thumb.png" />
+<p><a class="reference internal" href="Ex_TL_inversion_memory.html"><span class="doc">Ex. Memory-Optimized Time-Lapse ERT Inversion</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Memory-Optimized Time-Lapse ERT Inversion</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example loads a VTEM line and its survey geometry, inspects measured decays, calibrates the response to a documented reference resistivity, and creates a stitched resistivity section from independent 1D inversions."><img alt="" src="../_images/sphx_glr_Ex_EM_line_section_thumb.png" />
+<p><a class="reference internal" href="Ex_EM_line_section.html"><span class="doc">Ex. Airborne EM Line Inversion</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Airborne EM Line Inversion</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="Run a small MODFLOW 6 comparison using the topography and interpreted regolith / fractured-bedrock depths from Hang Chen&#x27;s Geophysics_informed_models repository. The bundled data are 13 KB and require no runtime data download. This example compares uniform layer thicknesses with spatially varying interpreted interfaces. Hydraulic properties and forcing are illustrative, not the paper&#x27;s calibration. It does not perform seismic inversion or infer conductivity from velocity."><img alt="" src="../_images/sphx_glr_Ex_MODFLOW_geophysics_feedback_thumb.png" />
+<p><a class="reference internal" href="Ex_MODFLOW_geophysics_feedback.html"><span class="doc">Ex. Geophysical structure → MODFLOW → hydrological response</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Geophysical structure → MODFLOW → hydrological response</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example shows a minimal, robust workflow for one ERT survey:"><img alt="" src="../_images/sphx_glr_Ex_ERT_single_inversion_thumb.png" />
+<p><a class="reference internal" href="Ex_ERT_single_inversion.html"><span class="doc">Ex. Single ERT File Inversion (No Time-Lapse)</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Single ERT File Inversion (No Time-Lapse)</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates advanced time-lapse ERT inversion using structural constraints derived from seismic interpretation to monitor subsurface water  content changes in layered geological media."><img alt="" src="../_images/sphx_glr_Ex_structure_TLresinv_thumb.png" />
+<p><a class="reference internal" href="Ex_structure_TLresinv.html"><span class="doc">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates different approaches for time-lapse electrical  resistivity tomography (ERT) inversion using PyHydroGeophysX."><img alt="" src="../_images/sphx_glr_Ex_TL_inversion_thumb.png" />
+<p><a class="reference internal" href="Ex_TL_inversion.html"><span class="doc">Ex. Time-Lapse ERT Inversion Techniques</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Time-Lapse ERT Inversion Techniques</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to perform a 2D seismic refraction tomography (SRT)  inversion and interpret the results to define subsurface structures."><img alt="" src="../_images/sphx_glr_Ex_SRT_inv_thumb.png" />
+<p><a class="reference internal" href="Ex_SRT_inv.html"><span class="doc">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example compares direct cross-gradient and geostatistical cross-gradient coupling using the same ERT and SRT field data. Data loading, shared settings, the two inversion runs, result saving, and visualization are presented as separate steps."><img alt="" src="../_images/sphx_glr_Ex_joint_inversion_thumb.png" />
+<p><a class="reference internal" href="Ex_joint_inversion.html"><span class="doc">Ex. Joint ERT-SRT Inversion: Cross-Gradient and Geostatistical Coupling</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Joint ERT-SRT Inversion: Cross-Gradient and Geostatistical Coupling</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates the complete workflow for integrating hydrological  model outputs (MODFLOW water content) with Time-Domain Electromagnetic (TDEM)  forward modeling and inversion using SimPEG and PyHydroGeophysX."><img alt="" src="../_images/sphx_glr_Ex_TDEM_workflow_thumb.png" />
+<p><a class="reference internal" href="Ex_TDEM_workflow.html"><span class="doc">Ex. TDEM Workflow: From Hydrological Models to EM Responses and Inversion</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. TDEM Workflow: From Hydrological Models to EM Responses and Inversion</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example extracts one two-dimensional profile from a hydrological-model snapshot, builds a common mesh, and simulates ERT, SRT, TDEM, FDEM, and gravity responses. Each processing and forward-modeling stage is kept separate so the intermediate hydrological profiles and mesh properties can be inspected."><img alt="" src="../_images/sphx_glr_Ex_hydro_to_multigeophys_thumb.png" />
+<p><a class="reference internal" href="Ex_hydro_to_multigeophys.html"><span class="doc">Ex. Hydrology to Multi-Geophysics Responses</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Hydrology to Multi-Geophysics Responses</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates seismic refraction tomography forward modeling for watershed structure characterization using PyHydroGeophysX."><img alt="" src="../_images/sphx_glr_EX_SRT_forward_thumb.png" />
+<p><a class="reference internal" href="EX_SRT_forward.html"><span class="doc">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to create synthetic time-lapse electrical  resistivity tomography (ERT) measurements for watershed monitoring applications."><img alt="" src="../_images/sphx_glr_Ex_Time_lapse_measurement_thumb.png" />
+<p><a class="reference internal" href="Ex_Time_lapse_measurement.html"><span class="doc">Ex. Creating Synthetic Time-Lapse ERT Measurements</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Creating Synthetic Time-Lapse ERT Measurements</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates the complete workflow for integrating hydrological  model outputs with ERT forward modeling and inversion using PyHydroGeophysX."><img alt="" src="../_images/sphx_glr_Ex_ERT_workflow_thumb.png" />
+<p><a class="reference internal" href="Ex_ERT_workflow.html"><span class="doc">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates Monte Carlo uncertainty quantification for  converting ERT resistivity models to water content estimates."><img alt="" src="../_images/sphx_glr_Ex_MC_Hydro_thumb.png" />
+<p><a class="reference internal" href="Ex_MC_Hydro.html"><span class="doc">Ex. Monte Carlo Uncertainty Quantification for Hydrologic Properties Estimation</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. Monte Carlo Uncertainty Quantification for Hydrologic Properties Estimation</div>
+</div><div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates the complete workflow for 3D ERT forward modeling using PyHydroGeophysX, integrating hydrological model outputs."><img alt="" src="../_images/sphx_glr_Ex_3D_ERT_forward_thumb.png" />
+<p><a class="reference internal" href="Ex_3D_ERT_forward.html"><span class="doc">Ex. 3D ERT Forward Modeling with MODFLOW Integration</span></a></p>
+  <div class="sphx-glr-thumbnail-title">Ex. 3D ERT Forward Modeling with MODFLOW Integration</div>
+</div></div><div class="toctree-wrapper compound">
+</div>
+<div class="sphx-glr-footer sphx-glr-footer-gallery docutils container">
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/07fcc19ba03226cd3d83d4e40ec44385/auto_examples_python.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">all</span> <span class="pre">examples</span> <span class="pre">in</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">auto_examples_python.zip</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/6f1e7a639e0699d6164445b55e6c116d/auto_examples_jupyter.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">all</span> <span class="pre">examples</span> <span class="pre">in</span> <span class="pre">Jupyter</span> <span class="pre">notebooks:</span> <span class="pre">auto_examples_jupyter.zip</span></code></a></p>
+</div>
+</div>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/auto_examples/index.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/auto_examples/index.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

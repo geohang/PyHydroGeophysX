@@ -1,0 +1,820 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Ex. Geophysical structure → MODFLOW → hydrological response &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=fd6457a4" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../_static/site.css?v=ab8241cd" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=6c02275b"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'auto_examples/Ex_MODFLOW_geophysics_feedback';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex_MODFLOW_geophysics_feedback.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/desktop_studio.html">
+    Desktop Studio
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../agents/index.html">
+    AI + Web App
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../usage.html">
+    Usage and Downloads
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/desktop_studio.html">
+    Desktop Studio
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    AI + Web App
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../usage.html">
+    Usage and Downloads
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"></div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Ex. Geophysical structure → MODFLOW → hydrological response</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-ex-modflow-geophysics-feedback-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="ex-geophysical-structure-modflow-hydrological-response">
+<span id="sphx-glr-auto-examples-ex-modflow-geophysics-feedback-py"></span><h1>Ex. Geophysical structure → MODFLOW → hydrological response<a class="headerlink" href="#ex-geophysical-structure-modflow-hydrological-response" title="Link to this heading">#</a></h1>
+<p>Run a small MODFLOW 6 comparison using the topography and interpreted regolith /
+fractured-bedrock depths from Hang Chen’s Geophysics_informed_models repository.
+The bundled data are 13 KB and require no runtime data download. This example
+compares uniform layer thicknesses with spatially varying interpreted interfaces.
+Hydraulic properties and forcing are illustrative, not the paper’s calibration.
+It does not perform seismic inversion or infer conductivity from velocity.</p>
+<p>Open the companion notebook and run its cells in order. Install <code class="docutils literal notranslate"><span class="pre">flopy</span></code>,
+<code class="docutils literal notranslate"><span class="pre">numpy</span></code>, <code class="docutils literal notranslate"><span class="pre">matplotlib</span></code> and PyHydroGeophysX first. Set the executable path
+in the settings cell, or enable its optional download. Set <code class="docutils literal notranslate"><span class="pre">write_only=True</span></code>
+to inspect inputs without running a solver. No ParFlow, GPU, pyGIMLi or GIS
+installation is needed.</p>
+<p>Source: <a class="github reference external" href="https://github.com/geohang/Geophysics_informed_models">geohang/Geophysics_informed_models</a>
+Revision: a23fff3c00c0033f479064cf3651e23b1d5bea07 (Apache-2.0).
+The original S4 notebook constructs top - regolith_depth and top - fractured_depth
+interfaces at 5 m spacing. Its integrated UZF/SFR/MVR catchment model is replaced
+here with prescribed recharge, drains and a fixed-head outlet for a short test.
+See data/modflow_informed/provenance.json for exact source files and hashes.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+<section id="imports-and-example-directory">
+<h2>1. Imports and example directory<a class="headerlink" href="#imports-and-example-directory" title="Link to this heading">#</a></h2>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">flopy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.model_input</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_modflow6_inputs</span>
+
+<span class="n">current_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span> <span class="k">if</span> <span class="s2">"__file__"</span> <span class="ow">in</span> <span class="nb">globals</span><span class="p">()</span> <span class="k">else</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">current_dir</span> <span class="o">/</span> <span class="s2">"data/modflow_informed/structure.npz"</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">current_dir</span> <span class="o">/</span> <span class="s2">"examples"</span>
+<span class="n">data_path</span> <span class="o">=</span> <span class="n">current_dir</span> <span class="o">/</span> <span class="s2">"data/modflow_informed/structure.npz"</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">data_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+    <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">"Open the notebook from examples/ or the repository root."</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="settings">
+<h2>2. Settings<a class="headerlink" href="#settings" title="Link to this heading">#</a></h2>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">mf6</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Set to your mf6 executable path, or leave None to search PATH.</span>
+<span class="n">download</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># Set True to download the official executable with FloPy.</span>
+<span class="n">write_only</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># Set True to prepare inputs without running MODFLOW.</span>
+<span class="n">output</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># None creates a unique folder; otherwise supply a new directory.</span>
+</pre></div>
+</div>
+</section>
+<section id="convert-interpreted-depths-to-hydrological-interfaces">
+<h2>3. Convert interpreted depths to hydrological interfaces<a class="headerlink" href="#convert-interpreted-depths-to-hydrological-interfaces" title="Link to this heading">#</a></h2>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">data</span><span class="p">:</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">'top'</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">active</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">'active'</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="n">reg</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">'regolith_depth'</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">fractured</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">'fractured_depth'</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">active</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="p">(</span><span class="n">top</span><span class="p">,</span> <span class="n">reg</span><span class="p">,</span> <span class="n">fractured</span><span class="p">)):</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'Active source cells must have finite structure data.'</span><span class="p">)</span>
+<span class="c1"># Same thin-layer conditioning as S4; no inferred conductivity conversion.</span>
+<span class="n">reg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">active</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">reg</span> <span class="o">&lt;=</span> <span class="mf">.1</span><span class="p">,</span> <span class="mf">.15</span><span class="p">,</span> <span class="n">reg</span><span class="p">),</span> <span class="mf">1.</span><span class="p">)</span>
+<span class="n">fractured</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">active</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">fractured</span> <span class="o">&lt;=</span> <span class="n">reg</span><span class="o">+</span><span class="mf">.1</span><span class="p">,</span> <span class="n">reg</span><span class="o">+</span><span class="mf">.15</span><span class="p">,</span> <span class="n">fractured</span><span class="p">),</span> <span class="mf">10.</span><span class="p">)</span>
+<span class="n">top</span><span class="p">[</span><span class="o">~</span><span class="n">active</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">top</span><span class="p">[</span><span class="n">active</span><span class="p">])</span>
+<span class="c1"># Same base in both cases so only internal layer geometry changes.</span>
+<span class="n">base</span> <span class="o">=</span> <span class="n">top</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">fractured</span><span class="o">+</span><span class="mf">30.</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fractured</span><span class="p">[</span><span class="n">active</span><span class="p">])</span><span class="o">+</span><span class="mf">1.</span><span class="p">)</span>
+<span class="n">informed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">top</span><span class="o">-</span><span class="n">reg</span><span class="p">,</span> <span class="n">top</span><span class="o">-</span><span class="n">fractured</span><span class="p">,</span> <span class="n">base</span><span class="p">])</span>
+<span class="n">baseline</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">top</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">reg</span><span class="p">[</span><span class="n">active</span><span class="p">]),</span> <span class="n">top</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fractured</span><span class="p">[</span><span class="n">active</span><span class="p">]),</span> <span class="n">base</span><span class="p">])</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Grid: </span><span class="si">{</span><span class="n">top</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">; active cells per layer: </span><span class="si">{</span><span class="n">active</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="prepare-the-output-folder-and-executable">
+<h2>4. Prepare the output folder and executable<a class="headerlink" href="#prepare-the-output-folder-and-executable" title="Link to this heading">#</a></h2>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">executable</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">mf6</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span> <span class="k">if</span> <span class="n">mf6</span> <span class="k">else</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s1">'mf6'</span><span class="p">)</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">write_only</span> <span class="ow">and</span> <span class="n">executable</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">download</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">"Set mf6 or download=True in cell 2; write_only=True needs no solver."</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">output</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">current_dir</span> <span class="o">/</span> <span class="s1">'results'</span>
+    <span class="n">results</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s1">'modflow-feedback-'</span><span class="p">,</span> <span class="nb">dir</span><span class="o">=</span><span class="n">results</span><span class="p">))</span> <span class="o">/</span> <span class="s1">'run'</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">output</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">write_only</span> <span class="ow">and</span> <span class="n">executable</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">download</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">flopy.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_modflow</span>
+    <span class="n">binary</span> <span class="o">=</span> <span class="n">output</span> <span class="o">/</span> <span class="s1">'bin'</span>
+    <span class="n">binary</span><span class="o">.</span><span class="n">mkdir</span><span class="p">()</span>
+    <span class="n">get_modflow</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">binary</span><span class="p">),</span> <span class="n">subset</span><span class="o">=</span><span class="s1">'mf6'</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">executable</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">binary</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">'mf6*'</span><span class="p">)))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Results: </span><span class="si">{</span><span class="n">output</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="build-the-uniform-thickness-baseline">
+<h2>5. Build the uniform-thickness baseline<a class="headerlink" href="#build-the-uniform-thickness-baseline" title="Link to this heading">#</a></h2>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">sim</span> <span class="o">=</span> <span class="n">flopy</span><span class="o">.</span><span class="n">mf6</span><span class="o">.</span><span class="n">MFSimulation</span><span class="p">(</span><span class="n">sim_name</span><span class="o">=</span><span class="s1">'structure_demo'</span><span class="p">,</span> <span class="n">sim_ws</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">output</span> <span class="o">/</span> <span class="s1">'baseline'</span><span class="p">),</span> <span class="n">exe_name</span><span class="o">=</span><span class="n">executable</span> <span class="ow">or</span> <span class="s1">'mf6'</span><span class="p">)</span>
+<span class="n">flopy</span><span class="o">.</span><span class="n">mf6</span><span class="o">.</span><span class="n">ModflowTdis</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">time_units</span><span class="o">=</span><span class="s1">'DAYS'</span><span class="p">,</span> <span class="n">nper</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                     <span class="n">perioddata</span><span class="o">=</span><span class="p">[(</span><span class="mf">10.</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mf">1.</span><span class="p">)]</span><span class="o">*</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">flopy</span><span class="o">.</span><span class="n">mf6</span><span class="o">.</span><span class="n">ModflowIms</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">complexity</span><span class="o">=</span><span class="s1">'MODERATE'</span><span class="p">,</span> <span class="n">linear_acceleration</span><span class="o">=</span><span class="s1">'BICGSTAB'</span><span class="p">,</span>
+                    <span class="n">outer_dvclose</span><span class="o">=</span><span class="mf">1e-7</span><span class="p">,</span> <span class="n">inner_dvclose</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">rcloserecord</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">flopy</span><span class="o">.</span><span class="n">mf6</span><span class="o">.</span><span class="n">ModflowGwf</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">modelname</span><span class="o">=</span><span class="s1">'catchment'</span><span class="p">,</span> <span class="n">save_flows</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">shape</span> <span class="o">=</span> <span class="n">baseline</span><span class="o">.</span><span class="n">shape</span>
+<span class="n">flopy</span><span class="o">.</span><span class="n">mf6</span><span class="o">.</span><span class="n">ModflowGwfdis</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">length_units</span><span class="o">=</span><span class="s1">'METERS'</span><span class="p">,</span> <span class="n">nlay</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="n">nrow</span><span class="o">=</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">ncol</span><span class="o">=</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">delr</span><span class="o">=</span><span class="mf">5.</span><span class="p">,</span> <span class="n">delc</span><span class="o">=</span><span class="mf">5.</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="n">top</span><span class="p">,</span>
+    <span class="n">botm</span><span class="o">=</span><span class="n">baseline</span><span class="p">,</span> <span class="n">idomain</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span><span class="n">active</span><span class="p">,</span><span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">))</span>
+<span class="n">flopy</span><span class="o">.</span><span class="n">mf6</span><span class="o">.</span><span class="n">ModflowGwfnpf</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">icelltype</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="p">[</span><span class="mf">1.</span><span class="p">,</span><span class="mf">.1</span><span class="p">,</span><span class="mf">.001</span><span class="p">],</span> <span class="n">k33</span><span class="o">=</span><span class="p">[</span><span class="mf">.1</span><span class="p">,</span><span class="mf">.01</span><span class="p">,</span><span class="mf">.0001</span><span class="p">],</span> <span class="n">save_flows</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">flopy</span><span class="o">.</span><span class="n">mf6</span><span class="o">.</span><span class="n">ModflowGwfic</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">strt</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span><span class="n">top</span><span class="o">+</span><span class="mf">.1</span><span class="p">,</span><span class="n">shape</span><span class="p">))</span>
+<span class="c1"># Confined storage is intentional: this small linear comparison does not model UZF.</span>
+<span class="n">flopy</span><span class="o">.</span><span class="n">mf6</span><span class="o">.</span><span class="n">ModflowGwfsto</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">iconvert</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ss</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">sy</span><span class="o">=</span><span class="mf">.1</span><span class="p">,</span> <span class="n">transient</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">:</span><span class="kc">True</span><span class="p">})</span>
+<span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unravel_index</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">active</span><span class="p">,</span><span class="n">top</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">)),</span><span class="n">top</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="n">flopy</span><span class="o">.</span><span class="n">mf6</span><span class="o">.</span><span class="n">ModflowGwfchd</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">stress_period_data</span><span class="o">=</span><span class="p">[((</span><span class="mi">0</span><span class="p">,</span><span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">),</span><span class="nb">int</span><span class="p">(</span><span class="n">col</span><span class="p">)),</span><span class="nb">float</span><span class="p">(</span><span class="n">top</span><span class="p">[</span><span class="n">row</span><span class="p">,</span><span class="n">col</span><span class="p">]))],</span> <span class="n">save_flows</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">drains</span> <span class="o">=</span> <span class="p">[((</span><span class="mi">0</span><span class="p">,</span><span class="nb">int</span><span class="p">(</span><span class="n">r</span><span class="p">),</span><span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">)),</span><span class="nb">float</span><span class="p">(</span><span class="n">top</span><span class="p">[</span><span class="n">r</span><span class="p">,</span><span class="n">c</span><span class="p">]),</span><span class="mf">1.</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span><span class="n">c</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">active</span><span class="p">)</span>
+          <span class="k">if</span> <span class="p">(</span><span class="n">r</span><span class="p">,</span><span class="n">c</span><span class="p">)</span><span class="o">!=</span><span class="p">(</span><span class="n">row</span><span class="p">,</span><span class="n">col</span><span class="p">)]</span>
+<span class="n">flopy</span><span class="o">.</span><span class="n">mf6</span><span class="o">.</span><span class="n">ModflowGwfdrn</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">stress_period_data</span><span class="o">=</span><span class="n">drains</span><span class="p">,</span> <span class="n">save_flows</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">flopy</span><span class="o">.</span><span class="n">mf6</span><span class="o">.</span><span class="n">ModflowGwfrcha</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">recharge</span><span class="o">=</span><span class="p">{</span><span class="n">i</span><span class="p">:</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">active</span><span class="p">,</span><span class="n">rate</span><span class="p">,</span><span class="mf">0.</span><span class="p">)</span>
+                       <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">rate</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">([</span><span class="mf">.001</span><span class="p">,</span><span class="mf">.003</span><span class="p">,</span><span class="mf">.001</span><span class="p">])},</span> <span class="n">save_flows</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">flopy</span><span class="o">.</span><span class="n">mf6</span><span class="o">.</span><span class="n">ModflowGwfoc</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">head_filerecord</span><span class="o">=</span><span class="s1">'catchment.hds'</span><span class="p">,</span> <span class="n">budget_filerecord</span><span class="o">=</span><span class="s1">'catchment.cbc'</span><span class="p">,</span>
+    <span class="n">saverecord</span><span class="o">=</span><span class="p">[(</span><span class="s1">'HEAD'</span><span class="p">,</span><span class="s1">'ALL'</span><span class="p">),(</span><span class="s1">'BUDGET'</span><span class="p">,</span><span class="s1">'ALL'</span><span class="p">)],</span> <span class="n">printrecord</span><span class="o">=</span><span class="p">[(</span><span class="s1">'BUDGET'</span><span class="p">,</span><span class="s1">'ALL'</span><span class="p">)])</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">write_simulation</span><span class="p">(</span><span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="write-the-geophysics-informed-geometry">
+<h2>6. Write the geophysics-informed geometry<a class="headerlink" href="#write-the-geophysics-informed-geometry" title="Link to this heading">#</a></h2>
+<p>The base, hydraulic properties and forcing stay the same in both models.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">write_modflow6_inputs</span><span class="p">(</span><span class="n">sim</span><span class="p">,</span> <span class="n">output</span> <span class="o">/</span> <span class="s1">'informed'</span><span class="p">,</span> <span class="p">{</span><span class="s1">'bottom_elevation'</span><span class="p">:</span> <span class="n">informed</span><span class="p">})</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Both model input decks are ready.'</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="run-each-model-and-check-its-water-budget">
+<h2>7. Run each model and check its water budget<a class="headerlink" href="#run-each-model-and-check-its-water-budget" title="Link to this heading">#</a></h2>
+<p>This helper applies identical solver and output checks to both cases.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">run_case</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">executable</span><span class="p">,</span> <span class="n">active</span><span class="p">):</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">flopy</span>
+    <span class="n">sim</span> <span class="o">=</span> <span class="n">flopy</span><span class="o">.</span><span class="n">mf6</span><span class="o">.</span><span class="n">MFSimulation</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">sim_ws</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">folder</span><span class="p">),</span><span class="n">exe_name</span><span class="o">=</span><span class="n">executable</span><span class="p">,</span><span class="n">verbosity_level</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">ok</span><span class="p">,</span> <span class="n">report</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">run_simulation</span><span class="p">(</span><span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">report</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">folder</span><span class="o">/</span><span class="s1">'solver.log'</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">report</span><span class="p">),</span><span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ok</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">'MODFLOW failed; inspect </span><span class="si">{</span><span class="n">folder</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="s2">"solver.log"</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">get_model</span><span class="p">()</span>
+    <span class="n">heads</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">head</span><span class="p">()</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">heads</span><span class="p">[:,</span><span class="n">active</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">heads</span><span class="p">[:,</span><span class="n">active</span><span class="p">])</span><span class="o">&gt;</span><span class="mf">1e20</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">'Invalid active-cell heads.'</span><span class="p">)</span>
+    <span class="n">listing</span> <span class="o">=</span> <span class="p">(</span><span class="n">folder</span><span class="o">/</span><span class="s1">'catchment.lst'</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">errors</span><span class="o">=</span><span class="s1">'replace'</span><span class="p">)</span>
+    <span class="n">discrepancy</span> <span class="o">=</span> <span class="p">[</span><span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s1">'PERCENT DISCREPANCY\s*=\s*([-+\d.Ee]+)'</span><span class="p">,</span><span class="n">listing</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">discrepancy</span> <span class="ow">or</span> <span class="nb">max</span><span class="p">(</span><span class="n">discrepancy</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">.1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">'Missing or excessive water-budget discrepancy.'</span><span class="p">)</span>
+    <span class="n">budget</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">budget</span><span class="p">()</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">budget</span><span class="o">.</span><span class="n">get_times</span><span class="p">()</span>
+    <span class="n">discharge</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="n">budget</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s1">'DRN'</span><span class="p">,</span><span class="n">totim</span><span class="o">=</span><span class="n">t</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="s1">'q'</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">times</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">heads</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">times</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">discharge</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">discrepancy</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="compare-heads-and-drain-discharge">
+<h2>8. Compare heads and drain discharge<a class="headerlink" href="#compare-heads-and-drain-discharge" title="Link to this heading">#</a></h2>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="ow">not</span> <span class="n">write_only</span><span class="p">:</span>
+    <span class="n">base_head</span><span class="p">,</span> <span class="n">times</span><span class="p">,</span> <span class="n">base_q</span><span class="p">,</span> <span class="n">base_error</span> <span class="o">=</span> <span class="n">run_case</span><span class="p">(</span><span class="n">output</span><span class="o">/</span><span class="s1">'baseline'</span><span class="p">,</span><span class="n">executable</span><span class="p">,</span><span class="n">active</span><span class="p">)</span>
+    <span class="n">informed_head</span><span class="p">,</span> <span class="n">informed_times</span><span class="p">,</span> <span class="n">informed_q</span><span class="p">,</span> <span class="n">informed_error</span> <span class="o">=</span> <span class="n">run_case</span><span class="p">(</span><span class="n">output</span><span class="o">/</span><span class="s1">'informed'</span><span class="p">,</span><span class="n">executable</span><span class="p">,</span><span class="n">active</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_array_equal</span><span class="p">(</span><span class="n">times</span><span class="p">,</span><span class="n">informed_times</span><span class="p">)</span>
+    <span class="n">summary</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'status'</span><span class="p">:</span><span class="s1">'both_simulations_completed'</span><span class="p">,</span> <span class="s1">'output'</span><span class="p">:</span><span class="nb">str</span><span class="p">(</span><span class="n">output</span><span class="p">),</span>
+        <span class="s1">'active_cells'</span><span class="p">:</span><span class="nb">int</span><span class="p">(</span><span class="n">active</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">*</span><span class="mi">3</span><span class="p">),</span><span class="s1">'steps'</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">times</span><span class="p">),</span>
+        <span class="s1">'max_head_change_m'</span><span class="p">:</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">informed_head</span><span class="p">[:,</span><span class="n">active</span><span class="p">]</span><span class="o">-</span><span class="n">base_head</span><span class="p">[:,</span><span class="n">active</span><span class="p">]))),</span>
+        <span class="s1">'max_budget_discrepancy_percent'</span><span class="p">:</span><span class="nb">max</span><span class="p">(</span><span class="n">base_error</span><span class="p">,</span><span class="n">informed_error</span><span class="p">),</span>
+        <span class="s1">'interpretation'</span><span class="p">:</span><span class="s1">'Sensitivity to interpreted structure, not evidence of improved prediction.'</span><span class="p">}</span>
+    <span class="p">(</span><span class="n">output</span><span class="o">/</span><span class="s1">'summary.json'</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span><span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span><span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">savez_compressed</span><span class="p">(</span><span class="n">output</span><span class="o">/</span><span class="s1">'comparison.npz'</span><span class="p">,</span><span class="n">baseline_head</span><span class="o">=</span><span class="n">base_head</span><span class="p">,</span><span class="n">informed_head</span><span class="o">=</span><span class="n">informed_head</span><span class="p">,</span>
+                        <span class="n">time_days</span><span class="o">=</span><span class="n">times</span><span class="p">,</span><span class="n">baseline_drain_m3_day</span><span class="o">=</span><span class="n">base_q</span><span class="p">,</span><span class="n">informed_drain_m3_day</span><span class="o">=</span><span class="n">informed_q</span><span class="p">,</span><span class="n">active</span><span class="o">=</span><span class="n">active</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">summary</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"output"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">output</span><span class="p">),</span> <span class="s2">"status"</span><span class="p">:</span> <span class="s2">"inputs_written_not_run"</span><span class="p">}</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="plot-the-hydrological-response">
+<h2>9. Plot the hydrological response<a class="headerlink" href="#plot-the-hydrological-response" title="Link to this heading">#</a></h2>
+<p>Read the differences as sensitivity to structure, not evidence of improved prediction.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="ow">not</span> <span class="n">write_only</span><span class="p">:</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">13</span><span class="p">,</span><span class="mi">4</span><span class="p">),</span><span class="n">layout</span><span class="o">=</span><span class="s1">'constrained'</span><span class="p">)</span>
+    <span class="n">artist</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">active</span><span class="p">,</span><span class="n">top</span><span class="o">-</span><span class="n">informed</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">),</span><span class="n">cmap</span><span class="o">=</span><span class="s1">'viridis'</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">'Interpreted fractured-zone depth'</span><span class="p">)</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">artist</span><span class="p">,</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">label</span><span class="o">=</span><span class="s1">'m below ground'</span><span class="p">)</span>
+    <span class="n">difference</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">active</span><span class="p">,</span><span class="n">informed_head</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">base_head</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+    <span class="n">limit</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">difference</span><span class="p">))),</span><span class="mf">1e-12</span><span class="p">)</span>
+    <span class="n">artist</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">difference</span><span class="p">,</span><span class="n">cmap</span><span class="o">=</span><span class="s1">'coolwarm'</span><span class="p">,</span><span class="n">vmin</span><span class="o">=-</span><span class="n">limit</span><span class="p">,</span><span class="n">vmax</span><span class="o">=</span><span class="n">limit</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">'Final head: informed − baseline'</span><span class="p">)</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">artist</span><span class="p">,</span><span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">label</span><span class="o">=</span><span class="s1">'m'</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">[:</span><span class="mi">2</span><span class="p">]:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="s1">'Column (5 m cells)'</span><span class="p">,</span><span class="n">ylabel</span><span class="o">=</span><span class="s1">'Row (5 m cells)'</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">times</span><span class="p">,</span><span class="n">base_q</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">'Uniform thickness'</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">times</span><span class="p">,</span><span class="n">informed_q</span><span class="p">,</span><span class="n">label</span><span class="o">=</span><span class="s1">'Geophysical structure'</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="s1">'Time (days)'</span><span class="p">,</span><span class="n">ylabel</span><span class="o">=</span><span class="s1">'Drain discharge (m³/day)'</span><span class="p">,</span><span class="n">title</span><span class="o">=</span><span class="s1">'Hydrological response'</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">output</span><span class="o">/</span><span class="s1">'comparison.png'</span><span class="p">,</span><span class="n">dpi</span><span class="o">=</span><span class="mi">150</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The interpreted fractured-zone depth (left) sets where the two models differ;
+the head difference (centre) and the drain hydrographs (right) show how that
+structure propagates into the simulated response. The figure is produced with
+<code class="docutils literal notranslate"><span class="pre">write_only</span> <span class="pre">=</span> <span class="pre">False</span></code>.</p>
+<a class="reference internal image-reference" href="../_images/Ex_MODFLOW_geophysics_feedback_fig_01.png"><img alt="../_images/Ex_MODFLOW_geophysics_feedback_fig_01.png" class="align-center" src="../_images/Ex_MODFLOW_geophysics_feedback_fig_01.png" style="width: 900px;" />
+</a>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-ex-modflow-geophysics-feedback-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/e74c5aaf9347f788169223bbb21d62b3/Ex_MODFLOW_geophysics_feedback.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">Ex_MODFLOW_geophysics_feedback.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/410b7cedba1f5b43fd086dc4078d6539/Ex_MODFLOW_geophysics_feedback.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">Ex_MODFLOW_geophysics_feedback.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/b41397bdc68eaca4c93fd374ac7e8705/Ex_MODFLOW_geophysics_feedback.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">Ex_MODFLOW_geophysics_feedback.zip</span></code></a></p>
+</div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#imports-and-example-directory">1. Imports and example directory</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#settings">2. Settings</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#convert-interpreted-depths-to-hydrological-interfaces">3. Convert interpreted depths to hydrological interfaces</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prepare-the-output-folder-and-executable">4. Prepare the output folder and executable</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-the-uniform-thickness-baseline">5. Build the uniform-thickness baseline</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#write-the-geophysics-informed-geometry">6. Write the geophysics-informed geometry</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-each-model-and-check-its-water-budget">7. Run each model and check its water budget</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#compare-heads-and-drain-discharge">8. Compare heads and drain discharge</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#plot-the-hydrological-response">9. Plot the hydrological response</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/auto_examples/Ex_MODFLOW_geophysics_feedback.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/auto_examples/Ex_MODFLOW_geophysics_feedback.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
