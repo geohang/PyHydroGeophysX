@@ -23,7 +23,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-__all__ = ["parse_das1", "parse_res2dinv_general", "parse_tx0", "reciprocal_errors"]
+__all__ = ["parse_das1", "parse_res2dinv_general", "parse_sting", "parse_tx0",
+           "reciprocal_errors"]
 
 
 # The DAS-1 header writes its own layout as ``#key= value`` directives, so the
@@ -71,11 +72,13 @@ def _pick(tokens: List[str], column: Optional[int]) -> Optional[str]:
 
 
 def _as_float(text: Optional[str]) -> float:
-    """A DAS-1 numeric field as a float, NaN when the field is not numeric.
+    """One numeric field as a float, NaN when the field is not numeric.
 
-    The instrument writes values with an explicit sign and a leading decimal
-    point (``+.0018633``), which ``float`` already accepts, and writes a text
-    message in place of the whole numeric run when a reading failed.
+    Shared by the readers in this module because every instrument here writes
+    numbers ``float`` already accepts -- DAS-1 writes an explicit sign and a
+    leading decimal point (``+.0018633``), SuperSting writes padded scientific
+    notation (`` 1.88352E-01``) -- and every one of them writes a text message
+    in place of the whole numeric run when a reading failed.
     """
     if text is None:
         return float("nan")
@@ -447,6 +450,215 @@ def parse_res2dinv_general(path: str | Path) -> Tuple[np.ndarray, pd.DataFrame]:
         "ip": np.nan,
     })
     df.attrs["electrode_spacing"] = spacing
+    return elec, df
+
+
+# A ``.stg`` record writes its measurement before its geometry, always in this
+# order and always comma separated: record number, measurement mode, date, time,
+# transfer resistance, stacking error, injected current, apparent resistivity,
+# command-file name, and then the four electrodes as x/y/z triplets in A, B, M,
+# N order. The instrument writes no header row above the data block, so these
+# positions are the format itself rather than an assumption about one.
+_STG_COLUMNS = {
+    "resist": 4,          # V/I, ohm
+    "error_percent": 5,   # spread across the measurement cycles, %
+    "current": 6,         # injected current, mA
+    "rhoa": 7,            # apparent resistivity, in the file's own length unit
+    "command": 8,         # the command file, which is the operator's line name
+}
+_STG_FIRST_COORD = 9
+_STG_N_FIELDS = _STG_FIRST_COORD + 12   # the shortest record the format writes
+
+#: The header declares the length unit. Coordinates, geometric factors and
+#: apparent resistivities are all written in it, so it is recorded rather than
+#: converted: a file in feet is internally consistent in feet.
+_STG_UNIT = re.compile(r"^\s*Unit\s*:\s*(\S+)", re.IGNORECASE)
+_STG_RECORDS = re.compile(r"Records\s*:\s*(\d+)", re.IGNORECASE)
+_STG_SETTING = re.compile(r"^([A-Za-z][A-Za-z0-9_]*)=(.*)$")
+
+
+def _stg_record(fields: List[str]) -> Optional[Dict[str, Any]]:
+    """One ``.stg`` data line as a record, or None when the line is not one.
+
+    The header carries no comment marker, so "is this a measurement?" has to be
+    answered from the line itself: a record starts with an integer and holds
+    twelve readable coordinates after the command-file name. Header lines, blank
+    lines and a truncated final record all fail that test.
+    """
+    if len(fields) < _STG_N_FIELDS:
+        return None
+    try:
+        record_no = int(fields[0])
+    except ValueError:
+        return None
+
+    coords = np.array([_as_float(f) for f in
+                       fields[_STG_FIRST_COORD:_STG_FIRST_COORD + 12]], dtype=float)
+    if not np.isfinite(coords).all():
+        return None
+
+    resist = _as_float(fields[_STG_COLUMNS["resist"]])
+    if not np.isfinite(resist):
+        return None                    # the cycle failed; there is no reading here
+
+    record: Dict[str, Any] = {
+        "record": record_no,
+        "command": fields[_STG_COLUMNS["command"]].strip(),
+        "resist": resist,
+        "error_percent": _as_float(fields[_STG_COLUMNS["error_percent"]]),
+        "current": _as_float(fields[_STG_COLUMNS["current"]]),
+        "rhoa": _as_float(fields[_STG_COLUMNS["rhoa"]]),
+        "coords": coords.reshape(4, 3),
+    }
+
+    # Whatever follows the geometry is annotation. An IP acquisition writes its
+    # decay windows there as bare numbers; the firmware writes the acquisition
+    # settings as ``key=value``. Neither sits at a fixed column, so they are
+    # told apart by shape instead of by position.
+    windows: List[float] = []
+    settings: Dict[str, str] = {}
+    for field in fields[_STG_FIRST_COORD + 12:]:
+        field = field.strip()
+        if not field:
+            continue
+        setting = _STG_SETTING.match(field)
+        if setting:
+            settings[setting.group(1)] = setting.group(2).strip()
+            continue
+        value = _as_float(field)
+        if np.isfinite(value):
+            windows.append(value)
+    record["ip_windows"] = windows
+    record["settings"] = settings
+    return record
+
+
+def _stg_electrodes(coords: np.ndarray) -> Tuple[np.ndarray, Dict[tuple, int]]:
+    """The electrode table implied by every position the records mention.
+
+    A ``.stg`` file addresses electrodes by position and never writes an
+    electrode table, so the table has to be recovered from the measurements.
+    Positions are rounded to a micrometre first, because they reach this point
+    as text and AGI does not spell them one way: the raw export writes
+    ``6.18000E+02`` where a rescaled one writes ``618.0000``. A difference far
+    below any survey's precision must not become a second electrode.
+
+    Numbering runs along the axis the array is longest in, so a straight line
+    gets its along-line order whichever compass direction it was laid out in,
+    and a genuinely three-dimensional array still gets a stable, reproducible
+    one.
+    """
+    unique = np.unique(np.round(coords.reshape(-1, 3), 6), axis=0)
+    extent = unique.max(axis=0) - unique.min(axis=0)
+    primary, secondary, tertiary = np.argsort(extent)[::-1]
+    order = np.lexsort((unique[:, tertiary], unique[:, secondary], unique[:, primary]))
+    elec = unique[order]
+    lookup = {tuple(row): i + 1 for i, row in enumerate(elec)}  # 1-based, as the readers agree
+    return elec, lookup
+
+
+def parse_sting(path: str | Path) -> Tuple[np.ndarray, pd.DataFrame]:
+    """Read an AGI SuperSting / Sting R1 ``.stg`` export.
+
+    The format is a short header followed by one comma-separated record per
+    measurement. Two of its properties shape this reader:
+
+    * Electrodes are identified by their coordinates, not by a number, and the
+      file holds no electrode table. The table returned here is therefore built
+      from the positions the records use, and ``a``/``b``/``m``/``n`` are 1-based
+      indices into it. An electrode that was laid out but never energised or read
+      does not appear in it, because the file never mentions it.
+    * The instrument writes both the transfer resistance and the apparent
+      resistivity it derived from it, so their ratio is the geometric factor the
+      instrument itself used. It is carried in ``k`` rather than recomputed,
+      which lets a caller see whether the file's own geometry agrees with the
+      electrode positions it wrote.
+
+    Column 6 is the stacking error in percent -- the spread across the
+    measurement cycles, not a reciprocal error -- and is reported both as written
+    (``error_percent``) and as the fraction (``error``) the rest of this package
+    expects. Negative resistances are kept: a reversed or noisy reading is a
+    quality-control decision for the caller, not a parse failure.
+
+    Lengths come back in whatever unit the header declares, which is reported in
+    ``df.attrs["unit"]``. A survey recorded in feet is returned in feet, with
+    apparent resistivity in ohm-feet to match, because converting the coordinates
+    without also rescaling the resistivities would leave the two disagreeing.
+
+    Returns ``(elec, df)``: an ``(n_electrodes, 3)`` array of x, y, z, and a
+    frame carrying ``a``, ``b``, ``m``, ``n``, ``resist``, ``rhoa``, ``k``,
+    ``error``, ``error_percent``, ``current`` and ``ip``.
+    """
+    lines = Path(path).read_text(encoding="utf-8", errors="ignore").splitlines()
+
+    unit = "meter"
+    declared: Optional[int] = None
+    for line in lines[:8]:
+        found_unit = _STG_UNIT.search(line)
+        if found_unit:
+            unit = found_unit.group(1).strip().lower()
+        found_records = _STG_RECORDS.search(line)
+        if found_records and declared is None:
+            declared = int(found_records.group(1))
+
+    records: List[Dict[str, Any]] = []
+    skipped = 0
+    for line in lines:
+        if not line.strip():
+            continue
+        record = _stg_record(line.split(","))
+        if record is None:
+            skipped += 1
+            continue
+        records.append(record)
+
+    if not records:
+        raise ValueError(
+            f"{Path(path).name}: no SuperSting records could be read. A .stg record "
+            "is a comma-separated line that starts with a record number and carries "
+            "four x/y/z electrode positions.")
+
+    coords = np.round(np.array([r["coords"] for r in records], dtype=float), 6)
+    elec, lookup = _stg_electrodes(coords)
+    quads = np.array([[lookup[tuple(row[role])] for role in range(4)] for row in coords],
+                     dtype=int)
+
+    resist = np.array([r["resist"] for r in records], dtype=float)
+    rhoa = np.array([r["rhoa"] for r in records], dtype=float)
+    error_percent = np.array([r["error_percent"] for r in records], dtype=float)
+
+    # The instrument's own geometric factor, recovered from the two numbers it
+    # wrote. A reading of exactly zero resistance carries no factor, so it stays
+    # NaN rather than becoming an infinity the inversion would have to filter.
+    with np.errstate(divide="ignore", invalid="ignore"):
+        k = np.where(np.abs(resist) > 0, rhoa / resist, np.nan)
+
+    df = pd.DataFrame({
+        "a": quads[:, 0], "b": quads[:, 1], "m": quads[:, 2], "n": quads[:, 3],
+        "resist": resist,
+        "rhoa": rhoa,
+        "k": k,
+        "error": error_percent / 100.0,
+        "error_percent": error_percent,
+        "current": np.array([r["current"] for r in records], dtype=float),
+        "record": np.array([r["record"] for r in records], dtype=int),
+        "command": [r["command"] for r in records],
+    })
+
+    # An IP acquisition writes one column per decay window and a DC acquisition
+    # writes none, but ``ip`` has to exist either way because the callers read it.
+    n_windows = max((len(r["ip_windows"]) for r in records), default=0)
+    for window in range(n_windows):
+        df[f"ip_{window + 1}"] = [
+            r["ip_windows"][window] if window < len(r["ip_windows"]) else np.nan
+            for r in records]
+    df["ip"] = df["ip_1"] if n_windows else np.nan
+
+    df.attrs["remote_electrodes"] = _mark_remote(elec)
+    df.attrs["unit"] = unit
+    df.attrs["records_declared"] = declared
+    df.attrs["lines_skipped"] = skipped
+    df.attrs["acquisition_settings"] = records[0]["settings"]
     return elec, df
 
 

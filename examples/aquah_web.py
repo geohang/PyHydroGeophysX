@@ -3,7 +3,8 @@
 This is the web counterpart of the Qt desktop AQUAH assistant. It lets the user
 drive the SAME workflow engine the one-click flow uses
 (``BaseAgent.run_unified_agent_workflow``) through a natural-language chat, with
-provider/model taken from the app sidebar (OpenAI or Claude).
+provider and request level (which fixes the model) taken from the app sidebar
+(OpenAI or Claude).
 
 The module is split so the agent logic is import-light and unit-testable:
 
@@ -34,7 +35,7 @@ Tools: set_config, get_config, list_uploaded_files, run_workflow, get_results.
 
 How to work:
 - Build the config from the user's request with set_config. Always set "user_request" to a clear one-line description, plus the data files and key parameters.
-- Common config fields: user_request; for ERT inversion: data_file (or ert_file), instrument (E4D / BERT / Syscal / DAS-1 / ABEM-Lund / ResInv / ...), electrode_file (optional); for time-lapse ERT: time_lapse_files (an ordered list) + electrode_file; for seismic refraction: raw_seismic_file or seismic_file; for TDEM: tdem_file; for hydrologic-model conversion: hydro_model ("modflow" or "parflow") + modflow_dir / parflow_dir; inversion params: lambda, max_iterations.
+- Common config fields: user_request; for ERT inversion: data_file (or ert_file), instrument (E4D / BERT / Syscal / DAS-1 / ABEM-Lund / ResInv / ...), electrode_file (optional); for time-lapse ERT: time_lapse_files (an ordered list) + electrode_file; for seismic refraction: raw_seismic_file or seismic_file; for TDEM: tdem_file; for hydrologic-model conversion: hydro_model ("modflow" or "parflow") + modflow_dir / parflow_dir; inversion params: lambda, max_iterations, and for a monitoring series temperature_correction to report every survey at one reference temperature — resistivity moves about 2 % per °C, so without it a seasonal change reads as a moisture change. Prefer mode "surface" when a ground-surface temperature record exists ({"enabled": true, "mode": "surface", "reference": 25, "surface_times": [...dates...], "surface_temperature": [...degC...], "diffusivity": 0.06}); it diffuses that record into the ground and supplies the depth structure. One temperature per survey is a coarse surface record and goes in the same mode. Otherwise "constant", "profile" (a measured depth profile) or "seasonal" ({"mean_temperature": 10, "amplitude": 12, "damping_depth": 2.5}).
 - Call list_uploaded_files to see what the user uploaded, then point the right config field at those paths. NEVER invent file paths — only use uploaded files or paths the user gave you. If you have no data, ask the user to upload files (in the panel) or give paths.
 - Before running, call get_config and briefly summarize it. Then call run_workflow — this is a heavy step that runs the full pipeline.
 - If a tool result has status "failed" or "blocked", read it and adjust or ask the user.
@@ -191,6 +192,8 @@ def run_agent_turn(
         }
         if "_anthropic_content" in out:
             assistant["_anthropic_content"] = out["_anthropic_content"]
+        if "_openai_output" in out:
+            assistant["_openai_output"] = out["_openai_output"]
         messages.append(assistant)
         if assistant["content"]:
             events.append({"kind": "assistant", "text": assistant["content"]})
@@ -231,7 +234,11 @@ def render_aquah_chat(sidebar_state: Dict[str, Any]) -> None:
     if not ok:
         st.warning(f"{reason} Set it in the sidebar (provider/model/API key).")
         return
-    st.caption(f"Using **{providers.PROVIDER_META[prov_id]['label']} · {provider.model}**")
+    tier = providers.tier_for_model(prov_id, provider.model)
+    level = providers.MODEL_TIERS.get(tier, {}).get("name", "Custom")
+    price = providers.price_label(provider.model)
+    st.caption(f"Using **{providers.PROVIDER_META[prov_id]['label']} · {provider.model}** "
+               f"— {level}{f' · {price}' if price else ''}. Change the level in the sidebar.")
 
     # Session state for this panel.
     st.session_state.setdefault("aquah_messages", [])

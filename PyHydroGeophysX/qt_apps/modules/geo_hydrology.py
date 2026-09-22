@@ -1157,6 +1157,41 @@ class GeoHydrologyModule(BaseModule):
                     "valid_actions": list(handlers.keys())}
         return handler()
 
+    def show_run_inputs(self, inputs: Dict[str, Any]) -> str:
+        """Open the model the run has just inverted, so this page is not blank.
+
+        The automatic run reaches this page having already recovered the
+        resistivity models, and the page was still showing "No model folder set.
+        Use 'Select folder…'" - asking the user to go and find something the run
+        was holding. The inversion step now writes the bundle these controls
+        read, so the folder is known and the layers it found are on screen.
+
+        Anything already loaded is left alone; a run must not discard work
+        somebody was in the middle of.
+        """
+        if self._summary is not None:
+            return ""
+        folder = inputs.get("model_directory") or inputs.get("ert_model_dir")
+        if not folder or not Path(str(folder)).is_dir():
+            return ""
+        result = self._agent_set_data_dir(str(folder))
+        if not result.get("loaded"):
+            return ""
+        # Layers come from the markers the inversion mesh carries, so the page
+        # arrives at the step the run is actually on rather than at step 1.
+        self._agent_detect_layers()
+        layers = len(self._enabled_layers())
+        return f"the inverted model from this run ({layers} layer(s))"
+
+    def show_run_stage(self, tool: str) -> str:
+        """Follow the run through this page's wizard steps."""
+        views = {"fetch_climate": "Data", "convert_water_content": "Run"}
+        step = views.get(str(tool), "")
+        if not step:
+            return ""
+        self._agent_goto_step(step)
+        return step
+
     def _agent_status(self) -> Dict[str, Any]:
         status = self._step_status()
         last = self.state.module_results.get(self.module_key, {})

@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 
+from ._method import IMPLEMENTED_SCHEME, SCHEME_LABEL
 from .base_agent import BaseAgent
 
 
@@ -41,7 +42,8 @@ constraints, structural constraints, and convergence criteria."""
                 - ert_data: Loaded ERT data (for standard inversion)
                 - inversion_mode: 'standard' or 'time-lapse'
                 - time_lapse_data: List of ERT datasets (for time-lapse)
-                - time_lapse_method: 'difference', 'ratio', or 'joint' (for time-lapse)
+                - time_lapse_method: recorded only; the solver implements one
+                  scheme (see PyHydroGeophysX.agents._method)
                 - temporal_regularization: Temporal smoothing weight (for time-lapse)
                 - inversion_params: Inversion parameters (lambda, max_iter, etc.)
                 - use_structure_constraint: Whether to use seismic structure (default: False)
@@ -185,6 +187,14 @@ constraints, structural constraints, and convergence criteria."""
                 'iterations': int(inversion_result.meta.get('native_iterations')) if inversion_result.meta.get('native_iterations') is not None else len(inversion_result.iteration_chi2),
                 'interpretation': interpretation,
                 'output_dir': output_dir
+            }
+            self.results['processing'] = {
+                'input_measurements': len(ert_data.observations),
+                'inverted_measurements': int(inversion.data.size()),
+                'exported_data_file': str(data_file),
+                'export_strategy': str(export_strategy),
+                'use_source_error': bool(use_source_error),
+                'inversion_params': dict(inversion_params),
             }
             
             final_chi2 = float(inversion_result.meta.get('final_chi2')) if inversion_result.meta.get('final_chi2') is not None else (float(np.asarray(inversion_result.iteration_chi2[-1]).item()) if inversion_result.iteration_chi2 else 0.0)
@@ -334,7 +344,7 @@ Provide a brief interpretation (2-3 sentences) about:
         Args:
             input_data: Dictionary containing:
                 - time_lapse_data: List of ERT datasets (or file paths) in temporal order
-                - time_lapse_method: 'difference', 'ratio', or 'joint'
+                - time_lapse_method: recorded only; see PyHydroGeophysX.agents._method
                 - temporal_regularization: Temporal smoothing weight (default: 10.0)
                 - baseline_index: Index of baseline dataset (default: 0)
                 - inversion_params: Standard inversion parameters
@@ -353,7 +363,7 @@ Provide a brief interpretation (2-3 sentences) about:
 
             # Extract parameters
             time_lapse_data = input_data.get('time_lapse_data', [])
-            tl_method = input_data.get('time_lapse_method', 'difference')
+            tl_method = input_data.get('time_lapse_method', IMPLEMENTED_SCHEME)
             temporal_reg = input_data.get('temporal_regularization', 10.0)
             baseline_idx = input_data.get('baseline_index', 0)
             inversion_params = input_data.get('inversion_params', {})
@@ -365,7 +375,10 @@ Provide a brief interpretation (2-3 sentences) about:
                 raise ValueError("Time-lapse inversion requires at least 2 datasets")
             
             self._log_execution(f"Processing {len(time_lapse_data)} time-lapse datasets")
-            self._log_execution(f"Method: {tl_method}, Temporal regularization: {temporal_reg}")
+            # Log what will actually run. The requested value is logged beside
+            # it, not in place of it, because the solver ignores it.
+            self._log_execution(f"Scheme: {SCHEME_LABEL} (configuration requested '{tl_method}'), "
+                                f"temporal constraint alpha={temporal_reg}")
             
             # Export all datasets to inversion format
             use_source_error = input_data.get(
@@ -403,8 +416,28 @@ Provide a brief interpretation (2-3 sentences) about:
             self._log_execution(f"Inversion parameters: lambda={lambda_val}, alpha={alpha}, "
                               f"max_iter={max_iterations}, method={method}, type={inversion_type}")
             
-            # Create measurement times (sequential indices if not provided)
-            measurement_times = input_data.get('measurement_times', list(range(1, len(time_lapse_data) + 1)))
+            # Measurement times. A sequential index treats a one-hour gap and a
+            # one-month gap as the same spacing and gives the report a step number
+            # where it wants a date, so the acquisition times are read off the
+            # original file names whenever the caller did not supply them.
+            source_files = [str(f) for f in (input_data.get('source_files') or [])]
+            timing = None
+            measurement_times = input_data.get('measurement_times')
+            if measurement_times is None:
+                from PyHydroGeophysX.data_processing.survey_timing import survey_timing
+
+                if len(source_files) == len(time_lapse_data):
+                    timing = survey_timing(source_files)
+                if timing is not None and timing.dated:
+                    measurement_times = list(timing.times)
+                    self._log_execution(f"Survey timing: {timing.summary()}")
+                else:
+                    timing = None
+                    measurement_times = list(range(1, len(time_lapse_data) + 1))
+                    self._log_execution(
+                        "No acquisition times could be read from the survey files; "
+                        "using a sequential index, so the run cannot report the "
+                        "real interval between surveys.", level='WARNING')
             
             # Create mesh for inversion
             from pygimli.physics import ert
@@ -432,8 +465,22 @@ Provide a brief interpretation (2-3 sentences) about:
             )
             
             tl_result = tl_inversion.run()
-            
+
             self._log_execution("Time-lapse inversion completed successfully")
+
+            # Temperature correction. Resistivity falls about 2 % per degC, so over
+            # a monitoring season the temperature signal is the same size as the
+            # moisture signal the survey is run to see. Applied here so every
+            # downstream consumer - the report, the petrophysics - reads the
+            # corrected series; the raw one is kept alongside it.
+            final_models = tl_result.final_models
+            temperature_report = self._correct_for_temperature(
+                inversion_params.get('temperature_correction'), final_models,
+                tl_result, data, measurement_times, timing)
+            if temperature_report.get('applied'):
+                final_models = temperature_report.pop('models')
+            else:
+                temperature_report.pop('models', None)
             
             # Store results
             self.update_context('time_lapse_result', tl_result)
@@ -449,12 +496,30 @@ Provide a brief interpretation (2-3 sentences) about:
                 'status': 'success',
                 'inversion_mode': 'time-lapse',
                 'time_lapse_result': tl_result,
-                'final_models': tl_result.final_models,  # 2D array: cells x timesteps
-                'baseline_model': tl_result.final_models[:, 0] if tl_result.final_models is not None else None,
-                'time_lapse_models': [tl_result.final_models[:, i] for i in range(tl_result.final_models.shape[1])] if tl_result.final_models is not None else [],
+                'final_models': final_models,  # 2D array: cells x timesteps
+                'baseline_model': final_models[:, 0] if final_models is not None else None,
+                'time_lapse_models': [final_models[:, i] for i in range(final_models.shape[1])] if final_models is not None else [],
+                # What the models above are: inverted resistivity, or resistivity
+                # reported at a reference temperature. A corrected section looks
+                # exactly like an uncorrected one, so the run has to say which.
+                'temperature_correction': temperature_report,
+                'final_models_uncorrected': (
+                    tl_result.final_models if temperature_report.get('applied') else None),
+                'survey_timing': timing.to_dict() if timing is not None else None,
                 'mesh': tl_result.mesh,
-                'method': tl_method,
+                # Two different things that were both called 'method'. The
+                # report printed this one under "Solver Method" and showed the
+                # time-lapse scheme there; the linear solver that actually ran
+                # is the one in inversion_params.
+                'time_lapse_method_requested': tl_method,
+                'method': method,
                 'temporal_regularization': temporal_reg,
+                # Recorded on the result so the report and the audit describe the
+                # run that happened, instead of showing N/A for settings the
+                # caller passed in.
+                'inversion_params': dict(inversion_params or {}),
+                'lambda': dict(inversion_params or {}).get('lambda'),
+                'max_iterations': dict(inversion_params or {}).get('max_iterations'),
                 'n_timesteps': tl_result.final_models.shape[1] if tl_result.final_models is not None else len(time_lapse_data),
                 'chi2_values': tl_result.all_chi2 if hasattr(tl_result, 'all_chi2') else None,
                 'coverage': tl_result.all_coverage if hasattr(tl_result, 'all_coverage') else [],
@@ -476,6 +541,45 @@ Provide a brief interpretation (2-3 sentences) about:
             }
             raise
     
+    def _correct_for_temperature(self, spec, models, tl_result, data,
+                                 measurement_times, timing) -> dict:
+        """Report every time step at one reference temperature, if asked to.
+
+        Returns a report dict, carrying the corrected models under ``"models"``
+        when it succeeded. A correction that was requested but could not be built
+        is returned as ``applied: False`` with the reason and logged as a warning:
+        a section left uncorrected looks exactly like a corrected one, so the run
+        has to say which it is rather than quietly produce the wrong one.
+        """
+        if not spec or not bool(dict(spec).get('enabled', True)):
+            return {'applied': False, 'requested': False}
+        if models is None:
+            return {'applied': False, 'requested': True,
+                    'error': 'the inversion produced no models to correct'}
+        try:
+            import numpy as _np
+
+            from PyHydroGeophysX.core import section_geometry
+            from PyHydroGeophysX.petrophysics import temperature as temperature_model
+
+            try:
+                sensors = _np.asarray(data.sensors(), dtype=float)[:, :2]
+            except Exception:  # noqa: BLE001 - topography comes from the mesh then
+                sensors = None
+            depths = section_geometry.cell_depths(tl_result.mesh, sensors=sensors)
+            dates = list(timing.timestamps) if timing is not None and timing.dated else None
+            corrected, report = temperature_model.correct_time_lapse_models(
+                models, dict(spec), depths, days=list(measurement_times), dates=dates)
+        except Exception as exc:  # noqa: BLE001 - never lose the inversion over this
+            self._log_execution(
+                f"Temperature correction was requested but could not be applied "
+                f"({exc}); the models below are the raw inverted resistivity.",
+                level='WARNING')
+            return {'applied': False, 'requested': True, 'error': str(exc)}
+        self._log_execution(f"Temperature correction: {report['note']}")
+        report['models'] = corrected
+        return report
+
     def _interpret_time_lapse_results(self, tl_result, method: str) -> str:
         """
         Get LLM interpretation of time-lapse inversion results.
@@ -488,18 +592,34 @@ Provide a brief interpretation (2-3 sentences) about:
             Interpretation string
         """
         try:
-            n_timesteps = len(tl_result.time_lapse_models) if hasattr(tl_result, 'time_lapse_models') else 0
-            
+            # TimeLapseInversionResult carries final_models, one column per
+            # time step. The attributes read here before - baseline_model,
+            # time_lapse_models, changes - are not on it, so every time-lapse
+            # run logged "object has no attribute 'baseline_model'" and
+            # produced no interpretation at all.
+            models = getattr(tl_result, 'final_models', None)
+            if models is None or getattr(models, 'ndim', 0) != 2 or models.shape[1] == 0:
+                self._log_execution('No time-lapse models to interpret', level='WARNING')
+                return None
+            n_timesteps = int(models.shape[1])
+            baseline = models[:, 0]
+
             results_summary = f"""
             Time-Lapse Inversion Results:
             - Number of time steps: {n_timesteps}
             - Method: {method}
-            - Baseline resistivity range: {np.min(tl_result.baseline_model):.1f} to {np.max(tl_result.baseline_model):.1f} Ohm-m
+            - Baseline resistivity range: {np.nanmin(baseline):.1f} to {np.nanmax(baseline):.1f} Ohm-m
             """
-            
-            if hasattr(tl_result, 'changes') and tl_result.changes:
-                max_change = np.max([np.abs(c).max() for c in tl_result.changes])
-                results_summary += f"\n            - Maximum resistivity change: {max_change:.1f} Ohm-m"
+
+            if n_timesteps > 1:
+                changes = models[:, 1:] - baseline[:, None]
+                max_change = float(np.nanmax(np.abs(changes)))
+                mean_changes = [float(np.nanmean(changes[:, i]))
+                                for i in range(changes.shape[1])]
+                results_summary += (
+                    f"\n            - Maximum absolute resistivity change: {max_change:.1f} Ohm-m"
+                    f"\n            - Mean change per step: "
+                    + ", ".join(f"{value:+.2f}" for value in mean_changes) + " Ohm-m")
             
             prompt = f"""Interpret these time-lapse ERT inversion results:
 

@@ -174,6 +174,7 @@ class ProcessProbeWorker(QObject):
         *,
         timeout_ms: int = 60000,
         working_directory: str | Path | None = None,
+        arguments: list[str] | None = None,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -193,7 +194,7 @@ class ProcessProbeWorker(QObject):
         environment.insert("PYTHONIOENCODING", "utf-8")
         self.process.setProcessEnvironment(environment)
         self.process.setProgram(str(_active_console_python()))
-        self.process.setArguments(["-m", self.module])
+        self.process.setArguments(["-m", self.module, *(arguments or [])])
         self.process.readyReadStandardOutput.connect(self._read_stdout)
         self.process.readyReadStandardError.connect(self._read_stderr)
         self.process.errorOccurred.connect(self._on_process_error)
@@ -249,10 +250,29 @@ class ProcessProbeWorker(QObject):
             )
 
     def _on_process_error(self, error: QProcess.ProcessError) -> None:
-        if error == QProcess.ProcessError.FailedToStart and not self._finished:
+        if self._finished:
+            return
+        if error == QProcess.ProcessError.FailedToStart:
             self._finish_with_error(
                 f"Could not start probe process: {self.process.errorString()}"
             )
+            return
+        # A read or write error does not end the process, and nothing else here
+        # would have noticed: the run hung with no message and no result. That
+        # became reachable when the input channel started staying open for the
+        # whole run so the child could be answered mid-run - a failed write to
+        # that channel means the child is waiting for an answer it will never
+        # get. Killing it turns a silent hang into a reported failure, which is
+        # the difference between a bug report and a mystery.
+        if error in (QProcess.ProcessError.WriteError,
+                     QProcess.ProcessError.ReadError):
+            channel = "sending to" if error == QProcess.ProcessError.WriteError \
+                else "reading from"
+            if self.process.state() != QProcess.ProcessState.NotRunning:
+                self.process.kill()
+            self._finish_with_error(
+                f"Lost contact with the workflow process while {channel} it: "
+                f"{self.process.errorString()}")
 
     def _finish_with_error(self, message: str) -> None:
         if self._finished:

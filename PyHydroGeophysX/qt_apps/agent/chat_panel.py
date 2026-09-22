@@ -25,8 +25,10 @@ from typing import Any, Dict, List, Optional, Tuple
 from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QImage, QTextDocument
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -41,11 +43,20 @@ from PySide6.QtWidgets import (
 from PyHydroGeophysX.qt_apps import theme
 from PyHydroGeophysX.qt_apps.agent.controller import StudioController
 from PyHydroGeophysX.qt_apps.agent.providers import (
+    MODEL_TIERS,
     PROVIDER_META,
     PROVIDER_ORDER,
+    TIER_CUSTOM,
+    TIER_ORDER,
     image_block,
     make_provider,
+    price_label,
+    provider_has_tiers,
     text_block,
+    tier_effort,
+    tier_for_model,
+    tier_label,
+    tier_model,
 )
 from PyHydroGeophysX.qt_apps.agent.runtime import LlmCallWorker
 from PyHydroGeophysX.agents.studio_tools import tool_specs
@@ -149,6 +160,8 @@ class AquahChatPanel(QWidget):
         self._current_call: Optional[Dict[str, Any]] = None
         self._executed_in_turn = False
         self._awaiting_user = False
+        # Until the user touches the Reasoning box, effort follows the level.
+        self._effort_is_user_set = False
         self._paused_resume: Optional[Dict[str, Any]] = None  # resume action while paused
         self._resume_seq = 0
         self._busy = False
@@ -163,6 +176,10 @@ class AquahChatPanel(QWidget):
 
         self._build_ui()
         self._sync_settings_widgets()
+        # Start open only when there is nothing to send with: otherwise a first
+        # run would report "no API key" with no visible way to supply one.
+        if not self._provider.available()[0]:
+            self._settings_btn.setChecked(True)
         self._reset_conversation()
 
     # -- model capabilities --------------------------------------------------
@@ -191,13 +208,38 @@ class AquahChatPanel(QWidget):
         header = QHBoxLayout()
         header.addWidget(QLabel("<b>AQUAH Assistant</b>"))
         header.addStretch(1)
+        # Provider, model, key and the tool switches are chosen once a session
+        # and then only read back, so they collapse behind this button. What
+        # stays out is what changes per message: the status line (can I send,
+        # and what does it cost) and the execution mode.
+        self._settings_btn = QPushButton("Settings")
+        self._settings_btn.setCheckable(True)
+        self._settings_btn.setIcon(theme.icon("fa5s.chevron-right"))
+        self._settings_btn.setToolTip("Provider, model, API key, and the RAG / MCP switches")
+        self._settings_btn.toggled.connect(self._on_settings_toggled)
+        header.addWidget(self._settings_btn)
         self._new_btn = QPushButton("New chat")
         self._new_btn.setIcon(theme.icon("fa5s.broom"))
         self._new_btn.clicked.connect(self._reset_conversation)
         header.addWidget(self._new_btn)
         root.addLayout(header)
 
-        root.addWidget(self._build_settings())
+        self._status_label = QLabel("")
+        self._status_label.setWordWrap(True)
+        self._status_label.setStyleSheet(f"color:{_P['muted']};")
+        root.addWidget(self._status_label)
+
+        self._settings = self._build_settings()
+        self._settings.setVisible(False)
+        root.addWidget(self._settings)
+
+        self._execution_mode = QComboBox()
+        self._execution_mode.addItem("Step-by-step assistance", "guided")
+        self._execution_mode.addItem("Auto to report", "auto")
+        self._execution_mode.setToolTip(
+            "Step-by-step: review each action before it runs. "
+            "Auto to report: run your goal through to a report using the data in Workflow.")
+        root.addWidget(self._execution_mode)
 
         self._transcript = QTextBrowser()
         self._transcript.setOpenExternalLinks(True)
@@ -244,54 +286,107 @@ class AquahChatPanel(QWidget):
         root.addLayout(input_row)
 
     def _build_settings(self) -> QWidget:
-        box = QFrame()
-        lay = QVBoxLayout(box)
-        lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(4)
+        """Build the collapsible configuration block.
 
-        row1 = QHBoxLayout()
-        row1.addWidget(QLabel("Provider"))
+        Laid out on a grid rather than a row per control: each of these is a
+        short word or a model name, so one per full-width row spent most of the
+        panel's height on empty combo boxes. Pairing them across four columns
+        keeps the labels aligned and roughly halves the block.
+        """
+        box = QFrame()
+        lay = QGridLayout(box)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setHorizontalSpacing(6)
+        lay.setVerticalSpacing(4)
+        lay.setColumnStretch(1, 1)
+        lay.setColumnStretch(3, 1)
+
+        # The cost ladder, on its own full-width row: its entries name a level,
+        # a model and a price, which no half row can show. Picking a level sets
+        # the model for whichever provider is selected, so switching provider
+        # keeps the level you chose.
+        self._level_row = QWidget()
+        lrow = QHBoxLayout(self._level_row)
+        lrow.setContentsMargins(0, 0, 0, 0)
+        lrow.setSpacing(6)
+        lrow.addWidget(QLabel("Level"))
+        self._level_combo = QComboBox()
+        for tier_id in TIER_ORDER:
+            self._level_combo.addItem(tier_id, tier_id)  # text filled in by _sync
+        self._level_combo.addItem("Custom model", TIER_CUSTOM)
+        self._level_combo.currentIndexChanged.connect(self._on_level_changed)
+        # What the level is for is a tooltip, not a label. Visible, it wrapped to
+        # three lines - more height than every other control here put together -
+        # to say something that is read once and then never again.
+        lrow.addWidget(self._level_combo, stretch=1)
+        lay.addWidget(self._level_row, 0, 0, 1, 4)
+
+        lay.addWidget(QLabel("Provider"), 1, 0)
         self._provider_combo = QComboBox()
         for pid in PROVIDER_ORDER:
             self._provider_combo.addItem(PROVIDER_META[pid]["label"], pid)
         self._provider_combo.currentIndexChanged.connect(self._on_provider_changed)
-        row1.addWidget(self._provider_combo, stretch=1)
-        lay.addLayout(row1)
+        lay.addWidget(self._provider_combo, 1, 1)
 
-        row2 = QHBoxLayout()
-        row2.addWidget(QLabel("Model"))
+        lay.addWidget(QLabel("Model"), 1, 2)
         self._model_combo = QComboBox()
         self._model_combo.setEditable(True)
         self._model_combo.currentTextChanged.connect(self._on_model_changed)
-        row2.addWidget(self._model_combo, stretch=1)
-        lay.addLayout(row2)
+        lay.addWidget(self._model_combo, 1, 3)
 
         self._base_url_row = QWidget()
         burl = QHBoxLayout(self._base_url_row)
         burl.setContentsMargins(0, 0, 0, 0)
+        burl.setSpacing(6)
         burl.addWidget(QLabel("Base URL"))
         self._base_url_edit = QLineEdit()
         self._base_url_edit.setPlaceholderText("https://api.example.com/v1")
         burl.addWidget(self._base_url_edit, stretch=1)
-        lay.addWidget(self._base_url_row)
+        lay.addWidget(self._base_url_row, 2, 0, 1, 4)
 
-        row3 = QHBoxLayout()
         self._key_edit = QLineEdit()
         self._key_edit.setEchoMode(QLineEdit.Password)
         self._key_edit.setPlaceholderText("Paste API key for this session")
+        lay.addWidget(self._key_edit, 3, 0, 1, 3)
         self._apply_btn = QPushButton("Apply")
         self._apply_btn.clicked.connect(self._on_apply_settings)
-        row3.addWidget(self._key_edit, stretch=1)
-        row3.addWidget(self._apply_btn)
-        lay.addLayout(row3)
+        lay.addWidget(self._apply_btn, 3, 3)
 
-        self._status_label = QLabel("")
-        self._status_label.setWordWrap(True)
-        self._status_label.setStyleSheet(f"color:{_P['muted']};")
-        lay.addWidget(self._status_label)
+        lay.addWidget(QLabel("Reasoning"), 4, 0)
+        self._reasoning = QComboBox()
+        self._reasoning.addItems(['none', 'low', 'medium', 'high', 'xhigh', 'max'])
+        self._reasoning.setCurrentText('medium')
+        self._reasoning.setToolTip(
+            'How hard the model thinks before answering. Follows the level until '
+            'you change it, then stays where you put it. Chat pays this on every '
+            'tool call, so a high effort is felt one step at a time. Applies to '
+            'reasoning models; not a display of private chain-of-thought.')
+        self._reasoning.currentTextChanged.connect(self._on_reasoning_changed)
+        lay.addWidget(self._reasoning, 4, 1)
+
+        # Short labels, full sentences in the tooltips: the names are what you
+        # scan for, the explanation is what you hover for.
+        self._rag = QCheckBox('RAG')
+        self._rag.setChecked(True)
+        self._rag.setToolTip('Retrieve relevant excerpts from local documentation and selected reference files; record sources in the report.')
+        self._mcp = QCheckBox('MCP')
+        self._mcp.setToolTip('Connect to the bundled stdio MCP server and retrieve available workflow APIs. Requires the mcp extra.')
+        lay.addWidget(self._rag, 4, 2)
+        lay.addWidget(self._mcp, 4, 3)
         return box
 
     # -- settings handling ---------------------------------------------------
+    def _on_settings_toggled(self, shown: bool) -> None:
+        """Show or hide the configuration block, and point the chevron at it.
+
+        A drawn icon rather than a text arrow: a chevron character disappears
+        under font fallback, and a checkable button's pressed look is too quiet
+        to read as open/closed on its own.
+        """
+        self._settings.setVisible(shown)
+        self._settings_btn.setIcon(
+            theme.icon("fa5s.chevron-down" if shown else "fa5s.chevron-right"))
+
     def _sync_settings_widgets(self) -> None:
         """Reflect the active provider into the combos / rows (no signals)."""
         meta = PROVIDER_META.get(self._provider_id, PROVIDER_META["openai"])
@@ -307,15 +402,90 @@ class AquahChatPanel(QWidget):
         self._model_combo.setCurrentText(self._provider.model)
         self._model_combo.blockSignals(False)
 
+        self._sync_level_widgets()
         self._base_url_row.setVisible(bool(meta.get("needs_base_url")))
         self._key_edit.setPlaceholderText(f"Paste {meta['env_key']} for this session")
+
+    def _sync_level_widgets(self) -> None:
+        """Relabel the ladder for this provider and select the level in force.
+
+        The level is derived from the model rather than remembered separately, so
+        a model set by an environment variable or typed into the model box is
+        described correctly instead of leaving the selector claiming a level the
+        provider is not on.
+        """
+        tiered = provider_has_tiers(self._provider_id)
+        self._level_row.setVisible(tiered)
+        if not tiered:
+            return
+        self._level_combo.blockSignals(True)
+        for i, tier_id in enumerate(TIER_ORDER):
+            self._level_combo.setItemText(i, tier_label(tier_id, self._provider_id))
+        current = tier_for_model(self._provider_id, self._provider.model)
+        pos = self._level_combo.findData(current)
+        if pos >= 0:
+            self._level_combo.setCurrentIndex(pos)
+        self._level_combo.blockSignals(False)
+        self._level_combo.setToolTip(self._level_help_text(current))
+        self._apply_tier_effort(current)
+
+    def _on_reasoning_changed(self, value: str) -> None:
+        """A change the user made here outranks the level from then on."""
+        self._effort_is_user_set = True
+        self._provider.reasoning_effort = value
+
+    def _apply_tier_effort(self, tier_id: str) -> None:
+        """Move reasoning effort with the level, unless the user set it.
+
+        Chat drives the studio one tool call at a time and each call is its own
+        request, so effort is paid per step rather than once per question. Level
+        1 at medium effort made the cheapest level the slowest thing in the app;
+        the levels now carry the effort they are for. A value the user chose is
+        left alone - the combo stays the override.
+        """
+        if self._effort_is_user_set:
+            return
+        effort = tier_effort(tier_id)
+        if effort == self._reasoning.currentText():
+            return
+        self._reasoning.blockSignals(True)
+        self._reasoning.setCurrentText(effort)
+        self._reasoning.blockSignals(False)
+        self._provider.reasoning_effort = effort
+
+    def _level_help_text(self, tier_id: str) -> str:
+        """What the selected level is for, and where to go when it falls short."""
+        tier = MODEL_TIERS.get(tier_id)
+        if tier is None:
+            price = price_label(self._provider.model)
+            tail = f" — {price}" if price else ""
+            return f"Custom model — not one of the three levels{tail}."
+        nxt = TIER_ORDER[TIER_ORDER.index(tier_id) + 1] if tier_id != TIER_ORDER[-1] else None
+        after = (f" Move up to {MODEL_TIERS[nxt]['name']} when this level cannot finish the job."
+                 if nxt else " There is nothing above this level, so use it sparingly.")
+        return tier["purpose"] + after
+
+    def _on_level_changed(self, _index: int) -> None:
+        tier_id = self._level_combo.currentData()
+        model = tier_model(tier_id, self._provider_id) if tier_id else None
+        if not model:  # "Custom model" — keep whatever is in the model box
+            self._level_combo.setToolTip(self._level_help_text(TIER_CUSTOM))
+            return
+        self._model_combo.setCurrentText(model)  # _on_model_changed applies it
+        self._level_combo.setToolTip(self._level_help_text(tier_id))
 
     def _on_provider_changed(self, _index: int) -> None:
         pid = self._provider_combo.currentData()
         if not pid or pid == self._provider_id:
             return
+        # Carry the chosen level across the switch: a user who picked level 2 for
+        # cost reasons means level 2 on the new provider too, not its default.
+        wanted = tier_for_model(self._provider_id, self._provider.model)
         self._provider_id = pid
         self._provider = make_provider(pid)
+        carried = tier_model(wanted, pid)
+        if carried:
+            self._provider.set_model(carried)
         self._refresh_capabilities()
         self._sync_settings_widgets()
         self._render_note(f"Switched provider to <b>{html.escape(PROVIDER_META[pid]['label'])}</b>.")
@@ -324,6 +494,7 @@ class AquahChatPanel(QWidget):
     def _on_model_changed(self, text: str) -> None:
         self._provider.set_model(text)
         self._refresh_capabilities()
+        self._sync_level_widgets()
         self._refresh_ready_state()
 
     def _on_apply_settings(self) -> None:
@@ -336,11 +507,14 @@ class AquahChatPanel(QWidget):
             self._key_edit.clear()
         self._provider.set_model(self._model_combo.currentText())
         self._refresh_capabilities()
+        self._sync_level_widgets()
         self._render_note("Applied provider settings for this session.")
         self._refresh_ready_state()
 
     # -- conversation lifecycle ---------------------------------------------
     def _reset_conversation(self) -> None:
+        if hasattr(self._controller, 'reset_workflow_request'):
+            self._controller.reset_workflow_request()
         self._messages = []
         self._tool_queue = []
         self._current_call = None
@@ -358,7 +532,7 @@ class AquahChatPanel(QWidget):
             "<br>&#8226; <i>load ERT data from &lt;path&gt; as E4D and run the inversion with lambda 30</i>"
             "<br>&#8226; <i>build and export a 3D crosshole mesh</i>"
             f"{vision_line}"
-            "<br>Each step is shown with Approve / Reject before it runs."
+            "<br>Choose Step-by-step to approve individual actions, or Auto to report to run a complete workflow."
         )
         self._refresh_ready_state()
 
@@ -368,9 +542,14 @@ class AquahChatPanel(QWidget):
         self._send_btn.setEnabled(ok and not self._busy)
         label = PROVIDER_META.get(self._provider_id, {}).get("label", self._provider_id)
         if ok:
-            eye = " · 👁 can see panels" if self._vision else ""
+            eye = " · 👁" if self._vision else ""
+            price = price_label(self._provider.model, compact=True)
+            cost = f" · {html.escape(price)}" if price else ""
+            tier = MODEL_TIERS.get(tier_for_model(self._provider_id, self._provider.model))
+            level = f"{html.escape(tier['name'])} · " if tier else ""
             self._status_label.setText(
-                f"{html.escape(label)} · {html.escape(self._provider.model)} — ready{eye}")
+                f"{level}{html.escape(label)} · {html.escape(self._provider.model)}"
+                f" — ready{cost}{eye}")
         else:
             self._status_label.setText(f"{html.escape(label)}: {html.escape(reason)}")
 
@@ -383,7 +562,7 @@ class AquahChatPanel(QWidget):
             return
         # Fast-path: while paused at a checkpoint, "continue" runs the module's
         # declared resume action directly — no LLM round-trip, no approval click.
-        if self._paused_resume and text.lower() in _CONTINUE_WORDS:
+        if self._execution_mode.currentData() != "auto" and self._paused_resume and text.lower() in _CONTINUE_WORDS:
             self._input.clear()
             self._render_user(text)
             self._resume_paused(text)
@@ -396,9 +575,31 @@ class AquahChatPanel(QWidget):
         self._input.clear()
         self._render_user(text)
         self._messages.append({"role": "user", "content": text})
+        if self._execution_mode.currentData() == "auto":
+            if self._provider_id not in {"openai", "anthropic"}:
+                self._render_note("Auto to report currently supports OpenAI and Claude. Choose one above, or use step-by-step assistance.")
+                return
+            settings = {"provider": "claude" if self._provider_id == "anthropic" else "openai",
+                        "model": self._provider.model,
+                        "api_key": self._provider._api_key,
+                        "reasoning_effort": self._reasoning.currentText(),
+                        "use_rag": self._rag.isChecked(), "use_mcp": self._mcp.isChecked()}
+            try:
+                message = self._controller.run_to_report(text, settings, self._on_workflow_finished)
+            except Exception as exc:
+                message = f"Could not start workflow: {exc}"
+            self._on_workflow_finished(message)
+            if message.startswith("Workflow started."):
+                self._set_busy(True)
+            return
         self._paused_resume = None  # a non-"continue" message takes manual control
         self._set_busy(True)
         self._start_request()
+
+    def _on_workflow_finished(self, message):
+        self._render_note(html.escape(message))
+        self._messages.append({"role": "assistant", "content": message})
+        self._set_busy(False)
 
     def _resume_paused(self, text: str) -> None:
         """Run the paused checkpoint's resume action directly (no LLM call), keeping the
@@ -424,6 +625,7 @@ class AquahChatPanel(QWidget):
         self._refresh_ready_state()
 
     def _start_request(self) -> None:
+        self._provider.reasoning_effort = self._reasoning.currentText()
         self._send_btn.setText("…")
         worker = LlmCallWorker(self._provider, self._system, self._messages, self._tool_specs)
         worker.succeeded.connect(self._on_llm_ok)
@@ -445,6 +647,8 @@ class AquahChatPanel(QWidget):
         }
         if "_anthropic_content" in out:
             assistant["_anthropic_content"] = out["_anthropic_content"]
+        if "_openai_output" in out:
+            assistant["_openai_output"] = out["_openai_output"]
         self._messages.append(assistant)
 
         if assistant["content"]:
@@ -556,6 +760,8 @@ class AquahChatPanel(QWidget):
     # -- state / rendering ---------------------------------------------------
     def _set_busy(self, busy: bool) -> None:
         self._busy = busy
+        self._execution_mode.setEnabled(not busy)
+        self._new_btn.setEnabled(not busy)
         self._input.setEnabled(not busy)
         self._send_btn.setEnabled(not busy)
         if not busy:

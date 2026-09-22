@@ -21,6 +21,10 @@ from .base_agent import BaseAgent
 # ---------------------------------------------------------------------------
 # Workflow Orchestrator Agent
 # ---------------------------------------------------------------------------
+
+from ._method import SCHEME_SHORT_LABEL
+
+
 class WorkflowOrchestratorAgent(BaseAgent):
     """
     Master orchestrator that detects workflow type and coordinates execution.
@@ -280,9 +284,10 @@ You provide clear descriptions of what will be done and which agents will be use
         
         elif workflow_type == 'time_lapse':
             n_files = len(config.get('time_lapse_files', []))
-            method = config.get('time_lapse_method', 'difference')
-            
-            description = f"Time-lapse ERT monitoring ({method} method) with {n_files} timesteps"
+            # Named from what the solver does, not from the configuration
+            # field, which never reaches it.
+            description = (f"Time-lapse ERT monitoring ({SCHEME_SHORT_LABEL}) "
+                           f"with {n_files} timesteps")
             agents = ['ert_loader', 'ert_inversion', 'report']
             
             if config.get('use_climate'):

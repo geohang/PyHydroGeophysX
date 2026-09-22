@@ -60,7 +60,7 @@ def place_profile(distance, start, bearing, controls=None):
     return start + (distance - distance.min())[:, None] * np.array([np.sin(angle), np.cos(angle)])
 
 
-def mesh_snapshot(mesh, values, method, title='', coverage=None):
+def mesh_snapshot(mesh, values, method, title='', coverage=None, units=None):
     """Preserve original section cell polygons without needing PyGIMLi to reopen."""
     if mesh.dim() != 2:
         raise ValueError('Add to Map currently accepts 2D ERT/seismic sections.')
@@ -76,8 +76,11 @@ def mesh_snapshot(mesh, values, method, title='', coverage=None):
               'values': values, 'distance': np.linspace(x.min(), x.max(), 100)}
     if coverage is not None and np.size(coverage) == values.size:
         arrays['coverage'] = np.asarray(coverage, dtype=float).ravel()
+    # A derived quantity - percentage change, water content - is not in the
+    # method's own units, so the caller can say what it is rather than have the
+    # map label a change map in ohm-metres.
     return {'kind': 'mesh', 'method': method, 'label': title or method,
-            'units': 'm/s' if method == 'Seismic' else 'Ω·m'}, arrays
+            'units': units or ('m/s' if method == 'Seismic' else 'Ω·m')}, arrays
 
 
 def em_snapshot(result):

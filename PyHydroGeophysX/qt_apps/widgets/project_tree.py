@@ -46,6 +46,7 @@ _CHILD_ICONS = {
 # (group label, [(child label, module key), ...]). Several Hydro children map to
 # the same module page; that page exposes the corresponding section internally.
 TREE_STRUCTURE: List[Tuple[str, List[Tuple[str, str]]]] = [
+    ("Workflow", [("Data & reports", "one_click")]),
     (
         "Geophysical Data Processing",
         [

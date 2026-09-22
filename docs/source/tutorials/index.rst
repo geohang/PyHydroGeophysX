@@ -1,5 +1,5 @@
-Tutorials: choose your workflow
-===============================
+Workflows
+=========
 
 Tutorials explain **what to prepare, which decisions to make and how to inspect
 the result**. For complete scripts and figures, use :doc:`/examples/index`.
@@ -53,6 +53,10 @@ What connects these workflows
 Use :doc:`agent_workflows` for AI-assisted operation or
 :doc:`/agents/desktop_studio` for the Qt interface. These are ways to operate
 the workflows, alongside Python scripts.
+
+If you would rather start from the measurement than from the question, the
+:doc:`method pages </methods/index>` list what each one needs as input and which
+workflow it feeds.
 
 .. toctree::
    :caption: Model–data interaction

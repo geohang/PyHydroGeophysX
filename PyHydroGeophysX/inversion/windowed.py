@@ -19,6 +19,8 @@ from .ert_inversion import (
     _resolve_ert_engine,
 )
 from .time_lapse import TimeLapseERTInversion
+from .temporal_weights import DEFAULT_LIMIT as _TEMPORAL_LIMIT
+from .temporal_weights import temporal_weights
 
 
 class _ADTLERTWindowProgress:
@@ -548,6 +550,13 @@ class WindowedTimeLapseERTInversion:
             if progress.iteration_chi2
             else [float(value) for value in inverted.iteration_chi2]
         )
+        result.meta["temporal_weighting"] = {
+            "mode": "uniform", "applied": False,
+            "requested": str(self.inversion_params.get("temporal_weighting", "interval")),
+            "note": ("The ADTLERT backend builds its own temporal operator and "
+                     "constrains every adjacent pair equally; the interval "
+                     "weighting applies to the PyHydro engine only."),
+        }
         result.meta.update(
             backend="adtlert",
             backend_version=version,
@@ -598,6 +607,17 @@ class WindowedTimeLapseERTInversion:
         # Initialize result
         result = TimeLapseInversionResult()
         result.timesteps = self.measurement_times
+        # Each window is its own TimeLapseERTInversion and weights the pairs it
+        # holds; this describes the same weighting over the whole series, so the
+        # run can report what it did rather than leave it to the window logs.
+        _, temporal_report = temporal_weights(
+            self.measurement_times,
+            mode=str(self.inversion_params.get("temporal_weighting", "interval")),
+            limit=self.inversion_params.get("temporal_weight_limit", _TEMPORAL_LIMIT),
+        )
+        if temporal_report.get("applied"):
+            temporal_report["note"] += " Applied within each window."
+        result.meta["temporal_weighting"] = temporal_report
         
         # Create a temporary mesh file because PyGIMLi meshes are not
         # pickleable across worker processes.

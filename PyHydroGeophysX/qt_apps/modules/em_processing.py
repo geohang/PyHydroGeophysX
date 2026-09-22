@@ -2598,6 +2598,26 @@ class EMProcessingModule(BaseModule):
                     "valid_actions": list(handlers.keys())}
         return handler()
 
+    def show_run_inputs(self, inputs):
+        """Open the automatic run's data here, so this panel is not blank.
+
+        Part of the studio's contract: a module the run brings to the front has
+        to show the user a result, not an empty tool with a banner over it.
+        Display only - the workflow does its own work in its own process - and
+        anything already loaded is left alone.
+        """
+        if self._agent_status().get("data_loaded"):
+            return ""
+        path = inputs.get("tdem_file") or inputs.get("em_file")
+        if not path or not Path(str(path)).is_file():
+            return ""
+        method = inputs.get("em_method")
+        if method:
+            self._agent_set_method(str(method))
+        if self._agent_load(str(path)).get("status") == "failed":
+            return ""
+        return Path(str(path)).name
+
     def _agent_status(self) -> Dict[str, Any]:
         last = self.state.module_results.get(self.module_key, {})
         n_snd = int(self._data.get("n_soundings", 1)) if self._data else 0

@@ -71,6 +71,15 @@ DEFAULT_INVERSION = {
     # is a uniform term and 0.4 is where it was measured.
     # See :func:`PyHydroGeophysX.inversion.em1d_lci.solve_lci`.
     "model_damping": 0.4,
+    # Where that damping pulls to, which is a separate question from where the
+    # optimiser starts. ``neighbor`` reuses the starting model's local median
+    # over ``reference_window`` stations each side, ``line`` gives each line one
+    # half-space, ``global`` gives the survey one. A positive
+    # ``reference_resistivity`` overrides the mode and pins every station to it.
+    # See :func:`PyHydroGeophysX.workflows.em1d._reference_starts`.
+    "reference_model_mode": "neighbor",
+    "reference_window": 2,
+    "reference_resistivity": 0.0,
     "target_chi2": 1.0, "chi2_tolerance": 0.2, "max_lambda_trials": 5,
     "convergence_tolerance": 0.02, "min_iterations": 2,
     "reject_outliers": False, "outlier_threshold": 3.0,
@@ -462,11 +471,26 @@ def _occam_with_optional_rejection(
             predicted = np.asarray(forward_vec(np.full(n_layers, 1.0 / rho)), dtype=float).ravel()
             score = float(np.mean(((predicted - dobs_vec) / np.maximum(unc_vec, 1e-30)) ** 2))
             scores.append(score if np.isfinite(score) else np.inf)
+        scores = np.asarray(scores, dtype=float)
         if not np.isfinite(scores).any():
             raise ValueError("Automatic starting-model search produced no finite response.")
-        inv["starting_resistivity"] = float(candidates[int(np.argmin(scores))])
-        if int(np.argmin(scores)) in (0, len(candidates) - 1):
-            # An optimum on a search boundary is not a trustworthy background.
+        best_index = int(np.argmin(scores))
+        inv["starting_resistivity"] = float(candidates[best_index])
+        # An optimum on a search boundary is not a trustworthy background - the
+        # real one may sit outside the searched range - but that reading only
+        # holds when the misfit is still falling towards the edge. A screening
+        # that cannot separate the candidates at all (data insensitive to the
+        # half-space, a response that does not vary with it) lands argmin on
+        # index 0 by tie-break alone, and the short fits below cannot separate
+        # them either: they would cost six extra inversions per sounding and
+        # still return an arbitrary start. The 1% margin is the point below
+        # which the screening has said nothing a layered fit could act on.
+        # ``candidates`` always holds the 21 screening points, since
+        # _log_resistivity_bounds rejects rho_min >= rho_max, so the inward
+        # neighbour below always exists.
+        inward = scores[1] if best_index == 0 else scores[-2]
+        edge_is_pulling = bool(np.isfinite(inward) and scores[best_index] < 0.99 * inward)
+        if best_index in (0, len(candidates) - 1) and edge_is_pulling:
             # Compare short layered fits under one fixed reference, rather than
             # permanently anchoring the damping to the best half-space bound.
             reference = float(np.clip(inv.get("starting_resistivity_fallback", 100.0), 10**lo, 10**hi))

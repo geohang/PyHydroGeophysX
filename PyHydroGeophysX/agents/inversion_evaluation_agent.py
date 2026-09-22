@@ -9,9 +9,33 @@ import os
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
+from ._chi2 import chi2_history
+
 import numpy as np
 
 from .base_agent import BaseAgent
+
+
+def _or_default(value: Any, default: Any) -> Any:
+    """``value`` unless it is absent, in which case ``default``.
+
+    What ``dict.get(key, default)`` is usually assumed to do, and does not: a
+    key that is present and ``None`` returns ``None``, not the default. A
+    workflow configuration parsed from a plain-language request is full of those
+    - the model writes ``"quality_threshold": null`` for a setting the user did
+    not mention - and ``float(None)`` then failed the whole quality check on a
+    run whose inversion was perfectly good.
+
+    Examples
+    --------
+    >>> _or_default(None, 70)
+    70
+    >>> _or_default(0, 70)
+    0
+    >>> _or_default('', 70)
+    ''
+    """
+    return default if value is None else value
 
 
 # ---------------------------------------------------------------------------
@@ -41,8 +65,8 @@ optimal regularization parameter selection."""
         self.quality_thresholds = {
             'chi2_target': 1.0,  # Target chi-squared value
             'chi2_acceptable_range': (0.8, 1.5),  # Acceptable chi-squared range
-            'chi2_poor': (0.0, 0.5),  # Under-fitted (too smooth)
-            'chi2_overfit': (2.0, float('inf')),  # Over-fitted (too rough)
+            'chi2_poor': (2.0, float('inf')),  # Data not fitted within their errors
+            'chi2_overfit': (0.0, 0.5),  # Possible overfit or overestimated errors
             'min_resistivity': 1.0,  # Minimum physically reasonable resistivity (Ωm)
             'max_resistivity': 10000.0,  # Maximum physically reasonable resistivity (Ωm)
             'max_gradient': 100.0,  # Maximum acceptable resistivity gradient
@@ -94,10 +118,19 @@ optimal regularization parameter selection."""
         try:
             # Extract input data
             inversion_results = input_data.get('inversion_results')
-            original_params = input_data.get('inversion_params', {})
+            original_params = input_data.get('inversion_params') or {}
             auto_adjust = input_data.get('auto_adjust', True)
-            max_attempts = int(input_data.get('max_attempts', self.max_iterations))
-            quality_threshold = float(input_data.get('quality_threshold', 70))
+            # `dict.get(key, default)` does not apply the default to a key that
+            # is present and None, and a configuration parsed from a request
+            # carries exactly that: an LLM asked for a workflow config writes
+            # `"quality_threshold": null` for a setting the user did not mention.
+            # `float(None)` then failed the whole quality check on a run whose
+            # inversion was fine.
+            max_attempts = int(_or_default(input_data.get('max_attempts'),
+                                           self.max_iterations))
+            if max_attempts < 1:
+                raise ValueError('max_attempts must include at least the initial evaluation.')
+            quality_threshold = float(_or_default(input_data.get('quality_threshold'), 70))
             progress_callback = input_data.get('progress_callback')
             custom_thresholds = input_data.get('custom_thresholds', {})
             transparent_log = []
@@ -157,6 +190,8 @@ optimal regularization parameter selection."""
             # Attempt to improve through parameter adjustment
             best_results = inversion_results
             best_score = evaluation['quality_score']
+            best_evaluation = evaluation
+            best_params = original_params.copy()
             current_params = original_params.copy()
             
             for attempt in range(1, max_attempts):
@@ -195,6 +230,8 @@ optimal regularization parameter selection."""
                 if new_evaluation['quality_score'] > best_score:
                     best_results = new_results
                     best_score = new_evaluation['quality_score']
+                    best_evaluation = new_evaluation
+                    best_params = adjusted_params.copy()
                     self._log_execution(f"[OK] Improvement found! Score: {best_score:.1f}/100")
                 
                 # Check if acceptable quality achieved
@@ -216,22 +253,22 @@ optimal regularization parameter selection."""
             # Get LLM interpretation if available
             interpretation = None
             if self.api_key:
-                interpretation = self._generate_interpretation(best_results, self.history)
+                interpretation = self._generate_interpretation(best_results, self.history, best_evaluation)
             
             return {
-                'status': 'success' if best_score >= quality_threshold else 'needs_review',
+                'status': 'success' if best_evaluation['is_acceptable'] else 'needs_review',
                 'summary': (
                     'Inversion quality reached the configured threshold.'
-                    if best_score >= quality_threshold
+                    if best_evaluation['is_acceptable']
                     else (
                         f'Quality optimization stopped after {len(self.history)} attempts '
-                        f'with score {best_score:.1f}, below the threshold {quality_threshold:.1f}.'
+                        f'with score {best_score:.1f}; one or more quality criteria were not met.'
                     )
                 ),
                 'quality_score': best_score,
-                'quality_metrics': self.history[-1]['metrics'],
-                'recommendations': self.history[-1]['recommendations'],
-                'adjusted_params': current_params,
+                'quality_metrics': best_evaluation['metrics'],
+                'recommendations': best_evaluation['recommendations'],
+                'adjusted_params': best_params,
                 'final_results': best_results,
                 'evaluation_history': self.history,
                 'attempts': len(self.history),
@@ -378,7 +415,9 @@ optimal regularization parameter selection."""
     
     def _evaluate_data_fit(self, results: Dict[str, Any]) -> Tuple[float, Dict[str, Any]]:
         """Evaluate how well the model fits the observed data."""
-        chi2_values = results.get('chi2_values', [])
+        chi2_values = self._chi2_history(results)
+        if results.get('chi2') is not None:
+            chi2_values = [results['chi2']]
         
         if not chi2_values:
             # Try to get from time_lapse_result
@@ -389,15 +428,13 @@ optimal regularization parameter selection."""
         if not chi2_values or len(chi2_values) == 0:
             return 50.0, {'status': 'unknown', 'chi2': None}
         
-        # Get final chi2 value(s)
-        if isinstance(chi2_values[0], list):
-            # Multiple inversions (time-lapse)
-            final_chi2_list = [chi2[-1] if chi2 else None for chi2 in chi2_values]
-            final_chi2 = np.mean([c for c in final_chi2_list if c is not None])
-        else:
-            final_chi2 = chi2_values[-1] if len(chi2_values) > 0 else None
+        # The last iteration's chi-squared. A time-lapse row is
+        # [chi2, phi_m, phi_t], so the misfit is column 0, not the last entry -
+        # reading row[-1] scored the temporal regularization term instead.
+        history = chi2_history(chi2_values)
+        final_chi2 = history[-1] if history else None
         
-        if final_chi2 is None:
+        if final_chi2 is None or not np.isfinite(final_chi2) or final_chi2 < 0:
             return 50.0, {'status': 'unknown', 'chi2': None}
         
         # Score based on chi-squared value
@@ -409,10 +446,10 @@ optimal regularization parameter selection."""
             distance = abs(final_chi2 - target_chi2)
             score = 100 - (distance * 20)  # Penalty for deviation from target
         elif final_chi2 < acceptable_range[0]:
-            # Underfit (too smooth)
+            # Low misfit can indicate overfitting or overestimated errors.
             score = 40 + (final_chi2 / acceptable_range[0]) * 20
         else:
-            # Overfit (too rough)
+            # High misfit: data are not explained within their assigned errors.
             score = max(0, 60 - (final_chi2 - acceptable_range[1]) * 10)
         
         metrics = {
@@ -420,7 +457,7 @@ optimal regularization parameter selection."""
             'target_chi2': target_chi2,
             'acceptable_range': acceptable_range,
             'status': 'good' if acceptable_range[0] <= final_chi2 <= acceptable_range[1] else 
-                     ('underfit' if final_chi2 < acceptable_range[0] else 'overfit')
+                     ('overfit' if final_chi2 < acceptable_range[0] else 'underfit')
         }
         
         return float(np.clip(score, 0, 100)), metrics
@@ -430,7 +467,7 @@ optimal regularization parameter selection."""
         # Get final model
         final_model = self._extract_final_model(results)
         
-        if final_model is None or len(final_model) == 0:
+        if final_model is None or len(final_model) < 2:
             return 50.0, {'status': 'unknown'}
         
         # Calculate model gradient statistics
@@ -482,16 +519,19 @@ optimal regularization parameter selection."""
         else:
             score = max(0, 100 - violation_ratio * 200)
         
-        # Additional check for extreme ranges
-        resistivity_range = max_res / min_res if min_res > 0 else float('inf')
-        if resistivity_range > 1000:  # More than 3 orders of magnitude
-            score *= 0.8  # Penalize extreme ranges
-        
+        # Additional check for extreme contrasts. This is max/min, a ratio - it
+        # was reported under the key 'resistivity_range', where 94.5 read as a
+        # span of 94.5 ohm-m for a model spanning 105.8 to 10000.
+        resistivity_ratio = max_res / min_res if min_res > 0 else float('inf')
+        if resistivity_ratio > 1000:  # More than 3 orders of magnitude
+            score *= 0.8  # Penalize extreme contrasts
+
         metrics = {
             'min_resistivity': min_res,
             'max_resistivity': max_res,
             'mean_resistivity': mean_res,
-            'resistivity_range': float(resistivity_range),
+            'resistivity_span': float(max_res - min_res),
+            'resistivity_ratio': float(resistivity_ratio),
             'violations': int(violations),
             'violation_ratio': float(violation_ratio),
             'status': 'good' if violation_ratio < 0.01 else 'has_violations'
@@ -501,7 +541,7 @@ optimal regularization parameter selection."""
     
     def _evaluate_convergence(self, results: Dict[str, Any]) -> Tuple[float, Dict[str, Any]]:
         """Evaluate convergence quality of the inversion."""
-        chi2_values = results.get('chi2_values', [])
+        chi2_values = self._chi2_history(results)
         
         if not chi2_values:
             tl_result = results.get('time_lapse_result')
@@ -511,23 +551,33 @@ optimal regularization parameter selection."""
         if not chi2_values or len(chi2_values) == 0:
             return 50.0, {'status': 'unknown'}
         
-        # For time-lapse, take first dataset's chi2 history
-        if isinstance(chi2_values[0], list):
-            chi2_history = chi2_values[0]
-        else:
-            chi2_history = chi2_values
+        # The chi-squared trajectory across iterations. The first entry of a
+        # time-lapse result is one iteration's three objective terms, not a
+        # history, so reading chi2_values[0] measured convergence against
+        # [chi2, phi_m, phi_t] of iteration zero.
+        history = chi2_history(chi2_values)
         
-        if len(chi2_history) < 3:
+        if len(history) < 3:
             return 60.0, {'status': 'insufficient_iterations'}
         
         # Check convergence in last iterations
         last_improvements = []
-        for i in range(len(chi2_history) - 3, len(chi2_history) - 1):
-            if chi2_history[i] > 0:
-                improvement = (chi2_history[i] - chi2_history[i + 1]) / chi2_history[i]
+        for i in range(len(history) - 3, len(history) - 1):
+            if history[i] > 0:
+                improvement = (history[i] - history[i + 1]) / history[i]
                 last_improvements.append(improvement)
         
         avg_improvement = np.mean(last_improvements) if last_improvements else 0
+
+        # The solver records why its loop ended. Preferring that to a slope
+        # threshold stops the report saying "still_improving" about a run whose
+        # own log says "Convergence reached at iteration 8" - two verdicts on
+        # one question, only the weaker of which reached the reader.
+        stop_reason = None
+        tl_result = results.get('time_lapse_result')
+        if tl_result is not None:
+            stop_reason = (getattr(tl_result, 'meta', {}) or {}).get('stop_reason')
+        stop_reason = stop_reason or results.get('stop_reason')
         
         # Score based on convergence
         target_ratio = self.quality_thresholds['convergence_ratio']
@@ -542,12 +592,19 @@ optimal regularization parameter selection."""
             score = 50
         
         metrics = {
-            'total_iterations': len(chi2_history),
-            'final_chi2': float(chi2_history[-1]),
-            'initial_chi2': float(chi2_history[0]),
-            'improvement_ratio': float((chi2_history[0] - chi2_history[-1]) / chi2_history[0]) if chi2_history[0] > 0 else 0,
+            'total_iterations': len(history),
+            'final_chi2': float(history[-1]),
+            'initial_chi2': float(history[0]),
+            'improvement_ratio': float((history[0] - history[-1]) / history[0]) if history[0] > 0 else 0,
             'last_iteration_improvement': float(avg_improvement),
-            'status': 'converged' if avg_improvement < 0.01 else 'still_improving'
+            'solver_stop_reason': stop_reason,
+            # 'target' and 'plateau' are the two branches that print
+            # "Convergence reached"; 'iteration_cap' is the loop running out.
+            'status': ('converged'
+                       if stop_reason in ('target', 'plateau')
+                       else 'still_improving' if stop_reason == 'iteration_cap'
+                       else 'converged' if avg_improvement < 0.01
+                       else 'still_improving')
         }
         
         return float(score), metrics
@@ -567,13 +624,13 @@ optimal regularization parameter selection."""
             chi2_status = metrics['data_fit'].get('status', 'unknown')
             if chi2_status == 'underfit':
                 recommendations.append(
-                    "Model is underfit (chi² too low). Reduce regularization parameter (lambda) "
-                    "to allow more model complexity."
+                    "Data misfit is high (chi² above the target). Check errors, geometry and convergence; "
+                    "reducing regularization (lambda) may improve data fit."
                 )
             elif chi2_status == 'overfit':
                 recommendations.append(
-                    "Model is overfit (chi² too high). Increase regularization parameter (lambda) "
-                    "to smooth the model."
+                    "Data misfit is low (chi² below the target). Check for overestimated errors or "
+                    "overfitting; increasing regularization (lambda) may be appropriate."
                 )
         
         # Smoothness recommendations
@@ -635,9 +692,9 @@ optimal regularization parameter selection."""
             target = self.quality_thresholds['chi2_target']
             
             if chi2_value < target:
-                new_lambda = current_lambda * 0.8  # Slightly reduce
+                new_lambda = current_lambda * 1.2
             else:
-                new_lambda = current_lambda * 1.2  # Slightly increase
+                new_lambda = current_lambda * 0.8
             
             self._log_execution(f"Fine-tuning: adjusting lambda to {new_lambda:.2f}")
         
@@ -665,6 +722,9 @@ optimal regularization parameter selection."""
         
         # Prepare input with adjusted parameters
         reinversion_input = original_input.copy()
+        if original_input.get('output_dir'):
+            from pathlib import Path
+            reinversion_input['output_dir'] = str(Path(original_input['output_dir']) / f'attempt_{len(self.history) + 1}')
         reinversion_input['inversion_params'] = adjusted_params
         
         # Remove evaluation-specific keys
@@ -677,6 +737,8 @@ optimal regularization parameter selection."""
     def _extract_final_model(self, results: Dict[str, Any]) -> Optional[np.ndarray]:
         """Extract final model from results."""
         # Try different result formats
+        if results.get('resistivity_model') is not None:
+            return np.asarray(results['resistivity_model'])
         if 'baseline_model' in results:
             return np.array(results['baseline_model'])
         
@@ -699,30 +761,42 @@ optimal regularization parameter selection."""
         
         return None
     
+    @staticmethod
+    def _chi2_history(results):
+        values = results.get('chi2_values')
+        if values is None or len(values) == 0:
+            inv = results.get('inversion_result')
+            values = getattr(inv, 'iteration_chi2', None)
+        if values is None:
+            values = getattr(results.get('time_lapse_result'), 'all_chi2', None)
+        if values is None:
+            return []
+        return [np.asarray(value).tolist() for value in values]
+
     def _generate_interpretation(self, results: Dict[str, Any],
-                                history: List[Dict[str, Any]]) -> str:
+                                history: List[Dict[str, Any]], best=None) -> str:
         """Generate LLM-powered interpretation of evaluation results."""
         if not self.api_key:
             return None
         
-        # Prepare summary
+        # Interpret the retained result, which need not be the last attempt.
+        retained = best or history[-1]
         summary = f"""
 Inversion Quality Evaluation Summary:
 - Total attempts: {len(history)}
-- Final quality score: {history[-1]['quality_score']:.1f}/100
+- Final quality score: {retained['quality_score']:.1f}/100
 - Component scores:
-  * Data fit: {history[-1]['component_scores']['data_fit']:.1f}/100
-  * Smoothness: {history[-1]['component_scores']['smoothness']:.1f}/100
-  * Physical plausibility: {history[-1]['component_scores']['physical_plausibility']:.1f}/100
-  * Convergence: {history[-1]['component_scores']['convergence']:.1f}/100
-  * Coverage: {history[-1]['component_scores']['coverage']:.1f}/100
+  * Data fit: {retained['component_scores']['data_fit']:.1f}/100
+  * Smoothness: {retained['component_scores']['smoothness']:.1f}/100
+  * Physical plausibility: {retained['component_scores']['physical_plausibility']:.1f}/100
+  * Convergence: {retained['component_scores']['convergence']:.1f}/100
 
 Key metrics:
-- Final chi²: {history[-1]['metrics']['data_fit'].get('final_chi2', 'N/A')}
-- Resistivity range: {history[-1]['metrics']['physical_plausibility'].get('min_resistivity', 'N/A'):.1f} - {history[-1]['metrics']['physical_plausibility'].get('max_resistivity', 'N/A'):.1f} Ωm
+- Final chi²: {retained['metrics']['data_fit'].get('final_chi2', 'N/A')}
+- Resistivity range: {retained['metrics']['physical_plausibility'].get('min_resistivity', 'N/A')} - {retained['metrics']['physical_plausibility'].get('max_resistivity', 'N/A')} Ωm
 
 Recommendations:
-{chr(10).join('- ' + r for r in history[-1]['recommendations'])}
+{chr(10).join('- ' + r for r in retained['recommendations'])}
 """
         
         prompt = f"""Based on this ERT inversion quality evaluation, provide a brief 

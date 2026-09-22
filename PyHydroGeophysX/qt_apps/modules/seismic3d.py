@@ -827,6 +827,34 @@ class Seismic3DModule(BaseModule):
                     "valid_actions": list(handlers.keys())}
         return handler()
 
+    def show_run_inputs(self, inputs):
+        """Add the velocity section the run has just recovered, as a line.
+
+        Part of the studio's contract: a module the run brings to the front has
+        to show the user a result. The seismic step writes its mesh and velocity
+        model into the run folder, which is exactly what a line here is made of.
+        """
+        if self._agent_status().get("lines"):
+            return ""
+        folder = inputs.get("output_dir")
+        if not folder:
+            return ""
+        seismic = Path(str(folder)) / "seismic"
+        mesh, velocity = seismic / "seismic_mesh.bms", seismic / "velocity_model.npy"
+        if not (mesh.is_file() and velocity.is_file()):
+            return ""
+        result = self._agent_add_line({"mesh": str(mesh), "velocity": str(velocity)})
+        if result.get("status") == "failed":
+            return ""
+        return f"the velocity section from this run ({mesh.parent.name})"
+
+    def show_run_stage(self, tool):
+        """Follow the run through this page's wizard steps."""
+        if str(tool) != "derive_structure":
+            return ""
+        self._agent_goto_step("Structure")
+        return "Structure"
+
     def _agent_status(self) -> Dict[str, Any]:
         self._sync_lines_from_table()
         last = self.state.module_results.get(self.module_key, {})

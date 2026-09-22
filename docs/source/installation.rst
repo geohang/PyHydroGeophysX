@@ -80,8 +80,9 @@ platforms use CUDA-enabled Torch, CuPy GPU CGLS and the cuDSS GPU forward
 solver. The slower SciPy forward solver is intentionally disabled so ADTLERT
 is never reported while running an unaccelerated forward path. Linux remains
 the recommended, most thoroughly tested and generally fastest platform. When
-Torch, CuPy CUDA 12 or cuDSS is unavailable, selecting ADTLERT automatically
-uses the original PyHydro ERT engine instead.
+Torch, CuPy CUDA 12 or cuDSS is unavailable, the Python API can fall back to
+the original PyHydro ERT engine. Studio requires a passing GPU check before
+starting a GPU mode and offers manual selection of PyHydro CPU on failure.
 ADTLERT 0.1 also cannot represent remote electrodes encoded as negative ABMN
 indices; those surveys safely use the original engine without changing data.
 
@@ -154,3 +155,45 @@ Verification
 
    import PyHydroGeophysX as phg
    print("PyHydroGeophysX version:", phg.__version__)
+
+
+Verify GPU time-lapse compatibility
+-------------------------------------
+
+Use the same Python interpreter as Studio::
+
+   python -m PyHydroGeophysX.inversion.adtlert_diagnostics --report gpu-check.json
+
+The command checks CUDA runtime availability, a single-survey GPU inversion,
+and a two-iteration windowed GPU inversion in separate processes. The normal
+line-search configuration remains enabled. Each stage has a 120-second timeout;
+use ``--timeout`` to change it. Exit code 0 means all three passed. Inspect the
+JSON report for individual results, commands, complete logs, exit codes,
+package versions and interpreter/source paths. A small synthetic test does
+not establish convergence for every field survey.
+
+Studio runs these checks when ADTLERT is selected and displays single-survey
+and time-lapse availability separately. A GPU mode waits for its own successful
+check; switch to PyHydro for CPU operation or reselect ADTLERT to rerun checks.
+Neither GPU detection nor the Studio UI self-test proves time-lapse compatibility.
+
+Conflicting OpenMP runtimes on Windows
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Dependencies may initialize both ``libomp.dll`` and ``libiomp5md.dll``. This is
+a software-runtime issue, not specific to Intel CPUs. Keep the diagnostic
+report and verify the CPU path separately if the GPU time-lapse check fails.
+Do not set ``KMP_DUPLICATE_LIB_OK``, remove DLLs, or disable line search to
+turn a failing installation check into a pass. A process-isolation or numerical
+compatibility patch requires its own review and validation.
+
+After all required checks pass, save ``python -m pip freeze`` and, when using
+Conda, ``conda env export``. Record the GPU/driver and package source commit as
+well. Recheck after dependency changes. The repository's ``environment.yml``
+is a starting configuration, not a universal validated GPU lockfile.
+
+For editable installs, the source checkout and environment's launcher normally
+live in different directories. Verify the actual imported checkout before
+updating; do not create another checkout merely because these paths differ::
+
+   python -c "import sys, PyHydroGeophysX; print(sys.executable); print(PyHydroGeophysX.__file__)"

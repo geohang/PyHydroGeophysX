@@ -1,5 +1,5 @@
 Desktop Studio (Qt)
-======================
+================================================================================
 
 PyHydroGeophysX ships two complementary front ends:
 
@@ -18,7 +18,32 @@ the browser and finish the interactive work on the desktop.
    :depth: 2
 
 Studio at a Glance
----------------------
+--------------------------------------------------------------------------------
+
+AQUAH: one assistant, two execution modes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For folder classification, terrain inputs, reasoning, RAG, MCP and detailed
+processing reports, see :doc:`agent_workbench`.
+
+Use the right-hand AQUAH panel to enter goals and configure the request level,
+provider, and session API key. Choose **Step-by-step assistance** to approve
+individual operations, or **Auto to report** to execute a complete analysis
+workflow. Auto mode supports OpenAI and Claude and may incur provider API
+charges.
+
+The central **Workflow → Data & reports** page shows inputs, survey ordering,
+progress, results, report preview and activity. It contains no second prompt or
+AI settings. If data are missing, AQUAH retains the goal: add files by role in
+Workflow and send **continue** in the assistant. Time-lapse surveys can be moved
+up or down before execution.
+
+During execution, use **Stop** in Workflow to cancel. Each attempt has an
+independent output directory; partial files and inputs remain available for retry.
+Completion, interpretation, or errors appear back in AQUAH, with reports and files
+in the center. Use **File → Save Runs to Project** to retain runs in project history.
+Report availability depends on the workflow and installed dependencies. Keys are
+passed through stdin and are not included in saved workflow configuration.
 
 Watch the updated Qt interface walkthrough:
 
@@ -59,7 +84,7 @@ The main window has six working areas:
    busy.
 
 Download the Desktop App
-------------------------
+--------------------------------------------------------------------------------
 
 Prebuilt bundles for Windows and macOS are published on GitHub Releases. Each platform
 has two variants, so you can pick what fits your machine:
@@ -107,7 +132,7 @@ After unzipping, run ``PyHydroGeophysX-Studio.exe`` inside the extracted folder
 .. _desktop-install-source:
 
 Install and Run from Source
----------------------------
+--------------------------------------------------------------------------------
 
 The studio needs PySide6 and pyqtgraph in addition to numpy and pandas:
 
@@ -141,7 +166,7 @@ If the package is installed (``pip install pyhydrogeophysx[desktop]``), the
 ``pyhydrogeophysx-studio`` command starts the same application.
 
 Start Without a Terminal
-------------------------
+--------------------------------------------------------------------------------
 
 ``examples/start_studio.bat`` opens the studio from a double-click in
 Explorer, the desktop counterpart of ``start_webapp.bat``. It needs no activated
@@ -177,7 +202,7 @@ Both forward their arguments, so a shortcut can open a specific module::
       pip install "pyhydrogeophysx[desktop,desktop-3d,geophysics]"
 
 Choosing pip or conda
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Install with whichever tool already manages the packages in the environment.
 That is not always the tool that created it: an environment made with ``conda
@@ -205,7 +230,7 @@ Module keys for ``--module``: ``home``, ``seismic``, ``ert``, ``mesh3d``, ``em``
 ``gravmag``, ``hydro_geophysics``, ``geo_hydrology``, ``seismic3d``.
 
 Your First Studio Run: ERT Inversion
----------------------------------------
+--------------------------------------------------------------------------------
 
 This walkthrough uses the ERT module because it demonstrates the complete
 Studio pattern: load, inspect, QC, configure, run, evaluate, and export. From
@@ -222,7 +247,7 @@ your own BERT/unified, E4D, Syscal, or other supported resistivity file instead.
    in the scrollable center panel.
 
 Step 1 -- open the ERT module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Select **Geophysical Data Processing > ERT** in the project tree, or launch
 directly with:
@@ -232,7 +257,7 @@ directly with:
    python -m PyHydroGeophysX.qt_apps.launcher --module ert
 
 Step 2 -- load and inspect data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Under **Load resistivity data**, select the matching **Instrument / format**.
    For the bundled file, choose **BERT / Unified (.ohm/.dat)**.
@@ -246,7 +271,7 @@ Step 2 -- load and inspect data
    (optional)...**. The Studio accepts an ``x, z`` table.
 
 Step 3 -- apply QC filters
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Set **Min rhoa**, **Max rhoa**, and optionally **Max error**, then click
 **Apply filter**. A Max error value of zero disables the error filter. The Log
@@ -258,7 +283,7 @@ Check suspicious points against acquisition notes, reciprocal error, contact
 resistance, and neighboring measurements before deleting them.
 
 Step 4 -- configure and run the inversion
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The defaults provide a reasonable first diagnostic run:
 
@@ -276,7 +301,7 @@ finishes, inspect:
 - the Log for the final chi-squared value and saved intermediate paths.
 
 Step 5 -- edit geometry and export
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Use **Add electrode (click to place)** or **Edit (click select, click move)**
 only when the geometry needs correction. Right-click an electrode to delete it
@@ -292,7 +317,7 @@ hunting for the button that belongs to the tab you are on. It asks the open
 module what it can write; when there is more than one answer it offers a choice.
 
 Time-Lapse ERT
---------------
+--------------------------------------------------------------------------------
 
 The ERT loader also manages an ordered time series:
 
@@ -312,7 +337,7 @@ The ERT loader also manages an ordered time series:
    acquisition times, and the result figure.
 
 Module-by-Module Workflows
---------------------------
+--------------------------------------------------------------------------------
 
 Each module follows the same left-to-right logic. The shortest reliable path
 through each one is summarized below.
@@ -377,12 +402,14 @@ through each one is summarized below.
        monitoring-point time series, and petrophysics configuration JSON.
 
 Using AQUAH Chat Safely
------------------------
+--------------------------------------------------------------------------------
 
 The right-side **AQUAH Chat** tab can navigate modules, load example data,
 change parameters, and start supported actions.
 
-1. Select OpenAI, Anthropic, or an OpenAI-compatible provider and model.
+1. Choose a **Level** (see :ref:`choosing-a-request-level`), then select OpenAI,
+   Anthropic, or an OpenAI-compatible provider. The level fixes the model; the
+   **Model** box below it accepts any other name you want to pin.
 2. Paste an API key for the current session or set the provider's environment
    variable before launch.
 3. Describe one concrete task, for example: ``Open ERT, load the bundled BERT
@@ -393,8 +420,57 @@ change parameters, and start supported actions.
 5. Confirm completion in the module itself and in the Log. Chat does not replace
    inspection of the data or inversion-quality plots.
 
+.. _choosing-a-request-level:
+
+Choosing a Request Level
+--------------------------------------------------------------------------------
+
+Model choice is offered as a three-step ladder rather than a flat list, because
+sending every request to a flagship model costs several times more than it needs
+to. Most turns in a studio conversation are short and mechanical — open a module,
+set a parameter, read back a number — and the cheapest level answers them just as
+well. Pick a level and the panel sets the matching model for whichever provider
+is selected, so the choice survives a provider switch.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 14 30 28 28
+
+   * - Level
+     - What it is for
+     - OpenAI
+     - Anthropic
+   * - **Level 1** — default requests
+     - Most simple tasks: reading a file, setting a parameter, a short answer.
+     - ``gpt-5.6-luna`` ($0.20 / $1.20)
+     - ``claude-haiku-4-5`` ($1.00 / $5.00)
+   * - **Level 2** — complex requests
+     - Coding, reasoning, agent loops, and complex retrieval.
+     - ``gpt-5.6-terra`` ($2.00 / $12.00)
+     - ``claude-sonnet-5`` ($2.00 / $10.00)
+   * - **Level 3** — genuinely hard requests
+     - Escalate only when a lower level could not solve it.
+     - ``gpt-5.6-sol`` ($5.00 / $30.00)
+     - ``claude-opus-5`` ($5.00 / $25.00)
+
+Prices are approximate list rates in USD per million input / output tokens and
+are shown so you can compare one level against the next; they are not a bill.
+A long conversation re-sends its transcript on every turn, so the running cost
+of a session grows faster than the per-request price suggests.
+
+Practical guidance:
+
+- Start at level 1. It handles navigation, parameter edits, and short questions.
+- Move to level 2 when a request involves real reasoning — planning a multi-step
+  workflow, writing or fixing a configuration, judging an inversion result.
+- Reach level 3 only after a lower level has actually failed at the task, not in
+  anticipation that it might.
+- Typing any other model name into the **Model** box switches the selector to
+  *Custom*; the OpenAI-compatible provider is always custom, since the ladder
+  cannot know what a bring-your-own endpoint serves.
+
 Letting AQUAH See a Result
---------------------------
+--------------------------------------------------------------------------------
 
 With a model that reads images (every listed OpenAI and Anthropic model does),
 the status line under the model selector shows ``can see panels`` and one extra
@@ -418,9 +494,11 @@ What this changes in practice:
   module itself.
 - The OpenAI-compatible provider is text-only with its default ``deepseek-chat``
   model. Point it at a vision-capable model to get the same behavior.
+- A capture is charged at the level you are on, so it is worth stepping up to
+  level 2 or 3 for a judgement call on a figure and back down afterwards.
 
 Saving, Exporting, and Reopening Work
--------------------------------------
+--------------------------------------------------------------------------------
 
 **A computation is not recorded until you save it.** A finished run is held as
 "unsaved" and joins the Project's history only on your say-so.
@@ -456,7 +534,7 @@ Saving, Exporting, and Reopening Work
   **View > Reset Layout** if a dock is hidden or misplaced.
 
 What "unsaved" means on disk
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A solver has to write its outputs somewhere while it runs, so a run does get a
 folder under ``<project>/runs/`` from the moment it starts. What it does not get
@@ -475,7 +553,7 @@ folder is left behind. Opening that Project again reports how many such folders
 there are and offers to delete them, because nothing else would ever list them.
 
 CSV Output
-~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Every model export also writes ``model_cells.csv``: one row per mesh cell or
 voxel, each carrying its own coordinate, so a section can be replotted without
@@ -501,7 +579,7 @@ voxel's ``x_min``/``x_max`` extent on its own row, and layered EM models are
 written as one row per layer per sounding.
 
 Modules
--------
+--------------------------------------------------------------------------------
 
 .. list-table::
    :header-rows: 1
@@ -549,7 +627,7 @@ provider; bring your own API key). Every proposed action shows an Approve / Reje
 button before it runs.
 
 Managing Surveys in Project Map
---------------------------------
+--------------------------------------------------------------------------------
 
 After a successful ERT, EM, seismic, gravity/magnetic, or joint inversion,
 choose **Add to Map…** or **Not now**. The latter keeps the result on its
@@ -574,7 +652,7 @@ a method name and physical units. **Add available result…** also accepts sessi
 models that include mesh or grid geometry.
 
 Plan-View Interpolation of a Slice
------------------------------------
+--------------------------------------------------------------------------------
 
 A TEM/AEM depth slice, a recovered grid layer and an imported point product are
 all one value per map position, so the **Surface** row on the map interpolates
@@ -608,6 +686,15 @@ the number of square cells across the longer map axis. Soundings that lie on a
 single line are refused rather than smeared: a filled plan map of one line shows
 the interpolator, not the survey, so use the section view for those.
 
+Set blanking near the line spacing. Well below it the radius no longer trims
+between lines, it cuts inside the survey and leaves ribbons of colour along each
+line with white between them. The caption under the map names the distance the
+survey outline actually needs, so the number is read off the data rather than
+guessed, and it says so explicitly whenever the current setting is cutting.
+``no blanking`` keeps convex-hull clipping alone, which is the default. Neither
+control responds to the scroll wheel unless it has focus, so zooming the map
+cannot change the gridding by accident.
+
 **Export grid…** (also under the module's export menu) writes the displayed
 surface as an ESRI ASCII raster (``.asc``, ready for QGIS/ArcGIS in the survey's
 own frame) or as an ``x,y,value`` CSV of the cells that were not blanked. The
@@ -624,7 +711,7 @@ Adding a layer immediately saves an independent numeric snapshot in the project'
 a layer does not delete its source result or the retained snapshot data.
 
 How the Streamlit / Qt Bridge Works
------------------------------------
+--------------------------------------------------------------------------------
 
 The bridge directory is ``<output_dir>/qt_bridge/`` (default
 ``results/streamlit_workflow/qt_bridge/``).
@@ -645,7 +732,7 @@ electrode geometry JSON, processed EM curves, corrected gravity data, survey
 configuration JSON, figures) into a folder you choose.
 
 Remote Servers and Download Mode
---------------------------------
+--------------------------------------------------------------------------------
 
 A Qt window opens on the machine where the Python process runs. When Streamlit is
 hosted on a remote server, that server has no display attached to your screen, so the
@@ -662,7 +749,7 @@ Release and can be overridden with environment variables:
 to a local launch when PySide6 is present.
 
 Persistence and Troubleshooting
--------------------------------
+--------------------------------------------------------------------------------
 
 - Window size and dock layout persist between sessions via ``QSettings``
   (organization "PyHydroGeophysX", application "Studio"). Delete that settings key
@@ -673,7 +760,7 @@ Persistence and Troubleshooting
   optional package and the install command; the rest of the studio is unaffected.
 
 Building the Bundles Yourself
------------------------------
+--------------------------------------------------------------------------------
 
 The PyInstaller configuration lives at ``packaging/pyinstaller_studio.spec``. The
 ``PHGX_BUILD_VARIANT`` environment variable selects ``light`` (default) or ``full``.

@@ -4,9 +4,15 @@ Rates change over time. The values below are rough defaults intended for
 workflow previews, not billing reconciliation. Update them when provider
 pricing changes or override them in downstream applications when exact cost
 tracking matters.
+
+Current-generation rates live in
+:data:`PyHydroGeophysX.llm.providers.MODEL_PRICES_USD_PER_MTOK`, which is also
+what the chat UIs quote next to each request level; this module consults that
+table for any model its own provider-specific entries do not cover, so a model
+added to the level ladder is priced here without a second edit.
 """
 
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 
 # Values are approximate USD per 1 million input/output tokens.
@@ -34,9 +40,24 @@ DEFAULT_PROVIDER_RATES_USD_PER_MTOK: Dict[Tuple[str, str], Tuple[float, float]] 
     ("anthropic", "claude-opus-4-8"): (5.00, 25.00),
     ("anthropic", "claude-opus-4-7"): (5.00, 25.00),
     ("anthropic", "claude-haiku-4-5"): (1.00, 5.00),
+    ("claude", "claude-opus-5"): (5.00, 25.00),
+    ("anthropic", "claude-opus-5"): (5.00, 25.00),
 }
 
 FALLBACK_RATE_USD_PER_MTOK: Tuple[float, float] = (1.00, 3.00)
+
+
+def _shared_rate(model: str) -> Optional[Tuple[float, float]]:
+    """Rate for ``model`` from the shared provider table, or None.
+
+    Imported lazily and defensively: this module is used by the agents engine in
+    environments where the Qt/web chat layer may not be importable.
+    """
+    try:
+        from PyHydroGeophysX.llm.providers import MODEL_PRICES_USD_PER_MTOK
+    except Exception:  # noqa: BLE001
+        return None
+    return MODEL_PRICES_USD_PER_MTOK.get(model)
 
 
 def estimate_tokens(text: str) -> int:
@@ -92,10 +113,10 @@ def get_rate_usd_per_mtok(provider: str, model: str) -> Tuple[float, float]:
     """
     provider_key = (provider or "").lower()
     model_key = (model or "").lower()
-    return DEFAULT_PROVIDER_RATES_USD_PER_MTOK.get(
-        (provider_key, model_key),
-        FALLBACK_RATE_USD_PER_MTOK,
-    )
+    rate = DEFAULT_PROVIDER_RATES_USD_PER_MTOK.get((provider_key, model_key))
+    if rate is None:
+        rate = _shared_rate(model_key)
+    return rate if rate is not None else FALLBACK_RATE_USD_PER_MTOK
 
 
 def estimate_llm_cost_usd(

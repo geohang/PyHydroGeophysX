@@ -32,6 +32,14 @@ does not care which instrument produced the survey.
      - Res2DInv ``.dat``
      - General-array format.
    * - ERT
+     - AGI SuperSting ``.stg``
+     - SuperSting and Sting R1 exports. The format writes electrode positions
+       into every record instead of an electrode table, so the table is rebuilt
+       from the measurements; the instrument's own geometric factor is carried
+       alongside, which is what makes a nominal-versus-surveyed geometry
+       mismatch visible. IP decay windows are read when the acquisition
+       recorded them.
+   * - ERT
      - ``.ohm``, ``.dat``
      - E4D and pyGIMLi/BERT files, plus ResIPy for processing.
    * - Seismic

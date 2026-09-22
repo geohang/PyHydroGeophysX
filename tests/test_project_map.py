@@ -261,6 +261,30 @@ def test_completion_prompt_is_opt_in_and_keeps_not_now_as_default(app, tmp_path,
     page.close()
 
 
+def test_the_dismissed_completion_prompt_stops_belonging_to_the_page(app, tmp_path):
+    """A dismissed prompt must leave the page before it is queued for deletion.
+
+    deleteLater only runs when an event loop does, so a dialog still parented to
+    the page when the page is torn down leaves a queued deletion naming freed
+    memory. Nothing fails at that moment: the next event loop to run - a process
+    worker's, a modal dialog's - aborts the interpreter with no Python
+    traceback, in whatever test happens to be running then.
+    """
+    from PySide6.QtWidgets import QMessageBox
+    from PyHydroGeophysX.qt_apps.modules.base import BaseModule
+    from PyHydroGeophysX.qt_apps.state import StudioState
+    page = BaseModule(StudioState(output_dir=tmp_path), lambda *_: None)
+    page.add_to_map = lambda: None
+    page.offer_map_export()
+    app.processEvents()
+    prompt = page.findChild(QMessageBox)
+    next(b for b in prompt.buttons() if b.text() == 'Not now').click()
+    app.processEvents()
+    assert prompt.parent() is None
+    assert page.findChild(QMessageBox) is None
+    page.close()
+
+
 def test_basemap_fetch_is_off_ui_thread_and_failure_leaves_survey_visible(app, tmp_path, monkeypatch):
     import threading
     import time
@@ -277,9 +301,17 @@ def test_basemap_fetch_is_off_ui_thread_and_failure_leaves_survey_visible(app, t
     page = project_map.ProjectMapModule(state, lambda *_: None)
     page.refresh()
     page._fetch_tiles()
-    deadline = time.monotonic() + 5
+    # Wait for the worker thread, not for a duration. A fixed budget made this
+    # fail whenever the machine was busy, which says nothing about whether the
+    # fetch ran off the UI thread; the deadline is only so a genuinely stuck
+    # worker fails instead of hanging the suite.
+    deadline = time.monotonic() + 120
     while page._tile_worker is not None and time.monotonic() < deadline:
         app.processEvents()
+        worker = page._tile_worker
+        if worker is not None and worker.isRunning():
+            worker.wait(200)
+        time.sleep(0.02)
     assert page._tile_worker is None
     assert threads and threads[0] != threading.get_ident()
     assert page._artists and 'unavailable' in page._note.text()
@@ -403,6 +435,46 @@ def test_blanking_distance_and_resolution_reach_the_drawn_surface(app, tmp_path)
     page._interp_blank.setValue(20)
     assert page._surface[1]['coverage'] < wide['coverage']
     assert page._surface[1]['max_distance'] == 20.
+    page.close()
+
+
+def test_a_blanking_radius_below_the_station_reach_says_what_it_is_costing(app, tmp_path):
+    page, _ = map_page(tmp_path, em_snapshot(em_grid_example()), 'TEM block')
+    page._depth.setCurrentIndex(1)
+    page._interp.setCurrentIndex(page._interp.findData('idw'))
+    needed = page._surface[1]['gap']
+    assert 'cutting inside' not in page._note.text()
+    page._interp_blank.setValue(max(1, round(needed / 8)))
+    # Ribbons along the lines are the visible symptom; the caption has to name
+    # the number that would fill the outline instead of leaving it to guesswork.
+    assert 'cutting inside the survey' in page._note.text()
+    assert f'{needed:.0f}' in page._note.text()
+    page._interp_blank.setValue(round(needed) + 1)
+    assert 'cutting inside' not in page._note.text()
+    page.close()
+
+
+def test_gridding_settings_ignore_a_wheel_that_drifts_off_the_zooming_map(app, tmp_path):
+    from PySide6.QtCore import Qt, QPoint, QPointF
+    from PySide6.QtGui import QWheelEvent
+    page, _ = map_page(tmp_path, em_snapshot(em_grid_example()), 'TEM block')
+    page._depth.setCurrentIndex(1)
+    page._interp.setCurrentIndex(page._interp.findData('idw'))
+    for widget in (page._interp_res, page._interp_blank):
+        widget.clearFocus()
+        before = widget.value()
+        widget.wheelEvent(QWheelEvent(
+            QPointF(4, 4), QPointF(4, 4), QPoint(0, 0), QPoint(0, 120),
+            Qt.NoButton, Qt.NoModifier, Qt.NoScrollPhase, False))
+        assert widget.value() == before, 'an unfocused wheel must not re-grid the slice'
+    page.close()
+
+
+def test_zero_blanking_reads_as_the_off_switch_it_is(app, tmp_path):
+    page, _ = map_page(tmp_path, em_snapshot(em_grid_example()), 'TEM block')
+    assert page._interp_blank.value() == 0
+    assert page._interp_blank.text() == 'no blanking'
+    assert not page._interp_blank.keyboardTracking()
     page.close()
 
 

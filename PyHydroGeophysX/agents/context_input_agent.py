@@ -8,6 +8,8 @@ Supports multiple LLM providers (OpenAI GPT, Google Gemini, Anthropic Claude).
 import json
 from typing import Any, Dict, List, Optional
 
+from ._intent import read_request, stage_enabled
+from ._method import IMPLEMENTED_SCHEME
 from .base_agent import AgentResult, BaseAgent
 
 
@@ -224,32 +226,50 @@ class ContextInputAgent(BaseAgent):
         """
         user_request_lower = user_request.lower()
         print("Parsing request with multi-stage extraction:")
-        print("  Stage 1: Extracting ERT inversion configuration...")
         
         # Build context for LLM
         context = self._build_context(available_data)
-        
+
+        # STAGE 0: one cheap call that reads what the request is about, so the
+        # stages below run only where they apply. Extracting every topic from
+        # every request spent two calls and about fourteen seconds returning
+        # "fusion_pattern: null, use_climate: false, use_seismic: false" for a
+        # plain ERT request. Unreachable model, unparsable answer: every stage
+        # runs, which is what happened before.
+        print("  Stage 0: Reading the request...")
+        deliverables, aspects = read_request(user_request, self.query_llm)
+        enabled = [name for name, on in aspects.items() if on is not False]
+        print(f"  -> Topics to extract: {', '.join(enabled) if enabled else 'ERT only'}")
+        if deliverables:
+            print(f"  -> Deliverables from the request: {deliverables}")
+
         # STAGE 1: Extract inversion configuration
+        print("  Stage 1: Extracting ERT inversion configuration...")
         inversion_prompt = self._create_inversion_prompt(user_request, context)
         inversion_response = self.query_llm(inversion_prompt)
         inversion_config = self._extract_config_from_response(inversion_response)
         
-        # STAGE 2: Extract data fusion configuration  
-        print("  Stage 2: Extracting data fusion configuration...")
-        fusion_prompt = self._create_data_fusion_prompt(user_request)
-        fusion_response = self.query_llm(fusion_prompt)
-        fusion_config = self._extract_config_from_response(fusion_response)
-        
+        # STAGE 2: Extract data fusion configuration
+        fusion_config = {}
+        if stage_enabled(aspects, 'fusion'):
+            print("  Stage 2: Extracting data fusion configuration...")
+            fusion_prompt = self._create_data_fusion_prompt(user_request)
+            fusion_response = self.query_llm(fusion_prompt)
+            fusion_config = self._extract_config_from_response(fusion_response)
+
         # STAGE 3: Extract climate configuration
-        print("  Stage 3: Extracting climate/site configuration...")
-        climate_prompt = self._create_climate_prompt(user_request)
-        climate_response = self.query_llm(climate_prompt)
-        climate_config = self._extract_config_from_response(climate_response)
+        climate_config = {}
+        if stage_enabled(aspects, 'climate'):
+            print("  Stage 3: Extracting climate/site configuration...")
+            climate_prompt = self._create_climate_prompt(user_request)
+            climate_response = self.query_llm(climate_prompt)
+            climate_config = self._extract_config_from_response(climate_response)
 
         # STAGE 4: Extract hydrological model output configuration (MODFLOW / ParFlow)
         hydro_config = {}
         hydro_keywords = ['modflow', 'parflow', 'par flow', 'watercontent', 'saturation', 'porosity', 'hydrological model']
-        if any(kw in user_request_lower for kw in hydro_keywords):
+        if stage_enabled(aspects, 'hydro_model',
+                         any(kw in user_request_lower for kw in hydro_keywords)):
             print("  Stage 4: Extracting hydrological model output configuration...")
             hydro_prompt = self._create_hydro_model_prompt(user_request)
             hydro_response = self.query_llm(hydro_prompt)
@@ -259,7 +279,8 @@ class ContextInputAgent(BaseAgent):
         tdem_config = {}
         tdem_keywords = ['tdem', 'tem ', 'time-domain electromagnetic', 'electromagnetic sounding',
                         'loop source', 'transient electromagnetic', 'simpeg']
-        if any(kw in user_request.lower() for kw in tdem_keywords):
+        if stage_enabled(aspects, 'tdem',
+                         any(kw in user_request.lower() for kw in tdem_keywords)):
             print("  Stage 5: Extracting TDEM configuration...")
             tdem_prompt = self._create_tdem_prompt(user_request)
             tdem_response = self.query_llm(tdem_prompt)
@@ -274,7 +295,7 @@ class ContextInputAgent(BaseAgent):
                           'ert' not in user_request_lower and 
                           'resistivity' not in user_request_lower and
                           'fusion' not in user_request_lower)
-        if is_seismic_only:
+        if stage_enabled(aspects, 'seismic', is_seismic_only):
             print("  Stage 6: Extracting seismic configuration...")
             seismic_prompt = self._create_seismic_prompt(user_request)
             seismic_response = self.query_llm(seismic_prompt)
@@ -282,6 +303,10 @@ class ContextInputAgent(BaseAgent):
         
         # Merge configurations
         workflow_config = {**inversion_config, **fusion_config, **climate_config, **hydro_config, **tdem_config, **seismic_config}
+
+        # What stage 0 read from the request wins over the per-topic extractions.
+        if deliverables:
+            workflow_config.update(deliverables)
 
         # Detect ERT data processing intent (QC/export without inversion)
         processing_keywords = ['data processing', 'quality control', 'qc', 'preprocess', 'export', 'resipy']
@@ -697,6 +722,11 @@ class ContextInputAgent(BaseAgent):
         context_parts = []
         
         if available_data:
+            selected = {key: value for key, value in available_data.items()
+                        if key.endswith(('_file', '_files', '_dir')) and value}
+            if selected:
+                context_parts.append('User-selected inputs by role (authoritative paths):\n'
+                                     + json.dumps(selected, ensure_ascii=False, default=str))
             if 'data_files' in available_data:
                 context_parts.append(f"Available data files: {', '.join(available_data['data_files'])}")
             if 'instruments' in available_data:
@@ -730,7 +760,10 @@ Extract ONLY ERT inversion configuration in JSON format:
    - inversion_mode: 'standard' OR 'time-lapse'
    - If time-lapse (keywords: time-lapse, temporal, monitoring, 4D, repeated surveys):
      * time_lapse_files: List of ALL data files in temporal order (extract all filenames)
-     * time_lapse_method: 'difference', 'ratio', or 'joint'
+     * time_lapse_method: only 'temporal_constraint' is implemented (all
+       surveys inverted together under a temporal constraint). Use it
+       unless the request explicitly names another scheme, in which case
+       report that name so the workflow can say it was not honoured.
      * temporal_regularization: Temporal smoothing weight (extract if mentioned)
 
 3. **Inversion parameters**:
@@ -738,6 +771,10 @@ Extract ONLY ERT inversion configuration in JSON format:
    - max_iterations: Maximum iterations (extract if mentioned, default: 10)
    - method: Solver method (extract if mentioned, default: 'cgls')
    - use_gpu: Boolean for GPU acceleration
+   - Put these solver parameters in inversion_params.
+   - At TOP LEVEL: max_attempts (total evaluations including the first), auto_adjust
+     (false if no optimization requested), quality_threshold (if specified).
+   - Preserve explicit limits. Do not confuse solver iterations with optimization attempts.
 
 4. **Petrophysical parameters** (ONLY if water content conversion mentioned):
    - Extract explicit values: rho_sat, porosity, n, m
@@ -754,7 +791,7 @@ Example output:
 {{
   "inversion_mode": "time-lapse",
   "time_lapse_files": ["2021-10-08_1400.ohm", "2021-11-08_1230.ohm", "2021-12-08_1230.ohm"],
-  "time_lapse_method": "difference",
+  "time_lapse_method": "temporal_constraint",
   "temporal_regularization": 15.0,
   "data_file": "2021-10-08_1400.ohm",
   "project_dir": "data/ERT/E4D",
@@ -1143,6 +1180,20 @@ Generate JSON now:"""
         """Validate configuration and add missing defaults."""
         from pathlib import Path
 
+        # Some model responses nest workflow controls with solver parameters.
+        params = config.get('inversion_params')
+        if isinstance(params, dict):
+            for key in ('max_attempts', 'auto_adjust', 'quality_threshold'):
+                if key in params:
+                    config.setdefault(key, params.pop(key))
+            if 'max_iter' in params:
+                params.setdefault('max_iterations', params.pop('max_iter'))
+        if 'max_attempts' in config:
+            attempts = config['max_attempts']
+            if isinstance(attempts, bool) or int(attempts) != float(attempts) or int(attempts) < 1:
+                raise ValueError('max_attempts must be a positive integer including the initial evaluation.')
+            config['max_attempts'] = int(attempts)
+
         # First, flatten nested structures if present
         # Handle 'data_source' nested structure
         if 'data_source' in config and isinstance(config['data_source'], dict):
@@ -1250,7 +1301,10 @@ Generate JSON now:"""
             else:
                 # Set defaults for time-lapse
                 if 'time_lapse_method' not in config:
-                    config['time_lapse_method'] = 'difference'
+                    # What the solver actually does. The old default named a
+                    # difference inversion, which this package does not
+                    # implement, and every report then described the run as one.
+                    config['time_lapse_method'] = IMPLEMENTED_SCHEME
                 if 'temporal_regularization' not in config:
                     config['temporal_regularization'] = 10.0
         

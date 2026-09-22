@@ -40,7 +40,7 @@ The agent stack includes dedicated support for SRT, FDEM, and joint ERT+SRT inve
    :caption: Contents
 
    webapp
-   desktop_studio
+   agent_workbench
    quick_start
    workflows
    agent_reference

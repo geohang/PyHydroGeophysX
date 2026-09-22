@@ -12,6 +12,7 @@ from typing import Any, Dict, Optional, Tuple
 import numpy as np
 
 from .base_agent import AgentResult, BaseAgent
+from PyHydroGeophysX.data_processing.survey_geometry import OriginMismatch
 
 
 # ---------------------------------------------------------------------------
@@ -231,11 +232,30 @@ and fresh bedrock (>3000 m/s)."""
                 'interpretation': interpretation,
                 'visualization_file': vis_file,
                 'output_dir': output_dir,
+                # Off-end shots and the like: the work succeeded, and the caller
+                # still has to be able to say what the geometry rests on.
+                'geometry_warnings': list(getattr(self, '_geometry_warnings', [])),
                 **raw_artifacts,
             }
-            
+
             return self.results
             
+        except OriginMismatch as e:
+            # Recoverable, and only by someone who knows the survey: the two
+            # frames differ by a rigid translation, so the run can be repeated
+            # once told which origin to report. Carried out as structured data
+            # rather than a sentence so the caller can offer that choice
+            # instead of re-parsing the message.
+            self._log_execution(f"Geometry origin mismatch: {str(e)}", level='ERROR')
+            self.results = AgentResult(
+                status="failed",
+                summary="The coordinate file and the SEG-Y headers do not share an origin.",
+                data={'origin_mismatch': {'shift': e.shift}},
+                error=str(e),
+                error_fix_hint="Say which origin to report - the coordinate file's or the SEG-Y headers' - or correct one of the two files.",
+            )
+            return self.results
+
         except Exception as e:
             self._log_execution(f"Error during seismic processing: {str(e)}", level='ERROR')
             self.results = AgentResult(
@@ -308,6 +328,21 @@ and fresh bedrock (>3000 m/s)."""
         )
 
         output = Path(output_dir)
+        if input_data.get('geophone_file') or input_data.get('topography_file'):
+            from PyHydroGeophysX.data_processing.survey_geometry import apply_pick_geometry
+            geometry_notes: list = []
+            picks = apply_pick_geometry(picks, input_data.get('geophone_file'),
+                                        input_data.get('topography_file'),
+                                        align_origin=input_data.get('align_origin'),
+                                        warn=geometry_notes.append)
+            self._log_execution('Applied explicit receiver coordinates / x-z topographic profile before travel-time export')
+            for note in geometry_notes:
+                self._log_execution(note, level='WARNING')
+            self._geometry_warnings = list(geometry_notes)
+            if input_data.get('align_origin'):
+                self._log_execution(
+                    f"Coordinate file and SEG-Y headers were reconciled onto the "
+                    f"{input_data['align_origin']} origin, as chosen by the user")
         picks_csv = export_first_breaks(picks, str(output / "first_break_picks.csv"))
         traveltime_file = first_breaks_to_traveltime(
             picks,

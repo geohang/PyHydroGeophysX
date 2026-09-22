@@ -17,6 +17,87 @@ from .base_agent import BaseAgent
 # ---------------------------------------------------------------------------
 # Petrophysics Agent
 # ---------------------------------------------------------------------------
+#: A layer has to hold enough cells for its own parameters to mean anything.
+#: Below this a "layer" is a handful of cells whose statistics are noise.
+MIN_CELLS_PER_LAYER = 10
+
+
+def resolve_layers(cell_markers, n_cells: int,
+                   min_cells: int = MIN_CELLS_PER_LAYER):
+    """Group cells into geological layers, or into one unit when there is none.
+
+    Cell markers mean different things depending on where the mesh came from. A
+    mesh built with regions carries a handful of markers that genuinely separate
+    soil from weathered rock from bedrock. An inversion parameter mesh often
+    carries one marker per cell, which identifies cells and says nothing about
+    geology. Reading the second as layering gives every cell its own
+    petrophysical parameter set estimated from one sample.
+
+    The test applied here is whether the markers *group* the mesh: at least two
+    values, each covering enough cells to estimate parameters from. When they do
+    not, the section is one unit - which is the honest description of a model
+    with no structural information, not a failure to find any.
+
+    Parameters
+    ----------
+    cell_markers : array-like
+        One marker per cell, as the mesh reports them.
+    n_cells : int
+        Number of model cells.
+    min_cells : int, optional
+        Fewest cells a layer may hold and still be treated as one.
+
+    Returns
+    -------
+    tuple
+        ``(markers, unique_layers, description)`` - the markers to use (all
+        zeros for a single unit), their distinct values, and a sentence for the
+        log and the report saying which case this is and why.
+
+    Raises
+    ------
+    None
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> markers, unique, why = resolve_layers(np.arange(832), 832)
+    >>> len(unique), 'single unit' in why
+    (1, True)
+    >>> markers, unique, why = resolve_layers(np.r_[np.zeros(400), np.ones(432)], 832)
+    >>> len(unique), 'layers' in why
+    (2, True)
+    """
+    markers = np.asarray(cell_markers).ravel()
+    if markers.size != n_cells:
+        markers = np.zeros(n_cells, dtype=int)
+        return markers, np.array([0]), (
+            "Cell markers did not match the model, so the section is treated as a "
+            "single unit with one petrophysical parameter set.")
+
+    unique, counts = np.unique(markers, return_counts=True)
+    if unique.size < 2:
+        return (markers.astype(int), unique,
+                "The mesh reports one region, so the section is a single unit with "
+                "one petrophysical parameter set.")
+    if counts.min() >= min_cells:
+        sizes = ", ".join(str(int(c)) for c in counts)
+        return (markers.astype(int), unique,
+                f"Using {unique.size} geological layers from the mesh markers "
+                f"(cells per layer: {sizes}).")
+
+    # Markers exist but do not group the mesh - typically one per cell, which
+    # identifies cells rather than geology.
+    detail = (f"{unique.size} markers for {n_cells} cells"
+              if unique.size > n_cells // 2 else
+              f"the smallest of {unique.size} marker groups holds {int(counts.min())} "
+              f"cell(s)")
+    return (np.zeros(n_cells, dtype=int), np.array([0]),
+            f"The cell markers do not describe geological structure ({detail}), so the "
+            f"section is treated as a single unit with one petrophysical parameter set. "
+            f"Supplying a layered model is what would let parameters vary with depth.")
+
+
 class PetrophysicsAgent(BaseAgent):
     """
     Agent for converting resistivity to hydrological properties with uncertainty.
@@ -105,18 +186,12 @@ different geological materials and quantify uncertainties."""
             self._log_execution(f"Processing {n_cells} cells, {n_timesteps} time step(s)")
             self._log_execution(f"Monte Carlo realizations: {n_realizations}")
             
-            # Check if cell_markers need simplification (too many unique markers)
-            unique_layers = np.unique(cell_markers)
-            n_unique = len(unique_layers)
-            
-            # If too many unique markers (each cell has unique marker), treat as single layer
-            if n_unique > 100:
-                self._log_execution(f"Too many unique markers ({n_unique}), treating as single layer")
-                cell_markers = np.zeros(n_cells, dtype=int)
-                unique_layers = np.array([0])
-                self._log_execution("Created single-layer model")
-            
-            self._log_execution(f"Found {len(unique_layers)} geological layers: {unique_layers}")
+            # Decide whether the markers describe geology or merely number the
+            # cells. A fixed "more than 100 is too many" threshold called the
+            # latter a failure; the honest reading is that a model with no
+            # structural information is one unit.
+            cell_markers, unique_layers, layering_note = resolve_layers(cell_markers, n_cells)
+            self._log_execution(layering_note)
             
             # Determine information level for uncertainty scaling
             # If layer_params are provided (from natural language), that's high information
@@ -210,6 +285,10 @@ different geological materials and quantify uncertainties."""
                 'saturation_mean': saturation_mean,
                 'saturation_std': saturation_std,
                 'cell_markers': cell_markers,  # Include the markers used for layer-specific analysis
+                # Recorded so the report can say how the section was divided, and
+                # why, rather than leaving it to be inferred from a log line.
+                'layering': layering_note,
+                'n_layers': int(len(unique_layers)),
                 'layer_params': layer_params,
                 'layer_params_used': layer_params,
                 'petrophysical_params': petrophysical_params or {},

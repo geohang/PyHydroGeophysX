@@ -12,9 +12,11 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDoubleSpinBox,
     QHBoxLayout,
     QLabel,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -37,8 +39,12 @@ class MeshResultView(QWidget):
         )
         from matplotlib.figure import Figure
 
-        self._fig = Figure(figsize=(7.5, 4.2), tight_layout=True)
+        self._fig = Figure(figsize=(7.5, 4.2))
         self._canvas = FigureCanvasQTAgg(self._fig)
+        # Below this a section is not readable anyway, and matplotlib gives up on
+        # fitting the title and the colorbar around an equal-aspect axes - which
+        # is how the title ends up cut off by the top of the panel.
+        self._canvas.setMinimumHeight(280)
         self._toolbar = NavigationToolbar2QT(self._canvas, self)
         self._mgr = None
         self._mesh = None         # field mode: a pyGIMLi mesh ...
@@ -55,13 +61,43 @@ class MeshResultView(QWidget):
         self._show_mesh.toggled.connect(self._redraw)
         bar.addWidget(self._show_mesh)
 
-        self._smooth = QCheckBox("Smooth")
+        # How smooth the section is drawn. Subdividing interpolates the model onto
+        # a finer mesh and still draws cells; "Contour" leaves the mesh behind and
+        # draws filled contours on a regular grid, which is the continuous image
+        # traditional resistivity software produces. Both are display choices: no
+        # resolution is added and the exported model is unchanged.
+        bar.addWidget(QLabel("Smooth"))
+        self._smooth = QComboBox()
+        self._smooth.addItem("Off", 0)
+        self._smooth.addItem("Cells ×1", 1)
+        self._smooth.addItem("Cells ×2", 2)
+        self._smooth.addItem("Contour", -1)
         self._smooth.setToolTip(
-            "Draw the model on a once-subdivided mesh, interpolating cell centres. "
-            "This is a display choice only: it adds no resolution and the exported "
-            "model is unchanged. Turn “Show mesh” off to see the effect.")
-        self._smooth.toggled.connect(self._redraw)
+            "How smoothly the model is drawn. “Cells” interpolates it onto a "
+            "subdivided mesh and still draws cells; “Contour” draws filled "
+            "contours on a regular grid instead, for the continuous image "
+            "traditional resistivity software produces. Display only - no "
+            "resolution is added and the exported model is unchanged. Turn "
+            "“Show mesh” off to see the effect.\n\n"
+            "Contours cannot reproduce the soft per-cell sensitivity fade, so "
+            "they draw the whole section: use “Hide below” or “Clean cut” to trim "
+            "it to what the data resolve.")
+        self._smooth.currentIndexChanged.connect(self._on_smooth_changed)
         bar.addWidget(self._smooth)
+
+        self._levels = QSpinBox()
+        self._levels.setRange(4, 128)
+        self._levels.setValue(40)
+        self._levels.setPrefix("levels ")
+        self._levels.setMaximumWidth(110)
+        self._levels.setKeyboardTracking(False)
+        self._levels.setToolTip(
+            "Number of filled contour bands. A high count reads as a continuous "
+            "image; a low one bands the section, which is easier to read a value "
+            "off but invents edges where the model is smooth.")
+        self._levels.setVisible(False)
+        self._levels.valueChanged.connect(self._redraw)
+        bar.addWidget(self._levels)
 
         # Sensitivity controls. ERT resolution falls off with depth and away from
         # the line, so part of every section is decoration; these say how much.
@@ -78,6 +114,20 @@ class MeshResultView(QWidget):
             "letting poorly constrained cells read as real structure.")
         self._mask_low.toggled.connect(self._redraw)
         bar.addWidget(self._mask_low)
+
+        # Blanking cells can only cut on cell boundaries, and an inversion mesh has
+        # ten-metre triangles at depth, so the cut comes out as a saw-tooth with
+        # islands hanging off it. Clipping the drawing to the coverage envelope cuts
+        # on that line instead: the clean shape traditional software produces.
+        self._clean_cut = QCheckBox("Clean cut")
+        self._clean_cut.setToolTip(
+            "Clip the section to a smooth envelope at the coverage cut, instead of "
+            "blanking cell by cell. The edge then follows how deep the survey sees "
+            "rather than where the mesh happens to put a triangle. Needs "
+            "“Hide below”.")
+        self._clean_cut.setEnabled(False)
+        self._clean_cut.toggled.connect(self._redraw)
+        bar.addWidget(self._clean_cut)
 
         self._cov_threshold = QDoubleSpinBox()
         self._cov_threshold.setRange(-10.0, 10.0)
@@ -308,14 +358,30 @@ class MeshResultView(QWidget):
         elif show_coverage:
             mask = None  # do not mask the sensitivity plot by itself
 
-        if self._smooth.isChecked():
+        # A clean cut replaces the per-cell mask rather than adding to it: keeping
+        # both would draw the saw-tooth edge inside the smooth outline.
+        clip_polygon = None
+        if (mask is not None and not show_coverage
+                and self._clean_cut.isChecked() and self._clean_cut.isEnabled()):
+            clip_polygon = self._clip_polygon(mesh, mask)
+            if clip_polygon is not None:
+                mask = None
+
+        smooth_level = int(self._smooth.currentData() or 0)
+        contour = smooth_level < 0
+        source_mesh = mesh          # the contour grid interpolates from this one
+        for _ in range(max(0, smooth_level)):
             try:
                 mesh, plot_values, mask = self._subdivide(mesh, plot_values, mask)
             except Exception:  # noqa: BLE001 - smoothing is cosmetic, never fatal
-                pass
+                break
         values, coverage = plot_values, mask
 
         self._fig.clear()
+        # Draw with no layout engine: pyGIMLi calls tight_layout itself, and
+        # matplotlib warns every time that is done to a constrained figure. The
+        # layout is put back once the drawing is finished, in _relayout.
+        self._fig.set_layout_engine("none")
         ax = self._fig.add_subplot(111)
         if show_coverage:
             label = ("Ray coverage (log10)" if self._kind == "srt"
@@ -349,21 +415,38 @@ class MeshResultView(QWidget):
             # Draw the model on the mesh via pyGIMLi but build the colorbar with
             # matplotlib: pyGIMLi's own colorbar hits a divide-by-zero on some
             # velocity models. colorBar=False avoids that.
-            if coverage is not None and np.asarray(coverage).size == np.asarray(values).size:
-                show_kw["coverage"] = coverage
-            try:
-                pg.show(mesh, values, **show_kw)
-            except Exception:  # noqa: BLE001 - coverage masking can still fail; retry plain
-                show_kw.pop("coverage", None)
-                ax.clear()
-                pg.show(mesh, values, **show_kw)
-            mappable = next(
-                (c for c in ax.collections if getattr(c, "get_array", lambda: None)() is not None),
-                None,
-            )
+            mappable = None
+            if contour:
+                mappable = self._draw_contour(ax, source_mesh, values, coverage, show_kw)
+            if mappable is None:
+                if contour:
+                    ax.clear()   # the contour attempt left partial artists behind
+                if coverage is not None and np.asarray(coverage).size == np.asarray(values).size:
+                    show_kw["coverage"] = coverage
+                try:
+                    pg.show(mesh, values, **show_kw)
+                except Exception:  # noqa: BLE001 - coverage masking can still fail; retry plain
+                    show_kw.pop("coverage", None)
+                    ax.clear()
+                    pg.show(mesh, values, **show_kw)
+                mappable = next(
+                    (c for c in ax.collections
+                     if getattr(c, "get_array", lambda: None)() is not None),
+                    None,
+                )
+            if clip_polygon is not None:
+                from PyHydroGeophysX.visualization.section_clip import (
+                    clip_axes_to_polygon,
+                )
+                clip_axes_to_polygon(ax, clip_polygon, outline=True, tighten=True)
             if mappable is not None:
                 cbar = self._fig.colorbar(mappable, ax=ax, shrink=0.85, pad=0.02)
                 cbar.set_label(label)
+                if contour:
+                    # A contour colorbar ticks on its own level boundaries, which
+                    # with forty bands are arbitrary numbers like 1.48038e2. Put
+                    # readable values on it instead.
+                    self._set_contour_ticks(cbar, bool(show_kw.get("logScale")))
             # isHidden(), not isVisible(): the latter is False whenever an
             # ancestor has not been shown, which would skip the overlay in any
             # embedded or offscreen use.
@@ -379,7 +462,149 @@ class MeshResultView(QWidget):
             ax.text(0.5, 0.5, f"Could not draw model:\n{exc}", ha="center", va="center",
                     transform=ax.transAxes, wrap=True)
             ax.axis("off")
+        self._relayout()
         self._canvas.draw_idle()
+
+    def _relayout(self) -> None:
+        """Re-run the figure layout once pyGIMLi has finished drawing.
+
+        ``pg.show`` positions its axes itself, which leaves matplotlib holding a
+        placeholder layout engine and the axes reaching to 96 % of the figure
+        height. On an equal-aspect section - which is most of them - the title
+        then lands above the canvas and is cut off by its top edge. Handing the
+        figure back to a real layout engine here puts that space back, and keeps
+        it correct when the panel is resized.
+        """
+        try:
+            self._fig.set_layout_engine("constrained")
+            self._fig.draw_without_rendering()
+        except Exception:  # noqa: BLE001 - fall back rather than lose the figure
+            try:
+                self._fig.tight_layout()
+            except Exception:  # noqa: BLE001 - layout is cosmetic, never fatal
+                pass
+
+    def _draw_contour(self, ax, mesh, values, coverage, show_kw):
+        """Draw the model as filled contours on a regular grid.
+
+        The mesh view is honest about where the model's degrees of freedom are,
+        which is why it is the default; but a section is also read as a picture of
+        the ground, and for that the cell edges are an artefact of the inversion,
+        not of the site. This is the continuous rendering traditional resistivity
+        software produces: the model interpolated onto a grid and drawn as filled
+        bands, blanked above the ground surface and outside the coverage.
+
+        Returns the mappable for the colorbar, or None if the section could not be
+        gridded - in which case the caller falls back to the mesh drawing rather
+        than showing nothing.
+        """
+        import numpy as np
+        from matplotlib.colors import LogNorm, Normalize
+        from scipy.interpolate import griddata
+
+        from PyHydroGeophysX.core import section_geometry
+
+        try:
+            centers = section_geometry.cell_centers(mesh)
+            surface = section_geometry.surface_line(mesh)
+        except Exception:  # noqa: BLE001 - no geometry, no grid
+            return None
+        field = np.asarray(values, dtype=float).ravel()
+        if centers.shape[0] != field.size:
+            return None
+
+        x, z = centers[:, 0], centers[:, 1]
+        # A fixed grid count rather than a cell size: the point is a smooth
+        # picture, and the resolution of the model is set by the mesh either way.
+        xi = np.linspace(float(x.min()), float(x.max()), 500)
+        zi = np.linspace(float(z.min()), float(z.max()), 250)
+        grid_x, grid_z = np.meshgrid(xi, zi)
+        grid = griddata((x, z), field, (grid_x, grid_z), method="linear")
+        if not np.isfinite(grid).any():
+            return None
+
+        # Blank the air: the convex hull of the cell centres reaches above a
+        # concave hillside, and a contour drawn there is interpolation into the sky.
+        top = section_geometry.surface_elevation_at(xi, surface)
+        grid = np.where(grid_z <= top[None, :], grid, np.nan)
+
+        if coverage is not None and np.asarray(coverage).size == field.size:
+            weight = np.asarray(coverage, dtype=float).ravel()
+            if np.asarray(coverage).dtype == bool:
+                weight = weight.astype(float)
+                blanked = griddata((x, z), weight, (grid_x, grid_z), method="linear")
+                grid = np.where(np.nan_to_num(blanked) >= 0.5, grid, np.nan)
+
+        lo = show_kw.get("cMin")
+        hi = show_kw.get("cMax")
+        finite = grid[np.isfinite(grid)]
+        if finite.size == 0:
+            return None
+        lo = float(lo if lo is not None else np.nanmin(finite))
+        hi = float(hi if hi is not None else np.nanmax(finite))
+        if hi <= lo:
+            hi = lo + abs(lo) * 0.01 + 1.0e-9
+        count = int(self._levels.value())
+        if show_kw.get("logScale") and lo > 0.0:
+            norm = LogNorm(vmin=lo, vmax=hi)
+            levels = np.logspace(np.log10(lo), np.log10(hi), count)
+        else:
+            norm = Normalize(vmin=lo, vmax=hi)
+            levels = np.linspace(lo, hi, count)
+
+        filled = ax.contourf(grid_x, grid_z, grid, levels=levels, norm=norm,
+                             cmap=show_kw.get("cMap", "Spectral_r"), extend="both")
+        if self._show_mesh.isChecked():
+            try:
+                import pygimli as pg
+
+                pg.viewer.mpl.drawMeshBoundaries(ax, mesh, hideMesh=False)
+            except Exception:  # noqa: BLE001 - the overlay is optional
+                pass
+        ax.set_xlim(float(xi.min()), float(xi.max()))
+        ax.set_ylim(float(zi.min()), float(np.nanmax(top)))
+        return filled
+
+    @staticmethod
+    def _set_contour_ticks(cbar, log_scale: bool) -> None:
+        """Put round numbers on a filled-contour colorbar."""
+        import numpy as np
+        from matplotlib.ticker import LogLocator, MaxNLocator, ScalarFormatter
+
+        try:
+            lo, hi = cbar.mappable.get_clim()
+            if log_scale and lo > 0.0:
+                ticks = LogLocator(base=10.0, subs=(1.0, 2.0, 5.0)).tick_values(lo, hi)
+            else:
+                ticks = MaxNLocator(nbins=6, steps=[1, 2, 2.5, 5, 10]).tick_values(lo, hi)
+            ticks = [t for t in np.asarray(ticks, dtype=float) if lo <= t <= hi]
+            if len(ticks) >= 2:
+                cbar.set_ticks(ticks)
+                formatter = ScalarFormatter()
+                formatter.set_scientific(False)
+                cbar.ax.yaxis.set_major_formatter(formatter)
+        except Exception:  # noqa: BLE001 - ticks are cosmetic, never fatal
+            pass
+
+    def _on_smooth_changed(self, _index: int = 0) -> None:
+        """Show the contour-band count only while contours are being drawn."""
+        self._levels.setVisible(int(self._smooth.currentData() or 0) < 0)
+        self._redraw()
+
+    def _clip_polygon(self, mesh, mask):
+        """Envelope polygon for the clean cut, or None if it cannot be built.
+
+        Built on the pre-smoothing mesh, because that is the one ``mask`` belongs
+        to; the polygon itself is in data coordinates and clips whichever mesh ends
+        up being drawn.
+        """
+        try:
+            from PyHydroGeophysX.core.section_geometry import coverage_envelope_polygon
+
+            return coverage_envelope_polygon(
+                mesh, mask, float(self._cov_threshold.value()))
+        except Exception:  # noqa: BLE001 - the clip is cosmetic, never fatal
+            return None
 
     # -- colour limits -------------------------------------------------------
 
@@ -498,15 +723,20 @@ class MeshResultView(QWidget):
         """Say how much of the section the data actually constrain."""
         import numpy as np
 
+        srt = self._kind == "srt"
         if coverage is None:
             self._cov_note.setText("")
-            for widget in (self._show_cov, self._mask_low, self._cov_threshold):
+            for widget in (self._show_cov, self._mask_low, self._cov_threshold,
+                           self._hide_uncovered, self._clean_cut):
                 widget.setEnabled(False)
-            self._hide_uncovered.setEnabled(False)
             return
         for widget in (self._show_cov, self._mask_low, self._cov_threshold):
             widget.setEnabled(True)
         self._hide_uncovered.setEnabled(True)
+        # The clean cut reshapes a cut that is already being applied; on its own it
+        # would have no boundary to follow.
+        self._clean_cut.setEnabled(
+            self._hide_uncovered.isChecked() if srt else self._mask_low.isChecked())
         cov = np.asarray(coverage, dtype=float)
         finite = cov[np.isfinite(cov)]
         if finite.size == 0 or cov.size != np.asarray(values).size:
@@ -538,4 +768,6 @@ class MeshResultView(QWidget):
             + (f" {unsampled} cells unsampled." if unsampled else "")
             + f" At the {cut:.2f} cut, {kept} of {finite.size} cells survive "
               f"({share:.0f} %)."
-            + ("" if self._mask_low.isChecked() else "  Tick “Hide below” to apply it."))
+            + ("" if self._mask_low.isChecked() else "  Tick “Hide below” to apply it.")
+            + ("  Clipped to the smooth envelope of that cut."
+               if self._mask_low.isChecked() and self._clean_cut.isChecked() else ""))

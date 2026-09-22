@@ -15,6 +15,8 @@ from scipy.sparse import csr_matrix, diags, eye, issparse, kron
 
 from ..solvers.linear_solvers import generalized_solver
 from .base import InversionBase, TimeLapseInversionResult
+from .temporal_weights import DEFAULT_LIMIT as DEFAULT_TEMPORAL_LIMIT
+from .temporal_weights import temporal_weights
 
 
 # ---------------------------------------------------------------------------
@@ -49,6 +51,13 @@ class TimeLapseSRTInversion(InversionBase):
         defaults = {
             "lambda_val": 50.0,
             "alpha": 10.0,
+            # Weight each adjacent pair by the interval between the two surveys,
+            # so the temporal constraint penalizes the rate of change rather than
+            # the raw difference. Normalized by the median interval, so an evenly
+            # sampled series is unaffected; 'uniform' reproduces a run from before
+            # this existed.
+            "temporal_weighting": "interval",
+            "temporal_weight_limit": DEFAULT_TEMPORAL_LIMIT,
             # 'H' below is the Gauss-Newton normal matrix, which needs a
             # symmetric solver; the old 'cgls' default is a least-squares method
             # and works with the square of its condition number. Pass
@@ -99,6 +108,7 @@ class TimeLapseSRTInversion(InversionBase):
         self.Wd_sq = None
         self.Wm = None
         self.Wt = None
+        self.temporal_weight_report: Dict[str, Any] = {}
         self.n_cells: Optional[int] = None
         self._setup_complete = False
 
@@ -294,10 +304,19 @@ class TimeLapseSRTInversion(InversionBase):
         self.Wm = sparse_block_diag([Wm_single] * self.n_times, format="csr")
 
         # Adjacent-time differences without allocating dense cell-by-cell
-        # identity matrices just to insert diagonals into a sparse array.
+        # identity matrices just to insert diagonals into a sparse array. Each
+        # difference is weighted by the interval it spans, so the constraint is
+        # on the rate of change rather than on the raw difference - the only form
+        # that means the same thing when the surveys are unevenly spaced.
         differences = diags([np.ones(self.n_times - 1), -np.ones(self.n_times - 1)],
                             [0, 1], shape=(self.n_times - 1, self.n_times))
-        self.Wt = kron(differences, eye(self.n_cells), format="csr")
+        pair_weights, self.temporal_weight_report = temporal_weights(
+            self.measurement_times,
+            mode=str(self.parameters.get("temporal_weighting", "interval")),
+            limit=self.parameters.get("temporal_weight_limit", DEFAULT_TEMPORAL_LIMIT),
+        )
+        self.Wt = kron(diags(pair_weights).dot(differences),
+                       eye(self.n_cells), format="csr")
         self._setup_complete = True
 
     def run(self, initial_model: Optional[np.ndarray] = None) -> TimeLapseInversionResult:

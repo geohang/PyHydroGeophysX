@@ -65,6 +65,20 @@ What It Does
 - Supports joint ERT+SRT workflows where compatible inputs are provided.
 - Produces intermediate artifacts and workflow reports where available.
 
+Choosing a Request Level
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The sidebar's **AI connection** panel asks for a request level rather than a
+model name. It is the same three-step ladder the desktop studio offers — level 1
+for the simple majority of requests, level 2 for coding, reasoning, agent loops,
+and complex retrieval, level 3 for what the levels below could not finish — and
+it resolves to a model for whichever provider you picked, with the price shown
+underneath. Start at level 1 and move up only when a level cannot finish the job;
+the sidebar's running cost estimate reflects the level you are on.
+
+Gemini, and the **Custom** choice on any provider, fall back to typing a model
+name. See :ref:`choosing-a-request-level` for the full table of models and rates.
+
 Required Inputs
 ^^^^^^^^^^^^^^^
 

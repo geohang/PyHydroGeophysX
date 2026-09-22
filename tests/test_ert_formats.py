@@ -18,6 +18,7 @@ from PyHydroGeophysX.data_processing.ert_formats import (
     _read_directives,
     parse_das1,
     parse_res2dinv_general,
+    parse_sting,
     parse_tx0,
     reciprocal_errors,
 )
@@ -312,6 +313,164 @@ def test_tx0_without_an_electrode_block_is_refused(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="Electrode"):
         parse_tx0(path)
+
+
+# --- AGI SuperSting .stg -----------------------------------------------------
+
+#: Four dipole-dipole records on a six-electrode, 6 m line, written the way a
+#: SuperSting R8 writes them: three header lines, then record number, mode,
+#: date, time, V/I, stacking error, current, apparent resistivity, command file,
+#: the four x/y/z triplets, and the acquisition settings as key=value.
+#: Electrodes sit at 0, 6, 12, 18 and 24 m. Records 3 and 4 are one reciprocal
+#: pair, record 2 is a negative reading, and every apparent resistivity is the
+#: resistance times the analytic dipole-dipole factor for that quadrupole.
+STG = """Advanced Geosciences, Inc. SuperSting R8-IP Resistivity meter. S/N: SS1006019 Type: 3D
+Firmware version: 01.23.75E Survey period: 20260811 Records: 4
+Unit: meter
+   1,USER   ,20260811,10:15:00, 1.00000E-01,   1,488, 1.13097E+01,LINE1    , 1.80000E+01, 0.00000E+00, 0.00000E+00, 2.40000E+01, 0.00000E+00, 0.00000E+00, 1.20000E+01, 0.00000E+00, 0.00000E+00, 6.00000E+00, 0.00000E+00, 0.00000E+00,Cmd=29,HV=221,Cyk=2,MTime=1.2,Gain=10,Ch=1
+   2,USER   ,20260811,10:15:00,-5.00000E-02,   3,488,-2.26195E+01,LINE1    , 1.80000E+01, 0.00000E+00, 0.00000E+00, 2.40000E+01, 0.00000E+00, 0.00000E+00, 6.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,Cmd=29,HV=221,Cyk=2,MTime=1.2,Gain=20,Ch=2
+   3,USER   ,20260811,10:15:12, 1.00000E-01,  12,488, 1.13097E+01,LINE1    , 1.20000E+01, 0.00000E+00, 0.00000E+00, 1.80000E+01, 0.00000E+00, 0.00000E+00, 6.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,Cmd=37,HV=178,Cyk=2,MTime=1.2,Gain=50,Ch=3
+   4,USER   ,20260811,10:15:12, 1.02000E-01,   0,488, 1.15359E+01,LINE1    , 6.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 1.20000E+01, 0.00000E+00, 0.00000E+00, 1.80000E+01, 0.00000E+00, 0.00000E+00,Cmd=37,HV=178,Cyk=2,MTime=1.2,Gain=50,Ch=4
+"""
+
+
+def _sting_east_west(tmp_path):
+    """The fixture as written: a line running along x."""
+    path = tmp_path / "reference.stg"
+    path.write_text(STG, encoding="utf-8")
+    return parse_sting(path)
+
+
+def test_sting_recovers_the_electrode_table_from_the_measurements(tmp_path) -> None:
+    """The format writes positions, never an electrode table, so it is rebuilt."""
+    path = tmp_path / "line.stg"
+    path.write_text(STG, encoding="utf-8")
+
+    elec, df = parse_sting(path)
+
+    assert elec.shape == (5, 3)
+    np.testing.assert_allclose(elec[:, 0], [0.0, 6.0, 12.0, 18.0, 24.0])
+    quad = df[["a", "b", "m", "n"]].to_numpy()
+    assert quad.min() >= 1 and quad.max() <= len(elec)
+    # Record 1 is A=18 m, B=24 m, M=12 m, N=6 m on that table.
+    assert quad[0].tolist() == [4, 5, 3, 2]
+
+
+def test_sting_header_lines_are_not_mistaken_for_records(tmp_path) -> None:
+    path = tmp_path / "line.stg"
+    path.write_text(STG, encoding="utf-8")
+
+    _, df = parse_sting(path)
+
+    assert len(df) == 4 == df.attrs["records_declared"]
+    assert df.attrs["lines_skipped"] == 3
+    assert df.attrs["unit"] == "meter"
+
+
+def test_sting_carries_the_instruments_own_geometric_factor(tmp_path) -> None:
+    """k = rhoa / R is what the instrument used, and is not the same claim as
+    the factor the electrode positions imply."""
+    path = tmp_path / "line.stg"
+    path.write_text(STG, encoding="utf-8")
+
+    _, df = parse_sting(path)
+
+    np.testing.assert_allclose(df["k"], df["rhoa"] / df["resist"])
+    # For record 1 the analytic dipole-dipole factor is 2*pi / (1/6 - 1/12 - 1/12 + 1/18).
+    np.testing.assert_allclose(df["k"].iloc[0], 113.097, rtol=1e-4)
+
+
+def test_sting_reports_the_stacking_error_as_a_fraction_too(tmp_path) -> None:
+    """Column 6 is a percentage; a consumer needs the fraction."""
+    path = tmp_path / "line.stg"
+    path.write_text(STG, encoding="utf-8")
+
+    _, df = parse_sting(path)
+
+    np.testing.assert_allclose(df["error_percent"], [1.0, 3.0, 12.0, 0.0])
+    np.testing.assert_allclose(df["error"], [0.01, 0.03, 0.12, 0.0])
+
+
+def test_sting_keeps_a_negative_reading(tmp_path) -> None:
+    """A reversed or noisy reading is a QC decision, not a parse failure."""
+    path = tmp_path / "line.stg"
+    path.write_text(STG, encoding="utf-8")
+
+    _, df = parse_sting(path)
+
+    assert (df["resist"] < 0).sum() == 1
+    assert (df["rhoa"] < 0).sum() == 1
+
+
+def test_sting_pairs_a_reciprocal_written_as_positions(tmp_path) -> None:
+    """Records 3 and 4 are one reciprocal pair, which only works if both map
+    onto the same electrode numbers."""
+    path = tmp_path / "line.stg"
+    path.write_text(STG, encoding="utf-8")
+
+    _, df = parse_sting(path)
+
+    scored = reciprocal_errors(df, max_reciprocal_error=0.5)
+    assert np.isfinite(scored["reciprocalErrRel"]).sum() == 2
+
+
+def test_sting_reads_ip_windows_without_a_column_map(tmp_path) -> None:
+    """An IP acquisition appends decay windows after the geometry; a DC one
+    appends nothing, and ``ip`` has to exist in both cases."""
+    dc_path = tmp_path / "dc.stg"
+    dc_path.write_text(STG, encoding="utf-8")
+    ip_lines = []
+    for line in STG.splitlines():
+        if line.startswith(("Advanced", "Firmware", "Unit")):
+            ip_lines.append(line)
+            continue
+        head, settings = line.split(",Cmd=", 1)
+        ip_lines.append(f"{head}, 4.500, 3.200, 2.100,Cmd={settings}")
+    (tmp_path / "ip.stg").write_text("\n".join(ip_lines), encoding="utf-8")
+
+    _, dc = parse_sting(dc_path)
+    _, ip = parse_sting(tmp_path / "ip.stg")
+
+    assert dc["ip"].isna().all()
+    assert "ip_1" not in dc.columns
+    np.testing.assert_allclose(ip["ip"], 4.5)
+    np.testing.assert_allclose(ip["ip_3"], 2.1)
+    # The geometry must survive the extra columns untouched.
+    assert ip[["a", "b", "m", "n"]].equals(dc[["a", "b", "m", "n"]])
+
+
+def test_sting_numbers_electrodes_along_the_line_whatever_its_bearing(tmp_path) -> None:
+    """A line laid out north-south must get the same numbering as one laid out
+    east-west, because the index is only a handle on a position."""
+    swapped = []
+    for line in STG.splitlines():
+        if line.startswith(("Advanced", "Firmware", "Unit")):
+            swapped.append(line)
+            continue
+        head, rest = line.split(",LINE1    ,", 1)
+        coords = [c.strip() for c in rest.split(",") if "=" not in c]
+        settings = rest[rest.index("Cmd="):]
+        flipped = []
+        for i in range(0, 12, 3):
+            x, y, z = coords[i:i + 3]
+            flipped += [y, x, z]          # put the line on the y axis instead
+        swapped.append(f"{head},LINE1    , " + ", ".join(flipped) + "," + settings)
+    path = tmp_path / "northsouth.stg"
+    path.write_text("\n".join(swapped), encoding="utf-8")
+
+    elec, df = parse_sting(path)
+    _, reference = _sting_east_west(tmp_path)
+
+    np.testing.assert_allclose(elec[:, 1], [0.0, 6.0, 12.0, 18.0, 24.0])
+    assert df[["a", "b", "m", "n"]].equals(reference[["a", "b", "m", "n"]])
+
+
+def test_a_file_that_is_not_a_sting_export_is_refused(tmp_path) -> None:
+    path = tmp_path / "notsting.stg"
+    path.write_text("some,other,file\nwith,two,rows\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="no SuperSting records"):
+        parse_sting(path)
 
 
 # --- a format with no reader must refuse, not fall through -------------------

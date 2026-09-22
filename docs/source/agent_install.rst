@@ -31,3 +31,14 @@ README installation prompt and covers CPU, optional CUDA and Desktop Studio.
 
 Manual setup: :doc:`installation` and :doc:`agents/desktop_studio`.
 For the separate in-app AQUAH assistant, see :doc:`agents/quick_start`.
+
+
+What counts as a verified GPU installation?
+---------------------------------------------
+
+The agent must report runtime, single-survey and time-lapse checks separately,
+using ``python -m PyHydroGeophysX.inversion.adtlert_diagnostics --report gpu-check.json``.
+A green GPU indicator or successful single-survey run is insufficient evidence
+for time-lapse. Preserve the diagnostic report, actual source path and environment
+export. See :doc:`installation` for OpenMP failure handling. Installation does
+not authorize changing inversion algorithms or suppressing runtime errors.

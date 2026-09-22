@@ -1,229 +1,314 @@
+:sd_hide_title:
+:html_theme.sidebar_secondary.remove: true
+
 PyHydroGeophysX
 ===============
 
-Connect **geophysical data and hydrological modeling**.
-Predict survey responses from hydrological states, interpret observations through
-petrophysics, and investigate how subsurface conditions change through time.
-Start with :doc:`the model–data interaction <tutorials/hydro_geophysical_interaction>`,
-then explore the workflows in Python or Desktop Studio.
+.. raw:: html
+
+   <div class="phgx-hero">
+     <div class="phgx-hero__text">
+       <p class="phgx-hero__eyebrow">Open-source hydrogeophysics</p>
+       <h1 class="phgx-hero__title">PyHydroGeophysX</h1>
+       <p class="phgx-hero__lead">Connect hydrological models with geophysical measurements.</p>
+       <p class="phgx-hero__body">Predict survey responses from hydrological states, interpret field
+       observations, and bring geophysical constraints back into hydrological models.</p>
+       <p class="phgx-hero__actions">
+         <a class="phgx-btn phgx-btn--primary" href="quickstart.html">Run the Python quickstart</a>
+         <a class="phgx-btn" href="agents/desktop_studio.html">Download Desktop Studio</a>
+       </p>
+       <p class="phgx-hero__more"><a href="examples/index.html">View example workflows &rarr;</a></p>
+     </div>
+     <div class="phgx-hero__art">
+       <svg class="phgx-flow" viewBox="0 0 470 356" role="img"
+            aria-label="A loop with two directions. Down the left, a hydrological model feeds
+            petrophysics, petrophysics feeds geophysical modelling, and that gives a predicted
+            geophysical response. Up the right, measured geophysical data are inverted and fed
+            to petrophysics, petrophysics gives hydrological properties, and those return to the
+            hydrological model. The two directions meet at the bottom, where the predicted
+            response and the measured data are compared against each other."
+            xmlns="http://www.w3.org/2000/svg">
+         <defs>
+           <marker id="phgx-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                   markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+             <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+           </marker>
+           <!-- A marker resolves currentColor against itself, not against the
+                path that references it, so the compare arrowheads need their
+                own marker to pick up the accent colour. -->
+           <marker id="phgx-arrow-compare" viewBox="0 0 10 10" refX="9" refY="5"
+                   markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+             <path d="M0,0 L10,5 L0,10 z" class="phgx-flow__compare-head"/>
+           </marker>
+         </defs>
+
+         <g class="phgx-flow__box">
+           <rect x="135" y="8"   width="200" height="42" rx="9"/>
+           <rect x="10"  y="98"  width="200" height="42" rx="9"/>
+           <rect x="260" y="98"  width="200" height="42" rx="9"/>
+           <rect x="10"  y="190" width="200" height="42" rx="9"/>
+           <rect x="260" y="190" width="200" height="42" rx="9"/>
+           <rect x="10"  y="282" width="200" height="52" rx="9"/>
+           <rect x="260" y="282" width="200" height="52" rx="9"/>
+         </g>
+
+         <g class="phgx-flow__link">
+           <path d="M135,29 H116 Q110,29 110,35 V94" marker-end="url(#phgx-arrow)"/>
+           <path d="M110,140 V186" marker-end="url(#phgx-arrow)"/>
+           <path d="M110,232 V278" marker-end="url(#phgx-arrow)"/>
+           <path d="M360,278 V236" marker-end="url(#phgx-arrow)"/>
+           <path d="M360,186 V144" marker-end="url(#phgx-arrow)"/>
+           <path d="M360,94 V35 Q360,29 354,29 H341" marker-end="url(#phgx-arrow)"/>
+         </g>
+
+         <g class="phgx-flow__compare">
+           <path d="M216,308 H254" marker-start="url(#phgx-arrow-compare)"
+                 marker-end="url(#phgx-arrow-compare)" stroke="currentColor"
+                 stroke-width="2" fill="none"/>
+           <text x="235" y="272" text-anchor="middle" class="phgx-flow__note">compare</text>
+         </g>
+
+         <g class="phgx-flow__label" text-anchor="middle">
+           <text x="235" y="34">Hydrological model</text>
+           <text x="110" y="124">Petrophysics</text>
+           <text x="360" y="124">Hydrological properties</text>
+           <text x="110" y="216">Geophysical modelling</text>
+           <text x="360" y="216">Petrophysics</text>
+           <text x="110" y="303">Predicted</text>
+           <text x="110" y="321">geophysical response</text>
+           <text x="360" y="303">Measured</text>
+           <text x="360" y="321">geophysical data</text>
+         </g>
+
+         <g class="phgx-flow__sub">
+           <text x="370" y="262">inversion</text>
+         </g>
+       </svg>
+     </div>
+   </div>
+
+Start with what you have
+------------------------
+
+Choose the path that matches your data and research question.
 
 .. grid:: 1 1 3 3
    :gutter: 3
+   :class-container: phgx-cards
 
-   .. grid-item-card:: Download Desktop Studio
-      :link: agents/desktop_studio
-      :link-type: doc
-
-      Start with the interactive application. Find Windows and macOS downloads
-      and installation instructions.
-
-   .. grid-item-card:: Start with Python
-      :link: quickstart
-      :link-type: doc
-
-      Install the package and run your first hydrogeophysical example.
-
-   .. grid-item-card:: Explore examples
-      :link: examples/index
-      :link-type: doc
-
-      Browse scripts, datasets and scientific figures for your workflow.
-
-The loop this package closes
-----------------------------
-
-Information travels in both directions. A hydrological state predicts what a
-survey should measure, and a survey constrains what the model should hold.
-
-.. raw:: html
-
-   <svg class="phgx-loop" viewBox="0 0 860 190" role="img"
-        aria-label="Four stages: predict a response from a hydrological state,
-        measure in the field, recover a model by inversion, interpret and write
-        the result back to the hydrological model."
-        xmlns="http://www.w3.org/2000/svg">
-     <defs>
-       <marker id="phgx-arrow" viewBox="0 0 10 10" refX="9" refY="5"
-               markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-         <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
-       </marker>
-     </defs>
-     <g fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.85">
-       <rect x="6"   y="20" width="185" height="58" rx="8"/>
-       <rect x="228" y="20" width="185" height="58" rx="8"/>
-       <rect x="450" y="20" width="185" height="58" rx="8"/>
-       <rect x="672" y="20" width="182" height="58" rx="8"/>
-       <path d="M195,49 L224,49" marker-end="url(#phgx-arrow)"/>
-       <path d="M417,49 L446,49" marker-end="url(#phgx-arrow)"/>
-       <path d="M639,49 L668,49" marker-end="url(#phgx-arrow)"/>
-       <path d="M763,82 L763,132 Q763,146 749,146 L112,146 Q98,146 98,132 L98,82"
-             marker-end="url(#phgx-arrow)"/>
-     </g>
-     <g fill="currentColor" font-size="14" text-anchor="middle">
-       <text x="98"  y="45">1. Predict</text>
-       <text x="320" y="45">2. Measure</text>
-       <text x="542" y="45">3. Recover</text>
-       <text x="763" y="45">4. Interpret</text>
-     </g>
-     <g fill="currentColor" font-size="11.5" text-anchor="middle" opacity="0.72">
-       <text x="98"  y="65">state to response</text>
-       <text x="320" y="65">field data and QC</text>
-       <text x="542" y="65">inversion</text>
-       <text x="763" y="65">water content, structure</text>
-       <text x="430" y="166">write back to the hydrological model</text>
-     </g>
-   </svg>
-
-Stage 1 uses ``Hydro_modular``; stage 4 ends in :doc:`model_input
-<api/model_input>`, which writes MODFLOW 6 and ParFlow inputs without touching
-the source model. :doc:`How the two connect
-<tutorials/hydro_geophysical_interaction>` walks the whole loop.
-
-Your surveys, from data to results
-----------------------------------
-
-.. figure:: /_static/studio_overview.png
-   :alt: Desktop Studio interface for interactive geophysical processing
-   :width: 100%
-
-   Desktop Studio brings processing controls and scientific results into one workspace.
-   Available features depend on the installed release and optional engines.
-
-Work with **ERT, seismic, TDEM/FDEM, gravity and magnetics**, or connect hydrological
-outputs through petrophysical relationships. See the :doc:`desktop guide
-<agents/desktop_studio>` for supported inputs and project workflows.
-
-Video walkthroughs: :doc:`Qt Desktop Studio <agents/desktop_studio>`,
-:doc:`web agent <agents/webapp>`, :doc:`manual installation <installation>`,
-and :ref:`ADERT speed comparison <adert-speed-comparison>`.
-
-Install with an AI agent
-------------------------
-
-Prefer guided setup? Watch the installation video and copy a prompt that asks
-your AI agent to check the environment, install the package and verify startup.
-
-.. button-ref:: agent_install
-   :color: primary
-
-   Watch the video & copy the setup prompt
-
-Choose a workflow
------------------
-
-One card per stage of the loop above. Each opens a tutorial that names the
-inputs it expects and the result it produces.
-
-.. grid:: 1 2 2 2
-   :gutter: 2
-
-   .. grid-item-card:: 1. Predict a survey response
+   .. grid-item-card:: I have a hydrological model
       :link: tutorials/hydrology_to_ert
       :link-type: doc
 
-      Turn hydrological outputs into resistivity or conductivity through
-      petrophysics, then simulate what a survey would record. The
-      :doc:`electromagnetic route <tutorials/hydrology_to_tdem>` covers
-      TDEM and FDEM.
+      Start from MODFLOW, ParFlow, water content, saturation or porosity. Apply
+      petrophysical relationships and predict ERT, seismic, EM or potential-field
+      measurements.
 
-   .. grid-item-card:: 2. Read and check field data
+      +++
+      Hydrology to geophysics
+
+   .. grid-item-card:: I have geophysical observations
       :link: tutorials/field_ert_data_qc
       :link-type: doc
 
-      Load a field dataset, inspect it, remove what should not be inverted,
-      and export an inversion-ready file.
-      :doc:`Supported formats <data_and_processing>`.
+      Quality-check field measurements, recover physical-property models, and
+      translate the results into hydrologically meaningful quantities.
 
-   .. grid-item-card:: 3. Recover a model
+      +++
+      Geophysics to hydrology
+
+   .. grid-item-card:: I have repeated or multiple surveys
       :link: tutorials/time_lapse_monitoring
       :link-type: doc
 
-      Invert one survey or a monitoring series. Structural constraints and
-      :doc:`joint ERT and seismic inversion <tutorials/joint_inversion>`
-      combine complementary measurements.
+      Analyse change through time, introduce structural information, combine
+      complementary methods, and assess uncertainty.
 
-   .. grid-item-card:: 4. Return the result to the model
-      :link: tutorials/hydrological_input_updates
+      +++
+      Monitoring and integration
+
+Choose how you want to work
+---------------------------
+
+The same workflows are available from a script, from a desktop interface, or
+through natural language.
+
+.. grid:: 1 1 3 3
+   :gutter: 3
+   :class-container: phgx-cards
+
+   .. grid-item-card:: Python
+      :link: quickstart
       :link-type: doc
 
-      Map an interpreted quantity onto the hydrological grid and write MODFLOW 6
-      or ParFlow inputs for the next run.
+      Build reproducible workflows, automate repeated analyses, and integrate
+      PyHydroGeophysX into research code.
 
-Any stage can be driven by an assistant instead of by hand: see
-:doc:`AI-assisted workflows <tutorials/agent_workflows>`.
+      +++
+      Python quickstart
 
-More resources
---------------
+   .. grid-item-card:: Desktop Studio
+      :link: agents/desktop_studio
+      :link-type: doc
 
-:doc:`Installation <installation>` · :doc:`Data and processing <data_and_processing>` ·
+      Process data, inspect surveys, build meshes, run inversions and visualise
+      results through an interactive interface.
+
+      +++
+      Download Desktop Studio
+
+   .. grid-item-card:: AI-assisted workflows
+      :link: agents/index
+      :link-type: doc
+
+      Use natural-language guidance to configure, execute and inspect the
+      supported hydrogeophysical workflows.
+
+      +++
+      Explore AQUAH and agents
+
+See AQUAH in action
+-------------------
+
+AQUAH is the built-in assistant. It takes a goal in plain language, configures
+the workflow, runs it and reports back. It runs in the desktop application and
+in the browser, and both demos below show a complete workflow, not a mock-up.
+
+.. raw:: html
+
+   <div class="phgx-demos">
+     <figure class="phgx-demo">
+       <div class="setup-video">
+         <iframe src="https://www.youtube-nocookie.com/embed/cSUEGBFGxrI"
+           title="AQUAH running a workflow in the PyHydroGeophysX Desktop Studio"
+           loading="lazy" allow="fullscreen; picture-in-picture" allowfullscreen></iframe>
+       </div>
+       <figcaption><strong>Desktop Studio.</strong> The assistant beside the
+       scientific modules, with step-by-step approval or a run straight through
+       to a report. <a href="agents/desktop_studio.html">Desktop guide</a></figcaption>
+     </figure>
+     <figure class="phgx-demo">
+       <div class="setup-video">
+         <iframe src="https://www.youtube-nocookie.com/embed/d4lgs_hQqDo"
+           title="The PyHydroGeophysX web agent running a hydrogeophysical workflow"
+           loading="lazy" allow="fullscreen; picture-in-picture" allowfullscreen></iframe>
+       </div>
+       <figcaption><strong>Web app.</strong> The same assistant in a browser, with
+       nothing to install. <a href="agents/webapp.html">Web app guide</a></figcaption>
+     </figure>
+   </div>
+
+   <p class="phgx-actions">
+     <a class="phgx-btn phgx-btn--primary"
+        href="https://github.com/geohang/PyHydroGeophysX/releases/latest">Download Desktop Studio</a>
+     <a class="phgx-btn" href="https://pyhydrogeophysx.streamlit.app/">Open the web app</a>
+     <a class="phgx-btn" href="agent_install.html">Install with an AI agent</a>
+   </p>
+
+Windows and macOS bundles are published on GitHub Releases. The
+:doc:`AI-agent install prompt <agent_install>` is a text file you paste into a
+coding assistant to have it check the environment, install the package and
+verify startup; :doc:`installation` covers the manual route, with its own video.
+
+Supported methods and models
+----------------------------
+
+Use each method on its own, or connect it to a hydrological, monitoring,
+structural or joint workflow.
+
+.. raw:: html
+
+   <p class="phgx-tags">
+     <a class="phgx-tag" href="methods/ert.html">ERT</a>
+     <a class="phgx-tag" href="methods/seismic.html">Seismic refraction</a>
+     <a class="phgx-tag" href="methods/em.html">TDEM</a>
+     <a class="phgx-tag" href="methods/em.html">FDEM</a>
+     <a class="phgx-tag" href="methods/potential_fields.html">Gravity</a>
+     <a class="phgx-tag" href="methods/potential_fields.html">Magnetics</a>
+     <a class="phgx-tag phgx-tag--hydro" href="methods/hydrological_models.html">MODFLOW</a>
+     <a class="phgx-tag phgx-tag--hydro" href="methods/hydrological_models.html">ParFlow</a>
+   </p>
+
+:doc:`Compare the methods <methods/index>` to see what each one needs as input
+and which workflows it can feed.
+
+Featured workflows
+------------------
+
+.. grid:: 1 1 3 3
+   :gutter: 3
+   :class-container: phgx-cards phgx-cards--figure
+
+   .. grid-item-card:: Hydrological model to ERT
+      :link: tutorials/hydrology_to_ert
+      :link-type: doc
+      :img-top: /_static/Ex_ERT_workflow_fig_04.png
+      :img-alt: A resistivity section derived from modelled water content, beside the apparent-resistivity pseudosection an ERT survey would record over it
+
+      Convert a hydrological state into a resistivity model and predict the
+      measurements an ERT survey would record.
+
+      +++
+      Open workflow
+
+   .. grid-item-card:: Field observations to interpretation
+      :link: auto_examples/Ex_MC_Hydro
+      :link-type: doc
+      :img-top: /_static/Ex_MC_Hydro_fig_02.png
+      :img-alt: Water content estimated from a recovered resistivity section, with the spread that petrophysical parameter uncertainty produces
+
+      Recover a model from field measurements, then estimate water content with
+      the uncertainty the petrophysical parameters imply.
+
+      +++
+      Open workflow
+
+   .. grid-item-card:: Time-lapse monitoring
+      :link: tutorials/time_lapse_monitoring
+      :link-type: doc
+      :img-top: /_static/Ex_TL_inversion_fig_02.png
+      :img-alt: Resistivity sections recovered from repeated surveys, showing how the subsurface changed between acquisitions
+
+      Invert a monitoring series together so that the recovered change is
+      constrained rather than differenced after the fact.
+
+      +++
+      Open workflow
+
+Open-source hydrogeophysics
+---------------------------
+
+Python package · Desktop Studio · Reproducible examples · API reference
+
+`GitHub <https://github.com/geohang/PyHydroGeophysX>`_ ·
+:doc:`Installation <installation>` ·
+:doc:`Data and processing <data_and_processing>` ·
 :doc:`API reference <api/index>` ·
-:doc:`Web app <agents/webapp>` · :doc:`Usage and downloads <usage>` ·
+:doc:`Usage and downloads <usage>` ·
 `Environmental Geophysics course <https://geohang.github.io/environmental-geophysics/>`_
 
-Citation
---------
+Citing PyHydroGeophysX
+----------------------
 
-Please cite the software paper, and the workflow paper as well if you used the
-AI-assisted workflows:
+If PyHydroGeophysX contributes to your research, please cite the software paper
+and any numerical engines your analysis actually ran.
 
-- Chen, H., Niu, Q., and Wu, Y. (2026). *PyHydroGeophysX: An Extensible
-  Open-Source Platform for Integrating Hydrological Models with Geophysical
-  Measurements*. SoftwareX, in press.
-  https://doi.org/10.2139/ssrn.6238293
-- Chen, H. (2026). *A Generalizable Automated Geophysical Agent Workflow for
-  Accessible Subsurface Hydrology Analysis*. Big Data and Earth System, 100042.
-- Chen, H., Niu, Q., Mendieta, A., Bradford, J., and McNamara, J. (2023).
-  Geophysics-informed hydrologic modeling of a mountain headwater catchment for
-  studying hydrological partitioning in the critical zone. *Water Resources
-  Research*, 59(12), e2023WR035280. https://doi.org/10.1029/2023WR035280
-  Cite this one for work that uses geophysical observations to inform a
-  hydrological model, which is stage 4 of the loop above.
+.. button-ref:: citation
+   :color: primary
+   :ref-type: doc
 
-The engines underneath do the numerical work, so please also cite the ones your
-analysis actually ran:
-
-.. list-table::
-   :header-rows: 1
-   :widths: 38 62
-
-   * - If your analysis used
-     - Please also cite
-   * - ERT or seismic refraction forward modelling and inversion
-     - Rücker, C., Günther, T., and Wagner, F. M. (2017). pyGIMLi.
-       *Computers and Geosciences*, 109, 106-123.
-   * - Differentiable time-lapse ERT (``engine="adtlert"``)
-     - Yang, P., Fang, Z., Liu, Y., Su, X., Feng, D., and Chen, H. (2026).
-       ADTLERT. arXiv:2608.14661.
-   * - ERT data processing and quality control
-     - Blanchy, G., Saneiyan, S., Boyd, J., McLachlan, P., and Binley, A.
-       (2020). ResIPy. *Computers and Geosciences*, 137, 104423.
-   * - TDEM or FDEM forward modelling and inversion
-     - Cockett, R., Kang, S., Heagy, L. J., Pidlisecky, A., and Oldenburg,
-       D. W. (2015). SimPEG. *Computers and Geosciences*, 85, 142-154.
-   * - MODFLOW, read or written through FloPy
-     - Bakker, M., Post, V., Langevin, C. D., Hughes, J. D., White, J. T.,
-       Starn, J. J., and Fienen, M. N. (2016). *Groundwater*, 54(5), 733-739.
-   * - ParFlow outputs or written ParFlow inputs
-     - Kollet, S. J. and Maxwell, R. M. (2006). *Advances in Water Resources*,
-       29(7), 945-958; Maxwell, R. M. (2013). *Advances in Water Resources*,
-       53, 109-117.
-   * - A petrophysical relationship
-     - The reference for the model you used, listed with it in
-       :doc:`the petrophysics API <api/petrophysics>`.
-   * - Ensemble Kalman updating
-     - Evensen, G. (2003). *Ocean Dynamics*, 53(4), 343-367.
-
-BibTeX entries for the first group are in the
-`project README <https://github.com/geohang/PyHydroGeophysX#citation>`_.
+   View citation guide
 
 .. toctree::
    :maxdepth: 1
    :hidden:
 
-   Desktop Studio <agents/desktop_studio>
    Getting started <getting_started>
-   Tutorials <tutorials/index>
+   Workflows <tutorials/index>
+   Methods <methods/index>
    Examples <examples/index>
-   API Reference <api/index>
-   AI + Web App <agents/index>
-   Usage and Downloads <usage>
+   AI workflows <agents/index>
+   API reference <api/index>
+   Data and processing <data_and_processing>
+   Usage and downloads <usage>
+   Citation <citation>

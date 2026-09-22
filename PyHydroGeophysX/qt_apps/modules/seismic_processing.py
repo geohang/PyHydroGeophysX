@@ -1606,6 +1606,30 @@ class SeismicProcessingModule(BaseModule):
             return []
         return [self._shot_combo.itemData(i) for i in range(self._shot_combo.count())]
 
+    def show_run_inputs(self, inputs):
+        """Open the automatic run's data here, so this panel is not blank.
+
+        Part of the studio's contract: a module the run brings to the front has
+        to show the user a result, not an empty tool with a banner over it.
+        Display only - the workflow does its own work in its own process - and
+        anything already loaded is left alone.
+        """
+        status = self._agent_status()
+        if status.get("data_loaded") or status.get("traveltime_loaded"):
+            return ""
+        geometry = inputs.get("geophone_file") or inputs.get("topography_file")
+        if geometry and Path(str(geometry)).is_file():
+            self._agent_load_geometry(str(geometry))
+        travel = inputs.get("seismic_file")
+        if travel and Path(str(travel)).is_file():
+            if self._agent_load_traveltime(str(travel)).get("status") != "failed":
+                return Path(str(travel)).name
+        raw = inputs.get("raw_seismic_file")
+        if raw and Path(str(raw)).is_file():
+            if self._agent_load(str(raw)).get("status") != "failed":
+                return Path(str(raw)).name
+        return ""
+
     def _agent_status(self) -> Dict[str, Any]:
         if self._current_record is not None:
             self._save_current_picks()

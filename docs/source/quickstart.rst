@@ -1,129 +1,132 @@
-Quickstart
-==========
+10-minute quickstart
+====================
 
-This page gives a fast path to the most important workflows added in the current package architecture:
-single-method inversion, joint inversion, EM workflows, agent usage, and the 3D Mesh Builder.
+What you will do
+----------------
 
-Install
--------
+Turn a hydrological state into the geophysical property a survey responds to,
+and plot the pair. That conversion is the hinge of every workflow in this
+package: it is what lets a hydrological model predict a measurement, and what
+lets a measurement be read back as water content.
+
+You will not need field data, a downloaded dataset, an API key, or any of the
+optional geophysics engines.
+
+Requirements
+------------
+
+Python 3.8 or newer and the core install below. NumPy, SciPy and Matplotlib
+come with it.
+
+1. Install
+----------
 
 .. code-block:: bash
 
    pip install pyhydrogeophysx
-   pip install "pyhydrogeophysx[geophysics]"   # PyGIMLi + SimPEG + RESIPY stack
 
-3D Mesh Builder GUI
+2. Create a hydrological state
+------------------------------
+
+A depth profile through the unsaturated zone: wet near the surface, drier with
+depth, in a soil of uniform porosity. In a real workflow these arrays come out
+of MODFLOW or ParFlow instead of out of ``numpy``.
+
+.. code-block:: python
+
+   import numpy as np
+
+   depth = np.linspace(0.0, 10.0, 60)        # metres below ground
+   porosity = np.full_like(depth, 0.42)      # volume fraction
+   water_content = 0.38 - 0.020 * depth      # volumetric, drying with depth
+
+3. Convert it to resistivity
+----------------------------
+
+``water_content_to_resistivity`` applies the Waxman-Smits relationship. It needs
+the porosity as well as the water content, because what controls the electrical
+response is the saturation, which is the ratio of the two.
+
+.. code-block:: python
+
+   from PyHydroGeophysX.petrophysics import water_content_to_resistivity
+
+   resistivity = water_content_to_resistivity(
+       water_content=water_content,
+       rhos=120.0,            # resistivity at full saturation, ohm m
+       n=2.0,                 # saturation exponent
+       porosity=porosity,
+       sigma_sur=1.0 / 500.0, # surface conductivity of the grains, S/m
+   )
+
+   print(resistivity.min(), resistivity.max())   # about 116 and 419 ohm m
+
+4. Plot the result
+------------------
+
+.. code-block:: python
+
+   import matplotlib.pyplot as plt
+
+   fig, (left, right) = plt.subplots(1, 2, figsize=(7.2, 4.0), sharey=True)
+   left.plot(water_content, depth)
+   left.set_xlabel("Water content (-)")
+   left.set_ylabel("Depth (m)")
+   right.plot(resistivity, depth)
+   right.set_xlabel("Resistivity (ohm m)")
+   left.invert_yaxis()
+   fig.tight_layout()
+   plt.show()
+
+.. figure:: /_static/quickstart_profile.png
+   :alt: Two panels sharing a depth axis. Water content falls from 0.38 to 0.18
+         over ten metres on the left; resistivity rises from about 116 to about
+         419 ohm m over the same interval on the right.
+   :width: 100%
+
+   The figure the code above produces.
+
+What just happened?
 -------------------
 
-Build and export 3D ERT meshes interactively, with no API key required:
+A twofold drop in water content produced a nearly fourfold rise in resistivity.
+That leverage is why electrical methods are useful for hydrology, and it is also
+where the assumptions live: the exponent ``n``, the saturated resistivity
+``rhos`` and the surface conductivity are properties of the material, and a
+survey cannot recover water content more precisely than they are known.
+
+Two consequences shape the rest of the documentation.
+
+- Going **forwards**, from a model to a prediction, this conversion is applied
+  to a mesh rather than to a profile, and the resulting resistivity model is
+  handed to a forward operator that simulates what a survey would record.
+- Going **backwards**, from measurements to hydrology, the same relationship is
+  inverted, and the petrophysical uncertainty has to be propagated with it.
+  :doc:`/auto_examples/Ex_MC_Hydro` does that with a Monte Carlo ensemble.
+
+Continue to a complete ERT workflow
+-----------------------------------
+
+Ready to predict survey measurements? Install the geophysics engines and
+continue to the full hydrology-to-ERT workflow, which adds profile
+interpolation, geological layers, mesh generation and the forward operator.
 
 .. code-block:: bash
 
-   # Recommended
-   python -m PyHydroGeophysX.gui_mesh3d
+   pip install "pyhydrogeophysx[geophysics]"
 
-   # Or directly
-   streamlit run examples/app_mesh3d.py
+.. button-ref:: tutorials/hydrology_to_ert
+   :color: primary
+   :ref-type: doc
 
-The app opens three tabs: **Electrode View** (interactive 3D scatter), **Generate
-Mesh** (runs ``Mesh3DCreator``), and **Export** (.bms / .vtk download).
+   Continue to ERT forward modelling
 
-For the full step-by-step guide see :doc:`/agents/webapp`.
-
-Quick Petrophysics Check
-------------------------
-
-.. code-block:: python
-
-   import numpy as np
-   from PyHydroGeophysX.petrophysics import water_content_to_resistivity
-
-   wc = np.array([0.20, 0.25, 0.30, 0.35])
-   phi = np.array([0.35, 0.35, 0.35, 0.35])
-   rho = water_content_to_resistivity(water_content=wc, rhos=100.0, n=2.0, porosity=phi)
-   print(rho)
-
-SRT Inversion (Single Time)
----------------------------
-
-.. code-block:: python
-
-   from PyHydroGeophysX.inversion import SRTInversion
-
-   inv = SRTInversion(
-       data_file="examples/data/srt/survey.sgt",
-       lambda_val=50.0,
-       max_iterations=20,
-   )
-   result = inv.run()
-   print("Velocity model cells:", result.final_model.size)
-
-FDEM Forward and Inversion
---------------------------
-
-.. code-block:: python
-
-   import numpy as np
-   from PyHydroGeophysX.forward import FDEMForwardModeling, FDEMSurveyConfig
-   from PyHydroGeophysX.inversion import FDEMInversion
-
-   thicknesses = np.array([5.0, 10.0, 20.0])     # 4-layer model -> 3 thicknesses
-   sigma_true = np.array([0.01, 0.02, 0.05, 0.08])
-   cfg = FDEMSurveyConfig(frequencies=np.logspace(2, 4, 12))
-
-   fwd = FDEMForwardModeling(thicknesses=thicknesses, survey_config=cfg)
-   dobs = fwd.forward(sigma_true)
-   uncert = 0.05 * np.maximum(np.abs(dobs), 1e-12)
-
-   inv = FDEMInversion(
-       frequencies=cfg.frequencies,
-       dobs=dobs,
-       uncertainties=uncert,
-       thicknesses=thicknesses,
-       receiver_component="secondary",
-   )
-   result = inv.run()
-   print("FDEM chi2:", result.chi2)
-
-Unified Method Dispatch
------------------------
-
-.. code-block:: python
-
-   from PyHydroGeophysX.inversion import GeophysicalInversion
-
-   srt = GeophysicalInversion("srt", data_file="examples/data/srt/survey.sgt")
-   srt_result = srt.run()
-
-   # Other options: "ert", "tdem", "fdem", "joint_ert_srt"
-
-Joint ERT + SRT Inversion
+Choose your next workflow
 -------------------------
 
-.. code-block:: python
-
-   from PyHydroGeophysX.inversion import JointERTSRTInversion
-
-   joint = JointERTSRTInversion(
-       ert_data="examples/data/ert/survey.dat",
-       srt_data="examples/data/srt/survey.sgt",
-       regularization_mode="geostat",      # or "smoothness"
-       cross_gradient_mode="direct",       # or "spatial"
-       lambda_cg_ert=120.0,
-       lambda_cg_srt=80.0,
-   )
-   result = joint.run()
-   print(result.chi2_ert, result.chi2_srt)
-
-Agent Web App
--------------
-
-- Open the hosted app: `https://pyhydrogeophysx.streamlit.app/ <https://pyhydrogeophysx.streamlit.app/>`_
-- Web app usage and limitations: :doc:`agents/webapp`
-
-Where To Go Next
-----------------
-
-- Tutorials: :doc:`tutorials/index`
-- Examples gallery: :doc:`auto_examples/index`
-- API reference: :doc:`api/index`
+- :doc:`Workflows <tutorials/index>`, organised by what you already have.
+- :doc:`Methods <methods/index>`, if you know which measurement you are working
+  with.
+- :doc:`Examples <examples/index>` for complete, downloadable scripts.
+- :doc:`Desktop Studio <agents/desktop_studio>` to do the same work through an
+  interface instead of a script.

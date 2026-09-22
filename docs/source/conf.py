@@ -120,6 +120,10 @@ html_theme_options = {
     ],
     'use_edit_page_button': True,
     'show_toc_level': 2,
+    # The root toctree names the seven sections of the site. Showing six of
+    # them keeps "Getting started" through "API reference" in the bar itself
+    # and leaves the reference-shelf pages in the "More" dropdown.
+    'header_links_before_dropdown': 6,
 }
 
 html_context = {

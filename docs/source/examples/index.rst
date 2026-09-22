@@ -142,3 +142,9 @@ Browse all figures
 
 Use the :doc:`complete gallery </auto_examples/index>` for thumbnails and downloads.
 The categories above cover every scientific Python example currently in the gallery.
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   Complete gallery </auto_examples/index>

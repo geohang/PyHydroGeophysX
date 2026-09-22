@@ -18,6 +18,16 @@ def _distribution(layer: Mapping[str, Any], key: str, default: float) -> tuple[f
     return float(raw), 0.0
 
 
+#: Archie exponents are bounded by what rock can be, not merely by being
+#: positive. Flooring them at 1e-6 let a 100%-standard-deviation prior put 31%
+#: of the ensemble below n = 1, where the Waxman-Smits residual evaluates
+#: 0**(n-1) and the initial guess evaluates rho**(1/n): a divide-by-zero and an
+#: overflow per realization, and a third of the ensemble carrying exponents no
+#: rock has. Cementation and saturation exponents both sit near 1.3-2.5 in the
+#: literature; this envelope is wide enough not to narrow a legitimate prior.
+EXPONENT_BOUNDS = (1.0, 4.0)
+
+
 def _sample_layer(
     rng: np.random.Generator,
     layer: Mapping[str, Any],
@@ -40,12 +50,17 @@ def _sample_layer(
     else:
         for key, default in (("m", 1.5), ("rho_fluid", 20.0)):
             mean, std = _distribution(layer, key, default)
-            sampled[key] = max(1e-6, float(rng.normal(mean, std)))
+            value = float(rng.normal(mean, std))
+            if key == "m":
+                value = float(np.clip(value, *EXPONENT_BOUNDS))
+            else:
+                value = max(1e-6, value)
+            sampled[key] = value
     for key, default in parameter_defaults.items():
         mean, std = _distribution(layer, key, default)
         value = float(rng.normal(mean, std))
         if key == "n":
-            value = max(1e-6, value)
+            value = float(np.clip(value, *EXPONENT_BOUNDS))
         elif key == "sigma_sur":
             value = max(0.0, value)
         elif key == "porosity":

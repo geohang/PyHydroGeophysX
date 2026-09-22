@@ -21,6 +21,7 @@ import pandas as pd
 from PyHydroGeophysX.data_processing.ert_formats import (
     parse_das1,
     parse_res2dinv_general,
+    parse_sting,
     parse_tx0,
     reciprocal_errors,
 )
@@ -722,6 +723,7 @@ _EMBEDDED_PARSER_MAP = {
     "E4D": _bertParser,
     "DAS-1": parse_das1,
     "ResInv": parse_res2dinv_general,
+    "Sting": parse_sting,
     "ABEM-Lund": _abem_lund_parser,
     "Lippmann": _lippmann_parser,
     "ARES": _bertParser,       # same unified layout
@@ -1173,20 +1175,33 @@ def _load_ert_pygimli(
     n = np.array(data('n')) if 'n' in data.dataMap() else np.zeros(n_data, dtype=int)
 
     # Some BERT-style files load through PyGIMLi with indices shifted by -1
-    # (e.g., [0..N-1] becomes [-1..N-2]). Normalize back to non-negative
-    # indexing so downstream export and validation keep all valid measurements.
+    # (e.g., [1..N] becomes [0..N-1], or [0..N-1] becomes [-1..N-2]).
+    # Normalize so the lowest index is 1, which is the electrode labelling every
+    # consumer downstream assumes.
+    #
+    # Landing on 0 instead of 1 was not enough, and failed far from here: a
+    # correction that only removed negatives left fielddataline2.dat indexed
+    # [0..71] for 72 electrodes, ResIPy looked up the label '0' while its own
+    # electrodes are labelled '1'..'72', and the export died with a bare
+    # KeyError('0') - which surfaced as "Failed to rebuild the default
+    # reciprocal-pair export with ResIPy: '0'" and blocked the whole survey.
+    # DAS-1 and E4D files already load as 1-based, so this is a no-op for them.
     abmn_all = np.concatenate([a, b, m, n]).astype(float)
     finite_abmn = abmn_all[np.isfinite(abmn_all)]
     if finite_abmn.size > 0:
         min_idx = int(np.min(finite_abmn))
         max_idx = int(np.max(finite_abmn))
         n_elec = len(electrodes_df)
-        if min_idx < 0 and max_idx <= max(n_elec - 2, 0):
-            a = a + 1
-            b = b + 1
-            m = m + 1
-            n = n + 1
-            print("   Detected shifted ABMN indices from PyGIMLi loader; applied +1 correction.")
+        shift = 1 - min_idx
+        # Only when the shifted indices still fit the electrodes that were read:
+        # otherwise the premise is wrong and shifting would hide that.
+        if shift > 0 and max_idx + shift <= n_elec:
+            a = a + shift
+            b = b + shift
+            m = m + shift
+            n = n + shift
+            print(f"   ABMN indices ran [{min_idx}..{max_idx}] for {n_elec} "
+                  f"electrodes; applied +{shift} to make them 1-based.")
     
     # Get apparent resistivity or resistance
     app_res_source = "unknown"
@@ -1546,10 +1561,7 @@ def load_ert_resipy(
                 elec_data = elec_data.reshape(-1, 3)
             
             # Set electrode positions in survey
-            if hasattr(survey, 'setElec'):
-                survey.setElec(elec_data)
-            else:
-                survey.elec = elec_data
+            prj.setElec(elec_data)
             print(f"   Updated electrode positions from {electrode_file_path.name}")
         except Exception as e:
             raise RuntimeError(f"Failed to load electrode file '{electrode_file_path}': {e}") from e
@@ -1559,10 +1571,7 @@ def load_ert_resipy(
         n_elec = int(np.max(df[['a','b','m','n']].values)) + 1
         elec = np.zeros((n_elec, 3))
         elec[:, 0] = np.arange(n_elec) * spacing
-        if hasattr(survey, 'setElec'):
-            survey.setElec(elec)
-        else:
-            survey.elec = elec
+        prj.setElec(elec)
 
     # Step 3: Basic QC filters on raw data
     # Skip i/u filters for BERT format - these columns contain zeros in BERT/PyGIMLi format
@@ -1596,7 +1605,10 @@ def load_ert_resipy(
             before_rec = len(df)
             # Filter: keep only measurements where reciprocal error < threshold
             # reciprocalErrRel is in decimal form, so divide threshold by 100
-            df = df[df[rec_col] < (rec_threshold / 100.0)]
+            reciprocal_error = pd.to_numeric(df[rec_col], errors='coerce').abs()
+            # Missing reciprocal partners provide no error estimate, not a
+            # failed measurement. Keep these rows for source/default errors.
+            df = df[reciprocal_error.isna() | (reciprocal_error < rec_threshold / 100.0)]
             rec_filtered = before_rec - len(df)
             if rec_filtered > 0:
                 print(f"   Applied reciprocal error filter (< {rec_threshold}%): removed {rec_filtered} measurements")
@@ -1666,7 +1678,10 @@ def load_ert_resipy(
             break
 
     # Electrodes - access from survey object
-    elec_arr = np.array(survey.elec) if survey.elec is not None else \
+    elec_table = survey.elec
+    if isinstance(elec_table, pd.DataFrame):
+        elec_table = elec_table[['x', 'y', 'z']].to_numpy(dtype=float)
+    elec_arr = np.array(elec_table) if elec_table is not None else \
                np.zeros((int(df[['a','b','m','n']].values.max())+1, 3))
     if elec_arr.ndim == 1:
         elec_arr = elec_arr.reshape(-1, 1)
@@ -1943,9 +1958,11 @@ def export_for_inversion(
 
     - fmt='pgimli': Unified data format for pyGIMLi/BERT with electrode coordinates and measurements
     - fmt='resipy': return the RESIPY project directory for running prj.start().
-    - export_strategy='default' (default): rebuild the raw survey in ResIPy,
-      keep only reciprocal-paired measurements, export recipMean as resistance,
-      and use abs((relative * resist + absolute) / recipMean) for the error.
+    - export_strategy='default' (default): rebuild the raw survey in ResIPy.
+      When reciprocal pairing is complete, export paired recipMean resistance
+      and abs((relative * resist + absolute) / recipMean) errors. Otherwise use
+      the full loaded dataset with source or estimated errors, retaining
+      measurements without reciprocal partners.
       If that path is unavailable, the function falls back to the legacy export.
     - export_strategy='legacy': use the older full-dataset export path.
     - use_source_error only affects the legacy export path.
@@ -2172,10 +2189,13 @@ def export_for_inversion(
                         raise RuntimeError("ResIPy did not create a survey from the raw data file.")
 
                     survey = prj.surveys[0]
-                    if hasattr(survey, "setElec"):
-                        survey.setElec(elec_xyz)
-                    else:
-                        survey.elec = elec_xyz
+                    # Project.setElec normalizes coordinates to ResIPy's
+                    # labelled table and updates both project and surveys.
+                    prj.setElec(elec_xyz)
+
+                    pairing = pd.to_numeric(survey.df.get('irecip', pd.Series(0, index=survey.df.index)), errors='coerce').fillna(0)
+                    if (pairing == 0).any():
+                        raise ValueError('No reciprocal partners for some measurements; retaining unpaired rows through full-dataset export.')
 
                     rhoa_min, rhoa_max = default_rhoa_limits
                     filter_app_resist = getattr(prj, "filterAppResist", None)
@@ -2194,17 +2214,24 @@ def export_for_inversion(
 
                     df = prj.surveys[0].df.copy()
             except Exception as e:
-                if "no reciprocal" in str(e).lower():
-                    print(
-                        f"   Warning: No reciprocal measurements detected in survey data; "
-                        f"falling back to legacy export. ({e})"
-                    )
-                    _fallback_to_legacy = True
-                    use_default_export = False
-                else:
-                    raise RuntimeError(
-                        f"Failed to rebuild the default reciprocal-pair export with ResIPy: {e}"
-                    ) from e
+                # Any failure of this path falls back, not only the one whose
+                # message happens to say "no reciprocal". ResIPy re-parses the
+                # *raw* file here with its own reader, so the ways it can fail
+                # are its reader's, not this package's, and it does not report
+                # them in a common vocabulary: fielddataline2.dat comes back as
+                # a bare KeyError('0') because that parser numbers electrodes
+                # from zero while its own labels start at one. Matching on the
+                # message turned a recoverable file into a lost survey - and
+                # the legacy export below handles it, which is the whole reason
+                # the fallback exists.
+                print(
+                    f"   ResIPy could not rebuild the reciprocal-pair export "
+                    f"({type(e).__name__}: {e}); using the full-dataset export "
+                    f"with source or estimated errors instead. Reciprocal-based "
+                    f"error estimates are not available for this survey."
+                )
+                _fallback_to_legacy = True
+                use_default_export = False
 
             if use_default_export:
                 required_cols = {"a", "b", "m", "n", "irecip", "recipMean", "resist"}
@@ -2245,8 +2272,8 @@ def export_for_inversion(
                         skipped_counts["non_finite_values"] += 1
                         continue
 
-                    R = abs(recip_mean)
-                    if R <= 1e-12:
+                    R = recip_mean
+                    if abs(R) <= 1e-12:
                         skipped_counts["missing_resistivity"] += 1
                         continue
 
@@ -2255,7 +2282,7 @@ def export_for_inversion(
                         skipped_counts["non_finite_values"] += 1
                         continue
 
-                    valid_rows.append((a, b, m, n, R, R, 1.0, float(err_val)))
+                    valid_rows.append((a, b, m, n, R, abs(R), 1.0, float(err_val)))
         if not use_default_export:
             for obs in ert.observations:
                 try:
@@ -2278,18 +2305,24 @@ def export_for_inversion(
                 R = None
                 rhoa = None
                 k = 1.0
-                if (
+                if app_res_is_apparent and obs.app_res is not None and np.isfinite(obs.app_res):
+                    # A source rhoa is authoritative even when U and I are also
+                    # present. R=U/I is resistance, not apparent resistivity.
+                    rhoa = float(obs.app_res)
+                    k = float(obs.K) if obs.K is not None and np.isfinite(obs.K) and obs.K != 0 else 1.0
+                    R = rhoa / k
+                elif (
                     obs.I is not None
                     and obs.dV is not None
                     and np.isfinite(obs.I)
                     and np.isfinite(obs.dV)
                     and obs.I != 0
                 ):
-                    R = abs(float(obs.dV) / float(obs.I))
+                    R = float(obs.dV) / float(obs.I)
                     rhoa = R
                     k = 1.0
                 elif obs.app_res is not None and np.isfinite(obs.app_res):
-                    if obs.K is not None and np.isfinite(obs.K) and float(obs.K) > 1:
+                    if obs.K is not None and np.isfinite(obs.K) and abs(float(obs.K)) > 1:
                         k = float(obs.K)
                         R = float(obs.app_res) / k
                         rhoa = float(obs.app_res)
@@ -2305,15 +2338,17 @@ def export_for_inversion(
                     skipped_counts["non_finite_values"] += 1
                     continue
 
-                R = abs(float(R))
-                rhoa = abs(float(rhoa))
-                k = abs(float(k)) if k != 0 else 1.0
-                if R <= 0 or rhoa <= 0:
+                # Preserve signed R and K so rhoa = R*K remains meaningful.
+                # Resistance-only rows temporarily carry R in rhoa until K is computed.
+                if R == 0 or (app_res_is_apparent and rhoa <= 0):
                     skipped_counts["missing_resistivity"] += 1
                     continue
 
-                rhoa = float(np.clip(rhoa, rho_min, rho_max))
-                R = float(max(R, rho_min))
+                # PyGIMLi validates rhoa on load. For resistance-only inputs
+                # this positive placeholder is replaced with signed R*K below.
+                if not app_res_is_apparent:
+                    rhoa = abs(rhoa)
+
 
                 src_err_val = np.nan
                 if obs.rel_err is not None and np.isfinite(obs.rel_err) and obs.rel_err > 0:
@@ -2455,7 +2490,7 @@ def export_for_inversion(
             if not np.any(keep_mask):
                 raise RuntimeError("All measurements removed after K filtering.")
 
-            if app_res_is_apparent and not has_valid_k:
+            if app_res_is_apparent and not use_default_export:
                 # Source observations already represent apparent resistivity.
                 # Avoid rhoa <- r * k double-application when K is newly computed.
                 print("   DEBUG: Preserving source rhoa and back-calculating r from computed K.")
@@ -2475,7 +2510,7 @@ def export_for_inversion(
                     out=np.full_like(rhoa_vals_preserved, np.nan),
                     where=np.isfinite(k_safe)
                 )
-                r_backcalc = np.where(np.isfinite(r_backcalc) & (r_backcalc > 0), r_backcalc, r_raw)
+                r_backcalc = np.where(np.isfinite(r_backcalc) & (r_backcalc != 0), r_backcalc, r_raw)
                 data['r'] = r_backcalc
                 data['rhoa'] = rhoa_vals_preserved
             else:
@@ -2541,7 +2576,7 @@ def export_for_inversion(
                     if not (np.isfinite(r_val) and np.isfinite(rhoa_val) and np.isfinite(k_val)):
                         skipped_rewrite += 1
                         continue
-                    if r_val <= 0 or rhoa_val <= 0:
+                    if r_val == 0 or rhoa_val <= 0:
                         skipped_rewrite += 1
                         continue
                     src_err_val = float(err_data_all[i]) if has_err_data else np.nan
@@ -2748,4 +2783,3 @@ def export_ert_dataset(
         raise ValueError(f"Unsupported ERT export format(s): {sorted(unsupported)}")
 
     return outputs
-

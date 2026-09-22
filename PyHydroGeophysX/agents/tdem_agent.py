@@ -116,7 +116,8 @@ and can interpret conductivity structures in terms of geological and hydrologica
         if validation_error:
             return validation_error
         
-        times, dobs, uncertainties = self._load_tdem_data(data_file)
+        times, dobs, uncertainties = self._load_tdem_data(
+            data_file, int(input_data.get('sounding', 0)))
         self._log_execution(f"Loaded {len(times)} time channels from {Path(data_file).name}")
         
         # Inversion parameters
@@ -354,36 +355,6 @@ and can interpret conductivity structures in terms of geological and hydrologica
         
         return self.results
     
-    def _load_tdem_data(self, data_file: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Load TDEM data from text file.
-        
-        Expected format: TIME(s) BZ(T) UNCERTAINTY(T)
-        Can also handle formats with only time and data columns.
-        """
-        data_path = Path(data_file)
-        if not data_path.exists():
-            raise FileNotFoundError(f"TDEM data file not found: {data_file}")
-        
-        # Load data, skipping header lines starting with #
-        data = np.loadtxt(data_file, comments='#')
-        
-        if data.ndim == 1:
-            raise ValueError("Data file must have at least 2 columns (time, data)")
-        
-        times = data[:, 0]
-        dobs = data[:, 1]
-        
-        # Handle uncertainty column
-        if data.shape[1] >= 3:
-            uncertainties = data[:, 2]
-        else:
-            # Estimate uncertainties as 5% of data
-            uncertainties = 0.05 * np.abs(dobs)
-            self._log_execution("No uncertainty column found, using 5% of data magnitude")
-        
-        return times, dobs, uncertainties
-    
     def _generate_inversion_plots(self, tdem_inv, result, times, dobs, uncertainties, 
                                    output_dir: str) -> str:
         """Generate inversion result plots."""
@@ -549,46 +520,104 @@ and can interpret conductivity structures in terms of geological and hydrologica
         
         return vis_file
     
-    def _load_tdem_data(self, data_file: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Load TDEM data from text file.
-        
-        Expects file format with columns: TIME(s) BZ(T) UNCERTAINTY(T)
-        Header line is skipped.
-        
-        Args:
-            data_file: Path to data file
-            
-        Returns:
-            Tuple of (times, dobs, uncertainties) arrays
+    #: Header names that mark a column as an uncertainty rather than a sounding.
+    UNCERTAINTY_NAMES = ('unc', 'err', 'std', 'noise', 'sigma')
+
+    def _load_tdem_data(self, data_file: str, sounding: int = 0
+                        ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Times, observations and uncertainties from a TDEM data file.
+
+        Handles the two shapes these files come in, which the previous version
+        handled neither of for the data shipped with this package:
+
+        - **Delimiter.** It read with ``np.loadtxt``'s whitespace default, so a
+          comma-separated file failed on its first row. The delimiter is now
+          taken from the header line.
+        - **What the third column is.** It assumed column 2 was an uncertainty.
+          In a multi-sounding file - ``time_s, dBdt_E603036_N6413476,
+          dBdt_E611529_N6405000, ...``, which is what
+          ``examples/data/EM/skytem_bhmar_tdem.csv`` is - every column after the
+          time is a separate sounding, and using the second one as the error on
+          the first weights the inversion by another site's data. A column is
+          treated as an uncertainty only when its name says so.
+
+        Parameters
+        ----------
+        data_file : str
+            Path to the data file. A header line is used when present.
+        sounding : int
+            Which sounding to invert, when the file holds several. Zero-based.
+
+        Returns
+        -------
+        tuple of ndarray
+            ``(times, dobs, uncertainties)``.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the file is absent.
+        ValueError
+            If it cannot be parsed, has fewer than two columns, or does not
+            contain the requested sounding.
         """
         data_path = Path(data_file)
-        
         if not data_path.exists():
             raise FileNotFoundError(f"TDEM data file not found: {data_file}")
-        
+
         try:
-            # Load data, skipping header
-            data = np.loadtxt(data_path, skiprows=1)
-            
-            if data.ndim == 1:
-                raise ValueError("Data file must have at least 3 columns")
-            
-            times = data[:, 0]
-            dobs = data[:, 1]
-            
-            # Uncertainties can be column 3 or estimated
-            if data.shape[1] >= 3:
-                uncertainties = data[:, 2]
-            else:
-                # Estimate uncertainties as 5% of data + noise floor
-                uncertainties = np.abs(dobs) * 0.05 + 1e-15
-                self._log_execution("No uncertainty column found, estimating 5% + noise floor")
-            
-            return times, dobs, uncertainties
-            
-        except Exception as e:
-            raise ValueError(f"Failed to load TDEM data from {data_file}: {e}")
+            first_line = data_path.read_text(encoding='utf-8',
+                                             errors='replace').splitlines()[0]
+        except (OSError, IndexError) as exc:
+            raise ValueError(f"Could not read {data_file}: {exc}")
+
+        delimiter = ',' if first_line.count(',') >= 1 else (
+            '\t' if first_line.count('\t') >= 1 else None)
+        header: List[str] = []
+        try:
+            float(first_line.split(delimiter)[0] if delimiter else first_line.split()[0])
+            skip = 0
+        except ValueError:
+            header = [name.strip().lower() for name in
+                      (first_line.split(delimiter) if delimiter else first_line.split())]
+            skip = 1
+
+        try:
+            data = np.loadtxt(data_path, delimiter=delimiter, skiprows=skip,
+                              comments='#')
+        except Exception as exc:  # noqa: BLE001 - reported with the file name
+            raise ValueError(f"Failed to load TDEM data from {data_file}: {exc}")
+
+        data = np.atleast_2d(data)
+        if data.shape[1] < 2:
+            raise ValueError(f"{data_file} has {data.shape[1]} column(s); TDEM data "
+                             f"needs at least a time and a measurement column.")
+
+        times = data[:, 0]
+        uncertainty_column = next(
+            (i for i, name in enumerate(header)
+             if i > 0 and any(mark in name for mark in self.UNCERTAINTY_NAMES)), None)
+        sounding_columns = [i for i in range(1, data.shape[1])
+                            if i != uncertainty_column]
+        if sounding >= len(sounding_columns):
+            raise ValueError(f"{data_file} holds {len(sounding_columns)} sounding(s); "
+                             f"sounding {sounding} was requested.")
+        column = sounding_columns[sounding]
+        dobs = data[:, column]
+        if len(sounding_columns) > 1:
+            name = header[column] if column < len(header) else f"column {column}"
+            self._log_execution(f"{data_file} holds {len(sounding_columns)} soundings; "
+                                f"inverting '{name}'. Set 'sounding' to choose another.")
+
+        if uncertainty_column is not None:
+            uncertainties = data[:, uncertainty_column]
+        else:
+            # 5% of the measurement plus a noise floor, so late-time gates whose
+            # signal has decayed to nothing do not dominate the misfit.
+            uncertainties = np.abs(dobs) * 0.05 + 1e-15
+            self._log_execution("No uncertainty column found, estimating 5% of the "
+                                "measurement plus a noise floor")
+        return times, dobs, uncertainties
     
     def _interpret_results(self, result, times: np.ndarray) -> str:
         """Generate LLM interpretation of TDEM results."""

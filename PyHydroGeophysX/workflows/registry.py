@@ -69,6 +69,7 @@ def get_workflow(workflow_id: str) -> WorkflowDescriptor:
 
 
 MODULE_DESCRIPTORS: Dict[str, ModuleDescriptor] = {
+    "one_click": ModuleDescriptor("one_click", "one_click", ()),
     "seismic": ModuleDescriptor(
         "seismic", "seismic_processing", ("seismic.srt_inversion",),
         aliases=("seismic_processing",),

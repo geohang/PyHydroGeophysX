@@ -9,6 +9,14 @@ import sys
 from datetime import datetime
 from typing import Any, Dict, Optional
 
+from ._chi2 import chi2_history
+from ._document import bullets, control_block, facts, numbered, renumber, table
+from . import _figstyle as figstyle
+from ._figures import (FIGURE_CATALOG, llm_figure_topics,
+                       missing_figure_warnings, plan_figures)
+from ._method import SCHEME_DESCRIPTION, SCHEME_LABEL, resolve_scheme
+from ._uncertainty import water_content_reliability
+
 import numpy as np
 import pandas as pd
 
@@ -171,7 +179,13 @@ reports suitable for scientists and engineers. You should integrate climate insi
         
         if 'inversion_results' in workflow_data:
             inv = workflow_data['inversion_results']
-            summary += f"- Inversion converged in {inv.get('iterations', 'N/A')} iterations (chi2: {inv.get('chi2', 'N/A'):.3f})\n"
+            summary += f"- Inversion completed {inv.get('iterations', 'N/A')} iterations (chi2: {inv.get('chi2', 'N/A')})\n"
+            evaluation = workflow_data.get('evaluation_results') or {}
+            summary += f"- Quality assessment: {evaluation.get('status', 'not evaluated')} — {evaluation.get('summary', 'Review convergence and data fit.')}\n"
+            processing = inv.get('processing') or {}
+            if processing:
+                summary += (f"- Measurements supplied to inversion: {processing.get('inverted_measurements', 'N/A')} "
+                            f"of {processing.get('input_measurements', 'N/A')} loaded; see processing log for filters.\n")
         
         if 'water_content' in workflow_data:
             wc = workflow_data['water_content']
@@ -221,7 +235,8 @@ reports suitable for scientists and engineers. You should integrate climate insi
 ### ERT Inversion
 - Final chi2: {inv.get('chi2', 'N/A')}
 - Iterations: {inv.get('iterations', 'N/A')}
-- Convergence: {'Success' if (inv.get('status') == 'success' or (isinstance(inv.get('chi2'), (int, float)) and inv.get('chi2') is not None and inv.get('chi2') < 2.0)) else 'Failed'}
+- Quality assessment: {(workflow_data.get('evaluation_results') or {}).get('status', 'not evaluated')}
+- Assessment details: {(workflow_data.get('evaluation_results') or {}).get('summary', 'A completed solver run alone does not establish convergence or model validity.')}
 
 **Interpretation:** {inv.get('interpretation', 'N/A')}
 """
@@ -580,8 +595,9 @@ including detection of post-rainfall infiltration and high-PET drying periods.
             # Ensure minimum spread for log scale
             if log_scale:
                 cMin = max(cMin, 1e-3)  # Prevent too-small values
-                if cMax / cMin < 10:  # Ensure at least one order of magnitude
-                    cMax = cMin * 100
+                if cMax <= cMin:  # Only pad a constant model; preserve real contrast.
+                    cMin /= 1.05
+                    cMax *= 1.05
             else:
                 # For linear scale, round to nice values
                 spread = cMax - cMin
@@ -805,18 +821,21 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                             inv['resistivity_model'],
                             ax=ax,
                             fig=fig,
-                            cMap='jet',
+                            cMap=style.cmap_for('resistivity'),
                             cMin=cMin_res,
                             cMax=cMax_res,
                             logScale=True,
                             label=r'Resistivity ($\Omega$ m)',
                             pad=0.3,
-                            orientation='vertical',
+                            orientation=style.colorbar_orientation,
                             coverage=coverage_mask
                         )
                         
                         ax.set_xlabel('Distance (m)', fontsize=14, fontfamily='Arial')
                         ax.set_ylabel('Elevation (m)', fontsize=14, fontfamily='Arial')
+                        # pg.show may format negative elevations as positive
+                        # depths. Keep signed coordinates for an elevation axis.
+                        ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
                         ax.set_title('ERT Inversion Results', fontsize=16, fontfamily='Arial')
 
                         applied, shown_span, min_span = _apply_vertical_limits(
@@ -873,7 +892,7 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                             cMin=cMin_wc,
                             cMax=cMax_wc,
                             pad=0.3,
-                            orientation='vertical',
+                            orientation=style.colorbar_orientation,
                             coverage=coverage_mask
                         )
                         
@@ -924,7 +943,7 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                                 cMin=cMin_std,
                                 cMax=cMax_std,
                                 pad=0.3,
-                                orientation='vertical',
+                                orientation=style.colorbar_orientation,
                                 coverage=coverage_mask
                             )
                             
@@ -957,9 +976,9 @@ including detection of post-rainfall infiltration and high-PET drying periods.
             prompt = f"""Based on the following workflow results, write a cohesive narrative 
 summary (3-4 paragraphs) that:
 1. Describes the overall workflow and objectives
-2. Integrates climate data insights with geophysical results
-3. Explains how climate features (rainfall, drying periods) relate to resistivity changes
-4. Summarizes the key findings with climate context
+2. Discusses only methods and data actually present in the supplied results
+3. Integrates climate context only if climate observations were included
+4. Summarizes findings without inventing geological causes or computed uncertainties
 5. Highlights any notable patterns, anomalies, or data quality caveats
 6. Provides recommendations for next steps
 
@@ -1006,38 +1025,6 @@ Generated by PyHydroGeophysX Multi-Agent System
 """
         
         return report
-    
-    def _save_html_report(self, markdown_report: str, output_dir: str, 
-                         filename: str = 'workflow_report') -> Optional[str]:
-        """Convert markdown to HTML if possible."""
-        try:
-            import markdown
-            html_content = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Geophysical Workflow Report</title>
-    <style>
-        body {{ font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }}
-        h1 {{ color: #2c3e50; }}
-        h2 {{ color: #34495e; border-bottom: 2px solid #3498db; }}
-        h3 {{ color: #7f8c8d; }}
-        img {{ max-width: 100%; height: auto; }}
-        code {{ background-color: #f4f4f4; padding: 2px 5px; }}
-    </style>
-</head>
-<body>
-{markdown.markdown(markdown_report)}
-</body>
-</html>
-"""
-            html_file = os.path.join(output_dir, f'{filename}.html')
-            with open(html_file, 'w', encoding='utf-8') as f:
-                f.write(html_content)
-            return html_file
-        except Exception:
-            return None
     
     def _save_pdf_report(self, markdown_report: str, output_dir: str, 
                         visualization_files: Dict[str, str],
@@ -1177,7 +1164,8 @@ Generated by PyHydroGeophysX Multi-Agent System
                 - comparison_data: DataFrame with climate-resistivity comparison
                 - output_dir: Directory for report output
                 - inversion_mode: 'time-lapse'
-                - time_lapse_method: 'difference', 'joint', or 'ratio'
+                - time_lapse_method: what was requested; the scheme reported is
+                  the one that runs (see PyHydroGeophysX.agents._method)
                 
         Returns:
             Dictionary containing report information and file paths
@@ -1190,31 +1178,41 @@ Generated by PyHydroGeophysX Multi-Agent System
             site_info = input_data.get('site_info', {})
             comparison_df = input_data.get('comparison_data')
             output_dir = input_data.get('output_dir', 'results/Time-lapse_agent')
-            time_lapse_method = input_data.get('time_lapse_method', 'difference')
+            time_lapse_method = input_data.get('time_lapse_method')
             
             os.makedirs(output_dir, exist_ok=True)
             
             # Generate report sections with error handling
             self._log_execution("Generating time-lapse report sections")
             
+            workflow_config = input_data.get('workflow_config') or {}
+            evaluation_results = (input_data.get('evaluation_results')
+                                  or inversion_results.get('evaluation_results'))
+            key_findings = self._timelapse_key_findings(
+                inversion_results, climate_data, evaluation_results, workflow_config)
+
             # 1. Time-Lapse Executive Summary
             try:
                 tl_exec_summary = self._generate_timelapse_executive_summary(
-                    inversion_results, site_info, time_lapse_method
+                    inversion_results, site_info, time_lapse_method,
+                    workflow_config, key_findings, evaluation_results
                 )
             except Exception as e:
                 self._log_execution(f"Error generating executive summary: {e}", level='ERROR')
                 raise Exception(f"Failed to generate executive summary: {str(e)}")
-            
-            # 2. Time-Lapse Inversion Results
+
+            # 2. Method, then the inversion results it produced
             try:
+                tl_method_section = self._generate_timelapse_method_section(
+                    inversion_results, workflow_config, site_info
+                )
                 tl_inversion_section = self._generate_timelapse_inversion_section(
-                    inversion_results, time_lapse_method
+                    inversion_results, time_lapse_method, site_info
                 )
             except Exception as e:
                 self._log_execution(f"Error generating inversion section: {e}", level='ERROR')
                 raise Exception(f"Failed to generate inversion section: {str(e)}")
-            
+
             # 3. Climate Data Section (if available)
             try:
                 tl_climate_section = self._generate_timelapse_climate_section(
@@ -1233,14 +1231,29 @@ Generated by PyHydroGeophysX Multi-Agent System
                 self._log_execution(f"Error generating correlation section: {e}", level='ERROR')
                 tl_correlation_section = "\n## Climate-Resistivity Correlation\n\n*Correlation analysis unavailable*\n"
             
-            # 5. Time-Lapse Visualizations
+            # 5. Time-Lapse Visualizations.
+            #
+            # The request is read for its figure preferences *before* anything
+            # is drawn. Asking afterwards was useless: "make the figures bigger"
+            # would have been recorded into a configuration the generators had
+            # already finished reading.
+            figure_request = self._read_figure_request(workflow_config)
             try:
                 tl_vis_files = self._generate_timelapse_visualizations(
-                    inversion_results, comparison_df, climate_data, output_dir
+                    inversion_results, comparison_df, climate_data, output_dir,
+                    site_info, workflow_config
                 )
             except Exception as e:
                 self._log_execution(f"Error generating visualizations: {e}", level='ERROR')
                 tl_vis_files = {}
+
+            # Which of them this request wanted to see, and what it wanted that
+            # the run cannot show.
+            figure_plan = self._figure_plan(tl_vis_files, workflow_config,
+                                            figure_request)
+            self._figure_warnings = missing_figure_warnings(figure_plan.get('missing') or [])
+            for warning in self._figure_warnings:
+                self._log_execution(warning, level='WARNING')
             
             # 6. Generate LLM-enhanced interpretation
             tl_narrative = None
@@ -1253,13 +1266,19 @@ Generated by PyHydroGeophysX Multi-Agent System
             
             # Compile full time-lapse report
             full_report = self._compile_timelapse_report(
+                self._timelapse_front_matter(
+                    inversion_results, site_info, workflow_config),
                 tl_exec_summary,
-                tl_narrative,
+                tl_method_section,
                 tl_inversion_section,
+                self._generate_timelapse_water_content_section(
+                    inversion_results, workflow_config, site_info),
                 tl_climate_section,
                 tl_correlation_section,
-                tl_vis_files,
-                site_info
+                self._figures_section(tl_vis_files, figure_plan),
+                tl_narrative,
+                self._timelapse_recommendations(
+                    climate_data, inversion_results, workflow_config),
             )
             
             # Save report to file
@@ -1286,6 +1305,10 @@ Generated by PyHydroGeophysX Multi-Agent System
                 'pdf_file': pdf_file,
                 'visualization_files': tl_vis_files,
                 'executive_summary': tl_exec_summary,
+                # A figure the request asked for that the run cannot produce is
+                # reported, not left as an absence the reader has to notice.
+                'figure_plan': figure_plan,
+                'warnings': list(getattr(self, '_figure_warnings', []) or []),
                 'output_dir': output_dir
             }
             
@@ -1296,134 +1319,333 @@ Generated by PyHydroGeophysX Multi-Agent System
                 'error': str(e)
             }
     
+    #: Placed under the document-control block. A reader who opens this at the
+    #: heading and stops reading should still know it is machine-written.
+    NOTICE = (
+        "This report was produced by an automated multi-agent workflow. The "
+        "numerical results are computed; the interpretive text is written by a "
+        "language model and has not been reviewed by a geophysicist. Both must "
+        "be checked against field observations before they are relied upon. "
+        "The limitations stated at the end of this document qualify every "
+        "number in it."
+    )
+
+    def _timelapse_front_matter(self, inversion_results: Dict, site_info: Dict,
+                                config: Optional[Dict] = None) -> str:
+        """Title and document-control block.
+
+        The equivalent of a deliverable's cover page: what this is, which site
+        and surveys it covers, what produced it and when. It exists so the
+        provenance of a file that will be forwarded, printed and filed travels
+        with it, rather than living only in the run directory it came out of.
+        """
+        config = config or {}
+        scheme_note = resolve_scheme(config.get('time_lapse_method'))[1]
+        n_steps = inversion_results.get('n_timesteps')
+        pairs = [
+            ('Site', site_info.get('name')),
+            ('Location', site_info.get('location')),
+            ('Coordinates', site_info.get('coordinates')),
+            ('Survey period', site_info.get('study_period')),
+            ('Surveys inverted', n_steps),
+            ('Inversion scheme', SCHEME_LABEL),
+            ('Report date', datetime.now().strftime('%Y-%m-%d %H:%M')),
+            ('Prepared by', 'PyHydroGeophysX multi-agent workflow'),
+            ('Status', 'Automated output - technical review required'),
+        ]
+        block = control_block(
+            'Time-Lapse Electrical Resistivity Tomography: Monitoring Report',
+            pairs, notice=self.NOTICE)
+        if scheme_note:
+            block += f"\n{scheme_note}\n"
+        return block
+
     def _generate_timelapse_executive_summary(self, inversion_results: Dict,
-                                             site_info: Dict, method: str) -> str:
-        """Generate executive summary for time-lapse report."""
-        summary = f"""# Time-Lapse ERT Monitoring Report
+                                             site_info: Dict, method: str,
+                                             config: Optional[Dict] = None,
+                                             key_findings: str = '',
+                                             evaluation_results: Optional[Dict] = None
+                                             ) -> str:
+        """The section a reader who reads nothing else will read.
 
-**Report Generation Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        It answers three questions in order - what was asked for, what the run
+        found, and how far the findings can be trusted - and every figure in it
+        is repeated with its full working further down. The configuration
+        details that used to occupy this space moved to the method section;
+        knowing the temporal regularization was 10.0 is not a summary of
+        anything.
+        """
+        config = config or {}
+        request = str(config.get('user_request') or '').strip()
+        summary = "## Executive Summary\n\n### Scope\n\n"
+        if request:
+            summary += (f"This report responds to the request: “{request}”\n\n")
+        n_steps = inversion_results.get('n_timesteps')
+        period = site_info.get('study_period')
+        scope = (f"{n_steps} electrical resistivity surveys" if n_steps
+                 else "Repeat electrical resistivity surveys")
+        if period and period not in ('N/A', 'N/A to N/A'):
+            scope += f" covering the period {period}"
+        summary += (f"{scope} were inverted together and the resulting models "
+                    f"compared to the first survey in the series.\n\n")
 
-## Executive Summary
+        if key_findings:
+            summary += "### Principal Findings\n\n" + key_findings.rstrip() + "\n\n"
 
-### Site Information
-- **Location:** {site_info.get('name', 'N/A')}, {site_info.get('location', 'N/A')}
-- **Coordinates:** {site_info.get('coordinates', 'N/A')}
-- **Elevation:** {site_info.get('elevation', 'N/A')}
-- **Study Period:** {site_info.get('study_period', 'N/A')}
-
-### Monitoring Objective
-{site_info.get('description', 'Time-lapse ERT monitoring of subsurface processes.')}
-
-### Method and Configuration
-- **Time-Lapse Method:** {method.title()} Inversion
-- **Number of Time Steps:** {inversion_results.get('n_timesteps', 'N/A')}
-- **Temporal Regularization:** {inversion_results.get('temporal_regularization', 'N/A')}
-- **Inversion Quality (χ²):** {self._format_chi2(inversion_results.get('chi2_values'))}
-
-"""
+        summary += "### Confidence in These Findings\n\n"
+        summary += self._timelapse_confidence_statement(
+            inversion_results, evaluation_results, config,
+            # The findings already carry the water-content caveat verbatim;
+            # repeating it three paragraphs later reads as two separate
+            # objections rather than one.
+            include_water=not key_findings) + "\n\n"
         return summary
-    
-    def _generate_timelapse_inversion_section(self, inversion_results: Dict, method: str) -> str:
-        """Generate time-lapse inversion results section."""
-        section = """## Time-Lapse Inversion Results
 
-### Methodology
-"""
-        
-        if method == 'difference':
-            section += """
-The **difference inversion** method calculates absolute resistivity changes between 
-each time step and the baseline survey. This approach is optimal for detecting 
-localized changes and quantifying moisture infiltration or drying processes.
-"""
-        elif method == 'joint':
-            section += """
-The **joint inversion** method simultaneously inverts all time steps with temporal 
-coupling constraints. This approach provides enhanced structural consistency across 
-time steps and is ideal for gradual, continuous processes like seasonal variations.
-"""
-        elif method == 'ratio':
-            section += """
-The **ratio inversion** method calculates proportional resistivity changes, making 
-it particularly suited for detecting relative changes in highly heterogeneous media 
-or when monitoring processes with variable baseline conditions.
-"""
-        
-        # Safely format parameters (handle potential lists or None values)
-        n_timesteps = inversion_results.get('n_timesteps', 'N/A')
-        temp_reg = inversion_results.get('temporal_regularization', 'N/A')
-        lambda_val = inversion_results.get('lambda', 'N/A')
-        max_iter = inversion_results.get('max_iterations', 'N/A')
-        method_val = inversion_results.get('method', 'N/A')
-        
-        # Format method safely
-        if isinstance(method_val, str) and method_val != 'N/A':
-            method_str = method_val.upper()
-        else:
-            method_str = str(method_val) if method_val else 'N/A'
-        
-        section += f"""
+    def _timelapse_confidence_statement(self, inversion_results: Dict,
+                                        evaluation_results: Optional[Dict],
+                                        config: Optional[Dict],
+                                        include_water: bool = True) -> str:
+        """One paragraph on whether the findings can carry weight.
 
-### Inversion Parameters
-- **Number of Time Steps:** {n_timesteps}
-- **Temporal Regularization (α):** {temp_reg}
-- **Spatial Regularization (λ):** {lambda_val}
-- **Maximum Iterations:** {max_iter}
-- **Solver Method:** {method_str}
+        Written from the run's own diagnostics rather than a stock sentence,
+        because the useful case is the one where the answer is no: a report
+        whose confidence statement never says "do not rely on this" is not
+        reporting confidence.
+        """
+        evaluation = evaluation_results or {}
+        status = evaluation.get('status')
+        score = evaluation.get('quality_score')
+        history = chi2_history(inversion_results.get('chi2_values'))
+        parts = []
+        if history:
+            final = history[-1]
+            verdict = ("within the range normally accepted for a converged inversion"
+                       if 0.8 <= final <= 1.5 else
+                       "outside the range normally accepted for a converged inversion")
+            parts.append(f"The inversion reached a final chi-squared of {final:.3f}, "
+                         f"{verdict}.")
+        if score is not None:
+            outcome = ('passes' if status == 'success' else 'does not pass')
+            parts.append(f"The automated quality assessment scored the result "
+                         f"{float(score):.1f} out of 100, which {outcome} the "
+                         f"threshold configured for this workflow.")
+        reliability = (water_content_reliability(inversion_results, config or {})
+                       if include_water else None)
+        if reliability:
+            parts.append(reliability['sentence'])
+        if not parts:
+            parts.append("The run did not report the diagnostics needed to judge "
+                         "how far these findings can be trusted.")
+        parts.append("A good data fit constrains the model; it does not make it "
+                     "unique, and it says nothing about whether the cause "
+                     "attributed to a change is the right one.")
+        return " ".join(parts)
 
-### Convergence and Data Fit
-"""
-        
-        # Add chi-squared information
-        chi2_values = inversion_results.get('chi2_values')
-        if chi2_values is not None:
-            try:
-                if isinstance(chi2_values, (list, tuple)):
-                    section += f"\n**Chi-Squared Values by Time Step:**\n"
-                    for i, chi2 in enumerate(chi2_values, 1):
-                        if isinstance(chi2, (int, float)):
-                            section += f"- Time Step {i}: χ² = {chi2:.3f}\n"
-                        else:
-                            section += f"- Time Step {i}: χ² = {chi2}\n"
-                elif isinstance(chi2_values, (int, float)):
-                    section += f"\n**Overall Chi-Squared:** {chi2_values:.3f}\n"
-                else:
-                    section += f"\n**Overall Chi-Squared:** {chi2_values}\n"
-            except Exception as e:
-                section += f"\n**Overall Chi-Squared:** {str(chi2_values)}\n"
-        
-        # Add temporal statistics
-        final_models = inversion_results.get('final_models')
-        if final_models is not None:
-            try:
-                import numpy as np
-                baseline = final_models[:, 0]
-                
-                section += f"\n### Temporal Resistivity Statistics\n\n"
-                section += f"**Baseline Resistivity (Time Step 1):**\n"
-                section += f"- Mean: {np.mean(baseline):.2f} Ω·m\n"
-                section += f"- Range: [{np.min(baseline):.2f}, {np.max(baseline):.2f}] Ω·m\n"
-                section += f"- Standard Deviation: {np.std(baseline):.2f} Ω·m\n"
-                
-                section += f"\n**Resistivity Changes (Relative to Baseline):**\n\n"
-                
-                for i in range(1, min(final_models.shape[1], 6)):  # Show up to 5 time steps
-                    change = final_models[:, i] - baseline
-                    mean_change = np.mean(change)
-                    max_decrease = np.min(change)
-                    max_increase = np.max(change)
-                    
-                    section += f"**Time Step {i+1}:**\n"
-                    section += f"- Mean Change: {mean_change:+.2f} Ω·m\n"
-                    section += f"- Maximum Decrease: {max_decrease:.2f} Ω·m (moisture increase)\n"
-                    section += f"- Maximum Increase: {max_increase:.2f} Ω·m (drying/freezing)\n\n"
-            except Exception as e:
-                self._log_execution(f"Could not generate temporal statistics: {e}")
-                section += f"\n### Temporal Resistivity Statistics\n\n"
-                section += f"*Statistics unavailable - see logs for details*\n\n"
-        
+
+    def _survey_dates(self, site_info: Optional[Dict], count: int) -> list:
+        """Acquisition date per survey, or empty strings when unknown.
+
+        Labelling rows "Time Step 4" makes a reader cross-reference the file
+        list to find out when that was; the dates are already read off the
+        file names for the study period, so they are carried through here.
+        """
+        dates = list((site_info or {}).get('survey_dates') or [])
+        if len(dates) != count:
+            return [''] * count
+        return [str(d) for d in dates]
+
+    @staticmethod
+    def _temperature_correction_note(report: Optional[Dict]) -> str:
+        """State what temperature the sections are reported at.
+
+        Always stated, in every time-lapse report. Bulk resistivity falls about
+        2 % per degC, so a seasonal temperature swing produces the same size of
+        change as the moisture the survey is run to see - and a corrected section
+        is indistinguishable from an uncorrected one on the page. A reader who is
+        not told cannot know which they are looking at.
+        """
+        report = report or {}
+        if report.get('applied'):
+            reference = report.get('reference_temperature_C')
+            law = 'Hayley et al. (2007)' if report.get('model') == 'hayley' else \
+                'the linear (Campbell/Arps) law'
+            text = (
+                f"Every survey was corrected to a reference temperature of "
+                f"{reference:g} °C using {law}, from "
+                f"{report.get('temperature_source', 'the supplied temperatures')}. "
+                f"The resistivities reported below are therefore at "
+                f"{reference:g} °C, and the change between surveys is free of the "
+                f"seasonal warming and cooling of the ground.")
+            change = report.get('max_abs_change_percent')
+            if isinstance(change, (int, float)):
+                text += (f" The correction moved the models by up to "
+                         f"{change:.1f} %; changes smaller than that would have "
+                         f"been temperature rather than moisture.")
+            return text + "\n"
+        if report.get('requested'):
+            return (
+                "A temperature correction was requested but could not be applied "
+                f"({report.get('error', 'reason not recorded')}). The sections "
+                "below are raw inverted resistivity, so part of any change "
+                "between surveys is the ground warming or cooling rather than a "
+                "change in moisture.\n")
+        return (
+            "No temperature correction was applied. The sections below are "
+            "inverted resistivity at the in-situ ground temperature, so part of "
+            "any change between surveys - roughly 2 % per °C - is seasonal "
+            "warming and cooling rather than a change in moisture. Over a few "
+            "days this is negligible; across seasons it is not.\n")
+
+    def _generate_timelapse_method_section(self, inversion_results: Dict,
+                                           config: Optional[Dict] = None,
+                                           site_info: Optional[Dict] = None) -> str:
+        """What was done, in enough detail for someone to repeat it.
+
+        The scheme is named from :mod:`PyHydroGeophysX.agents._method` rather
+        than from ``time_lapse_method`` in the configuration. That field is
+        written to the log and never reaches the solver, so reporting it
+        described a difference inversion for every run - while the solver was
+        inverting all surveys simultaneously under a temporal constraint.
+        """
+        config = config or {}
+        section = "## Method\n\n### Inversion Approach\n\n"
+        section += SCHEME_DESCRIPTION + "\n\n"
+        note = resolve_scheme(config.get('time_lapse_method'))[1]
+        if note:
+            section += note + "\n\n"
+
+        solver = inversion_results.get('method')
+        solver_label = str(solver).upper() if solver else None
+        section += "### Inversion Parameters\n\n"
+        section += facts([
+            ('Surveys inverted', inversion_results.get('n_timesteps')),
+            ('Spatial constraint, lambda', inversion_results.get('lambda')),
+            ('Temporal constraint, alpha',
+             inversion_results.get('temporal_regularization')),
+            ('Maximum iterations', inversion_results.get('max_iterations')),
+            ('Linear solver', solver_label),
+        ], label='Parameter', value='Value')
+
+        section += "\n### Survey Inventory\n\n"
+        count = int(inversion_results.get('n_timesteps') or 0)
+        dates = self._survey_dates(site_info, count)
+        # The gap since the previous survey, per row. A monitoring series reads
+        # the same whether it was sampled hourly or monthly until something says
+        # which, and that is the first thing a reader needs to judge the changes.
+        timing = inversion_results.get('survey_timing') or {}
+        gaps = list(timing.get('interval_text') or [])
+        rows = [[i + 1, dates[i] if i < len(dates) and dates[i] else None,
+                 gaps[i - 1] if 0 < i <= len(gaps) else None,
+                 'Baseline' if i == 0 else 'Repeat']
+                for i in range(count)]
+        inventory = table(['Survey', 'Acquired', 'Since previous', 'Role'], rows,
+                          align=['right', 'left', 'left', 'left'])
+        section += inventory or "The run did not report how many surveys it inverted.\n"
+        if timing.get('summary'):
+            section += f"\n{timing['summary']}\n"
+        elif count > 1:
+            section += ("\nThe survey files carried no acquisition time, so the "
+                        "steps are numbered rather than dated and the interval "
+                        "between them is not known to the analysis.\n")
+
+        section += "\n### Temperature Correction\n\n"
+        section += self._temperature_correction_note(
+            inversion_results.get('temperature_correction'))
+
+        petro = config.get('petrophysical_params')
+        if (inversion_results.get('time_lapse_water_content')
+                or config.get('convert_to_water_content')):
+            section += "\n### Petrophysical Conversion\n\n"
+            section += (
+                "Resistivity was converted to volumetric water content cell by "
+                "cell through a petrophysical relationship, with the parameters "
+                "of that relationship drawn repeatedly from their distributions "
+                "so that the spread of the resulting water content reports the "
+                "uncertainty of the conversion. ")
+            section += (
+                "Site-specific petrophysical parameters were supplied and used.\n"
+                if petro else
+                "No site-specific petrophysical parameters were supplied, so "
+                "generated defaults were used. The conversion is therefore "
+                "indicative rather than calibrated, and the water-content "
+                "uncertainty reported below is dominated by that choice.\n")
         return section
-    
+
+    def _generate_timelapse_inversion_section(self, inversion_results: Dict,
+                                              method: str,
+                                              site_info: Optional[Dict] = None) -> str:
+        """The recovered models and how well they fit the data."""
+        section = "## Inversion Results\n\n### Convergence and Data Fit\n\n"
+
+        # One row per *iteration*, not per time step, and a time-lapse row is
+        # [chi2, phi_m, phi_t]. Printing the rows as "Time Step i" claimed nine
+        # time steps for a five-survey series and put the regularization terms
+        # on the chi-squared scale.
+        history = chi2_history(inversion_results.get('chi2_values'))
+        if history:
+            rows = [[i, f"{value:.3f}"] for i, value in enumerate(history, 1)]
+            section += table(['Iteration', 'Chi-squared'], rows,
+                             align=['right', 'right'])
+            start, final = history[0], history[-1]
+            section += (
+                f"\nThe data misfit fell from {start:.3f} at the first iteration "
+                f"to {final:.3f} after {len(history)}. A chi-squared of 1 means "
+                f"the model reproduces the data to within their assigned errors; "
+                f"a value above 1 means it does not, and a value below 1 means "
+                f"the errors were set too generously and the model is fitting "
+                f"noise.\n")
+        else:
+            section += "The solver did not report a chi-squared history.\n"
+
+        final_models = inversion_results.get('final_models')
+        if final_models is None:
+            return section
+        try:
+            baseline = final_models[:, 0]
+            dates = self._survey_dates(site_info, final_models.shape[1])
+            baseline_date = dates[0] if dates and dates[0] else None
+
+            section += "\n### Baseline Resistivity Distribution\n\n"
+            section += facts([
+                ('Survey', f"1{f' ({baseline_date})' if baseline_date else ''}"),
+                ('Mean', f"{np.mean(baseline):.1f} ohm-m"),
+                ('Median', f"{np.median(baseline):.1f} ohm-m"),
+                ('Minimum', f"{np.min(baseline):.1f} ohm-m"),
+                ('Maximum', f"{np.max(baseline):.1f} ohm-m"),
+                ('Standard deviation', f"{np.std(baseline):.1f} ohm-m"),
+            ], label='Statistic', value='Value')
+
+            section += "\n### Resistivity Change Relative to the Baseline\n\n"
+            rows = []
+            for i in range(1, final_models.shape[1]):
+                change = final_models[:, i] - baseline
+                # No cause attached. A resistivity decrease is consistent with
+                # wetting, and also with warming, a lithological contrast or
+                # inversion sensitivity; labelling every one "moisture
+                # increase" asserted exactly what the report's own
+                # interpretation is careful to say ERT cannot settle.
+                rows.append([
+                    i + 1,
+                    dates[i] if i < len(dates) and dates[i] else None,
+                    f"{np.mean(change):+.2f}",
+                    f"{np.min(change):.2f}",
+                    f"+{np.max(change):.2f}",
+                ])
+            section += table(
+                ['Survey', 'Acquired', 'Mean change (ohm-m)',
+                 'Largest decrease (ohm-m)', 'Largest increase (ohm-m)'],
+                rows, align=['right', 'left', 'right', 'right', 'right'])
+            section += (
+                "\nThe mean change is taken over every cell of the model, so it "
+                "is small whenever wetting in one part of the section offsets "
+                "drying in another; the two extreme columns are what show "
+                "whether anything localised happened.\n")
+        except Exception as e:
+            self._log_execution(f"Could not generate temporal statistics: {e}")
+            section += ("\n### Resistivity Change Relative to the Baseline\n\n"
+                        "Statistics unavailable - see the run log.\n")
+        return section
+
     def _generate_timelapse_climate_section(self, climate_data: Dict, site_info: Dict) -> str:
         """Generate climate data section for time-lapse report."""
         section = """## Climate Data Integration
@@ -1433,8 +1655,11 @@ or when monitoring processes with variable baseline conditions.
 """
         
         if not climate_data:
-            section += "No climate data was integrated in this time-lapse analysis.\n"
-            return section
+            # Nothing to report and nothing was asked for: a heading whose
+            # only content is "there is none" invites the reader to wonder
+            # what went wrong. The Key Findings say plainly that none were
+            # supplied, which is where a reader looks.
+            return ""
         
         metadata = climate_data.get('metadata', {})
         
@@ -1511,8 +1736,7 @@ meteorological variables to understand subsurface moisture dynamics.
 """
         
         if comparison_df is None or comparison_df.empty:
-            section += "Correlation analysis not available - climate data or comparison data not provided.\n"
-            return section
+            return ""
         
         import numpy as np
         
@@ -1585,19 +1809,113 @@ Correlation between mean resistivity changes and climate variables:
         
         return section
     
+    def _generate_timelapse_water_content_section(self, inversion_results: Dict,
+                                                  config: Optional[Dict] = None,
+                                                  site_info: Optional[Dict] = None) -> str:
+        """The water-content estimate, when the run produced one.
+
+        A request that asked for water content used to get one sentence in the
+        Key Findings and nothing else: no per-step numbers, no figure, while the
+        arrays sat on disk under ``petrophysics/``. The product was computed and
+        then left out of the document that reports the run.
+
+        Returns an empty string when no conversion ran, so the heading only
+        appears where there is something under it.
+        """
+        per_step = (inversion_results or {}).get('time_lapse_water_content') or []
+        if not per_step:
+            return ""
+
+        section = "## Water Content\n\n"
+        reliability = water_content_reliability(inversion_results, config or {})
+        layering = (per_step[0] or {}).get('layering')
+        if layering:
+            section += f"{layering}\n\n"
+        if reliability:
+            section += f"{reliability['sentence']}\n\n"
+
+        # Surveys are numbered as they are everywhere else in the report, and
+        # dated where the dates are known. The old labels ran "Baseline, Time
+        # Step 1, Time Step 2 ..." for surveys 1 to 5, so "Time Step 4" in this
+        # table and "Time Step 4" in the resistivity table were different
+        # surveys.
+        dates = self._survey_dates(site_info, len(per_step))
+        rows = []
+        for index, step in enumerate(per_step):
+            mean = np.asarray(step.get('water_content_mean'), dtype=float).ravel()
+            std = np.asarray(step.get('water_content_std'), dtype=float).ravel()
+            if mean.size == 0:
+                continue
+            low, high = np.nanpercentile(mean, [10, 90])
+            typical = float(np.nanmean(std)) if std.size else float('nan')
+            rows.append([
+                index + 1,
+                dates[index] if index < len(dates) and dates[index] else None,
+                'Baseline' if index == 0 else 'Repeat',
+                f"{np.nanmean(mean):.3f}",
+                f"{low:.3f} - {high:.3f}",
+                f"±{typical:.3f}",
+            ])
+        section += table(
+            ['Survey', 'Acquired', 'Role', 'Mean', '10th-90th percentile',
+             'Mean uncertainty'],
+            rows, align=['right', 'left', 'left', 'right', 'right', 'right'])
+
+        # Change relative to the baseline, which is what a monitoring survey is
+        # for - but only where it exceeds the error bar it is measured against.
+        baseline = np.asarray(per_step[0].get('water_content_mean'), dtype=float).ravel()
+        if len(per_step) > 1 and baseline.size:
+            section += "\n**Change from baseline (mean water content)**\n\n"
+            typical = float(np.nanmean(np.asarray(
+                per_step[0].get('water_content_std'), dtype=float).ravel()))
+            change_rows = []
+            for index, step in enumerate(per_step[1:], start=1):
+                values = np.asarray(step.get('water_content_mean'), dtype=float).ravel()
+                if values.size != baseline.size:
+                    continue
+                change = float(np.nanmean(values - baseline))
+                verdict = ("not assessed" if not np.isfinite(typical) or typical <= 0
+                           else "below the uncertainty on a single value"
+                           if abs(change) < typical else
+                           "exceeds the uncertainty on a single value")
+                change_rows.append([
+                    index + 1,
+                    dates[index] if index < len(dates) and dates[index] else None,
+                    f"{change:+.4f}", verdict])
+            section += table(
+                ['Survey', 'Acquired', 'Change from baseline', 'Significance'],
+                change_rows, align=['right', 'left', 'right', 'left'])
+
+        section += ("\nWater content is derived from the resistivity models through a "
+                    "petrophysical relationship, so it carries the uncertainty of that "
+                    "relationship in addition to the uncertainty of the inversion.\n")
+        return section
+
     def _generate_timelapse_visualizations(self, inversion_results: Dict,
                                           comparison_df: pd.DataFrame,
                                           climate_data: Dict,
-                                          output_dir: str) -> Dict[str, str]:
-        """Generate visualizations for time-lapse report."""
+                                          output_dir: str,
+                                          site_info: Optional[Dict] = None,
+                                          config: Optional[Dict] = None
+                                          ) -> Dict[str, str]:
+        """Every figure the time-lapse report shows, in one visual style.
+
+        Each generator below used to choose its own size, fonts, colormap and
+        way of naming a survey, which produced figures that did not look like
+        they belonged to the same document. They now ask
+        :mod:`PyHydroGeophysX.agents._figstyle`, and the reader can change what
+        it answers through ``config['figure_style']``.
+        """
         import matplotlib
         import matplotlib.pyplot as plt
         import numpy as np
 
-        # Set Arial font
-        matplotlib.rcParams['font.family'] = 'Arial'
-        matplotlib.rcParams['font.size'] = 12
-        
+        style = figstyle.style_from_config(config)
+        matplotlib.rcParams['font.family'] = style.font_family
+        matplotlib.rcParams['font.size'] = style.label_size
+        survey_dates = self._survey_dates(
+            site_info, int(inversion_results.get('n_timesteps') or 0))
+
         vis_files = {}
         
         try:
@@ -1661,7 +1979,8 @@ Correlation between mean resistivity changes and climate variables:
                         coverage_masked = None
                     
                     # Plot baseline resistivity
-                    fig_baseline, ax_baseline = plt.subplots(1, 1, figsize=(12, 6))
+                    fig_baseline, _axes = figstyle.panels(1, style)
+                    ax_baseline = _axes[0]
                     
                     # Plot with baseline-masked coverage - PyGIMLi will handle the masking internally
                     ax_baseline, cbar = pg.show(
@@ -1669,25 +1988,20 @@ Correlation between mean resistivity changes and climate variables:
                         baseline,
                         ax=ax_baseline,
                         fig=fig_baseline,
-                        cMap='jet',
+                        cMap=style.cmap_for('resistivity'),
                         cMin=30,
                         cMax=3000,  # Optimized upper limit
                         logScale=True,
                         label=r'Resistivity ($\Omega$ m)',
                         pad=0.3,
-                        orientation='vertical',
+                        orientation=style.colorbar_orientation,
                         coverage=coverage_masked
                     )
-                    
-                    ax_baseline.set_xlabel('Distance (m)', fontsize=14, fontfamily='Arial')
-                    ax_baseline.set_ylabel('Elevation (m)', fontsize=14, fontfamily='Arial')
-                    ax_baseline.set_title('Baseline Resistivity',
-                                         fontsize=16, fontweight='bold', fontfamily='Arial')
-                    
+                    figstyle.apply(ax_baseline, style,
+                                   figstyle.survey_title(0, survey_dates))
                     plt.tight_layout()
                     baseline_file = os.path.join(output_dir, 'baseline_resistivity.png')
-                    fig_baseline.savefig(baseline_file, dpi=300, bbox_inches='tight')
-                    plt.close(fig_baseline)
+                    figstyle.save(fig_baseline, baseline_file, style)
                     vis_files['baseline_resistivity'] = baseline_file
                     self._log_execution("Saved baseline resistivity plot")
                     
@@ -1717,7 +2031,7 @@ Correlation between mean resistivity changes and climate variables:
                     n_timesteps = min(final_models.shape[1], 4)  # Show up to 4 timesteps
                     
                     # Create subplot grid: 1 row, 4 columns
-                    fig, axes = plt.subplots(1, n_timesteps, figsize=(20, 5))
+                    fig, axes = figstyle.panels(n_timesteps, style)
                     if n_timesteps == 1:
                         axes = np.array([axes])
                     
@@ -1755,25 +2069,23 @@ Correlation between mean resistivity changes and climate variables:
                             timestep_data,
                             ax=ax,
                             fig=fig,
-                            cMap='jet',
+                            cMap=style.cmap_for('resistivity'),
                             cMin=30,
                             cMax=3000,
                             logScale=True,
                             label=r'Resistivity ($\Omega$ m)',
                             pad=0.3,
-                            orientation='vertical',
+                            orientation=style.colorbar_orientation,
                             coverage=coverage_masked
                         )
                         
-                        ax.set_xlabel('Distance (m)', fontsize=12, fontfamily='Arial')
-                        ax.set_ylabel('Elevation (m)', fontsize=12, fontfamily='Arial')
-                        ax.set_title(f'{time_labels[i]}',
-                                   fontsize=14, fontweight='bold', fontfamily='Arial')
+                        figstyle.apply(ax, style,
+                                       figstyle.survey_title(i, survey_dates),
+                                       ylabel='Elevation (m)' if i == 0 else '')
                     
                     plt.tight_layout()
                     all_timesteps_file = os.path.join(output_dir, 'timelapse_all_resistivity.png')
-                    fig.savefig(all_timesteps_file, dpi=300, bbox_inches='tight')
-                    plt.close(fig)
+                    figstyle.save(fig, all_timesteps_file, style)
                     vis_files['timelapse_all_resistivity'] = all_timesteps_file
                     self._log_execution("Saved all timesteps resistivity plot")
                     
@@ -1800,7 +2112,7 @@ Correlation between mean resistivity changes and climate variables:
                     
                     # Create subplot grid: 1 row, 4 columns (baseline + 3 changes)
                     n_total_plots = n_timesteps + 1  # baseline + changes
-                    fig, axes = plt.subplots(1, n_total_plots, figsize=(20, 5))
+                    fig, axes = figstyle.panels(n_total_plots, style)
                     if n_total_plots == 1:
                         axes = np.array([axes])
                     
@@ -1831,18 +2143,17 @@ Correlation between mean resistivity changes and climate variables:
                         baseline,
                         ax=ax,
                         fig=fig,
-                        cMap='jet',
+                        cMap=style.cmap_for('resistivity'),
                         cMin=30,
                         cMax=3000,
                         logScale=True,
                         label=r'Resistivity ($\Omega$ m)',
                         pad=0.3,
-                        orientation='vertical',
+                        orientation=style.colorbar_orientation,
                         coverage=coverage_masked
                     )
-                    ax.set_xlabel('Distance (m)', fontsize=12, fontfamily='Arial')
-                    ax.set_ylabel('Elevation (m)', fontsize=12, fontfamily='Arial')
-                    ax.set_title('Baseline (t=0)', fontsize=14, fontweight='bold', fontfamily='Arial')
+                    figstyle.apply(ax, style,
+                                   figstyle.survey_title(0, survey_dates))
                     
                     # Plots 2-4: Percentage changes
                     time_labels = self._generate_time_labels(n_timesteps)
@@ -1865,24 +2176,22 @@ Correlation between mean resistivity changes and climate variables:
                             percent_change,
                             ax=ax,
                             fig=fig,
-                            cMap='RdBu_r',
+                            cMap=style.cmap_for('change'),
                             cMin=-50,  # Optimized range from testing
                             cMax=50,
                             label=r'$\Delta\rho$ (%)',
                             pad=0.3,
-                            orientation='vertical',
+                            orientation=style.colorbar_orientation,
                             coverage=coverage_masked
                         )
                         
-                        ax.set_xlabel('Distance (m)', fontsize=12, fontfamily='Arial')
-                        ax.set_ylabel('Elevation (m)', fontsize=12, fontfamily='Arial')
-                        ax.set_title(f'{time_labels[i]}',
-                                   fontsize=14, fontweight='bold', fontfamily='Arial')
+                        figstyle.apply(ax, style,
+                                       figstyle.change_title(i, survey_dates),
+                                       ylabel='')
                     
                     plt.tight_layout()
                     tl_changes_file = os.path.join(output_dir, 'timelapse_resistivity_changes_percent.png')
-                    fig.savefig(tl_changes_file, dpi=300, bbox_inches='tight')
-                    plt.close(fig)
+                    figstyle.save(fig, tl_changes_file, style)
                     vis_files['timelapse_changes_percent'] = tl_changes_file
                     self._log_execution("Saved time-lapse resistivity percentage changes plot")
                     
@@ -1896,6 +2205,10 @@ Correlation between mean resistivity changes and climate variables:
 
                     # Get fresh coverage reference
                     coverage = inversion_results.get('coverage')
+                    # The three blocks above each do this; the one missing here
+                    # is why only the absolute-changes figure died on a list.
+                    if coverage is not None and isinstance(coverage, list):
+                        coverage = np.array(coverage)
                     
                     # Use cellMarkers to properly index the data
                     cell_markers = mesh.cellMarkers()
@@ -1904,7 +2217,7 @@ Correlation between mean resistivity changes and climate variables:
                     
                     # Create subplot grid: 1 row, 4 columns (baseline + 3 changes)
                     n_total_plots = n_timesteps + 1  # baseline + changes
-                    fig, axes = plt.subplots(1, n_total_plots, figsize=(20, 5))
+                    fig, axes = figstyle.panels(n_total_plots, style)
                     if n_total_plots == 1:
                         axes = np.array([axes])
                     
@@ -1935,18 +2248,17 @@ Correlation between mean resistivity changes and climate variables:
                         baseline,
                         ax=ax,
                         fig=fig,
-                        cMap='jet',
+                        cMap=style.cmap_for('resistivity'),
                         cMin=30,
                         cMax=3000,
                         logScale=True,
                         label=r'Resistivity ($\Omega$ m)',
                         pad=0.3,
-                        orientation='vertical',
+                        orientation=style.colorbar_orientation,
                         coverage=coverage_masked
                     )
-                    ax.set_xlabel('Distance (m)', fontsize=12, fontfamily='Arial')
-                    ax.set_ylabel('Elevation (m)', fontsize=12, fontfamily='Arial')
-                    ax.set_title('Baseline', fontsize=14, fontweight='bold', fontfamily='Arial')
+                    figstyle.apply(ax, style,
+                                   figstyle.survey_title(0, survey_dates))
                     
                     # Plots 2-4: Absolute changes
                     time_labels = self._generate_time_labels(n_timesteps)
@@ -1963,24 +2275,22 @@ Correlation between mean resistivity changes and climate variables:
                             change,
                             ax=ax,
                             fig=fig,
-                            cMap='RdBu_r',
+                            cMap=style.cmap_for('change'),
                             cMin=-300,  # Optimized range from testing
                             cMax=300,
                             label=r'$\Delta\rho$ ($\Omega$ m)',
                             pad=0.3,
-                            orientation='vertical',
+                            orientation=style.colorbar_orientation,
                             coverage=coverage_masked
                         )
                         
-                        ax.set_xlabel('Distance (m)', fontsize=12, fontfamily='Arial')
-                        ax.set_ylabel('Elevation (m)', fontsize=12, fontfamily='Arial')
-                        ax.set_title(f'{time_labels[i]}',
-                                   fontsize=14, fontweight='bold', fontfamily='Arial')
+                        figstyle.apply(ax, style,
+                                       figstyle.change_title(i, survey_dates),
+                                       ylabel='')
                     
                     plt.tight_layout()
                     tl_changes_abs_file = os.path.join(output_dir, 'timelapse_resistivity_changes_absolute.png')
-                    fig.savefig(tl_changes_abs_file, dpi=300, bbox_inches='tight')
-                    plt.close(fig)
+                    figstyle.save(fig, tl_changes_abs_file, style)
                     vis_files['timelapse_changes_absolute'] = tl_changes_abs_file
                     self._log_execution("Saved time-lapse resistivity absolute changes plot")
                     
@@ -1996,7 +2306,7 @@ Correlation between mean resistivity changes and climate variables:
                     # Set Arial font for all text
                     plt.rcParams['font.family'] = 'Arial'
                     
-                    fig, axes = plt.subplots(2, 1, figsize=(12, 6))
+                    fig, axes = figstyle.panels(1, style, rows=2)
                     
                     # Get daily climate data from climate_data results
                     daily_df = None
@@ -2032,8 +2342,8 @@ Correlation between mean resistivity changes and climate variables:
                             ax_top_left.plot(daily_dates, daily_df['pet'], '-',
                                             linewidth=1.5, label='PET (daily)',
                                             color='#FF8C00', alpha=0.8, zorder=2)
-                            ax_top_left.set_ylabel('PET (mm/day)', fontsize=12,
-                                                  color='#FF8C00', fontfamily='Arial')
+                            ax_top_left.set_ylabel('PET (mm/day)', fontsize=style.label_size,
+                                                  color='#FF8C00')
                             ax_top_left.tick_params(axis='y', labelcolor='#FF8C00', labelsize=11)
                         
                         # Precipitation on right axis (bar plot) - using daily data
@@ -2041,8 +2351,8 @@ Correlation between mean resistivity changes and climate variables:
                             ax_top_right.bar(daily_dates, daily_df['prcp'], 
                                             alpha=0.6, width=1.0, label='Precipitation (daily)',
                                             color='#4682B4', zorder=1)
-                            ax_top_right.set_ylabel('Precipitation (mm/day)', fontsize=12,
-                                                   color='#4682B4', fontfamily='Arial')
+                            ax_top_right.set_ylabel('Precipitation (mm/day)', fontsize=style.label_size,
+                                                   color='#4682B4')
                             ax_top_right.tick_params(axis='y', labelcolor='#4682B4', labelsize=11)
                         
                         # Overlay ERT survey data points
@@ -2068,7 +2378,7 @@ Correlation between mean resistivity changes and climate variables:
                         ax_top_left.tick_params(axis='x', which='both', length=0)
                         
                         ax_top_left.set_title('Climate Data: Precipitation and Potential Evapotranspiration', 
-                                             fontsize=13, fontfamily='Arial', pad=15)
+                                             fontsize=style.title_size, pad=15)
                         ax_top_left.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
                         ax_top_left.tick_params(axis='y', labelsize=11)
                         ax_top_left.tick_params(axis='both', which='major', length=6, width=1.5)
@@ -2078,7 +2388,7 @@ Correlation between mean resistivity changes and climate variables:
                         lines1, labels1 = ax_top_left.get_legend_handles_labels()
                         lines2, labels2 = ax_top_right.get_legend_handles_labels()
                         ax_top_left.legend(lines1 + lines2, labels1 + labels2, 
-                                          loc='upper left', fontsize=10, framealpha=0.9)
+                                          loc='upper left', fontsize=style.tick_size, framealpha=0.9)
                         
                         # =====================================================================
                         # BOTTOM PLOT: Temperature (min/max with shaded range, NO mean line)
@@ -2118,21 +2428,20 @@ Correlation between mean resistivity changes and climate variables:
                             ax_bottom.axvline(x=date, color='black', linestyle='--',
                                             linewidth=2, alpha=0.8, zorder=4)
                         
-                        ax_bottom.set_xlabel('Date', fontsize=12, fontfamily='Arial')
-                        ax_bottom.set_ylabel('Temperature (°C)', fontsize=12, fontfamily='Arial')
-                        ax_bottom.set_title('Temperature Variations', fontsize=13, 
-                                           fontfamily='Arial', pad=15)
+                        ax_bottom.set_xlabel('Date', fontsize=style.label_size)
+                        ax_bottom.set_ylabel('Temperature (°C)', fontsize=style.label_size)
+                        ax_bottom.set_title('Temperature Variations', fontsize=style.title_size, 
+                                           pad=15)
                         ax_bottom.grid(True, alpha=0.3, linestyle='-', linewidth=0.5)
                         ax_bottom.tick_params(axis='x', rotation=45, labelsize=11)
                         ax_bottom.tick_params(axis='y', labelsize=11)
                         ax_bottom.tick_params(axis='both', which='major', length=6, width=1.5)
-                        ax_bottom.legend(loc='best', fontsize=9, framealpha=0.9, 
+                        ax_bottom.legend(loc='best', fontsize=style.tick_size, framealpha=0.9, 
                                        edgecolor='gray', fancybox=True, ncol=2)
                     
                     plt.tight_layout()
                     climate_corr_file = os.path.join(output_dir, 'climate_data_visualization.png')
-                    fig.savefig(climate_corr_file, dpi=300, bbox_inches='tight')
-                    plt.close(fig)
+                    figstyle.save(fig, climate_corr_file, style)
                     vis_files['climate_correlation'] = climate_corr_file
                     self._log_execution("Saved climate data visualization plot")
                     
@@ -2144,9 +2453,74 @@ Correlation between mean resistivity changes and climate variables:
             
         except Exception as e:
             self._log_execution(f"Error generating time-lapse visualizations: {e}")
-        
+
+        # Deliberately outside the block above. This figure was written inside
+        # that except handler, so it was drawn only when the resistivity
+        # figures failed - which is to say never on a successful run. The
+        # product the request asked for reached the report as a table and no
+        # picture, twice, while the arrays sat on disk.
+        self._timelapse_water_content_figure(inversion_results, output_dir, vis_files,
+                                             site_info, style)
         return vis_files
-    
+
+    def _timelapse_water_content_figure(self, inversion_results: Dict, output_dir: str,
+                                        vis_files: Dict[str, str],
+                                        site_info: Optional[Dict] = None,
+                                        style: Optional[Any] = None) -> None:
+        """Water content per survey, on one shared colour scale.
+
+        Shared limits are the point of the figure: with per-panel scaling every
+        survey looks the same and the change between them - which is what a
+        monitoring survey is for - is exactly what cannot be seen.
+
+        Adds to ``vis_files`` in place and never raises; a figure that cannot be
+        drawn is logged and the rest of the report still goes out.
+        """
+        per_step = (inversion_results or {}).get('time_lapse_water_content') or []
+        mesh = (inversion_results or {}).get('mesh')
+        if not per_step:
+            return
+        if mesh is None:
+            self._log_execution(
+                "Water content was computed but no mesh was returned, so it "
+                "could not be plotted.", level='WARNING')
+            return
+        try:
+            import matplotlib.pyplot as plt
+            import pygimli as pg
+
+            style = style or figstyle.FigureStyle()
+            cell_markers = mesh.cellMarkers()
+            steps = [np.asarray(s.get('water_content_mean'), dtype=float).ravel()
+                     for s in per_step
+                     if s.get('water_content_mean') is not None]
+            if not steps:
+                return
+            stacked = np.concatenate(steps)
+            lo, hi = np.nanpercentile(stacked, [2, 98])
+            if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
+                lo, hi = float(np.nanmin(stacked)), float(np.nanmax(stacked))
+            fig, axes = figstyle.panels(len(steps), style)
+            dates = self._survey_dates(site_info, len(steps))
+            for i, values in enumerate(steps):
+                data = (values[cell_markers]
+                        if len(values) > len(cell_markers) else values)
+                pg.show(mesh, data, ax=axes[i], fig=fig, cMap=style.cmap_for('water_content'),
+                        cMin=lo, cMax=hi, logScale=False,
+                        label='Water content (-)', pad=0.3,
+                        orientation=style.colorbar_orientation)
+                figstyle.apply(axes[i], style,
+                               figstyle.survey_title(i, dates),
+                               ylabel='Elevation (m)' if i == 0 else '')
+            plt.tight_layout()
+            wc_file = os.path.join(output_dir, 'timelapse_water_content.png')
+            figstyle.save(fig, wc_file, style)
+            vis_files['timelapse_water_content'] = wc_file
+            self._log_execution("Saved time-lapse water content plot")
+        except Exception as e:
+            self._log_execution(f"Could not generate water content plot: {e}",
+                                level='ERROR')
+
     def _generate_timelapse_narrative(self, exec_summary: str, inv_section: str,
                                      climate_section: str, corr_section: str,
                                      site_info: Dict) -> str:
@@ -2172,77 +2546,280 @@ that effectively combines temporal ERT analysis with meteorological context."""
             
             narrative = self.query_llm(prompt, self.system_message,
                                       temperature=0.6, max_tokens=700)
+            # No heading of its own. The compiler already places this under
+            # "## Interpretation"; a second heading here produced
+            # "6. Interpretation" followed immediately by "7. Integrated
+            # Analysis and Interpretation" with nothing in between.
             caveat = "**AI-generated interpretation - verify before citing.**"
-            return f"\n## Integrated Analysis and Interpretation\n\n{caveat}\n\n{narrative}\n"
+            return f"{caveat}\n\n{narrative}\n"
         except Exception as e:
             self._log_execution(f"Could not generate narrative: {e}")
             return ""
     
-    def _compile_timelapse_report(self, exec_summary: str, narrative: str,
-                                 inv_section: str, climate_section: str,
-                                 corr_section: str, vis_files: Dict[str, str],
-                                 site_info: Dict) -> str:
-        """Compile full time-lapse report."""
-        report = f"""{exec_summary}
-{narrative if narrative else ''}
-{inv_section}
-{climate_section}
-{corr_section}
+    def _timelapse_key_findings(self, inversion_results, climate_data,
+                                evaluation_results, config=None) -> str:
+        """Key findings written from what the run produced, not from a template.
 
-## Visualizations
+        The fixed text this replaced asserted three things every time: that
+        systematic changes were observed, that climate-resistivity correlations
+        gave insight, and that convergence was good. On the run that prompted
+        this, no climate data had been supplied at all and the quality score was
+        54.8/100 - so two of the three claims were false, printed directly under
+        an AI narrative that had correctly hedged both.
 
-"""
-        
-        for vis_type, file_path in vis_files.items():
-            report += f"### {vis_type.replace('_', ' ').title()}\n"
-            report += f"![{vis_type}]({os.path.basename(file_path)})\n\n"
-        
-        report += f"""
-## Summary and Recommendations
+        Each finding here is derived, and a finding with nothing behind it is
+        omitted rather than asserted.
+        """
+        findings = []
+        results = inversion_results or {}
 
-### Key Findings Summary
+        # 1. Resistivity change - reported only with numbers behind it.
+        models = results.get('final_models')
+        if models is not None and getattr(models, 'ndim', 0) == 2 and models.shape[1] > 1:
+            baseline = models[:, 0]
+            changes = [float(np.mean(models[:, i] - baseline))
+                       for i in range(1, models.shape[1])]
+            largest = max(changes, key=abs)
+            direction = 'an increase' if largest > 0 else 'a decrease'
+            findings.append(
+                f"**Temporal Resistivity Changes:** Mean resistivity changed by "
+                f"{changes[0]:+.2f} to {changes[-1]:+.2f} ohm-m relative to the baseline "
+                f"across {len(changes)} repeat survey{'s' if len(changes) != 1 else ''}; "
+                f"the largest mean shift was "
+                f"{direction} of {abs(largest):.2f} ohm-m. Whether this reflects moisture, "
+                f"temperature or inversion sensitivity is not established by these numbers "
+                f"alone.")
+        else:
+            findings.append(
+                "**Temporal Resistivity Changes:** Not summarised - the run did not return "
+                "a model per time step.")
 
-Based on the time-lapse ERT monitoring and climate data integration:
+        # 2. Climate - say what was integrated, which is often nothing.
+        if climate_data:
+            findings.append(
+                "**Climate-Resistivity Relationships:** Meteorological data were integrated; "
+                "see the correlation section for the relationships actually computed.")
+        else:
+            findings.append(
+                "**Climate-Resistivity Relationships:** No meteorological data were supplied, "
+                "so no climate-resistivity relationship was computed and none should be "
+                "inferred from this report.")
 
-1. **Temporal Resistivity Changes:** Systematic changes in subsurface resistivity were 
-   observed over the monitoring period, indicating dynamic moisture conditions.
+        # 3. Data quality - the measured score and misfit, whatever they say.
+        evaluation = evaluation_results or {}
+        score = evaluation.get('quality_score')
+        history = chi2_history(results.get('chi2_values'))
+        final_chi2 = history[-1] if history else None
+        if score is not None:
+            verdict = ('meets the configured threshold' if evaluation.get('status') == 'success'
+                       else 'is below the configured threshold and needs review')
+            quality_line = f"a heuristic quality score of {float(score):.1f}/100, which {verdict}"
+        else:
+            quality_line = "no quality score (the evaluation did not run or did not report one)"
+        if final_chi2 is not None:
+            fit = (f"a final chi-squared of {final_chi2:.3f}"
+                   + (" (close to the target of 1)" if 0.8 <= final_chi2 <= 1.5 else
+                      ", further from the target of 1 than a well-fitted inversion" ))
+        else:
+            fit = "no reported chi-squared"
+        findings.append(f"**Data Quality:** The inversion returned {fit} and {quality_line}. "
+                        f"A chi-squared near one does not by itself establish that the model "
+                        f"is correct or unique.")
 
-2. **Climate-Resistivity Relationships:** Correlations between meteorological variables 
-   and resistivity changes provide insights into subsurface hydrological processes.
+        # 4. Water content, when the run produced it.
+        per_step = results.get('time_lapse_water_content') or []
+        if per_step:
+            reliability = water_content_reliability(results, config or {})
+            verdict = f" {reliability['sentence']}" if reliability else ""
+            # How the section was divided belongs next to the number, not in a
+            # log line: one parameter set for the whole profile is part of why
+            # the uncertainty is what it is.
+            layering = (per_step[0] or {}).get('layering') if per_step else None
+            structure = f" {layering}" if layering else ""
+            findings.append(
+                f"**Water Content:** Converted for {len(per_step)} time step(s) by Monte "
+                f"Carlo petrophysics.{structure}{verdict}")
 
-3. **Data Quality:** Inversion results show good convergence, indicating reliable 
-   monitoring of subsurface changes.
+        return '\n\n'.join(f"{i}. {text}" for i, text in enumerate(findings, 1))
 
-### Recommendations for Future Monitoring
+    # Captions live in FIGURE_CATALOG (PyHydroGeophysX.agents._figures) next to
+    # the topic each figure belongs to, so the planner and the captions cannot
+    # disagree about what a figure is.
 
-1. **Continue Time-Series:** Extend monitoring to capture seasonal cycles and longer-term trends
-2. **Enhanced Climate Integration:** Consider additional variables (snow depth, soil temperature)
-3. **Depth-Dependent Analysis:** Investigate how climate effects vary with depth
-4. **Validation:** Compare with direct measurements (soil moisture sensors, neutron probes)
-5. **Predictive Modeling:** Use established correlations for forecasting subsurface response
+    def _read_figure_request(self, config: Optional[Dict] = None
+                             ) -> Optional[Dict[str, Any]]:
+        """What the request asks to see, and how it asks it to look.
 
----
+        Called before any figure is drawn, because a style preference is only
+        useful to the generators that have not run yet. Writes the style it
+        finds into ``config['figure_style']``, under anything already there -
+        an explicit setting outranks a sentence.
 
-**Site:** {site_info.get('name', 'N/A')}  
-**Report Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  
-**Generated by:** PyHydroGeophysX Multi-Agent System
-"""
-        
-        return report
-    
+        Returns the model's answer so the figure plan can reuse it instead of
+        asking a second time.
+        """
+        config = config if config is not None else {}
+        request = str(config.get('user_request') or '').strip()
+        if not request or not getattr(self, 'api_key', None):
+            return None
+
+        def query(prompt):  # noqa: D401 - a one-shot question, no tools
+            return self.query_llm(prompt, max_tokens=250)
+
+        try:
+            asked = llm_figure_topics(request, query)
+        except Exception as e:  # noqa: BLE001 - a preference must not fail a run
+            self._log_execution(f"Could not read figure preferences: {e}",
+                                level='WARNING')
+            return None
+        if asked and asked.get('style'):
+            config['figure_style'] = {**asked['style'],
+                                      **(config.get('figure_style') or {})}
+            self._log_execution(f"Figure style from the request: {asked['style']}")
+        return asked
+
+    def _figure_plan(self, vis_files: Dict[str, str],
+                     config: Optional[Dict] = None,
+                     asked: Optional[Dict[str, Any]] = None) -> Dict[str, list]:
+        """Which figures this request wants shown, read by the model.
+
+        The figure set used to be whatever the plotting code reached, so a
+        request for water content could come back with four resistivity
+        figures and none of what was asked for, and nothing compared the two.
+        The request is now read for the subjects it wants to see, and the plan
+        names what is drawn, what was deliberately left out, and what was asked
+        for but has no data behind it.
+
+        Falls back to drawing everything when there is no model to ask: an
+        unanswered question must not be able to suppress a figure.
+        """
+        config = config if config is not None else {}
+        request = str(config.get('user_request') or '').strip()
+        try:
+            return plan_figures(list(vis_files), request, topics=asked)
+        except Exception as e:  # noqa: BLE001 - planning must never lose figures
+            self._log_execution(f"Figure planning failed, showing all: {e}",
+                                level='WARNING')
+            return {'draw': list(vis_files), 'omitted': [], 'missing': []}
+
+    def _figures_section(self, vis_files: Dict[str, str],
+                         plan: Optional[Dict[str, list]] = None) -> str:
+        """The planned figures, numbered and captioned.
+
+        A figure left out on purpose is named rather than dropped silently -
+        the reader is told the run has it and where to find it, which is the
+        difference between an edited report and an incomplete one.
+        """
+        if not vis_files:
+            return ""
+        plan = plan or {'draw': list(vis_files), 'omitted': [], 'missing': []}
+        drawn = [key for key in plan.get('draw') or [] if key in vis_files]
+        if not drawn:
+            return ""
+        section = "## Figures\n\n"
+        for number, vis_type in enumerate(drawn, 1):
+            caption = (FIGURE_CATALOG.get(vis_type, {}).get('caption')
+                       or vis_type.replace('_', ' ').capitalize() + '.')
+            section += f"![Figure {number}]({os.path.basename(vis_files[vis_type])})\n\n"
+            section += f"**Figure {number}.** {caption}\n\n"
+        omitted = [key for key in plan.get('omitted') or [] if key in vis_files]
+        if omitted:
+            names = ', '.join(f"`{os.path.basename(vis_files[key])}`" for key in omitted)
+            section += (f"The run also produced {names}, left out here because the "
+                        f"request asked for a narrower set. They are in the output "
+                        f"folder.\n\n")
+        return section
+
+    def _timelapse_recommendations(self, climate_data: Optional[Dict],
+                                   inversion_results: Dict,
+                                   config: Optional[Dict] = None) -> str:
+        """Next steps that follow from this run, not a standing wish list.
+
+        A recommendation to integrate climate data is useful to a run that had
+        none and noise to a run that had it; the same is true of calibrating
+        petrophysics. Each item here is conditional on what the run actually
+        lacked.
+        """
+        config = config or {}
+        items = []
+        if not climate_data:
+            items.append(
+                "**Supply meteorological data.** Precipitation, temperature and "
+                "potential evapotranspiration covering the survey dates would "
+                "let the recovered changes be tested against the forcing that "
+                "plausibly caused them. Until that is done, no hydrological "
+                "cause for these changes is established.")
+        if inversion_results.get('time_lapse_water_content') and not config.get(
+                'petrophysical_params'):
+            items.append(
+                "**Calibrate the petrophysical relationship.** Samples or "
+                "borehole logs from this site would replace the generated "
+                "default parameters, which are the largest single contributor "
+                "to the water-content uncertainty reported above.")
+        items += [
+            "**Extend the time series.** Five surveys over five days resolve "
+            "an event, not a seasonal cycle; repeat surveys through a wetting "
+            "and a drying season would separate the two."
+            if (inversion_results.get('n_timesteps') or 0) <= 6 else
+            "**Continue monitoring** on the established schedule so the "
+            "seasonal envelope of the site can be established.",
+            "**Examine the depth dependence of the recovered changes** against "
+            "model sensitivity, so that changes reported at depth can be "
+            "distinguished from the inversion's decreasing resolution there.",
+            "**Validate against direct measurement.** Soil-moisture probes or "
+            "borehole observations at one or two locations would anchor the "
+            "converted water content to a measured value.",
+        ]
+        return numbered(items)
+
+    def _compile_timelapse_report(self, front_matter: str, exec_summary: str,
+                                  method_section: str, inv_section: str,
+                                  water_content_section: str,
+                                  climate_section: str, corr_section: str,
+                                  figures_section: str, narrative: str,
+                                  recommendations: str) -> str:
+        """Assemble the deliverable in the order a reader needs it.
+
+        Scope and findings first, then how the work was done, then what it
+        produced, then what it is taken to mean, then what to do next. The
+        interpretation sits after the results rather than before them so that
+        its claims are read next to the numbers they rest on; it used to be
+        printed immediately under the summary, where a model-written paragraph
+        was the first technical content in the document.
+
+        Section numbers are applied at the end by
+        :func:`PyHydroGeophysX.agents._document.renumber` so that sections
+        omitted for want of data - climate, correlation, water content - do not
+        leave gaps in the numbering.
+        """
+        body = "\n\n".join(part.strip() for part in [
+            exec_summary, method_section, inv_section, water_content_section,
+            climate_section, corr_section, figures_section,
+            f"## Interpretation\n\n{narrative.strip()}" if narrative else '',
+            f"## Recommendations\n\n{recommendations.strip()}"
+            if recommendations else '',
+        ] if part and part.strip())
+        return front_matter.rstrip() + "\n\n" + renumber(body) + "\n"
+
     def _format_chi2(self, chi2_values) -> str:
-        """Format chi-squared values for display."""
+        """The headline chi-squared: what the inversion converged to.
+
+        Not a mean. Averaging a time-lapse table folded the model- and
+        temporal-regularization columns in with the misfit and reported
+        1442.924 for a run whose chi-squared was 1.630; averaging a
+        single-survey history mixes the starting misfit into the answer. The
+        number a reader wants is the last iteration's.
+        """
         if chi2_values is None:
             return 'N/A'
-        elif isinstance(chi2_values, list):
-            if len(chi2_values) == 0:
-                return 'N/A'
-            elif len(chi2_values) == 1:
-                return f"{chi2_values[0]:.3f}"
-            else:
-                return f"{np.mean(chi2_values):.3f} (mean)"
-        else:
+        if isinstance(chi2_values, (int, float)):
             return f"{chi2_values:.3f}"
+        history = chi2_history(chi2_values)
+        if not history:
+            return 'N/A'
+        if len(history) == 1:
+            return f"{history[0]:.3f}"
+        return f"{history[-1]:.3f} (final of {len(history)} iterations)"
     
     def _generate_time_labels(self, n_timesteps: int) -> list:
         """Generate time labels for plots."""
@@ -2650,79 +3227,18 @@ All workflow parameters were extracted from the natural language request:
         
         return report
     
-    def _save_html_report(self, markdown_content: str, output_dir: str, 
-                          filename: str = 'workflow_report') -> Optional[str]:
-        """
-        Convert markdown report to HTML.
-        
-        Args:
-            markdown_content: Report in markdown format
-            output_dir: Output directory
-            filename: Output filename without extension
-            
-        Returns:
-            Path to HTML file or None if conversion failed
-        """
-        try:
-            import markdown
+    def _save_html_report(self, markdown_content: str, output_dir: str,
+                          filename: str = 'workflow_report') -> None:
+        """HTML output was removed; reports are Markdown only.
 
-            # Convert markdown to HTML
-            html_body = markdown.markdown(
-                markdown_content, 
-                extensions=['tables', 'fenced_code', 'codehilite', 'toc']
-            )
-            
-            # Wrap in HTML template with styling
-            html_template = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PyHydroGeophysX Report</title>
-    <style>
-        body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-            background-color: #f9fafb;
-            color: #1f2937;
-        }}
-        h1 {{ color: #0f4c75; border-bottom: 2px solid #0f4c75; padding-bottom: 0.5rem; }}
-        h2 {{ color: #1b4f72; margin-top: 2rem; }}
-        h3 {{ color: #2874a6; }}
-        table {{ border-collapse: collapse; width: 100%; margin: 1rem 0; }}
-        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-        th {{ background-color: #0f4c75; color: white; }}
-        tr:nth-child(even) {{ background-color: #f2f2f2; }}
-        code {{ background-color: #e5e7eb; padding: 2px 6px; border-radius: 3px; }}
-        pre {{ background-color: #1f2937; color: #f9fafb; padding: 1rem; border-radius: 5px; overflow-x: auto; }}
-        img {{ max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px; margin: 1rem 0; }}
-        .toc {{ background-color: #eef2f7; padding: 1rem; border-radius: 5px; margin-bottom: 2rem; }}
-        blockquote {{ border-left: 4px solid #0f4c75; margin: 1rem 0; padding-left: 1rem; color: #4b5563; }}
-        hr {{ border: none; border-top: 1px solid #d1d5db; margin: 2rem 0; }}
-    </style>
-</head>
-<body>
-{html_body}
-</body>
-</html>"""
-            
-            html_file = os.path.join(output_dir, f'{filename}.html')
-            with open(html_file, 'w', encoding='utf-8') as f:
-                f.write(html_template)
-            
-            self._log_execution(f"HTML report saved: {html_file}")
-            return html_file
-            
-        except ImportError:
-            self._log_execution("markdown package not installed, skipping HTML conversion", level='WARNING')
-            return None
-        except Exception as e:
-            self._log_execution(f"Failed to save HTML report: {e}", level='WARNING')
-            return None
-    
+        The conversion depended on the optional ``markdown`` package and, when
+        it was absent, every run logged two warnings and produced nothing. The
+        Markdown report is the deliverable, and anything that needs HTML can
+        convert it downstream. Kept as a no-op so the call sites and the
+        ``html_file`` key in the results keep working.
+        """
+        return None
+
     def _save_pdf_report(self, markdown_content: str, output_dir: str, 
                          visualization_files: Optional[Dict[str, str]] = None,
                          filename: str = 'workflow_report') -> Optional[str]:
@@ -2779,7 +3295,10 @@ All workflow parameters were extracted from the natural language request:
 </body>
 </html>"""
         except ImportError:
-            self._log_execution("markdown package not installed", level='WARNING')
+            # Names the deliverable now that HTML output is gone and this is the
+            # only path left that wants the package.
+            self._log_execution("markdown package not installed; skipping the PDF "
+                                "(the Markdown report is still written)", level='WARNING')
             return None
         
         # Method 1: Try weasyprint

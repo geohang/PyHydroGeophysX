@@ -25,6 +25,12 @@ produced by a tool has to travel as a separate follow-up user message. Anthropic
 would allow an image inside ``tool_result``, but routing both providers the same
 way keeps one code path and one transcript shape.
 
+Model choice is offered as a three-step cost ladder rather than a flat list -
+see :data:`MODEL_TIERS`. Level 1 answers most requests, level 2 handles coding
+and agent work, level 3 exists for what the levels below could not finish. Both
+the desktop chat panel and the Streamlit sidebar read that one registry, so the
+two surfaces always offer the same levels at the same prices.
+
 The ``openai`` / ``anthropic`` SDKs are imported lazily, so importing this module
 never requires either to be installed.
 """
@@ -146,6 +152,34 @@ def to_openai_messages(system: str, messages: List[Dict[str, Any]]) -> List[Dict
             out.append({"role": "tool", "tool_call_id": m.get("id"),
                         "content": _as_text(m.get("content"))})
     return out
+
+
+def to_responses_input(messages):
+    """Keep reasoning and function calls together across stateless tool turns."""
+    items = []
+    for message in messages:
+        role = message.get('role')
+        if role == 'assistant' and message.get('_openai_output'):
+            items.extend(message['_openai_output'])
+        elif role == 'tool':
+            items.append({'type': 'function_call_output', 'call_id': message['id'],
+                          'output': _as_text(message.get('content'))})
+        elif role == 'assistant':
+            if message.get('content'):
+                items.append({'role': 'assistant', 'content': message['content']})
+            for call in message.get('tool_calls') or []:
+                items.append({'type': 'function_call', 'call_id': call['id'],
+                              'name': call['name'], 'arguments': json.dumps(call.get('arguments') or {})})
+        elif role == 'user':
+            content = []
+            for block in as_blocks(message.get('content', '')):
+                if block['type'] == 'text':
+                    content.append({'type': 'input_text', 'text': block.get('text', '')})
+                else:
+                    content.append({'type': 'input_image', 'image_url':
+                        f"data:{block.get('media_type', 'image/png')};base64,{block.get('data', '')}"})
+            items.append({'role': 'user', 'content': content})
+    return items
 
 
 def _provider_blocks(content: Any) -> List[Dict[str, Any]]:
@@ -285,6 +319,7 @@ class Provider:
         self._api_key = api_key or None
         self._base_url = base_url or None
         self._client = None
+        self.reasoning_effort = 'medium'
 
     @property
     def model(self) -> str:
@@ -337,13 +372,16 @@ class OpenAIProvider(Provider):
         return self._client
 
     def complete(self, system, messages, specs, max_tokens: int = 1024) -> Dict[str, Any]:
+        from .runtime_options import openai_options
         client = self._ensure_client()
+        if (self.id == 'openai' and self._model.startswith(('gpt-5', 'gpt-6', 'o1', 'o3', 'o4'))
+                and (specs or any(m.get('_openai_output') for m in messages))):
+            return self._complete_responses(client, system, messages, specs, max_tokens)
         response = client.chat.completions.create(
             model=self._model,
             messages=to_openai_messages(system, messages),
-            tools=to_openai_tools(specs),
-            tool_choice="auto",
-            temperature=0.2,
+            **({'tools': to_openai_tools(specs), 'tool_choice': 'auto'} if specs else {}),
+            **openai_options(self._model, effort=self.reasoning_effort),
         )
         message = response.choices[0].message
         out: Dict[str, Any] = {"content": message.content, "tool_calls": []}
@@ -353,6 +391,27 @@ class OpenAIProvider(Provider):
             except Exception:
                 args = {}
             out["tool_calls"].append({"id": tc.id, "name": tc.function.name, "arguments": args})
+        return out
+
+    def _complete_responses(self, client, system, messages, specs, max_tokens):
+        response = client.responses.create(
+            model=self._model, instructions=system, input=to_responses_input(messages),
+            tools=[{'type': 'function', **tool['function'], 'strict': False}
+                   for tool in to_openai_tools(specs)],
+            reasoning={'effort': self.reasoning_effort or 'medium'},
+            max_output_tokens=max(16384, max_tokens), store=False,
+            include=['reasoning.encrypted_content'],
+        )
+        if response.status != 'completed':
+            raise RuntimeError(f'Model response did not complete: {response.status}. Retry or reduce reasoning effort.')
+        out = {'content': response.output_text, 'tool_calls': [],
+               '_openai_output': [item.model_dump(exclude_none=True) for item in response.output]}
+        for item in response.output:
+            if item.type == 'function_call':
+                args = json.loads(item.arguments or '{}')
+                if not isinstance(args, dict):
+                    raise ValueError('Model returned invalid tool arguments; no action was executed.')
+                out['tool_calls'].append({'id': item.call_id, 'name': item.name, 'arguments': args})
         return out
 
 
@@ -427,10 +486,12 @@ PROVIDER_META: Dict[str, Dict[str, Any]] = {
         "label": "OpenAI",
         "env_key": "OPENAI_API_KEY",
         "model_env": "OPENAI_MODEL",
-        # gpt-4.1 follows tool/agent instructions much better than 4o-mini and is
-        # still inexpensive; mini variants are cheaper, gpt-4o is the older mid-tier.
-        "models": ["gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini"],
-        "default_model": "gpt-4.1",
+        # Ordered by the cost ladder in MODEL_TIERS: luna / terra / sol are the
+        # level 1 / 2 / 3 rungs. The gpt-4.x names stay selectable for keys and
+        # endpoints that have not been moved to the 5.6 family yet.
+        "models": ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol",
+                   "gpt-4.1", "gpt-4.1-mini", "gpt-4o-mini"],
+        "default_model": "gpt-5.6-luna",
         "needs_base_url": False,
         "vision": True,
     },
@@ -438,11 +499,11 @@ PROVIDER_META: Dict[str, Dict[str, Any]] = {
         "label": "Claude (Anthropic)",
         "env_key": "ANTHROPIC_API_KEY",
         "model_env": "ANTHROPIC_MODEL",
-        # Sonnet is the speed/intelligence sweet spot and far cheaper than Opus;
-        # claude-sonnet-5 is the current Sonnet generation (near-Opus coding quality
-        # at the same price, intro pricing through 2026-08-31).
-        "models": ["claude-sonnet-5", "claude-sonnet-4-6", "claude-opus-4-8", "claude-haiku-4-5", "claude-opus-4-7"],
-        "default_model": "claude-sonnet-5",
+        # Ordered by the cost ladder in MODEL_TIERS: haiku / sonnet / opus are the
+        # level 1 / 2 / 3 rungs. The 4.x names remain selectable for pinned work.
+        "models": ["claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5",
+                   "claude-sonnet-4-6", "claude-opus-4-8"],
+        "default_model": "claude-haiku-4-5",
         "needs_base_url": False,
         "vision": True,
     },
@@ -477,6 +538,191 @@ def supports_vision(provider_id: str, model: Optional[str]) -> bool:
         return False
     name = (model or "").lower()
     return not any(hint in name for hint in TEXT_ONLY_MODEL_HINTS)
+
+# -- model tiers (the cost ladder) --------------------------------------------
+#: Approximate list price in USD per million input / output tokens, by model id.
+#: Rates move, and an agent turn re-sends its transcript, so read these as the
+#: relative cost of one level against the next rather than as a bill.
+MODEL_PRICES_USD_PER_MTOK: Dict[str, Tuple[float, float]] = {
+    "gpt-5.6-luna": (0.20, 1.20),
+    "gpt-5.6-terra": (2.00, 12.00),
+    "gpt-5.6-sol": (5.00, 30.00),
+    "gpt-4.1": (2.00, 8.00),
+    "gpt-4.1-mini": (0.40, 1.60),
+    "gpt-4o": (5.00, 15.00),
+    "gpt-4o-mini": (0.15, 0.60),
+    "claude-haiku-4-5": (1.00, 5.00),
+    "claude-sonnet-5": (2.00, 10.00),
+    "claude-opus-5": (5.00, 25.00),
+    "claude-sonnet-4-6": (3.00, 15.00),
+    "claude-opus-4-8": (5.00, 25.00),
+    "deepseek-chat": (0.28, 0.42),
+}
+
+#: Tier ids in ladder order, cheapest first.
+TIER_ORDER = ("level1", "level2", "level3")
+
+#: Selected when the model does not belong to any tier - a hand-typed name, an
+#: OpenAI-compatible endpoint, or a model pinned from an earlier session.
+TIER_CUSTOM = "custom"
+
+#: The three-step routing ladder offered in the chat settings and the Streamlit
+#: sidebar. Sending every request to a flagship model is the expensive default;
+#: starting at level 1 and escalating only when a level cannot finish the job
+#: costs far less over a session, because most turns in a studio conversation
+#: are short and mechanical. Each tier names one model per provider so the same
+#: choice survives a provider switch.
+MODEL_TIERS: Dict[str, Dict[str, Any]] = {
+    "level1": {
+        "name": "Level 1",
+        "headline": "Default requests",
+        "purpose": "Most simple tasks: reading a file, setting a parameter, a short answer.",
+        "models": {"openai": "gpt-5.6-luna", "anthropic": "claude-haiku-4-5"},
+        "effort": "low",
+    },
+    "level2": {
+        "name": "Level 2",
+        "headline": "Complex requests",
+        "purpose": "Coding, reasoning, agent loops, and complex retrieval.",
+        "models": {"openai": "gpt-5.6-terra", "anthropic": "claude-sonnet-5"},
+        "effort": "medium",
+    },
+    "level3": {
+        "name": "Level 3",
+        "headline": "Genuinely hard requests",
+        "purpose": "Escalate here only when a lower level could not solve it.",
+        "models": {"openai": "gpt-5.6-sol", "anthropic": "claude-opus-5"},
+        "effort": "high",
+    },
+}
+
+#: Reasoning effort when the level does not name one, and for a custom model.
+DEFAULT_EFFORT = "medium"
+
+
+def tier_effort(tier_id: Optional[str]) -> str:
+    """How hard the model should think, for a level of the ladder.
+
+    Effort is the other half of the dial the ladder turns. Every level-1 model
+    is a reasoning model, so leaving effort at ``medium`` there made the cheap
+    level slow: chat drives the studio one tool call at a time, and each call is
+    a separate request that pays a full reasoning pass before it can answer
+    "navigate to the ERT module". Level 1 exists for exactly the requests that
+    do not need that.
+
+    Parameters
+    ----------
+    tier_id : str or None
+        A key of :data:`MODEL_TIERS`, or None / :data:`TIER_CUSTOM` for a model
+        that is not on the ladder.
+
+    Returns
+    -------
+    str
+        An effort accepted by the reasoning models: ``'low'``, ``'medium'`` or
+        ``'high'``. A custom model gets :data:`DEFAULT_EFFORT`, since nothing is
+        known about what it is for.
+
+    Raises
+    ------
+    None
+
+    Examples
+    --------
+    >>> tier_effort('level1'), tier_effort('level2'), tier_effort('level3')
+    ('low', 'medium', 'high')
+    >>> tier_effort(None)
+    'medium'
+    >>> tier_effort(TIER_CUSTOM)
+    'medium'
+    """
+    tier = MODEL_TIERS.get(tier_id or "")
+    return str((tier or {}).get("effort") or DEFAULT_EFFORT)
+
+#: Provider names used by callers that predate this module - the Streamlit
+#: sidebar and the agents engine both say "claude" where the adapters say
+#: "anthropic".
+PROVIDER_ALIASES = {"claude": "anthropic", "anthropic": "anthropic",
+                    "openai": "openai", "gpt": "openai"}
+
+
+def normalise_provider_id(provider_id: Optional[str]) -> str:
+    """Map a caller's provider name onto an adapter id (``claude`` -> ``anthropic``)."""
+    key = (provider_id or "").strip().lower()
+    return PROVIDER_ALIASES.get(key, key)
+
+
+def tier_model(tier_id: str, provider_id: str) -> Optional[str]:
+    """The model a ``tier_id`` selects on ``provider_id``, or None if untiered.
+
+    Returns None for a provider the ladder does not cover (an OpenAI-compatible
+    endpoint, say), which is the caller's cue to fall back to manual entry.
+    """
+    tier = MODEL_TIERS.get(tier_id)
+    if not tier:
+        return None
+    return tier["models"].get(normalise_provider_id(provider_id))
+
+
+def tier_for_model(provider_id: str, model: Optional[str]) -> str:
+    """Which tier ``model`` belongs to on ``provider_id``, else :data:`TIER_CUSTOM`.
+
+    The reverse lookup keeps the level selector honest when the model is set by
+    an environment variable, a saved session, or hand-typed into the model box.
+    """
+    name = (model or "").strip()
+    for tier_id in TIER_ORDER:
+        if tier_model(tier_id, provider_id) == name:
+            return tier_id
+    return TIER_CUSTOM
+
+
+def tier_of_model(model: Optional[str]) -> str:
+    """Which tier ``model`` sits on for *any* provider, else :data:`TIER_CUSTOM`.
+
+    Lets a caller keep the level a user chose when they switch provider: the
+    saved model belongs to the old provider's ladder, and the level it names is
+    what should carry over.
+    """
+    for tier_id in TIER_ORDER:
+        if (model or "").strip() in MODEL_TIERS[tier_id]["models"].values():
+            return tier_id
+    return TIER_CUSTOM
+
+
+def price_label(model: Optional[str], compact: bool = False) -> str:
+    """``"$0.20 / $1.20 per Mtok"`` for a known model, else an empty string.
+
+    ``compact`` drops the unit, for a status line that has to stay on one row;
+    the ladder itself spells the unit out, so it is stated somewhere.
+    """
+    rate = MODEL_PRICES_USD_PER_MTOK.get((model or "").strip())
+    if rate is None:
+        return ""
+    unit = "" if compact else " per Mtok"
+    return f"${rate[0]:.2f} / ${rate[1]:.2f}{unit}"
+
+
+def tier_label(tier_id: str, provider_id: str, with_model: bool = True) -> str:
+    """One line naming a tier, and on a covered provider its model and price.
+
+    Example: ``Level 2 - Complex requests (gpt-5.6-terra, $2.00 / $12.00 per Mtok)``.
+    """
+    tier = MODEL_TIERS.get(tier_id)
+    if not tier:
+        return "Custom model"
+    label = f"{tier['name']} - {tier['headline']}"
+    model = tier_model(tier_id, provider_id)
+    if not (with_model and model):
+        return label
+    price = price_label(model)
+    return f"{label} ({model}, {price})" if price else f"{label} ({model})"
+
+
+def provider_has_tiers(provider_id: str) -> bool:
+    """Whether the ladder names a model for every tier on ``provider_id``."""
+    return all(tier_model(t, provider_id) for t in TIER_ORDER)
+
 
 _PROVIDER_CLASSES = {
     "openai": OpenAIProvider,

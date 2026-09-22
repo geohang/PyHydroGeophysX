@@ -1432,6 +1432,30 @@ class JointInversionModule(BaseModule):
             ],
         }
 
+    def show_run_inputs(self, inputs):
+        """Name the pair this run is fusing, so the page is not a blank wizard.
+
+        This module has no file loader of its own - its inputs are other
+        modules' results - so what it can honestly show is which two methods the
+        run has, selected and ready, rather than an empty method chooser.
+        """
+        if self._result is not None:
+            return ""
+        present = []
+        if inputs.get("time_lapse_files") or inputs.get("data_file") or inputs.get("ert_file"):
+            present.append("ERT")
+        if inputs.get("seismic_file") or inputs.get("raw_seismic_file"):
+            present.append("Seismic")
+        if inputs.get("tdem_file"):
+            present.append("TDEM")
+        if len(present) < 2:
+            return ""
+        self.agent_apply("select_pair", {"method_a": present[0], "method_b": present[1]})
+        chosen = self._selected_methods()
+        if len(chosen) < 2:
+            return ""
+        return f"{chosen[0]} with {chosen[1]}, from this run"
+
     def agent_apply(self, action: str, args: Dict[str, Any]) -> Dict[str, Any]:
         if action == "get_status":
             return self.agent_describe()["state"]

@@ -25,6 +25,7 @@ A Python package for integrating hydrological model outputs (MODFLOW, ParFlow) w
 - **ERT data processing** — field data QC, export, and RESIPY integration
 - **Forward modeling** — 2D/3D ERT, SRT, TDEM, FDEM synthetic data generation
 - **Inversion** — single-time, time-lapse, windowed, structure-constrained, joint ERT+SRT, TDEM, FDEM
+- **Monitoring** — acquisition times read from the survey files, temperature correction to a reference temperature, sections clipped to what the data resolve
 - **Petrophysics** — water content ↔ resistivity (Waxman-Smits/Archie), seismic velocity (Hertz-Mindlin, DEM)
 - **Uncertainty quantification** — Monte Carlo for petrophysical parameter uncertainty
 - **Multi-agent AI system** — automated workflows via GPT, Gemini, or Claude APIs
@@ -87,8 +88,9 @@ Both platforms use CUDA-enabled Torch, CuPy GPU CGLS and the cuDSS GPU forward
 solver. The slower SciPy forward solver is intentionally disabled so ADTLERT
 is never reported while running an unaccelerated forward path. Linux remains
 the recommended, most thoroughly tested and generally fastest platform. When
-Torch, CuPy CUDA 12 or cuDSS is unavailable, selecting ADTLERT automatically
-uses the original PyHydro ERT engine instead.
+Torch, CuPy CUDA 12 or cuDSS is unavailable, the Python API can fall back to
+the original PyHydro ERT engine. Studio requires a passing GPU check before
+starting a GPU mode and offers manual selection of PyHydro CPU on failure.
 ADTLERT 0.1 also cannot represent remote electrodes encoded as negative ABMN
 indices; those surveys safely use the original engine without changing data.
 
@@ -113,7 +115,11 @@ result = run_timelapse_ert(
 )
 ```
 
-All timesteps must use the same electrode positions and ABMN ordering. ADTLERT
+ADTLERT timesteps must share electrode positions and numbering. Measurements
+are aligned by their ABMN union; missing rows receive 100% relative error and
+an apparent-resistivity placeholder from the available timesteps. This reduces
+their weight; it does not exclude them from fitting. Native PyHydro time-lapse
+keeps each survey's own measurement count and ordering. ADTLERT
 processes overlapping windows sequentially on the GPU so solver state and
 Jacobian caches are reused without duplicating GPU memory across processes.
 The default `cgls` method selects CuPy CGLS on the CUDA-backed ADTLERT path.
@@ -128,6 +134,34 @@ git clone https://github.com/geohang/PyHydroGeophysX.git
 cd PyHydroGeophysX
 pip install -e ".[geophysics]"
 ```
+
+### Verify Windows/Linux GPU time-lapse before using field data
+
+Run with the same interpreter used to launch Studio:
+
+```bash
+python -m PyHydroGeophysX.inversion.adtlert_diagnostics --report gpu-check.json
+```
+
+This runs CUDA-runtime, single-survey, and two-iteration windowed time-lapse
+checks in separate processes, preserving the default line search. Each stage
+has a 120-second timeout (override with `--timeout`). Exit code 0 means all
+three checks passed. The JSON report includes versions, source/interpreter
+paths, exact commands, full logs and per-stage results. It is a smoke test,
+not a guarantee of convergence for every field dataset.
+
+Studio performs these checks when ADTLERT is selected and reports single and
+time-lapse readiness separately. A mode cannot start until its check passes.
+Select PyHydro to use the CPU path; switch engines and reselect ADTLERT to retry.
+GPU visibility or a passing Studio self-test alone does not verify time-lapse.
+
+On Windows, different dependencies can load conflicting OpenMP runtimes
+(`libomp.dll` / `libiomp5md.dll`), including on AMD CPUs. Keep the error report
+and use a separately verified CPU setup while investigating. Do not force
+`KMP_DUPLICATE_LIB_OK`, remove DLLs, or disable line search to claim success.
+Keep an environment export from a passing installation and rerun the checks
+after package updates. `environment.yml` is a starting environment, not a
+validated CUDA lockfile for every driver and computer.
 
 ### With a coding agent (Claude Code, Codex)
 
@@ -163,6 +197,11 @@ Desktop guide: https://geohang.github.io/PyHydroGeophysX/agents/desktop_studio.h
    official repository into a new directory, then enter the directory that
    contains pyproject.toml before using an editable install. Do not overwrite
    an existing checkout. Every pip command must use the chosen interpreter.
+   For updates, locate the checkout currently imported by that interpreter;
+   do not create another clone or worktree unless I request it. Record:
+     python -c "import sys, PyHydroGeophysX; print(sys.executable); print(PyHydroGeophysX.__file__)"
+   An editable source folder and an environment's Scripts launcher are normally
+   in different locations; that alone does not indicate a broken installation.
 
 4. Start with the CPU setup unless GPU acceleration is needed and supported.
    For CUDA, inspect the NVIDIA GPU, driver, OS, Python and dependency support.
@@ -179,12 +218,39 @@ Desktop guide: https://geohang.github.io/PyHydroGeophysX/agents/desktop_studio.h
    finite results, any warnings and the engine that actually executed.
    If testing ADTLERT, use a compatible dataset without remote electrodes;
    report a fallback rather than claiming that GPU execution succeeded.
+   For ADTLERT, also run the three isolated checks (runtime, single, time-lapse):
+     python -m PyHydroGeophysX.inversion.adtlert_diagnostics --report gpu-check.json
+   Wait for the command to finish and inspect every stage's exit code and JSON
+   result. CUDA availability, a passing single-survey test, or Studio self-test
+   alone does not verify GPU time-lapse. A traceback line alone does not prove
+   that a process crashed; preserve the complete log and final exit status.
+   If this command is unavailable in an older release, report time-lapse as
+   unverified and use the matching release's documented test, or offer an update.
+   On failure, retain gpu-check.json and report each capability separately.
+   OpenMP conflicts can affect Intel or AMD CPUs. Do not set KMP_DUPLICATE_LIB_OK,
+   delete/rename DLLs, disable line search, or patch NumPy to make a check pass.
+   Do not modify source algorithms as part of installation unless I explicitly
+   request a code fix. Offer the CPU engine and verify it independently;
+   do not reinstall the same package combination repeatedly.
+   After successful verification, save python -m pip freeze and, for Conda,
+   conda env export. These record this tested machine; they are not a universal
+   GPU compatibility guarantee. Re-run the checks after dependency updates.
 
 6. For Desktop Studio, install the desktop extras and the engines needed for
    my methods, then run:
      python -m PyHydroGeophysX.qt_apps.launcher --self-test
    Launch the application and give me the exact command to reopen it.
    Report the environment name, installation path and any unverified features.
+
+   For AQUAH Auto to report, keep provider/model/API key settings in the right
+   assistant panel. The OpenAI default is gpt-5.6-luna with medium reasoning.
+   Folder classification sends filenames and short previews to that provider;
+   report whether a real API call was verified or only offline tests passed.
+   RAG uses local reference text. If I request MCP integration, install the
+   optional mcp extra and test the stdio server's list_workflows tool. Leave
+   numerical recipe execution disabled unless I request --allow-run.
+   Never claim that a generic DEM/XYZ file was used by an inversion merely
+   because the classifier recognized it; verify the supported geometry adapter.
 
 Do not delete environments, overwrite projects, or accept third-party Terms
 of Service on my behalf. If a step needs my action, explain what to do.
@@ -294,6 +360,41 @@ free port and tell me which one.
 ```
 
 **Desktop studio (Qt):**
+
+### Agent workflow: folders, reasoning, references and tools
+
+- Select a data folder and let AQUAH classify supported files from names and
+  short previews. Review/edit roles, then continue; unknown files are not used
+  automatically. Individual files can still be added, including geometry and references.
+- Default OpenAI model: **GPT-5.6 Luna**, with selectable reasoning effort
+  (default **medium**). Explicit environment model settings retain precedence.
+- **RAG** retrieves local documentation/reference excerpts and records citations.
+- **MCP** exposes the existing workflow registry, folder scan, documentation
+  search, recipe validation, and optional recipe execution to other MCP clients.
+  Install with `pip install "pyhydrogeophysx[mcp]"`; start with
+  `python -m PyHydroGeophysX.mcp_server --root /path/to/project`.
+- Real backend events and elapsed time stay visible. Detailed reports include
+  filenames/hashes, parameters, observed software calls/versions, references,
+  processing warnings and sources of uncertainty.
+
+See the [Agent Workflow guide](https://geohang.github.io/PyHydroGeophysX/agents/agent_workbench.html)
+for coordinate formats, current terrain limitations, MCP configuration and audit scope.
+
+Use the right-hand **AQUAH** assistant as the single AI entry point. Choose
+**Step-by-step assistance** to review actions, or **Auto to report** to submit a
+complete analysis goal. Both use the provider/model and session key configured
+in AQUAH. The central **Workflow** page contains data selection, survey ordering,
+progress, report preview, output files, and activity; it has no separate AI settings.
+If data are missing, AQUAH keeps your goal and asks you to add files and send
+**continue**. Completion or failure is reported back in the same conversation.
+Follow-up instructions refine the retained goal; **New chat** starts a new goal
+while keeping selected data. Set `max_attempts: 1` or request no automatic
+optimization to assess the first inversion without retries. Completion with
+**Needs review** means the computation finished but quality criteria were not met.
+Use **Stop** in Workflow to cancel. Each attempt has its own output folder;
+use **File → Save Runs to Project** to retain it in project history.
+Auto to report currently supports OpenAI and Claude, reuses the Streamlit unified
+workflow, and may incur API charges. Session keys are passed through stdin.
 
 ```bash
 python -m PyHydroGeophysX.qt_apps.launcher

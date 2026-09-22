@@ -207,6 +207,12 @@ def resistivity_to_saturation(
 
     # Clip porosity to avoid extremes
     porosity = np.clip(porosity, 1e-3, 0.99)
+    # And the exponents, for the same reason. Below n = 1 the residual below
+    # evaluates 0**(n-1) at the bracket's lower end (a divide-by-zero) and the
+    # initial guess raises a ratio to the power 1/n (an overflow as n -> 0).
+    # Callers that sample these from a wide prior otherwise hit both per cell.
+    n_arr = np.clip(n_arr, 1.0, 4.0)
+    m_arr = np.clip(m_arr, 1.0, 4.0)
 
     # Saturated resistivity (Archie)
     rhos = a * rho_fluid * porosity**(-m_arr)

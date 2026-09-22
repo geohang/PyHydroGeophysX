@@ -48,6 +48,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+mcp = ["mcp>=1.12,<2; python_version >= '3.10'"]
 geophysics = [
     "pygimli>=1.5.5,<2.0",
     "simpeg>=0.24,<1.0",
@@ -148,6 +149,7 @@ all = [
 ]
 
 [project.scripts]
+pyhydrogeophysx-mcp = "PyHydroGeophysX.mcp_server:main"
 pyhydrogeophysx-gui = "PyHydroGeophysX.gui:main"
 pyhydrogeophysx-workflow = "PyHydroGeophysX.workflows.cli:main"
 

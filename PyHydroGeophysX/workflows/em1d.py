@@ -713,8 +713,16 @@ def _best_starting_resistivity(blocks, n_layers: int, workers: int, *,
     return best_rho
 
 
-def _neighboring_starts(raw, positions, lines, bounds):
-    """Local log-median starts, without crossing lines or large spatial gaps."""
+def _neighboring_starts(raw, positions, lines, bounds, window: int = 2):
+    """Local log-median starts, without crossing lines or large spatial gaps.
+
+    ``window`` is how many stations on each side join the median, so the default
+    of 2 medians over five. A wider window is what the reference model wants and
+    the starting model does not: a start only has to be close, while every
+    wiggle left in the reference is written into the model below the depth of
+    investigation, where nothing else decides the level.
+    """
+    window = max(int(window), 0)
     raw = np.asarray(raw, dtype=float)
     result = raw.copy()
     for line in np.unique(lines):
@@ -725,11 +733,70 @@ def _neighboring_starts(raw, positions, lines, bounds):
         limit = 3 * np.median(positive) if positive.size else np.inf
         for group in np.split(ids, np.flatnonzero(gaps > limit) + 1):
             for j, index in enumerate(group):
-                local = raw[group[max(0, j-2):j+3]]
+                local = raw[group[max(0, j-window):j+window+1]]
                 valid = local[np.isfinite(local) & (local > bounds[0]) & (local < bounds[1])]
                 if valid.size >= 2:
                     result[index] = 10 ** np.median(np.log10(valid))
     return result
+
+
+def _reference_starts(selected, raw, positions, lines, bounds, inv,
+                      log: LogFn = _noop):
+    """The half-space per station that the zeroth-order damping pulls toward.
+
+    Kept apart from the starting model on purpose, although the two default to
+    the same array. A start only decides where the optimiser begins, so a
+    per-station data-driven value costs nothing once the run converges. The
+    reference is a prior: below the depth of investigation it is the only thing
+    setting the level, so whatever station-to-station scatter it carries is
+    written into the section whether the data support it or not.
+
+    ``reference_model_mode`` chooses how much of that scatter to keep.
+    ``neighbor`` (the default) reuses the starting model's own local median,
+    widened by ``reference_window``; ``line`` collapses each line to one
+    half-space; ``global`` collapses the survey to one. A positive
+    ``reference_resistivity`` overrides all three, which is the way to pin the
+    reference to a level measured from an earlier inversion rather than to
+    whatever the half-space scan ranked first.
+    """
+    selected = np.asarray(selected, dtype=float)
+    explicit = float(inv.get("reference_resistivity", 0.0) or 0.0)
+    if explicit > 0:
+        log(f"Reference model: explicit {explicit:g} ohm-m at every station.")
+        return np.full(selected.shape, explicit)
+
+    mode = str(inv.get("reference_model_mode", "neighbor")).lower()
+    if mode not in {"neighbor", "line", "global"}:
+        raise ValueError("reference_model_mode must be neighbor, line or global.")
+
+    if mode == "neighbor":
+        window = max(int(inv.get("reference_window", 2)), 0)
+        if window == 2:
+            return selected
+        widened = _neighboring_starts(raw, positions, lines, bounds, window=window)
+        usable = np.isfinite(widened) & (widened > 0)
+        log(f"Reference model: local log-median over +/-{window} same-line stations.")
+        return np.where(usable, widened, selected)
+
+    usable = np.isfinite(selected) & (selected > 0)
+    if not usable.any():
+        log("Reference model: no usable starts; falling back to the half-space.")
+        return selected
+
+    if mode == "global":
+        value = float(10.0 ** np.median(np.log10(selected[usable])))
+        log(f"Reference model: one {value:.6g} ohm-m half-space for the survey.")
+        return np.full(selected.shape, value)
+
+    reference = selected.copy()
+    lines = np.asarray(lines)
+    for line in np.unique(lines):
+        ids = np.flatnonzero(lines == line)
+        good = ids[usable[ids]]
+        if good.size:
+            reference[ids] = 10.0 ** np.median(np.log10(selected[good]))
+    log("Reference model: one half-space per line.")
+    return reference
 
 
 def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any],
@@ -1005,26 +1072,48 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
 
     neighbor_starts = None
     if neighbor_start:
-        from PyHydroGeophysX.inversion.em1d import tdem_moment_blocks
-        from PyHydroGeophysX.inversion.em1d_lci import SoundingBlock
+        from PyHydroGeophysX.inversion.em1d import (
+            _moment_forward, _moment_jacobian, tdem_moment_blocks,
+        )
+        from PyHydroGeophysX.inversion.em1d_lci import SoundingBlock, _map_soundings
         raw_starts = np.full(n_pos, np.nan)
-        for s, data in enumerate(datasets):
-            if data is None:
-                continue
+        scan_default = float(inv.get("starting_resistivity", 100.))
+
+        def scan(s: int):
+            """One station's half-space ranking, on a worker thread.
+
+            The candidates are independent per station, so this is the same
+            embarrassingly parallel shape as the block build below. ``workers=1``
+            inside: the pool is out here, one station per thread, and a nested
+            pool would only oversubscribe the cores.
+
+            Returns its failure rather than raising, so one bad station cannot
+            stop the line, and stays quiet so the caller can log in order.
+            """
+            if datasets[s] is None:
+                return s, float("nan"), None
             try:
-                blocks = tdem_moment_blocks(data, geometries[s], inv, thick)
-                from PyHydroGeophysX.inversion.em1d import _moment_forward, _moment_jacobian
+                blocks = tdem_moment_blocks(datasets[s], geometries[s], inv, thick)
                 block = SoundingBlock(
                     forward=_moment_forward(blocks),
                     jacobian=_moment_jacobian(blocks),
                     dobs=np.concatenate([b["observed"] for b in blocks]),
                     uncertainty=np.concatenate([b["uncertainty"] for b in blocks]),
                     position=float(pos_lci[s]), line=int(line_numbers[s]))
-                raw_starts[s] = _best_starting_resistivity(
-                    [block], n_layers, 1,
-                    default=float(inv.get("starting_resistivity", 100.)), log=_noop)
-            except Exception as exc:
-                log(f"  sounding {s+1} initial scan unavailable: {exc}")
+                return s, _best_starting_resistivity(
+                    [block], n_layers, 1, default=scan_default, log=_noop), None
+            except Exception as exc:  # noqa: BLE001 - keep the line going
+                return s, float("nan"), exc
+
+        if workers > 1:
+            log(f"Ranking starting half-spaces for {n_pos} soundings on {workers} threads")
+        with _worker_pool(workers) as scan_pool:
+            scanned = _map_soundings(scan_pool, scan, n_pos)
+        for s, value, failure in scanned:
+            if failure is not None:
+                log(f"  sounding {s+1} initial scan unavailable: {failure}")
+                continue
+            raw_starts[s] = value
         bounds = (float(inv.get("rho_min", 1.)), float(inv.get("rho_max", 1e5)))
         neighbor_starts = _neighboring_starts(raw_starts, pos_lci, line_numbers, bounds)
         if sequential and not use_warm_models:
@@ -1233,8 +1322,25 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                         f"{prior_report['target_resistivity']:.0f} ohm-m")
                 log(f"  Background soft tendency: {target_description} "
                     "(capped by rho_max; all layers, not a depth estimate).")
+            reference_model = None
+            if neighbor_starts is not None:
+                reference_starts = _reference_starts(
+                    selected_starts, raw_starts[kept], pos_lci[kept],
+                    line_numbers[kept], bounds, inv, log=log)
+                reference_model = np.repeat(reference_starts[:, None], n_layers, axis=1)
+                finite = reference_starts[np.isfinite(reference_starts)]
+                if not finite.size:
+                    reference_description = f"{start_resistivity:.6g} ohm-m"
+                elif np.allclose(finite, finite[0]):
+                    reference_description = f"{finite[0]:.6g} ohm-m at every station"
+                else:
+                    reference_description = (
+                        f"per station, {finite.min():.6g} to {finite.max():.6g} ohm-m "
+                        f"(median {np.median(finite):.6g})")
+            else:
+                reference_description = f"{start_resistivity:.6g} ohm-m half-space"
             log(f"Model damping ratio: {float(inv.get('model_damping', DEFAULT_INVERSION['model_damping'])):g}; "
-                f"reference half-space: {start_resistivity:.6g} ohm-m.")
+                f"reference: {reference_description}.")
             lci_kwargs = dict(
                 solver=str(inv.get("lci_solver", "trf")),
                 trf_max_nfev=int(inv.get("lci_max_nfev", 90)),
@@ -1246,8 +1352,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                 reference_distance=reference_distance,
                 lateral_distance_power=lateral_distance_power,
                 model_damping=float(inv.get("model_damping", DEFAULT_INVERSION["model_damping"])),
-                reference_model=(np.repeat(selected_starts[:, None], n_layers, axis=1)
-                                 if neighbor_starts is not None else None),
+                reference_model=reference_model,
                 starting_resistivity=start_resistivity,
                 max_iterations=int(inv.get("max_iterations", 20)),
                 convergence_tolerance=float(inv.get("convergence_tolerance", 0.02)),

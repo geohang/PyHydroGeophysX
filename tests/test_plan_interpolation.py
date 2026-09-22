@@ -208,9 +208,26 @@ def test_a_reused_variogram_fit_reproduces_the_same_grid():
     assert first['variogram']['model'] in VARIOGRAM_MODELS
 
 
-def test_gridding_refuses_an_unknown_method_and_an_over_blanked_frame():
+def test_the_reported_gap_is_the_blanking_distance_that_costs_nothing():
+    xy, rho = tem_survey(lines=4, line_spacing=400.)
+    free = plan_grid(xy, rho, method='idw', resolution=120, log_values=True)
+    gap = free['gap']
+    assert gap > 0
+    # Blanking at the reported gap leaves the outline whole; well under it the
+    # map is reduced to ribbons along the lines, which is what the caption warns
+    # about rather than leaving the reader to guess a number.
+    at_gap = plan_grid(xy, rho, method='idw', resolution=120, log_values=True, max_distance=gap)
+    ribbons = plan_grid(xy, rho, method='idw', resolution=120, log_values=True,
+                        max_distance=gap / 10)
+    assert at_gap['coverage'] == pytest.approx(free['coverage'])
+    assert ribbons['coverage'] < free['coverage'] / 2
+    assert ribbons['gap'] == pytest.approx(gap), 'the gap describes the survey, not the setting'
+
+
+def test_gridding_refuses_an_unknown_method_and_says_what_over_blanking_needed():
     xy, rho = tem_survey(lines=4, stations=6)
     with pytest.raises(ValueError, match='Unknown interpolation method'):
         plan_grid(xy, rho, method='spline')
-    with pytest.raises(ValueError, match='blank'):
+    with pytest.raises(ValueError, match=r'blanked.*needs') as refusal:
         plan_grid(xy, rho, method='idw', max_distance=1e-6)
+    assert '1e-06' in str(refusal.value)

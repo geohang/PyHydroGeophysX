@@ -437,7 +437,10 @@ def plan_grid(xy: np.ndarray,
         ``x`` / ``y`` cell centres, ``x_edges`` / ``y_edges`` for
         ``pcolormesh``, ``cell_size``, ``variance`` (kriging only, in
         interpolated-space squared units, NaN where blanked), ``variogram`` (the
-        fit actually used), ``n_samples``, ``coverage`` and the settings applied.
+        fit actually used), ``n_samples``, ``coverage``, ``gap`` -- the smallest
+        ``max_distance`` that would blank nothing inside the survey outline, so a
+        caller can tell a trimmed line spacing from a gutted map -- and the
+        settings applied.
     """
     method = str(method).lower()
     if method not in METHODS:
@@ -461,11 +464,19 @@ def plan_grid(xy: np.ndarray,
             keep &= Delaunay(xy).find_simplex(targets) >= 0
         except Exception as exc:  # noqa: BLE001 - a degenerate hull is a data problem
             raise ValueError(f'Cannot outline the survey for clipping: {exc}') from exc
+    nearest = cKDTree(xy).query(targets)[0]
+    # How far a cell can sit from the nearest station and still be inside the
+    # survey. Blanking at or above this removes nothing; below it starts eating
+    # the map, which is the difference between trimming a wide line spacing and
+    # reducing the survey to ribbons along the lines.
+    gap = float(nearest[keep].max()) if keep.any() else float('nan')
     if max_distance:
-        keep &= cKDTree(xy).query(targets)[0] <= float(max_distance)
+        keep &= nearest <= float(max_distance)
     if not keep.any():
-        raise ValueError('Every grid cell was blanked. Widen the blanking distance '
-                         'or turn off convex-hull clipping.')
+        raise ValueError(f'Every grid cell was blanked: no cell lies within '
+                         f'{float(max_distance):g} of a station, and the survey needs '
+                         f'{gap:.4g} to fill its outline.' if max_distance else
+                         'Every grid cell was blanked. Turn off convex-hull clipping.')
 
     wanted = targets[keep]
     fit = None
@@ -496,7 +507,7 @@ def plan_grid(xy: np.ndarray,
             'cell_size': cell,
             'variance': None if variance is None else variance.reshape(mesh_x.shape),
             'variogram': fit, 'method': method, 'log_values': bool(log_values),
-            'n_samples': int(len(values)), 'clipped': bool(clip_to_hull),
+            'n_samples': int(len(values)), 'clipped': bool(clip_to_hull), 'gap': gap,
             'max_distance': None if not max_distance else float(max_distance),
             'coverage': float(np.count_nonzero(keep)) / keep.size}
 

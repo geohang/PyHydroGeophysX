@@ -87,8 +87,16 @@ def result_snapshot(page):
         tl = getattr(page, '_tl_models', None)
         if tl is not None and getattr(page, '_map_result_kind', '') == 'timelapse':
             index = max(0, page._tl_step_combo.currentIndex())
+            label = page._tl_step_combo.currentText()
+            # Follow the display mode. Adding a percentage-change section to the
+            # map as though it were resistivity puts a number near zero on a
+            # resistivity colour scale, and nothing on the map would say why.
+            if page._tl_view_mode.currentData() == 'change':
+                return mesh_snapshot(page._tl_mesh,
+                                     page._percent_change(np.asarray(tl), index),
+                                     'ERT', f'ERT change {label}', units='%')
             return mesh_snapshot(page._tl_mesh, np.asarray(tl)[:, index], 'ERT',
-                                 f'ERT {page._tl_step_combo.currentText()}')
+                                 f'ERT {label}')
         manager = getattr(page, '_inv_mgr', None)
         if manager is None:
             raise ValueError('Run an ERT inversion first.')

@@ -244,6 +244,9 @@ class ModelViewerModule(BaseModule):
         self._unsaved_ids: set[str] = set()
         self._current: Optional[RunRecord] = None
         self._current_artifacts: List[Dict[str, Any]] = []
+        self._series = None        # the time-lapse view currently on screen
+        self._series_source = None # its models as inverted, before any correction
+        self._correction_note = None
         self._size_cache: Dict[str, int] = {}
         self._visual_resources: List[Any] = []
         self._quality_ok = False
@@ -926,6 +929,11 @@ class ModelViewerModule(BaseModule):
     def _replace_visual(
         self, widget: QWidget, *, resources: Optional[List[Any]] = None
     ) -> None:
+        # Whatever is on screen owns "Add to Map"; dropping the handle here means
+        # a new artifact cannot be mapped, or corrected, as the previous one.
+        self._series = None
+        self._series_source = None
+        self._correction_note = None
         self._clear_visual()
         self._visual_resources.extend(resources or [])
         self._visual_layout.addWidget(widget)
@@ -1071,13 +1079,198 @@ class ModelViewerModule(BaseModule):
         )
         self._replace_visual(view)
 
+    def _step_titles(self, model: Any, mesh: Any) -> List[str]:
+        """Acquisition dates for the steps, when the run recorded them.
+
+        A saved run carries the titles its own panels used, so a result reopened
+        months later is still headed by the survey date rather than by an index.
+        """
+        if self._current is None:
+            return []
+        summary = self._current.summary or {}
+        for key in ("step_titles", "time_labels"):
+            titles = summary.get(key)
+            if isinstance(titles, list) and titles:
+                return [str(t) for t in titles]
+        return []
+
+    def _with_map_export(self, view: QWidget) -> QWidget:
+        """Put the section view above the actions that apply to it.
+
+        A saved result is exactly the thing that should be corrected, compared and
+        mapped without being inverted again: this is where someone opens a result a
+        colleague handed over.
+        """
+        host = QWidget()
+        layout = QVBoxLayout(host)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(view, stretch=1)
+        # Carried on the host rather than assigned here: the caller swaps the page
+        # in afterwards, and that swap clears the page-level handles.
+        note = QLabel("")
+        note.setWordWrap(True)
+        host.correction_note = note
+        layout.addWidget(note)
+        row = QHBoxLayout()
+        temperature = QPushButton("Temperature correction…")
+        temperature.setToolTip(
+            "Report this result at one reference temperature. Resistivity moves "
+            "about 2 % per °C, so across a season the temperature signal is the "
+            "same size as the moisture signal - and the correction can be applied "
+            "here, to a result that has already been inverted.")
+        temperature.clicked.connect(self._open_temperature_dialog)
+        row.addWidget(temperature)
+        row.addStretch(1)
+        row.addWidget(self.map_export_button())
+        layout.addLayout(row)
+        return host
+
+    def _series_survey_times(self, n_steps: int):
+        """``(days, dates)`` for the loaded series, from what the run recorded."""
+        from PyHydroGeophysX.data_processing.survey_timing import parse_timestamp
+
+        summary = (self._current.summary if self._current is not None else {}) or {}
+        days = summary.get("measurement_times")
+        days = ([float(value) for value in days]
+                if isinstance(days, list) and len(days) == n_steps else None)
+        stamps = ((summary.get("survey_timing") or {}).get("timestamps")
+                  if isinstance(summary.get("survey_timing"), dict) else None)
+        dates = None
+        if isinstance(stamps, list) and len(stamps) == n_steps and all(stamps):
+            dates = []
+            for value in stamps:
+                try:
+                    dates.append(datetime.fromisoformat(str(value)))
+                except ValueError:
+                    dates = None
+                    break
+        if dates is None:
+            # A run saved before the timing was recorded still has its labels, and
+            # those are the dates the panels were headed with.
+            labels = summary.get("time_labels") or summary.get("step_titles")
+            if isinstance(labels, list) and len(labels) == n_steps:
+                parsed = [parse_timestamp(str(label)) for label in labels]
+                if all(item is not None for item in parsed):
+                    dates = [item[0] for item in parsed]
+        return days, dates
+
+    def _open_temperature_dialog(self) -> None:
+        """Correct the displayed series to a reference temperature, in place."""
+        from PySide6.QtWidgets import QDialog, QDialogButtonBox
+        from PyHydroGeophysX.qt_apps.widgets.temperature_panel import TemperatureOptions
+
+        source = getattr(self, "_series_source", None)
+        if self._series is None or not source:
+            QMessageBox.information(
+                self, "Temperature correction",
+                "Open a saved model result in the Visualization tab first.")
+            return
+        models = source["models"]
+        n_steps = 1 if models.ndim == 1 else models.shape[1]
+        _, dates = self._series_survey_times(n_steps)
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Temperature correction")
+        layout = QVBoxLayout(dialog)
+        panel = TemperatureOptions(dialog)
+        panel.set_context(n_steps, dates is not None)
+        panel.setChecked(bool(source.get("correction")))
+        layout.addWidget(panel)
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        spec, problem = panel.spec()
+        if problem:
+            QMessageBox.warning(self, "Temperature correction", problem)
+            return
+        ok, message = self.apply_temperature_spec(spec)
+        if not ok:
+            QMessageBox.warning(self, "Temperature correction", message)
+
+    def apply_temperature_spec(self, spec: Optional[Dict[str, Any]]) -> tuple:
+        """Correct the displayed series, or put the inverted models back.
+
+        Split out of the dialog so the correction can be applied without one -
+        by a test, or by a caller that already knows what it wants.
+
+        Returns ``(ok, message)``.
+        """
+        source = getattr(self, "_series_source", None)
+        if self._series is None or not source:
+            return False, "Open a saved model result in the Visualization tab first."
+        models = source["models"]
+        n_steps = 1 if models.ndim == 1 else models.shape[1]
+        if spec is None:
+            # Unticked: put the raw inverted models back rather than leaving a
+            # corrected section on screen with nothing saying so.
+            self._apply_series(models, None)
+            self.log("Temperature correction removed; showing the inverted models.",
+                     "info")
+            return True, ""
+        days, dates = self._series_survey_times(n_steps)
+        try:
+            from PyHydroGeophysX.core import section_geometry
+            from PyHydroGeophysX.petrophysics import temperature as temperature_model
+
+            depths = section_geometry.cell_depths(source["mesh"])
+            stack = models.reshape(-1, 1) if models.ndim == 1 else models
+            corrected, report = temperature_model.correct_time_lapse_models(
+                stack, spec, depths, days=days, dates=dates)
+        except Exception as exc:  # noqa: BLE001 - report it, never lose the result
+            self.log(f"Temperature correction not applied: {exc}", "warn")
+            return False, str(exc)
+        self._apply_series(corrected if models.ndim > 1 else corrected[:, 0], report)
+        self.log(f"Temperature correction: {report['note']}", "success")
+        return True, report["note"]
+
+    def _apply_series(self, models: Any, report: Optional[Dict[str, Any]]) -> None:
+        """Redraw the series and say, on the page, what it is now showing."""
+        source = getattr(self, "_series_source", None)
+        if self._series is None or not source:
+            return
+        source["correction"] = report
+        self._series.set_series(source["mesh"], models,
+                                coverage=source.get("coverage"),
+                                titles=source.get("titles"))
+        note = getattr(self, "_correction_note", None)
+        if note is not None:
+            note.setText(
+                f"Reported at {report['reference_temperature_C']:g} °C — "
+                f"{report['note']}" if report else "")
+
+    def map_snapshot(self):
+        """What "Add to Map" takes from this page: exactly what is on screen.
+
+        Including the display mode - a percentage-change section is added as a
+        percentage-change survey, not silently as resistivity.
+        """
+        from PyHydroGeophysX.qt_apps.project_map import mesh_snapshot
+
+        series = getattr(self, "_series", None)
+        if series is None:
+            raise ValueError(
+                "Open a saved model result in the Visualization tab first.")
+        mesh = getattr(series, "_mesh", None)
+        values = series.current_values()
+        if mesh is None or values is None:
+            raise ValueError("The selected result has no model to add.")
+        title = series.current_title() or "ERT"
+        if series.current_mode() == "change":
+            return mesh_snapshot(mesh, values, "ERT", f"ERT change {title}",
+                                 coverage=series.current_coverage(), units="%")
+        return mesh_snapshot(mesh, values, "ERT", f"ERT {title}",
+                             coverage=series.current_coverage())
+
     def _render_mesh_bundle(self, artifact: Dict[str, Any]) -> None:
         if self._current is None or self._store is None:
             return
         bundle = dict((artifact.get("metadata") or {}).get("bundle") or {})
         try:
             import pygimli as pg
-            from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
             mesh = pg.load(str(self._store.locate_run_artifact(self._current, bundle["mesh"])))
             model_key = "models" if "models" in bundle else "model"
             model = np.load(
@@ -1090,31 +1283,27 @@ class ModelViewerModule(BaseModule):
                     self._store.locate_run_artifact(self._current, bundle["coverage"]),
                     allow_pickle=False,
                 )
-            if model.ndim == 1:
-                view = MeshResultView(); view.show_field(mesh, model, coverage=coverage)
-                self._replace_visual(view)
-            else:
-                host = QWidget(); layout = QVBoxLayout(host); step = QSpinBox()
-                n_steps = model.shape[1] if model.shape[0] == mesh.cellCount() else model.shape[0]
-                step.setRange(0, n_steps - 1)
-                view = MeshResultView()
-                def show(value: int) -> None:
-                    values = model[:, value] if model.shape[0] == mesh.cellCount() else model[value]
-                    cov = None
-                    if coverage is not None:
-                        cov = coverage[:, value] if coverage.ndim > 1 and coverage.shape[0] == mesh.cellCount() else coverage[value] if coverage.ndim > 1 else coverage
-                    view.show_field(mesh, values, coverage=cov, title=f"Time step {value + 1}")
-                step.valueChanged.connect(show); show(0)
-                # One scale over the whole series, so stepping through compares
-                # the models instead of comparing each one with itself.
-                finite = model[np.isfinite(model) & (model > 0.0)]
-                if finite.size:
-                    low = float(np.nanpercentile(finite, 2.0))
-                    high = float(np.nanpercentile(finite, 98.0))
-                    view.set_color_range(low, max(high, low * 1.01))
-                row = QHBoxLayout(); row.addWidget(QLabel("Time step:")); row.addWidget(step); row.addStretch(1)
-                layout.addLayout(row); layout.addWidget(view, stretch=1)
-                self._replace_visual(host)
+            # The same series view the processing modules use, so a result someone
+            # else inverted is read here with the same controls - step through the
+            # surveys, switch to percentage change, clip, smooth, add to the map -
+            # instead of being a set of pictures to look at. A single model takes
+            # the same path and simply hides the series controls.
+            from PyHydroGeophysX.qt_apps.widgets.series_view import TimeLapseSeriesView
+
+            titles = self._step_titles(model, mesh)
+            view = TimeLapseSeriesView()
+            view.set_series(mesh, model, coverage=coverage, titles=titles)
+            host = self._with_map_export(view)
+            # After the swap, not before: _replace_visual drops the previous
+            # page's handles so a stale one cannot be mapped or corrected.
+            self._replace_visual(host)
+            self._series = view
+            self._correction_note = host.correction_note
+            # Keep the models as inverted, so a temperature correction can be
+            # applied, changed and taken off again without reloading the run.
+            self._series_source = {"mesh": mesh, "models": model,
+                                   "coverage": coverage, "titles": titles,
+                                   "correction": None}
         except Exception as exc:
             self._clear_visual(f"Mesh viewer is unavailable or the bundle is incomplete:\n{exc}")
 

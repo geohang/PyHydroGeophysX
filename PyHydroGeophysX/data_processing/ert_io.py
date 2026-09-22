@@ -17,8 +17,6 @@ across loaders so a file never silently loads empty.
 
 from __future__ import annotations
 
-import datetime as _dt
-import re
 import tempfile
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Sequence, Tuple
@@ -236,40 +234,30 @@ def load_ert_container(path: str, instrument: Optional[str] = None,
 # ---------------------------------------------------------------------------
 # Measurement times from filenames
 # ---------------------------------------------------------------------------
-_DATE_PATTERN = re.compile(
-    r"(?<!\d)(\d{4})[-_]?(\d{2})[-_]?(\d{2})"
-    r"(?:[T_ -]?(\d{2})[:_-]?(\d{2})(?:[:_-]?(\d{2}))?)?(?!\d)"
-)
+def survey_timing_for(files: Sequence[str], *, allow_header: bool = True,
+                      allow_mtime: bool = False):
+    """Full acquisition timing of a monitoring sequence.
 
+    Thin re-export of :func:`PyHydroGeophysX.data_processing.survey_timing.survey_timing`
+    so callers already holding this module do not need a second import. Prefer it
+    over :func:`measurement_times_for` whenever the interval between surveys is
+    worth reporting, which for a time-lapse survey is always.
+    """
+    from PyHydroGeophysX.data_processing.survey_timing import survey_timing
 
-def _parse_date(stem: str) -> Optional[_dt.datetime]:
-    for m in _DATE_PATTERN.finditer(stem):
-        try:
-            return _dt.datetime(*(int(value) if value is not None else 0
-                                  for value in m.groups()))
-        except ValueError:
-            continue
-    return None
+    return survey_timing(files, allow_header=allow_header, allow_mtime=allow_mtime)
 
 
 def measurement_times_for(files: Sequence[str]) -> Tuple[List[float], List[str]]:
     """Derive numeric measurement times + display labels from filenames.
 
     When every filename embeds a distinct timestamp, times are elapsed days from
-    the earliest acquisition. Labels retain time when acquisitions share a date.
-    Otherwise falls back to a
-    sequential ``1..n`` with index labels.
+    the earliest acquisition and labels are the dates; otherwise it falls back to
+    a sequential ``1..n`` with index labels. :func:`survey_timing_for` returns the
+    same times plus the absolute timestamps and the intervals between them.
     """
-    dates = [_parse_date(Path(f).stem) for f in files]
-    if files and all(d is not None for d in dates):
-        t0 = min(dates)
-        times = [(d - t0).total_seconds() / 86400.0 for d in dates]
-        show_time = len({d.date() for d in dates}) != len(dates)
-        labels = [d.strftime("%Y-%m-%d %H:%M:%S" if show_time else "%Y-%m-%d") for d in dates]
-        if len(set(times)) == len(times):  # distinct -> usable as a time axis
-            return times, labels
-    n = len(files)
-    return [float(i + 1) for i in range(n)], [str(i + 1) for i in range(n)]
+    timing = survey_timing_for(files)
+    return list(timing.times), list(timing.labels)
 
 
 def save_edited_ert_container(

@@ -43,6 +43,22 @@ DEFAULT_TL = {
     # step, so the default budget is smaller than the single-inversion search.
     "auto_lambda": False, "target_chi2": 1.0, "chi2_tolerance": 0.2,
     "max_lambda_trials": 4, "lambda_warm_start": True,
+    # Distribute the temporal constraint by the interval between surveys, so it
+    # penalizes the rate of change rather than the raw difference. Normalized by
+    # the median interval: an evenly sampled series is unaffected and alpha keeps
+    # its meaning. "uniform" reproduces a run from before this existed.
+    "temporal_weighting": "interval",
+    "temporal_weight_limit": 10.0,
+    # Correct every step to one reference temperature before the sections are
+    # compared. None or {"enabled": False} leaves the models as inverted; see
+    # PyHydroGeophysX.petrophysics.temperature.DEFAULT_TEMPERATURE_SPEC.
+    "temperature_correction": None,
+    # How the exported panels are trimmed to the resolved part of the section:
+    # "coverage" is pyGIMLi's own per-cell alpha fade, "envelope" is the
+    # traditional clean cut along a smooth clipping depth, "none" draws the whole
+    # parameter mesh.
+    "figure_clip": "coverage",
+    "figure_clip_threshold": -2.0,
 }
 
 #: Above this many model unknowns (para cells x time steps) the dense
@@ -125,6 +141,149 @@ def default_times(n: int) -> List[int]:
     return list(range(1, int(n) + 1))
 
 
+def _coerce_datetime(value: Any):
+    """A datetime from a datetime, a date or an ISO-ish string; None otherwise."""
+    import datetime as dt
+
+    if isinstance(value, dt.datetime):
+        return value
+    if isinstance(value, dt.date):
+        return dt.datetime(value.year, value.month, value.day)
+    if isinstance(value, str) and value.strip():
+        try:
+            return dt.datetime.fromisoformat(value.strip())
+        except ValueError:
+            from PyHydroGeophysX.data_processing.survey_timing import parse_timestamp
+
+            found = parse_timestamp(value)
+            return found[0] if found else None
+    return None
+
+
+def _resolve_timing(source_files: Sequence[str],
+                    measurement_times: Optional[Sequence[float]],
+                    time_labels: Optional[Sequence[str]],
+                    timestamps: Optional[Sequence[Any]]):
+    """Acquisition times for the run, from whichever source has them.
+
+    Order of preference: timestamps handed in by the caller, then timestamps
+    recovered from the caller's own labels (the Studio stages the files under
+    generated names but records the parsed dates as labels, so this is what keeps
+    a bundled run dated), then the filenames themselves.
+
+    A caller that also supplies numeric ``measurement_times`` keeps them: they may
+    be in a unit of its own choosing and they are what the temporal regularization
+    sees. Only the reporting - the labels, the intervals, the span - comes from the
+    timestamps.
+    """
+    from PyHydroGeophysX.data_processing.survey_timing import (
+        SurveyTiming, survey_timing,
+    )
+
+    files = [str(f) for f in source_files]
+    n = len(files)
+    stamps = None
+    if timestamps is not None and len(timestamps) == n:
+        candidate = [_coerce_datetime(value) for value in timestamps]
+        if all(value is not None for value in candidate):
+            stamps, source = candidate, "acquisition times supplied with the run"
+    if stamps is None and time_labels is not None and len(time_labels) == n:
+        candidate = [_coerce_datetime(str(label)) for label in time_labels]
+        if all(value is not None for value in candidate) and len(set(candidate)) == n:
+            stamps, source = candidate, "the acquisition dates recorded with the files"
+
+    has_times = measurement_times is not None and len(measurement_times) == n
+    if stamps is not None:
+        origin = min(stamps)
+        derived = [(s - origin).total_seconds() / 86400.0 for s in stamps]
+        times = [float(t) for t in measurement_times] if has_times else derived
+        labels = ([str(lbl) for lbl in time_labels]
+                  if time_labels is not None and len(time_labels) == n
+                  else [s.strftime("%Y-%m-%d %H:%M") for s in stamps])
+        return SurveyTiming(files=files, timestamps=stamps, times=times,
+                            labels=labels, source=source, unit="d")
+
+    if has_times:
+        labels = ([str(lbl) for lbl in time_labels]
+                  if time_labels is not None and len(time_labels) == n
+                  else [f"{float(t):g}" for t in measurement_times])
+        return SurveyTiming(files=files, timestamps=[None] * n,
+                            times=[float(t) for t in measurement_times],
+                            labels=labels, source="supplied times", unit="")
+
+    return survey_timing(files)
+
+
+def _sensor_positions(data) -> Optional[np.ndarray]:
+    """Electrode ``(x, elevation)`` positions, or None when they cannot be read."""
+    try:
+        positions = np.asarray(data.sensors(), dtype=float)
+        return positions[:, :2] if positions.ndim == 2 and positions.shape[1] >= 2 else None
+    except Exception:  # noqa: BLE001 - topography will come from the mesh instead
+        return None
+
+
+def _apply_temperature_correction(spec: Any, models: np.ndarray, mesh: Any, data,
+                                  times: Sequence[float],
+                                  timestamps: Sequence[Any],
+                                  log: LogFn) -> Dict[str, Any]:
+    """Correct the inverted series to one reference temperature, if asked to.
+
+    Returns a report dict carrying the corrected models under ``"models"`` when it
+    succeeded. A correction that was asked for but could not be built is reported
+    as ``applied: False`` with the reason, and logged as a warning: a section
+    silently left uncorrected looks exactly like a corrected one, so the run has to
+    say which it is.
+    """
+    if not spec or not bool(dict(spec).get("enabled", True)):
+        return {"applied": False, "requested": False}
+    try:
+        from PyHydroGeophysX.core import section_geometry
+        from PyHydroGeophysX.petrophysics import temperature as temperature_model
+
+        depths = section_geometry.cell_depths(mesh, sensors=_sensor_positions(data))
+        dates = [t for t in timestamps] if timestamps and all(
+            t is not None for t in timestamps) else None
+        corrected, report = temperature_model.correct_time_lapse_models(
+            models, dict(spec), depths, days=list(times), dates=dates)
+    except Exception as exc:  # noqa: BLE001 - never lose the inversion over this
+        log(f"WARNING: temperature correction was requested but could not be "
+            f"applied ({exc}). The sections below are the raw inverted "
+            f"resistivity, uncorrected for temperature.")
+        return {"applied": False, "requested": True, "error": str(exc)}
+    log(f"Temperature correction: {report['note']}")
+    report["models"] = corrected
+    return report
+
+
+def _envelope_polygon(mesh, coverage, threshold: float,
+                      sensors: Optional[np.ndarray], log: LogFn):
+    """Clipping polygon for the panels, or None if one cannot be built."""
+    try:
+        from PyHydroGeophysX.core.section_geometry import coverage_envelope_polygon
+
+        polygon = coverage_envelope_polygon(
+            mesh, coverage, threshold, sensors=sensors)
+        if polygon is None:
+            log(f"Section clipping skipped: the {threshold:g} coverage cut keeps "
+                f"either all of the section or none of it.")
+        return polygon
+    except Exception as exc:  # noqa: BLE001 - a clip is cosmetic, never fatal
+        log(f"Section clipping skipped: {exc}")
+        return None
+
+
+def _clip_axes(ax, polygon, log: LogFn) -> bool:
+    """Clip one drawn panel to ``polygon``; never fatal if it cannot."""
+    try:
+        from PyHydroGeophysX.visualization.section_clip import clip_axes_to_polygon
+
+        return clip_axes_to_polygon(ax, polygon, outline=True, tighten=True)
+    except Exception as exc:  # noqa: BLE001 - a clip is cosmetic
+        log(f"Section clipping skipped: {exc}")
+        return False
+
+
 def _step_titles(labels: Sequence[str], times: Sequence[float], n_time: int,
                  time_unit: str = "") -> List[str]:
     """Clear per-step titles so the panel always says what the number means:
@@ -171,7 +330,12 @@ def build_timelapse_config(data_files: Sequence[str], measurement_times: Sequenc
             "lambda_val", "alpha", "inversion_type", "max_iterations",
             "relativeError", "method", "mesh_quality", "rho_min", "rho_max",
             "windowed", "window_size", "save_memory", "engine", "para_depth",
-            "max_error")},
+            "max_error", "temporal_weighting", "temporal_weight_limit")},
+        # Post-processing that changes what the sections show has to travel with
+        # the configuration, or a re-run reproduces different pictures.
+        "temperature_correction": p.get("temperature_correction"),
+        "figure_clip": p.get("figure_clip"),
+        "figure_clip_threshold": p.get("figure_clip_threshold"),
     }
 
 
@@ -183,6 +347,7 @@ def run_timelapse_ert(
     log: LogFn = _noop,
     time_labels: Optional[Sequence[str]] = None,
     time_unit: str = "",
+    timestamps: Optional[Sequence[Any]] = None,
 ) -> Dict[str, Any]:
     """Run a full temporal-regularized time-lapse ERT inversion.
 
@@ -192,6 +357,12 @@ def run_timelapse_ert(
     (the Studio writes them as ``step_0000.*``) is the only place the original
     dates still exist. ``time_unit`` labels the numbers when there is nothing
     better to show, e.g. ``"d"``.
+
+    ``timestamps`` are the absolute acquisition times (datetimes or ISO strings).
+    They are what lets the run report the real duration between surveys instead of
+    an elapsed-day number, and they are required by the seasonal mode of the
+    temperature correction, which needs to know where in the year each survey sits.
+    When they are not given they are read back off the source filenames.
 
     Raises ``BackendUnavailable`` if pygimli / the inversion cannot be imported,
     and propagates other exceptions so the caller can fall back to config export.
@@ -248,24 +419,19 @@ def run_timelapse_ert(
             "Time-lapse ERT engine must be 'pyhydro' or windowed 'adtlert'"
         )
 
-    # Derive measurement times + display labels. Filenames that embed dates (e.g.
-    # the E4D monthly series 2021-10-08_1400.ohm) give elapsed-day times and date
-    # labels; otherwise fall back to a sequential 1..n.
-    if measurement_times is not None and len(measurement_times) == len(source_files):
-        times = [float(t) for t in measurement_times]
-        # Prefer the caller's labels. Deriving them here from the numbers instead
-        # is what used to turn a dated survey into a panel headed "t = 0.276065":
-        # by this point the files may be staged under generated names, so the
-        # dates cannot be recovered and have to be handed in.
-        if time_labels is not None and len(time_labels) == len(source_files):
-            labels = [str(lbl) for lbl in time_labels]
-        else:
-            labels = [f"{t:g}" for t in times]
-    else:
-        times, labels = ert_load.measurement_times_for(source_files)
-        # Times read off the filenames are elapsed days from the first survey, so
-        # here the unit is known even when the caller did not say.
+    # Acquisition times. Absolute timestamps are what make the sequence readable —
+    # they turn "step 3" into a date and an interval — so they are carried through
+    # when the caller has them and read back off the filenames when it does not.
+    timing = _resolve_timing(source_files, measurement_times, time_labels, timestamps)
+    times, labels = list(timing.times), list(timing.labels)
+    if timing.dated:
         time_unit = time_unit or "d"
+    log("Survey timing: " + timing.summary())
+    if not timing.dated:
+        log("  No timestamps were found, so every step is one unit apart and the "
+            "panels are headed by an index. Name the files with their acquisition "
+            "time (e.g. site_2024-06-12_1430.dat) or enter the times in the "
+            "interface to get real dates and intervals.")
 
     # Load every file through the robust device-aware loader and re-write it as a
     # clean pygimli file. Raw ``ert.load`` cannot parse index-prefixed / header-less
@@ -303,8 +469,16 @@ def run_timelapse_ert(
         inversion_type=str(p["inversion_type"]),
         model_constraints=(float(p["rho_min"]), float(p["rho_max"])),
         save_memory=save_memory,
+        temporal_weighting=str(p.get("temporal_weighting", "interval")),
+        temporal_weight_limit=p.get("temporal_weight_limit", 10.0),
     )
     lambda_report: Dict[str, Any] = {"enabled": False}
+    # The GPU backend builds its own temporal operator and does not take these,
+    # so say that rather than let the setting look as if it applied.
+    if engine == "adtlert" and str(p.get("temporal_weighting", "interval")) == "interval":
+        log("Note: the ADTLERT backend applies its own uniform temporal "
+            "constraint; the interval weighting is used by the PyHydro engine "
+            "only.")
 
     if use_windowed:
         window_size = int(p["window_size"])
@@ -334,6 +508,13 @@ def run_timelapse_ert(
                 log=log,
             )
             lambda_report = lambda_info
+
+    # What the solver did with the temporal constraint. Two runs with the same
+    # alpha are not the same inversion if one weighted by the interval, so the
+    # run says which it was.
+    temporal_report = dict(result.meta.get("temporal_weighting") or {})
+    if temporal_report.get("note"):
+        log(temporal_report["note"])
 
     final_models = np.asarray(result.final_models, dtype=float)
     if final_models.ndim != 2:
@@ -367,6 +548,24 @@ def run_timelapse_ert(
     figure_paths: List[str] = []
     data_paths: List[str] = []
 
+    # Temperature correction. Resistivity falls about 2 % per degC, which over a
+    # season is the same size as the change moisture produces, so an uncorrected
+    # series shows the ground "drying" as it cools. Applied here, after the
+    # inversion, so the corrected models are what every panel, change plot and
+    # export below is built from; the raw models are kept beside them.
+    raw_models = final_models
+    temperature_report = _apply_temperature_correction(
+        p.get("temperature_correction"), final_models, res_mesh, data0,
+        times=times, timestamps=timing.timestamps, log=log)
+    if temperature_report.get("applied"):
+        final_models = np.asarray(temperature_report.pop("models"), dtype=float)
+        raw_path = out / "final_models_uncorrected.npy"
+        io_utils.save_npy_atomic(raw_path, raw_models)
+        data_paths.append(str(raw_path))
+        temperature_report["uncorrected_models"] = str(raw_path)
+    else:
+        temperature_report.pop("models", None)
+
     # Per-step titles: a parsed date is shown as-is (already unambiguous); a plain
     # sequence reads "Time step N"; any other numeric time reads "t = <value>" so
     # the panel always says what the number means.
@@ -385,6 +584,21 @@ def run_timelapse_ert(
         rho_min, rho_max = 1.0, 1000.0
     if rho_max <= rho_min:
         rho_max = rho_min * 1.01
+    # How the panels are trimmed. "envelope" is the traditional clean cut: the
+    # drawing is clipped to a smooth clipping depth instead of being masked cell by
+    # cell, so the edge follows how deep the survey sees rather than where the mesh
+    # put a triangle.
+    clip_mode = str(p.get("figure_clip", "coverage") or "none").strip().lower()
+    clip_cut = float(p.get("figure_clip_threshold", -2.0))
+    sensors = _sensor_positions(data0)
+    # One envelope for the whole sequence, from the mean coverage. Per-step
+    # envelopes would frame each panel slightly differently, and a series whose
+    # panels are not on the same axes cannot be compared by eye - which is the
+    # only reason to draw them side by side.
+    clip_polygon = None
+    if coverage is not None and clip_mode == "envelope":
+        clip_polygon = _envelope_polygon(
+            res_mesh, np.nanmean(coverage, axis=0), clip_cut, sensors, log)
     ncol = min(4, n_time)
     nrow = int(np.ceil(n_time / ncol))
     fig = plt.figure(figsize=(3.6 * ncol, 3.0 * nrow))
@@ -397,17 +611,25 @@ def run_timelapse_ert(
             cMin=rho_min,
             cMax=rho_max,
         )
-        if coverage is not None and coverage.shape[0] > i:
-            show_kw["coverage"] = coverage[i]
+        step_coverage = (coverage[i] if coverage is not None and coverage.shape[0] > i
+                         else None)
+        if step_coverage is not None and clip_mode == "coverage":
+            show_kw["coverage"] = step_coverage
         try:
             pg.show(res_mesh, final_models[:, i], **show_kw)
         except Exception:  # noqa: BLE001 - retry without coverage
             show_kw.pop("coverage", None)
             ax.clear()
             pg.show(res_mesh, final_models[:, i], **show_kw)
+        if clip_polygon is not None:
+            _clip_axes(ax, clip_polygon, log)
         ax.set_title(panel_titles[i])
     span = f": {labels[0]} → {labels[-1]}" if n_time and any("-" in str(l) for l in labels) else ""
-    fig.suptitle(f"Time-lapse resistivity ({mode}, {n_time} time steps){span}", y=1.0)
+    corrected = (f", corrected to "
+                 f"{temperature_report.get('reference_temperature_C', 25.0):g} °C"
+                 if temperature_report.get("applied") else "")
+    fig.suptitle(f"Time-lapse resistivity ({mode}, {n_time} time steps)"
+                 f"{corrected}{span}", y=1.0)
     fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.97))
     panel = out / "timelapse_resistivity.png"
     fig.savefig(panel, dpi=160, bbox_inches="tight"); plt.close(fig)
@@ -431,6 +653,14 @@ def run_timelapse_ert(
         header=["index", f"time[{time_unit}]" if time_unit else "time",
                 "label", "source_file"])
     data_paths.append(str(out / "measurement_times.csv"))
+    # The acquisition log: absolute timestamp, elapsed time and the gap to the
+    # previous survey, in a unit a reader recognises. This is the table that says
+    # whether "step 3 to step 4" was an hour or a month.
+    timing_rows = timing.rows()
+    if timing_rows:
+        io_utils.write_csv(out / "survey_times.csv", timing_rows,
+                           header=timing.csv_header())
+        data_paths.append(str(out / "survey_times.csv"))
     mesh_path = out / "timelapse_mesh.bms"
     try:
         res_mesh.save(str(mesh_path)); data_paths.append(str(mesh_path))
@@ -494,6 +724,12 @@ def run_timelapse_ert(
         "measurement_times": [float(t) for t in times],
         "time_labels": list(labels),
         "time_unit": str(time_unit),
+        # Absolute acquisition times and the gaps between them, so the report can
+        # state the monitoring interval instead of a bare step count.
+        "survey_timing": timing.to_dict(),
+        "temporal_weighting": temporal_report,
+        "temperature_correction": temperature_report,
+        "figure_clip": clip_mode,
         "resistivity_range": [rho_min, rho_max],
         "figure_paths": figure_paths,
         "data_paths": data_paths,

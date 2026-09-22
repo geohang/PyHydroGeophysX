@@ -25,6 +25,7 @@ from PyHydroGeophysX.qt_apps.agent import capture as capture_mod
 
 #: One-line purpose per module so the agent can route a task to the right one.
 MODULE_PURPOSES: Dict[str, str] = {
+    "one_click": "Workflow workspace for data, progress and reports. To run end-to-end, the user selects Auto to report in AQUAH and sends their goal there.",
     "home": "Landing page / overview.",
     "seismic": "Process seismic shot gathers, pick first breaks, and run SRT travel-time "
                "tomography to get a velocity model from field data.",
@@ -68,6 +69,21 @@ class StudioController(QObject):
         self._window = window
 
     # -- public API ----------------------------------------------------------
+    def reset_workflow_request(self):
+        page = getattr(self._window, '_pages', {}).get('one_click')
+        if page is not None and hasattr(page, 'reset_request'):
+            page.reset_request()
+
+    def run_to_report(self, request, settings, on_finished):
+        self._window.show_module("one_click")
+        page = self._window._pages["one_click"]
+        if not hasattr(page, "submit_request"):
+            return "Workflow page could not be loaded. See the Studio log."
+        if not getattr(page, "_chat_connected", False):
+            page.workflowFinished.connect(on_finished)
+            page._chat_connected = True
+        return page.submit_request(request, settings)
+
     def dispatch(self, name: str, args: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Execute one tool call by name and return a JSON-friendly result."""
         args = args or {}

@@ -3219,7 +3219,7 @@ STRICT GROUNDING RULES:
 ```python
 from PyHydroGeophysX.agents import BaseAgent, ContextInputAgent
 
-context_agent = ContextInputAgent(api_key=api_key, model="gpt-4.1", llm_provider="openai")
+context_agent = ContextInputAgent(api_key=api_key, model="gpt-5.6-terra", llm_provider="openai")
 config = context_agent.parse_request(
     "Run ERT inversion on data.ohm with electrodes electrodes.dat, lambda=20, "
     "convert to water content with rho_sat=500, porosity=0.35, n=1.5"
@@ -7076,6 +7076,60 @@ def render_hydro_multigeophys_tab() -> None:
             st.rerun()
 
 
+def _render_model_level_picker(panel, provider: str) -> str:
+    """Render the three-step model ladder and return the chosen model name.
+
+    Levels come from :data:`PyHydroGeophysX.llm.providers.MODEL_TIERS`, the same
+    registry the desktop chat panel reads, so both surfaces offer the same
+    choices at the same prices. Level 1 answers most requests; level 2 is for
+    coding, reasoning, agent loops, and complex retrieval; level 3 is for what
+    the levels below could not finish. A provider the ladder does not cover
+    (Gemini, or an endpoint without published tiers) falls back to typing a
+    model name, and so does the explicit "Custom" choice.
+    """
+    try:
+        from PyHydroGeophysX.llm import providers as llm_providers
+    except Exception:  # noqa: BLE001 - the package may not be importable yet
+        llm_providers = None
+
+    fallback_models = {"openai": "gpt-5.6-luna", "gemini": "gemini-2.5-flash",
+                       "claude": "claude-haiku-4-5"}
+    saved = (st.session_state.llm_model or "").strip()
+
+    if llm_providers is None or not llm_providers.provider_has_tiers(provider):
+        default = saved or fallback_models.get(provider, "gpt-5.6-luna")
+        return panel.text_input("Model name", value=default)
+
+    tiers = llm_providers.MODEL_TIERS
+    order = list(llm_providers.TIER_ORDER) + [llm_providers.TIER_CUSTOM]
+    # tier_of_model, not tier_for_model: after a provider switch the saved model
+    # belongs to the previous provider's ladder, and the level should carry over.
+    current = llm_providers.tier_of_model(saved) if saved else llm_providers.TIER_ORDER[0]
+
+    choice = panel.radio(
+        "Request level",
+        options=order,
+        index=order.index(current),
+        format_func=lambda t: (
+            f"{tiers[t]['name']} — {tiers[t]['headline']}" if t in tiers else "Custom model"
+        ),
+        help="Start at level 1 and move up only when a level cannot finish the job — "
+             "sending every request to a flagship model costs several times more.",
+    )
+
+    if choice == llm_providers.TIER_CUSTOM:
+        model = panel.text_input("Model name", value=saved or fallback_models.get(provider, ""))
+        price = llm_providers.price_label(model)
+        if price:
+            panel.caption(f":material/payments: {price}")
+        return model
+
+    model = llm_providers.tier_model(choice, provider)
+    panel.caption(f"**{model}** · {llm_providers.price_label(model)}")
+    panel.caption(tiers[choice]["purpose"])
+    return model
+
+
 def render_sidebar() -> Dict[str, Any]:
     """Render sidebar controls and return the selected configuration values.
 
@@ -7108,9 +7162,7 @@ def render_sidebar() -> Dict[str, Any]:
         help="Used by the context agent to parse your natural-language request.",
     )
 
-    default_models = {"openai": "gpt-4o-mini", "gemini": "gemini-2.5-flash", "claude": "claude-sonnet-5"}
-    model_default = st.session_state.llm_model or default_models.get(provider, "gpt-4o-mini")
-    model = setup_panel.text_input("Model name", value=model_default)
+    model = _render_model_level_picker(setup_panel, provider)
 
     env_map = {"openai": "OPENAI_API_KEY", "gemini": "GEMINI_API_KEY", "claude": "ANTHROPIC_API_KEY"}
     with setup_panel:

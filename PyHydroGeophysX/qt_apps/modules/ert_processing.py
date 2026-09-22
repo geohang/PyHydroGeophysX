@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QProgressBar,
@@ -45,6 +46,7 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX.data_processing import run_inputs
 from PyHydroGeophysX.data_processing import ert_io as ert_load
+from PyHydroGeophysX.data_processing import survey_timing
 from PyHydroGeophysX.qt_apps import io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.qt_utils import (
@@ -119,6 +121,9 @@ class ERTProcessingModule(BaseModule):
         self._adtlert_probe_worker: Optional[ProcessProbeWorker] = None
         self._adtlert_probe_serial = 0
         self._adtlert_runtime_ready: Optional[bool] = None
+        self._adtlert_single_ready: Optional[bool] = None
+        self._adtlert_timelapse_ready: Optional[bool] = None
+        self._adtlert_checks: Dict[str, str] = {}
         self._ert_recipe_path: str = ""
         # Set by the Mode selector, which trades the pre-inversion checks against
         # turnaround. Quick skips them; Full validates and repairs k. A k that
@@ -136,6 +141,7 @@ class ERTProcessingModule(BaseModule):
         self._tl_files: List[str] = []
         self._tl_labels: List[str] = []
         self._tl_times: List[float] = []
+        self._tl_timing: Optional[Any] = None   # acquisition times of the sequence
         self._tl_worker: Optional[Any] = None
         self._tl_busy: Optional[BusyStateController] = None
         self._tl_recipe_path = ""
@@ -343,9 +349,15 @@ class ERTProcessingModule(BaseModule):
         up_btn.clicked.connect(lambda: self._move_tl_files(-1))
         down_btn = QPushButton("↓"); down_btn.setToolTip("Move selected down"); down_btn.setMaximumWidth(34)
         down_btn.clicked.connect(lambda: self._move_tl_files(1))
+        sort_btn = QPushButton("Sort by time"); sort_btn.setIcon(theme.icon("fa5s.clock"))
+        sort_btn.setToolTip(
+            "Put the files in acquisition order, using the times read from their "
+            "names or headers. A time-lapse inversion compares each survey with "
+            "the one before it, so the order is part of the result.")
+        sort_btn.clicked.connect(self._sort_tl_files_by_time)
         clr_btn = QPushButton("Clear"); clr_btn.setIcon(theme.icon("fa5s.trash"))
         clr_btn.clicked.connect(self._clear_tl_files)
-        for b in (add_btn, rm_btn, up_btn, down_btn, clr_btn):
+        for b in (add_btn, rm_btn, up_btn, down_btn, sort_btn, clr_btn):
             tl_btns.addWidget(b)
         lform.addRow(tl_btns)
 
@@ -775,6 +787,16 @@ class ERTProcessingModule(BaseModule):
         self._tl_type.setToolTip("Temporal norm: L2 smooth, L1 blocky, L1L2 hybrid.")
         tlform.addRow("Norm", self._tl_type)
 
+        self._tl_dt_weight = QCheckBox("Weight by the interval between surveys")
+        self._tl_dt_weight.setChecked(True)
+        self._tl_dt_weight.setToolTip(
+            "Penalize the rate of change rather than the raw difference, so a "
+            "month-long gap is allowed proportionally more change than an hour-long "
+            "one. Weights are normalized by the median interval, so an evenly "
+            "sampled series is unchanged and Alpha keeps its meaning. Untick to "
+            "constrain every pair equally, as before.")
+        tlform.addRow(self._tl_dt_weight)
+
         self._tl_windowed = QCheckBox("Windowed (sliding window)")
         self._tl_windowed.setToolTip("Process consecutive time steps in overlapping windows: "
                                      "cheaper and lower-memory for long monitoring sequences.")
@@ -788,6 +810,35 @@ class ERTProcessingModule(BaseModule):
                                    "(for many files / large meshes). Auto-enabled for "
                                    "large problems; check to force it on.")
         tlform.addRow(self._tl_lowmem)
+
+        # Acquisition times. The file list above shows what was read and the gap
+        # between surveys; this is the escape hatch for a set whose names carry no
+        # time at all.
+        self._tl_use_mtime = QCheckBox("Use file times when the names carry none")
+        self._tl_use_mtime.setToolTip(
+            "Fall back to each file's modification time when neither its name nor "
+            "its header gives an acquisition time. Off by default: a file that was "
+            "copied or re-exported carries the time of the copy, not of the survey.")
+        self._tl_use_mtime.toggled.connect(self._on_tl_time_source_changed)
+        tlform.addRow(self._tl_use_mtime)
+
+        self._tl_clip = QCheckBox("Clip sections to the coverage envelope")
+        self._tl_clip.setToolTip(
+            "Trim the exported panels to a smooth clipping depth at the coverage "
+            "cut - the traditional clean-cut resistivity image - instead of fading "
+            "each cell by its own sensitivity.")
+        self._tl_clip_cut = QDoubleSpinBox()
+        self._tl_clip_cut.setRange(-10.0, 10.0); self._tl_clip_cut.setDecimals(2)
+        self._tl_clip_cut.setSingleStep(0.25); self._tl_clip_cut.setValue(-2.0)
+        self._tl_clip_cut.setToolTip(
+            "Coverage cut the envelope follows, in log10 cumulative sensitivity. "
+            "The same number the model view's “Hide below” uses.")
+        self._tl_clip_cut.setEnabled(False)
+        self._tl_clip.toggled.connect(self._tl_clip_cut.setEnabled)
+        tlform.addRow(self._tl_clip)
+        tlform.addRow("Clip at coverage", self._tl_clip_cut)
+
+        tlform.addRow(self._build_temperature_group())
 
         self._tl_btn = QPushButton("Run time-lapse inversion")
         self._tl_btn.setProperty("primary", True)
@@ -813,6 +864,32 @@ class ERTProcessingModule(BaseModule):
         panel.setVisible(False)
         return panel
 
+    def _build_temperature_group(self) -> QWidget:
+        """The shared temperature-correction options.
+
+        Off by default: a correction applied with a guessed ground temperature is
+        its own error source, so it has to be a decision. The panel itself lives
+        in widgets/temperature_panel.py, so the saved-results browser offers the
+        same settings on a result that was inverted somewhere else.
+        """
+        from PyHydroGeophysX.qt_apps.widgets.temperature_panel import TemperatureOptions
+
+        self._tc_box = TemperatureOptions(self)
+        return self._tc_box
+
+    def _temperature_spec(self) -> Tuple[Optional[Dict[str, Any]], str]:
+        """The temperature-correction options, or an error saying what is missing."""
+        timing = getattr(self, "_tl_timing", None)
+        self._tc_box.set_context(len(self._tl_files),
+                                 bool(timing is not None and timing.dated))
+        return self._tc_box.spec()
+
+    def _on_tl_time_source_changed(self, *_args: Any) -> None:
+        """Re-read the acquisition times when the allowed sources change."""
+        if self._tl_files:
+            self._read_tl_times()
+            self._refresh_tl_list()
+
     def _on_tl_mode(self, checked: bool) -> None:
         """Toggle between single-file and time-lapse inversion."""
         self._tl_panel.setVisible(bool(checked))
@@ -830,11 +907,15 @@ class ERTProcessingModule(BaseModule):
         self._adtlert_probe_serial += 1
         serial = self._adtlert_probe_serial
         self._adtlert_runtime_ready = None
+        self._adtlert_single_ready = None
+        self._adtlert_timelapse_ready = None
+        self._adtlert_checks = {}
         self._adtlert_status.setText("Checking CUDA, cuDSS, and GPU CGLS…")
         self._adtlert_status.setStyleSheet("color:#5a6a7a; font-size:8pt;")
         self._adtlert_status.setVisible(True)
         worker = ProcessProbeWorker(
-            "PyHydroGeophysX.qt_apps.adtlert_probe",
+            "PyHydroGeophysX.inversion.adtlert_diagnostics",
+            arguments=["--stage", "runtime"],
             timeout_ms=60000,
         )
         worker.succeeded.connect(
@@ -854,10 +935,39 @@ class ERTProcessingModule(BaseModule):
         if self._engine.currentData() != "adtlert":
             return
         self._adtlert_runtime_ready = True
+        self._adtlert_checks["runtime"] = f"CUDA: ready ({result['device']})"
+        self._start_adtlert_numerical_check(serial, "single")
+
+    def _start_adtlert_numerical_check(self, serial: int, stage: str) -> None:
         self._adtlert_status.setText(
-            f"GPU ready: {result['device']} · cuDSS forward · GPU CGLS"
+            " · ".join(self._adtlert_checks.values()) + f" · Checking {stage} inversion…"
         )
-        self._adtlert_status.setStyleSheet("color:#238636; font-size:8pt;")
+        worker = ProcessProbeWorker(
+            "PyHydroGeophysX.inversion.adtlert_diagnostics",
+            arguments=["--stage", stage], timeout_ms=120000,
+        )
+        worker.succeeded.connect(lambda result: self._finish_adtlert_numerical_check(serial, stage, True, ""))
+        worker.failed.connect(lambda error: self._finish_adtlert_numerical_check(serial, stage, False, error))
+        self._adtlert_probe_worker = self.register_worker(worker)
+        worker.start()
+
+    def _finish_adtlert_numerical_check(self, serial: int, stage: str, ok: bool, error: str) -> None:
+        if serial != self._adtlert_probe_serial or self._engine.currentData() != "adtlert":
+            return
+        setattr(self, f"_adtlert_{stage}_ready", ok)
+        label = "Single GPU" if stage == "single" else "Time-lapse GPU"
+        self._adtlert_checks[stage] = f"{label}: {'passed' if ok else 'failed'}"
+        if error:
+            self.log(f"{label} self-test failed: {error}. Select In-house Gauss-Newton / PyHydro for this mode. "
+                     "Run python -m PyHydroGeophysX.inversion.adtlert_diagnostics --report gpu-check.json for full diagnostics.", "warn")
+        if stage == "single":
+            self._start_adtlert_numerical_check(serial, "timelapse")
+        else:
+            self._adtlert_status.setText(" · ".join(self._adtlert_checks.values()))
+            healthy = self._adtlert_single_ready and self._adtlert_timelapse_ready
+            self._adtlert_status.setStyleSheet(
+                f"color:{'#238636' if healthy else '#b42318'}; font-size:8pt;"
+            )
 
     def _on_adtlert_probe_failed(self, serial: int, message: str) -> None:
         if serial != self._adtlert_probe_serial:
@@ -865,9 +975,10 @@ class ERTProcessingModule(BaseModule):
         if self._engine.currentData() != "adtlert":
             return
         self._adtlert_runtime_ready = False
+        self._adtlert_single_ready = False
+        self._adtlert_timelapse_ready = False
         self._adtlert_status.setText(
-            "GPU preflight failed. The isolated inversion process will check "
-            f"again and fall back only if CUDA/cuDSS is unavailable. {message}"
+            f"CUDA check failed; GPU inversion is not verified. Select PyHydro CPU. {message}"
         )
         self._adtlert_status.setStyleSheet("color:#b42318; font-size:8pt;")
 
@@ -1436,13 +1547,15 @@ class ERTProcessingModule(BaseModule):
             return
         if (
             self._engine.currentData() == "adtlert"
-            and self._adtlert_runtime_ready is False
+            and self._adtlert_single_ready is not True
         ):
             self.log(
-                "ADTLERT GPU preflight failed; the isolated inversion process "
-                "will check again and fall back only if CUDA/cuDSS is unavailable.",
+                "ADTLERT single self-test has not passed. Wait for the check, "
+                "or select In-house Gauss-Newton / PyHydro. "
+                "To retry, switch engines and select ADTLERT again.",
                 "warn",
             )
+            return
         if str(self._inv_mode.currentData() or "quick") == "full":
             self._report_data_health()
         try:
@@ -1998,15 +2111,35 @@ class ERTProcessingModule(BaseModule):
     def _set_tl_files(self, paths: List[str]) -> None:
         """Replace the ordered time-lapse file set and refresh the list + times."""
         self._tl_files = [str(p) for p in paths]
-        self._tl_times, self._tl_labels = ert_load.measurement_times_for(self._tl_files)
+        self._read_tl_times()
         self._refresh_tl_list()
+
+    def _read_tl_times(self) -> None:
+        """Read the acquisition time of every file, from the names or the headers.
+
+        Kept in one place because three operations reorder the sequence, and a set
+        of times that no longer matches the list is worse than none: the inversion
+        would pair each survey with someone else's date.
+        """
+        mtime_box = getattr(self, "_tl_use_mtime", None)   # absent until built
+        self._tl_timing = ert_load.survey_timing_for(
+            self._tl_files,
+            allow_mtime=bool(mtime_box is not None and mtime_box.isChecked()))
+        self._tl_times = list(self._tl_timing.times)
+        self._tl_labels = list(self._tl_timing.labels)
 
     def _refresh_tl_list(self) -> None:
         self._tl_list.blockSignals(True)
         self._tl_list.clear()
+        timing = getattr(self, "_tl_timing", None)
+        gaps = timing.intervals if timing is not None else []
         for i, path in enumerate(self._tl_files):
             label = self._tl_labels[i] if i < len(self._tl_labels) else str(i + 1)
-            item = QListWidgetItem(f"{i + 1}.  {label}    ·    {Path(path).name}")
+            # The gap to the previous survey, on the row it belongs to: an hourly
+            # sequence and a monthly one look identical without it.
+            gap = f"   (+{survey_timing.format_duration(gaps[i - 1])})" if (
+                i > 0 and i - 1 < len(gaps)) else ""
+            item = QListWidgetItem(f"{i + 1}.  {label}    ·    {Path(path).name}{gap}")
             item.setData(Qt.UserRole, path)
             item.setToolTip(path)
             self._tl_list.addItem(item)
@@ -2018,9 +2151,12 @@ class ERTProcessingModule(BaseModule):
             self._tl_info.setText(f"<b>1</b> file. Tick “Time-lapse” and add more for a "
                                   f"time sequence. Instrument: {self._instrument.currentText()}.")
         else:
-            dated = any(lbl and not lbl.isdigit() for lbl in self._tl_labels)
-            span = f"{self._tl_labels[0]} → {self._tl_labels[-1]}" if dated else f"{n} steps"
-            self._tl_info.setText(f"<b>{n}</b> files ({span}). "
+            summary = timing.summary() if timing is not None else f"{n} files."
+            note = "" if (timing is not None and timing.dated) else (
+                "  Name the files with their acquisition time "
+                "(e.g. <code>site_2024-06-12_1430.dat</code>), or tick "
+                "“Use file times” below.")
+            self._tl_info.setText(f"{summary}{note} "
                                   f"Instrument: {self._instrument.currentText()}.")
 
     def _add_tl_files(self) -> None:
@@ -2064,11 +2200,31 @@ class ERTProcessingModule(BaseModule):
             if 0 <= j < len(order):
                 order[r], order[j] = order[j], order[r]
         self._tl_files = [self._tl_files[i] for i in order]
-        self._tl_times, self._tl_labels = ert_load.measurement_times_for(self._tl_files)
+        self._read_tl_times()
         moved = {order.index(i) for i in rows}
         self._refresh_tl_list()
         for r in moved:
             self._tl_list.item(r).setSelected(True)
+
+    def _sort_tl_files_by_time(self) -> None:
+        """Reorder the list into acquisition order.
+
+        The sequence order is part of the result - each survey is compared with
+        the one before it - and a file dialog returns names in whatever order the
+        filesystem gives, which for ``survey_9`` and ``survey_10`` is not the
+        order they were recorded in.
+        """
+        timing = getattr(self, "_tl_timing", None)
+        if timing is None or not timing.dated:
+            self.log("Cannot sort: the files carry no readable acquisition time. "
+                     "Use ↑ ↓ to put them in order by hand.", "warn")
+            return
+        order = sorted(range(len(self._tl_files)), key=lambda i: timing.timestamps[i])
+        if order == list(range(len(self._tl_files))):
+            self.log("Files are already in acquisition order.", "info")
+            return
+        self._set_tl_files([self._tl_files[i] for i in order])
+        self.log(f"Sorted {len(self._tl_files)} files into acquisition order.", "success")
 
     def _clear_tl_files(self) -> None:
         self._set_tl_files([])
@@ -2097,13 +2253,15 @@ class ERTProcessingModule(BaseModule):
             return
         if (
             self._engine.currentData() == "adtlert"
-            and self._adtlert_runtime_ready is False
+            and self._adtlert_timelapse_ready is not True
         ):
             self.log(
-                "ADTLERT GPU preflight failed; the isolated inversion process "
-                "will check again and fall back only if CUDA/cuDSS is unavailable.",
+                "ADTLERT timelapse self-test has not passed. Wait for the check, "
+                "or select In-house Gauss-Newton / PyHydro. "
+                "To retry, switch engines and select ADTLERT again.",
                 "warn",
             )
+            return
         if (
             self._engine.currentData() == "adtlert"
             and not self._tl_windowed.isChecked()
@@ -2128,10 +2286,26 @@ class ERTProcessingModule(BaseModule):
             "target_chi2": float(self._target_chi2.value()),
             "chi2_tolerance": float(self._chi2_tol.value()),
             "max_lambda_trials": min(int(self._lam_trials.value()), 4),
+            "temporal_weighting": (
+                "interval" if self._tl_dt_weight.isChecked() else "uniform"),
         }
         if self._tl_lowmem.isChecked():
             params["save_memory"] = True
+        temperature, problem = self._temperature_spec()
+        if problem:
+            self.log(f"Temperature correction: {problem}", "error")
+            return
+        if temperature is not None:
+            params["temperature_correction"] = temperature
+        if self._tl_clip.isChecked():
+            params["figure_clip"] = "envelope"
+            params["figure_clip_threshold"] = float(self._tl_clip_cut.value())
         times = self._tl_times if len(self._tl_times) == len(self._tl_files) else None
+        timing = getattr(self, "_tl_timing", None)
+        # The bundle below renames the files, so the acquisition times have to
+        # travel with the run or the intervals cannot be reported from inside it.
+        stamps = ([t.isoformat(sep=" ") for t in timing.timestamps]
+                  if timing is not None and timing.dated else [])
         try:
             run = self.begin_persisted_run(
                 "ert.timelapse_inversion", "ert.timelapse_inversion"
@@ -2181,6 +2355,7 @@ class ERTProcessingModule(BaseModule):
                 # from the originals have to travel with the times or the panels
                 # end up headed by a bare elapsed-day number.
                 "time_labels": list(self._tl_labels),
+                "timestamps": stamps,
                 "time_unit": "d" if times is not None else "",
             },
             parameters=params,
@@ -2314,6 +2489,21 @@ class ERTProcessingModule(BaseModule):
                  f"{result.get('n_times')} steps, {result.get('mesh_cells')} cells. "
                  f"Saved VTK (combined + {n_vtk} per-step), npy, mesh. "
                  f"Pick a step in the Resistivity model tab; “Export results…” saves them.", "success")
+        # What the models on screen are. A section corrected to a reference
+        # temperature looks exactly like an uncorrected one, so the run says which
+        # it produced rather than leaving the viewer to assume.
+        correction = result.get("temperature_correction") or {}
+        if correction.get("applied"):
+            self.log(
+                f"Sections are reported at "
+                f"{correction.get('reference_temperature_C', 25.0):g} °C — "
+                f"{correction.get('note', '')} The raw inverted models are saved "
+                f"as final_models_uncorrected.npy.", "success")
+        elif correction.get("requested"):
+            self.log(
+                f"Temperature correction was requested but not applied "
+                f"({correction.get('error', 'reason not recorded')}). The sections "
+                f"are raw inverted resistivity.", "warn")
         if requested_engine == "adtlert" and engine != "adtlert":
             self.log(
                 "ADTLERT was requested but the time-lapse run used the original "
@@ -2364,14 +2554,12 @@ class ERTProcessingModule(BaseModule):
     def _percent_change(models, idx: int):
         """Percentage change of step ``idx`` against the first survey.
 
-        Cells whose baseline is zero or non-finite become NaN rather than a
-        spike: a division artefact placed next to real change reads as change.
+        The definition lives in the shared series widget, so this panel and the
+        saved-results browser cannot drift into two different percentages.
         """
-        import numpy as np
-        baseline = models[:, 0]
-        with np.errstate(divide="ignore", invalid="ignore"):
-            change = 100.0 * (models[:, idx] - baseline) / np.abs(baseline)
-        return np.where(np.isfinite(change), change, np.nan)
+        from PyHydroGeophysX.qt_apps.widgets.series_view import percent_change
+
+        return percent_change(models, idx)
 
     def _seed_tl_color_range(self) -> None:
         """Put every time step on one colour scale, for the mode on screen.
@@ -2382,30 +2570,14 @@ class ERTProcessingModule(BaseModule):
         exported summary figure, so a handful of poorly covered cells cannot
         flatten everything else.
         """
-        import numpy as np
+        from PyHydroGeophysX.qt_apps.widgets.series_view import series_color_limits
+
         if self._tl_models is None:
             return
-        models = np.asarray(self._tl_models, dtype=float)
-        if models.ndim != 2 or models.shape[1] == 0:
-            return
-        if self._tl_view_mode.currentData() == "change":
-            with np.errstate(divide="ignore", invalid="ignore"):
-                change = 100.0 * (models - models[:, [0]]) / np.abs(models[:, [0]])
-            finite = change[np.isfinite(change)]
-            if finite.size == 0:
-                return
-            span = float(np.nanpercentile(np.abs(finite), 98.0))
-            if span > 0.0:
-                self._model_view.set_color_range(-span, span)
-            return
-        finite = models[np.isfinite(models) & (models > 0.0)]
-        if finite.size == 0:
-            return
-        low = float(np.nanpercentile(finite, 2.0))
-        high = float(np.nanpercentile(finite, 98.0))
-        if high <= low:
-            high = low * 1.01
-        self._model_view.set_color_range(low, high)
+        limits = series_color_limits(
+            self._tl_models, str(self._tl_view_mode.currentData() or "model"))
+        if limits is not None:
+            self._model_view.set_color_range(*limits)
 
     def _show_tl_step(self, idx: int) -> None:
         import numpy as np
@@ -2788,6 +2960,75 @@ class ERTProcessingModule(BaseModule):
         self.report_result(result)
 
     # -- AQUAH agent interface ----------------------------------------------
+    def show_run_inputs(self, inputs: Dict[str, Any]) -> str:
+        """Open the automatic run's surveys here so this panel is not empty.
+
+        The workflow inverts its own copy in its own process; this loads the
+        same files for display, through the same handlers the assistant uses,
+        so the pseudosection and electrode layout are on screen while the run
+        works. Nothing is inverted here.
+
+        Anything already loaded is left alone: a run must not throw away work
+        somebody was in the middle of.
+        """
+        if self._ert_data is not None or self._tl_files:
+            return ""
+        surveys = [str(p) for p in (inputs.get("time_lapse_files") or [])]
+        single = inputs.get("data_file")
+        electrodes = inputs.get("electrode_file")
+        # The run's instrument, not this panel's. There is no format auto-detect
+        # anywhere here - the device is chosen, not guessed - so leaving the
+        # dropdown on its own default read the run's files with the wrong
+        # reader: an E4D .ohm parsed as a unified file has its leading index
+        # column taken for electrode A, and every quadrupole then lands out of
+        # bounds. The panel listed the files and drew nothing.
+        instrument = str(inputs.get("instrument") or "").strip()
+        if instrument:
+            self._agent_set_instrument(instrument)
+        # Electrodes first: a survey file carrying no geometry of its own picks
+        # them up as it loads, and loading them afterwards would not be applied.
+        if electrodes:
+            self._agent_load_electrodes(str(electrodes))
+        if surveys:
+            if self._agent_add_timelapse_files(surveys).get("status") != "ok":
+                return ""
+            self._agent_preview_timelapse(0)
+            return (f"{len(surveys)} surveys, showing "
+                    f"{Path(surveys[0]).name}")
+        if single:
+            if self._agent_load(str(single), None).get("status") == "failed":
+                return ""
+            return Path(str(single)).name
+        return ""
+
+    def show_run_stage(self, tool: str) -> str:
+        """Follow the run through this page's own tabs.
+
+        Loading belongs on the pseudosection, a finished inversion on the model,
+        and the quality check on the quality view. Without this the page stayed
+        on whichever tab it opened with while the run moved on underneath it.
+        """
+        views = {
+            "load_ert_surveys": (self._pseudo_widget, "Pseudosection"),
+            "invert_ert": (self._model_tab, "Resistivity model"),
+            "invert_time_lapse": (self._model_tab, "Resistivity model"),
+            "evaluate_inversion": (self._quality_view, "Inversion quality"),
+        }
+        widget, name = views.get(str(tool), (None, ""))
+        if widget is None:
+            return ""
+        self._tabs.setCurrentWidget(widget)
+        return name
+
+    def _agent_set_instrument(self, instrument: str) -> bool:
+        """Point the format dropdown at ``instrument``. True when it matched."""
+        key = str(instrument).strip().lower()
+        for index, (label, value) in enumerate(_INSTRUMENTS):
+            if value is not None and key in (value.lower(), label.lower()):
+                self._instrument.setCurrentIndex(index)
+                return True
+        return False
+
     def agent_describe(self) -> Dict[str, Any]:
         return {
             "module": self.module_key,
@@ -3224,12 +3465,20 @@ class ERTProcessingModule(BaseModule):
         self._set_tl_files(merged)
         self._tl_mode.setChecked(True)  # reveal the time-lapse options in the UI
         return {"status": "ok", "files": len(self._tl_files),
-                "time_labels": list(self._tl_labels)}
+                "time_labels": list(self._tl_labels),
+                "timing": self._tl_timing.summary() if self._tl_timing else ""}
 
     def _agent_list_timelapse(self) -> Dict[str, Any]:
+        timing = self._tl_timing
+        gaps = timing.intervals if timing is not None else []
         return {
             "status": "ok",
             "count": len(self._tl_files),
+            # The interval between surveys, in words: the sequence reads the same
+            # whether it is hourly or monthly until something says which.
+            "timing": timing.summary() if timing is not None else "",
+            "time_source": timing.source if timing is not None else "index",
+            "intervals": [survey_timing.format_duration(g) for g in gaps],
             "files": [{"index": i, "label": self._tl_labels[i] if i < len(self._tl_labels) else str(i + 1),
                        "time": self._tl_times[i] if i < len(self._tl_times) else float(i + 1),
                        "name": Path(p).name, "path": p}

@@ -266,10 +266,15 @@ def run_ert_timelapse(spec: WorkflowSpec, context: RunContext) -> WorkflowRunRes
         # The bundle staged the files under generated names, so the acquisition
         # dates survive only in the labels the caller recorded alongside them.
         labels = [str(lbl) for lbl in (inputs.get("time_labels") or [])]
+        # Absolute acquisition times, recorded alongside the labels for the same
+        # reason: the bundle renamed the files, so this is the only place they
+        # survive. They are what the run reports intervals from.
+        stamps = [str(value) for value in (inputs.get("timestamps") or [])]
         result = run_timelapse_ert(
             files, times, parameters, str(context.output_dir), log=context.progress,
             time_labels=labels or None,
             time_unit=str(inputs.get("time_unit") or ""),
+            timestamps=stamps or None,
         )
     return _legacy_result(spec, context, result)
 

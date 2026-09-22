@@ -31,6 +31,29 @@ SURFACE_HELP = ('Interpolate the selected slice between stations into a plan ima
                 'Cells outside the convex hull of the stations are always blanked.')
 
 
+class SteadySpinBox:
+    """Mixin: ignore the wheel unless focused.
+
+    The map zooms on scroll, so a wheel that drifts onto this row would
+    otherwise re-grid the slice with settings nobody chose -- a few notches of
+    blanking is enough to cut a survey down to ribbons along its lines.
+    """
+
+    def wheelEvent(self, event):
+        if self.hasFocus():
+            super().wheelEvent(event)
+        else:
+            event.ignore()
+
+
+class GridSpinBox(SteadySpinBox, QSpinBox):
+    pass
+
+
+class DistanceSpinBox(SteadySpinBox, QDoubleSpinBox):
+    pass
+
+
 class VariogramDialog(QDialog):
     """The experimental semivariogram and the model kriging actually used."""
 
@@ -181,20 +204,27 @@ class ProjectMapModule(BaseModule):
         self._interp.setToolTip(SURFACE_HELP)
         self._interp.currentIndexChanged.connect(self._surface_changed)
         surface.addWidget(self._interp)
-        self._interp_res = QSpinBox()
+        self._interp_res = GridSpinBox()
         self._interp_res.setRange(40, 400)
         self._interp_res.setValue(140)
         self._interp_res.setSuffix(' cells')
+        self._interp_res.setKeyboardTracking(False)
         self._interp_res.setToolTip('Square cells across the longer map axis.')
         self._interp_res.valueChanged.connect(self._draw_map)
         surface.addWidget(self._interp_res)
-        self._interp_blank = QDoubleSpinBox()
+        self._interp_blank = DistanceSpinBox()
         self._interp_blank.setRange(0, 1e7)
         self._interp_blank.setDecimals(0)
         self._interp_blank.setSuffix(' m blanking')
+        # Typing "60" must not re-grid at 6 on the way, and 0 has to read as the
+        # off switch it is rather than as a zero-metre radius.
+        self._interp_blank.setKeyboardTracking(False)
+        self._interp_blank.setSpecialValueText('no blanking')
         self._interp_blank.setToolTip(
             'Also blank cells farther than this from any station, so a wide line\n'
-            'spacing does not read as coverage. 0 keeps convex-hull clipping only.')
+            'spacing does not read as coverage. Set it near the line spacing:\n'
+            'well below that it cuts into the survey and leaves ribbons along the\n'
+            'lines. The caption under the map reports what the outline needs.')
         self._interp_blank.valueChanged.connect(self._draw_map)
         surface.addWidget(self._interp_blank)
         self._stations = QCheckBox('Stations')
@@ -462,11 +492,21 @@ class ProjectMapModule(BaseModule):
         if result is False:
             return None
         self._surface = (entry, result, self._depth.currentText())
+        # Web Mercator metres are stretched by 1/cos(latitude), so calling them
+        # plain metres would misstate every distance a geographic survey reports.
+        unit = 'display m' if self._frame.currentData() == 'geographic' else 'm'
         self._surface_note = (
             f"{self._interp.currentText()} · {result['n_samples']} stations · "
-            f"{result['cell_size']:.3g} m cells · {result['coverage']:.0%} of the frame filled"
+            f"{result['cell_size']:.3g} {unit} cells · {result['coverage']:.0%} of the frame filled"
             + (f" · {result['variogram']['model']} variogram, range "
-               f"{result['variogram']['range']:.4g} m" if result['variogram'] else ''))
+               f"{result['variogram']['range']:.4g} {unit}" if result['variogram'] else ''))
+        if blank and blank < result['gap']:
+            # A blanking radius under the station reach does not trim a wide line
+            # spacing, it eats the survey; say so with the number that would not.
+            self._surface_note = (
+                f"Blanking at {blank:g} {unit} is cutting inside the survey: the outline "
+                f"needs {result['gap']:.0f} {unit} to fill, so this leaves ribbons along the "
+                f"lines. · {self._surface_note}")
         return self._ax.pcolormesh(result['x_edges'], result['y_edges'], result['grid'],
                                    cmap=cmap, norm=norm, zorder=1, alpha=.92,
                                    shading='flat', rasterized=True)

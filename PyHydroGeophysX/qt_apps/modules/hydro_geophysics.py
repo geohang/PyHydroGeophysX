@@ -1341,6 +1341,24 @@ class HydroGeophysicsModule(BaseModule):
                     "valid_actions": list(handlers.keys())}
         return handler()
 
+    def show_run_inputs(self, inputs):
+        """Open the automatic run's data here, so this panel is not blank.
+
+        Part of the studio's contract: a module the run brings to the front has
+        to show the user a result, not an empty tool with a banner over it.
+        Display only - the workflow does its own work in its own process - and
+        anything already loaded is left alone.
+        """
+        if self._agent_status().get("data_dir"):
+            return ""
+        folder = (inputs.get("modflow_dir") or inputs.get("parflow_dir")
+                  or inputs.get("hydro_model"))
+        if not folder or not Path(str(folder)).is_dir():
+            return ""
+        if not self._agent_set_data_dir(str(folder)).get("loaded"):
+            return ""
+        return Path(str(folder)).name
+
     def _agent_status(self) -> Dict[str, Any]:
         status = self._step_status()
         last = self.state.module_results.get(self.module_key, {})

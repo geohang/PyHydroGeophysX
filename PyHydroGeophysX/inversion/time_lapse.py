@@ -15,6 +15,8 @@ from scipy.sparse.linalg import lsqr
 from ..forward.ert_forward import ertforandjac2, ertforward2
 from ..solvers.linear_solvers import generalized_solver
 from .base import InversionBase, TimeLapseInversionResult
+from .temporal_weights import DEFAULT_LIMIT as DEFAULT_TEMPORAL_LIMIT
+from .temporal_weights import temporal_weights
 
 
 def _sparse_temporal_difference_matrix(cell_count: int, size: int, dtype):
@@ -156,6 +158,13 @@ class TimeLapseERTInversion(InversionBase):
                 - lambda_rate: Lambda reduction rate
                 - lambda_min: Minimum lambda value
                 - save_memory: Use sparse operators to reduce RAM consumption
+                - temporal_weighting: 'interval' (default) weights each adjacent
+                  pair by the interval between the two surveys, so the temporal
+                  constraint penalizes the rate of change; 'uniform' weights every
+                  pair equally. What was applied is reported on the result, in
+                  ``meta['temporal_weighting']``.
+                - temporal_weight_limit: cap on how far an interval weight may
+                  depart from the median interval, either way (default 10).
         """
         # Load ERT data
         self.data_files = data_files
@@ -176,6 +185,13 @@ class TimeLapseERTInversion(InversionBase):
             'lambda_val': 100.0,
             'alpha': 10.0,
             'decay_rate': 0.0,
+            # Weight each adjacent pair by the interval between the two surveys,
+            # so the temporal constraint penalizes the rate of change rather than
+            # the raw difference. Normalized by the median interval, so an evenly
+            # sampled series is unaffected and 'alpha' keeps its meaning; pass
+            # 'uniform' to reproduce a run from before this existed.
+            'temporal_weighting': 'interval',
+            'temporal_weight_limit': DEFAULT_TEMPORAL_LIMIT,
             # 'H' below is the Gauss-Newton normal matrix, which is square and
             # symmetric positive definite, so it wants a symmetric solver. The
             # old 'cgls' default is a least-squares method: on this matrix it
@@ -222,6 +238,7 @@ class TimeLapseERTInversion(InversionBase):
         self.Wd = None
         self.Wm = None
         self.Wt = None
+        self.temporal_weight_report: Dict[str, Any] = {}
     
     def setup(self):
         """Set up time-lapse ERT inversion (load data, create operators, matrices, etc.)"""
@@ -314,13 +331,20 @@ class TimeLapseERTInversion(InversionBase):
             Wm_dense = Wm_r.todense().astype(self.dtype, copy=False)
             self.Wm = dense_block_diag(*[Wm_dense for _ in range(self.size)]).astype(self.dtype, copy=False)
         
-        # Create temporal regularization matrix
+        # Create temporal regularization matrix. One weight per adjacent pair,
+        # repeated over the cells of that block row. Weighting by the interval
+        # turns the penalty from one on the raw difference between surveys into
+        # one on the rate of change, which is the only form that means the same
+        # thing when the sampling is irregular.
         cell_count = self.fwd_operators[0].paraDomain.cellCount()
-        tdiff = np.diff(self.measurement_times)
-        temporal_weights = np.repeat(
-            np.exp(-self.parameters['decay_rate'] * tdiff),
-            cell_count,
-        ).astype(self.dtype, copy=False)
+        pair_weights, self.temporal_weight_report = temporal_weights(
+            self.measurement_times,
+            mode=str(self.parameters.get('temporal_weighting', 'interval')),
+            limit=self.parameters.get('temporal_weight_limit', DEFAULT_TEMPORAL_LIMIT),
+            decay_rate=float(self.parameters.get('decay_rate', 0.0)),
+        )
+        temporal_weights_full = np.repeat(pair_weights, cell_count).astype(
+            self.dtype, copy=False)
         if self.use_sparse:
             Wt = _sparse_temporal_difference_matrix(
                 cell_count,
@@ -342,7 +366,7 @@ class TimeLapseERTInversion(InversionBase):
                     idx:idx + cell_count,
                     idx + cell_count:idx + 2 * cell_count,
                 ] = -identity
-        self.Wt = diags(temporal_weights, dtype=self.dtype).dot(Wt)
+        self.Wt = diags(temporal_weights_full, dtype=self.dtype).dot(Wt)
     
     def run(self, initial_model: Optional[np.ndarray] = None) -> TimeLapseInversionResult:
         """
@@ -768,6 +792,11 @@ class TimeLapseERTInversion(InversionBase):
         result.meta['lambda'] = float(self.parameters['lambda_val'])
         result.meta['final_lambda'] = float(Lambda)
         result.meta['chi2_history'] = [float(row[0]) for row in Err_tot]
+        # How the temporal constraint was distributed over the sequence. Two runs
+        # with the same alpha are not the same inversion if one weighted by the
+        # interval and the other did not, so the result records which it was.
+        result.meta['temporal_weighting'] = dict(
+            getattr(self, 'temporal_weight_report', None) or {})
 
         if verbose:
             print('End of inversion')
