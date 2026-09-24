@@ -1,0 +1,911 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Time-Lapse Monitoring &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=6c02275b"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'tutorials/time_lapse_monitoring';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/tutorials/time_lapse_monitoring.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Seismic Structure Constraints" href="seismic_structure_constraints.html" />
+    <link rel="prev" title="Field ERT Data QC" href="field_ert_data_qc.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../citation.html">
+    Citation
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../citation.html">
+    Citation
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Model–data interaction</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="hydro_geophysical_interaction.html">Connecting geophysical data and hydrological models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hydrological_input_updates.html">Write updates back to hydrological models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modflow_feedback.html">Run MODFLOW with geophysical structure</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hydrology_to_ert.html">Hydrology to ERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hydrology_to_tdem.html">Hydrology to EM (TDEM and FDEM)</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Measurements and monitoring</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="field_ert_data_qc.html">Field ERT Data QC</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Time-Lapse Monitoring</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Combining methods</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="seismic_structure_constraints.html">Seismic Structure Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="joint_inversion.html">Joint ERT + SRT Inversion</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">AI-assisted operation</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="agent_workflows.html">Agent Workflows</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Workflows</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Time-Lapse Monitoring</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="time-lapse-monitoring">
+<h1>Time-Lapse Monitoring<a class="headerlink" href="#time-lapse-monitoring" title="Link to this heading">#</a></h1>
+<section id="workflow-at-a-glance">
+<h2>Workflow at a glance<a class="headerlink" href="#workflow-at-a-glance" title="Link to this heading">#</a></h2>
+<p><strong>Prepare:</strong> A sequence of ERT surveys with compatible acquisition geometry and time ordering.</p>
+<p><strong>Produce:</strong> A resistivity model for each time and their temporal changes.</p>
+<p><strong>Check / next step:</strong> First reproduce one time step; then assess data fit and whether temporal smoothing suppresses real changes.</p>
+<p>This workflow builds synthetic or field time-lapse ERT datasets and inverts temporal changes.</p>
+</section>
+<section id="steps">
+<h2>Steps<a class="headerlink" href="#steps" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p>Generate or import multi-time ERT measurements.</p></li>
+<li><p>Configure temporal regularization.</p></li>
+<li><p>Compare inversion strategies (full, windowed, L1/L2).</p></li>
+</ol>
+<p>Run the examples in this order: generate measurements, invert the sequence,
+then add structure or compare memory-oriented strategies. Keep the same input
+data and error model when comparing strategies so changes in the results can
+be attributed to the inversion choices.</p>
+</section>
+<section id="acquisition-times">
+<h2>Acquisition times<a class="headerlink" href="#acquisition-times" title="Link to this heading">#</a></h2>
+<p>A time-lapse sequence is only as readable as its time axis. The acquisition time
+of each survey is read from the file name - <code class="docutils literal notranslate"><span class="pre">site_2024-06-12_1430.dat</span></code>,
+<code class="docutils literal notranslate"><span class="pre">20171105_1418.Data</span></code>, <code class="docutils literal notranslate"><span class="pre">06-12-2024</span> <span class="pre">14-30.dat</span></code> and the other common instrument
+layouts are all recognised - and from the file header when the name carries
+nothing. A layout is accepted only when it reads every file in the set, so an
+ambiguous one is resolved by the sequence rather than by guesswork.</p>
+<p>What this buys you:</p>
+<ul class="simple">
+<li><p>panels titled with the acquisition date instead of <code class="docutils literal notranslate"><span class="pre">Time</span> <span class="pre">step</span> <span class="pre">3</span></code>;</p></li>
+<li><p>the gap since the previous survey, shown next to each file in the Studio and
+written to <code class="docutils literal notranslate"><span class="pre">survey_times.csv</span></code> beside the models, in hours or days rather than
+decimal days;</p></li>
+<li><p>the position in the year that the seasonal temperature model needs.</p></li>
+</ul>
+<p>When nothing can be read, the run falls back to a sequential <code class="docutils literal notranslate"><span class="pre">1..n</span></code> index and
+says so in the log and in the report - it does not quietly assume an interval.
+In the Studio, <em>Use file times when the names carry none</em> opts into the
+filesystem modification time as a last resort; it is off by default because a
+copied or re-exported file carries the time of the copy.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.data_processing.survey_timing</span><span class="w"> </span><span class="kn">import</span> <span class="n">survey_timing</span>
+
+<span class="n">timing</span> <span class="o">=</span> <span class="n">survey_timing</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"data/*.ohm"</span><span class="p">)))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">timing</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
+<span class="c1"># 10 surveys, 2021-10-08 14:00 to 2022-06-26 00:30 (span 260 d 10 h), times</span>
+<span class="c1"># from the file names. Interval: median 30 d 22 h, 17 d 12 h to 31 d 00 h -</span>
+<span class="c1"># the sampling is irregular.</span>
+</pre></div>
+</div>
+</section>
+<section id="temperature-correction">
+<h2>Temperature correction<a class="headerlink" href="#temperature-correction" title="Link to this heading">#</a></h2>
+<p>Bulk resistivity falls by about 2 % per °C, so across a monitoring season the
+temperature signal is the same size as the moisture signal the survey is run to
+see: an uncorrected series shows the ground “drying” as it cools. Correcting each
+survey to one reference temperature leaves the remaining change attributable to
+water.</p>
+<p>In the Studio, run the inversion, then set the <strong>Temperature correction</strong> panel
+beside the section on the <strong>Resistivity model</strong> tab and press <strong>Apply</strong> (see
+<a class="reference internal" href="#correcting-a-result-that-is-already-inverted">Correcting a result that is already inverted</a>). In a script, pass
+<code class="docutils literal notranslate"><span class="pre">temperature_correction</span></code> in the inversion parameters:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">params</span><span class="p">[</span><span class="s2">"temperature_correction"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"enabled"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s2">"model"</span><span class="p">:</span> <span class="s2">"hayley"</span><span class="p">,</span>     <span class="c1"># or "linear", with alpha (default 0.025 per degC)</span>
+    <span class="s2">"reference"</span><span class="p">:</span> <span class="mf">25.0</span><span class="p">,</span>     <span class="c1"># degC the corrected sections are reported at</span>
+    <span class="s2">"mode"</span><span class="p">:</span> <span class="s2">"surface"</span><span class="p">,</span>     <span class="c1"># constant | profile | surface | seasonal</span>
+    <span class="s2">"surface_times"</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">],</span>        <span class="c1"># dates or days of the surface record</span>
+    <span class="s2">"surface_temperature"</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">],</span>  <span class="c1"># degC at the ground surface</span>
+    <span class="s2">"diffusivity"</span><span class="p">:</span> <span class="mf">0.06</span><span class="p">,</span>           <span class="c1"># m2/day</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The temperature comes from one of four sources: a constant, a <strong>measured profile</strong>
+(with depth, and through time when it was logged that way), a <strong>surface record
+diffused into the ground</strong>, or the analytical damped annual wave. In a scripted
+run the corrected models become the series every panel, change plot and export is
+built from; the raw ones are kept beside them as <code class="docutils literal notranslate"><span class="pre">final_models_uncorrected.npy</span></code>.
+Every run states which it produced - in the log, in the figure title and in the
+report - because a corrected section is indistinguishable from an uncorrected one
+on the page.</p>
+<section id="measured-profile-depth-time">
+<h3>Measured profile, depth × time<a class="headerlink" href="#measured-profile-depth-time" title="Link to this heading">#</a></h3>
+<p>A thermistor string is the best temperature data a site can have: it measures the
+depth structure and how it evolves, so nothing has to be modelled.
+<code class="docutils literal notranslate"><span class="pre">load_temperature_profiles</span></code> - and the panel’s <strong>Profile table</strong> - read it in
+whichever layout the logger wrote, told apart by the file’s own shape:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">date,</span> <span class="pre">depth_m,</span> <span class="pre">temperature_C</span></code></dt><dd><p>one reading per row, the long form a database exports;</p>
+</dd>
+<dt>a header of depths, then a row per date</dt><dd><p>one column per sensor, the wide form a logger exports;</p>
+</dd>
+<dt>a header of dates, then a row per depth</dt><dd><p>the same table transposed, as it is often typed by hand;</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">depth_m,</span> <span class="pre">temperature_C</span></code></dt><dd><p>a single profile, held constant in time.</p>
+</dd>
+</dl>
+<p>Sensor headers may carry a unit or a prefix (<code class="docutils literal notranslate"><span class="pre">0.5m</span></code>, <code class="docutils literal notranslate"><span class="pre">50</span> <span class="pre">cm</span></code>, <code class="docutils literal notranslate"><span class="pre">T_0.5</span></code>), the
+time may span two columns (<code class="docutils literal notranslate"><span class="pre">date,</span> <span class="pre">time</span></code>), and gaps - empty cells, <code class="docutils literal notranslate"><span class="pre">NaN</span></code>,
+<code class="docutils literal notranslate"><span class="pre">-9999</span></code> - are filled in time for each sensor.</p>
+<p>The record is interpolated linearly in time and then in depth onto every cell and
+survey. Before and after its span, and above its shallowest sensor, the nearest
+reading is held. Below its deepest sensor the seasonal swing that sensor recorded
+is damped with depth towards its mean, at the annual damping depth of the
+<code class="docutils literal notranslate"><span class="pre">diffusivity</span></code> option (2.6 m by default), because conduction damps it; holding the
+deepest reading instead would carry a shallow string’s full season to every
+deeper cell. The panel says what it read - how many depths over which interval,
+how many times over which dates - and warns when some surveys fall outside the
+record, before anything is applied.</p>
+</section>
+<section id="surface-record-1-d-conduction">
+<h3>Surface record, 1-D conduction<a class="headerlink" href="#surface-record-1-d-conduction" title="Link to this heading">#</a></h3>
+<p>The mode most sites can actually use. Almost nobody has a thermistor string, and
+almost everybody has a surface logger - or an air-temperature series from a
+nearby station, which is a workable stand-in. <code class="docutils literal notranslate"><span class="pre">mode:</span> <span class="pre">&quot;surface&quot;</span></code> solves 1-D heat
+conduction, <span class="math notranslate nohighlight">\(\partial T/\partial t = \alpha\, \partial^2 T/\partial z^2\)</span>,
+driven by that record and insulated at depth, and samples the result at every
+cell depth and survey date.</p>
+<p>The ground’s own physics then supplies the depth structure: the annual swing
+damps as <code class="docutils literal notranslate"><span class="pre">exp(-z/d)</span></code> and lags by <code class="docutils literal notranslate"><span class="pre">z/d</span></code> radians, so a cold snap that matters at
+0.3 m has all but vanished at 3 m. Only the thermal diffusivity has to be chosen -
+soils run about 0.04 to 0.13 m²/day - and the panel reports the annual damping
+depth it implies, which is a number with an intuition attached:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics.temperature</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">annual_damping_depth</span><span class="p">,</span> <span class="n">simulate_temperature_1d</span><span class="p">)</span>
+
+<span class="n">annual_damping_depth</span><span class="p">(</span><span class="mf">0.06</span><span class="p">)</span>      <span class="c1"># 2.64 m</span>
+<span class="n">field</span> <span class="o">=</span> <span class="n">simulate_temperature_1d</span><span class="p">(</span><span class="n">days</span><span class="p">,</span> <span class="n">surface_degC</span><span class="p">,</span> <span class="n">cell_depths</span><span class="p">,</span> <span class="n">survey_days</span><span class="p">,</span>
+                                <span class="n">diffusivity</span><span class="o">=</span><span class="mf">0.06</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A two-column CSV (a date or a number of days, then the temperature) is read by
+<code class="docutils literal notranslate"><span class="pre">load_surface_temperature</span></code> and by the <strong>Browse…</strong> button in the panel. Driven by
+a clean annual sinusoid the simulation reproduces the analytical damped wave to
+better than 0.1 °C, which is the check in the test suite.</p>
+<p>One temperature per survey belongs here too, as a coarse surface record. There is
+deliberately no mode that applies such a value uniformly over depth: it would
+correct a cell ten metres down by what happened at the surface, which that cell
+never felt, and so manufacture a change at depth that the ground never had.</p>
+<p>The record and the surveys have to be on one clock: dates on both sides, or plain
+days on both sides. A dated record against undated surveys is refused rather than
+guessed, because an offset of a few months in the forcing is a sign error in the
+correction, not a small one.</p>
+</section>
+<section id="correcting-a-result-that-is-already-inverted">
+<h3>Correcting a result that is already inverted<a class="headerlink" href="#correcting-a-result-that-is-already-inverted" title="Link to this heading">#</a></h3>
+<p>The correction is post-processing, so it never needs the inversion to be re-run,
+and in the Studio it is always applied this way - to a single inversion as much as
+to a time-lapse series. The same panel sits beside the section on the ERT page’s
+<strong>Resistivity model</strong> tab and beside a reopened section in <strong>Project → Saved
+Results</strong>. Choose the settings and press <strong>Apply</strong>: the model on screen is
+corrected there and then, its title and the panel say what temperature it is now
+reported at, and <strong>Remove</strong> puts the inverted model back. Nothing is switched on in
+advance, and the settings are shared between the two pages. A single survey is
+placed in time by the date in its file name or header, which a dated record or the
+seasonal model needs.</p>
+<p>On the ERT page the exports then write the corrected model beside the inverted
+one, never in place of it: <code class="docutils literal notranslate"><span class="pre">final_models_temperature_corrected.npy</span></code> and
+<code class="docutils literal notranslate"><span class="pre">timelapse_resistivity_temperature_corrected.vtk</span></code> for a series,
+<code class="docutils literal notranslate"><span class="pre">resistivity_model_temperature_corrected.npy</span></code> and <code class="docutils literal notranslate"><span class="pre">.vtk</span></code> for a single model,
+the cell CSV holding what is on screen, and <code class="docutils literal notranslate"><span class="pre">temperature_correction.json</span></code>
+recording what was applied. <code class="docutils literal notranslate"><span class="pre">final_models.npy</span></code>, <code class="docutils literal notranslate"><span class="pre">resistivity_model.npy</span></code>, the
+per-step VTKs and the figure remain the models as inverted.</p>
+</section>
+</section>
+<section id="weighting-the-temporal-constraint-by-the-interval">
+<h2>Weighting the temporal constraint by the interval<a class="headerlink" href="#weighting-the-temporal-constraint-by-the-interval" title="Link to this heading">#</a></h2>
+<p>The temporal regularization penalizes the difference between adjacent surveys.
+On an evenly sampled series that is the right question; on a campaign that samples
+hourly for a week and then monthly it is not, because a one-hour change and a
+one-month change are held equally still, and real change across the wide gaps is
+pushed into the data misfit instead.</p>
+<p>Each adjacent pair is therefore weighted by <code class="docutils literal notranslate"><span class="pre">1/Δt</span></code>, which turns the penalty into
+one on the <em>rate</em> of change. The weights are normalized by the median interval, so
+an evenly sampled series is bit-for-bit unchanged and <code class="docutils literal notranslate"><span class="pre">alpha</span></code> keeps the meaning
+it always had; only irregular sampling is affected. A cap (10× either way by
+default) keeps two surveys minutes apart inside a monthly series from being
+effectively frozen together.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">params</span><span class="p">[</span><span class="s2">"temporal_weighting"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"interval"</span>   <span class="c1"># the default; "uniform" is the old behaviour</span>
+<span class="n">params</span><span class="p">[</span><span class="s2">"temporal_weight_limit"</span><span class="p">]</span> <span class="o">=</span> <span class="mf">10.0</span>      <span class="c1"># None removes the cap</span>
+</pre></div>
+</div>
+<p>The run logs what it applied and records it under <code class="docutils literal notranslate"><span class="pre">temporal_weighting</span></code> in the
+result. In the Studio it is the <em>Weight by the interval between surveys</em> tick in
+the time-lapse panel. The GPU (ADTLERT) backend builds its own temporal operator
+and constrains every pair equally; the run says so rather than letting the setting
+look as though it applied.</p>
+</section>
+<section id="reading-a-result-someone-else-inverted">
+<h2>Reading a result someone else inverted<a class="headerlink" href="#reading-a-result-someone-else-inverted" title="Link to this heading">#</a></h2>
+<p>Saved runs open in <strong>Project → Saved Results</strong> with the same section controls the
+processing modules have: step through the surveys by acquisition date, switch to
+<strong>% change from baseline</strong> on a symmetric scale, clip, smooth, and add the
+section - in whichever of the two views is on screen - to the Project Map. A
+result that has already been inverted does not need to be inverted again to be
+read, compared or mapped.</p>
+</section>
+<section id="clipping-the-sections">
+<h2>Clipping the sections<a class="headerlink" href="#clipping-the-sections" title="Link to this heading">#</a></h2>
+<p>An inverted model is drawn on the whole parameter mesh, so the outer edges of the
+picture are regularization rather than data. The model view’s <strong>Hide below</strong>
+blanks cells under a coverage cut; <strong>Clean cut</strong> next to it reduces that same cut
+to a smooth clipping depth and clips the drawing to it, which gives the
+traditional clean-edged resistivity image instead of a saw-tooth of surviving
+triangles. <em>Clip sections to the coverage envelope</em> applies the same cut to the
+exported panels, with one envelope for the whole sequence so the steps stay
+comparable.</p>
+</section>
+<section id="how-smoothly-the-section-is-drawn">
+<h2>How smoothly the section is drawn<a class="headerlink" href="#how-smoothly-the-section-is-drawn" title="Link to this heading">#</a></h2>
+<p><strong>Smooth</strong> next to <em>Show mesh</em> sets how the model is rendered:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">Off</span></code></dt><dd><p>the inversion’s own cells, which is honest about where the model’s degrees of
+freedom are;</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">Cells</span> <span class="pre">×1</span></code> / <code class="docutils literal notranslate"><span class="pre">Cells</span> <span class="pre">×2</span></code></dt><dd><p>the model interpolated onto a once- or twice-subdivided mesh, still drawn as
+cells;</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">Contour</span></code></dt><dd><p>filled contours on a regular grid, blanked above the ground surface - the
+continuous image traditional resistivity software produces. The <strong>levels</strong>
+box next to it sets the number of bands: a high count reads as a continuous
+image, a low one bands the section so a value can be read off it.</p>
+</dd>
+</dl>
+<p>All three are display choices. No resolution is added and the exported model is
+unchanged.</p>
+</section>
+<section id="related-examples">
+<h2>Related Examples<a class="headerlink" href="#related-examples" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../auto_examples/Ex_Time_lapse_measurement.html"><span class="doc">Ex. Creating Synthetic Time-Lapse ERT Measurements</span></a></p></li>
+<li><p><a class="reference internal" href="../auto_examples/Ex_TL_inversion.html"><span class="doc">Ex. Time-Lapse ERT Inversion Techniques</span></a></p></li>
+<li><p><a class="reference internal" href="../auto_examples/Ex_TL_inversion_memory.html"><span class="doc">Ex. Memory-Optimized Time-Lapse ERT Inversion</span></a></p></li>
+<li><p><a class="reference internal" href="../auto_examples/Ex_structure_TLresinv.html"><span class="doc">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</span></a></p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="field_ert_data_qc.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Field ERT Data QC</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="seismic_structure_constraints.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Seismic Structure Constraints</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#workflow-at-a-glance">Workflow at a glance</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#steps">Steps</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acquisition-times">Acquisition times</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#temperature-correction">Temperature correction</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#measured-profile-depth-time">Measured profile, depth × time</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#surface-record-1-d-conduction">Surface record, 1-D conduction</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#correcting-a-result-that-is-already-inverted">Correcting a result that is already inverted</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#weighting-the-temporal-constraint-by-the-interval">Weighting the temporal constraint by the interval</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reading-a-result-someone-else-inverted">Reading a result someone else inverted</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#clipping-the-sections">Clipping the sections</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-smoothly-the-section-is-drawn">How smoothly the section is drawn</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#related-examples">Related Examples</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/tutorials/time_lapse_monitoring.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/tutorials/time_lapse_monitoring.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

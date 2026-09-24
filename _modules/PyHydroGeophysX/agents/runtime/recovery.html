@@ -1,0 +1,907 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.agents.runtime.recovery &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../../_static/documentation_options.js?v=6c02275b"></script>
+    <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/agents/runtime/recovery';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../../../../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/agents/runtime/recovery.html" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../../_static/searchtools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <script src="../../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../citation.html">
+    Citation
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../citation.html">
+    Citation
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.agents.runtime.recovery</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.agents.runtime.recovery</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""What the loop does about a step that failed.</span>
+
+<span class="sd">Before this, a failed step was recorded and the run moved on. That is right for</span>
+<span class="sd">a step nothing can be done about, and wrong for the ones that fail because a</span>
+<span class="sd">setting was unsuitable rather than because the work is impossible - an inversion</span>
+<span class="sd">that diverged at the configured regularisation, a conversion given a threshold</span>
+<span class="sd">no cell meets, a loader pointed at the wrong column layout. A person looking at</span>
+<span class="sd">the error would change one number and run it again, and the loop could not.</span>
+
+<span class="sd">The inversion already had a hand-written version of this: evaluate the result,</span>
+<span class="sd">adjust lambda, invert again. That special case is what this generalises.</span>
+
+<span class="sd">Three things are deliberately separated:</span>
+
+<span class="sd">- **Diagnosis** is the model's, because reading an error message and saying what</span>
+<span class="sd">  it means is what a model is for. It never runs anything.</span>
+<span class="sd">- **The decision** is bounded here: the only recovery this performs on its own</span>
+<span class="sd">  is re-running the same tool with different *configuration*. Changing numbers</span>
+<span class="sd">  is reversible, inspectable, and recorded in the plan; it cannot reach outside</span>
+<span class="sd">  the run.</span>
+<span class="sd">- **Anything beyond configuration** - a generated reader for a coordinate file</span>
+<span class="sd">  nobody anticipated - is a proposal that goes to the user through</span>
+<span class="sd">  :meth:`RunContext.ask` with the source in front of them, and runs only on an</span>
+<span class="sd">  explicit yes. See :mod:`~PyHydroGeophysX.agents.runtime.adapters`. Code a</span>
+<span class="sd">  model wrote, executed unattended against somebody's data, is not a thing this</span>
+<span class="sd">  package does on its own initiative: a run with nobody to ask declines.</span>
+
+<span class="sd">A recovery is itself a step in the transcript, with the diagnosis as its reason,</span>
+<span class="sd">so a reader of the report sees what failed, what the run thought about it, what</span>
+<span class="sd">it changed, and whether that worked.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.context</span><span class="w"> </span><span class="kn">import</span> <span class="n">RunContext</span>
+
+<span class="c1">#: How many times one tool may be recovered within a run. One retry catches the</span>
+<span class="c1">#: unsuitable-setting case; a tool that fails twice with different settings is</span>
+<span class="c1">#: failing for a reason settings will not fix, and going round again only spends</span>
+<span class="c1">#: the user's time and tokens.</span>
+<span class="n">MAX_RECOVERIES</span> <span class="o">=</span> <span class="mi">1</span>
+
+<span class="c1">#: Configuration keys a diagnosis is allowed to change. Everything here is a</span>
+<span class="c1">#: number or a switch that selects between behaviours already implemented and</span>
+<span class="c1">#: tested. Absent on purpose: every path key, because a recovery that can point</span>
+<span class="c1">#: the run at a different file is a recovery that can read anything on the disk,</span>
+<span class="c1">#: and the user chose those files.</span>
+<span class="n">ADJUSTABLE</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"inversion_params"</span><span class="p">,</span> <span class="s2">"temporal_regularization"</span><span class="p">,</span> <span class="s2">"time_lapse_method"</span><span class="p">,</span>
+    <span class="s2">"quality_threshold"</span><span class="p">,</span> <span class="s2">"max_attempts"</span><span class="p">,</span> <span class="s2">"auto_adjust"</span><span class="p">,</span>
+    <span class="s2">"velocity_threshold"</span><span class="p">,</span> <span class="s2">"seismic_inversion_params"</span><span class="p">,</span> <span class="s2">"align_origin"</span><span class="p">,</span>
+    <span class="s2">"petrophysical_params"</span><span class="p">,</span> <span class="s2">"n_realizations"</span><span class="p">,</span> <span class="s2">"coverage_threshold"</span><span class="p">,</span>
+    <span class="s2">"instrument"</span><span class="p">,</span> <span class="s2">"crs"</span><span class="p">,</span> <span class="s2">"first_break_params"</span><span class="p">,</span> <span class="s2">"tdem_params"</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">RECOVERY_PROMPT</span> <span class="o">=</span> <span class="s2">"""A step of a hydrogeophysical workflow failed. Say what to do.</span>
+
+<span class="s2">The run so far:</span>
+<span class="si">{transcript}</span>
+
+<span class="s2">The step that failed: </span><span class="si">{tool}</span>
+<span class="s2">What it is for: </span><span class="si">{purpose}</span>
+<span class="s2">The error: </span><span class="si">{error}</span>
+
+<span class="s2">The settings it ran with (only these may be changed):</span>
+<span class="si">{settings}</span>
+
+<span class="s2">Coordinate files in this run that a reader could be written for, if one of</span>
+<span class="s2">them is what could not be read: </span><span class="si">{adaptable}</span>
+
+<span class="s2">Answer with JSON and nothing else:</span>
+<span class="s2">{{"cause": "one sentence on why this failed",</span>
+<span class="s2">  "action": "retry" | "adapt" | "give_up",</span>
+<span class="s2">  "changes": {{"&lt;setting&gt;": &lt;new value&gt;}},</span>
+<span class="s2">  "file_key": "&lt;one of the coordinate files above, for adapt only&gt;",</span>
+<span class="s2">  "why": "one sentence on why this should work"}}</span>
+
+<span class="s2">Rules:</span>
+<span class="s2">- "retry" only when a different setting could plausibly fix it. Re-running with</span>
+<span class="s2">  the same settings is never worth doing.</span>
+<span class="s2">- "adapt" only when a coordinate file above holds the right numbers in a layout</span>
+<span class="s2">  the reader does not handle. Name it in "file_key". A human will read the</span>
+<span class="s2">  reader you would write and decide whether to run it, so do not propose this</span>
+<span class="s2">  for a file whose contents are simply wrong or missing.</span>
+<span class="s2">- "give_up" when the failure is about missing data, an unreadable instrument</span>
+<span class="s2">  format, an unimplemented method, or anything neither of the above can change.</span>
+<span class="s2">  This is a normal answer, not a defeat; say the cause plainly so the report can</span>
+<span class="s2">  state it.</span>
+<span class="s2">- Only the settings listed above may appear in "changes". Keep the same types.</span>
+<span class="s2">- Change as little as possible: one or two values, not a new configuration."""</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_extract_json</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""The first JSON object in ``text``, or None.</span>
+
+<span class="sd">    Models wrap JSON in prose and in code fences however they are asked not to.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; _extract_json('```json\\n{"action": "retry"}\\n```')</span>
+<span class="sd">    {'action': 'retry'}</span>
+<span class="sd">    &gt;&gt;&gt; _extract_json('no json here') is None</span>
+<span class="sd">    True</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\{.*\}"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">text</span><span class="p">),</span> <span class="n">re</span><span class="o">.</span><span class="n">S</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">parsed</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">parsed</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parsed</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_merge</span><span class="p">(</span><span class="n">current</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">change</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Apply ``change`` to ``current``, merging one level of dict.</span>
+
+<span class="sd">    A diagnosis that wants a different lambda says ``{"inversion_params":</span>
+<span class="sd">    {"lambda": 5}}`` and means "that one key", not "replace every inversion</span>
+<span class="sd">    setting with this".</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; _merge({'lambda': 15, 'max_iterations': 10}, {'lambda': 5})</span>
+<span class="sd">    {'lambda': 5, 'max_iterations': 10}</span>
+<span class="sd">    &gt;&gt;&gt; _merge(15.0, 5.0)</span>
+<span class="sd">    5.0</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">current</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">change</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">merged</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">current</span><span class="p">)</span>
+        <span class="n">merged</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">change</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">merged</span>
+    <span class="k">return</span> <span class="n">change</span>
+
+
+<div class="viewcode-block" id="settings_for">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.recovery.settings_for">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">settings_for</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The adjustable part of the configuration, as the diagnosis sees it."""</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">ADJUSTABLE</span> <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="diagnose">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.recovery.diagnose">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">diagnose</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">,</span> <span class="n">tool</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+             <span class="n">ask</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Ask what went wrong and what to change, and keep only what is allowed.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ctx : RunContext</span>
+<span class="sd">        The run, for the transcript and the current settings.</span>
+<span class="sd">    tool : Tool or None</span>
+<span class="sd">        The tool that failed.</span>
+<span class="sd">    error : str</span>
+<span class="sd">        Its error message.</span>
+<span class="sd">    ask : callable or None</span>
+<span class="sd">        Takes a prompt, returns the model's reply. Without one there is no</span>
+<span class="sd">        diagnosis: a deterministic run does not guess at causes.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        ``{"cause", "action", "changes", "why"}``. ``action`` is ``"retry"``</span>
+<span class="sd">        only when a diagnosis asked for it *and* named at least one allowed</span>
+<span class="sd">        setting that would actually differ; otherwise ``"give_up"``, so a model</span>
+<span class="sd">        that answers "retry" with nothing to change cannot loop the run.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    None</span>
+<span class="sd">        An unreachable or unparseable model gives up, which is what the loop</span>
+<span class="sd">        did before any of this existed.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; ctx = RunContext('goal', {'inversion_params': {'lambda': 15}})</span>
+<span class="sd">    &gt;&gt;&gt; reply = '{"cause": "lambda too high", "action": "retry",' \\</span>
+<span class="sd">    ...         ' "changes": {"inversion_params": {"lambda": 5}},' \\</span>
+<span class="sd">    ...         ' "why": "less smoothing"}'</span>
+<span class="sd">    &gt;&gt;&gt; plan = diagnose(ctx, None, 'diverged', lambda prompt: reply)</span>
+<span class="sd">    &gt;&gt;&gt; plan['action'], plan['changes']</span>
+<span class="sd">    ('retry', {'inversion_params': {'lambda': 5}})</span>
+<span class="sd">    &gt;&gt;&gt; diagnose(ctx, None, 'diverged', None)['action']</span>
+<span class="sd">    'give_up'</span>
+<span class="sd">    """</span>
+    <span class="n">blank</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"cause"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span> <span class="s2">"action"</span><span class="p">:</span> <span class="s2">"give_up"</span><span class="p">,</span> <span class="s2">"changes"</span><span class="p">:</span> <span class="p">{},</span> <span class="s2">"file_key"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
+             <span class="s2">"why"</span><span class="p">:</span> <span class="s2">""</span><span class="p">}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">ask</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">blank</span>
+    <span class="n">settings</span> <span class="o">=</span> <span class="n">settings_for</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">ADAPTABLE_FILES</span>
+
+    <span class="n">present</span> <span class="o">=</span> <span class="p">[</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">ADAPTABLE_FILES</span> <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span>
+    <span class="n">prompt</span> <span class="o">=</span> <span class="n">RECOVERY_PROMPT</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">transcript</span><span class="o">=</span><span class="n">ctx</span><span class="o">.</span><span class="n">transcript</span><span class="p">(</span><span class="n">limit</span><span class="o">=</span><span class="mi">12</span><span class="p">),</span>
+        <span class="n">tool</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"the step"</span><span class="p">,</span>
+        <span class="n">purpose</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="s2">"description"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"(not described)"</span><span class="p">,</span>
+        <span class="n">error</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)[:</span><span class="mi">800</span><span class="p">],</span>
+        <span class="n">settings</span><span class="o">=</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="nb">str</span><span class="p">)[:</span><span class="mi">2000</span><span class="p">],</span>
+        <span class="n">adaptable</span><span class="o">=</span><span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">present</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"(none)"</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">parsed</span> <span class="o">=</span> <span class="n">_extract_json</span><span class="p">(</span><span class="n">ask</span><span class="p">(</span><span class="n">prompt</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - an unreachable model is not a crash</span>
+        <span class="n">parsed</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">parsed</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">blank</span>
+    <span class="c1"># Only the allowed keys, and only values that would actually differ. A</span>
+    <span class="c1"># "retry" that changes nothing is a re-run of the thing that just failed.</span>
+    <span class="n">changes</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">(</span><span class="n">parsed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"changes"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+               <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">ADJUSTABLE</span>
+               <span class="ow">and</span> <span class="n">_merge</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="n">value</span><span class="p">)</span> <span class="o">!=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)}</span>
+    <span class="n">wanted</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">parsed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"action"</span><span class="p">))</span>
+    <span class="n">file_key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">parsed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"file_key"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">wanted</span> <span class="o">==</span> <span class="s2">"adapt"</span> <span class="ow">and</span> <span class="n">file_key</span> <span class="ow">in</span> <span class="n">ADAPTABLE_FILES</span> <span class="ow">and</span> <span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">file_key</span><span class="p">):</span>
+        <span class="n">action</span> <span class="o">=</span> <span class="s2">"adapt"</span>
+    <span class="k">elif</span> <span class="n">wanted</span> <span class="o">==</span> <span class="s2">"retry"</span> <span class="ow">and</span> <span class="n">changes</span><span class="p">:</span>
+        <span class="n">action</span> <span class="o">=</span> <span class="s2">"retry"</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">action</span> <span class="o">=</span> <span class="s2">"give_up"</span>
+        <span class="n">file_key</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"cause"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">parsed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"cause"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)[:</span><span class="mi">300</span><span class="p">],</span>
+            <span class="s2">"action"</span><span class="p">:</span> <span class="n">action</span><span class="p">,</span>
+            <span class="s2">"changes"</span><span class="p">:</span> <span class="n">changes</span><span class="p">,</span>
+            <span class="s2">"file_key"</span><span class="p">:</span> <span class="n">file_key</span><span class="p">,</span>
+            <span class="s2">"why"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">parsed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"why"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)[:</span><span class="mi">300</span><span class="p">]}</span></div>
+
+
+
+<div class="viewcode-block" id="apply_changes">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.recovery.apply_changes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_changes</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">,</span> <span class="n">changes</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Put the diagnosis's settings into the configuration, and say which.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list of str</span>
+<span class="sd">        ``"key: old -&gt; new"`` per change, for the transcript. The run's</span>
+<span class="sd">        configuration is what the report prints, so a number that changed</span>
+<span class="sd">        mid-run has to be visible as having changed.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; ctx = RunContext('goal', {'inversion_params': {'lambda': 15}})</span>
+<span class="sd">    &gt;&gt;&gt; apply_changes(ctx, {'inversion_params': {'lambda': 5}})</span>
+<span class="sd">    ["inversion_params: {'lambda': 15} -&gt; {'lambda': 5}"]</span>
+<span class="sd">    """</span>
+    <span class="n">applied</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">(</span><span class="n">changes</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ADJUSTABLE</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">before</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="n">after</span> <span class="o">=</span> <span class="n">_merge</span><span class="p">(</span><span class="n">before</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">after</span>
+        <span class="n">applied</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">before</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">after</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">applied</span></div>
+
+
+
+<div class="viewcode-block" id="recover">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.recovery.recover">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">recover</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">,</span> <span class="n">tool</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">ask</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]],</span>
+            <span class="n">run</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">],</span>
+            <span class="n">attempts</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Diagnose a failed step and, if a setting can be blamed, run it again.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ctx : RunContext</span>
+<span class="sd">        The run. Its configuration is what a recovery changes.</span>
+<span class="sd">    tool : Tool</span>
+<span class="sd">        The tool that failed.</span>
+<span class="sd">    error : str</span>
+<span class="sd">        Its error.</span>
+<span class="sd">    ask : callable or None</span>
+<span class="sd">        The model, for the diagnosis.</span>
+<span class="sd">    run : callable</span>
+<span class="sd">        Takes the tool's name and runs it again, returning the new status. The</span>
+<span class="sd">        controller passes its own ``invoke`` so the retry is an ordinary step,</span>
+<span class="sd">        recorded like any other.</span>
+<span class="sd">    attempts : dict, optional</span>
+<span class="sd">        Tool name to recoveries already spent, carried across a run.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        ``(status, note)`` - the status after any retry, and a sentence for the</span>
+<span class="sd">        warnings. ``status`` is the original ``"failed"`` when nothing was tried.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from .tools import Tool</span>
+<span class="sd">    &gt;&gt;&gt; ctx = RunContext('goal', {'inversion_params': {'lambda': 15}})</span>
+<span class="sd">    &gt;&gt;&gt; tool = Tool('invert', 'Invert.', lambda c: ('', {}),</span>
+<span class="sd">    ...             label='Run ERT inversion')</span>
+<span class="sd">    &gt;&gt;&gt; reply = '{"cause": "too smooth", "action": "retry",' \\</span>
+<span class="sd">    ...         ' "changes": {"inversion_params": {"lambda": 5}}, "why": "ok"}'</span>
+<span class="sd">    &gt;&gt;&gt; recover(ctx, tool, 'diverged', lambda p: reply, lambda name: 'ok')</span>
+<span class="sd">    ('ok', "Run ERT inversion failed (diverged). Diagnosis: too smooth. Retried with inversion_params: {'lambda': 15} -&gt; {'lambda': 5}, which worked.")</span>
+<span class="sd">    """</span>
+    <span class="n">spent</span> <span class="o">=</span> <span class="n">attempts</span> <span class="k">if</span> <span class="n">attempts</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">{}</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span>
+    <span class="k">if</span> <span class="n">spent</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">MAX_RECOVERIES</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"failed"</span><span class="p">,</span> <span class="s2">""</span>
+    <span class="n">plan</span> <span class="o">=</span> <span class="n">diagnose</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tool</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">ask</span><span class="p">)</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="s2">"label"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">or</span> <span class="n">name</span> <span class="ow">or</span> <span class="s2">"the step"</span>
+    <span class="k">if</span> <span class="n">plan</span><span class="p">[</span><span class="s2">"action"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"adapt"</span><span class="p">:</span>
+        <span class="c1"># A coordinate file whose layout nobody wrote a reader for. The model</span>
+        <span class="c1"># writes one, the user reads it and decides, and only then does anything</span>
+        <span class="c1"># run. Declining is the default and a perfectly good outcome.</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">adapt_file</span>
+
+        <span class="n">spent</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">spent</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">plan</span><span class="p">[</span><span class="s2">"file_key"</span><span class="p">]</span>
+        <span class="n">rewritten</span> <span class="o">=</span> <span class="n">adapt_file</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">ask</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">rewritten</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">"failed"</span><span class="p">,</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> failed (</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">). Diagnosis: "</span>
+                              <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">plan</span><span class="p">[</span><span class="s1">'cause'</span><span class="p">]</span><span class="si">}</span><span class="s2"> A reader for </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> was not run, "</span>
+                              <span class="sa">f</span><span class="s2">"so the step was left undone."</span><span class="p">)</span>
+        <span class="n">original</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">rewritten</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">run</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">outcome</span> <span class="o">=</span> <span class="s2">"which worked"</span> <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="s2">"ok"</span> <span class="k">else</span> <span class="s2">"which did not help either"</span>
+        <span class="k">return</span> <span class="n">status</span><span class="p">,</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> failed (</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">). Diagnosis: </span><span class="si">{</span><span class="n">plan</span><span class="p">[</span><span class="s1">'cause'</span><span class="p">]</span><span class="si">}</span><span class="s2"> "</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> was re-read by approved generated code and the "</span>
+                        <span class="sa">f</span><span class="s2">"step retried against </span><span class="si">{</span><span class="n">rewritten</span><span class="si">}</span><span class="s2"> in place of "</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">original</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">outcome</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">plan</span><span class="p">[</span><span class="s2">"action"</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">"retry"</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">plan</span><span class="p">[</span><span class="s2">"cause"</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="s2">"failed"</span><span class="p">,</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> failed (</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">). Diagnosis: "</span>
+                              <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">plan</span><span class="p">[</span><span class="s1">'cause'</span><span class="p">]</span><span class="si">}</span><span class="s2"> Nothing in the settings would "</span>
+                              <span class="sa">f</span><span class="s2">"change that, so it was left undone."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">"failed"</span><span class="p">,</span> <span class="s2">""</span>
+    <span class="n">spent</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">spent</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">applied</span> <span class="o">=</span> <span class="n">apply_changes</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">plan</span><span class="p">[</span><span class="s2">"changes"</span><span class="p">])</span>
+    <span class="n">ctx</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> was retried with changed settings after it failed: "</span>
+             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'; '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">applied</span><span class="p">)</span><span class="si">}</span><span class="s2">. Reason given: </span><span class="si">{</span><span class="n">plan</span><span class="p">[</span><span class="s1">'why'</span><span class="p">]</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">plan</span><span class="p">[</span><span class="s1">'cause'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">status</span> <span class="o">=</span> <span class="n">run</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">outcome</span> <span class="o">=</span> <span class="s2">"which worked"</span> <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="s2">"ok"</span> <span class="k">else</span> <span class="s2">"which did not help either"</span>
+    <span class="k">return</span> <span class="n">status</span><span class="p">,</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> failed (</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">). Diagnosis: </span><span class="si">{</span><span class="n">plan</span><span class="p">[</span><span class="s1">'cause'</span><span class="p">]</span><span class="si">}</span><span class="s2">. "</span>
+                    <span class="sa">f</span><span class="s2">"Retried with </span><span class="si">{</span><span class="s1">'; '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">applied</span><span class="p">)</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">outcome</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

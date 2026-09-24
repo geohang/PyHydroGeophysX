@@ -1,0 +1,819 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.agents.runtime.tools &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../../_static/documentation_options.js?v=6c02275b"></script>
+    <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/agents/runtime/tools';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../../../../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/agents/runtime/tools.html" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../../_static/searchtools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <script src="../../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../citation.html">
+    Citation
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../citation.html">
+    Citation
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.agents.runtime.tools</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.agents.runtime.tools</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Every capability the workflow has, described well enough to be chosen.</span>
+
+<span class="sd">A tool is the unit the controller selects. It is deliberately not the same</span>
+<span class="sd">thing as an agent class: an agent is an implementation, a tool is an offer -</span>
+<span class="sd">what it needs, what it produces, and one sentence of what it is for. The</span>
+<span class="sd">controller never sees ``ERTInversionAgent``; it sees "invert_time_lapse:</span>
+<span class="sd">recover a resistivity model for every survey at once, needs ert_data".</span>
+
+<span class="sd">Three fields carry the weight:</span>
+
+<span class="sd">``requires``</span>
+<span class="sd">    Artifacts that must exist. A tool whose requirements are unmet is never</span>
+<span class="sd">    offered, which is what makes an impossible sequence unrepresentable rather</span>
+<span class="sd">    than merely discouraged. The old pipeline enforced ordering by writing the</span>
+<span class="sd">    calls in order; here the data dependencies say it.</span>
+
+<span class="sd">``produces``</span>
+<span class="sd">    What will exist afterwards, so the controller can reason about reaching a</span>
+<span class="sd">    goal it has not been given a recipe for.</span>
+
+<span class="sd">``description``</span>
+<span class="sd">    Written for a reader who does not know this codebase, because that is what</span>
+<span class="sd">    the model is. This is the same reason a tool description matters more than</span>
+<span class="sd">    a function docstring: nothing else tells the caller when to reach for it.</span>
+
+<span class="sd">Handlers take the :class:`~PyHydroGeophysX.agents.runtime.context.RunContext`</span>
+<span class="sd">and return ``(summary, outputs)``. Raising is allowed and is not fatal - the</span>
+<span class="sd">controller records the failure as an observation and carries on deciding.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.context</span><span class="w"> </span><span class="kn">import</span> <span class="n">RunContext</span>
+
+<span class="c1">#: Every registered tool, by name.</span>
+<span class="n">TOOLS</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">"Tool"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+
+<div class="viewcode-block" id="Tool">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.tools.Tool">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Tool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One capability the controller can choose."""</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">handler</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">RunContext</span><span class="p">],</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span>
+    <span class="n">requires</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">tuple</span><span class="p">)</span>
+    <span class="n">produces</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">tuple</span><span class="p">)</span>
+    <span class="c1">#: Which agent class implements it, for the derived execution plan.</span>
+    <span class="n">agent</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="c1">#: A short imperative label for the plan, e.g. "Run time-lapse inversion".</span>
+    <span class="n">label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="c1">#: The desktop studio module that shows this kind of work, as keyed in</span>
+    <span class="c1">#: ``PyHydroGeophysX.qt_apps.modules.MODULE_SPECS``. The runtime never</span>
+    <span class="c1">#: imports Qt; it reports the key and the desktop decides what to do with</span>
+    <span class="c1">#: it, which is what lets a run walk the user through the studio while it</span>
+    <span class="c1">#: works instead of leaving them on a progress bar.</span>
+    <span class="n">module</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="c1">#: Extra condition beyond ``requires`` - for tools gated by configuration</span>
+    <span class="c1">#: rather than by data, such as the climate step.</span>
+    <span class="n">when</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">RunContext</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="c1">#: Tools that make no sense to run twice. The controller will not re-offer</span>
+    <span class="c1">#: one that has already been *attempted* unless it is marked repeatable.</span>
+    <span class="n">repeatable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="Tool.available">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.tools.Tool.available">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">available</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Whether this tool can run against the context as it stands."""</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ctx</span><span class="o">.</span><span class="n">has</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">requires</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="c1"># Attempted, not merely succeeded. Excluding only successes leaves a</span>
+        <span class="c1"># failing tool offered forever: the deterministic policy takes the</span>
+        <span class="c1"># first offer, so a single failure became twenty-four identical</span>
+        <span class="c1"># failures and the step that could have salvaged the run was never</span>
+        <span class="c1"># reached. A tool that should be retried says so with `repeatable`,</span>
+        <span class="c1"># and then owns the decision to vary what it does.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">repeatable</span> <span class="ow">and</span> <span class="n">ctx</span><span class="o">.</span><span class="n">attempted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">when</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">when</span><span class="p">(</span><span class="n">ctx</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - a broken gate must not hide the tool</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="Tool.missing">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.tools.Tool.missing">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">missing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Requirements that are not satisfied, for a blocked-step message."""</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">requires</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">ctx</span><span class="o">.</span><span class="n">has</span><span class="p">(</span><span class="n">key</span><span class="p">)]</span></div>
+
+
+<div class="viewcode-block" id="Tool.unavailable_because">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.tools.Tool.unavailable_because">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">unavailable_because</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Why :meth:`available` is False, in words the controller can act on."""</span>
+        <span class="n">absent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">missing</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">absent</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">"it needs </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">absent</span><span class="p">)</span><span class="si">}</span><span class="s2">, which the run has not produced"</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">repeatable</span> <span class="ow">and</span> <span class="n">ctx</span><span class="o">.</span><span class="n">attempted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s2">"it has already been tried in this run and is not repeated"</span>
+        <span class="k">return</span> <span class="s2">"it does not apply to this run as configured"</span></div>
+
+
+<div class="viewcode-block" id="Tool.offer">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.tools.Tool.offer">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">offer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The tool as one line of the controller's menu."""</span>
+        <span class="n">needs</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">requires</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"nothing"</span>
+        <span class="n">gives</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">produces</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"a side effect"</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"- </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="si">}</span><span class="s2"> (needs: </span><span class="si">{</span><span class="n">needs</span><span class="si">}</span><span class="s2">; gives: </span><span class="si">{</span><span class="n">gives</span><span class="si">}</span><span class="s2">)"</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="register">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.tools.register">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">register</span><span class="p">(</span><span class="n">tool</span><span class="p">:</span> <span class="n">Tool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Add ``tool`` to the registry, replacing any tool of the same name.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    tool : Tool</span>
+<span class="sd">        The tool to register.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Tool</span>
+<span class="sd">        The same tool, so this can wrap a definition.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the tool has no name or no handler - a nameless tool cannot be</span>
+<span class="sd">        chosen and a handlerless one cannot be run, and both fail far from</span>
+<span class="sd">        here.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; t = register(Tool('noop', 'Do nothing.', lambda ctx: ('done', {})))</span>
+<span class="sd">    &gt;&gt;&gt; TOOLS['noop'] is t</span>
+<span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; del TOOLS['noop']</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">tool</span><span class="o">.</span><span class="n">name</span> <span class="ow">or</span> <span class="n">tool</span><span class="o">.</span><span class="n">handler</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"a tool needs a name and a handler"</span><span class="p">)</span>
+    <span class="n">TOOLS</span><span class="p">[</span><span class="n">tool</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">tool</span>
+    <span class="k">return</span> <span class="n">tool</span></div>
+
+
+
+<div class="viewcode-block" id="runnable_tools">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.tools.runnable_tools">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">runnable_tools</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">,</span>
+                   <span class="n">tools</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">"Tool"</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tool</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Every tool whose requirements the context currently satisfies.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ctx : RunContext</span>
+<span class="sd">        The run as it stands.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list of Tool</span>
+<span class="sd">        In registration order, which is roughly the order a run needs them -</span>
+<span class="sd">        so a controller that simply takes the first is already a sane pipeline.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; ctx = RunContext('x')</span>
+<span class="sd">    &gt;&gt;&gt; only = {'needs_data': Tool('needs_data', 'Needs data.',</span>
+<span class="sd">    ...                            lambda c: ('', {}), requires=('data',))}</span>
+<span class="sd">    &gt;&gt;&gt; [t.name for t in runnable_tools(ctx, only)]</span>
+<span class="sd">    []</span>
+<span class="sd">    &gt;&gt;&gt; ctx.put('data', [1])</span>
+<span class="sd">    &gt;&gt;&gt; [t.name for t in runnable_tools(ctx, only)]</span>
+<span class="sd">    ['needs_data']</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">tool</span> <span class="k">for</span> <span class="n">tool</span> <span class="ow">in</span> <span class="p">(</span><span class="n">TOOLS</span> <span class="k">if</span> <span class="n">tools</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">tools</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">tool</span><span class="o">.</span><span class="n">available</span><span class="p">(</span><span class="n">ctx</span><span class="p">)]</span></div>
+
+
+
+<div class="viewcode-block" id="menu">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.tools.menu">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">menu</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">,</span> <span class="n">tools</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">"Tool"</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The runnable tools as the controller sees them, one per line."""</span>
+    <span class="n">offers</span> <span class="o">=</span> <span class="p">[</span><span class="n">tool</span><span class="o">.</span><span class="n">offer</span><span class="p">()</span> <span class="k">for</span> <span class="n">tool</span> <span class="ow">in</span> <span class="n">runnable_tools</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tools</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">offers</span><span class="p">)</span> <span class="k">if</span> <span class="n">offers</span> <span class="k">else</span> <span class="s2">"- (nothing can run against the current state)"</span></div>
+
+
+
+<div class="viewcode-block" id="invoke">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.tools.invoke">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">invoke</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
+           <span class="n">tools</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">"Tool"</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Run one tool, recording the step whatever happens.</span>
+
+<span class="sd">    Only ``requires`` is checked here, not the ``when`` gate or the no-repeat</span>
+<span class="sd">    rule: a recovery retries a tool that has just failed, which the no-repeat</span>
+<span class="sd">    rule would refuse. Refusing a tool the menu did not offer is the</span>
+<span class="sd">    controller's job, before it gets this far.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ctx : RunContext</span>
+<span class="sd">        The run; the tool reads and writes it.</span>
+<span class="sd">    name : str</span>
+<span class="sd">        Registered tool name.</span>
+<span class="sd">    reason : str</span>
+<span class="sd">        Why this step was chosen, for the transcript and the plan.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        The step's status: ``'ok'``, ``'failed'``, ``'blocked'`` or</span>
+<span class="sd">        ``'skipped'`` (the last for an unknown tool name).</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    None</span>
+<span class="sd">        A tool that raises is recorded as failed. The loop has to keep its</span>
+<span class="sd">        ability to decide what to do about a failure, which it loses if the</span>
+<span class="sd">        exception propagates out of the run.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; ctx = RunContext('x')</span>
+<span class="sd">    &gt;&gt;&gt; only = {'boom': Tool('boom', 'Raise.', lambda c: 1 / 0)}</span>
+<span class="sd">    &gt;&gt;&gt; invoke(ctx, 'boom', tools=only)</span>
+<span class="sd">    'failed'</span>
+<span class="sd">    &gt;&gt;&gt; ctx.steps[-1].error.startswith('ZeroDivisionError')</span>
+<span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; invoke(ctx, 'no_such_tool', tools=only)</span>
+<span class="sd">    'skipped'</span>
+<span class="sd">    """</span>
+    <span class="n">tool</span> <span class="o">=</span> <span class="p">(</span><span class="n">TOOLS</span> <span class="k">if</span> <span class="n">tools</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">tools</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tool</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">begin</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">reason</span><span class="p">)</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">"skipped"</span><span class="p">,</span>
+                   <span class="n">error</span><span class="o">=</span><span class="sa">f</span><span class="s2">"No tool named '</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">'. Choose one that is offered."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">"skipped"</span>
+    <span class="n">ctx</span><span class="o">.</span><span class="n">begin</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">reason</span><span class="p">,</span> <span class="n">agent</span><span class="o">=</span><span class="n">tool</span><span class="o">.</span><span class="n">agent</span><span class="p">,</span>
+              <span class="n">description</span><span class="o">=</span><span class="n">tool</span><span class="o">.</span><span class="n">label</span> <span class="ow">or</span> <span class="n">tool</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">purpose</span><span class="o">=</span><span class="n">tool</span><span class="o">.</span><span class="n">description</span><span class="p">)</span>
+    <span class="n">absent</span> <span class="o">=</span> <span class="n">tool</span><span class="o">.</span><span class="n">missing</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">absent</span><span class="p">:</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">"blocked"</span><span class="p">,</span>
+                   <span class="n">error</span><span class="o">=</span><span class="sa">f</span><span class="s2">"Needs </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">absent</span><span class="p">)</span><span class="si">}</span><span class="s2">, which the run has not produced."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">"blocked"</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">summary</span><span class="p">,</span> <span class="n">outputs</span> <span class="o">=</span> <span class="n">tool</span><span class="o">.</span><span class="n">handler</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - a failure is an observation</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">"failed"</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">"failed"</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.context</span><span class="w"> </span><span class="kn">import</span> <span class="n">merge_outputs</span>
+    <span class="n">merge_outputs</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">outputs</span> <span class="ow">or</span> <span class="p">{})</span>
+    <span class="n">ctx</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="n">summary</span><span class="o">=</span><span class="n">summary</span> <span class="ow">or</span> <span class="s2">"Completed."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">"ok"</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

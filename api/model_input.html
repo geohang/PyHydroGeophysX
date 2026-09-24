@@ -1,0 +1,984 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>model_input package &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=6c02275b"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/model_input';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/api/model_input.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="petrophysics package" href="petrophysics.html" />
+    <link rel="prev" title="model_output package" href="model_output.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../citation.html">
+    Citation
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../citation.html">
+    Citation
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="data_processing.html">Data Processing Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_output.html">model_output package</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">model_input package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="petrophysics.html">petrophysics package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="forward.html">Forward Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="inversion.html">Inversion Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="core.html">core package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="agents.html">Agents Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Geophy_modular.html">Geophy_modular package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Hydro_modular.html">Hydro_modular package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="solvers.html">solvers package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="analysis.html">analysis package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="assimilation.html">assimilation package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_access.html">data_access package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="uncertainty.html">uncertainty package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualization.html">visualization package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.workflows.html">PyHydroGeophysX.workflows package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.llm.html">PyHydroGeophysX.llm package</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">model_input package</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="model-input-package">
+<h1>model_input package<a class="headerlink" href="#model-input-package" title="Link to this heading">#</a></h1>
+<p>Writes interpreted geophysical information back into hydrological model inputs.
+This is the return leg of the coupling: <code class="docutils literal notranslate"><span class="pre">model_output</span></code> reads a simulation,
+and <code class="docutils literal notranslate"><span class="pre">model_input</span></code> writes a new one. The conversion step is explicit, so the
+relationship used to turn resistivity into a hydrological quantity stays a
+stated choice rather than a hidden default.</p>
+<p>See <a class="reference internal" href="../tutorials/hydrological_input_updates.html"><span class="doc">Write updates back to hydrological models</span></a> for the workflow these
+functions belong to.</p>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">#</a></h2>
+</section>
+<section id="pyhydrogeophysx-model-input-conversion-module">
+<h2>PyHydroGeophysX.model_input.conversion module<a class="headerlink" href="#pyhydrogeophysx-model-input-conversion-module" title="Link to this heading">#</a></h2>
+<p>Maps an interpreted quantity onto a hydrological grid and prepares the update.</p>
+<p id="module-PyHydroGeophysX.model_input.conversion">Explicit petrophysics and distance-limited transfer to hydrological grids.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.conversion.HydroGrid">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.conversion.</span></span><span class="sig-name descname"><span class="pre">HydroGrid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">centers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">active</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#HydroGrid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.conversion.HydroGrid" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Cell centres in a shared metric XYZ frame; Z is elevation, increasing up.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.conversion.HydroGrid.active">
+<span class="sig-name descname"><span class="pre">active</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></span><a class="headerlink" href="#PyHydroGeophysX.model_input.conversion.HydroGrid.active" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.conversion.HydroGrid.centers">
+<span class="sig-name descname"><span class="pre">centers</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></span><a class="headerlink" href="#PyHydroGeophysX.model_input.conversion.HydroGrid.centers" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.conversion.HydroGrid.from_modflow">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_modflow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#HydroGrid.from_modflow"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.conversion.HydroGrid.from_modflow" title="Link to this definition">#</a></dt>
+<dd><p>Use FloPy cell centres, including model offsets and rotation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.conversion.HydroGrid.from_parflow">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_parflow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">active</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#HydroGrid.from_parflow"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.conversion.HydroGrid.from_parflow" title="Link to this definition">#</a></dt>
+<dd><p>Build uniform-grid PFB centres, bottom-up. Supply an explicit domain mask.</p>
+<p>Variable-dz / terrain-following grids need explicitly constructed centres.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.conversion.MappedField">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.conversion.</span></span><span class="sig-name descname"><span class="pre">MappedField</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">updated</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#MappedField"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.conversion.MappedField" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Mapped values and an audit of which target cells were updated.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.conversion.MappedField.distance">
+<span class="sig-name descname"><span class="pre">distance</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></span><a class="headerlink" href="#PyHydroGeophysX.model_input.conversion.MappedField.distance" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.conversion.MappedField.source_index">
+<span class="sig-name descname"><span class="pre">source_index</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></span><a class="headerlink" href="#PyHydroGeophysX.model_input.conversion.MappedField.source_index" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.conversion.MappedField.updated">
+<span class="sig-name descname"><span class="pre">updated</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></span><a class="headerlink" href="#PyHydroGeophysX.model_input.conversion.MappedField.updated" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.conversion.MappedField.values">
+<span class="sig-name descname"><span class="pre">values</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></span><a class="headerlink" href="#PyHydroGeophysX.model_input.conversion.MappedField.values" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.conversion.interpret_resistivity">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.conversion.</span></span><span class="sig-name descname"><span class="pre">interpret_resistivity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resistivity</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_fluid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_sur</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">saturation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#interpret_resistivity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.conversion.interpret_resistivity" title="Link to this definition">#</a></dt>
+<dd><p>Infer S and water content given porosity, or porosity given known S.</p>
+<p>Uses the package’s unscaled surface-conductivity convention:
+1/rho = phi**m/(a*rho_fluid)*S**n + sigma_sur*S**(n-1).
+Supply exactly one of porosity or saturation. Parameters may be scalar or
+broadcast to rho.shape. n must exceed 1. No clipping or fallback is applied
+to physically incompatible observations. rho uses ohm-m; sigma_sur uses S/m.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.conversion.map_to_hydro_grid">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.conversion.</span></span><span class="sig-name descname"><span class="pre">map_to_hydro_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_xyz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_distance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_valid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#map_to_hydro_grid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.conversion.map_to_hydro_grid" title="Link to this definition">#</a></dt>
+<dd><p>Transfer nearest valid samples within an explicit distance; keep other cells.</p>
+<p>source_xyz must be N×3 in the same CRS, metre units and vertical datum as
+grid.centers. No CRS guessing, depth-to-elevation conversion or extrapolation
+beyond max_distance is performed. This is point transfer, not conservative
+cell-volume averaging. Pass DOI/coverage exclusions through source_valid.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.conversion.prepare_hydro_updates">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.conversion.</span></span><span class="sig-name descname"><span class="pre">prepare_hydro_updates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_xyz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resistivity</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">petrophysics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field_transforms</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baselines</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_distance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_valid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#prepare_hydro_updates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.conversion.prepare_hydro_updates" title="Link to this definition">#</a></dt>
+<dd><p>Convert source cells, derive requested fields and map to writer-ready arrays.</p>
+<p>field_transforms maps writer field names to either an interpreted field name
+(e.g. ‘porosity’) or a callable accepting the interpreted source dictionary.
+Use a calibrated callable for conductivity or a retention relation for pressure.
+Returns {field: MappedField}; pass each .values to the input writer.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.conversion.saturation_to_pressure">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.conversion.</span></span><span class="sig-name descname"><span class="pre">saturation_to_pressure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">saturation</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">residual_saturation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">saturated_pressure</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#saturation_to_pressure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.conversion.saturation_to_pressure" title="Link to this definition">#</a></dt>
+<dd><p>Invert van Genuchten for pressure head (negative in unsaturated cells).</p>
+<p>alpha is inverse length; output uses that length unit. m=1-1/n. Fully
+saturated cells need an explicit pressure (scalar or matching array), because
+saturation alone cannot determine positive pressure. S at/below residual is
+rejected because its inverse pressure is unbounded.</p>
+</dd></dl>
+
+</section>
+<section id="pyhydrogeophysx-model-input-writers-module">
+<h2>PyHydroGeophysX.model_input.writers module<a class="headerlink" href="#pyhydrogeophysx-model-input-writers-module" title="Link to this heading">#</a></h2>
+<p>Exports the mapped fields into a new MODFLOW 6 or ParFlow simulation directory,
+leaving the source model untouched.</p>
+<p id="module-PyHydroGeophysX.model_input.writers">Model-input adapters. Values must already be in the target grid and units.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.writers.write_modflow6_inputs">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.writers.</span></span><span class="sig-name descname"><span class="pre">write_modflow6_inputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">simulation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">updates</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/writers.html#write_modflow6_inputs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.writers.write_modflow6_inputs" title="Link to this definition">#</a></dt>
+<dd><p>Write a copy of a FloPy MF6 simulation with mapped GWF array updates.</p>
+<p>Supported keys are <code class="docutils literal notranslate"><span class="pre">hydraulic_conductivity</span></code> (NPF k), <code class="docutils literal notranslate"><span class="pre">vertical_conductivity</span></code>
+(NPF k33), <code class="docutils literal notranslate"><span class="pre">specific_storage</span></code> (STO ss), <code class="docutils literal notranslate"><span class="pre">specific_yield</span></code> (STO sy), and
+<code class="docutils literal notranslate"><span class="pre">initial_head</span></code> (IC strt). <code class="docutils literal notranslate"><span class="pre">bottom_elevation</span></code> updates structured DIS layer
+bottoms and requires strictly positive layer thickness in every column.
+Arrays must match the model grid exactly, in model
+length/time units. Structured grids use (layer, row, column), top layer first.
+Existing packages are required; stress periods and boundary conditions remain
+as configured. This writes inputs only and never runs MODFLOW.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.writers.write_parflow_inputs">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.writers.</span></span><span class="sig-name descname"><span class="pre">write_parflow_inputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">updates</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">domain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'domain'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/writers.html#write_parflow_inputs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.writers.write_parflow_inputs" title="Link to this definition">#</a></dt>
+<dd><p>Copy a ParFlow workspace and write PFB updates plus a PFIDB definition.</p>
+<p>Keys: <code class="docutils literal notranslate"><span class="pre">permeability</span></code>, <code class="docutils literal notranslate"><span class="pre">porosity</span></code>, <code class="docutils literal notranslate"><span class="pre">initial_pressure</span></code>. Values use the
+existing run’s units and (z, y, x) grid order, bottom layer first. Permeability
+retains the run’s tensor settings. Initial pressure is pressure head, not
+saturation. Other input files must be inside source_dir with relative paths.
+The source workspace is copied, including forcing files; no solver is run.
+<code class="docutils literal notranslate"><span class="pre">run</span></code> may be a ParFlow Run or a flat key/value dictionary from read_pfidb.
+Only the full-domain field is replaced; this is not a partial-facies update.</p>
+</dd></dl>
+
+</section>
+<section id="module-PyHydroGeophysX.model_input">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-PyHydroGeophysX.model_input" title="Link to this heading">#</a></h2>
+<p>Export explicitly mapped hydrological updates without modifying source models.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.HydroGrid">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.</span></span><span class="sig-name descname"><span class="pre">HydroGrid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">centers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">active</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#HydroGrid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.HydroGrid" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Cell centres in a shared metric XYZ frame; Z is elevation, increasing up.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.HydroGrid.active">
+<span class="sig-name descname"><span class="pre">active</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></span><a class="headerlink" href="#PyHydroGeophysX.model_input.HydroGrid.active" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.HydroGrid.centers">
+<span class="sig-name descname"><span class="pre">centers</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></span><a class="headerlink" href="#PyHydroGeophysX.model_input.HydroGrid.centers" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.HydroGrid.from_modflow">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_modflow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#HydroGrid.from_modflow"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.HydroGrid.from_modflow" title="Link to this definition">#</a></dt>
+<dd><p>Use FloPy cell centres, including model offsets and rotation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.HydroGrid.from_parflow">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_parflow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">active</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#HydroGrid.from_parflow"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.HydroGrid.from_parflow" title="Link to this definition">#</a></dt>
+<dd><p>Build uniform-grid PFB centres, bottom-up. Supply an explicit domain mask.</p>
+<p>Variable-dz / terrain-following grids need explicitly constructed centres.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.MappedField">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.</span></span><span class="sig-name descname"><span class="pre">MappedField</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">updated</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#MappedField"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.MappedField" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Mapped values and an audit of which target cells were updated.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.MappedField.distance">
+<span class="sig-name descname"><span class="pre">distance</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></span><a class="headerlink" href="#PyHydroGeophysX.model_input.MappedField.distance" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.MappedField.source_index">
+<span class="sig-name descname"><span class="pre">source_index</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></span><a class="headerlink" href="#PyHydroGeophysX.model_input.MappedField.source_index" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.MappedField.updated">
+<span class="sig-name descname"><span class="pre">updated</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></span><a class="headerlink" href="#PyHydroGeophysX.model_input.MappedField.updated" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.MappedField.values">
+<span class="sig-name descname"><span class="pre">values</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span></span><a class="headerlink" href="#PyHydroGeophysX.model_input.MappedField.values" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.interpret_resistivity">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.</span></span><span class="sig-name descname"><span class="pre">interpret_resistivity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resistivity</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_fluid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma_sur</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">saturation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#interpret_resistivity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.interpret_resistivity" title="Link to this definition">#</a></dt>
+<dd><p>Infer S and water content given porosity, or porosity given known S.</p>
+<p>Uses the package’s unscaled surface-conductivity convention:
+1/rho = phi**m/(a*rho_fluid)*S**n + sigma_sur*S**(n-1).
+Supply exactly one of porosity or saturation. Parameters may be scalar or
+broadcast to rho.shape. n must exceed 1. No clipping or fallback is applied
+to physically incompatible observations. rho uses ohm-m; sigma_sur uses S/m.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.map_to_hydro_grid">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.</span></span><span class="sig-name descname"><span class="pre">map_to_hydro_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_xyz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_distance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_valid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#map_to_hydro_grid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.map_to_hydro_grid" title="Link to this definition">#</a></dt>
+<dd><p>Transfer nearest valid samples within an explicit distance; keep other cells.</p>
+<p>source_xyz must be N×3 in the same CRS, metre units and vertical datum as
+grid.centers. No CRS guessing, depth-to-elevation conversion or extrapolation
+beyond max_distance is performed. This is point transfer, not conservative
+cell-volume averaging. Pass DOI/coverage exclusions through source_valid.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.prepare_hydro_updates">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.</span></span><span class="sig-name descname"><span class="pre">prepare_hydro_updates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_xyz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resistivity</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">petrophysics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field_transforms</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baselines</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_distance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_valid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#prepare_hydro_updates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.prepare_hydro_updates" title="Link to this definition">#</a></dt>
+<dd><p>Convert source cells, derive requested fields and map to writer-ready arrays.</p>
+<p>field_transforms maps writer field names to either an interpreted field name
+(e.g. ‘porosity’) or a callable accepting the interpreted source dictionary.
+Use a calibrated callable for conductivity or a retention relation for pressure.
+Returns {field: MappedField}; pass each .values to the input writer.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.saturation_to_pressure">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.</span></span><span class="sig-name descname"><span class="pre">saturation_to_pressure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">saturation</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">residual_saturation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">saturated_pressure</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/conversion.html#saturation_to_pressure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.saturation_to_pressure" title="Link to this definition">#</a></dt>
+<dd><p>Invert van Genuchten for pressure head (negative in unsaturated cells).</p>
+<p>alpha is inverse length; output uses that length unit. m=1-1/n. Fully
+saturated cells need an explicit pressure (scalar or matching array), because
+saturation alone cannot determine positive pressure. S at/below residual is
+rejected because its inverse pressure is unbounded.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.write_modflow6_inputs">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.</span></span><span class="sig-name descname"><span class="pre">write_modflow6_inputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">simulation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">updates</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/writers.html#write_modflow6_inputs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.write_modflow6_inputs" title="Link to this definition">#</a></dt>
+<dd><p>Write a copy of a FloPy MF6 simulation with mapped GWF array updates.</p>
+<p>Supported keys are <code class="docutils literal notranslate"><span class="pre">hydraulic_conductivity</span></code> (NPF k), <code class="docutils literal notranslate"><span class="pre">vertical_conductivity</span></code>
+(NPF k33), <code class="docutils literal notranslate"><span class="pre">specific_storage</span></code> (STO ss), <code class="docutils literal notranslate"><span class="pre">specific_yield</span></code> (STO sy), and
+<code class="docutils literal notranslate"><span class="pre">initial_head</span></code> (IC strt). <code class="docutils literal notranslate"><span class="pre">bottom_elevation</span></code> updates structured DIS layer
+bottoms and requires strictly positive layer thickness in every column.
+Arrays must match the model grid exactly, in model
+length/time units. Structured grids use (layer, row, column), top layer first.
+Existing packages are required; stress periods and boundary conditions remain
+as configured. This writes inputs only and never runs MODFLOW.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.model_input.write_parflow_inputs">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.model_input.</span></span><span class="sig-name descname"><span class="pre">write_parflow_inputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">updates</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">domain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'domain'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/model_input/writers.html#write_parflow_inputs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.model_input.write_parflow_inputs" title="Link to this definition">#</a></dt>
+<dd><p>Copy a ParFlow workspace and write PFB updates plus a PFIDB definition.</p>
+<p>Keys: <code class="docutils literal notranslate"><span class="pre">permeability</span></code>, <code class="docutils literal notranslate"><span class="pre">porosity</span></code>, <code class="docutils literal notranslate"><span class="pre">initial_pressure</span></code>. Values use the
+existing run’s units and (z, y, x) grid order, bottom layer first. Permeability
+retains the run’s tensor settings. Initial pressure is pressure head, not
+saturation. Other input files must be inside source_dir with relative paths.
+The source workspace is copied, including forcing files; no solver is run.
+<code class="docutils literal notranslate"><span class="pre">run</span></code> may be a ParFlow Run or a flat key/value dictionary from read_pfidb.
+Only the full-domain field is replaced; this is not a partial-facies update.</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="model_output.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">model_output package</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="petrophysics.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">petrophysics package</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#submodules">Submodules</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pyhydrogeophysx-model-input-conversion-module">PyHydroGeophysX.model_input.conversion module</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.conversion.HydroGrid"><code class="docutils literal notranslate"><span class="pre">HydroGrid</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.conversion.HydroGrid.active"><code class="docutils literal notranslate"><span class="pre">HydroGrid.active</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.conversion.HydroGrid.centers"><code class="docutils literal notranslate"><span class="pre">HydroGrid.centers</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.conversion.HydroGrid.from_modflow"><code class="docutils literal notranslate"><span class="pre">HydroGrid.from_modflow()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.conversion.HydroGrid.from_parflow"><code class="docutils literal notranslate"><span class="pre">HydroGrid.from_parflow()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.conversion.MappedField"><code class="docutils literal notranslate"><span class="pre">MappedField</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.conversion.MappedField.distance"><code class="docutils literal notranslate"><span class="pre">MappedField.distance</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.conversion.MappedField.source_index"><code class="docutils literal notranslate"><span class="pre">MappedField.source_index</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.conversion.MappedField.updated"><code class="docutils literal notranslate"><span class="pre">MappedField.updated</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.conversion.MappedField.values"><code class="docutils literal notranslate"><span class="pre">MappedField.values</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.conversion.interpret_resistivity"><code class="docutils literal notranslate"><span class="pre">interpret_resistivity()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.conversion.map_to_hydro_grid"><code class="docutils literal notranslate"><span class="pre">map_to_hydro_grid()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.conversion.prepare_hydro_updates"><code class="docutils literal notranslate"><span class="pre">prepare_hydro_updates()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.conversion.saturation_to_pressure"><code class="docutils literal notranslate"><span class="pre">saturation_to_pressure()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pyhydrogeophysx-model-input-writers-module">PyHydroGeophysX.model_input.writers module</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.writers.write_modflow6_inputs"><code class="docutils literal notranslate"><span class="pre">write_modflow6_inputs()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.writers.write_parflow_inputs"><code class="docutils literal notranslate"><span class="pre">write_parflow_inputs()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-PyHydroGeophysX.model_input">Module contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.HydroGrid"><code class="docutils literal notranslate"><span class="pre">HydroGrid</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.HydroGrid.active"><code class="docutils literal notranslate"><span class="pre">HydroGrid.active</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.HydroGrid.centers"><code class="docutils literal notranslate"><span class="pre">HydroGrid.centers</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.HydroGrid.from_modflow"><code class="docutils literal notranslate"><span class="pre">HydroGrid.from_modflow()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.HydroGrid.from_parflow"><code class="docutils literal notranslate"><span class="pre">HydroGrid.from_parflow()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.MappedField"><code class="docutils literal notranslate"><span class="pre">MappedField</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.MappedField.distance"><code class="docutils literal notranslate"><span class="pre">MappedField.distance</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.MappedField.source_index"><code class="docutils literal notranslate"><span class="pre">MappedField.source_index</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.MappedField.updated"><code class="docutils literal notranslate"><span class="pre">MappedField.updated</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.MappedField.values"><code class="docutils literal notranslate"><span class="pre">MappedField.values</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.interpret_resistivity"><code class="docutils literal notranslate"><span class="pre">interpret_resistivity()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.map_to_hydro_grid"><code class="docutils literal notranslate"><span class="pre">map_to_hydro_grid()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.prepare_hydro_updates"><code class="docutils literal notranslate"><span class="pre">prepare_hydro_updates()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.saturation_to_pressure"><code class="docutils literal notranslate"><span class="pre">saturation_to_pressure()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.write_modflow6_inputs"><code class="docutils literal notranslate"><span class="pre">write_modflow6_inputs()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.model_input.write_parflow_inputs"><code class="docutils literal notranslate"><span class="pre">write_parflow_inputs()</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/api/model_input.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/api/model_input.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

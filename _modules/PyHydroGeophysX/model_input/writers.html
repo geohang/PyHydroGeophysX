@@ -1,0 +1,767 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.model_input.writers &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../_static/documentation_options.js?v=6c02275b"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/model_input/writers';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../../../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/model_input/writers.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../citation.html">
+    Citation
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../citation.html">
+    Citation
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.model_input.writers</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.model_input.writers</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Model-input adapters. Values must already be in the target grid and units."""</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_array</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bounds</span><span class="p">):</span>
+    <span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">array</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">array</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1"> must be finite with shape </span><span class="si">{</span><span class="nb">tuple</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s1">; got </span><span class="si">{</span><span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s1">.'</span><span class="p">)</span>
+    <span class="n">low</span><span class="p">,</span> <span class="n">high</span> <span class="o">=</span> <span class="n">bounds</span>
+    <span class="n">inclusive</span> <span class="o">=</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">'specific_storage'</span><span class="p">,</span> <span class="s1">'specific_yield'</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">low</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">array</span> <span class="o">&lt;</span> <span class="n">low</span> <span class="k">if</span> <span class="n">inclusive</span> <span class="k">else</span> <span class="n">array</span> <span class="o">&lt;=</span> <span class="n">low</span><span class="p">):</span>
+        <span class="n">relation</span> <span class="o">=</span> <span class="s1">'at least'</span> <span class="k">if</span> <span class="n">inclusive</span> <span class="k">else</span> <span class="s1">'greater than'</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1"> must be </span><span class="si">{</span><span class="n">relation</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">low</span><span class="si">}</span><span class="s1">.'</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">high</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">array</span> <span class="o">&gt;</span> <span class="n">high</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1"> must be at most </span><span class="si">{</span><span class="n">high</span><span class="si">}</span><span class="s1">.'</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">array</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_destination</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">target</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Use a new output directory: </span><span class="si">{</span><span class="n">target</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+    <span class="n">target</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">target</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_relative</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">()</span> <span class="ow">or</span> <span class="s1">'..'</span> <span class="ow">in</span> <span class="n">path</span><span class="o">.</span><span class="n">parts</span> <span class="ow">or</span> <span class="s1">':'</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Input references must be relative and remain in the workspace: </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">path</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_record</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">engine</span><span class="p">,</span> <span class="n">fields</span><span class="p">,</span> <span class="n">convention</span><span class="p">):</span>
+    <span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s1">'hydro_update.json'</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span>
+        <span class="s1">'engine'</span><span class="p">:</span> <span class="n">engine</span><span class="p">,</span> <span class="s1">'updated_fields'</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">fields</span><span class="p">),</span> <span class="s1">'array_convention'</span><span class="p">:</span> <span class="n">convention</span><span class="p">,</span>
+        <span class="s1">'simulation_executed'</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">},</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_publish</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">target</span><span class="p">):</span>
+    <span class="c1"># Windows scanners can briefly hold freshly written PFB files open.</span>
+    <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">target</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">folder</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">except</span> <span class="ne">PermissionError</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">attempt</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+                <span class="k">raise</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">.05</span> <span class="o">*</span> <span class="p">(</span><span class="n">attempt</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="write_modflow6_inputs">
+<a class="viewcode-back" href="../../../api/model_input.html#PyHydroGeophysX.model_input.writers.write_modflow6_inputs">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">write_modflow6_inputs</span><span class="p">(</span><span class="n">simulation</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">updates</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">model_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Write a copy of a FloPy MF6 simulation with mapped GWF array updates.</span>
+
+<span class="sd">    Supported keys are ``hydraulic_conductivity`` (NPF k), ``vertical_conductivity``</span>
+<span class="sd">    (NPF k33), ``specific_storage`` (STO ss), ``specific_yield`` (STO sy), and</span>
+<span class="sd">    ``initial_head`` (IC strt). ``bottom_elevation`` updates structured DIS layer</span>
+<span class="sd">    bottoms and requires strictly positive layer thickness in every column.</span>
+<span class="sd">    Arrays must match the model grid exactly, in model</span>
+<span class="sd">    length/time units. Structured grids use (layer, row, column), top layer first.</span>
+<span class="sd">    Existing packages are required; stress periods and boundary conditions remain</span>
+<span class="sd">    as configured. This writes inputs only and never runs MODFLOW.</span>
+<span class="sd">    """</span>
+    <span class="n">rules</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">'hydraulic_conductivity'</span><span class="p">:</span> <span class="p">(</span><span class="s1">'npf'</span><span class="p">,</span> <span class="s1">'k'</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span>
+        <span class="s1">'vertical_conductivity'</span><span class="p">:</span> <span class="p">(</span><span class="s1">'npf'</span><span class="p">,</span> <span class="s1">'k33'</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span>
+        <span class="s1">'specific_storage'</span><span class="p">:</span> <span class="p">(</span><span class="s1">'sto'</span><span class="p">,</span> <span class="s1">'ss'</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span>
+        <span class="s1">'specific_yield'</span><span class="p">:</span> <span class="p">(</span><span class="s1">'sto'</span><span class="p">,</span> <span class="s1">'sy'</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>
+        <span class="s1">'initial_head'</span><span class="p">:</span> <span class="p">(</span><span class="s1">'ic'</span><span class="p">,</span> <span class="s1">'strt'</span><span class="p">,</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span>
+        <span class="s1">'bottom_elevation'</span><span class="p">:</span> <span class="p">(</span><span class="s1">'dis'</span><span class="p">,</span> <span class="s1">'botm'</span><span class="p">,</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">updates</span> <span class="ow">or</span> <span class="nb">set</span><span class="p">(</span><span class="n">updates</span><span class="p">)</span> <span class="o">-</span> <span class="n">rules</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Choose one or more supported fields: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">rules</span><span class="p">)</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">model_names</span>
+    <span class="k">if</span> <span class="n">model_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'Select model_name explicitly for a multi-model simulation.'</span><span class="p">)</span>
+        <span class="n">model_name</span> <span class="o">=</span> <span class="n">names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">get_model</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">model</span><span class="o">.</span><span class="n">model_type</span> <span class="o">!=</span> <span class="s1">'gwf6'</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'A MODFLOW 6 groundwater-flow (GWF) model is required.'</span><span class="p">)</span>
+    <span class="n">arrays</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">updates</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">package</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">bounds</span> <span class="o">=</span> <span class="n">rules</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">get_package</span><span class="p">(</span><span class="n">package</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1"> requires an existing </span><span class="si">{</span><span class="n">package</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s1"> package.'</span><span class="p">)</span>
+        <span class="c1"># With ratio flags, k33 is dimensionless rather than conductivity.</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">'vertical_conductivity'</span> <span class="ow">and</span> <span class="n">model</span><span class="o">.</span><span class="n">npf</span><span class="o">.</span><span class="n">k33overk</span><span class="o">.</span><span class="n">get_data</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'Disable k33overk before supplying absolute vertical conductivity.'</span><span class="p">)</span>
+        <span class="n">arrays</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">_array</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">modelgrid</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">bounds</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">'bottom_elevation'</span> <span class="ow">in</span> <span class="n">arrays</span><span class="p">:</span>
+        <span class="n">bottoms</span> <span class="o">=</span> <span class="n">arrays</span><span class="p">[</span><span class="s1">'bottom_elevation'</span><span class="p">]</span>
+        <span class="n">interfaces</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">dis</span><span class="o">.</span><span class="n">top</span><span class="o">.</span><span class="n">array</span><span class="p">)[</span><span class="kc">None</span><span class="p">],</span> <span class="n">bottoms</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">interfaces</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'Layer bottoms must decrease strictly below top in every column.'</span><span class="p">)</span>
+    <span class="n">clone</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">simulation</span><span class="p">)</span>
+    <span class="c1"># Resolve external arrays in the original workspace before relocating the copy.</span>
+    <span class="n">clone</span><span class="o">.</span><span class="n">set_all_data_internal</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">clone</span><span class="o">.</span><span class="n">model_names</span><span class="p">:</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">clone</span><span class="o">.</span><span class="n">get_model</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">_relative</span><span class="p">(</span><span class="n">clone</span><span class="o">.</span><span class="n">simulation_data</span><span class="o">.</span><span class="n">mfpath</span><span class="o">.</span><span class="n">model_relative_path</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s1">'.'</span><span class="p">)</span> <span class="ow">or</span> <span class="s1">'.'</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">package</span> <span class="ow">in</span> <span class="n">m</span><span class="o">.</span><span class="n">packagelist</span><span class="p">:</span>
+            <span class="n">_relative</span><span class="p">(</span><span class="n">package</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">package</span> <span class="ow">in</span> <span class="n">clone</span><span class="o">.</span><span class="n">sim_package_list</span><span class="p">:</span>
+        <span class="n">_relative</span><span class="p">(</span><span class="n">package</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">arrays</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">package</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">rules</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="nb">getattr</span><span class="p">(</span><span class="n">clone</span><span class="o">.</span><span class="n">get_model</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span><span class="o">.</span><span class="n">get_package</span><span class="p">(</span><span class="n">package</span><span class="p">),</span> <span class="n">field</span><span class="p">)</span><span class="o">.</span><span class="n">set_data</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">_destination</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">(</span><span class="nb">dir</span><span class="o">=</span><span class="n">target</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s1">'.hydro-update-'</span><span class="p">)</span> <span class="k">as</span> <span class="n">temp</span><span class="p">:</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span> <span class="o">/</span> <span class="s1">'model'</span>
+        <span class="n">folder</span><span class="o">.</span><span class="n">mkdir</span><span class="p">()</span>
+        <span class="n">clone</span><span class="o">.</span><span class="n">set_sim_path</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span>
+        <span class="n">clone</span><span class="o">.</span><span class="n">write_simulation</span><span class="p">(</span><span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">_record</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="s1">'MODFLOW6'</span><span class="p">,</span> <span class="n">arrays</span><span class="p">,</span> <span class="s1">'native model grid; model length/time units'</span><span class="p">)</span>
+        <span class="n">_publish</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">target</span></div>
+
+
+
+<div class="viewcode-block" id="write_parflow_inputs">
+<a class="viewcode-back" href="../../../api/model_input.html#PyHydroGeophysX.model_input.writers.write_parflow_inputs">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">write_parflow_inputs</span><span class="p">(</span><span class="n">run</span><span class="p">,</span> <span class="n">source_dir</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">updates</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="s1">'domain'</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Copy a ParFlow workspace and write PFB updates plus a PFIDB definition.</span>
+
+<span class="sd">    Keys: ``permeability``, ``porosity``, ``initial_pressure``. Values use the</span>
+<span class="sd">    existing run's units and (z, y, x) grid order, bottom layer first. Permeability</span>
+<span class="sd">    retains the run's tensor settings. Initial pressure is pressure head, not</span>
+<span class="sd">    saturation. Other input files must be inside source_dir with relative paths.</span>
+<span class="sd">    The source workspace is copied, including forcing files; no solver is run.</span>
+<span class="sd">    ``run`` may be a ParFlow Run or a flat key/value dictionary from read_pfidb.</span>
+<span class="sd">    Only the full-domain field is replaced; this is not a partial-facies update.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">parflow.tools.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_pfb</span><span class="p">,</span> <span class="n">write_dict</span>
+    <span class="n">rules</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'permeability'</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="s1">'porosity'</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+             <span class="s1">'initial_pressure'</span><span class="p">:</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">updates</span> <span class="ow">or</span> <span class="nb">set</span><span class="p">(</span><span class="n">updates</span><span class="p">)</span> <span class="o">-</span> <span class="n">rules</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Choose one or more supported fields: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">rules</span><span class="p">)</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">domain</span><span class="o">.</span><span class="n">isidentifier</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'domain must be a simple geometry name.'</span><span class="p">)</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">run</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">run</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="n">run</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'Domain.GeomName'</span><span class="p">)</span> <span class="o">!=</span> <span class="n">domain</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'Select the existing full-domain geometry; partial geometry updates are unsupported.'</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">grid</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">config</span><span class="p">[</span><span class="s1">'ComputationalGrid.'</span> <span class="o">+</span> <span class="n">key</span><span class="p">]</span>
+    <span class="n">shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">grid</span><span class="p">(</span><span class="n">key</span><span class="p">))</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">'NZ'</span><span class="p">,</span> <span class="s1">'NY'</span><span class="p">,</span> <span class="s1">'NX'</span><span class="p">))</span>
+    <span class="n">spacing</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">grid</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">'DX'</span><span class="p">,</span> <span class="s1">'DY'</span><span class="p">,</span> <span class="s1">'DZ'</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">origin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">grid</span><span class="p">(</span><span class="s1">'Lower.'</span> <span class="o">+</span> <span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">'X'</span><span class="p">,</span> <span class="s1">'Y'</span><span class="p">,</span> <span class="s1">'Z'</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">topology</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'Process.Topology.'</span> <span class="o">+</span> <span class="n">key</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">'P'</span><span class="p">,</span> <span class="s1">'Q'</span><span class="p">,</span> <span class="s1">'R'</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">spacing</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">spacing</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">origin</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'Grid origin must be finite and spacing must be positive.'</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">n</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="n">extent</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">extent</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">topology</span><span class="p">,</span> <span class="n">shape</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'Process topology must fit the grid dimensions.'</span><span class="p">)</span>
+    <span class="n">arrays</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">_array</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">rules</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">updates</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">_destination</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">source</span><span class="o">.</span><span class="n">is_dir</span><span class="p">()</span> <span class="ow">or</span> <span class="n">source</span> <span class="o">==</span> <span class="n">target</span> <span class="ow">or</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">target</span><span class="o">.</span><span class="n">parents</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'Use an existing source workspace and a separate output directory.'</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">()</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">source</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s1">'*'</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'Source workspace must not contain symbolic links.'</span><span class="p">)</span>
+    <span class="c1"># Keep ancillary file references portable when copying the workspace.</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">'.FileName'</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">_relative</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">source</span> <span class="o">/</span> <span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="n">source</span> <span class="o">/</span> <span class="n">path</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">(</span><span class="nb">dir</span><span class="o">=</span><span class="n">target</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s1">'.hydro-update-'</span><span class="p">)</span> <span class="k">as</span> <span class="n">temp</span><span class="p">:</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span> <span class="o">/</span> <span class="s1">'model'</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">folder</span><span class="p">)</span>
+        <span class="n">data_dir</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="s1">'hydro_updates'</span>
+        <span class="k">if</span> <span class="n">data_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span><span class="s1">'Source already contains hydro_updates; use a clean source workspace.'</span><span class="p">)</span>
+        <span class="n">data_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">array</span> <span class="ow">in</span> <span class="n">arrays</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'hydro_updates/</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">.pfb'</span>
+            <span class="n">write_pfb</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="n">filename</span><span class="p">),</span> <span class="n">array</span><span class="p">,</span>
+                      <span class="n">p</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'Process.Topology.P'</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>
+                      <span class="n">q</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'Process.Topology.Q'</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>
+                      <span class="n">r</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'Process.Topology.R'</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">x</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">grid</span><span class="p">(</span><span class="s1">'Lower.X'</span><span class="p">)),</span>
+                      <span class="n">y</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">grid</span><span class="p">(</span><span class="s1">'Lower.Y'</span><span class="p">)),</span> <span class="n">z</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">grid</span><span class="p">(</span><span class="s1">'Lower.Z'</span><span class="p">)),</span>
+                      <span class="n">dx</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">grid</span><span class="p">(</span><span class="s1">'DX'</span><span class="p">)),</span> <span class="n">dy</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">grid</span><span class="p">(</span><span class="s1">'DY'</span><span class="p">)),</span> <span class="n">dz</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">grid</span><span class="p">(</span><span class="s1">'DZ'</span><span class="p">)),</span> <span class="n">dist</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">'initial_pressure'</span><span class="p">:</span>
+                <span class="n">settings</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'ICPressure.Type'</span><span class="p">:</span> <span class="s1">'PFBFile'</span><span class="p">,</span> <span class="s1">'ICPressure.GeomNames'</span><span class="p">:</span> <span class="n">domain</span><span class="p">,</span>
+                            <span class="sa">f</span><span class="s1">'Geom.</span><span class="si">{</span><span class="n">domain</span><span class="si">}</span><span class="s1">.ICPressure.FileName'</span><span class="p">:</span> <span class="n">filename</span><span class="p">}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">prop</span> <span class="o">=</span> <span class="s1">'Perm'</span> <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">'permeability'</span> <span class="k">else</span> <span class="s1">'Porosity'</span>
+                <span class="n">settings</span> <span class="o">=</span> <span class="p">{</span><span class="sa">f</span><span class="s1">'Geom.</span><span class="si">{</span><span class="n">prop</span><span class="si">}</span><span class="s1">.Names'</span><span class="p">:</span> <span class="n">domain</span><span class="p">,</span>
+                            <span class="sa">f</span><span class="s1">'Geom.</span><span class="si">{</span><span class="n">domain</span><span class="si">}</span><span class="s1">.</span><span class="si">{</span><span class="n">prop</span><span class="si">}</span><span class="s1">.Type'</span><span class="p">:</span> <span class="s1">'PFBFile'</span><span class="p">,</span>
+                            <span class="sa">f</span><span class="s1">'Geom.</span><span class="si">{</span><span class="n">domain</span><span class="si">}</span><span class="s1">.</span><span class="si">{</span><span class="n">prop</span><span class="si">}</span><span class="s1">.FileName'</span><span class="p">:</span> <span class="n">filename</span><span class="p">}</span>
+                <span class="k">if</span> <span class="n">prop</span> <span class="o">==</span> <span class="s1">'Porosity'</span><span class="p">:</span>
+                    <span class="n">settings</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">'Geom.Porosity.Names'</span><span class="p">)</span>
+                    <span class="n">settings</span><span class="p">[</span><span class="s1">'Geom.Porosity.GeomNames'</span><span class="p">]</span> <span class="o">=</span> <span class="n">domain</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span>
+        <span class="c1"># The official flat-dictionary writer avoids Run.pfset's Windows path handling</span>
+        <span class="c1"># and leaves existing CLM forcing files exactly as copied from source_dir.</span>
+        <span class="n">write_dict</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s1">'updated_model.pfidb'</span><span class="p">))</span>
+        <span class="n">_record</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="s1">'ParFlow'</span><span class="p">,</span> <span class="n">arrays</span><span class="p">,</span> <span class="s1">'z,y,x; bottom first; native run units'</span><span class="p">)</span>
+        <span class="n">_publish</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">target</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

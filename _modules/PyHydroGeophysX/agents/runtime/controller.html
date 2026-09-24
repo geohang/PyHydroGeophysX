@@ -1,0 +1,917 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.agents.runtime.controller &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../../_static/documentation_options.js?v=6c02275b"></script>
+    <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/agents/runtime/controller';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../../../../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/agents/runtime/controller.html" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../../_static/searchtools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <script src="../../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../citation.html">
+    Citation
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../citation.html">
+    Citation
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.agents.runtime.controller</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.agents.runtime.controller</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""The loop: read the transcript, choose one action, observe, choose again.</span>
+
+<span class="sd">This is the whole difference from the pipeline it replaces. A pipeline decides</span>
+<span class="sd">everything before it starts; a loop decides one step at a time, with the</span>
+<span class="sd">results of the previous steps in front of it. That is what lets a run react -</span>
+<span class="sd">to an inversion that did not converge, to a mesh with no layering, to a file</span>
+<span class="sd">that turned out to hold something other than what its name suggested.</span>
+
+<span class="sd">Two properties matter more than the loop itself:</span>
+
+<span class="sd">**It always terminates, and always produces something.** A model that keeps</span>
+<span class="sd">choosing badly is bounded by ``max_steps``; a model that cannot be reached at</span>
+<span class="sd">all falls through to :func:`next_by_policy`, which walks the tools in</span>
+<span class="sd">dependency order. A run without an API key therefore behaves exactly like the</span>
+<span class="sd">old pipeline - it simply stops adapting. This matters because the previous</span>
+<span class="sd">design's failure mode was an exception mid-sequence that lost the whole run.</span>
+
+<span class="sd">**A refusal is data.** When the controller names a tool that cannot run, or one</span>
+<span class="sd">that does not exist, that becomes a recorded step with the reason, and the loop</span>
+<span class="sd">continues. The model sees its own mistake in the transcript on the next turn,</span>
+<span class="sd">which is how it corrects. Raising instead would end the run over a typo.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.context</span><span class="w"> </span><span class="kn">import</span> <span class="n">RunContext</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.tools</span><span class="w"> </span><span class="kn">import</span> <span class="n">TOOLS</span><span class="p">,</span> <span class="n">invoke</span><span class="p">,</span> <span class="n">menu</span><span class="p">,</span> <span class="n">runnable_tools</span>
+
+<span class="c1">#: A run that has taken this many steps is looping rather than progressing.</span>
+<span class="c1">#: Generous: a time-lapse run with a retry and a report is about eight.</span>
+<span class="n">DEFAULT_MAX_STEPS</span> <span class="o">=</span> <span class="mi">24</span>
+
+<span class="n">CONTROLLER_PROMPT</span> <span class="o">=</span> <span class="s2">"""You are running a geophysics processing workflow. Choose </span><span class="se">\</span>
+<span class="s2">the single next action.</span>
+
+<span class="si">{transcript}</span>
+
+<span class="s2">Actions you can take now:</span>
+<span class="si">{menu}</span>
+
+<span class="s2">Reply with JSON only - no prose, no code fence:</span>
+<span class="s2">{{"tool": "&lt;name from the list&gt;", "why": "&lt;one short sentence&gt;"}}</span>
+<span class="s2">or, when the goal has been met and a report has been written:</span>
+<span class="s2">{{"done": true, "why": "&lt;one short sentence&gt;"}}</span>
+
+<span class="s2">Rules:</span>
+<span class="s2">- Choose only from the list above. A tool not listed cannot run yet, usually</span>
+<span class="s2">  because something it needs has not been produced.</span>
+<span class="s2">- Produce everything the goal asks for before finishing. If the user asked for</span>
+<span class="s2">  water content, a resistivity model alone does not meet the goal.</span>
+<span class="s2">- Write the report last, once the products it should describe exist.</span>
+<span class="s2">- If a step failed, do not repeat it unchanged. Either try the alternative that</span>
+<span class="s2">  addresses the failure, or move on and let the report state what is missing.</span>
+<span class="s2">- Prefer finishing over exploring. This is a processing run, not an investigation.</span>
+<span class="s2">"""</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_choice</span><span class="p">(</span><span class="n">reply</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""The controller's decision, or None when the reply is unusable."""</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reply</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">reply</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">"{"</span><span class="p">),</span> <span class="n">text</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s2">"}"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">start</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">end</span> <span class="o">&lt;=</span> <span class="n">start</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">answer</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">answer</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">answer</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"done"</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"done"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"why"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">answer</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"why"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))}</span>
+    <span class="n">tool</span> <span class="o">=</span> <span class="n">answer</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"tool"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">tool</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"tool"</span><span class="p">:</span> <span class="n">tool</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="s2">"why"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">answer</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"why"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))}</span>
+
+
+<div class="viewcode-block" id="next_by_policy">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.controller.next_by_policy">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">next_by_policy</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">,</span>
+                   <span class="n">tools</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The next tool when there is no model to ask.</span>
+
+<span class="sd">    Takes the first tool whose requirements are met and which has not already</span>
+<span class="sd">    run. Registration order is dependency order, so this reproduces the fixed</span>
+<span class="sd">    pipeline - which is the right fallback: without a model the run should</span>
+<span class="sd">    still do the obvious thing, it just cannot reconsider.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ctx : RunContext</span>
+<span class="sd">        The run as it stands.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str or None</span>
+<span class="sd">        A tool name, or None when nothing can run.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from .tools import Tool</span>
+<span class="sd">    &gt;&gt;&gt; ctx = RunContext('x')</span>
+<span class="sd">    &gt;&gt;&gt; only = {'first': Tool('first', 'One.', lambda c: ('', {'a': 1}),</span>
+<span class="sd">    ...                       produces=('a',)),</span>
+<span class="sd">    ...         'second': Tool('second', 'Two.', lambda c: ('', {}),</span>
+<span class="sd">    ...                        requires=('a',))}</span>
+<span class="sd">    &gt;&gt;&gt; next_by_policy(ctx, only)</span>
+<span class="sd">    'first'</span>
+<span class="sd">    &gt;&gt;&gt; ctx.put('a', 1)</span>
+<span class="sd">    &gt;&gt;&gt; _ = ctx.begin('first'); ctx.finish()</span>
+<span class="sd">    &gt;&gt;&gt; next_by_policy(ctx, only)</span>
+<span class="sd">    'second'</span>
+<span class="sd">    """</span>
+    <span class="k">for</span> <span class="n">tool</span> <span class="ow">in</span> <span class="n">runnable_tools</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tools</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">tool</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<span class="c1">#: What an ``on_step`` hook may answer. ``proceed`` is the default for any</span>
+<span class="c1">#: other value, including None, so a hook that forgets to return cannot stall a</span>
+<span class="c1">#: run.</span>
+<span class="n">PROCEED</span><span class="p">,</span> <span class="n">SKIP</span><span class="p">,</span> <span class="n">STOP</span> <span class="o">=</span> <span class="s2">"proceed"</span><span class="p">,</span> <span class="s2">"skip"</span><span class="p">,</span> <span class="s2">"stop"</span>
+
+
+<div class="viewcode-block" id="run_controller">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.controller.run_controller">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_controller</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">,</span> <span class="n">ask</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">max_steps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_MAX_STEPS</span><span class="p">,</span>
+                   <span class="n">progress</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">tools</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">on_step</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">on_result</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">recovery</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+                   <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RunContext</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Drive the run to completion, one chosen action at a time.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ctx : RunContext</span>
+<span class="sd">        The run. Mutated in place and returned.</span>
+<span class="sd">    ask : callable, optional</span>
+<span class="sd">        Takes a prompt, returns the model's reply. Omit to run the</span>
+<span class="sd">        deterministic policy - which is what happens without an API key.</span>
+<span class="sd">    max_steps : int</span>
+<span class="sd">        Hard bound on iterations, so a model that keeps choosing badly still</span>
+<span class="sd">        terminates with whatever it has produced.</span>
+<span class="sd">    progress : callable, optional</span>
+<span class="sd">        ``(step, fraction, detail)``, called before each action so the desktop</span>
+<span class="sd">        app can show the run advancing.</span>
+<span class="sd">    on_step : callable, optional</span>
+<span class="sd">        ``(ctx, tool, reason) -&gt; 'proceed' | 'skip' | 'stop'``, called before</span>
+<span class="sd">        each action with the tool about to run. This is the single difference</span>
+<span class="sd">        between the app's two modes: "auto to report" supplies a hook that</span>
+<span class="sd">        notes the tool's module and returns immediately, while "step by step"</span>
+<span class="sd">        supplies one that shows the user what is about to happen and waits.</span>
+<span class="sd">        Both drive the same loop over the same tools, so a step behaves</span>
+<span class="sd">        identically whichever way it was reached - the previous design had two</span>
+<span class="sd">        separate code paths that could and did drift.</span>
+<span class="sd">    recovery : bool</span>
+<span class="sd">        Whether a failed step may be diagnosed and retried once with different</span>
+<span class="sd">        settings. On by default, because the alternative - recording the failure</span>
+<span class="sd">        and moving on - loses runs that one changed number would have saved.</span>
+<span class="sd">        Only configuration is ever changed, never code and never a file path;</span>
+<span class="sd">        see :mod:`~PyHydroGeophysX.agents.runtime.recovery`.</span>
+<span class="sd">    on_result : callable, optional</span>
+<span class="sd">        ``(ctx, step)``, called after each action with the step it finished.</span>
+<span class="sd">        ``on_step`` fires *before* a step and so can only say what is about to</span>
+<span class="sd">        happen; this is where what a step actually concluded becomes available</span>
+<span class="sd">        to a caller while the run is still going.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    RunContext</span>
+<span class="sd">        The same context, carrying the steps taken, the artifacts produced and</span>
+<span class="sd">        any warnings raised.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    None</span>
+<span class="sd">        Tool failures are recorded, not raised: the point of the loop is to</span>
+<span class="sd">        keep deciding after one.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from .tools import Tool</span>
+<span class="sd">    &gt;&gt;&gt; only = {'load': Tool('load', 'Load.',</span>
+<span class="sd">    ...                      lambda c: ('Loaded 3 files.', {'data': [1, 2, 3]}),</span>
+<span class="sd">    ...                      produces=('data',)),</span>
+<span class="sd">    ...         'report': Tool('report', 'Report.', lambda c: ('Wrote it.', {}),</span>
+<span class="sd">    ...                        requires=('data',))}</span>
+<span class="sd">    &gt;&gt;&gt; ctx = run_controller(RunContext('process my data'), tools=only)</span>
+<span class="sd">    &gt;&gt;&gt; [s.tool for s in ctx.steps]</span>
+<span class="sd">    ['load', 'report']</span>
+<span class="sd">    &gt;&gt;&gt; ctx.steps[0].summary</span>
+<span class="sd">    'Loaded 3 files.'</span>
+<span class="sd">    """</span>
+    <span class="c1"># Recoveries spent per tool, so one bad setting cannot be retried forever.</span>
+    <span class="n">spent</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_steps</span><span class="p">):</span>
+        <span class="n">options</span> <span class="o">=</span> <span class="n">runnable_tools</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tools</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">options</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="n">choice</span> <span class="o">=</span> <span class="n">_decide</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">ask</span><span class="p">,</span> <span class="n">tools</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">choice</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">choice</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"done"</span><span class="p">):</span>
+            <span class="k">break</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">choice</span><span class="p">[</span><span class="s2">"tool"</span><span class="p">]</span>
+        <span class="n">tool</span> <span class="o">=</span> <span class="p">(</span><span class="n">TOOLS</span> <span class="k">if</span> <span class="n">tools</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">tools</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">reason</span> <span class="o">=</span> <span class="n">choice</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"why"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">tool</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="n">t</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">options</span><span class="p">}:</span>
+            <span class="c1"># Only what the menu offered may run. `invoke` checks requirements</span>
+            <span class="c1"># and nothing else, so a reply naming an unlisted tool ran it: a</span>
+            <span class="c1"># single-survey inversion replaced a time-lapse result, a climate</span>
+            <span class="c1"># retrieval ran with climate switched off. Recorded as blocked - it</span>
+            <span class="c1"># never ran - so the model reads why on its next turn, and the tool</span>
+            <span class="c1"># stays on offer for when it does apply.</span>
+            <span class="n">why</span> <span class="o">=</span> <span class="n">tool</span><span class="o">.</span><span class="n">unavailable_because</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span>
+            <span class="n">ctx</span><span class="o">.</span><span class="n">begin</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">reason</span><span class="p">,</span> <span class="n">agent</span><span class="o">=</span><span class="n">tool</span><span class="o">.</span><span class="n">agent</span><span class="p">,</span>
+                      <span class="n">description</span><span class="o">=</span><span class="n">tool</span><span class="o">.</span><span class="n">label</span> <span class="ow">or</span> <span class="n">name</span><span class="p">,</span> <span class="n">purpose</span><span class="o">=</span><span class="n">tool</span><span class="o">.</span><span class="n">description</span><span class="p">)</span>
+            <span class="n">ctx</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">"blocked"</span><span class="p">,</span>
+                       <span class="n">error</span><span class="o">=</span><span class="sa">f</span><span class="s2">"Not offered, so not run: </span><span class="si">{</span><span class="n">why</span><span class="si">}</span><span class="s2">. Choose one of: "</span>
+                             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">options</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+            <span class="k">continue</span>
+
+        <span class="n">verdict</span> <span class="o">=</span> <span class="n">PROCEED</span>
+        <span class="k">if</span> <span class="n">on_step</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">verdict</span> <span class="o">=</span> <span class="n">on_step</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tool</span><span class="p">,</span> <span class="n">reason</span><span class="p">)</span> <span class="ow">or</span> <span class="n">PROCEED</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - a UI hook must not stop a run</span>
+                <span class="n">verdict</span> <span class="o">=</span> <span class="n">PROCEED</span>
+        <span class="k">if</span> <span class="n">verdict</span> <span class="o">==</span> <span class="n">STOP</span><span class="p">:</span>
+            <span class="n">ctx</span><span class="o">.</span><span class="n">begin</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">reason</span><span class="p">,</span> <span class="n">agent</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="s2">"agent"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+                      <span class="n">description</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="s2">"label"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">or</span> <span class="n">name</span><span class="p">)</span>
+            <span class="n">ctx</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">"skipped"</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="s2">"Stopped here at the user's request."</span><span class="p">)</span>
+            <span class="k">break</span>
+        <span class="k">if</span> <span class="n">verdict</span> <span class="o">==</span> <span class="n">SKIP</span><span class="p">:</span>
+            <span class="c1"># Recorded, not silently dropped: a step the user chose to skip is</span>
+            <span class="c1"># a fact about the run, and the report has to be able to say the</span>
+            <span class="c1"># product it would have made is missing.</span>
+            <span class="n">ctx</span><span class="o">.</span><span class="n">begin</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">reason</span><span class="p">,</span> <span class="n">agent</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="s2">"agent"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+                      <span class="n">description</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="s2">"label"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">or</span> <span class="n">name</span><span class="p">)</span>
+            <span class="n">ctx</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">"skipped"</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="s2">"Skipped at the user's request."</span><span class="p">)</span>
+            <span class="k">continue</span>
+
+        <span class="k">if</span> <span class="n">progress</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fraction</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.95</span><span class="p">,</span> <span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">max_steps</span><span class="p">))</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">progress</span><span class="p">(</span><span class="n">tool</span><span class="o">.</span><span class="n">label</span> <span class="k">if</span> <span class="n">tool</span> <span class="ow">and</span> <span class="n">tool</span><span class="o">.</span><span class="n">label</span> <span class="k">else</span> <span class="n">name</span><span class="p">,</span> <span class="n">fraction</span><span class="p">,</span> <span class="n">reason</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - a UI callback must not stop a run</span>
+                <span class="k">pass</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">invoke</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">reason</span><span class="p">,</span> <span class="n">tools</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="s2">"failed"</span> <span class="ow">and</span> <span class="n">recovery</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="c1"># A step that failed because a setting was unsuitable is worth one</span>
+            <span class="c1"># more go with a different setting; a person reading the error would</span>
+            <span class="c1"># do the same. The retry is an ordinary recorded step, so the plan</span>
+            <span class="c1"># shows both attempts and what changed between them.</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">.recovery</span><span class="w"> </span><span class="kn">import</span> <span class="n">recover</span>
+
+            <span class="n">status</span><span class="p">,</span> <span class="n">note</span> <span class="o">=</span> <span class="n">recover</span><span class="p">(</span>
+                <span class="n">ctx</span><span class="p">,</span> <span class="n">tool</span><span class="p">,</span> <span class="n">ctx</span><span class="o">.</span><span class="n">steps</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="n">ask</span><span class="p">,</span>
+                <span class="k">lambda</span> <span class="n">again</span><span class="p">,</span> <span class="n">why</span><span class="o">=</span><span class="n">reason</span><span class="p">:</span> <span class="n">invoke</span><span class="p">(</span>
+                    <span class="n">ctx</span><span class="p">,</span> <span class="n">again</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"retried after it failed; </span><span class="si">{</span><span class="n">why</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">tools</span><span class="p">),</span>
+                <span class="n">spent</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">note</span><span class="p">:</span>
+                <span class="n">ctx</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="n">note</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">on_result</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">ctx</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">on_result</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">ctx</span><span class="o">.</span><span class="n">steps</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - a UI hook must not stop a run</span>
+                <span class="k">pass</span>
+    <span class="k">return</span> <span class="n">ctx</span></div>
+
+
+
+<div class="viewcode-block" id="forced_choice">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.controller.forced_choice">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">forced_choice</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">,</span>
+                  <span class="n">tools</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""The decision to take without asking, when the menu leaves only one.</span>
+
+<span class="sd">    The model may answer with a tool from the menu, or with "done" once a</span>
+<span class="sd">    report has been written (:data:`CONTROLLER_PROMPT`). With one tool on the</span>
+<span class="sd">    menu and no report yet there is exactly one valid answer, and asking for it</span>
+<span class="sd">    cost a full model request: three of the six decisions in an ERT-to-water-</span>
+<span class="sd">    content run - load, invert, write the report - were of this kind. Taking it</span>
+<span class="sd">    directly is the same decision, and the step says so, so the plan and the</span>
+<span class="sd">    transcript show that nothing was chosen.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ctx : RunContext</span>
+<span class="sd">        The run as it stands.</span>
+<span class="sd">    tools : dict, optional</span>
+<span class="sd">        The registry to choose from; the global one by default.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict or None</span>
+<span class="sd">        ``{"tool": name, "why": "only one action was available: name"}`` when</span>
+<span class="sd">        the choice is forced; None when the model has something to decide,</span>
+<span class="sd">        including whether to finish.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from .tools import Tool</span>
+<span class="sd">    &gt;&gt;&gt; only = {'load': Tool('load', 'Load.', lambda c: ('', {'data': 1}),</span>
+<span class="sd">    ...                      produces=('data',))}</span>
+<span class="sd">    &gt;&gt;&gt; forced_choice(RunContext('x'), only)</span>
+<span class="sd">    {'tool': 'load', 'why': 'only one action was available: load'}</span>
+<span class="sd">    &gt;&gt;&gt; ctx = RunContext('x')</span>
+<span class="sd">    &gt;&gt;&gt; ctx.put('report_files', {'report_markdown': 'r.md'})</span>
+<span class="sd">    &gt;&gt;&gt; forced_choice(ctx, only) is None        # "done" is a valid answer now</span>
+<span class="sd">    True</span>
+<span class="sd">    """</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="n">runnable_tools</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tools</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">options</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">_may_finish</span><span class="p">(</span><span class="n">ctx</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"tool"</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span> <span class="s2">"why"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"only one action was available: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">}</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_may_finish</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether "done" is a valid answer: the prompt allows it once a report exists."""</span>
+    <span class="k">return</span> <span class="n">ctx</span><span class="o">.</span><span class="n">has</span><span class="p">(</span><span class="s2">"report_files"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_decide</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">,</span> <span class="n">ask</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]],</span>
+            <span class="n">tools</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""One decision: the model's if it can make one, the policy's otherwise."""</span>
+    <span class="k">if</span> <span class="n">ask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Nothing to decide, nothing to ask. Without a model the policy below</span>
+        <span class="c1"># takes the same step, as it always has.</span>
+        <span class="n">forced</span> <span class="o">=</span> <span class="n">forced_choice</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tools</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">forced</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">forced</span>
+        <span class="n">prompt</span> <span class="o">=</span> <span class="n">CONTROLLER_PROMPT</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">transcript</span><span class="o">=</span><span class="n">ctx</span><span class="o">.</span><span class="n">transcript</span><span class="p">(),</span>
+                                         <span class="n">menu</span><span class="o">=</span><span class="n">menu</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tools</span><span class="p">))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">choice</span> <span class="o">=</span> <span class="n">_parse_choice</span><span class="p">(</span><span class="n">ask</span><span class="p">(</span><span class="n">prompt</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - an unreachable model is not a failed run</span>
+            <span class="n">choice</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">choice</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">choice</span>
+        <span class="c1"># The model could not be reached or did not answer usably. Recording it</span>
+        <span class="c1"># matters: a run that silently fell back to the fixed order looks</span>
+        <span class="c1"># identical to one the model drove, and the two are not the same run.</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="s2">"The controller could not get a usable decision from the model "</span>
+                 <span class="s2">"and fell back to running the available steps in order."</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">next_by_policy</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tools</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">{</span><span class="s2">"tool"</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span> <span class="s2">"why"</span><span class="p">:</span> <span class="s2">"next available step"</span><span class="p">}</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
