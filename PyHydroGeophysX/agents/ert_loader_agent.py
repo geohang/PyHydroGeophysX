@@ -203,6 +203,13 @@ different data formats, coordinate systems, and common data quality issues."""
         --------
         >>> ERTLoaderAgent()._detect_instrument_from_header("")
         """
+        from PyHydroGeophysX.data_processing.ert_formats import (
+            looks_like_subsurface_insights,
+        )
+
+        # Its table opens far below the first two lines, under a metadata block.
+        if looks_like_subsurface_insights(data_file):
+            return "Subsurface Insights"
         try:
             with open(data_file, "r", encoding="utf-8", errors="ignore") as handle:
                 header = " ".join([handle.readline(), handle.readline()]).lower()

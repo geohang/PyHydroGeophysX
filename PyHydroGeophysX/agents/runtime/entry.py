@@ -23,8 +23,8 @@ from typing import Any, Callable, Dict, Optional, Tuple
 from . import catalog  # noqa: F401 - importing registers every tool
 from .catalog import summarise_run
 from .context import RunContext
-from .controller import run_controller
-from .modes import auto, completion
+from .controller import PROCEED, SKIP, STOP, run_controller
+from .modes import announcement, auto, completion
 
 #: Set to 1 to run the pre-controller implementation instead.
 LEGACY_ENV = "PHGX_LEGACY_WORKFLOW"
@@ -57,6 +57,64 @@ def _make_ask(api_key: Optional[str], model: Optional[str], provider: str
         return agent.query_llm(prompt, temperature=0.0, max_tokens=300)
 
     return ask
+
+
+def announced(on_step: Callable[..., Optional[str]],
+              announce: Callable[[Dict[str, Any]], None]) -> Callable[..., Optional[str]]:
+    """``on_step``, followed by auto mode's "now running" event once it approves.
+
+    Step-by-step answered the approval and then said nothing until the step
+    had finished, so the desktop showed "Continuing · proceed" for the whole of
+    an inversion and the choice of the next step after it. Auto mode announces
+    each step as it starts; this sends the same announcement once the user has
+    approved one, and nothing for a step that was skipped or that ended the run.
+
+    Parameters
+    ----------
+    on_step : callable
+        The pause hook, as :func:`run_controller` takes it.
+    announce : callable
+        Receives the step's :func:`~.modes.announcement`.
+
+    Returns
+    -------
+    callable
+        A hook returning exactly what ``on_step`` returned. An ``announce``
+        that raises is ignored, as auto mode ignores it: a display must not
+        stop a run.
+
+    Raises
+    ------
+    None
+        What ``on_step`` raises propagates, for the controller to handle as it
+        always has.
+
+    Examples
+    --------
+    >>> from .tools import Tool
+    >>> seen = []
+    >>> hook = announced(lambda ctx, tool, why: 'proceed', seen.append)
+    >>> tool = Tool('invert_ert', 'Invert.', lambda c: ('', {}), label='Run ERT inversion')
+    >>> hook(RunContext('goal'), tool, 'the data are loaded')
+    'proceed'
+    >>> seen[0]['label']
+    'Run ERT inversion'
+    >>> announced(lambda ctx, tool, why: 'skip', seen.append)(RunContext('g'), tool, '')
+    'skip'
+    >>> len(seen)
+    1
+    """
+    def hook(ctx: RunContext, tool: Any, reason: str) -> Optional[str]:
+        verdict = on_step(ctx, tool, reason)
+        # The controller reads a missing answer as "proceed", and so does this.
+        if (verdict or PROCEED) not in (STOP, SKIP):
+            try:
+                announce(announcement(ctx, tool, reason))
+            except Exception:  # noqa: BLE001 - a display must not stop a run
+                pass
+        return verdict
+
+    return hook
 
 
 def run_workflow(workflow_config: Dict[str, Any], api_key: Optional[str],
@@ -179,7 +237,8 @@ def run_workflow(workflow_config: Dict[str, Any], api_key: Optional[str],
     # one it stops before each step and asks. Both announce the same events, so
     # the app follows along either way.
     run_controller(ctx, ask=_make_ask(api_key, llm_model, llm_provider),
-                   on_step=on_step or auto(announce), on_result=report_result)
+                   on_step=announced(on_step, announce) if on_step else auto(announce),
+                   on_result=report_result)
 
     failed = [s for s in ctx.steps if s.status == "failed"]
     # A step that failed is reported, not hidden: the request may have named the

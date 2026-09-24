@@ -265,8 +265,8 @@ Do not report success while required verification is failing.
 | `adtlert` | adtlert, pygimli, Torch, CuPy CUDA 12 and cuDSS acceleration on Windows/Linux; Linux recommended (Python 3.11+) |
 | `desktop` | PySide6, pyqtgraph, qtawesome, numpy, pandas |
 | `desktop-3d` | pyvista, pyvistaqt, vtk (the Mesh 3D and volume viewers) |
-| `agents` | openai, google-generativeai, anthropic |
-| `climate` | pydaymet, pandas, xarray |
+| `agents` | openai, google-genai, anthropic |
+| `climate` | pandas, requests |
 | `webapp` | streamlit, plotly, streamlit-plotly-events, pyarrow |
 | `seismic-raw` | obspy |
 | `gpu` | cupy-cuda12x with CUDA Toolkit components |

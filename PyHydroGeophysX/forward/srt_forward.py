@@ -176,13 +176,15 @@ class SeismicForwardModeling:
         else:
             slowness_values = velocity_model
         
-        # Simulate data
+        # Simulate data. seed goes to simulate, which draws the noise; it was
+        # accepted here and never passed on, so a seeded run was not repeatable.
         synth_data = manager.simulate(
             slowness=slowness_values,
             scheme=scheme,
             mesh=mesh,
             noiseLevel=noise_level,
             noiseAbs=noise_abs,
+            seed=seed,
             verbose=verbose
         )
         

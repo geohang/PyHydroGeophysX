@@ -725,7 +725,7 @@ WALKTHROUGHS["gravmag.invert"] = Walkthrough(
                 "    x, y, values, KIND, out_dir=str(OUT_DIR), **elevation, **INVERSION_PARAMETERS\n"
                 ")\n"
                 "\n"
-                'model = np.asarray(result["model"], dtype=float)\n'
+                'model = np.asarray(result["model3d"], dtype=float)\n'
                 'print(f"recovered {model.size} cells, "\n'
                 '      f"range {model.min():.4g} to {model.max():.4g}")'
             ),

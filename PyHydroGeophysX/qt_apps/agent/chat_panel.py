@@ -20,9 +20,10 @@ from __future__ import annotations
 
 import base64
 import html
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
-from PySide6.QtCore import Qt, QUrl, Signal
+from PySide6.QtCore import Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QImage, QTextDocument
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -50,6 +51,7 @@ from PyHydroGeophysX.qt_apps.agent.providers import (
     TIER_ORDER,
     image_block,
     make_provider,
+    prewarm,
     price_label,
     provider_has_tiers,
     text_block,
@@ -74,10 +76,10 @@ Rules:
 - Pick the module by matching the task to the module purposes listed under "Studio modules" below — read them before choosing. For 2D-profile forward modeling / synthetic data (ERT/SRT/EM/gravity along a line), use hydro_geophysics. For 3D ERT forward modeling, use mesh3d (first 'generate' the 3D mesh, then 'run_ert_forward'). Do NOT use ert for forward modeling — it inverts field data.
 - Every tool call you make is automatically shown to the user with Approve / Reject buttons before it runs, so you do NOT need to ask for permission in words. Never end your turn with a question like "Shall I proceed?" — instead, briefly say what you are about to do and then make the tool call in the same turn.
 - Take one action at a time: call a single tool, wait for its result, then decide the next step.
-- After you navigate to a module, call describe_current_module before apply_action, so you use the module's real action names and parameter keys.
+- navigate returns the opened module's description under "current_module": its actions with their parameter keys, its current state and its views. Use those real action names and parameter keys in apply_action. Do not call describe_current_module right after navigate - it would return the same description again; call it only to refresh the state later (for example after data were loaded or a run finished), or when no navigate result is at hand.
 - Never invent file paths or other inputs. Except for Hydro -> Geophysics, if an action needs a data file and the user did not give you a path, prefer an example-data action (such as use_example_data or use_example) when the module offers one; only call load_data with a path the user actually provided. If neither is possible, ask the user for the file.
-- For a processing request, a typical sequence is: navigate to the right module, describe it, load data (use the example data if the user gave none), set parameters, then run.
-- In Hydro -> Geophysics, data-source choice is a mandatory user checkpoint. After describe_current_module, if the user has not explicitly chosen a source, STOP and ask whether to use (1) the bundled example data or (2) the user's own hydrologic-model output folder. Do not call use_example_data or set_data_dir until the user answers. If project-context data are already displayed, treat them as user data and still ask whether to use them. For bundled data call use_example_data; for user data call set_data_dir only with a path supplied by the user or reported by the studio context.
+- For a processing request, a typical sequence is: navigate to the right module (its result describes the module), load data (use the example data if the user gave none), set parameters, then run.
+- In Hydro -> Geophysics, data-source choice is a mandatory user checkpoint. Once the module is open, if the user has not explicitly chosen a source, STOP and ask whether to use (1) the bundled example data or (2) the user's own hydrologic-model output folder. Do not call use_example_data or set_data_dir until the user answers. If project-context data are already displayed, treat them as user data and still ask whether to use them. For bundled data call use_example_data; for user data call set_data_dir only with a path supplied by the user or reported by the studio context.
 - In Hydro -> Geophysics, if the user wants to choose a profile interactively on the map rather than provide coordinates, call start_profile_pick. It opens the Profile step and pauses for the user's two clicks. Do not claim that profile points are selected until the user has completed those clicks and resumed the workflow.
 - In Hydro -> Geophysics, after select_methods returns parameter_defaults, STOP before set_params or run and ask whether the user wants those displayed defaults or wants to specify parameters. Do not silently invent or apply acquisition/noise values. If the user chooses defaults, leave the existing UI values unchanged; after either choice, call confirm_parameters ONLY after the user explicitly confirms it, then run.
 - If a tool result has status "failed" or "declined", read it and adjust, or ask the user what to do. Do not invent module names, actions, or parameters; discover them with the tools.
@@ -91,7 +93,7 @@ Studio modules (key: purpose):
 
 #: Appended to the rules only when the selected model reads images, so a
 #: text-only model is never told about a tool it will not be given.
-VISION_RULES = """- You can see the studio. capture_view takes a picture of a panel in the current module and shows it to you; describe_current_module lists the panel names under "views". Use it to judge what numbers do not show: artefacts or implausible structure in an inversion section, picks that follow noise instead of the first arrival, a mesh with the wrong extent or bad element shape. Say which view you looked at, report what is actually in the picture, and say plainly when the image is too coarse to judge rather than guessing.
+VISION_RULES = """- You can see the studio. capture_view takes a picture of a panel in the current module and shows it to you; the module's description (from navigate or describe_current_module) lists the panel names under "views". Use it to judge what numbers do not show: artefacts or implausible structure in an inversion section, picks that follow noise instead of the first arrival, a mesh with the wrong extent or bad element shape. Say which view you looked at, report what is actually in the picture, and say plainly when the image is too coarse to judge rather than guessing.
 - Do not capture after every step. One picture costs about as much context as a long message, so capture when a result is worth judging visually, never to confirm that a parameter was set.
 - When a capture_view result carries a "context" field, those numbers are exact and the picture is not. Never read an index, a trace number or a coordinate off the image when "context" gives it to you: dozens of items can share one axis and the marker sits far from its tick label, so counting across a plot is where you will be wrong. Judge quality from the picture, then name the item from the numbers. If the two disagree, trust the numbers for identity and say what the picture showed you.
 - If the user asks about pick quality while a first-break review is paused, capture_view the 'gather' view before answering, and cross-check its "context" pick table against what you see.
@@ -172,6 +174,9 @@ class AquahChatPanel(QWidget):
         self._vision = False
         self._tool_specs: List[Dict[str, Any]] = []
         self._system = ""
+        # (provider, whether it could send) when its warm-up was last started.
+        self._prewarmed: Optional[Tuple[Any, bool]] = None
+        self._thinking_started = 0.0
         self._refresh_capabilities()
 
         self._build_ui()
@@ -245,6 +250,17 @@ class AquahChatPanel(QWidget):
         self._transcript.setOpenExternalLinks(True)
         root.addWidget(self._transcript, stretch=1)
 
+        # Shown while a model request is in flight, with how long it has been.
+        # The Send button's "…" was the only sign of the wait step-by-step
+        # spends most of its time in.
+        self._thinking = QLabel()
+        self._thinking.setStyleSheet(f"color:{_P['muted']}; font-style:italic;")
+        self._thinking.setVisible(False)
+        root.addWidget(self._thinking)
+        self._thinking_clock = QTimer(self)
+        self._thinking_clock.setInterval(1000)
+        self._thinking_clock.timeout.connect(self._update_thinking)
+
         # Pending tool-call confirmation card (hidden until needed).
         self._confirm = QFrame()
         self._confirm.setObjectName("ConfirmCard")
@@ -277,6 +293,7 @@ class AquahChatPanel(QWidget):
         self._input = ChatInputEdit()
         self._input.setPlaceholderText("e.g. Build a 3D crosshole mesh with 12 sensors per borehole")
         self._input.sendRequested.connect(self._on_send)
+        self._input.textChanged.connect(self._prewarm_provider)
         self._send_btn = QPushButton("Send")
         self._send_btn.setProperty("primary", True)
         self._send_btn.setIcon(theme.icon("fa5s.paper-plane", color="#ffffff"))
@@ -631,14 +648,56 @@ class AquahChatPanel(QWidget):
         worker.succeeded.connect(self._on_llm_ok)
         worker.failed.connect(self._on_llm_failed)
         worker.finished.connect(lambda: self._send_btn.setText("Send"))
+        # Only the request in flight may take the indicator down: a finished
+        # signal delivered late must not hide the next request's.
+        worker.finished.connect(
+            lambda w=worker: self._set_thinking(False) if self._worker is w else None)
         self._worker = worker
+        self._set_thinking(True)
         worker.start()
 
+    def _set_thinking(self, on: bool) -> None:
+        """Show that a model request is in flight, and for how long; or hide it."""
+        if on:
+            self._thinking_started = time.monotonic()
+            self._update_thinking()
+            self._thinking_clock.start()
+        else:
+            self._thinking_clock.stop()
+        self._thinking.setVisible(on)
+
+    def _update_thinking(self) -> None:
+        seconds = int(time.monotonic() - self._thinking_started)
+        self._thinking.setText("AQUAH is thinking…" + (f" {seconds} s" if seconds else ""))
+
+    def _prewarm_provider(self) -> None:
+        """Do the provider's first-request setup while the user is still typing.
+
+        Importing the SDK and building its client cost the first request of a
+        session about 1.5 s, and none of it depends on the message. It runs on
+        a background thread from the first keystroke - once per provider, and
+        once more when a key makes a provider that could not send able to.
+        """
+        provider = self._provider
+        last = self._prewarmed
+        if last is not None and last[0] is provider and last[1]:
+            return
+        try:
+            ready = bool(provider.available()[0])
+        except Exception:  # noqa: BLE001 - a provider that cannot say is not ready
+            ready = False
+        if last is not None and last[0] is provider and last[1] == ready:
+            return
+        self._prewarmed = (provider, ready)
+        prewarm(provider)
+
     def _on_llm_failed(self, error: str) -> None:
+        self._set_thinking(False)
         self._render_note(f"Model call failed: {html.escape(error)}")
         self._set_busy(False)
 
     def _on_llm_ok(self, out: Dict[str, Any]) -> None:
+        self._set_thinking(False)
         # Record the assistant turn (neutral form) so tool ids line up next call.
         assistant: Dict[str, Any] = {
             "role": "assistant",

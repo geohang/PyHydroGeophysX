@@ -232,10 +232,18 @@ class AgentCoordinator:
                 "anthropic package is not installed. LLM calls will fail. "
                 "Install via: pip install anthropic"
             )
-        if needs_google and importlib.util.find_spec("google.generativeai") is None:
+        def _importable(name: str) -> bool:
+            try:
+                return importlib.util.find_spec(name) is not None
+            except ImportError:            # its parent package is missing too
+                return False
+
+        # google-genai, or the older google-generativeai BaseAgent falls back to.
+        if needs_google and not (_importable("google.genai")
+                                 or _importable("google.generativeai")):
             warnings_out.append(
-                "google-generativeai package is not installed. LLM calls will fail. "
-                "Install via: pip install google-generativeai"
+                "No Gemini SDK is installed. LLM calls will fail. "
+                "Install via: pip install google-genai"
             )
 
         return warnings_out

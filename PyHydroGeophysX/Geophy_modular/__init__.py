@@ -20,18 +20,6 @@ _EXPORTS: Dict[str, Tuple[str, str]] = {
         "PyHydroGeophysX.Geophy_modular.seismic_processor",
         "seismic_velocity_classifier",
     ),
-    "create_ert_mesh_with_structure": (
-        "PyHydroGeophysX.Geophy_modular.structure_integration",
-        "create_ert_mesh_with_structure",
-    ),
-    "integrate_velocity_interface": (
-        "PyHydroGeophysX.Geophy_modular.structure_integration",
-        "integrate_velocity_interface",
-    ),
-    "create_joint_inversion_mesh": (
-        "PyHydroGeophysX.Geophy_modular.structure_integration",
-        "create_joint_inversion_mesh",
-    ),
     "ERTtoWC": ("PyHydroGeophysX.Geophy_modular.ERT_to_WC", "ERTtoWC"),
     "plot_time_series": (
         "PyHydroGeophysX.Geophy_modular.ERT_to_WC",
@@ -45,10 +33,23 @@ _EXPORTS: Dict[str, Tuple[str, str]] = {
 
 __all__ = list(_EXPORTS)
 
+#: Removed from ``structure_integration`` when it became the 3D-model pipeline.
+#: Still exported, they raised a bare AttributeError on first use - and the ERT
+#: inversion agent, catching it, ran a requested structure-constrained inversion
+#: on an unconstrained mesh. The replacement is named instead.
+_REMOVED = {
+    name: "PyHydroGeophysX.core.mesh_utils.add_velocity_interface"
+    for name in ("create_ert_mesh_with_structure", "integrate_velocity_interface",
+                 "create_joint_inversion_mesh")
+}
+
 
 def __getattr__(name: str):
     target = _EXPORTS.get(name)
     if target is None:
+        if name in _REMOVED:
+            raise AttributeError(f"{name} was removed; build the interface mesh "
+                                 f"with {_REMOVED[name]}")
         raise AttributeError(name)
     module_name, attribute = target
     try:

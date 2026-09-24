@@ -106,9 +106,12 @@ def seismic_velocity_classifier(
     
     # For each vertical column (each unique x-coordinate)
     for x in unique_x:
-        # Get indices of cells in this column, sorted by depth (z-coordinate)
+        # Get indices of cells in this column, shallowest first. z is an
+        # elevation (negative downward), so an ascending sort starts at the
+        # deepest cell: once that one passed the threshold, every cell above it
+        # became 2 as well, an 800 m/s near-surface cell included.
         column_indices = np.where(x_coords == x)[0]
-        column_indices = column_indices[np.argsort(z_coords[column_indices])]
+        column_indices = column_indices[np.argsort(-z_coords[column_indices], kind="stable")]
         
         # Check if any cell in this column exceeds the threshold
         threshold_crossed = False

@@ -566,16 +566,29 @@ class JointERTSRTInversion(InversionBase):
         current_obj = float(objective_fn(model))
         directional = float(np.vdot(np.asarray(dm).ravel(), np.asarray(grad).ravel()))
 
+        # Armijo: f(m + s dm) <= f(m) + c s (dm . g), with dm . g < 0 for a
+        # descent step, so the goal lies below f(m). The sign was reversed,
+        # which put the goal above f(m) and returned steps that left the
+        # objective unchanged; and when every trial failed, 0.1 * dm was taken
+        # anyway, uphill or not. Now the best trial that lowered the objective
+        # is kept, or else the current model.
+        best, best_obj = None, current_obj
         maxiter = int(self.parameters.get("line_search_maxiter", 20))
         for _ in range(maxiter):
             trial = clip_fn(np.asarray(model, dtype=float).ravel() + step * np.asarray(dm, dtype=float).ravel())
             obj_trial = float(objective_fn(trial))
-            fgoal = current_obj - c * step * directional
-            if obj_trial < fgoal:
+            if obj_trial < best_obj:
+                best, best_obj = trial, obj_trial
+            fgoal = current_obj + c * step * directional
+            # 'obj_trial < current_obj' only matters when dm . g >= 0 (an
+            # inexact solve), where the Armijo goal alone admits an increase.
+            if obj_trial <= fgoal and obj_trial < current_obj:
                 return trial
             step *= 0.5
 
-        return clip_fn(np.asarray(model, dtype=float).ravel() + 0.1 * np.asarray(dm, dtype=float).ravel())
+        if best is not None:
+            return best
+        return clip_fn(np.asarray(model, dtype=float).ravel())
 
     def _compute_chi2(self, Wd: csr_matrix, data_obs: np.ndarray, data_pred: np.ndarray) -> float:
         phi_d = self._quad_norm(Wd, data_obs - data_pred)

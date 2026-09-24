@@ -14,7 +14,7 @@ from scipy.sparse import diags
 from PyHydroGeophysX._internal.utils import noop as _noop_log
 from PyHydroGeophysX._internal.optional_dependencies import BackendUnavailable
 from ..forward.ert_forward import ertforandjac2, ertforward2
-from ..solvers.linear_solvers import generalized_solver
+from ..solvers.linear_solvers import _SPD_METHODS, generalized_solver
 from .base import InversionBase, InversionResult
 from .lambda_search import LAMBDA_BOUNDS, search_lambda_for_chi2
 from .metrics import metrics_from_manager
@@ -386,6 +386,26 @@ def ensure_geometric_factors(container, mesh, *, policy: str = "fix",
     if change["sign_flips"]:
         log(f"  note: {change['sign_flips']} geometric factor(s) changed sign")
     return info
+
+
+def _gauss_newton_step(system, rhs, method: str, **solver_options):
+    """Solve the stacked Gauss-Newton system ``system @ dm = rhs`` with any method.
+
+    A least-squares method takes the stacked system ``[W_d J; sqrt(lambda) W_m]``
+    as it is. An SPD method ('spd_cholesky', 'spd_cg') needs the square normal
+    matrix, so it is given ``system^T system`` and ``system^T rhs``: the same
+    step, in the form TimeLapseERTInversion solves. Handed the stacked system
+    itself, the SPD methods refused it as not square.
+    """
+    if str(method).lower().strip() in _SPD_METHODS:
+        system = np.asarray(system, dtype=float)
+        rhs = np.asarray(rhs, dtype=float).reshape(-1, 1)
+        # The normal matrix is built for this call alone, so the factorization
+        # may work in its buffer.
+        return generalized_solver(system.T @ system, system.T @ rhs, method=method,
+                                  use_gpu=solver_options.get("use_gpu", False),
+                                  overwrite_a=True)
+    return generalized_solver(system, rhs, method=method, **solver_options)
 
 
 def _weighted_residuals(response, data) -> np.ndarray:
@@ -1621,7 +1641,10 @@ class ERTInversion(InversionBase):
             mesh: Mesh for inversion (created if None)
             **kwargs: Additional parameters including:
                 - lambda_val: Regularization parameter
-                - method: Solver method ('cgls', 'lsqr', etc.)
+                - method: Solver method. A least-squares method ('cgls', the
+                  default, 'lsqr', 'scipy_lsmr', ...) solves the stacked system;
+                  'spd_cholesky' or 'spd_cg' solve its normal equations, as the
+                  time-lapse inversion does.
                 - model_constraints: (min, max) model parameter bounds
                 - max_iterations: Maximum iterations
                 - absoluteError: Absolute resistance error floor [Ohm] (default 0.0001)
@@ -1645,7 +1668,14 @@ class ERTInversion(InversionBase):
         if 'k' not in data.dataMap() or len(data['k']) == 0 or np.allclose(data['k'], 0) or np.allclose(data['k'], 1):
             print("   Computing geometric factors from electrode positions...")
             data['k'] = ert.createGeometricFactors(data, numerical=True)
-            data['rhoa'] = data['r'] * data['k']
+            # Rebuild rhoa only from resistances the file actually carries.
+            # pyGIMLi fills an absent 'r' with zeros, so an unconditional r * k
+            # wiped out every apparent resistivity of a file that stores rhoa
+            # (fielddataline2.dat does) and the run returned 1e-6 Ohm m.
+            if data.haveData('r'):
+                data['rhoa'] = data['r'] * data['k']
+            elif not data.haveData('rhoa') and data.haveData('u') and data.haveData('i'):
+                data['rhoa'] = data['u'] / data['i'] * data['k']
         # Call parent initializer
         super().__init__(data, mesh, **kwargs)
         
@@ -1707,7 +1737,17 @@ class ERTInversion(InversionBase):
         
         # Prepare data
         rhos = self.data['rhoa']
-        self.rhos1 = np.log(rhos.array())
+        rhoa_values = np.asarray(rhos.array(), dtype=float)
+        unusable = int(np.count_nonzero(~(np.isfinite(rhoa_values) & (rhoa_values > 0))))
+        if unusable:
+            # The inversion works on log(rhoa); a zero or negative value becomes
+            # -inf or NaN and the run "converges" to garbage without an error.
+            raise ValueError(
+                f"{unusable} of {rhoa_values.size} readings have no positive apparent "
+                "resistivity, which a log-resistivity inversion cannot use. Filter "
+                "them out, or supply resistances ('r') or voltage and current "
+                "('u', 'i') so rhoa can be computed.")
+        self.rhos1 = np.log(rhoa_values)
         self.rhos1 = self.rhos1.reshape(self.rhos1.shape[0], 1)
         
         # Data error matrix
@@ -1731,9 +1771,11 @@ class ERTInversion(InversionBase):
             print(f'   No valid error data found, estimating errors '
                   f'(absoluteError={abs_e}, relativeError={rel_e})')
 
-            if 'r' in self.data.dataMap():
+            # haveData, not "in dataMap": pyGIMLi lists 'r' even when the file has
+            # none, and |r| = 0 gave every datum the max_relative_error cap.
+            if self.data.haveData('r'):
                 r_abs = np.abs(self.data['r'].array())
-            elif 'k' in self.data.dataMap():
+            elif self.data.haveData('k'):
                 r_abs = np.abs(rhos.array()) / np.maximum(np.abs(self.data['k'].array()), 1e-10)
             else:
                 raise RuntimeError("Cannot estimate error: data must contain 'r' or ('rhoa' + 'k').")
@@ -1851,14 +1893,27 @@ class ERTInversion(InversionBase):
         verbose = bool(self.parameters.get('verbose', True))
         stop_reason = 'iteration_cap'
         line_search_failures = 0
+        # What the forward operator last solved: (log model, linear response,
+        # whether its Jacobian followed). The line search solves the model it
+        # accepts, and each iteration used to solve that same model again before
+        # building its Jacobian - a third of the run. pyGIMLi's createJacobian
+        # reads the potentials of the operator's last response() and does not
+        # check the model, so a solve is reused only while this record still
+        # describes the operator.
+        solved = None
 
         # Main inversion loop
         for nn in range(self.parameters['max_iterations']):
             if verbose:
                 print(f'-------------------Iteration: {nn} ---------------------------')
 
-            # Forward modeling and Jacobian computation
-            dr, Jr = ertforandjac2(self.fwd_operator, mr, self.mesh)
+            # Forward modeling and Jacobian computation; the forward solve is
+            # skipped when the operator already holds this model's.
+            held = solved is not None and np.array_equal(solved[0], mr)
+            dr, Jr, linear = ertforandjac2(
+                self.fwd_operator, mr, self.mesh,
+                response=solved[1] if held else None, with_response=True)
+            solved = (mr, linear, True)
             dr = dr.reshape(dr.shape[0], 1)
 
             # The regularization pull is toward the reference model, so it has to
@@ -1938,18 +1993,27 @@ class ERTInversion(InversionBase):
             ).reshape(-1, 1)
             gc_r1 = Jr.T.dot(wd ** 2 * data_residual) + L_mr * reg_gradient
             
-            # Solve normal equations for update
-            d_mr = generalized_solver(
-                N11_R, -gc_r, 
-                method=self.parameters['method'],
+            # Solve for the update: the stacked system for a least-squares
+            # method, its normal equations for an SPD one.
+            d_mr = _gauss_newton_step(
+                N11_R, -gc_r, self.parameters['method'],
                 use_gpu=self.parameters['use_gpu'],
                 parallel=self.parameters.get('parallel', False),
                 n_jobs=self.parameters.get('n_jobs', -1)
             )
             
-            # Line search
+            # Line search. Armijo sufficient decrease is
+            # f(m + mu d) <= f(m) + c mu (d . g), with d . g < 0 for a descent
+            # direction, so the goal lies below f(m). It was written with the
+            # sign reversed, which put the goal above f(m) and let a step that
+            # did not lower the objective, or raised it, pass. The best trial
+            # that did lower it is kept in case none meets the test.
             mu_LS = 1
             iarm = 1
+            f_current = float(np.asarray(fc_r).item())
+            directional = float(np.asarray(
+                d_mr.T.dot(gc_r1.reshape(gc_r1.shape[0], 1))).item())
+            best_mr, best_f = None, f_current
             while True:
                 mr1 = mr + mu_LS * d_mr
 
@@ -1962,7 +2026,8 @@ class ERTInversion(InversionBase):
                         print(f'WARNING: Non-finite values detected in model at iteration {nn}')
                     mr1 = np.nan_to_num(mr1, nan=min_mr, posinf=max_mr, neginf=min_mr)
 
-                dr = ertforward2(self.fwd_operator, mr1, self.mesh)
+                dr, linear = ertforward2(self.fwd_operator, mr1, self.mesh, with_response=True)
+                solved = (mr1, linear, False)
                 dr = dr.reshape(dr.shape[0], 1)
 
                 dataerror_ert = self.rhos1 - dr
@@ -1974,12 +2039,16 @@ class ERTInversion(InversionBase):
                 wm_trial = self.Wm_r * (mr1 - mr_R)
                 fmert = lam_val * wm_trial.T.dot(wm_trial)
 
-                ft_r = fdert + fmert
+                ft_r = float(np.asarray(fdert + fmert).item())
+                if ft_r < best_f:
+                    best_mr, best_f = mr1, ft_r
 
-                fgoal = fc_r - 1e-4 * mu_LS * (d_mr.T.dot(gc_r1.reshape(gc_r1.shape[0], 1)))
+                fgoal = f_current + 1e-4 * mu_LS * directional
                 #print(f'ft_r: {ft_r}, fgoal: {fgoal}')
 
-                if ft_r < fgoal:
+                # 'ft_r < f_current' only matters when d . g >= 0 (an inexact
+                # solve), where the Armijo goal alone would admit an increase.
+                if ft_r <= fgoal and ft_r < f_current:
                     break
                 else:
                     iarm = iarm + 1
@@ -1989,6 +2058,10 @@ class ERTInversion(InversionBase):
                     line_search_failures += 1
                     if verbose:
                         print('Line search FAIL EXIT')
+                    # Never step uphill: take the best trial that lowered the
+                    # objective, or stay put. Before, the last (tiniest) trial
+                    # was taken whatever its objective.
+                    mr1 = best_mr if best_mr is not None else mr
                     break
 
             # Update model
@@ -2007,12 +2080,37 @@ class ERTInversion(InversionBase):
 
         # Process final model
         final_model = np.exp(mr)
+
+        # Compute final forward response. The loop has usually just solved this
+        # model - it ends right after its forward solve, or after the line search
+        # accepted it - and that solve is the same one unless the forward
+        # wrappers' resistivity clip changed the model they passed.
+        clip_free = np.array_equal(np.clip(np.exp(np.clip(mr, -20, 20)), 0.001, 1e6), final_model)
+        if solved is not None and clip_free and np.array_equal(solved[0], mr):
+            dr = pg.Vector(solved[1])
+            jacobian_held = solved[2]
+        else:
+            dr = self.fwd_operator.response(pg.Vector(final_model.ravel()))
+            jacobian_held = False
+
+        # Every chi2 recorded in the loop is pre-update, so when the loop ends
+        # on the iteration cap the history, and meta['chi2'] with it, described
+        # the model from before the final step, not the one returned
+        # (fielddataline2 with max_iterations=1: 3.49 reported, 0.25 actual).
+        # Score the returned model the same way the loop does.
+        iterations_run = len(result.iteration_chi2)
+        if stop_reason == 'iteration_cap':
+            final_err = self.rhos1 - np.log(np.asarray(dr, dtype=float)).reshape(-1, 1)
+            weighted_final = self.Wdert_diag.reshape(-1, 1) * final_err
+            result.iteration_chi2.append(
+                float(weighted_final.T.dot(weighted_final).item()) / max(len(final_err), 1))
+            result.iteration_models.append(final_model.ravel().copy())
+            result.iteration_data_errors.append(final_err.ravel())
         
-        # Compute final forward response
-        dr = self.fwd_operator.response(pg.Vector(final_model.ravel()))
-        
-        # Compute coverage
-        self.fwd_operator.createJacobian(pg.Vector(final_model.ravel()))
+        # Compute coverage, from the Jacobian of the final model - already built
+        # when the loop stopped at the start of an iteration.
+        if not jacobian_held:
+            self.fwd_operator.createJacobian(pg.Vector(final_model.ravel()))
         covTrans = pg.core.coverageDCtrans(
             self.fwd_operator.jacobian(),
             1.0 / dr,
@@ -2035,7 +2133,7 @@ class ERTInversion(InversionBase):
         # Why the loop ended, so a caller driving lambda can tell "this lambda
         # cannot do better" apart from "this run ran out of iterations".
         result.meta['stop_reason'] = stop_reason
-        result.meta['iterations'] = len(result.iteration_chi2)
+        result.meta['iterations'] = iterations_run
         result.meta['line_search_failures'] = line_search_failures
         result.meta['chi2'] = float(result.iteration_chi2[-1]) if result.iteration_chi2 else float('nan')
         result.meta['lambda'] = float(self.parameters['lambda_val'])

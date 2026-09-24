@@ -15,9 +15,18 @@ from typing import Optional
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
 
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+
 
 class PlanSliceView(QWidget):
-    def __init__(self, parent=None) -> None:
+    """Resistivity depth slices in plan view.
+
+    ``colormaps`` is the studio state's shared colormap dict; the slices share
+    the EM sections' colour map unless another ``colormap_key`` is given.
+    """
+
+    def __init__(self, parent=None, *, colormaps=None,
+                 colormap_key: str = cmaps.EM_SECTION) -> None:
         super().__init__(parent)
         from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
         from matplotlib.figure import Figure
@@ -34,6 +43,10 @@ class PlanSliceView(QWidget):
         self._z_label = QLabel("—")
         self._z_label.setMinimumWidth(56)
         row.addWidget(self._z_label)
+        # The colour map, beside the depth it is read at; turbo until chosen.
+        self._colormap = cmaps.ColormapChooser(colormap_key, "turbo", shared=colormaps)
+        self._colormap.colormapChanged.connect(lambda _name: self._redraw())
+        row.addWidget(self._colormap)
         layout.addLayout(row)
 
         self._xy = None       # (n_pos, 2) sounding map coordinates
@@ -69,6 +82,10 @@ class PlanSliceView(QWidget):
         self._z.setValue(int(min(2, max(0, n - 1))))  # a shallow-ish default layer
         self._z.blockSignals(False)
         self._redraw()
+
+    @property
+    def colormap_chooser(self) -> "cmaps.ColormapChooser":
+        return self._colormap
 
     # -- rendering -----------------------------------------------------------
     def _redraw(self, *_) -> None:
@@ -126,15 +143,16 @@ class PlanSliceView(QWidget):
         # bar labelled only in powers of ten.
         levels = (np.geomspace(norm.vmin, norm.vmax, 15) if self._log
                   else np.linspace(norm.vmin, norm.vmax, 15))
+        cmap = cmaps.to_matplotlib(self._colormap.colormap())
         mappable = None
         if good.sum() >= 4 and not collinear:
             try:  # a filled map when the soundings actually spread in 2D
                 mappable = ax.tricontourf(x[good], y[good], vals[good],
                                           levels=levels, extend="both",
-                                          cmap="turbo", norm=norm)
+                                          cmap=cmap, norm=norm)
             except Exception:  # noqa: BLE001 - degenerate triangulation -> points only
                 mappable = None
-        sc = ax.scatter(x[good], y[good], c=vals[good], cmap="turbo", norm=norm,
+        sc = ax.scatter(x[good], y[good], c=vals[good], cmap=cmap, norm=norm,
                         s=90, edgecolor="#333333", linewidth=0.5, zorder=3)
         if mappable is None:
             mappable = sc

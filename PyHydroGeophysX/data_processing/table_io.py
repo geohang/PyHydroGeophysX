@@ -17,6 +17,8 @@ __all__ = [
     "load_2d_array",
     "load_xyz_table",
     "npy_shape",
+    "read_electrode_table",
+    "table_header",
     "save_npy_atomic",
     "write_csv",
     "write_json",
@@ -149,6 +151,125 @@ def load_xyz_table(path: PathLike, min_cols: int = 2) -> np.ndarray:
             f"{array.shape} from '{Path(path).name}'."
         )
     return array
+
+
+def table_header(path: PathLike) -> Optional[list]:
+    """The header row of a text table, or None when it has none.
+
+    Found the way :func:`load_2d_array` finds it - the first non-comment line,
+    the same delimiter rule, a header only when every field is a label - so each
+    name lines up with the column the table is returned with.
+    """
+    import csv
+
+    source = Path(path)
+    if source.suffix.lower() in {".npy", ".npz"}:
+        return None
+    try:
+        lines = source.read_text(encoding="utf-8-sig").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return None
+    first = next((line for line in lines
+                  if line.strip() and not line.lstrip().startswith("#")), "")
+    first = first.split("#", 1)[0]
+    delimiter = next((sep for sep in (",", ";", "\t") if sep in first), None)
+    fields = next(csv.reader([first], delimiter=delimiter)) if delimiter else first.split()
+
+    def is_number(value: str) -> bool:
+        try:
+            float(value)
+            return True
+        except ValueError:
+            return False
+
+    if not fields or any(is_number(value) for value in fields):
+        return None
+    return [value.strip() for value in fields]
+
+
+#: Header words that name an electrode's elevation.
+_ELEVATION_NAMES = ("z", "elevation", "elev", "height", "altitude")
+
+
+def read_electrode_table(path: PathLike) -> Tuple[np.ndarray, np.ndarray, str]:
+    """Electrode coordinates from a table, its columns chosen by what they are.
+
+    Returns ``(coords, elevation, how)``. ``coords`` holds the coordinate
+    columns in the file's own order - ``(x, elevation)`` for a 2-D line,
+    ``(x, y, z)`` otherwise - which is what reading the table by position gave
+    for a plain two- or three-column file. ``elevation`` is each electrode's
+    height, and ``how`` says which columns were read.
+
+    Vendors lay the table out several ways - ``X,Y,Z,Global ID``, a leading or
+    trailing electrode number, plain ``x z`` - and reading columns by position
+    took an ID column as the elevation, or the electrode number as the position,
+    without a word. A header decides when there is one. Without one, an
+    electrode-number column (1..n) is set aside, and a layout that still cannot
+    be told apart is refused rather than guessed. The elevation is the column a
+    header names as such; otherwise, of y and z, the one that varies: PyGIMLi
+    writes a 2-D line with its elevation in y, and ``ert_io.electrode_elevation``
+    reads a loaded survey by the same rule.
+    """
+    source = Path(path)
+    if source.suffix.lower() in _ARRAY_SUFFIXES:
+        table = load_xyz_table(source, min_cols=2)
+    else:
+        # Electrode files come as .xyz, .elec and the like; they are text tables.
+        table = np.atleast_2d(_load_text_matrix(source))
+        if table.shape[1] < 2:
+            raise ValueError(f"'{source.name}' needs at least two columns: x and the elevation.")
+    rows, cols = table.shape
+    name = source.name
+    header = table_header(source)
+    if header is not None and len(header) == cols:
+        keys = []
+        for label in header:
+            words = label.lower().replace("(", " ").replace("[", " ").replace("_", " ").split()
+            keys.append(words[0] if words else "")
+        x_col = keys.index("x") if "x" in keys else None
+        y_col = keys.index("y") if "y" in keys else None
+        z_col = next((keys.index(key) for key in _ELEVATION_NAMES if key in keys), None)
+        if x_col is None or (y_col is None and z_col is None):
+            raise ValueError(
+                f"{name}: none of its columns ({', '.join(header)}) reads as x and "
+                "the elevation. Name them x and z (or elevation) in the header row.")
+        # A named elevation is the elevation; a table of x and y alone is a 2-D
+        # line written the PyGIMLi way, with y the vertical.
+        height = z_col if z_col is not None else y_col
+        picked = [x_col, y_col, z_col] if (y_col is not None and z_col is not None) else [x_col, height]
+        return (table[:, picked].copy(), table[:, height].copy(),
+                f"x from '{header[x_col]}', elevation from '{header[height]}'")
+
+    def numbering(col: int) -> bool:
+        return rows >= 3 and np.array_equal(table[:, col], np.arange(1, rows + 1))
+
+    first, last = numbering(0), numbering(cols - 1)
+    if cols == 3 and first and np.ptp(table[:, 1]) == 0:
+        # An "x" after the number that never changes would put every electrode
+        # in one place: the first column was x, at 1 m spacing.
+        first = False
+    picked = None
+    if cols == 2:
+        picked = [0, 1]
+    elif cols in (3, 4) and not (first and last):
+        rest = [c for c in range(cols)
+                if not ((c == 0 and first) or (c == cols - 1 and last))]
+        if len(rest) in (2, 3):              # x and elevation, or x y z
+            picked = rest
+    if picked is None:
+        raise ValueError(
+            f"{name}: {cols} columns and no header row, so which of them are x "
+            "and the elevation cannot be told. Add a header naming them "
+            "(x, y, z or elevation).")
+    coords = table[:, picked].copy()
+    if coords.shape[1] == 2:
+        height = 1
+    else:
+        height = 1 if np.std(coords[:, 1]) >= np.std(coords[:, 2]) else 2
+    columns = [c + 1 for c in picked]
+    how = ("x, elevation" if picked == [0, 1] else
+           f"x from column {columns[0]}, elevation from column {columns[height]}")
+    return coords, coords[:, height].copy(), how
 
 
 def write_csv(

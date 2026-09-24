@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import html
 import json
+import os
+from collections import OrderedDict
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QEvent, QObject, Qt, QUrl, Signal
@@ -16,6 +18,52 @@ LogFn = Callable[..., None]
 ExportAction = Tuple[str, Callable[[], Any]]
 #: What counts as something the user can be shown mid-run.
 FIGURE_SUFFIXES = (".png", ".jpg", ".jpeg", ".svg")
+
+#: Scaled figure thumbnails, newest use last, keyed by (path, mtime, size,
+#: height). A run's figures are saved at print resolution - five to six thousand
+#: pixels across - and the activity strip rebuilt every thumbnail whenever its
+#: figure list changed, decoding each full-size file again to show it 96 px
+#: high: about 135 ms of UI-thread time per new figure with four on the strip.
+_THUMBNAILS: "OrderedDict[Tuple[str, int, int, int], QPixmap]" = OrderedDict()
+#: Enough for several runs' strips; one entry is at most a few hundred KB.
+_THUMBNAIL_LIMIT = 32
+
+
+def thumbnail_pixmap(path: str, height: int = 96) -> Optional[QPixmap]:
+    """The image at ``path`` scaled to ``height`` pixels, decoded once.
+
+    Parameters
+    ----------
+    path : str
+        An image file.
+    height : int
+        Target height in pixels; the aspect ratio is kept.
+
+    Returns
+    -------
+    QPixmap or None
+        None when the file cannot be read as an image - an SVG, or a figure
+        still being written - which is not cached, so the next call tries
+        again. A file rewritten since has a new modification time or size and
+        is decoded afresh.
+    """
+    try:
+        stat = os.stat(path)
+    except OSError:
+        return None
+    key = (os.path.abspath(path), stat.st_mtime_ns, stat.st_size, int(height))
+    cached = _THUMBNAILS.get(key)
+    if cached is not None:
+        _THUMBNAILS.move_to_end(key)
+        return cached
+    full = QPixmap(path)
+    if full.isNull():
+        return None
+    scaled = full.scaledToHeight(int(height), Qt.SmoothTransformation)
+    _THUMBNAILS[key] = scaled
+    while len(_THUMBNAILS) > _THUMBNAIL_LIMIT:
+        _THUMBNAILS.popitem(last=False)
+    return scaled
 
 
 class RunActivity(QFrame):
@@ -281,9 +329,9 @@ class _Thumbnail(QLabel):
     def __init__(self, path: str) -> None:
         super().__init__()
         self._path = path
-        pixmap = QPixmap(path)
-        if not pixmap.isNull():
-            self.setPixmap(pixmap.scaledToHeight(96, Qt.SmoothTransformation))
+        pixmap = thumbnail_pixmap(path, 96)
+        if pixmap is not None:
+            self.setPixmap(pixmap)
             self.setToolTip(f"{path}\nClick to open full size.")
             self.setCursor(Qt.PointingHandCursor)
         else:

@@ -4,8 +4,10 @@ Base Agent Class for Multi-Agent System
 Provides the foundation for all specialized agents in the workflow.
 """
 
+import importlib
 import json
 import os
+import threading
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -18,6 +20,34 @@ from ._geocode import coords_from_config, geocode_place
 from ._method import IMPLEMENTED_SCHEME
 from ._intent import (climate_blocker, unmet_requests, wants_climate,
                       wants_water_content)
+
+#: Held for the two once-per-agent steps of a model call: folding the agent's
+#: .agent.md instructions into its system message, and building its SDK client.
+#: Both can now be reached from several threads at once - the request parser
+#: asks its independent questions concurrently - and neither may run twice.
+#: Module-level rather than one per agent, so agents stay picklable; each step
+#: runs once per agent, so nothing waits on it in practice.
+_LLM_INIT_LOCK = threading.Lock()
+
+
+def _genai_http_options(types: Any, timeout_s: float, keepalive_s: float) -> Any:
+    """``google.genai`` HTTP options: the package's request timeout, a long keep-alive.
+
+    The SDK takes its timeout in milliseconds. ``client_args`` reaches the httpx
+    client it builds, whose idle connections otherwise expire after 5 s - less
+    than approving a step takes. The limits are httpx's own defaults but for
+    that expiry. A release that does not know ``client_args`` refuses it, and
+    keeps httpx's expiry.
+    """
+    timeout_ms = int(float(timeout_s) * 1000)
+    try:
+        import httpx
+
+        limits = httpx.Limits(max_connections=100, max_keepalive_connections=20,
+                              keepalive_expiry=max(float(keepalive_s), 5.0))
+        return types.HttpOptions(timeout=timeout_ms, client_args={"limits": limits})
+    except Exception:  # noqa: BLE001 - an older SDK, or no httpx to configure
+        return types.HttpOptions(timeout=timeout_ms)
 
 
 AGENT_RESULT_FIELDS: Tuple[str, ...] = (
@@ -335,7 +365,109 @@ class BaseAgent(ABC):
         self.results = {}
         self.llm_usage_ledger: List[Dict[str, Any]] = []
         self._agent_md_augmented: bool = False
-        
+
+    def __getstate__(self) -> Dict[str, Any]:
+        """Pickle and copy as before the agent held a client: without it.
+
+        The cached SDK client owns sockets and locks, which neither pickle nor
+        deep-copy; the copy builds its own on its first call.
+        """
+        state = self.__dict__.copy()
+        state.pop("_llm_clients", None)
+        return state
+
+    def _llm_client(self, sdk_name: str) -> Any:
+        """This agent's SDK client, built on its first call and kept after it.
+
+        Each call used to build a new client, and so open a new connection: a
+        TCP and TLS handshake before every question, 17 of them in one ERT
+        workflow, and the SDK's ten-minute request timeout. The client kept
+        here reuses its connection between calls - the chat providers' idle
+        allowance, not the SDK's five seconds - and times a request out after
+        ``PHGX_LLM_TIMEOUT_S`` (``REQUEST_TIMEOUT_S``), as the chat does.
+
+        Parameters
+        ----------
+        sdk_name : str
+            ``"openai"`` or ``"anthropic"``.
+
+        Returns
+        -------
+        openai.OpenAI or anthropic.Anthropic
+            One per agent, SDK and API key: a key changed after a call gets a
+            client of its own rather than the old key's.
+
+        Raises
+        ------
+        ImportError
+            When the SDK is not installed, exactly as the per-call import did.
+        """
+        from PyHydroGeophysX.llm.providers import REQUEST_TIMEOUT_S, keepalive_http_client
+
+        sdk = importlib.import_module(sdk_name)
+        key = (sdk_name, self.api_key)
+        with _LLM_INIT_LOCK:
+            clients = self.__dict__.setdefault("_llm_clients", {})
+            client = clients.get(key)
+            if client is None:
+                kwargs: Dict[str, Any] = {"api_key": self.api_key,
+                                          "timeout": REQUEST_TIMEOUT_S}
+                http_client = keepalive_http_client(sdk)
+                if http_client is not None:
+                    kwargs["http_client"] = http_client
+                factory = sdk.OpenAI if sdk_name == "openai" else sdk.Anthropic
+                client = clients[key] = factory(**kwargs)
+            return client
+
+    def _gemini_client(self) -> Tuple[str, Any]:
+        """This agent's Gemini client, built on its first call and kept after it.
+
+        ``google-genai`` is preferred: its ``Client`` belongs to this agent, as
+        the OpenAI and Anthropic clients above do, keeps idle connections for
+        ``KEEPALIVE_S`` and times a request out after ``REQUEST_TIMEOUT_S``. The
+        older ``google-generativeai`` has no client an agent can own -
+        ``genai.configure`` sets one key for the whole process and discards every
+        client built before it - and each call configured and built afresh. With
+        that SDK the agent keeps one ``GenerativeModel``, configured once when it
+        is built, and the model keeps the connection it opens on its first call.
+
+        Returns
+        -------
+        tuple
+            ``("genai", google.genai.Client)``, or ``("generativeai", model)``
+            with a ``google.generativeai.GenerativeModel``.
+
+        Raises
+        ------
+        ImportError
+            When neither SDK is installed.
+        """
+        from PyHydroGeophysX.llm.providers import KEEPALIVE_S, REQUEST_TIMEOUT_S
+
+        try:
+            from google import genai
+            from google.genai import types
+        except ImportError:
+            genai = types = None
+            import google.generativeai as legacy
+        with _LLM_INIT_LOCK:
+            clients = self.__dict__.setdefault("_llm_clients", {})
+            if genai is not None:
+                key = ("google.genai", self.api_key)
+                client = clients.get(key)
+                if client is None:
+                    client = clients[key] = genai.Client(
+                        api_key=self.api_key,
+                        http_options=_genai_http_options(types, REQUEST_TIMEOUT_S,
+                                                         KEEPALIVE_S))
+                return "genai", client
+            key = ("google.generativeai", self.api_key, self.model)
+            model = clients.get(key)
+            if model is None:
+                legacy.configure(api_key=self.api_key)
+                model = clients[key] = legacy.GenerativeModel(self.model)
+            return "generativeai", model
+
     @staticmethod
     def _load_agent_md_for_name(name: str) -> Optional[str]:
         """Load the body of the corresponding .agent.md file for this agent.
@@ -399,16 +531,18 @@ class BaseAgent(ABC):
             LLM response as string
         """
         # One-time lazy augmentation: append .agent.md structured instructions
-        # to self.system_message the first time query_llm is called.
-        if not self._agent_md_augmented:
-            self._agent_md_augmented = True
-            _md_body = self._load_agent_md_for_name(self.name)
-            if _md_body and getattr(self, 'system_message', None):
-                self.system_message = (
-                    self.system_message.rstrip()
-                    + "\n\n---\n\n"
-                    + _md_body
-                )
+        # to self.system_message the first time query_llm is called. Under the
+        # lock: two first calls on two threads would otherwise both append it.
+        with _LLM_INIT_LOCK:
+            if not self._agent_md_augmented:
+                self._agent_md_augmented = True
+                _md_body = self._load_agent_md_for_name(self.name)
+                if _md_body and getattr(self, 'system_message', None):
+                    self.system_message = (
+                        self.system_message.rstrip()
+                        + "\n\n---\n\n"
+                        + _md_body
+                    )
 
         if not self.api_key:
             raise ValueError(
@@ -553,10 +687,9 @@ class BaseAgent(ABC):
     def _query_openai(self, prompt: str, system_message: str, 
                       temperature: float, max_tokens: int) -> str:
         """Query OpenAI GPT API."""
-        import openai
         from PyHydroGeophysX.llm.runtime_options import openai_options, retrieved_context
-        client = openai.OpenAI(api_key=self.api_key)
-        
+        client = self._llm_client("openai")
+
         messages = []
         if system_message:
             messages.append({"role": "system", "content": system_message})
@@ -585,44 +718,62 @@ class BaseAgent(ABC):
     
     def _query_gemini(self, prompt: str, system_message: str,
                       temperature: float, max_tokens: int) -> str:
-        """Query Google Gemini API."""
-        import google.generativeai as genai
-        genai.configure(api_key=self.api_key)
-        
-        model = genai.GenerativeModel(self.model)
-        
-        # Combine system message with prompt for Gemini
-        full_prompt = prompt
-        if system_message:
-            full_prompt = f"{system_message}\n\n{prompt}"
-        
-        def _call():
-            return model.generate_content(
-                full_prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=temperature,
-                    max_output_tokens=max_tokens,
-                ),
+        """Query Google Gemini through this agent's own client (:meth:`_gemini_client`)."""
+        from PyHydroGeophysX.llm.providers import REQUEST_TIMEOUT_S
+
+        kind, client = self._gemini_client()
+        if kind == "genai":
+            from google.genai import types
+
+            config = types.GenerateContentConfig(
+                system_instruction=system_message or None,
+                temperature=temperature,
+                max_output_tokens=max_tokens,
             )
+            sent = prompt
+
+            def _call():
+                return client.models.generate_content(
+                    model=self.model, contents=prompt, config=config)
+        else:
+            import google.generativeai as legacy
+
+            # This SDK takes the system message as the start of the prompt.
+            sent = f"{system_message}\n\n{prompt}" if system_message else prompt
+
+            def _call():
+                return client.generate_content(
+                    sent,
+                    generation_config=legacy.types.GenerationConfig(
+                        temperature=temperature,
+                        max_output_tokens=max_tokens,
+                    ),
+                    request_options={"timeout": REQUEST_TIMEOUT_S},
+                )
 
         response = self._retry_llm_call(_call)
 
         completion = response.text
+        if completion is None:
+            # google-genai answers a blocked or empty reply with no text, where
+            # the older SDK raised; say why rather than pass None on as the answer.
+            candidates = getattr(response, "candidates", None) or []
+            reason = getattr(candidates[0], "finish_reason", None) if candidates else None
+            raise ValueError(f"Gemini returned no text (finish reason: {reason}).")
         usage = getattr(response, "usage_metadata", None)
         self._record_llm_usage(
-            full_prompt,
+            sent,
             completion,
             prompt_tokens=getattr(usage, "prompt_token_count", None),
             completion_tokens=getattr(usage, "candidates_token_count", None),
         )
         return completion
-    
+
     def _query_claude(self, prompt: str, system_message: str,
                       temperature: float, max_tokens: int) -> str:
         """Query Anthropic Claude API."""
-        import anthropic
-        client = anthropic.Anthropic(api_key=self.api_key)
-        
+        client = self._llm_client("anthropic")
+
         def _call():
             return client.messages.create(
                 model=self.model,
@@ -648,7 +799,7 @@ class BaseAgent(ABC):
         """Get the package name for the current LLM provider."""
         packages = {
             "openai": "openai",
-            "gemini": "google-generativeai",
+            "gemini": "google-genai",
             "claude": "anthropic"
         }
         return packages.get(self.llm_provider, "unknown")
@@ -1081,7 +1232,7 @@ class BaseAgent(ABC):
             # for water content in so many words.
             plan_climate = wants_climate(workflow_config)
             if plan_climate and coords_from_config(workflow_config) is None:
-                # Daymet is sampled at a point, so a position is required. The
+                # The reanalysis is sampled at a point, so a position is required. The
                 # request parser extracts a place NAME; resolving it to a
                 # position is a gazetteer's job, not the model's - a remembered
                 # coordinate is confidently wrong often enough to put the whole
@@ -1221,82 +1372,42 @@ class BaseAgent(ABC):
             # executed one cannot disagree.
             if plan_climate:
                 print('\nFetching climate data for correlation analysis...')
-                import json
-
                 from .climate_data_agent import ClimateDataAgent
-                
+
                 climate_agent = ClimateDataAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
-                
+
                 climate_config = workflow_config.get('climate_config', {})
                 if climate_config:
-                    # Save climate config to JSON file for conda environment
-                    climate_config_file = output_dir / 'climate_config.json'
-                    output_dir.mkdir(parents=True, exist_ok=True)
-                    
-                    # Prepare climate config for saving
-                    config_to_save = {
-                        'coords': climate_config.get('coords'),
-                        'dates': climate_config.get('dates'),
-                        'variables': climate_config.get('variables', ['prcp', 'tmin', 'tmax', 'srad', 'dayl']),
-                        'pet_method': climate_config.get('pet_method', 'penman_monteith'),
-                        'time_scale': climate_config.get('time_scale', 'daily'),
-                        'region': climate_config.get('region', 'na'),
-                        'crs': climate_config.get('crs', 4326),
-                        'output': str(output_dir / 'climate_data.csv')
-                    }
-                    
-                    with open(climate_config_file, 'w', encoding='utf-8') as f:
-                        json.dump(config_to_save, f, indent=2)
-                    
-                    print(f"  → Climate config saved: {climate_config_file.name}")
-                    
-                    # Fetch climate data using separate conda environment
-                    fetch_result = climate_agent.fetch_climate_data_with_conda(
-                        config_file=str(climate_config_file),
-                        conda_path=None,  # Auto-detect
-                        env_name="climate_fetch"
-                    )
-                    
-                    if fetch_result.get('success'):
-                        csv_path = Path(fetch_result['csv_path'])
-                        print(f"  ✓ Climate data fetched: {csv_path.name}")
-                        
-                        # Load the fetched climate data from CSV
-                        import re
-                        from datetime import datetime, timedelta
+                    import re
+                    from datetime import datetime, timedelta
 
-                        # Extract ERT dates from filenames
-                        ert_dates = []
-                        for fname in time_lapse_files:
-                            match = re.search(r'(\d{4}-\d{2}-\d{2})', str(fname))
-                            if match:
-                                ert_dates.append(match.group(1))
-                        
-                        if ert_dates:
-                            # Load climate data with extended range for visualization
-                            first_date = datetime.strptime(ert_dates[0], '%Y-%m-%d')
-                            last_date = datetime.strptime(ert_dates[-1], '%Y-%m-%d')
-                            start_date = (first_date - timedelta(days=30)).strftime('%Y-%m-%d')
-                            end_date = (last_date + timedelta(days=30)).strftime('%Y-%m-%d')
-                            
-                            climate_input = {
-                                'csv_file': str(csv_path),
-                                'ert_timestamps': ert_dates,
-                                'start_date': start_date,
-                                'end_date': end_date
-                            }
-                            
-                            climate_results = climate_agent.execute(climate_input)
-                            
-                            if climate_results.get('data_source') == 'pre_fetched_csv':
-                                workflow_config['climate_data'] = climate_results
-                                print(f"  ✓ Climate data loaded from CSV")
-                            else:
-                                print(f"  ⚠️  Could not load climate CSV: {climate_results.get('error', 'Unknown error')}")
-                        else:
-                            print("  ⚠️  Could not extract dates from time-lapse filenames")
+                    # Survey dates from the file names. The series spans them with
+                    # a month either side, for the figures.
+                    ert_dates = []
+                    for fname in time_lapse_files:
+                        match = re.search(r'(\d{4}-\d{2}-\d{2})', str(fname))
+                        if match:
+                            ert_dates.append(match.group(1))
+                    dates = climate_config.get('dates')
+                    if ert_dates:
+                        first = datetime.strptime(min(ert_dates), '%Y-%m-%d')
+                        last = datetime.strptime(max(ert_dates), '%Y-%m-%d')
+                        dates = ((first - timedelta(days=30)).strftime('%Y-%m-%d'),
+                                 (last + timedelta(days=30)).strftime('%Y-%m-%d'))
+
+                    climate_results = climate_agent.execute({
+                        'coords': climate_config.get('coords'),
+                        'dates': dates,
+                        'crs': climate_config.get('crs', 4326),
+                        'pet_method': climate_config.get('pet_method', 'penman_monteith'),
+                        'ert_timestamps': ert_dates or None,
+                        'output_dir': str(output_dir / 'climate'),
+                    })
+                    if climate_results.get('status') == 'failed':
+                        print(f"  Climate data could not be retrieved: {climate_results.get('error', 'unknown error')}")
                     else:
-                        print(f"  ⚠️  Climate data fetch failed: {fetch_result.get('message', 'Unknown error')}")
+                        workflow_config['climate_data'] = climate_results
+                        print(f"  Climate data retrieved: {climate_results['metadata']['source']}")
 
             # Run time-lapse inversion
             update_progress("Running time-lapse inversion", 0.45, "This may take several minutes...")
@@ -1641,6 +1752,9 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
 
             export_requested = workflow_config.get('export_for_inversion')
             if export_requested is None:
+                # Never defined in this function before: every legacy ERT
+                # processing run without export_for_inversion hit a NameError.
+                user_request_lower = str(workflow_config.get('user_request', '')).lower()
                 export_requested = 'export' in user_request_lower or 'bert' in user_request_lower or 'pgimli' in user_request_lower
 
             export_file = None

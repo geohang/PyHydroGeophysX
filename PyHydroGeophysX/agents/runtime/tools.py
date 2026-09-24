@@ -86,6 +86,15 @@ class Tool:
         """Requirements that are not satisfied, for a blocked-step message."""
         return [key for key in self.requires if not ctx.has(key)]
 
+    def unavailable_because(self, ctx: RunContext) -> str:
+        """Why :meth:`available` is False, in words the controller can act on."""
+        absent = self.missing(ctx)
+        if absent:
+            return f"it needs {', '.join(absent)}, which the run has not produced"
+        if not self.repeatable and ctx.attempted(self.name):
+            return "it has already been tried in this run and is not repeated"
+        return "it does not apply to this run as configured"
+
     def offer(self) -> str:
         """The tool as one line of the controller's menu."""
         needs = ", ".join(self.requires) or "nothing"
@@ -165,6 +174,11 @@ def menu(ctx: RunContext, tools: Optional[Dict[str, "Tool"]] = None) -> str:
 def invoke(ctx: RunContext, name: str, reason: str = "",
            tools: Optional[Dict[str, "Tool"]] = None) -> str:
     """Run one tool, recording the step whatever happens.
+
+    Only ``requires`` is checked here, not the ``when`` gate or the no-repeat
+    rule: a recovery retries a tool that has just failed, which the no-repeat
+    rule would refuse. Refusing a tool the menu did not offer is the
+    controller's job, before it gets this far.
 
     Parameters
     ----------

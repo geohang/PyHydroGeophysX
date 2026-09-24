@@ -94,9 +94,13 @@ def export_to_vtk(
 
     n_points = points.shape[0]
     if values.size != n_points:
-        x_src = np.linspace(0.0, 1.0, values.size)
-        x_tgt = np.linspace(0.0, 1.0, n_points)
-        values = np.interp(x_tgt, x_src, values)
+        # Resampling by index used to paper over this: it painted each value onto
+        # whichever cell shared its rank, so the file looked valid and showed a
+        # model that was never estimated. A count mismatch means the wrong mesh
+        # (e.g. the full mesh for a model on the inversion's parameter mesh).
+        raise ValueError(
+            f"The result holds {values.size} model values but the mesh has "
+            f"{n_points} cells; pass the mesh the model was estimated on.")
 
     with open(filename, "w", encoding="utf-8") as f:
         f.write("# vtk DataFile Version 3.0\n")

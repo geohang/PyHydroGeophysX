@@ -414,10 +414,14 @@ class HertzMindlinModel(BaseVelocityModel):
         K_HM = (C**2 * (1 - phi_c)**2 * shear_modulus**2 / 
                (18 * np.pi**2 * (1 - v)**2) * P)**(1/3)
         
-        # Calculate Hertz-Mindlin shear modulus
-        G_HM = ((5 - 4 * v) / (10 - 2 * v) * 
+        # Calculate Hertz-Mindlin shear modulus (Mavko et al., The Rock
+        # Physics Handbook): the prefactor is (5 - 4v) / (5 (2 - v)) and sits
+        # outside the cube root. This had (10 - 2v) and took the root of the
+        # prefactor too, which overstated G_HM by 60% (0.428 against 0.268
+        # GPa for quartz at 5 m) and disagreed with vel_porous below.
+        G_HM = ((5 - 4 * v) / (5 * (2 - v)) *
                ((3 * C**2 * (1 - phi_c)**2 * shear_modulus**2) * P / 
-                (2 * np.pi**2 * (1 - v)**2)))**(1/3)
+                (2 * np.pi**2 * (1 - v)**2))**(1/3))
         
         # Initialize velocity arrays
         Vp_high = np.zeros(len(porosity))
@@ -679,7 +683,9 @@ def vel_porous(
     v = (3 * Km - 2 * Gm) / (2 * (3 * Km + Gm))  # Poisson's ratio
     P = (rho_b - 1000) * 9.8 * depth / (1e9)
     K_HM = (C ** 2 * (1 - phi_c) ** 2 * Gm ** 2 / (18 * np.pi ** 2 * (1 - v) ** 2) * P) ** (1 / 3)
-    G_HM = (5 - 4 * v) / (10 - 2 * v) * ((3 * C ** 2 * (1 - phi_c) ** 2 * Gm ** 2) * P / (2 * np.pi ** 2 * (1 - v) ** 2)) ** (1 / 3)
+    # Mavko et al.: the shear prefactor is (5 - 4v) / (5 (2 - v)); this had
+    # (10 - 2v), the same slip HertzMindlinModel had.
+    G_HM = (5 - 4 * v) / (5 * (2 - v)) * ((3 * C ** 2 * (1 - phi_c) ** 2 * Gm ** 2) * P / (2 * np.pi ** 2 * (1 - v) ** 2)) ** (1 / 3)
 
     Vp_h = []
     Vp_l = []

@@ -18,10 +18,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from PyHydroGeophysX.data_processing.table_io import read_electrode_table
 from PyHydroGeophysX.data_processing.ert_formats import (
+    looks_like_res2dinv_general,
+    looks_like_subsurface_insights,
+    looks_like_tx0,
     parse_das1,
     parse_res2dinv_general,
     parse_sting,
+    parse_subsurface_insights,
     parse_tx0,
     reciprocal_errors,
 )
@@ -279,7 +284,11 @@ def _unified_ert_parser(fname):
     with open(fname, "r", encoding="utf-8", errors="ignore") as fh:
         raw = fh.read().splitlines()
 
-    num_re = re.compile(r'[-+]?\d*\.\d+(?:[eE][-+]?\d+)?|[-+]?\d+')
+    # The exponent belongs to the number whether or not a decimal point comes
+    # first: with the point required, "2e-05" read as the two numbers 2 and -5,
+    # which shifted every column after it. pyGIMLi always writes the point, but
+    # other writers of this format do not.
+    num_re = re.compile(r'[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?')
     seq = []  # ("header", [names]) | ("nums", [floats])
     for ln in raw:
         s = ln.strip()
@@ -364,8 +373,16 @@ def _abem_lund_parser(fname):
       type xA yA xB yB xM yM xN yN <meta...>
     We extract ABMN from x-coordinates (xA, xB, xM, xN), and use the last
     two trailing numeric columns as resistivity-like values.
+
+    The positions become 1-based indices into the electrode table here, where
+    they are known to be positions. Handed over raw, whole-number positions
+    that happened to fit 1..n were taken for indices by the loader, and a 1 m
+    line with one electrode missing came back with 20 of 21 quadrupoles wrong.
     """
-    num_str = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+'
+    # Signed, with or without a decimal point or an exponent. The pattern that
+    # required a point for the sign dropped it from integers ("-3" read as 3),
+    # moving every electrode left of the origin onto the right of it.
+    num_str = r'[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?'
     rows = []
     try:
         with open(fname, "r", encoding="utf-8", errors="ignore") as f:
@@ -414,6 +431,9 @@ def _abem_lund_parser(fname):
 
     unique_elec = np.sort(np.unique(df[["a", "b", "m", "n"]].values.astype(float).flatten()))
     elec = np.c_[unique_elec, np.zeros_like(unique_elec), np.zeros_like(unique_elec)]
+    index = {value: number for number, value in enumerate(unique_elec, start=1)}
+    for col in ["a", "b", "m", "n"]:
+        df[col] = [index[value] for value in df[col].to_numpy(dtype=float)]
 
     if "ip" not in df.columns:
         df["ip"] = np.nan
@@ -427,7 +447,7 @@ def _abem_lund_parser(fname):
 Instrument = Literal[
     "Protocol DC", "Syscal", "Protocol IP", "ResInv", "PRIME/RESIMGR",
     "Sting", "ABEM-Lund", "Lippmann", "ARES", "BERT", "E4D",
-    "DAS-1", "Electra", "Custom", "Merged"
+    "DAS-1", "Electra", "Subsurface Insights", "Custom", "Merged"
 ]
 
 class LocalRef(NamedTuple):
@@ -466,6 +486,7 @@ class Observation:
     rel_err: float | None = 0.03   # relative error fraction (e.g., 0.03)
     K: float | None = None         # geometric factor
     fid: str | None = None         # field id/record id
+    contact_r: float | None = None # transmitter contact resistance (ohm)
 
 
 @dataclass
@@ -532,25 +553,44 @@ def _normalize_elevation_axis(electrodes_df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------
 # Instrument mapping
 # ---------------------------
+#: The ``ftype`` each instrument is handed to ResIPy as: the names its ``Survey``
+#: dispatches on (``ProtocolDC``, ``ResInv``, ``BGS Prime``, ``ARES``), not the
+#: labels its GUI shows. Given "Protocol DC", "ResInv (2D/3D)", "PRIME/RESIMGR"
+#: or "ARES (beta)", ResIPy raised "Sorry this file type is not implemented yet",
+#: so those files never reached its parsers even with it installed.
 _FTYPE_MAP = {
-    "Protocol DC": "Protocol DC",
+    "Protocol DC": "ProtocolDC",
     "Syscal": "Syscal",
-    "Protocol IP": "Protocol IP",
-    "ResInv": "ResInv (2D/3D)",
-    "PRIME/RESIMGR": "PRIME/RESIMGR",
+    "Protocol IP": "ProtocolIP",
+    "ResInv": "ResInv",
+    "PRIME/RESIMGR": "BGS Prime",   # RESIMGR is the same format and parser
     "Sting": "Sting",
     "ABEM-Lund": "ABEM-Lund",
     "Lippmann": "Lippmann",
-    "ARES": "ARES (beta)",
+    "ARES": "ARES",
     "BERT": "BERT",
     "E4D": "E4D",
     "DAS-1": "DAS-1",
     "Electra": "Electra",
+    # ResIPy has no reader for it; the entry keeps the name valid for callers
+    # that validate against this table (see _EMBEDDED_ONLY).
+    "Subsurface Insights": "Subsurface Insights",
+    # Not Survey file types either: a custom layout needs a parser of its own,
+    # and a merged survey is ResIPy's createMergedSurveys, not createSurvey.
     "Custom": "Custom",
     "Merged": "Merged",
 }
 
+#: Instruments that are not ResIPy ``Survey`` file types (see above).
+_NOT_RESIPY_FTYPES = ("Subsurface Insights", "Custom", "Merged")
+
 _INSTRUMENT_ALIAS_MAP = {
+    "subsurface insights": "Subsurface Insights",
+    "subsurfaceinsights": "Subsurface Insights",
+    "subinsights": "Subsurface Insights",
+    "sub insights": "Subsurface Insights",
+    "si": "Subsurface Insights",
+    "ssi": "Subsurface Insights",
     "abem": "ABEM-Lund",
     "abem lund": "ABEM-Lund",
     "abem-lund": "ABEM-Lund",
@@ -582,13 +622,26 @@ def _normalize_instrument_name(instrument: str) -> str:
         return "DAS-1"
     if "syscal" in token:
         return "Syscal"
+    if "subsurface" in token or "subinsight" in token.replace(" ", ""):
+        return "Subsurface Insights"
     return instrument
 
 
 def _looks_like_abem_lund_file(data_file_path: Path) -> bool:
     """
     Heuristically detect ABEM Terameter/Lund-style exports.
+
+    A Res2DInv general-array file is excluded first, because it carries both
+    marks this test looks for: the "Type of measurement (0=app. resistivity,
+    1=resistance)" header line, and data rows opening with 4, which there is
+    the electrode count. Every such file used to be handed to the ABEM reader,
+    which takes the last two numbers of a row for resistance and apparent
+    resistivity - the resistivity and the chargeability, with IP - and finds no
+    row it can use at all without IP. That header names its own layout, so the
+    Res2DInv reader takes those files instead.
     """
+    if looks_like_res2dinv_general(data_file_path):
+        return False
     try:
         with open(data_file_path, "r", encoding="utf-8", errors="ignore") as f:
             lines = [f.readline().strip() for _ in range(60)]
@@ -605,7 +658,10 @@ def _looks_like_abem_lund_file(data_file_path: Path) -> bool:
     type4_rows = 0
     for ln in lines:
         parts = ln.split()
-        if parts and parts[0] == "4":
+        # Only rows the ABEM reader can use - the flag, four x/y pairs and two
+        # values after them - or the override would pick a reader that then
+        # finds nothing to read.
+        if parts and parts[0] == "4" and len(parts) >= 11:
             type4_rows += 1
 
     # ABEM exports usually contain the explicit "Type of measurement" line
@@ -709,12 +765,22 @@ def _lippmann_parser(fname):
 
     The instrument writes ``.tx0``, so that is tried first. Falling back to the
     unified reader keeps working for a survey that was already converted, which
-    is what this entry used to point at.
+    is what this entry used to point at - but only for a file that is not a
+    ``.tx0`` at all. One carrying its electrode lines or column legend was read
+    by the reader that knows it, and that error is the answer: the unified
+    reader skips every ``*`` line as a comment and reads what is left as its own
+    layout, and its message used to replace the one that said what was wrong.
     """
     try:
         return parse_tx0(fname)
-    except (ValueError, OSError):
-        return _unified_ert_parser(fname)
+    except (ValueError, OSError) as tx0_error:
+        if looks_like_tx0(fname):
+            raise
+        try:
+            return _unified_ert_parser(fname)
+        except Exception as unified_error:
+            raise ValueError(f"{tx0_error} Read as an already converted table "
+                             f"instead, it failed too: {unified_error}") from tx0_error
 
 
 #: Formats with a reader in this package. Anything absent needs ResIPy.
@@ -727,7 +793,53 @@ _EMBEDDED_PARSER_MAP = {
     "ABEM-Lund": _abem_lund_parser,
     "Lippmann": _lippmann_parser,
     "ARES": _bertParser,       # same unified layout
+    "Subsurface Insights": parse_subsurface_insights,
 }
+
+#: Formats only this package reads. They go to its own reader even when ResIPy
+#: is installed, since ResIPy would reject them - or, worse, accept the file
+#: under some other layout.
+_EMBEDDED_ONLY = ("Subsurface Insights",)
+
+#: Formats PyGIMLi's own loader reads - its unified format, Res2DInv, and ASCII
+#: column exports such as Terrameter LS ones - so that it is a second reader of
+#: the same format for them, where for any other format it is a guess.
+_PYGIMLI_READS = ("BERT", "ResInv", "ABEM-Lund", "Custom")
+
+
+def _survey_electrodes_only(electrodes_df: pd.DataFrame, df: pd.DataFrame,
+                            n_listed: int, file_name: str):
+    """Cut the electrode table down to the electrodes the survey uses.
+
+    A DAS-1 header lists every electrode of the installation - 280 on nine
+    cables for the shipped sample - while one acquisition addresses a subset of
+    them (56 on one cable), and the electrode file surveyed for it lists only
+    those, in electrode order. ResIPy numbers the survey the same way, so the
+    pair loaded there and failed here against the full table. A reader that
+    knows the subset reports it as ``df.attrs["survey_electrodes"]``; the table
+    keeps those electrodes, in index order, and the quadrupoles are renumbered
+    onto them.
+    """
+    used = [int(i) for i in (df.attrs.get("survey_electrodes") or ())]
+    if len(used) != n_listed:
+        uses = f", and its measurements use {len(used)}" if used else ""
+        raise ValueError(
+            f"{file_name} lists {n_listed} electrodes, but the data file's "
+            f"electrode table has {len(electrodes_df)}{uses}.")
+    rows = [old - 1 for old in used]
+    kept = electrodes_df.iloc[rows].reset_index(drop=True)
+    renumber = {old: new for new, old in enumerate(used, start=1)}
+    out = df.copy()
+    for role in ("a", "b", "m", "n"):
+        if role in out.columns:
+            out[role] = out[role].map(renumber)
+    remote = out.attrs.get("remote_electrodes")
+    if remote is not None and len(remote) == len(electrodes_df):
+        out.attrs["remote_electrodes"] = np.asarray(remote)[rows]
+    out.attrs["survey_electrodes"] = tuple(range(1, len(used) + 1))
+    print(f"   {file_name} lists the {len(used)} electrodes this survey uses, "
+          f"of the {len(electrodes_df)} in the data file's table")
+    return kept, out
 
 
 # ---------------------------
@@ -764,15 +876,28 @@ def _load_ert_embedded_parsers(
     if not data_file_path.exists():
         raise FileNotFoundError(f"Data file not found: {data_file_path}")
 
+    # The reader that was asked for, before a header or a guess replaces it.
+    chosen = instrument
+    guessed = False
+    # A Res2DInv general-array file names its layout in its header, and only
+    # the Res2DInv reader honours that header - what the value column holds,
+    # whether an IP column follows - so it is read as one whatever was picked.
+    if instrument != "ResInv" and looks_like_res2dinv_general(data_file_path):
+        _notify(f"[PyHydroGeophysX] Detected a Res2DInv general-array file; "
+                f"reading it as one rather than as '{instrument}'")
+        instrument = "ResInv"
     # Guardrail: if the file clearly looks like ABEM-Lund but the instrument was
     # specified differently (common in quick mode), override to the safer parser.
-    if instrument != "ABEM-Lund" and _looks_like_abem_lund_file(data_file_path):
+    elif instrument != "ABEM-Lund" and _looks_like_abem_lund_file(data_file_path):
         print(
             f"[PyHydroGeophysX] Detected ABEM-Lund style file; "
             f"overriding instrument '{instrument}' -> 'ABEM-Lund'"
         )
         instrument = "ABEM-Lund"
-    
+        # A guess from the data rows, unlike the header above, so the reader
+        # that was asked for stays the fallback should the guess be wrong.
+        guessed = True
+
     # Select appropriate parser based on instrument
     parser_func = _EMBEDDED_PARSER_MAP.get(instrument)
     parser_name = instrument  # Use instrument name for error message
@@ -794,17 +919,28 @@ def _load_ert_embedded_parsers(
         raise
     except Exception as e:
         _notify(f"[PyHydroGeophysX] Parser {parser_name} failed: {e}")
-        # Try fallback parsers if this one fails
-        if parser_func != _bertParser:
-            _notify(f"[PyHydroGeophysX] Trying BERT parser as fallback...")
-            try:
-                elec_array, df = _bertParser(str(data_file_path))
-                _notify(f"[PyHydroGeophysX] BERT parser fallback succeeded")
-                parser_name = "BERT (fallback)"
-            except Exception as e2:
-                raise ValueError(f"Failed to parse ERT data with {parser_name} (primary) and BERT (fallback): {e} // {e2}")
-        else:
-            raise ValueError(f"Failed to parse ERT data with {parser_name}: {e}")
+        # Another reader is tried only when this one was a guess. A format the
+        # caller chose, or one whose header said what it is, was read by the
+        # reader that knows it, and its refusal is the answer. The unified
+        # reader used to be tried regardless: it read a DAS-1 file missing its
+        # data marker as one reading on one electrode, took the numbers of a
+        # Subsurface Insights header for 185 electrodes, and its message
+        # replaced the one that said what was wrong.
+        fallback = _EMBEDDED_PARSER_MAP.get(chosen) if guessed else None
+        if fallback is None or fallback is parser_func:
+            raise ValueError(f"Failed to parse ERT data with {parser_name}: {e}") from e
+        _notify(f"[PyHydroGeophysX] Trying the requested {chosen} parser instead...")
+        try:
+            elec_array, df = fallback(str(data_file_path))
+        except Exception as e2:
+            # The first reader's error leads: the second one ran on no evidence
+            # from the file at all.
+            raise ValueError(
+                f"Failed to parse ERT data with {parser_name}: {e} "
+                f"(the requested {chosen} parser failed too: {e2})") from e
+        _notify(f"[PyHydroGeophysX] The requested {chosen} parser succeeded")
+        parser_name = f"{chosen} (fallback)"
+        instrument = chosen
     
     # Build electrodes dataframe and optional label map for non-numeric electrode IDs
     label_map = None
@@ -843,9 +979,15 @@ def _load_ert_embedded_parsers(
 
         # Load electrode coordinates from file
         try:
-            elec_data = np.loadtxt(str(electrode_file_path))
-            if elec_data.ndim == 1:
-                elec_data = elec_data.reshape(-1, 3)
+            # Columns by meaning, not position: a vendor table's ID column was
+            # read as a coordinate, and a header row made loadtxt fail.
+            elec_data, _, _ = read_electrode_table(electrode_file_path)
+
+            # A file listing only the electrodes the survey uses is laid onto
+            # those, where the reader says which they are.
+            if len(elec_data) != len(electrodes_df):
+                electrodes_df, df = _survey_electrodes_only(
+                    electrodes_df, df, len(elec_data), electrode_file_path.name)
 
             # Update electrode positions in dataframe
             electrodes_df['x'] = elec_data[:, 0]
@@ -854,7 +996,7 @@ def _load_ert_embedded_parsers(
             print(f"   Updated electrode positions from {electrode_file_path.name}")
         except Exception as e:
             raise RuntimeError(f"Failed to load electrode file '{electrode_file_path}': {e}") from e
-    
+
     # Build observations dataframe with standardized columns
     observations = pd.DataFrame()
     n_elec = int(len(electrodes_df))
@@ -862,6 +1004,27 @@ def _load_ert_embedded_parsers(
     elec_valid = np.isfinite(elec_x)
     elec_x_valid = elec_x[elec_valid]
     elec_idx_valid = np.arange(1, n_elec + 1, dtype=int)[elec_valid]
+
+    # One numbering for all four electrode columns. Deciding per column shifted
+    # A - the only column of fielddataline2.dat that contains a 0 - by one and
+    # left B, M and N alone, so readings came out with coincident electrodes.
+    # When the pooled values fit neither base (a 1-based file that marks remote
+    # electrodes with 0, say), the per-column cases below still apply.
+    abmn_numeric = [pd.to_numeric(df[c], errors='coerce')
+                    for c in ('a', 'b', 'm', 'n') if c in df.columns]
+    shared_offset = None
+    shared_ranks = None
+    if abmn_numeric and all(s.notna().all() for s in abmn_numeric):
+        pooled = np.concatenate([s.to_numpy(dtype=float) for s in abmn_numeric])
+        pooled_int = np.rint(pooled)
+        if np.all(np.abs(pooled - pooled_int) < 1e-8):
+            if pooled_int.min() >= 1 and pooled_int.max() <= n_elec:
+                shared_offset = 0
+            elif pooled_int.min() >= 0 and pooled_int.max() <= n_elec - 1:
+                shared_offset = 1
+        pooled_unique = np.unique(pooled)
+        if len(pooled_unique) <= n_elec:
+            shared_ranks = {v: i + 1 for i, v in enumerate(np.sort(pooled_unique))}
 
     def _coerce_indices(col_name: str, fallback_value: int) -> pd.Series:
         if col_name not in df.columns:
@@ -871,6 +1034,9 @@ def _load_ert_embedded_parsers(
         if numeric.notna().all():
             values = numeric.to_numpy(dtype=float)
             rounded = np.rint(values)
+            if shared_offset is not None:
+                return pd.Series(rounded.astype(int) + shared_offset,
+                                 index=series.index, dtype=int)
 
             # Case 1: already 1-based electrode indices
             if np.all(np.abs(values - rounded) < 1e-8):
@@ -900,7 +1066,11 @@ def _load_ert_embedded_parsers(
                     return pd.Series(mapped.astype(int), index=series.index, dtype=int)
 
             # Case 4: numeric labels that are neither direct indices nor coordinates.
-            # Map sorted unique values to sequential electrode IDs.
+            # Map sorted unique values to sequential electrode IDs - ranked over
+            # all four columns, so a label maps to the same electrode in each.
+            if shared_ranks is not None:
+                mapped = np.array([shared_ranks[v] for v in values], dtype=int)
+                return pd.Series(mapped, index=series.index, dtype=int)
             uniq_vals = np.unique(values)
             if len(uniq_vals) <= n_elec:
                 rank_map = {v: i + 1 for i, v in enumerate(np.sort(uniq_vals))}
@@ -1020,25 +1190,45 @@ def _load_ert_embedded_parsers(
     # formed under a different convention". Both scale the section; neither
     # shows up in chi2.
     k_col = next((c for c in ['k', 'K', 'geom', 'geom_factor'] if c in df.columns), None)
-    file_k = (pd.to_numeric(df[k_col], errors='coerce').to_numpy(dtype=float)
-              if k_col is not None else None)
+    # Looked up by row label, not position: the reciprocal filter above can drop
+    # rows, and a positional lookup then hands every later measurement the
+    # factor of the one before it.
+    file_k = (pd.to_numeric(df[k_col], errors='coerce') if k_col is not None else None)
+
+    # Potential and current, carried only where a reader states them in volts
+    # and amperes by naming them 'u' and 'i'. They let QC floor the weak
+    # readings, and PyGIMLi reads these tokens as SI: a reader reporting
+    # milliamperes under the same name would put the absolute voltage error
+    # three orders of magnitude out.
+    volts = pd.to_numeric(df['u'], errors='coerce') if 'u' in df.columns else None
+    amps = pd.to_numeric(df['i'], errors='coerce') if 'i' in df.columns else None
+    # Contact resistance, in ohm under every reader that reports it; a failed
+    # electrode shows up here long before it shows up in the section.
+    contact = (pd.to_numeric(df['contact_r'], errors='coerce')
+               if 'contact_r' in df.columns else None)
+
+    def _value_at(series, idx):
+        if series is None or idx not in series.index:
+            return None
+        value = float(series.loc[idx])
+        return value if np.isfinite(value) else None
 
     obs_list: List[Observation] = []
-    for pos, (idx, row) in enumerate(observations.iterrows()):
+    for idx, row in observations.iterrows():
         app_res_val = float(row['rhoa']) if np.isfinite(row['rhoa']) else None
         rel_err_val = float(row['error']) if np.isfinite(row['error']) else 0.05
-        k_val = 1.0
-        if file_k is not None and pos < file_k.size and np.isfinite(file_k[pos]) \
-                and file_k[pos] != 0.0:
-            k_val = float(file_k[pos])
+        k_val = _value_at(file_k, idx)
+        if k_val is None or k_val == 0.0:
+            k_val = 1.0
         obs_list.append(Observation(
             quad=Quadruplet(int(row['a']), int(row['b']), int(row['m']), int(row['n'])),
             app_res=app_res_val,
-            dV=None,
-            I=None,
+            dV=_value_at(volts, idx),
+            I=_value_at(amps, idx),
             rel_err=rel_err_val,
             K=k_val,
-            fid=str(idx)
+            fid=str(idx),
+            contact_r=_value_at(contact, idx),
         ))
     
     # Build metadata
@@ -1054,7 +1244,22 @@ def _load_ert_embedded_parsers(
     }
     if label_map is not None:
         metadata['electrode_label_map'] = label_map
-    
+    if volts is not None or amps is not None:
+        # Said outright, because other routes fill the same fields in whatever
+        # unit their reader used, and only this one is known to be SI.
+        metadata['potential_current_units'] = 'V, A'
+    # What the reader learnt about the file beyond the table - the acquisition
+    # sequence, how the electrode positions were obtained - so a caller can say
+    # it. Plain values only; this metadata is written out as JSON.
+    reader_notes = {
+        key: value for key, value in (getattr(df, 'attrs', None) or {}).items()
+        if isinstance(value, (str, int, float, bool, dict, type(None)))
+    }
+    if electrode_file is not None and 'geometry_note' in reader_notes:
+        reader_notes['geometry_note'] = f"surveyed positions from {Path(electrode_file).name}"
+    if reader_notes:
+        metadata['reader_notes'] = reader_notes
+
     if local_ref is not None:
         metadata['local_origin_x'] = local_ref.origin_x
         metadata['local_origin_y'] = local_ref.origin_y
@@ -1153,9 +1358,9 @@ def _load_ert_pygimli(
 
         # Load electrode coordinates from file
         try:
-            elec_data = np.loadtxt(str(electrode_file_path))
-            if elec_data.ndim == 1:
-                elec_data = elec_data.reshape(-1, 3)
+            # Columns by meaning, not position: a vendor table's ID column was
+            # read as a coordinate, and a header row made loadtxt fail.
+            elec_data, _, _ = read_electrode_table(electrode_file_path)
 
             # Update electrode positions in dataframe
             electrodes_df['x'] = elec_data[:, 0]
@@ -1203,28 +1408,35 @@ def _load_ert_pygimli(
             print(f"   ABMN indices ran [{min_idx}..{max_idx}] for {n_elec} "
                   f"electrodes; applied +{shift} to make them 1-based.")
     
-    # Get apparent resistivity or resistance
+    # Get apparent resistivity or resistance. haveData, not "in dataMap": a
+    # pyGIMLi ERT container always lists rhoa, err and k, zero-filled when the
+    # file has none, so a resistance-only file used to load with rhoa = 0.
     app_res_source = "unknown"
-    if 'rhoa' in data.dataMap():
+    if data.haveData('rhoa'):
         rhoa = np.array(data('rhoa'))
         app_res_source = "rhoa"
-    elif 'r' in data.dataMap():
-        # Convert resistance to apparent resistivity using geometric factor
-        r = np.array(data('r'))
+    elif data.haveData('r'):
+        # Resistance. With app_res_source "resistance" the StandardERT holds the
+        # resistance itself and ert_io.standard_to_pg applies k, as the ResIPy and
+        # embedded routes do - multiplying here would apply it twice.
+        rhoa = np.array(data('r'))
         app_res_source = "resistance"
-        if 'k' in data.dataMap():
-            k = np.array(data('k'))
-            rhoa = r * k
-        else:
-            rhoa = r  # Use resistance as proxy
     else:
         rhoa = np.ones(n_data) * 100  # Default value
-    
-    # Get error if available
-    if 'err' in data.dataMap():
-        error = np.array(data('err'))
-    elif 'error' in data.dataMap():
-        error = np.array(data('error'))
+
+    # Get error if available, as a fraction. The file may hold fractions or
+    # percent (fielddataline2.dat holds percent: median 0.61, meaning 0.61 %);
+    # the embedded parsers normalise it with the same helper, and taking it raw
+    # here gave that file a median error of 61 %.
+    raw_error = None
+    for token in ('err', 'error'):
+        if token in data.dataMap() and data.haveData(token):
+            raw_error = np.array(data(token))
+            break
+    if raw_error is not None:
+        error = _source_error_to_relative(raw_error, rhoa, instrument=instrument,
+                                          min_error=0.01)
+        error = np.where(np.isfinite(error), error, 0.05)
     else:
         error = np.ones(n_data) * 0.05  # Default 5% error
     
@@ -1334,6 +1546,24 @@ def load_ert_resipy(
     if instrument != requested_instrument:
         _notify(f"[PyHydroGeophysX] Normalized instrument '{requested_instrument}' -> '{instrument}'")
 
+    # A Subsurface Insights export says what it is in its first rows, and no
+    # other reader can make sense of it, so it is read as one whatever was
+    # picked - the same guard the ABEM-Lund exports get below.
+    if instrument not in _EMBEDDED_ONLY and looks_like_subsurface_insights(data_file):
+        _notify(f"[PyHydroGeophysX] Detected a Subsurface Insights export; "
+                f"reading it as one rather than as '{instrument}'")
+        instrument = "Subsurface Insights"
+    if instrument in _EMBEDDED_ONLY:
+        return _load_ert_embedded_parsers(
+            data_file=data_file,
+            electrode_file=electrode_file,
+            project_dir=project_dir,
+            instrument=instrument,
+            crs=crs,
+            epsg=epsg,
+            local_ref=local_ref
+        )
+
     # Try resipy first, then local parsers, then pygimli
     if not _HAS_RESIPY:
         # Fallback 1: this package's own readers
@@ -1375,9 +1605,19 @@ def load_ert_resipy(
     if not data_file_path.exists():
         raise FileNotFoundError(f"Data file not found: {data_file_path}")
 
+    # The pick before the guards below: the fallback readers get it back and
+    # repeat the guards themselves, so a guess that fails can still return to it.
+    chosen = instrument
+    # A Res2DInv general-array header names its layout; see the same guard in
+    # _load_ert_embedded_parsers.
+    if instrument != "ResInv" and looks_like_res2dinv_general(data_file_path):
+        _notify(f"[PyHydroGeophysX] Detected a Res2DInv general-array file; "
+                f"reading it as one rather than as '{instrument}'")
+        instrument = "ResInv"
+        ftype = _to_ftype(instrument)
     # Guardrail: if file content clearly indicates ABEM/Lund export, switch
     # parser target even when user/LLM selected a different instrument.
-    if instrument != "ABEM-Lund" and _looks_like_abem_lund_file(data_file_path):
+    elif instrument != "ABEM-Lund" and _looks_like_abem_lund_file(data_file_path):
         print(
             f"[PyHydroGeophysX] Detected ABEM-Lund style file; "
             f"overriding instrument '{instrument}' -> 'ABEM-Lund'"
@@ -1495,28 +1735,37 @@ def load_ert_resipy(
                 )
             raise
 
-        # Default fallback order for non-BERT instruments:
-        # 1) this package's own readers -> 2) PyGIMLi
+        # Default fallback order for non-BERT instruments: 1) this package's own
+        # reader of the same format -> 2) PyGIMLi, but only for a format its
+        # loader reads (_PYGIMLI_READS). For any other it is a guess at a file
+        # that already said what it is: it loaded nonsense, or failed with an
+        # unrelated "'DataMap' object has no attribute 'size'" in place of the
+        # readers' own errors, which are reported instead.
+        pygimli_may_read = _HAS_PYGIMLI and instrument in _PYGIMLI_READS
         if _HAS_EMBEDDED_PARSERS:
             try:
                 return _load_ert_embedded_parsers(
                     data_file=data_file,
                     electrode_file=electrode_file,
                     project_dir=project_dir,
-                    instrument=instrument,
+                    instrument=chosen,
                     crs=crs,
                     epsg=epsg,
                     local_ref=local_ref
                 )
             except Exception as embedded_err:
-                if _HAS_PYGIMLI:
-                    warnings.warn(
-                        f"Embedded parser fallback failed: {embedded_err}. Trying PyGIMLi fallback.",
-                        UserWarning
-                    )
-                else:
-                    raise
-        if _HAS_PYGIMLI:
+                if not pygimli_may_read:
+                    # A missing reader here is no news once ResIPy has tried.
+                    own = ("" if isinstance(embedded_err, NotImplementedError)
+                           else f"; this package's own reader failed too: {embedded_err}")
+                    raise ValueError(
+                        f"ResIPy could not read '{data_file_path.name}' as "
+                        f"{instrument}: {e}{own}") from embedded_err
+                warnings.warn(
+                    f"Embedded parser fallback failed: {embedded_err}. Trying PyGIMLi fallback.",
+                    UserWarning
+                )
+        if pygimli_may_read:
             return _load_ert_pygimli(
                 data_file=data_file,
                 electrode_file=electrode_file,
@@ -1556,9 +1805,9 @@ def load_ert_resipy(
         
         # Load electrode coordinates from file
         try:
-            elec_data = np.loadtxt(str(electrode_file_path))
-            if elec_data.ndim == 1:
-                elec_data = elec_data.reshape(-1, 3)
+            # Columns by meaning, not position: a vendor table's ID column was
+            # read as a coordinate, and a header row made loadtxt fail.
+            elec_data, _, _ = read_electrode_table(electrode_file_path)
             
             # Set electrode positions in survey
             prj.setElec(elec_data)
@@ -1782,7 +2031,8 @@ def qc_and_visualize(ert: StandardERT, outdir: str = "examples/results/ert") -> 
     Create basic diagnostics and export normalized artifacts:
     - electrodes plot
     - histogram of log10 apparent resistivity
-    - observations parquet, electrodes CSV, standardized JSON
+    - observations parquet (CSV without a parquet engine), electrodes CSV,
+      standardized JSON
     """
     # Handle paths starting with / on Windows by converting to relative path
     outdir_path = Path(outdir)
@@ -1822,17 +2072,26 @@ def qc_and_visualize(ert: StandardERT, outdir: str = "examples/results/ert") -> 
         "app_res": o.app_res, "dV": o.dV, "I": o.I,
         "rel_err": o.rel_err, "fid": o.fid
     } for o in ert.observations]
-    pd.DataFrame(obs_rows).to_parquet(outdir_path / "observations.parquet", index=False)
+    artifacts = {
+        "electrodes_png": str(outdir_path/"electrodes.png"),
+        "rhoa_hist_png": str(outdir_path/"rhoa_hist.png"),
+    }
+    observations = pd.DataFrame(obs_rows)
+    try:
+        observations.to_parquet(outdir_path / "observations.parquet", index=False)
+        artifacts["observations_parquet"] = str(outdir_path/"observations.parquet")
+    except ImportError:
+        # Parquet needs pyarrow or fastparquet, and neither is a dependency of
+        # this package. Without one the table is written as CSV, rather than the
+        # whole load failing over the format of a diagnostic file.
+        observations.to_csv(outdir_path / "observations.csv", index=False)
+        artifacts["observations_csv"] = str(outdir_path/"observations.csv")
     pd.DataFrame([asdict(e) for e in ert.electrodes]).to_csv(outdir_path / "electrodes.csv", index=False)
     ert.to_json(outdir_path / "ert_standard.json")
 
-    return {
-        "electrodes_png": str(outdir_path/"electrodes.png"),
-        "rhoa_hist_png": str(outdir_path/"rhoa_hist.png"),
-        "observations_parquet": str(outdir_path/"observations.parquet"),
-        "electrodes_csv": str(outdir_path/"electrodes.csv"),
-        "standard_json": str(outdir_path/"ert_standard.json"),
-    }
+    artifacts["electrodes_csv"] = str(outdir_path/"electrodes.csv")
+    artifacts["standard_json"] = str(outdir_path/"ert_standard.json")
+    return artifacts
 
 
 def calculate_reciprocal_errors(ert: StandardERT) -> pd.DataFrame:

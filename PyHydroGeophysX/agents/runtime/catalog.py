@@ -18,7 +18,7 @@ an agent concluded ever reached another one.
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -194,7 +194,12 @@ def export_model_bundle(ctx: RunContext, results: Dict[str, Any]) -> str:
         # from a structural interface - which is where they actually come from.
         from ..petrophysics_agent import resolve_layers
 
-        markers = np.asarray(mesh.cellMarkers(), dtype=int)
+        # A structural constraint's layers, when the model has them; otherwise
+        # whatever the mesh carries, which resolve_layers then judges.
+        layers = results.get("cell_markers")
+        markers = np.asarray(
+            layers if layers is not None and np.asarray(layers).size == models[0].size
+            else mesh.cellMarkers(), dtype=int)
         resolved, unique, why = resolve_layers(markers, models[0].size)
         if unique.size > 1:
             np.save(folder / "index_marker.npy", resolved)
@@ -213,6 +218,19 @@ def export_model_bundle(ctx: RunContext, results: Dict[str, Any]) -> str:
     return str(folder)
 
 
+def _reexport(ctx: RunContext, results: Dict[str, Any], what: str) -> Dict[str, Any]:
+    """Rewrite the model bundle for a model that replaced the run's model.
+
+    The studio opens ``ert_model/``, which the inversion step wrote; left alone
+    it keeps showing the model the run has since replaced.
+    """
+    bundle = export_model_bundle(ctx, results)
+    if not bundle and ctx.get("model_directory"):
+        ctx.note(f"{ctx.get('model_directory')} still holds the model the run "
+                 f"replaced: {what} could not be written over it.")
+    return {"model_directory": bundle or None}
+
+
 # ---------------------------------------------------------------------------
 # 1. loading
 # ---------------------------------------------------------------------------
@@ -226,32 +244,66 @@ def _load_ert(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     project_dir = config.get("project_dir", ".")
     electrode = resolve_path(config.get("electrode_file"), project_dir) or None
     loader = ERTLoaderAgent(**agent_kwargs(ctx))
+    declared = config.get("instrument")
 
-    loaded, failed = [], []
+    loaded, files, failed, read_as = [], [], [], []
     for path in paths:
         resolved = resolve_path(path, project_dir)
+        # A default instrument is a guess, and the loader refuses a file whose
+        # header names another one - so a request that named no instrument had
+        # every DAS-1 file refused as "Syscal". When nobody chose, the header
+        # decides; the default is for a file that says nothing about itself.
+        detected = None if declared else loader._detect_instrument_from_header(resolved)
+        instrument = declared or detected or DEFAULT_INSTRUMENT
         result = loader.execute({
             "data_file": resolved,
-            "instrument": config.get("instrument", DEFAULT_INSTRUMENT),
+            "instrument": instrument,
             "project_dir": project_dir,
             "electrode_file": electrode,
             "crs": config.get("crs", "local"),
         })
         if result.get("status") != "success":
-            failed.append(f"{Path(resolved).name}: {result.get('error')}")
+            failed.append(f"{Path(resolved).name}: {_loader_failure(result)}")
             continue
         loaded.append(result["ert_data"])
+        files.append(str(path))
+        read_as.append((instrument, detected))
 
     if not loaded:
         raise ValueError("No ERT survey could be loaded. " + "; ".join(failed))
     for message in failed:
         ctx.note(f"An ERT file could not be loaded and was left out: {message}")
+    readers = {instrument for instrument, _ in read_as}
+    if not declared and len(readers) == 1:
+        # Recorded, so the report and every later step name the reader that
+        # was actually used rather than a default nobody chose.
+        config["instrument"] = readers.pop()
+        if all(found for _, found in read_as):
+            ctx.note(f"No instrument was named, so the files were read as "
+                     f"{config['instrument']}, as their headers say.")
 
     from .._intent import wants_water_content as _wwc  # noqa: F401 - documented below
     summary = f"Loaded {len(loaded)} ERT survey(s) from {len(paths)} configured file(s)."
     if failed:
         summary += f" {len(failed)} could not be read."
-    return summary, {"ert_data": loaded, "n_surveys": len(loaded)}
+    # The files that loaded, in order. The acquisition times are read from the
+    # file names, so a list that still holds a file which failed to load no
+    # longer lines up with the surveys, and every survey then loses its date.
+    return summary, {"ert_data": loaded, "n_surveys": len(loaded), "ert_files": files}
+
+
+def _loader_failure(result: Mapping[str, Any]) -> str:
+    """Why a survey was not loaded, in the loader's own words.
+
+    A refusal - the declared instrument contradicting the file header - comes
+    back as ``needs_review`` with a summary and a fix hint but no ``error``, and
+    reporting only the error printed "None", which neither the user nor a
+    recovery could act on.
+    """
+    reason = (result.get("error") or result.get("summary")
+              or f"the loader returned status {result.get('status')!r}")
+    hint = result.get("error_fix_hint")
+    return f"{reason} {hint}" if hint else str(reason)
 
 
 register(Tool(
@@ -300,18 +352,36 @@ def _fetch_climate(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         ctx.note(f"Located '{place}' as {located['matched_name']} at {coords} "
                  f"via {located['source']}; verify this is the right site.")
 
+    # ClimateDataAgent takes the period as ``dates`` = (start, end), which is the
+    # key the request parser fills (inferring it from the survey times when the
+    # request names none). Passing start_date/end_date instead failed every
+    # retrieval with "dates parameter is required".
+    climate_config = config.get("climate_config") or {}
+    dates = climate_config.get("dates")
+    if not dates and climate_config.get("start_date") and climate_config.get("end_date"):
+        dates = (climate_config["start_date"], climate_config["end_date"])
+    if not dates:
+        raise ValueError("No period for the climate series: give "
+                         "climate_config['dates'] as (start, end).")
     agent = ClimateDataAgent(**agent_kwargs(ctx))
+    # The agent reads its options (pet_method, antecedent_days, ert_timestamps,
+    # crs) at the top level; nested under "climate_config" they never arrived.
     result = agent.execute({
+        **climate_config,
         "coords": list(coords),
-        "climate_config": config.get("climate_config", {}),
-        "start_date": (config.get("climate_config") or {}).get("start_date"),
-        "end_date": (config.get("climate_config") or {}).get("end_date"),
+        "dates": dates,
         "output_dir": str(Path(ctx.output_dir) / "climate"),
     })
     if result.get("status") not in (None, "success"):
         raise ValueError(str(result.get("error") or "Climate retrieval failed."))
-    return (f"Retrieved meteorological data for {coords}.",
-            {"climate_data": result.get("climate_data") or result})
+    for note in result.get("notes") or []:
+        ctx.note(note)
+    # The whole result, not its DataFrame: the reports read metadata, derived
+    # features and the survey alignment from it. (``frame or result`` also
+    # raised, a DataFrame having no truth value.)
+    source = (result.get("metadata") or {}).get("source", "the climate service")
+    return (f"Retrieved daily meteorological data for {coords} from {source}.",
+            {"climate_data": result})
 
 
 register(Tool(
@@ -349,7 +419,7 @@ def _invert_time_lapse(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         "time_lapse_data": ctx.get("ert_data"),
         # The acquisition time lives in the file name, and the loaded containers
         # do not carry it; without these the sequence degrades to a 1..n index.
-        "source_files": survey_files(config),
+        "source_files": ctx.get("ert_files") or survey_files(config),
         "inversion_mode": "time-lapse",
         "time_lapse_method": config.get("time_lapse_method", IMPLEMENTED_SCHEME),
         "temporal_regularization": config.get("temporal_regularization", 10.0),
@@ -428,13 +498,21 @@ def _evaluate(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     config = ctx.config
     surveys = ctx.get("ert_data") or []
     results = ctx.get("inversion_results")
-    agent = InversionEvaluationAgent(**agent_kwargs(ctx))
-    evaluation = agent.execute({
+    first = results if isinstance(results, dict) else {}
+    time_lapse = len(surveys) > 1
+    # A retry re-runs the inversion from this input with lambda (and the
+    # iteration cap) changed, so everything else has to be what the first
+    # attempt used. The time-lapse settings were not passed at all: a retry ran
+    # at the agent's default alpha of 10 on a 1..n index instead of the survey
+    # dates, and the temperature correction then ran on those indices.
+    used = (first.get("inversion_params")
+            or (first.get("processing") or {}).get("inversion_params"))
+    payload = {
         "inversion_results": results,
         "ert_data": surveys[0] if surveys else None,
-        "time_lapse_data": surveys if len(surveys) > 1 else None,
-        "inversion_mode": "time-lapse" if len(surveys) > 1 else "standard",
-        "inversion_params": config.get("inversion_params", {}),
+        "time_lapse_data": surveys if time_lapse else None,
+        "inversion_mode": "time-lapse" if time_lapse else "standard",
+        "inversion_params": dict(used) if used else config.get("inversion_params", {}),
         "auto_adjust": config.get("auto_adjust", True),
         "output_dir": str(Path(ctx.output_dir) / "inversion"),
         "max_attempts": config.get("max_attempts", 3),
@@ -442,15 +520,35 @@ def _evaluate(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         "progress_callback": ctx.settings.get("progress_callback"),
         "project_dir": config.get("project_dir", "."),
         "instrument": config.get("instrument", DEFAULT_INSTRUMENT),
-    })
+    }
+    if time_lapse:
+        payload.update({
+            "source_files": ctx.get("ert_files") or survey_files(config),
+            "temporal_regularization": first.get(
+                "temporal_regularization", config.get("temporal_regularization", 10.0)),
+            "time_lapse_method": (first.get("time_lapse_method_requested")
+                                  or config.get("time_lapse_method", IMPLEMENTED_SCHEME)),
+            "baseline_index": 0,
+        })
+    if first.get("structure_constrained"):
+        # A retry re-inverts without the seismic interface, so a better score
+        # would swap the constrained model for an unconstrained one. Score it,
+        # and leave the model alone.
+        payload["auto_adjust"] = False
+    agent = InversionEvaluationAgent(**agent_kwargs(ctx))
+    evaluation = agent.execute(payload)
 
-    # A retry that improved the model replaces it, which is the one place the
-    # old pipeline could already react to a finding.
-    improved = (evaluation.get("status") == "success"
-                and evaluation.get("attempts", 1) > 1
-                and evaluation.get("final_results"))
-    if improved:
-        results = evaluation["final_results"]
+    # The best-scoring attempt replaces the model whenever a retry beat the
+    # first, whether or not it then cleared the threshold: keeping the first
+    # while the report printed the retry's score and lambda described a model
+    # the run had thrown away.
+    best = evaluation.get("final_results")
+    adopted = (isinstance(best, dict) and best is not results
+               and best.get("status") == "success")
+    outputs: Dict[str, Any] = {}
+    if adopted:
+        results = best
+        outputs.update(_reexport(ctx, results, "the adopted retry"))
     # Carried on the results as well as returned: the audit's quality block and
     # the desktop runner's "needs review" warning both read it from there.
     stripped = {k: v for k, v in evaluation.items() if k != "final_results"}
@@ -462,9 +560,18 @@ def _evaluate(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     summary = (f"Quality {float(score):.1f}/100 after "
                f"{evaluation.get('attempts', 1)} attempt(s): {verdict}"
                if score is not None else f"Evaluation returned: {verdict}")
+    if adopted:
+        history = evaluation.get("evaluation_history") or []
+        lam = (evaluation.get("adjusted_params") or {}).get("lambda")
+        summary += (" The run now uses the best-scoring retry's model"
+                    + (f" (lambda {float(lam):g})" if lam is not None else "")
+                    + (f", up from {float(history[0]['quality_score']):.1f} on the first "
+                       f"attempt." if history and history[0].get("quality_score") is not None
+                       else "."))
     if evaluation.get("status") != "success":
         ctx.note(str(verdict))
-    return summary, {"inversion_results": results, "evaluation_results": stripped}
+    return summary, {"inversion_results": results, "evaluation_results": stripped,
+                     **outputs}
 
 
 register(Tool(
@@ -488,6 +595,26 @@ def _water_content_wanted(ctx: RunContext) -> bool:
     return wants_water_content(ctx.config)
 
 
+def _structure_pending(ctx: RunContext) -> bool:
+    """Whether a seismic structural constraint is still to come for the model.
+
+    With a seismic line beside one ERT survey, ``derive_structure`` re-inverts
+    the survey with the velocity interface built into the mesh, and that model
+    replaces the unconstrained one. Registration order put the conversion
+    first, so water content was computed from the model about to be replaced
+    and the constrained one was never used. A conversion or a fusion therefore
+    waits until the constraint has been tried, or can no longer be.
+    """
+    if len(ctx.get("ert_data") or []) != 1:
+        return False
+    if not any(ctx.config.get(key) for key in ("seismic_file", "raw_seismic_file")):
+        return False
+    if ctx.attempted("derive_structure"):
+        return False
+    # A seismic step that failed or was skipped leaves nothing to constrain with.
+    return not (ctx.attempted("invert_seismic") and not ctx.has("seismic_results"))
+
+
 def _convert_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     from ..petrophysics_agent import PetrophysicsAgent
 
@@ -501,8 +628,15 @@ def _convert_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     if not models:
         raise ValueError("The inversion returned no resistivity model to convert.")
 
-    markers = (np.array(mesh.cellMarkers()) if mesh is not None
-               else np.zeros(len(models[0])))
+    layers = results.get("cell_markers")
+    if layers is not None and np.asarray(layers).size == np.asarray(models[0]).size:
+        # The layers a structural constraint drew (above and below the seismic
+        # interface), one per model cell. The parameter mesh's own markers only
+        # number its cells, and would make the conversion a single unit.
+        markers = np.asarray(layers)
+    else:
+        markers = (np.array(mesh.cellMarkers()) if mesh is not None
+                   else np.zeros(len(models[0])))
     agent = PetrophysicsAgent(**agent_kwargs(ctx))
     per_step: List[Dict[str, Any]] = []
     for index, model in enumerate(models):
@@ -531,7 +665,8 @@ def _convert_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     results["petrophysical_params"] = config.get("petrophysical_params", {})
 
     layering = per_step[0].get("layering") or ""
-    summary = (f"Converted {len(per_step)} of {len(models)} model(s) to water "
+    source = " the structure-constrained" if results.get("structure_constrained") else ""
+    summary = (f"Converted {len(per_step)} of {len(models)}{source} model(s) to water "
                f"content by Monte Carlo petrophysics.")
     if layering:
         summary += f" {layering}"
@@ -556,7 +691,7 @@ register(Tool(
     agent="PetrophysicsAgent",
     label="Convert to water content",
     module="geo_hydrology",
-    when=_water_content_wanted,
+    when=lambda ctx: _water_content_wanted(ctx) and not _structure_pending(ctx),
 ))
 
 
@@ -852,8 +987,76 @@ def _derive_structure(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     })
     if results.get("status") != "success":
         raise ValueError(str(results.get("error") or "Structure extraction failed."))
-    return "Derived layer interfaces from the velocity model.", {
-        "structure_results": results}
+    summary = (f"Re-inverted the first ERT survey with the {_speed(threshold)}"
+               f"velocity interface built into the mesh.")
+    outputs: Dict[str, Any] = {"structure_results": results}
+    if len(surveys) == 1:
+        # The constrained model is the run's model from here on. Kept only as
+        # structure_results, nothing read it: water content, the report and
+        # the exported bundle all described the unconstrained model.
+        adopted = _constrained_model(results, threshold)
+        outputs["unconstrained_inversion_results"] = ctx.get("inversion_results")
+        outputs["inversion_results"] = adopted
+        outputs.update(_reexport(ctx, adopted, "the structure-constrained model"))
+        if ctx.has("evaluation_results"):
+            # The score on record is the unconstrained model's; the report would
+            # print it under the constrained one.
+            outputs["evaluation_results"] = _score_constrained(ctx, adopted)
+        summary += (" That model replaces the unconstrained one for the water "
+                    "content, the report and the exported model.")
+    else:
+        ctx.note("The structure-constrained model covers the first survey only: the "
+                 "time-lapse models, and anything converted from them, are not "
+                 "constrained by the seismic interface.")
+    return summary, outputs
+
+
+def _speed(threshold: Any) -> str:
+    """``"1200 m/s "`` for a sentence, or nothing when no threshold is known.
+
+    A parsed configuration carries ``null`` for a setting the request did not
+    mention, and a summary must not fail after the inversion it describes ran.
+    """
+    try:
+        return f"{float(threshold):g} m/s "
+    except (TypeError, ValueError):
+        return ""
+
+
+def _constrained_model(structure: Dict[str, Any], threshold: Any) -> Dict[str, Any]:
+    """A structure-constrained inversion in the shape the rest of the run reads."""
+    return {
+        "status": "success",
+        "mesh": structure.get("mesh"),
+        "resistivity_model": structure.get("resistivity_model"),
+        "coverage": structure.get("coverage"),
+        "chi2": structure.get("chi2"),
+        # Layer markers on the parameter cells: above and below the interface.
+        "cell_markers": structure.get("cell_markers"),
+        "inversion_params": dict(structure.get("inversion_params") or {}),
+        "interpretation": structure.get("interpretation"),
+        "structure_constrained": True,
+        "inversion_method": (f"Structure-constrained inversion: the {_speed(threshold)}"
+                             f"seismic velocity interface is built into the mesh as a "
+                             f"boundary, so the smoothing does not act across it"),
+    }
+
+
+def _score_constrained(ctx: RunContext, adopted: Dict[str, Any]) -> Dict[str, Any]:
+    """The quality evaluation of ``adopted`` alone, without any retry."""
+    from ..inversion_evaluation_agent import InversionEvaluationAgent
+
+    evaluation = InversionEvaluationAgent(**agent_kwargs(ctx)).execute({
+        "inversion_results": adopted,
+        "inversion_params": adopted.get("inversion_params") or {},
+        # A retry re-inverts without the interface; see _evaluate.
+        "auto_adjust": False,
+        "max_attempts": 1,
+        "quality_threshold": ctx.config.get("quality_threshold", 70),
+    })
+    stripped = {k: v for k, v in evaluation.items() if k != "final_results"}
+    adopted["evaluation_results"] = stripped
+    return stripped
 
 
 register(Tool(
@@ -861,7 +1064,10 @@ register(Tool(
     description="Turn a seismic velocity model into layer interfaces that can "
                 "constrain an ERT inversion or a petrophysical conversion.",
     handler=_derive_structure,
-    requires=("seismic_results", "ert_data"),
+    # After the unconstrained inversion, not only after the seismic one: the
+    # constrained model replaces it, and an inversion run afterwards would
+    # replace the constrained model in turn.
+    requires=("seismic_results", "ert_data", "inversion_results"),
     produces=("structure_results",),
     agent="StructureConstraintAgent",
     label="Extract structural constraints",
@@ -949,8 +1155,81 @@ def _fuse(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     })
     if results.get("status") != "success":
         raise ValueError(str(results.get("error") or "Data fusion failed."))
-    return (f"Combined {', '.join(methods)} using the {pattern} pattern.",
-            {"fusion_results": results})
+    # DataFusionAgent.execute only drafts an execution plan. The summary used to
+    # announce "Combined seismic, ert, petrophysics" on the strength of that
+    # plan, so it now reports what the other steps of this run combined.
+    combined, apart = fusion_account(ctx)
+    results = {**results, "combined": combined, "not_combined": apart,
+               "planned_only": not combined}
+    if combined:
+        summary = f"Fused {', '.join(methods)} ({pattern}): {'; '.join(combined)}."
+        if apart:
+            summary += f" Not combined: {'; '.join(apart)}."
+    else:
+        summary = (f"Only planned the {pattern} pattern for {', '.join(methods)}; "
+                   f"nothing was combined"
+                   + (f": {'; '.join(apart)}." if apart else "."))
+        ctx.note(f"Data fusion was planned ({pattern}) but no results were "
+                 f"combined; each method is reported on its own.")
+    return summary, {"fusion_results": results}
+
+
+def fusion_account(ctx: RunContext) -> Tuple[List[str], List[str]]:
+    """What this run actually combined across methods, and what it did not.
+
+    Parameters
+    ----------
+    ctx : RunContext
+        The run, read for the artifacts the other steps left.
+
+    Returns
+    -------
+    tuple
+        ``(combined, not_combined)``, one clause per item, for the fusion
+        step's summary.
+
+    Raises
+    ------
+    None
+
+    Examples
+    --------
+    >>> ctx = RunContext('x')
+    >>> ctx.put('seismic_results', {'status': 'success'})
+    >>> ctx.put('inversion_results', {'status': 'success'})
+    >>> fusion_account(ctx)
+    ([], ['the seismic model did not constrain the ERT inversion (no structural constraint was derived)'])
+    """
+    combined: List[str] = []
+    apart: List[str] = []
+    inversion = ctx.get("inversion_results") or {}
+    structure = ctx.get("structure_results") or {}
+    constrained = bool(inversion.get("structure_constrained"))
+    if constrained:
+        threshold = structure.get("velocity_threshold",
+                                  ctx.config.get("velocity_threshold", 1200.0))
+        combined.append(f"the {_speed(threshold)}seismic velocity interface "
+                        f"constrained the ERT inversion")
+    elif structure:
+        apart.append("a structure-constrained model was computed for the first "
+                     "survey only; the time-lapse models were not constrained"
+                     if len(ctx.get("ert_data") or []) > 1 else
+                     "a structure-constrained model was computed but is not the "
+                     "model this run reports")
+    elif ctx.has("seismic_results") and ctx.has("inversion_results"):
+        apart.append("the seismic model did not constrain the ERT inversion "
+                     "(no structural constraint was derived)")
+    steps = ctx.get("water_content") or []
+    if steps:
+        source = ("the structure-constrained model" if constrained
+                  else "the resistivity model(s)")
+        layering = str((steps[0] or {}).get("layering") or "").strip()
+        combined.append(f"water content was converted from {source}"
+                        + (f" ({layering.rstrip('.')})" if layering else ""))
+    if ctx.has("tdem_results"):
+        apart.append("the TDEM sounding was inverted on its own and not combined "
+                     "with the other methods")
+    return combined, apart
 
 
 register(Tool(
@@ -964,14 +1243,70 @@ register(Tool(
     label="Fuse methods",
     module="joint_inversion",
     # Offered only when a pattern is actually satisfiable, so the controller is
-    # never shown a step that can only fail.
-    when=lambda ctx: fusion_pattern(available_methods(ctx)) is not None,
+    # never shown a step that can only fail - and not while a structural
+    # constraint is still to come, since it reports what was combined.
+    when=lambda ctx: (fusion_pattern(available_methods(ctx)) is not None
+                      and not _structure_pending(ctx)),
 ))
 
 
 # ---------------------------------------------------------------------------
 # 7. the report, last
 # ---------------------------------------------------------------------------
+def _survey_report_input(ctx: RunContext, results: Dict[str, Any]) -> Dict[str, Any]:
+    """What ``ReportAgent.execute`` reads for a single survey.
+
+    It takes the configuration under ``config`` and the step outputs nested by
+    step - ``inversion_results``, ``water_content``, ``ert_data`` - the shape the
+    pre-controller pipeline assembled. Handing it the flat inversion dict and
+    ``workflow_config`` instead gave a report with no request, no inversion
+    statistics, no water content and no figures, while the step still said it
+    had written them.
+    """
+    config = ctx.config
+    workflow_data: Dict[str, Any] = {
+        "inversion_results": results,
+        "evaluation_results": ctx.get("evaluation_results") or {},
+        "skip_petrophysics": results.get("water_content_mean") is None,
+    }
+    surveys = ctx.get("ert_data") or []
+    if surveys:
+        electrodes = len(getattr(surveys[0], "electrodes", None) or [])
+        readings = len(getattr(surveys[0], "observations", None) or [])
+        workflow_data["ert_data"] = {
+            "n_electrodes": electrodes, "num_electrodes": electrodes,
+            "n_measurements": readings, "num_measurements": readings,
+            "instrument": config.get("instrument", DEFAULT_INSTRUMENT),
+        }
+    if results.get("water_content_mean") is not None:
+        step = (ctx.get("water_content") or [{}])[0] or {}
+        workflow_data["water_content"] = {
+            "mesh": results.get("mesh"),
+            "water_content_mean": results.get("water_content_mean"),
+            "water_content_std": results.get("water_content_std"),
+            "layer_params_used": step.get("layer_params_used", {}),
+            "layer_params": step.get("layer_params", {}),
+            "petrophysical_params": config.get("petrophysical_params", {}),
+            "n_realizations": config.get("n_realizations", 100),
+        }
+        workflow_data["petrophysics_results"] = step
+        workflow_data["petrophysical_params"] = config.get("petrophysical_params", {})
+    climate = ctx.get("climate_data")
+    if isinstance(climate, Mapping):
+        workflow_data["climate_data"] = climate
+    if results.get("structure_constrained"):
+        # The report's seismic section and its "Seismic Integration" line read
+        # this; without it a constrained run was reported as ERT alone.
+        structure = ctx.get("structure_results") or {}
+        workflow_data["seismic_structure"] = {
+            "velocity_threshold": structure.get("velocity_threshold"),
+            "interpretation": (ctx.get("seismic_results") or {}).get("interpretation")
+                              or "N/A",
+        }
+    return {"workflow_data": workflow_data, "config": config,
+            "output_dir": str(ctx.output_dir)}
+
+
 def _write_report(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     from ..report_agent import ReportAgent
     from .._intent import unmet_requests
@@ -995,7 +1330,7 @@ def _write_report(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         "output_dir": str(ctx.output_dir),
     }
     report = (agent.generate_timelapse_report(payload) if time_lapse
-              else agent.execute({**payload, "workflow_data": results}))
+              else agent.execute(_survey_report_input(ctx, results)))
     if report.get("status") == "failed":
         raise ValueError(str(report.get("error") or "Report generation failed."))
 
@@ -1003,7 +1338,10 @@ def _write_report(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         ctx.note(warning)
     # Products the request named and the run did not deliver, stated here rather
     # than left for the reader to notice.
-    for warning in unmet_requests(config, results) + result_caveats(config, results):
+    # Climate data are a step output of their own, not part of the inversion
+    # results; without them here every run that retrieved them was told it had not.
+    delivered = {**results, "climate_data": ctx.get("climate_data")}
+    for warning in unmet_requests(config, delivered) + result_caveats(config, results):
         ctx.note(warning)
 
     files = {"report_markdown": report.get("report_file")}
@@ -1034,7 +1372,8 @@ def build_site_info(ctx: RunContext) -> Dict[str, Any]:
 
     config = ctx.config
     configured = dict(config.get("site_info") or {})
-    stamps = _dates_from_filenames(survey_files(config))
+    # The surveys that loaded, so each date labels the survey it belongs to.
+    stamps = _dates_from_filenames(ctx.get("ert_files") or survey_files(config))
     coords = coords_from_config(config)
     period = configured.get("study_period")
     if not period and stamps:

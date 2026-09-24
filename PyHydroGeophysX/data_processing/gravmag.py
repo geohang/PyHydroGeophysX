@@ -11,6 +11,17 @@ def regional_residual(x: np.ndarray, y: np.ndarray, value: np.ndarray,
     """Fit a polynomial regional trend of ``degree`` (1..3); return (regional, residual)."""
     x = np.asarray(x, dtype=float); y = np.asarray(y, dtype=float)
     v = np.asarray(value, dtype=float)
+    # Centre and scale before forming monomials. Projected coordinates run to
+    # 7e5 m, so a cubic column reaches ~3e17 beside the column of ones and
+    # lstsq's rank cut drops terms: on the Bushveld grid the degree-3 residual
+    # was off the true least-squares one by up to 56.6 mGal. An affine change of
+    # variables spans the same polynomials, so this is the same trend, well
+    # conditioned.
+    def _unit(c):
+        centred = c - (float(np.mean(c)) if c.size else 0.0)
+        half = float(np.max(np.abs(centred))) if c.size else 0.0
+        return centred / half if half > 0 else centred
+    x, y = _unit(x), _unit(y)
     terms = [np.ones_like(x)]
     for d in range(1, int(degree) + 1):
         for i in range(d + 1):

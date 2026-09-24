@@ -51,6 +51,17 @@ class StudioState:
     #: from the Seismic structure module to the ERT -> hydrology module. Not
     #: serialized into the bridge result file.
     shared_structure: Optional[Dict[str, Any]] = None
+    #: Temperature-correction settings, shared by every page that offers the
+    #: correction, so the ERT page and Saved Results show the same choices.
+    #: Plain values; in-session only and not written to the bridge file.
+    temperature_settings: Dict[str, Any] = field(default_factory=dict)
+    #: The colour map chosen for each kind of display - ``"resistivity"``,
+    #: ``"resistivity_change"``, ``"velocity"``, ``"em_section"``, ... (the keys
+    #: are defined in ``qt_apps/widgets/colormaps.py``) - so every view of one
+    #: quantity, on any page, draws it in the same colours. Only what the user
+    #: picked is stored; a view with no entry keeps its own default. Plain
+    #: names; in-session only and not written to the bridge file.
+    colormap_settings: Dict[str, str] = field(default_factory=dict)
     _active_run_handles: Dict[Tuple[str, str], RunHandle] = field(
         default_factory=dict, repr=False
     )

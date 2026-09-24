@@ -43,6 +43,11 @@ nothing downstream depends on which instrument wrote the file.
      - SuperSting and Sting R1. The electrode table is rebuilt from the records,
        and the instrument's own geometric factor is carried alongside so a
        nominal-versus-surveyed geometry mismatch becomes visible.
+   * - Subsurface Insights ``.csv``
+     - The ``results_processed_*`` export, read by column name across firmware
+       versions. Electrode positions are rebuilt from the instrument's own
+       geometric factors when they describe a straight, evenly spaced line;
+       otherwise the surveyed electrode file supplies them.
    * - ``.ohm``, ``.dat``
      - E4D and pyGIMLi/BERT files. ResIPy adds further instrument formats when
        it is installed.

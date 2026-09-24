@@ -27,19 +27,46 @@ from PySide6.QtWidgets import (
     QCheckBox, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget,
 )
 
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.visualization.pyvista_compat import try_import_pyvista
 
 
-class VTKVolumeView(QWidget):
-    """Interactive viewer for a VTK dataset exported by another workflow."""
+def _recolour_actors(actors, name: str) -> int:
+    """Give every colour-mapped PyVista actor ``name``; return how many took it.
 
-    def __init__(self, parent=None) -> None:
+    The lookup table is swapped in place, so the camera, a dragged clip plane
+    and the scalar bar all stay as the user left them - nothing is re-added.
+    """
+    changed = 0
+    for actor in actors or ():
+        try:
+            actor.mapper.lookup_table.cmap = cmaps.to_pyvista(name)
+            changed += 1
+        except Exception:  # noqa: BLE001 - an actor without a table is left alone
+            pass
+    return changed
+
+
+class VTKVolumeView(QWidget):
+    """Interactive viewer for a VTK dataset exported by another workflow.
+
+    ``colormaps`` is the studio state's shared colormap dict and
+    ``colormap_key`` names what the volume is (a velocity model, say), so its
+    colour map is the one chosen for that quantity everywhere else.
+    """
+
+    def __init__(self, parent=None, *, colormaps=None,
+                 colormap_key: str = cmaps.MODEL3D) -> None:
         super().__init__(parent)
         self._plotter = None
         self._mesh = None
         self._scalar: Optional[str] = None
         self._cmap = "turbo"
         self._opacity = 0.65
+        self._actors: list = []   # the colour-mapped actors now on screen
+        self._colormap = cmaps.ColormapChooser(
+            colormap_key, self._cmap, shared=colormaps, parent=self)
+        self._colormap.colormapChanged.connect(self._on_colormap_changed)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -63,6 +90,7 @@ class VTKVolumeView(QWidget):
                 reset.clicked.connect(self._reset_camera)
                 controls.addWidget(self._clip_cb)
                 controls.addWidget(reset)
+                controls.addWidget(self._colormap)
                 controls.addStretch(1)
                 layout.addLayout(controls)
                 layout.addWidget(self._plotter.interactor, stretch=1)
@@ -70,6 +98,7 @@ class VTKVolumeView(QWidget):
                 self._plotter = None
                 err = str(exc)
         if self._plotter is None:
+            self._colormap.hide()   # nothing here to colour
             self._notice = QLabel(
                 "Interactive 3D view is unavailable in this session.<br>"
                 f"<code>{err}</code><br><br>"
@@ -101,7 +130,11 @@ class VTKVolumeView(QWidget):
         cmap: str = "turbo",
         opacity: float = 0.65,
     ) -> bool:
-        """Load and display a VTK dataset, returning whether it was rendered."""
+        """Load and display a VTK dataset, returning whether it was rendered.
+
+        ``cmap`` is the volume's default colour map: what it is drawn with until
+        a map is chosen for this view's quantity.
+        """
         vtk_path = Path(path)
         if not vtk_path.is_file():
             self._info.setText(f"3D volume file not found: <code>{vtk_path}</code>")
@@ -122,7 +155,7 @@ class VTKVolumeView(QWidget):
                 ),
                 None,
             )
-            self._cmap = str(cmap)
+            self._cmap = self._colormap.set_target(self._colormap.key(), str(cmap))
             self._opacity = float(opacity)
             self._info.setText(
                 f"<b>{vtk_path.name}</b>  ·  "
@@ -151,18 +184,19 @@ class VTKVolumeView(QWidget):
         self._plotter.clear()
         kwargs = {
             "scalars": self._scalar,
-            "cmap": self._cmap,
+            "cmap": cmaps.to_pyvista(self._cmap),
             "opacity": self._opacity,
             "show_edges": False,
             "show_scalar_bar": bool(self._scalar),
         }
         try:
             if self._clip_cb.isChecked():
-                self._plotter.add_mesh_clip_plane(self._mesh, **kwargs)
+                actor = self._plotter.add_mesh_clip_plane(self._mesh, **kwargs)
             else:
-                self._plotter.add_mesh(self._mesh, **kwargs)
+                actor = self._plotter.add_mesh(self._mesh, **kwargs)
         except Exception:  # noqa: BLE001 - clip widgets can fail on some VTK builds
-            self._plotter.add_mesh(self._mesh, **kwargs)
+            actor = self._plotter.add_mesh(self._mesh, **kwargs)
+        self._actors = [actor] if self._scalar else []
         try:
             self._plotter.add_mesh(self._mesh.outline(), color="grey")
         except Exception:  # noqa: BLE001 - outline is cosmetic
@@ -184,9 +218,27 @@ class VTKVolumeView(QWidget):
         except Exception:  # noqa: BLE001 - refresh is best-effort
             pass
 
+    @property
+    def colormap_chooser(self) -> "cmaps.ColormapChooser":
+        return self._colormap
+
+    def _on_colormap_changed(self, name: str) -> None:
+        """Recolour the volume on screen, keeping the camera and the clip plane."""
+        self._cmap = name
+        if _recolour_actors(self._actors, name):
+            self._refresh()
+
 
 class Model3DView(QWidget):
-    def __init__(self, parent=None) -> None:
+    """A regular 3-D grid: a PyVista volume, or matplotlib slices without one.
+
+    ``colormaps`` is the studio state's shared colormap dict and
+    ``colormap_key`` names the quantity shown; a page showing different
+    quantities in turn passes ``colormap_key`` to :meth:`show_model`.
+    """
+
+    def __init__(self, parent=None, *, colormaps=None,
+                 colormap_key: str = cmaps.MODEL3D) -> None:
         super().__init__(parent)
         self._edges: Optional[Tuple] = None
         self._model = None
@@ -194,6 +246,12 @@ class Model3DView(QWidget):
         self._cmap = "turbo"
         self._log = False
         self._plotter = None
+        self._actors: list = []   # the colour-mapped actors now on screen
+        self._colormap = cmaps.ColormapChooser(
+            colormap_key, self._cmap, shared=colormaps, parent=self)
+        self._colormap.colormapChanged.connect(self._on_colormap_changed)
+        # A page can switch the quantity per model, so the choice waits for one.
+        self._colormap.setEnabled(False)
 
         ok, pv, qt_interactor, err = try_import_pyvista()
         self._pv = pv if ok else None
@@ -211,7 +269,8 @@ class Model3DView(QWidget):
                 self._clip_cb.toggled.connect(self._redraw_pv)
                 reset = QPushButton("Reset view")
                 reset.clicked.connect(lambda: self._plotter and self._plotter.reset_camera())
-                bar.addWidget(self._clip_cb); bar.addWidget(reset); bar.addStretch(1)
+                bar.addWidget(self._clip_cb); bar.addWidget(reset)
+                bar.addWidget(self._colormap); bar.addStretch(1)
                 layout.addLayout(bar)
                 layout.addWidget(self._plotter.interactor, stretch=1)
                 self._mode = "pyvista"
@@ -237,11 +296,18 @@ class Model3DView(QWidget):
         self._y_slider = QSlider(Qt.Horizontal)
         self._y_slider.valueChanged.connect(self._redraw_mpl)
         row.addWidget(self._y_slider, stretch=1)
+        row.addWidget(self._colormap)
         layout.addLayout(row)
 
     # -- public --------------------------------------------------------------
     def show_model(self, edges: Sequence, model3d, *, label: str = "value",
-                   cmap: str = "turbo", log_scale: bool = False) -> None:
+                   cmap: str = "turbo", log_scale: bool = False,
+                   colormap_key: Optional[str] = None) -> None:
+        """Show a model on a regular grid.
+
+        ``cmap`` is its default colour map, used until one is chosen for
+        ``colormap_key`` - the quantity shown, when the page shows several.
+        """
         import numpy as np
         parsed_edges = tuple(np.asarray(e, dtype=float) for e in edges)
         parsed_model = np.asarray(model3d, dtype=float)
@@ -255,7 +321,9 @@ class Model3DView(QWidget):
         self._edges = parsed_edges
         self._model = parsed_model
         self._label = label
-        self._cmap = cmap
+        self._cmap = self._colormap.set_target(
+            colormap_key or self._colormap.key(), str(cmap))
+        self._colormap.setEnabled(True)
         self._log = bool(log_scale)
         if self._mode == "pyvista":
             self._redraw_pv()
@@ -279,6 +347,7 @@ class Model3DView(QWidget):
         ex, ey, ez = self._edges
         grid = pv.RectilinearGrid(ex, ey, ez)
         self._plotter.clear()
+        self._actors = []
         values = self._model
         if self._log:
             values = np.where(np.isfinite(values) & (values > 0), values, np.nan)
@@ -290,15 +359,16 @@ class Model3DView(QWidget):
                 self._plotter.add_axes()
                 return
         grid.cell_data[self._label] = values.flatten(order="F")
-        kw = dict(scalars=self._label, cmap=self._cmap, log_scale=self._log,
+        kw = dict(scalars=self._label, cmap=cmaps.to_pyvista(self._cmap), log_scale=self._log,
                   show_edges=False, scalar_bar_args={"title": self._label})
         try:
             if self._clip_cb.isChecked():
-                self._plotter.add_mesh_clip_plane(grid, **kw)
+                actor = self._plotter.add_mesh_clip_plane(grid, **kw)
             else:
-                self._plotter.add_mesh(grid, **kw)
+                actor = self._plotter.add_mesh(grid, **kw)
         except Exception:  # noqa: BLE001 - clip widget can fail; show the plain volume
-            self._plotter.add_mesh(grid, **kw)
+            actor = self._plotter.add_mesh(grid, **kw)
+        self._actors = [actor]
         try:
             self._plotter.add_mesh(grid.outline(), color="grey")
         except Exception:  # noqa: BLE001
@@ -313,6 +383,7 @@ class Model3DView(QWidget):
             return
         ex, ey, ez = self._edges
         m = self._model
+        cmap = cmaps.to_matplotlib(self._cmap)
         _, ny, nz = m.shape
         zi = int(np.clip(self._z_slider.value(), 0, nz - 1))
         yj = int(np.clip(self._y_slider.value(), 0, ny - 1))
@@ -345,7 +416,7 @@ class Model3DView(QWidget):
         if ny == 1:
             # 2D section: position along the line (x) vs elevation/depth (z).
             ax = self._fig.add_subplot(111)
-            im = ax.pcolormesh(ex, ez, m[:, 0, :].T, cmap=self._cmap, norm=norm, shading="auto")
+            im = ax.pcolormesh(ex, ez, m[:, 0, :].T, cmap=cmap, norm=norm, shading="auto")
             field_name = self._label.strip() or "Model"
             ax.set_title(
                 "Resistivity section"
@@ -357,12 +428,36 @@ class Model3DView(QWidget):
             return
         ax1 = self._fig.add_subplot(121)
         ax2 = self._fig.add_subplot(122)
-        im1 = ax1.pcolormesh(ex, ey, m[:, :, zi].T, cmap=self._cmap, norm=norm, shading="auto")
+        im1 = ax1.pcolormesh(ex, ey, m[:, :, zi].T, cmap=cmap, norm=norm, shading="auto")
         ax1.set_title(f"Depth slice  z = {zc[zi]:.0f}")
         ax1.set_xlabel("x (m)"); ax1.set_ylabel("y (m)"); ax1.set_aspect("equal", "box")
         self._fig.colorbar(im1, ax=ax1, shrink=0.85, label=self._label)
-        im2 = ax2.pcolormesh(ex, ez, m[:, yj, :].T, cmap=self._cmap, norm=norm, shading="auto")
+        im2 = ax2.pcolormesh(ex, ez, m[:, yj, :].T, cmap=cmap, norm=norm, shading="auto")
         ax2.set_title(f"Cross-section  y = {yc[yj]:.0f}")
         ax2.set_xlabel("x (m)"); ax2.set_ylabel("elevation (m)")
         self._fig.colorbar(im2, ax=ax2, shrink=0.85, label=self._label)
         self._canvas.draw_idle()
+
+    # -- colour map ------------------------------------------------------------
+    @property
+    def colormap_chooser(self) -> "cmaps.ColormapChooser":
+        return self._colormap
+
+    def _on_colormap_changed(self, name: str) -> None:
+        """Recolour the model on screen from the grid already held.
+
+        The PyVista volume swaps its lookup table in place, keeping the camera
+        and the clip plane; the matplotlib slices are redrawn at the same depth
+        and position.
+        """
+        self._cmap = name
+        if self._model is None:
+            return
+        if self._mode == "pyvista":
+            if _recolour_actors(self._actors, name) and self._plotter is not None:
+                try:
+                    self._plotter.render()
+                except Exception:  # noqa: BLE001 - a repaint is best-effort
+                    pass
+        else:
+            self._redraw_mpl()

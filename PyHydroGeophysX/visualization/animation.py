@@ -7,6 +7,8 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 import matplotlib.pyplot as plt
 import numpy as np
 
+from .plotting import _coverage_mask
+
 
 def create_timelapse_gif(
     mesh: Any,
@@ -100,7 +102,7 @@ def create_timelapse_gif(
             kw["cMax"] = cmax
         if cov_arr is not None:
             c = cov_arr if single_cov else cov_arr[i]
-            kw["coverage"] = np.asarray(c).ravel() > -1
+            kw["coverage"] = _coverage_mask(c)
 
         pg.show(mesh, arr, ax=ax, **kw)
         if titles is not None and i < len(titles):
@@ -192,7 +194,7 @@ def create_timelapse_mp4(
             kw["cMax"] = cmax
         if cov_arr is not None:
             c = cov_arr if single_cov else cov_arr[i]
-            kw["coverage"] = np.asarray(c).ravel() > -1
+            kw["coverage"] = _coverage_mask(c)
         pg.show(mesh, arr, ax=ax, **kw)
         if titles is not None and i < len(titles):
             ax.set_title(titles[i])
@@ -254,12 +256,18 @@ def create_difference_gif(
             raise ValueError(f"Unknown mode '{mode}'.")
 
     # Compute global limits
+    log_scale = False
     if symmetric:
         all_vals = np.concatenate([d.ravel() for d in diff_models])
         vmax = np.nanmax(np.abs(all_vals))
         if mode == "ratio":
-            cmin_val = 1.0 / max(vmax, 1.01)
-            cmax_val = max(vmax, 1.01)
+            # Symmetric in log space and drawn on a log scale, as in
+            # plotting.plot_difference_map: max|r| alone ignored ratios below 1.
+            from .plotting import _log_symmetric_ratio_limit
+            vmax = _log_symmetric_ratio_limit(all_vals)
+            cmin_val = 1.0 / vmax
+            cmax_val = vmax
+            log_scale = True
         else:
             cmin_val = -vmax
             cmax_val = vmax
@@ -270,7 +278,7 @@ def create_difference_gif(
     return create_timelapse_gif(
         mesh, diff_models, filename,
         titles=titles, cmap=cmap,
-        cmin=cmin_val, cmax=cmax_val,
+        cmin=cmin_val, cmax=cmax_val, log_scale=log_scale,
         label=label or mode.replace("_", " ").title(),
         figsize=figsize, dpi=dpi, duration=duration,
         coverage=coverage,
@@ -404,7 +412,7 @@ def create_combined_timelapse_gif(
     # Pre-convert SimPEG data if needed
     simpeg_data_list = None
     if app_res_data is not None:
-        from SimPEG.electromagnetics.static.utils.static_utils import (
+        from simpeg.electromagnetics.static.utils.static_utils import (
             plot_pseudosection,
         )
 
@@ -412,7 +420,7 @@ def create_combined_timelapse_gif(
         simpeg_data_list = []
         for d in app_res_data:
             try:
-                from SimPEG import data as simpeg_data_mod
+                from simpeg import data as simpeg_data_mod
                 if isinstance(d, simpeg_data_mod.Data):
                     simpeg_data_list.append(d)
                 else:

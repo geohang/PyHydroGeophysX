@@ -10,6 +10,7 @@ window.
 
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -17,11 +18,13 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QSpinBox,
+    QSplitter,
     QVBoxLayout,
     QWidget,
 )
 
 from PyHydroGeophysX._internal.utils import velocity_of
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.visualization.ert_style import (
     ERT_RESISTIVITY_LABEL,
     ert_model_plot_kwargs,
@@ -29,9 +32,14 @@ from PyHydroGeophysX.visualization.ert_style import (
 
 
 class MeshResultView(QWidget):
-    """Show a pyGIMLi inversion manager's model drawn on its mesh."""
+    """Show a pyGIMLi inversion manager's model drawn on its mesh.
 
-    def __init__(self, parent=None) -> None:
+    ``colormaps`` is the studio state's shared colormap dict (see
+    :mod:`~PyHydroGeophysX.qt_apps.widgets.colormaps`): a resistivity section
+    drawn here and one reopened on another page then use the same choice.
+    """
+
+    def __init__(self, parent=None, *, colormaps=None) -> None:
         super().__init__(parent)
         from matplotlib.backends.backend_qtagg import (
             FigureCanvasQTAgg,
@@ -190,14 +198,55 @@ class MeshResultView(QWidget):
             box.valueChanged.connect(self._on_limit_changed)
             bar.addWidget(box)
 
+        # The colour map, one per quantity - resistivity, change, velocity,
+        # coverage - each shared with every other view of it, and each opening
+        # on the map this view always drew it with. The row above is already as
+        # wide as the panel can afford, so the choice has a row of its own,
+        # under the colour limits it belongs with.
+        self._colormap = cmaps.ColormapChooser(
+            cmaps.RESISTIVITY, ert_model_plot_kwargs()["cMap"], shared=colormaps)
+        self._colormap.colormapChanged.connect(self._on_colormap_changed)
+        # Which quantity it is set for is only known once a result is drawn; a
+        # choice made before that would be filed under the wrong one.
+        self._colormap.setEnabled(False)
+        colour_row = QHBoxLayout()
+        colour_row.setContentsMargins(0, 0, 0, 0)
+        colour_row.addStretch(1)
+        colour_row.addWidget(QLabel("Colour map"))
+        colour_row.addWidget(self._colormap)
+
         self._cov_note = QLabel("")
         self._cov_note.setWordWrap(True)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(bar)
+        layout.addLayout(colour_row)
         layout.addWidget(self._canvas, stretch=1)
         layout.addWidget(self._cov_note)
+        self._side = None          # splitter holding the canvas and a side panel
+
+    def add_side_panel(self, widget: QWidget) -> None:
+        """Put ``widget`` to the right of the section, under the toolbar.
+
+        For tools that act on the result on screen, such as the temperature
+        correction, so they sit next to what they change. Under the toolbar
+        rather than beside the whole view: the toolbar alone already sets how
+        narrow this view can get, and a panel beside it would add its own width
+        on top - wider than many screens. The splitter lets it be dragged
+        narrower or closed.
+        """
+        if self._side is None:
+            layout = self.layout()
+            index = layout.indexOf(self._canvas)
+            layout.removeWidget(self._canvas)
+            self._side = QSplitter(Qt.Horizontal)
+            self._side.addWidget(self._canvas)
+            self._side.setCollapsible(0, False)
+            layout.insertWidget(index, self._side, 1)
+        self._side.addWidget(widget)
+        self._side.setStretchFactor(0, 1)
+        self._side.setStretchFactor(self._side.count() - 1, 0)
 
     def show_model(self, mgr, kind: str = "ert") -> None:
         """Display the inverted model from a pyGIMLi manager (``ert`` or ``srt``)."""
@@ -406,6 +455,16 @@ class MeshResultView(QWidget):
             label = ERT_RESISTIVITY_LABEL
             show_kw = ert_model_plot_kwargs(show_mesh=self._show_mesh.isChecked())
             show_kw.update(ax=ax, colorBar=False)
+        # The map chosen for this quantity, or the one above when none has been:
+        # a name PyGIMLi and matplotlib both take, so the default draws exactly
+        # as it always did.
+        key = (cmaps.COVERAGE if show_coverage
+               else cmaps.VELOCITY if self._kind == "srt"
+               else cmaps.RESISTIVITY_CHANGE if self._kind == "change"
+               else cmaps.RESISTIVITY)
+        show_kw["cMap"] = cmaps.to_matplotlib(
+            self._colormap.set_target(key, show_kw["cMap"]))
+        self._colormap.setEnabled(True)
 
         # The sensitivity view is a different quantity in different units, so a
         # lock set on the model must not follow it there.
@@ -590,6 +649,15 @@ class MeshResultView(QWidget):
         """Show the contour-band count only while contours are being drawn."""
         self._levels.setVisible(int(self._smooth.currentData() or 0) < 0)
         self._redraw()
+
+    def _on_colormap_changed(self, _name: str) -> None:
+        """Redraw what is on screen in the new colours; nothing is reloaded."""
+        self._redraw()
+
+    @property
+    def colormap_chooser(self) -> "cmaps.ColormapChooser":
+        """The chooser beside the section, for callers that set it directly."""
+        return self._colormap
 
     def _clip_polygon(self, mesh, mask):
         """Envelope polygon for the clean cut, or None if it cannot be built.

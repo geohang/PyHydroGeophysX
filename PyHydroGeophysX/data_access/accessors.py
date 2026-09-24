@@ -15,6 +15,7 @@ Usage
 
 from __future__ import annotations
 
+import filecmp
 import json
 import hashlib
 from http.client import HTTPException
@@ -357,7 +358,12 @@ class HttpHydroAccessor(BaseHydroAccessor):
     def materialize(
         self, required_files: List[str], target_dir: str
     ) -> str:
-        """Download required files to *target_dir*, using the cache."""
+        """Download required files to *target_dir*, using the cache.
+
+        A file of the same name already in *target_dir* is replaced unless it
+        matches the one this dataset fetched: a stale copy, or another dataset's
+        file of that name, would otherwise be what the workflow reads.
+        """
         target = Path(target_dir)
         target.mkdir(parents=True, exist_ok=True)
 
@@ -368,7 +374,9 @@ class HttpHydroAccessor(BaseHydroAccessor):
                 dest.resolve().relative_to(target.resolve())
             except ValueError as exc:
                 raise ValueError(f"Dataset file escapes target directory: {fname}") from exc
-            if not dest.exists():
+            # shallow: a copy made from this cache entry keeps its size and
+            # mtime, so it is recognised without reading either file again.
+            if not (dest.is_file() and filecmp.cmp(str(cached), str(dest), shallow=True)):
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(str(cached), str(dest))
 

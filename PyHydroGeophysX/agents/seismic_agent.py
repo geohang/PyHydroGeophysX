@@ -465,11 +465,17 @@ Return as: lam=XX, zWeight=XX, vTop=XX, vBottom=XX"""
         except Exception:
             filled_cov = coverage
         
-        fig = plt.figure(figsize=(10, 8))
+        from . import _figstyle as figstyle
+
+        # Detached from pyplot: this is often the run's first pg.show, and
+        # pyGIMLi's first pg.plt use calls plt.show(), which blocks on an open
+        # pyplot figure under an interactive backend - the seismic path hung a
+        # fresh process under offscreen Qt this way.
+        fig = figstyle.detached_figure((10, 8))
         ax = fig.add_subplot(1, 1, 1)
-        
+
         # Plot velocity model
-        pg.show(mesh_inv, velocity_model, cMap=cmap, coverage=filled_cov, ax=ax,
+        figstyle.pg_show(mesh_inv, velocity_model, cMap=cmap, coverage=filled_cov, ax=ax,
                 label='Velocity (m/s)', xlabel='Distance (m)', ylabel='Elevation (m)',
                 pad=0.3, cMin=cMin, cMax=cMax, orientation='vertical')
         

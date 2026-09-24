@@ -99,6 +99,9 @@ _GENERIC_LAYER = {
     "porosity": {"mean": 0.30, "std": 0.05},
 }
 
+#: Marks a wizard step that has not been built yet.
+_UNBUILT = object()
+
 _INPUT_FORMAT_FALLBACK = (
     "# ERT → Water Content input format\n\n"
     "Place an inverted-model bundle in one folder:\n\n"
@@ -120,6 +123,16 @@ class GeoHydrologyModule(BaseModule):
         self._summary: Optional[Dict[str, Any]] = None
         self._layer_rows: List[Dict[str, Any]] = []
         self._param_widgets: Dict[int, Dict[str, Tuple[QDoubleSpinBox, QDoubleSpinBox]]] = {}
+        # The Layers and Parameters steps hold the user's choices, so each is
+        # rebuilt only when what it was built from changes, not on every visit:
+        # rebuilt from the defaults, Next -> Back put back every tick, name and
+        # value, and Run then used the defaults. These say what they show.
+        self._layer_rows_for: Any = _UNBUILT          # the summary the rows came from
+        self._param_summary: Any = _UNBUILT           # ... and the panels
+        self._param_layout: Optional[List[Tuple[int, str]]] = None
+        #: Per marker, the (mean, std) last set in a panel; kept for a layer
+        #: switched off, so switching it back on restores them.
+        self._param_values: Dict[int, Dict[str, Tuple[float, float]]] = {}
         self._last_result: Optional[Dict[str, Any]] = None
         self._markers_override: Optional[List[int]] = None
         self._worker: Optional[WorkflowWorker] = None
@@ -241,7 +254,7 @@ class GeoHydrologyModule(BaseModule):
 
     def _on_wizard_changed(self, step: int) -> None:
         self._current = step
-        if self._current == 1:  # Layers
+        if self._current == 1 and self._layer_rows_for is not self._summary:  # Layers
             self._refresh_layer_rows()
         if self._current == 3:  # Parameters
             self._refresh_parameter_panels()
@@ -350,14 +363,17 @@ class GeoHydrologyModule(BaseModule):
         return page
 
     def _refresh_layer_rows(self) -> None:
+        """Build the layer rows from the loaded model, at their defaults."""
         while self._layers_layout.count():
             item = self._layers_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
         self._layer_rows = []
+        self._layer_rows_for = self._summary
         if self._summary is None:
             self._layers_layout.addWidget(QLabel("Load a model in Step 1 first."))
             self._layers_status.setText("")
+            self._refresh_parameter_panels()
             return
         header = QHBoxLayout()
         for txt, w in (("Use", 40), ("Marker", 70), ("Cells", 80), ("Name", 200)):
@@ -386,6 +402,9 @@ class GeoHydrologyModule(BaseModule):
         self._layers_status.setText(
             f"{len(self._summary['layers'])} marker(s) from {self._summary['markers_source']}; "
             f"{self._summary['n_cells']} cells × {self._summary['n_timesteps']} timesteps.")
+        # The panels follow the rows, so a run started before Step 4 is visited
+        # uses this model's layers rather than the last model's panels.
+        self._refresh_parameter_panels()
         self._update_strip()
 
     def _enabled_layers(self) -> List[Dict[str, Any]]:
@@ -522,12 +541,29 @@ class GeoHydrologyModule(BaseModule):
         return {k: dict(src[k]) for k in _PARAM_SPECS}
 
     def _refresh_parameter_panels(self) -> None:
+        """One panel per enabled layer, keeping the values already set in them.
+
+        Rebuilt only when the enabled layers or their names changed; a marker's
+        values carry across the rebuild. A different model starts again from
+        the defaults.
+        """
+        enabled = self._enabled_layers()
+        layout = [(int(row["marker"]), row["name"].text().strip()) for row in enabled]
+        same_model = self._param_summary is self._summary
+        if same_model and layout == self._param_layout:
+            return
+        if same_model:
+            for marker, widgets in self._param_widgets.items():
+                self._param_values[marker] = {
+                    key: (mean.value(), std.value()) for key, (mean, std) in widgets.items()}
+        else:
+            self._param_values = {}
+        self._param_summary, self._param_layout = self._summary, layout
         while self._param_host_layout.count():
             item = self._param_host_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
         self._param_widgets = {}
-        enabled = self._enabled_layers()
         if not enabled:
             self._param_host_layout.addWidget(
                 QLabel("Enable at least one layer in Step 2."))
@@ -541,11 +577,14 @@ class GeoHydrologyModule(BaseModule):
             grid.addWidget(QLabel("<b>Mean</b>"), 0, 1)
             grid.addWidget(QLabel("<b>Std</b>"), 0, 2)
             defaults = self._layer_default(marker)
+            kept = self._param_values.get(marker, {})
             self._param_widgets[marker] = {}
             for r, key in enumerate(_PARAM_SPECS, start=1):
                 (mlo, mhi, mstep, mdec), (slo, shi, sstep, sdec) = _PARAM_SPECS[key]
-                mean_spin = self._dspin(float(defaults[key]["mean"]), mlo, mhi, mstep, mdec)
-                std_spin = self._dspin(float(defaults[key]["std"]), slo, shi, sstep, sdec)
+                mean, std = kept.get(key, (float(defaults[key]["mean"]),
+                                           float(defaults[key]["std"])))
+                mean_spin = self._dspin(float(mean), mlo, mhi, mstep, mdec)
+                std_spin = self._dspin(float(std), slo, shi, sstep, sdec)
                 grid.addWidget(QLabel(_PARAM_LABELS[key]), r, 0)
                 grid.addWidget(mean_spin, r, 1)
                 grid.addWidget(std_spin, r, 2)
@@ -931,11 +970,16 @@ class GeoHydrologyModule(BaseModule):
             entry: Dict[str, Any] = {"marker": marker,
                                      "name": row["name"].text().strip() or f"Layer {marker}"}
             widgets = self._param_widgets.get(marker)
+            # A layer switched back on since Step 4 was built has no panel yet,
+            # but may still have the values set in it before it was switched off.
+            kept = self._param_values.get(marker, {})
             defaults = self._layer_default(marker)
             for key in _PARAM_SPECS:
                 if widgets and key in widgets:
                     mean_spin, std_spin = widgets[key]
                     entry[key] = {"mean": mean_spin.value(), "std": std_spin.value()}
+                elif key in kept:
+                    entry[key] = {"mean": kept[key][0], "std": kept[key][1]}
                 else:
                     entry[key] = dict(defaults[key])
             layers.append(entry)

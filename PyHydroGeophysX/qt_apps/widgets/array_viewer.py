@@ -22,22 +22,33 @@ from PySide6.QtWidgets import (
 )
 
 from PyHydroGeophysX.qt_apps import theme
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets.log_scale_axis import label_axis_in_physical_units
 
 # Display arrays as image[row, col] (numpy convention) rather than the pyqtgraph
 # default of image[x, y]. This makes click -> [col, row] mapping correct.
 pg.setConfigOptions(imageAxisOrder="row-major", antialias=False)
 
+#: The gradient preset every array viewer opened with before it had a chooser.
+_DEFAULT_MAP = "viridis"
+
 
 class ArrayViewer(QWidget):
-    """Display a 2D array, read out values on hover, pick points, draw a profile."""
+    """Display a 2D array, read out values on hover, pick points, draw a profile.
+
+    The colour map is chosen beside the other controls under the image and kept
+    in ``colormaps`` - the studio state's shared dict - under ``colormap_key``.
+    A page that offers its own chooser for several viewers passes
+    ``colormap_control=False`` and calls :meth:`set_colormap` instead.
+    """
 
     #: Emitted on a left click in pick mode: (col, row, value).
     pointPicked = Signal(float, float, float)
     #: Emitted once a second profile point is set: ([col1, row1], [col2, row2]).
     profileSelected = Signal(list, list)
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent=None, *, colormaps=None, colormap_key: str = cmaps.ARRAY,
+                 colormap_control: bool = True) -> None:
         super().__init__(parent)
         self._array: Optional[np.ndarray] = None
         self._extent: Optional[Tuple[float, float, float, float]] = None
@@ -82,11 +93,24 @@ class ArrayViewer(QWidget):
         self._profile_line = pg.PlotDataItem(pen=pg.mkPen("#1565ff", width=2))
         self._plot.addItem(self._profile_line)
 
+        # The colour map, shared under colormap_key with every other viewer of
+        # the same kind of array. Opens on the preset above, drawn as before.
+        self._colormap = cmaps.ColormapChooser(colormap_key, _DEFAULT_MAP, shared=colormaps)
+        self._colormap.colormapChanged.connect(self._apply_colormap)
+        if self._colormap.colormap() != _DEFAULT_MAP:
+            self._apply_colormap(self._colormap.colormap())
+
         # Readout + action buttons.
         bar = QHBoxLayout()
         self._readout = QLabel("x: -, y: -, value: -")
-        self._readout.setMinimumWidth(260)
+        # The readout stretches into whatever the row leaves, so this floor only
+        # matters at the narrowest; it gives up the chooser's width, so the row
+        # is no wider than it was before the chooser joined it.
+        self._readout.setMinimumWidth(125 if colormap_control else 260)
         bar.addWidget(self._readout, stretch=1)
+        bar.addWidget(self._colormap)
+        if not colormap_control:
+            self._colormap.setVisible(False)
         for label, slot, icon_name in (
             ("Clear markers", self.clear_markers, "fa5s.times-circle"),
             ("Clear profile", self.clear_profile, "fa5s.eraser"),
@@ -174,15 +198,30 @@ class ArrayViewer(QWidget):
         self._hist.setLevels(lo, hi)
 
     def set_colormap(self, name: str) -> None:
+        """Colour the image with ``name``, a colour map the chooser offers.
+
+        For a page that drives the colours of several viewers from its own
+        chooser: this viewer's chooser follows, but the choice is not stored
+        again - the page's chooser already did that.
+        """
+        self._colormap.set_colormap(str(name), remember=False)
+
+    def colormap(self) -> str:
+        """The colour map the image is drawn with."""
+        return self._colormap.colormap()
+
+    @property
+    def colormap_chooser(self) -> "cmaps.ColormapChooser":
+        return self._colormap
+
+    def _apply_colormap(self, name: str) -> None:
+        # The default is the gradient preset these viewers always opened with,
+        # loaded as such so it looks exactly as it did; any other map in full.
         try:
-            self._hist.gradient.loadPreset(name)
-        except Exception:
-            try:
-                cmap = pg.colormap.get(name)  # matplotlib / colorcet name (e.g. "turbo")
-                if cmap is not None:
-                    self._hist.gradient.setColorMap(cmap)
-            except Exception:
-                pass
+            cmaps.apply_to_histogram(
+                self._hist, name, preset=name if name == _DEFAULT_MAP else None)
+        except Exception:  # noqa: BLE001 - a colour map must never break the viewer
+            pass
 
     # -- interaction modes ---------------------------------------------------
     def set_pick_mode(self, enabled: bool) -> None:

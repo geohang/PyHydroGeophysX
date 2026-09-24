@@ -231,6 +231,114 @@ def test_a_borehole_layout_is_refused_rather_than_flattened(tmp_path) -> None:
         parse_res2dinv_general(path)
 
 
+def _general_array(path, *, measurement_type=0, ip=False):
+    """Twenty Wenner readings on a 2 m line, written as a Res2DInv general array.
+
+    With measurement type 0 the values are apparent resistivities 100, 101, ...;
+    with type 1 they are the transfer resistance of a 100 ohm m half-space at
+    a = 2 m, 100 / (4 pi). With ``ip`` each row also carries a chargeability.
+    """
+    rows = []
+    for i in range(20):
+        a, m, n, b = (2.0 * (i + k) for k in range(4))
+        value = 100.0 / (4 * np.pi) if measurement_type else 100.0 + i
+        tail = f" {5.0 + 0.1 * i:.1f}" if ip else ""
+        rows.append(f"4 {a} 0 {b} 0 {m} 0 {n} 0 {value:.6f}{tail}")
+    header = ["Wenner as general array", "2.0", "11", "0",
+              "Type of measurement (0=app. resistivity,1=resistance)",
+              str(measurement_type), str(len(rows)), "1", "1" if ip else "0"]
+    if ip:
+        header += ["Chargeability", "mV/V", "0.12,0.26"]
+    path.write_text("\n".join(header + rows + ["0", "0", "0", "0"]) + "\n",
+                    encoding="utf-8")
+    return path
+
+
+def test_res2dinv_resistances_come_back_as_resistances(tmp_path) -> None:
+    """The line under "Type of measurement" says the values are resistances.
+
+    Read as apparent resistivities regardless, a 100 ohm m ground came back as
+    7.96 ohm m - off by each reading's geometric factor - and the loaders pass
+    rhoa through as given, so nothing downstream could catch it.
+    """
+    _, df = parse_res2dinv_general(_general_array(tmp_path / "r.dat", measurement_type=1))
+
+    assert "rhoa" not in df.columns
+    np.testing.assert_allclose(df["resist"], 100.0 / (4 * np.pi), rtol=1e-6)
+
+
+def test_res2dinv_resistances_load_as_the_true_resistivity(tmp_path) -> None:
+    pytest.importorskip("pygimli")
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+    from PyHydroGeophysX.data_processing.ert_io import standard_to_pg
+
+    ert = agent._load_ert_embedded_parsers(
+        data_file=str(_general_array(tmp_path / "r.dat", measurement_type=1)),
+        project_dir=str(tmp_path), instrument="ResInv")
+    assert ert.metadata["app_res_source"] == "resistance"
+    data = standard_to_pg(ert)      # kept alive: data["rhoa"] is a view into it
+    np.testing.assert_allclose(np.asarray(data["rhoa"], dtype=float), 100.0, rtol=1e-5)
+
+
+def test_res2dinv_ip_values_are_read_as_ip(tmp_path) -> None:
+    _, df = parse_res2dinv_general(_general_array(tmp_path / "ip.dat", ip=True))
+
+    assert df["rhoa"].tolist()[:3] == [100.0, 101.0, 102.0]
+    np.testing.assert_allclose(df["ip"].iloc[:3], [5.0, 5.1, 5.2])
+    assert df.attrs["ip_unit"] == "mV/V"
+
+
+@pytest.mark.parametrize("ip", [False, True], ids=["dc", "ip"])
+@pytest.mark.parametrize("picked", ["ResInv", "ABEM-Lund", "BERT"])
+def test_a_general_array_file_is_read_as_one_whatever_was_picked(tmp_path, ip, picked) -> None:
+    """Every general-array file carries both marks the ABEM guess looked for.
+
+    The "Type of measurement" header line, and rows opening with 4 - there the
+    electrode count. Handed to the ABEM reader, a file with IP came back with
+    the chargeability (5.0, 5.1, 5.2) as its apparent resistivity, and one
+    without IP loaded on no route at all.
+    """
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+
+    path = _general_array(tmp_path / "line.dat", ip=ip)
+    assert not agent._looks_like_abem_lund_file(path)
+
+    ert = agent._load_ert_embedded_parsers(
+        data_file=str(path), project_dir=str(tmp_path), instrument=picked)
+
+    assert ert.instrument == "ResInv"
+    assert [o.app_res for o in ert.observations[:3]] == [100.0, 101.0, 102.0]
+
+
+def test_the_resipy_route_reads_a_general_array_file_as_one(tmp_path) -> None:
+    """With ResIPy installed its own Res2DInv reader takes the file (resistances
+    plus k); without it, this package's. Either way the section is the same."""
+    pytest.importorskip("pygimli")
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+    from PyHydroGeophysX.data_processing.ert_io import standard_to_pg
+
+    ert = agent.load_ert_resipy(
+        project_dir=str(tmp_path / "prj"),
+        data_file=str(_general_array(tmp_path / "line.dat", ip=True)),
+        instrument="ABEM-Lund")
+
+    assert ert.instrument == "ResInv"
+    data = standard_to_pg(ert)      # kept alive: data["rhoa"] is a view into it
+    np.testing.assert_allclose(np.asarray(data["rhoa"], dtype=float)[:3],
+                               [100.0, 101.0, 102.0], rtol=1e-6)
+
+
+def test_an_abem_style_export_is_still_recognised(tmp_path) -> None:
+    """The guess still stands for the layout the ABEM reader was written for."""
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+
+    path = tmp_path / "abem.dat"
+    rows = [f"4 {a} 0 {a + 3} 0 {a + 1} 0 {a + 2} 0 0.1 15.9155 100.0" for a in range(10)]
+    path.write_text("Type of measurement\n" + "\n".join(rows) + "\n", encoding="utf-8")
+
+    assert agent._looks_like_abem_lund_file(path)
+
+
 # --- tx0 (Lippmann 4-Point Light) --------------------------------------------
 
 # The legend is the real one. It names "n" twice: the N electrode at column 4,
@@ -514,6 +622,60 @@ def test_the_generic_fallback_does_not_swallow_that_refusal(tmp_path) -> None:
         agent._EMBEDDED_PARSER_MAP.update(original)
 
 
+def test_the_four_electrode_columns_share_one_numbering(tmp_path) -> None:
+    """fielddataline2.dat numbers its electrodes from 0, and only column A has a 0.
+
+    Deciding 0- or 1-based per column shifted A by one and left B, M and N
+    alone, so 69 of the 936 readings came out with coincident electrodes.
+    """
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+
+    source = DAS_DIR.parent / "Bert" / "fielddataline2.dat"
+    if not source.exists():
+        pytest.skip("fielddataline2.dat is not present")
+    ert = agent._load_ert_embedded_parsers(
+        data_file=str(source), electrode_file=None,
+        project_dir=str(tmp_path), instrument="BERT")
+    quads = np.array([[o.quad.A, o.quad.B, o.quad.M, o.quad.N] for o in ert.observations])
+    assert quads[0].tolist() == [1, 38, 19, 20]        # the file's 0 37 18 19, all shifted
+    coincident = ((quads[:, 0] == quads[:, 2]) | (quads[:, 0] == quads[:, 3])
+                  | (quads[:, 1] == quads[:, 2]) | (quads[:, 1] == quads[:, 3]))
+    assert not coincident.any()
+
+
+def test_the_pygimli_fallback_reads_resistances_and_percent_errors(tmp_path) -> None:
+    """pyGIMLi lists rhoa, err and k even when a file has none, zero-filled.
+
+    The fallback read "rhoa in dataMap" as the file having apparent resistivity,
+    so a resistance-only file loaded as all zeros; and it copied the error column
+    without the percent check the embedded parsers apply, so fielddataline2.dat
+    (errors in percent) came back with a median error of 61 %. It is the route
+    that file takes whenever ResIPy is installed, because ResIPy cannot parse it.
+    """
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+    from PyHydroGeophysX.data_processing.ert_io import standard_to_pg
+
+    pytest.importorskip("pygimli")
+    # Twelve electrodes 1 m apart and Wenner quadrupoles: rhoa = 100 Ohm m is a
+    # resistance of 100 / (2 pi).
+    quads = [(a, a + 3, a + 1, a + 2) for a in range(1, 10)]
+    lines = ["12", "# x y z"] + [f"{i:.1f} 0 0" for i in range(12)]
+    lines += [str(len(quads)), "# a b m n r err"]
+    lines += [f"{a} {b} {m} {n} {100 / (2 * np.pi):.6f} 0.02" for a, b, m, n in quads]
+    resistances = tmp_path / "r_only.dat"
+    resistances.write_text("\n".join(lines) + "\n")
+    ert = agent._load_ert_pygimli(data_file=str(resistances), project_dir=str(tmp_path))
+    # Keep the container alive: data["rhoa"] is a view into it, and indexing a
+    # temporary left numpy reading freed memory (an access violation).
+    data = standard_to_pg(ert)
+    assert np.asarray(data["rhoa"], dtype=float) == pytest.approx(100.0, rel=1e-3)
+
+    source = DAS_DIR.parent / "Bert" / "fielddataline2.dat"
+    if source.exists():
+        ert = agent._load_ert_pygimli(data_file=str(source), project_dir=str(tmp_path))
+        assert np.median([o.rel_err for o in ert.observations]) < 0.05
+
+
 def test_the_install_hint_distinguishes_absent_from_broken() -> None:
     """The fix differs: install it, versus repair the environment it is in."""
     from PyHydroGeophysX.data_processing import ert_data_agent as agent
@@ -530,3 +692,282 @@ def test_the_install_hint_distinguishes_absent_from_broken() -> None:
     assert "did not import" not in absent
     assert "DLL load failed" in broken
     assert "pip install" in absent and "pip install" in broken
+
+
+def test_an_electrode_file_for_the_survey_lines_up_with_its_electrodes(tmp_path) -> None:
+    """The DAS-1 header lists 280 electrodes on nine cables; the survey uses 56.
+
+    electrodes.dat lists those 56, and the pair loaded under ResIPy but failed
+    here ("Length of values (56) does not match length of index") - the pair the
+    Streamlit app tells users to load. The file's rows go to the electrodes the
+    sequence addresses, in order, which is the numbering ResIPy gives them.
+    """
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+
+    listed_path = DAS_DIR / "electrodes.dat"
+    if not listed_path.exists():
+        pytest.skip("electrodes.dat is not present")
+    listed = np.loadtxt(listed_path)
+    _, df = parse_das1(DAS_FILES[0])
+    assert len(df.attrs["survey_electrodes"]) == len(listed) == 56
+
+    ert = agent._load_ert_embedded_parsers(
+        data_file=str(DAS_FILES[0]), electrode_file=str(listed_path),
+        project_dir=str(tmp_path), instrument="DAS-1")
+
+    assert len(ert.electrodes) == 56
+    np.testing.assert_allclose([[e.x, e.y, e.z] for e in ert.electrodes], listed)
+    quads = np.array([[o.quad.A, o.quad.B, o.quad.M, o.quad.N] for o in ert.observations])
+    assert len(quads) == len(df)
+    assert quads.min() >= 1 and quads.max() <= 56
+    # The first good reading, 009,02 009,05 009,03 009,04: electrodes 2 5 3 4.
+    assert quads[0].tolist() == [2, 5, 3, 4]
+
+
+def test_an_electrode_file_that_fits_neither_count_says_both(tmp_path) -> None:
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+
+    short = tmp_path / "ten.dat"
+    np.savetxt(short, np.column_stack([np.arange(10.0), np.zeros(10), np.zeros(10)]))
+
+    with pytest.raises(RuntimeError, match=r"lists 10 electrodes.*280.*56"):
+        agent._load_ert_embedded_parsers(
+            data_file=str(DAS_FILES[0]), electrode_file=str(short),
+            project_dir=str(tmp_path), instrument="DAS-1")
+
+
+def test_the_unified_reader_keeps_an_exponent_without_a_decimal_point(tmp_path) -> None:
+    """"2e-05" is one number; read as 2 and -5 it shifted every later column.
+
+    pyGIMLi writes the decimal point (2.00000000000000e-05), so its own files
+    were never affected; other writers of the format do not.
+    """
+    from PyHydroGeophysX.data_processing.ert_data_agent import _unified_ert_parser
+
+    path = tmp_path / "exponent.dat"
+    path.write_text("4\n# x y z\n0 0 0\n1 0 0\n2 0 0\n3 0 0\n"
+                    "1\n# a b m n r err\n1 4 2 3 2e-05 3E-2\n", encoding="utf-8")
+
+    _, df = _unified_ert_parser(path)
+
+    assert df[["a", "b", "m", "n"]].iloc[0].tolist() == [1, 4, 2, 3]
+    assert df["resist"].iloc[0] == pytest.approx(2e-05)
+    assert df["dev"].iloc[0] == pytest.approx(0.03)
+
+
+# --- ResIPy is handed the file types it dispatches on ------------------------
+
+@pytest.mark.parametrize("instrument, ftype", [
+    ("Protocol DC", "ProtocolDC"), ("Protocol IP", "ProtocolIP"),
+    ("PRIME/RESIMGR", "BGS Prime"), ("ARES", "ARES"), ("ResInv", "ResInv"),
+])
+def test_resipy_is_handed_the_file_type_it_dispatches_on(
+        tmp_path, monkeypatch, instrument, ftype) -> None:
+    """Given its GUI labels ("Protocol DC", "ResInv (2D/3D)", "ARES (beta)"),
+    ResIPy raised "not implemented yet", so these never reached its parsers."""
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+
+    seen = []
+
+    class StubProject:
+        def __init__(self, *args, **kwargs):
+            self.surveys = []
+
+        def createSurvey(self, fname=None, ftype=None, **kwargs):
+            seen.append(ftype)
+            raise RuntimeError("stub: nothing is parsed here")
+
+    monkeypatch.setattr(agent, "_HAS_RESIPY", True)
+    monkeypatch.setattr(agent, "Project", StubProject, raising=False)
+    monkeypatch.setattr(agent, "_HAS_PYGIMLI", False)      # keep the fallback local
+    path = tmp_path / "survey.txt"
+    path.write_text("not a survey\n", encoding="utf-8")
+
+    with pytest.raises(Exception):
+        agent.load_ert_resipy(project_dir=str(tmp_path / "prj"), data_file=str(path),
+                              instrument=instrument)
+    assert seen == [ftype]
+
+
+def test_every_mapped_file_type_is_one_resipy_dispatches_on(tmp_path) -> None:
+    survey_module = pytest.importorskip("resipy.Survey")
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+
+    junk = tmp_path / "junk.txt"
+    junk.write_text("1 2 3\n", encoding="utf-8")
+    for instrument, ftype in agent._FTYPE_MAP.items():
+        if instrument in agent._NOT_RESIPY_FTYPES:
+            continue
+        try:
+            survey_module.Survey(str(junk), ftype=ftype)
+        except Exception as error:  # noqa: BLE001 - a parse error is expected
+            assert "not implemented" not in str(error), (instrument, ftype)
+
+
+# --- ABEM-Lund rows give positions --------------------------------------------
+
+def _abem_walk(positions):
+    """ABEM-style rows for a Wenner walk along ``positions``."""
+    rows = [f"4 {positions[i]} 0 {positions[i + 3]} 0 {positions[i + 1]} 0 "
+            f"{positions[i + 2]} 0 0.1 15.9155 100.0" for i in range(len(positions) - 3)]
+    return "Type of measurement\n" + "\n".join(rows) + "\n"
+
+
+@pytest.mark.parametrize("positions", [
+    [p for p in range(25) if p != 11],
+    list(range(-5, 19)),
+    [2 * p for p in range(24)],
+], ids=["one-electrode-missing", "left-of-origin", "2m"])
+def test_abem_positions_become_the_right_electrodes(tmp_path, positions) -> None:
+    """Handed over as positions, whole metres that fit 1..n were read as indices:
+    a 1 m line with one electrode missing came back with 20 of 21 wrong."""
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+
+    path = tmp_path / "abem.dat"
+    path.write_text(_abem_walk(positions), encoding="utf-8")
+
+    ert = agent._load_ert_embedded_parsers(
+        data_file=str(path), project_dir=str(tmp_path), instrument="ABEM-Lund")
+
+    x = {e.id: e.x for e in ert.electrodes}
+    assert len(ert.electrodes) == len(positions)
+    got = [(x[o.quad.A], x[o.quad.B], x[o.quad.M], x[o.quad.N]) for o in ert.observations]
+    want = [(positions[i], positions[i + 3], positions[i + 1], positions[i + 2])
+            for i in range(len(positions) - 3)]
+    assert got == [tuple(float(v) for v in quad) for quad in want]
+
+
+def test_the_abem_reader_keeps_signs_and_exponents(tmp_path) -> None:
+    """"-3" read as 3, and "2e-05" as the two numbers 2 and 5."""
+    from PyHydroGeophysX.data_processing.ert_data_agent import _abem_lund_parser
+
+    path = tmp_path / "abem.dat"
+    path.write_text("Type of measurement\n4 -3 0 0 0 -2 0 -1 0 0.1 2e-05 100.0\n",
+                    encoding="utf-8")
+
+    elec, df = _abem_lund_parser(path)
+
+    np.testing.assert_allclose(elec[:, 0], [-3.0, -2.0, -1.0, 0.0])
+    assert df[["a", "b", "m", "n"]].iloc[0].tolist() == [1, 4, 2, 3]
+    assert df["resist"].iloc[0] == pytest.approx(2e-05)
+    assert df["app"].iloc[0] == pytest.approx(100.0)
+
+
+# --- a reader's refusal is the answer -----------------------------------------
+
+def _das_without_data_marker(tmp_path):
+    text = DAS_FILES[0].read_text(encoding="utf-8", errors="ignore")
+    path = tmp_path / "broken.Data"
+    path.write_text(text.replace("#data_start", "#data_begin"), encoding="utf-8")
+    return path
+
+
+def test_a_chosen_reader_that_refuses_is_not_second_guessed(tmp_path) -> None:
+    """Retried with the unified reader, this file loaded as one reading on one
+    electrode, and the error naming the missing section was lost."""
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+
+    with pytest.raises(ValueError, match="#data_start") as raised:
+        agent._load_ert_embedded_parsers(
+            data_file=str(_das_without_data_marker(tmp_path)),
+            project_dir=str(tmp_path), instrument="DAS-1")
+    assert "BERT" not in str(raised.value)
+
+
+def test_the_resipy_route_reports_the_readers_errors(tmp_path) -> None:
+    """PyGIMLi's loader cannot read DAS-1; tried anyway, its "'DataMap' object has
+    no attribute 'size'" was all the user saw."""
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+
+    with pytest.raises(ValueError, match="#data_start") as raised:
+        agent.load_ert_resipy(project_dir=str(tmp_path / "prj"),
+                              data_file=str(_das_without_data_marker(tmp_path)),
+                              instrument="DAS-1")
+    assert "DataMap" not in str(raised.value)
+
+
+def test_the_studio_loader_does_not_sweep_past_a_refusal(tmp_path) -> None:
+    """Its recovery sweep "auto-recovered" the file above as E4D: one reading."""
+    pytest.importorskip("pygimli")
+    from PyHydroGeophysX.data_processing.ert_io import load_ert_container
+
+    with pytest.raises(ValueError, match="#data_start"):
+        load_ert_container(str(_das_without_data_marker(tmp_path)), instrument="DAS-1")
+
+
+def test_a_tx0_file_is_not_retried_as_a_converted_table(tmp_path) -> None:
+    from PyHydroGeophysX.data_processing.ert_data_agent import _lippmann_parser
+
+    path = tmp_path / "nolegend.tx0"
+    path.write_text("\n".join(line for line in TX0.splitlines()
+                              if not line.lstrip().startswith("* num")), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="legend"):
+        _lippmann_parser(str(path))
+
+
+def test_the_lippmann_entry_still_reads_a_converted_table(tmp_path) -> None:
+    from PyHydroGeophysX.data_processing.ert_data_agent import _lippmann_parser
+
+    path = tmp_path / "converted.dat"
+    path.write_text("4\n# x y z\n0 0 0\n1 0 0\n2 0 0\n3 0 0\n1\n# a b m n r\n1 4 2 3 10.0\n",
+                    encoding="utf-8")
+
+    _, df = _lippmann_parser(str(path))
+    assert df["resist"].tolist() == [10.0]
+
+
+def _abem_lookalike(path, *, unified_blocks):
+    """A file the ABEM guess keys on ("Type of measurement", rows opening with 4)
+    whose rows the ABEM reader cannot use; optionally a unified survey too."""
+    lines = ["# Type of measurement"]
+    if unified_blocks:
+        lines += ["4", "# x y z", "0 0 0", "1 0 0", "2 0 0", "3 0 0",
+                  "1", "# a b m n r", "1 4 2 3 10.0"]
+    lines += ["4 " + " ".join(["x"] * 10)] * 3
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def test_a_failed_guess_falls_back_to_the_reader_asked_for(tmp_path) -> None:
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+
+    path = _abem_lookalike(tmp_path / "guess.dat", unified_blocks=True)
+    assert agent._looks_like_abem_lund_file(path)
+
+    ert = agent._load_ert_embedded_parsers(
+        data_file=str(path), project_dir=str(tmp_path), instrument="BERT")
+
+    assert ert.instrument == "BERT"
+    assert ert.metadata["parser_used"] == "BERT (fallback)"
+    assert [o.app_res for o in ert.observations] == [10.0]
+
+
+def test_when_the_guess_and_the_fallback_both_fail_the_guess_is_reported(tmp_path) -> None:
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+
+    path = _abem_lookalike(tmp_path / "guess.dat", unified_blocks=False)
+
+    with pytest.raises(ValueError) as raised:
+        agent._load_ert_embedded_parsers(
+            data_file=str(path), project_dir=str(tmp_path), instrument="BERT")
+    assert str(raised.value).startswith(
+        "Failed to parse ERT data with ABEM-Lund: No ABEM-Lund measurement rows")
+
+
+def test_qc_writes_its_table_as_csv_without_a_parquet_engine(tmp_path, monkeypatch) -> None:
+    """Parquet needs pyarrow or fastparquet, neither a dependency, and the whole
+    load failed over the format of this one diagnostic table."""
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+
+    ert = agent._load_ert_embedded_parsers(data_file=str(DAS_FILES[0]),
+                                           project_dir=str(tmp_path), instrument="DAS-1")
+
+    def no_engine(self, *args, **kwargs):
+        raise ImportError("Unable to find a usable engine; tried using: 'pyarrow', 'fastparquet'.")
+
+    monkeypatch.setattr(pd.DataFrame, "to_parquet", no_engine)
+    artifacts = agent.qc_and_visualize(ert, outdir=str(tmp_path / "qc"))
+    assert "observations_parquet" not in artifacts
+    assert len(pd.read_csv(artifacts["observations_csv"])) == len(ert.observations)
+    assert Path(artifacts["standard_json"]).exists()

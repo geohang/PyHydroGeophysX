@@ -244,17 +244,58 @@ def apply(ax, style: FigureStyle, title: str = "", xlabel: str = "Distance (m)",
     ax.tick_params(labelsize=style.tick_size)
 
 
+def detached_figure(figsize=None):
+    """A figure pyplot does not manage, for drawing with ``pygimli.show``.
+
+    pyGIMLi's first use of ``pg.plt`` calls ``plt.show()`` once
+    (``registerShowPendingFigsAtExit``). With an interactive backend and a
+    pyplot figure open that call blocks; under an offscreen Qt it never returns,
+    which is how the seismic step hung a fresh process. pyplot cannot see a
+    ``matplotlib.figure.Figure``, so there is nothing for that show() to wait
+    on. Save it with ``fig.savefig``.
+    """
+    from matplotlib.figure import Figure
+
+    return Figure(figsize=figsize)
+
+
+def pg_show(*args, **kwargs):
+    """``pygimli.show``, leaving pyplot holding no figure it did not hold before.
+
+    pyGIMLi draws its colorbar through ``plt.colorbar``, which calls
+    ``plt.gcf()`` and so opens an empty pyplot figure beside a detached one.
+    Left open, that is the figure pyGIMLi's exit handler waits on under an
+    interactive backend: the same hang, moved to the end of the process.
+    """
+    import warnings
+
+    import matplotlib.pyplot as plt
+    import pygimli as pg
+
+    before = set(plt.get_fignums())
+    try:
+        with warnings.catch_warnings():
+            # The colorbar lands in the detached figure's own axes; only the
+            # figure the call is routed through differs.
+            warnings.filterwarnings("ignore", message="Adding colorbar to a different Figure")
+            return pg.show(*args, **kwargs)
+    finally:
+        for number in set(plt.get_fignums()) - before:
+            plt.close(number)
+
+
 def panels(n_panels: int, style: FigureStyle, rows: int = 1):
     """A figure and its axes, sized by the style.
 
     Returns ``(fig, axes)`` with ``axes`` always a flat array, so a
-    single-panel figure and a five-panel one are indexed the same way.
+    single-panel figure and a five-panel one are indexed the same way. The
+    figure is detached from pyplot (see :func:`detached_figure`); draw on it
+    with :func:`pg_show`, and lay it out with ``fig.tight_layout()``.
     """
-    import matplotlib.pyplot as plt
     import numpy as np
 
-    fig, axes = plt.subplots(rows, max(1, int(n_panels)),
-                             figsize=style.figure_size(n_panels, rows))
+    fig = detached_figure(style.figure_size(n_panels, rows))
+    axes = fig.subplots(rows, max(1, int(n_panels)))
     return fig, np.atleast_1d(axes).ravel()
 
 

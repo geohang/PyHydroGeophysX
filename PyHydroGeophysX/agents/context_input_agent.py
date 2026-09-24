@@ -8,7 +8,7 @@ Supports multiple LLM providers (OpenAI GPT, Google Gemini, Anthropic Claude).
 import json
 from typing import Any, Dict, List, Optional
 
-from ._intent import read_request, stage_enabled
+from ._intent import MAX_CONCURRENT_STAGES, ask_concurrently, read_request, stage_enabled
 from ._method import IMPLEMENTED_SCHEME
 from .base_agent import AgentResult, BaseAgent
 
@@ -29,8 +29,12 @@ class ContextInputAgent(BaseAgent):
     - Seismic constraints
     - Uncertainty quantification
     """
-    
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4", 
+
+    #: Extraction questions :meth:`parse_request` keeps in flight at once after
+    #: the router has answered. 1 asks them one after another, as it used to.
+    parse_workers = MAX_CONCURRENT_STAGES
+
+    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4",
                  llm_provider: str = "openai"):
         """
         Initialize the context input agent.
@@ -243,70 +247,77 @@ class ContextInputAgent(BaseAgent):
         if deliverables:
             print(f"  -> Deliverables from the request: {deliverables}")
 
+        # STAGES 1-6 decide which questions to ask; none reads another's answer,
+        # so they are asked at once below and parsed and merged afterwards in
+        # this fixed order - the same configuration as asking them in turn, in
+        # the time of the slowest one instead of the sum.
+        stages = []
+
         # STAGE 1: Extract inversion configuration
-        print("  Stage 1: Extracting ERT inversion configuration...")
-        inversion_prompt = self._create_inversion_prompt(user_request, context)
-        inversion_response = self.query_llm(inversion_prompt)
-        inversion_config = self._extract_config_from_response(inversion_response)
-        
+        stages.append(('inversion', "  Stage 1: Extracting ERT inversion configuration...",
+                       self._create_inversion_prompt(user_request, context)))
+
         # STAGE 2: Extract data fusion configuration
-        fusion_config = {}
         if stage_enabled(aspects, 'fusion'):
-            print("  Stage 2: Extracting data fusion configuration...")
-            fusion_prompt = self._create_data_fusion_prompt(user_request)
-            fusion_response = self.query_llm(fusion_prompt)
-            fusion_config = self._extract_config_from_response(fusion_response)
+            stages.append(('fusion', "  Stage 2: Extracting data fusion configuration...",
+                           self._create_data_fusion_prompt(user_request)))
 
         # STAGE 3: Extract climate configuration
-        climate_config = {}
         if stage_enabled(aspects, 'climate'):
-            print("  Stage 3: Extracting climate/site configuration...")
-            climate_prompt = self._create_climate_prompt(user_request)
-            climate_response = self.query_llm(climate_prompt)
-            climate_config = self._extract_config_from_response(climate_response)
+            stages.append(('climate', "  Stage 3: Extracting climate/site configuration...",
+                           self._create_climate_prompt(user_request)))
 
         # STAGE 4: Extract hydrological model output configuration (MODFLOW / ParFlow)
-        hydro_config = {}
         hydro_keywords = ['modflow', 'parflow', 'par flow', 'watercontent', 'saturation', 'porosity', 'hydrological model']
         if stage_enabled(aspects, 'hydro_model',
                          any(kw in user_request_lower for kw in hydro_keywords)):
-            print("  Stage 4: Extracting hydrological model output configuration...")
-            hydro_prompt = self._create_hydro_model_prompt(user_request)
-            hydro_response = self.query_llm(hydro_prompt)
-            hydro_config = self._extract_config_from_response(hydro_response)
-        
+            stages.append(('hydro', "  Stage 4: Extracting hydrological model output configuration...",
+                           self._create_hydro_model_prompt(user_request)))
+
         # STAGE 5: Extract TDEM configuration (if electromagnetic mentioned)
-        tdem_config = {}
         tdem_keywords = ['tdem', 'tem ', 'time-domain electromagnetic', 'electromagnetic sounding',
                         'loop source', 'transient electromagnetic', 'simpeg']
         if stage_enabled(aspects, 'tdem',
                          any(kw in user_request.lower() for kw in tdem_keywords)):
-            print("  Stage 5: Extracting TDEM configuration...")
-            tdem_prompt = self._create_tdem_prompt(user_request)
-            tdem_response = self.query_llm(tdem_prompt)
-            tdem_config = self._extract_config_from_response(tdem_response)
-        
+            stages.append(('tdem', "  Stage 5: Extracting TDEM configuration...",
+                           self._create_tdem_prompt(user_request)))
+
         # STAGE 6: Extract seismic configuration (if seismic mentioned without ERT fusion)
-        seismic_config = {}
         seismic_keywords = ['seismic refraction', 'srt inversion', 'travel time', 'velocity model',
                            'velocity tomography', 'p-wave', 'first arrival', 'seismic tomography']
         # Only extract seismic config if seismic is mentioned but not as part of ERT fusion
         is_seismic_only = (any(kw in user_request_lower for kw in seismic_keywords) and
-                          'ert' not in user_request_lower and 
+                          'ert' not in user_request_lower and
                           'resistivity' not in user_request_lower and
                           'fusion' not in user_request_lower)
         if stage_enabled(aspects, 'seismic', is_seismic_only):
-            print("  Stage 6: Extracting seismic configuration...")
-            seismic_prompt = self._create_seismic_prompt(user_request)
-            seismic_response = self.query_llm(seismic_prompt)
-            seismic_config = self._extract_config_from_response(seismic_response)
-        
+            stages.append(('seismic', "  Stage 6: Extracting seismic configuration...",
+                           self._create_seismic_prompt(user_request)))
+
+        for _, announcement, _ in stages:
+            print(announcement)
+        replies = ask_concurrently([prompt for _, _, prompt in stages], self.query_llm,
+                                   self.parse_workers)
+        extracted = {name: self._extract_config_from_response(reply)
+                     for (name, _, _), reply in zip(stages, replies)}
+        inversion_config = extracted['inversion']
+        fusion_config = extracted.get('fusion', {})
+        climate_config = extracted.get('climate', {})
+        hydro_config = extracted.get('hydro', {})
+        tdem_config = extracted.get('tdem', {})
+        seismic_config = extracted.get('seismic', {})
+
         # Merge configurations
         workflow_config = {**inversion_config, **fusion_config, **climate_config, **hydro_config, **tdem_config, **seismic_config}
 
         # What stage 0 read from the request wins over the per-topic extractions.
         if deliverables:
             workflow_config.update(deliverables)
+        # The router's "no meteorology" is the model's decision and is recorded
+        # as one. Nothing else writes use_climate=False: a False nobody decided
+        # would now silence the keyword fallback that runs without a model.
+        if aspects.get('climate') is False:
+            workflow_config.setdefault('use_climate', False)
 
         # Detect ERT data processing intent (QC/export without inversion)
         processing_keywords = ['data processing', 'quality control', 'qc', 'preprocess', 'export', 'resipy']
@@ -444,14 +455,17 @@ class ContextInputAgent(BaseAgent):
         # Pattern to match common ERT file extensions
         # Look for lines with bullet points or dashes followed by filenames
         patterns = [
-            r'[-*•]\s+([^\s]+\.ohm)',  # Bullet + .ohm files
-            r'[-*•]\s+([^\s]+\.dat)',  # Bullet + .dat files
-            r'[-*•]\s+([^\s]+\.Data)',  # Bullet + .Data files
+            # The extension must end the name: matched case-insensitively,
+            # '.dat' also matches the start of '.Data' and invented a phantom
+            # '...1400.Dat' beside every real '...1400.Data'.
+            r'[-*•]\s+([^\s]+\.ohm)\b',  # Bullet + .ohm files
+            r'[-*•]\s+([^\s]+\.dat)\b',  # Bullet + .dat files
+            r'[-*•]\s+([^\s]+\.Data)\b',  # Bullet + .Data files
             r'([^\s,;:]+\.ohm)\b',  # Plain .ohm file references
             r'([^\s,;:]+\.bin)\b',  # Plain binary ERT exports
             r'([^\s,;:]+\.stg)\b',  # Plain SuperSting-style exports
-            r'(\d{4}-\d{2}-\d{2}[^\s]*\.ohm)',  # Date-based .ohm files (anywhere)
-            r'(\d{4}-\d{2}-\d{2}[^\s]*\.dat)',  # Date-based .dat files (anywhere)
+            r'(\d{4}-\d{2}-\d{2}[^\s]*\.ohm)\b',  # Date-based .ohm files (anywhere)
+            r'(\d{4}-\d{2}-\d{2}[^\s]*\.dat)\b',  # Date-based .dat files (anywhere)
         ]
         
         for pattern in patterns:
@@ -525,6 +539,10 @@ class ContextInputAgent(BaseAgent):
         import re
 
         lower = (text or "").lower()
+        # The company's name, not the word "subsurface", which half of all
+        # requests contain.
+        if re.search(r"sub\s*surface[\s-]*insight|subinsight", lower):
+            return "Subsurface Insights"
         if "abem" in lower or "terameter" in lower:
             return "ABEM-Lund"
         if "syscal" in lower:
@@ -751,9 +769,10 @@ Extract ONLY ERT inversion configuration in JSON format:
 1. **Data source**:
    - data_file: Path to ERT data file (REQUIRED - extract from text)
    - project_dir: Project directory path (extract folder path, e.g., "data/ERT/E4D")
-   - instrument: One of ['DAS-1', 'Syscal', 'ABEM-Lund', 'Protocol DC', 'BERT', 'Sting', 'ARES', 'E4D', 'Custom']
+   - instrument: One of ['DAS-1', 'Syscal', 'ABEM-Lund', 'Protocol DC', 'BERT', 'Sting', 'ARES', 'E4D', 'Subsurface Insights', 'Custom']
      * Match EXACT instrument name from request
      * "E4D" → use "E4D", "DAS" → use "DAS-1", "Syscal" → use "Syscal"
+     * "Subsurface Insights" / "SubInsights" (results_processed_*.csv exports) → use "Subsurface Insights"
    - crs: Coordinate system ('local' or 'EPSG:XXXX')
 
 2. **Inversion type**:
@@ -901,8 +920,8 @@ User Request:
 Extract ONLY climate data configuration in JSON format:
 
 1. **Climate data required?**
-   - use_climate: true if request mentions: climate, weather, precipitation, temperature, ET, evapotranspiration, meteorological
-   - use_climate: false otherwise
+   - use_climate: true if the request asks for meteorological data - climate, weather, precipitation, air temperature, ET, evapotranspiration - to be retrieved or compared with the surveys
+   - use_climate: false otherwise. A temperature correction of the resistivity (to a reference temperature, from a ground-temperature logger or model) is NOT a climate request, and "weathered" / "weathering" rock is geology, not weather
 
 2. **If use_climate = true**, extract climate_config:
    - coords: [longitude, latitude] in decimal degrees
@@ -912,8 +931,8 @@ Extract ONLY climate data configuration in JSON format:
      * Extract explicit date range if mentioned
      * Format: "September 2021 to March 2022" → ["2021-09-01", "2022-03-31"]
    - variables: List of climate variables mentioned
-     * Common: ["prcp", "tmin", "tmax", "srad", "vp", "dayl"]
-     * Extract if explicitly requested
+     * Available: ["prcp", "tmin", "tmax", "pet"] (precipitation, daily minimum and maximum air temperature, reference evapotranspiration)
+     * Extract if explicitly requested; name anything else asked for as it was asked, so it can be reported as unavailable
    - pet_method: PET calculation method if mentioned
      * "Penman-Monteith" → "penman_monteith"
      * "Hargreaves" → "hargreaves"
@@ -939,7 +958,7 @@ Example output (climate requested):
   "climate_config": {{
     "coords": [-106.97998, 38.92584],
     "dates": ["2021-09-01", "2022-03-31"],
-    "variables": ["prcp", "tmin", "tmax", "srad", "dayl"],
+    "variables": ["prcp", "tmin", "tmax", "pet"],
     "pet_method": "penman_monteith",
     "time_scale": "daily",
     "antecedent_days": [7, 14]
@@ -1266,8 +1285,10 @@ Generate JSON now:"""
             return config
         
         # Set defaults
+        # No 'instrument' default either. A guessed one contradicted the file
+        # header whenever it was wrong, and the loader then refused every file;
+        # left unset, the run reads the instrument from the header instead.
         defaults = {
-            'instrument': 'Syscal',  # Changed from E4D to more common instrument
             'crs': 'local',
             'inversion_mode': 'standard',  # or 'time-lapse'
             'inversion_params': {
@@ -1276,7 +1297,8 @@ Generate JSON now:"""
                 'method': 'cgls',
                 'use_gpu': False
             },
-            'use_climate': False,
+            # No 'use_climate' default: absent means undecided, and wants_climate
+            # then reads the request; an explicit value is final.
             'use_seismic': False,
             'run_uncertainty': True,
             'n_realizations': 100,
@@ -1436,7 +1458,7 @@ Keep it brief (3-5 sentences) and avoid technical jargon where possible."""
         
         # Set default climate variables if not specified
         if 'variables' not in climate_cfg:
-            climate_cfg['variables'] = ["prcp", "tmin", "tmax", "srad", "vp", "dayl"]
+            climate_cfg['variables'] = ["prcp", "tmin", "tmax", "pet"]  # what ClimateDataAgent returns
         
         # Set default PET method
         if 'pet_method' not in climate_cfg:

@@ -160,6 +160,9 @@ load_ert_resipy
    * **E4D** - E4D format (common in watershed monitoring)
    * **DAS-1** - DAS-1 systems
    * **Electra** - Electra systems
+   * **Subsurface Insights** - Subsurface Insights monitoring systems
+     (``results_processed_*.csv``); read by this package's own reader whether
+     or not ResIPy is installed
    * **Custom** - Custom data formats
    * **Merged** - Merged datasets
 
@@ -199,22 +202,27 @@ load_ert_resipy
 qc_and_visualize
 ^^^^^^^^^^^^^^^^
 
-.. py:function:: qc_and_visualize(ert: ERTDataset, outdir: str = "results") -> Dict[str, str]
+.. py:function:: qc_and_visualize(ert: ERTDataset, outdir: str = "examples/results/ert") -> Dict[str, str]
 
-   Generate quality control plots and summary statistics for ERT dataset.
+   Write quality-control plots and the dataset's standardized tables.
 
    :param ert: ERT dataset from load_ert_resipy
    :type ert: ERTDataset
-   :param outdir: Output directory for plots and reports
+   :param outdir: Output directory for the plots and tables
    :type outdir: str
    :return: Dictionary mapping artifact types to file paths
    :rtype: Dict[str, str]
 
    **Generated Artifacts:**
-   
+
+   * ``electrodes.png``: Electrode positions along the line
    * ``rhoa_hist.png``: Histogram of log10 apparent resistivity values
-   * ``pseudosection.png``: Pseudosection plot (if supported by instrument)
-   * ``data_summary.json``: Statistical summary (count, mean, std, min, max, percentiles)
+   * ``observations.parquet``: One row per measurement (quadrupole, apparent
+     resistivity, voltage, current, relative error). Parquet needs ``pyarrow``
+     or ``fastparquet``; without either the table is written as
+     ``observations.csv`` and returned under ``observations_csv``.
+   * ``electrodes.csv``: Electrode coordinates
+   * ``ert_standard.json``: The standardized dataset
 
    **Example:**
 

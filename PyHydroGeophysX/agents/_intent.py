@@ -34,9 +34,12 @@ for against what came back, and names anything missing so the caller can warn
 instead of claiming success.
 """
 
+import contextvars
 import json
+import re
+from concurrent.futures import ThreadPoolExecutor
 from difflib import SequenceMatcher
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 #: Phrases that mean "convert resistivity to water content". Matched fuzzily,
 #: so near-misses and ordinary misspellings still count.
@@ -131,13 +134,45 @@ def wants_water_content(config: Dict[str, Any]) -> bool:
     return _mentions(request, WATER_CONTENT_PHRASES)
 
 
-#: Phrases that mean "bring meteorology into this". Matched like the water
-#: content ones: fuzzily for a request, exactly for a refusal.
+#: Words that mean "bring meteorology into this" when no flag says. Matched as
+#: whole words, unlike the water-content phrases: "weather" inside "weathered
+#: bedrock" or "the weathering front" is geology, and a fuzzy comparison scores
+#: "weathered" 0.875 against it. The Chinese ones are plain substrings.
 CLIMATE_PHRASES = (
-    "climate", "precipitation", "rainfall", "weather", "meteorolog",
-    "evapotranspiration", "temperature", "snowmelt", "daymet",
+    "climate", "climatic", "precipitation", "rainfall", "rain", "weather",
+    "meteorology", "meteorological", "evapotranspiration", "temperature",
+    "snowmelt", "snowfall", "daymet", "open-meteo", "era5",
     "气象", "降水", "降雨", "蒸散", "气温", "融雪",
 )
+
+#: The long words, where a misspelling is still read as the word: nothing else
+#: in a survey request comes within the similarity threshold of them.
+_CLIMATE_LONG_WORDS = ("precipitation", "evapotranspiration", "meteorology",
+                       "meteorological")
+
+#: A temperature *correction* of the resistivity reads the ground's temperature
+#: from a logger or a model; it is not a request for weather data, and matching
+#: "temperature" in it switched the climate step on for every corrected series.
+_TEMPERATURE_CORRECTION = re.compile(
+    r"temperature[\s-]*(?:correct|compensat|normali[sz]|adjust)\w*"
+    r"|(?:correct|compensat|normali[sz]|adjust)\w*(?:\s+\w+){0,4}?\s+(?:for|to)\s+"
+    r"(?:the\s+|a\s+)?(?:\w+\s+)?temperature"
+    r"|reference\s+temperature",
+    re.IGNORECASE)
+
+
+def _names_climate(request: str) -> bool:
+    """Whether the wording of ``request`` asks for meteorological data."""
+    text = _TEMPERATURE_CORRECTION.sub(" ", (request or "").lower())
+    for phrase in CLIMATE_PHRASES:
+        if not phrase.isascii():
+            if phrase in text:
+                return True
+        elif re.search(rf"(?<![a-z0-9]){re.escape(phrase)}s?(?![a-z0-9])", text):
+            return True
+    return any(SequenceMatcher(None, word, phrase).ratio() >= _SIMILARITY
+               for word in re.findall(r"[a-z]{8,}", text)
+               for phrase in _CLIMATE_LONG_WORDS)
 
 
 def wants_climate(config: Dict[str, Any]) -> bool:
@@ -146,9 +181,10 @@ def wants_climate(config: Dict[str, Any]) -> bool:
     Parameters
     ----------
     config : dict
-        Workflow configuration. ``use_climate`` and a supplied
-        ``climate_config`` are honoured first, then the wording of
-        ``user_request``.
+        Workflow configuration. ``use_climate``, when present, decides - the
+        request parser's model or the user set it. Otherwise a supplied
+        ``climate_config`` means yes, and last the wording of ``user_request``
+        is read, whole words only.
 
     Returns
     -------
@@ -167,19 +203,29 @@ def wants_climate(config: Dict[str, Any]) -> bool:
     True
     >>> wants_climate({"user_request": "just invert the surveys"})
     False
+    >>> wants_climate({"user_request": "map the depth to weathered bedrock"})
+    False
+    >>> wants_climate({"user_request": "time-lapse ERT with temperature correction"})
+    False
+    >>> wants_climate({"use_climate": False, "user_request": "compare with rainfall"})
+    False
     """
-    if config.get("use_climate") is not None:
-        if bool(config.get("use_climate")):
-            return True
+    explicit = config.get("use_climate")
+    if explicit is not None:
+        # A decision is not outvoted by a keyword. A False used to fall through
+        # to the matching below, so the step ran - and the report warned that
+        # weather data had been requested - whenever the wording said "weather"
+        # or "temperature" in any sense.
+        return bool(explicit)
     if config.get("climate_config"):
         return True
-    return _mentions(str(config.get("user_request", "")), CLIMATE_PHRASES)
+    return _names_climate(str(config.get("user_request", "")))
 
 
 def climate_blocker(config: Dict[str, Any]) -> Optional[str]:
     """Why meteorological data cannot be retrieved, in the user's terms.
 
-    Daymet is sampled at a point, so a position is required. A survey in a local
+    The reanalysis is sampled at a point, so a position is required. A survey in a local
     coordinate frame has none - the electrode "y" values are elevations, not
     latitudes - and that is a fixable situation the user can only act on if they
     are told which piece is missing.
@@ -300,8 +346,9 @@ Fields:
   looked up can be checked, a remembered coordinate cannot.
 - aspects: which topics this request involves, so that only the matching
   configuration is extracted. Each is true or false:
-    climate     - meteorological data: precipitation, temperature, PET, snow
-    fusion      - combining two or more geophysical methods in one interpretation
+    climate     - meteorological data: precipitation, air temperature, PET, snow
+                  (a temperature correction of the resistivity is not climate)
+    fusion     - combining two or more geophysical methods in one interpretation
     tdem        - time-domain or transient electromagnetic soundings
     seismic     - seismic refraction, travel times, velocity models
     hydro_model - outputs of a hydrological model such as MODFLOW or ParFlow
@@ -527,3 +574,62 @@ def stage_enabled(aspects: Dict[str, Any], name: str,
     if stated is None:
         return bool(keyword_hit)
     return bool(stated) or bool(keyword_hit)
+
+
+#: At most this many extraction questions are in flight at once. The router
+#: leaves at most six stages running, usually two to four; four asks those in
+#: one wait without putting a burst of six on a provider's concurrency limit.
+MAX_CONCURRENT_STAGES = 4
+
+
+def ask_concurrently(prompts: Sequence[str], query: Callable[[str], Any],
+                     max_workers: int = MAX_CONCURRENT_STAGES) -> List[Any]:
+    """Put independent questions to the model at once; replies in prompt order.
+
+    The extraction stages after the router do not read one another's answers,
+    yet they were asked one after another, so parsing a request cost the sum
+    of their latencies instead of the longest one. The router still runs first
+    and alone, because it decides which stages there are.
+
+    Parameters
+    ----------
+    prompts : sequence of str
+        The questions, in the order their answers are wanted.
+    query : callable
+        Takes one prompt and returns the reply - an agent's ``query_llm``. It
+        is called on worker threads, each inside a copy of the caller's
+        context, so context variables (the reasoning effort, the retrieved
+        references) read there as they do on the calling thread.
+    max_workers : int
+        Questions in flight at once. 1 asks them in turn on the calling thread,
+        exactly as before.
+
+    Returns
+    -------
+    list
+        One reply per prompt, in the order of ``prompts`` whatever order the
+        replies arrived in.
+
+    Raises
+    ------
+    Exception
+        Whatever ``query`` raised for the earliest failing prompt, as asking in
+        turn would have raised it. The later questions have been asked by then.
+
+    Examples
+    --------
+    >>> ask_concurrently(['stage one', 'stage two'], str.upper)
+    ['STAGE ONE', 'STAGE TWO']
+    >>> ask_concurrently([], str.upper)
+    []
+    """
+    prompts = list(prompts)
+    if len(prompts) <= 1 or max_workers <= 1:
+        return [query(prompt) for prompt in prompts]
+    with ThreadPoolExecutor(max_workers=min(int(max_workers), len(prompts)),
+                            thread_name_prefix="phgx-parse") as pool:
+        # One context copy per question: a context can be entered on only one
+        # thread at a time.
+        futures = [pool.submit(contextvars.copy_context().run, query, prompt)
+                   for prompt in prompts]
+        return [future.result() for future in futures]

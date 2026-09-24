@@ -67,7 +67,9 @@ see: an uncorrected series shows the ground "drying" as it cools. Correcting eac
 survey to one reference temperature leaves the remaining change attributable to
 water.
 
-Tick **Temperature correction** in the Studio's time-lapse panel, or pass
+In the Studio, run the inversion, then set the **Temperature correction** panel
+beside the section on the **Resistivity model** tab and press **Apply** (see
+`Correcting a result that is already inverted`_). In a script, pass
 ``temperature_correction`` in the inversion parameters:
 
 .. code-block:: python
@@ -82,13 +84,45 @@ Tick **Temperature correction** in the Studio's time-lapse panel, or pass
        "diffusivity": 0.06,           # m2/day
    }
 
-The temperature comes from one of four sources: a constant, a measured
-``depth, temperature`` profile, a **surface record diffused into the ground**, or
-the analytical damped annual wave. The corrected models become the
-series every panel, change plot and export is built from; the raw ones are kept
-beside them as ``final_models_uncorrected.npy``. Every run states which it
-produced - in the log, in the figure title and in the report - because a
-corrected section is indistinguishable from an uncorrected one on the page.
+The temperature comes from one of four sources: a constant, a **measured profile**
+(with depth, and through time when it was logged that way), a **surface record
+diffused into the ground**, or the analytical damped annual wave. In a scripted
+run the corrected models become the series every panel, change plot and export is
+built from; the raw ones are kept beside them as ``final_models_uncorrected.npy``.
+Every run states which it produced - in the log, in the figure title and in the
+report - because a corrected section is indistinguishable from an uncorrected one
+on the page.
+
+Measured profile, depth × time
+``````````````````````````````
+
+A thermistor string is the best temperature data a site can have: it measures the
+depth structure and how it evolves, so nothing has to be modelled.
+``load_temperature_profiles`` - and the panel's **Profile table** - read it in
+whichever layout the logger wrote, told apart by the file's own shape:
+
+``date, depth_m, temperature_C``
+    one reading per row, the long form a database exports;
+a header of depths, then a row per date
+    one column per sensor, the wide form a logger exports;
+a header of dates, then a row per depth
+    the same table transposed, as it is often typed by hand;
+``depth_m, temperature_C``
+    a single profile, held constant in time.
+
+Sensor headers may carry a unit or a prefix (``0.5m``, ``50 cm``, ``T_0.5``), the
+time may span two columns (``date, time``), and gaps - empty cells, ``NaN``,
+``-9999`` - are filled in time for each sensor.
+
+The record is interpolated linearly in time and then in depth onto every cell and
+survey. Before and after its span, and above its shallowest sensor, the nearest
+reading is held. Below its deepest sensor the seasonal swing that sensor recorded
+is damped with depth towards its mean, at the annual damping depth of the
+``diffusivity`` option (2.6 m by default), because conduction damps it; holding the
+deepest reading instead would carry a shallow string's full season to every
+deeper cell. The panel says what it read - how many depths over which interval,
+how many times over which dates - and warns when some surveys fall outside the
+record, before anything is applied.
 
 Surface record, 1-D conduction
 ``````````````````````````````
@@ -133,10 +167,24 @@ correction, not a small one.
 Correcting a result that is already inverted
 ````````````````````````````````````````````
 
-The correction is post-processing, so it does not need the inversion to be re-run.
-**Project → Saved Results → Temperature correction…** applies it to the series on
-screen, states on the page what temperature the section is now reported at, and
-puts the inverted models back when it is unticked.
+The correction is post-processing, so it never needs the inversion to be re-run,
+and in the Studio it is always applied this way - to a single inversion as much as
+to a time-lapse series. The same panel sits beside the section on the ERT page's
+**Resistivity model** tab and beside a reopened section in **Project → Saved
+Results**. Choose the settings and press **Apply**: the model on screen is
+corrected there and then, its title and the panel say what temperature it is now
+reported at, and **Remove** puts the inverted model back. Nothing is switched on in
+advance, and the settings are shared between the two pages. A single survey is
+placed in time by the date in its file name or header, which a dated record or the
+seasonal model needs.
+
+On the ERT page the exports then write the corrected model beside the inverted
+one, never in place of it: ``final_models_temperature_corrected.npy`` and
+``timelapse_resistivity_temperature_corrected.vtk`` for a series,
+``resistivity_model_temperature_corrected.npy`` and ``.vtk`` for a single model,
+the cell CSV holding what is on screen, and ``temperature_correction.json``
+recording what was applied. ``final_models.npy``, ``resistivity_model.npy``, the
+per-step VTKs and the figure remain the models as inverted.
 
 Weighting the temporal constraint by the interval
 -------------------------------------------------

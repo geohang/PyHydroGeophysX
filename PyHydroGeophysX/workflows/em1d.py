@@ -265,6 +265,46 @@ def example_catalog() -> Dict[str, Dict[str, Any]]:
     }
 
 
+#: The refusal for fitting data with ``component="both"``. The forward then
+#: returns two fields per frequency, [secondary, total], while an observed
+#: sounding holds one - and which one is not something to guess.
+FDEM_BOTH_REFUSAL = (
+    "FDEM inversion fits one field per frequency; component='both' does not say "
+    "which one the data hold. Choose 'secondary' or 'total'.")
+
+
+def _one_fdem_field(geom: Dict[str, Any]) -> None:
+    """Refuse ``component="both"`` wherever a response is compared with data."""
+    if str(geom.get("component", "secondary")).strip().lower() == "both":
+        raise ValueError(FDEM_BOTH_REFUSAL)
+
+
+def _fdem_halfspace_amplitude(geom: Dict[str, Any], frequencies: np.ndarray,
+                              resistivity: float) -> np.ndarray:
+    """``|H|`` of a half-space at ``resistivity``, one value per frequency.
+
+    The solver returns one complex value per frequency and field, frequency
+    first. Cutting that to ``frequencies.size``, as this used to, read a "both"
+    response - [secondary(f1), total(f1), secondary(f2), ...] - as the band
+    itself, mixing the two fields and dropping its upper half. It is reshaped
+    as :func:`PyHydroGeophysX.forward.em1d.fdem_forward` does instead.
+    """
+    _one_fdem_field(geom)
+    from PyHydroGeophysX.forward.fdem_forward import FDEMForwardModeling
+
+    freqs = np.asarray(frequencies, dtype=float).ravel()
+    md = FDEMForwardModeling(thicknesses=np.array([50.0]),
+                             survey_config=_fdem_config(geom, freqs))
+    resp = np.asarray(md.forward(np.array([1.0 / resistivity, 1.0 / resistivity])))
+    resp = resp.ravel()
+    if not np.iscomplexobj(resp):
+        resp = resp[0::2] + 1j * resp[1::2]
+    if resp.size != freqs.size:
+        raise ValueError(f"FDEM forward returned {resp.size} values for "
+                         f"{freqs.size} frequencies.")
+    return np.abs(resp)
+
+
 def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
                         max_soundings: int = 8, log: LogFn = _noop) -> float:
     """Estimate the amplitude calibration (``data_scale``) for normalized data.
@@ -330,17 +370,9 @@ def estimate_data_scale(path: str, method: str, geom: Dict[str, Any], *,
                     abscissa,
                 )
         else:
-            from PyHydroGeophysX.forward.fdem_forward import FDEMForwardModeling
             abscissa = np.asarray(head["frequencies"], dtype=float).ravel()
-            cfg = _fdem_config(geom, abscissa)
-            grid = []
-            for R in np.geomspace(25.0, 3000.0, 20):
-                md = FDEMForwardModeling(thicknesses=np.array([50.0]), survey_config=cfg)
-                resp = np.asarray(md.forward(np.array([1.0 / R, 1.0 / R]))).ravel()
-                if resp.size == 2 * abscissa.size and not np.iscomplexobj(resp):
-                    resp = resp[0::2] + 1j * resp[1::2]
-                grid.append(np.abs(np.asarray(resp, dtype=complex).ravel()[:abscissa.size]))
-            preds = np.asarray(grid)
+            preds = np.asarray([_fdem_halfspace_amplitude(geom, abscissa, R)
+                                for R in np.geomspace(25.0, 3000.0, 20)])
 
             def observed(s):
                 d = load_sounding(
@@ -445,13 +477,8 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
                     abscissa,
                 )
         else:
-            from PyHydroGeophysX.forward.fdem_forward import FDEMForwardModeling
             abscissa = np.asarray(head["frequencies"], dtype=float).ravel()
-            md = FDEMForwardModeling(thicknesses=np.array([50.0]), survey_config=_fdem_config(geom, abscissa))
-            resp = np.asarray(md.forward(np.array([1.0 / ref, 1.0 / ref]))).ravel()
-            if resp.size == 2 * abscissa.size and not np.iscomplexobj(resp):
-                resp = resp[0::2] + 1j * resp[1::2]
-            pred = np.abs(np.asarray(resp, dtype=complex).ravel()[:abscissa.size])
+            pred = _fdem_halfspace_amplitude(geom, abscissa, ref)
 
             def observed(s):
                 d = load_sounding(
@@ -863,6 +890,11 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     """
     if method not in METHODS:
         raise ValueError(f"method must be one of {METHODS}, got {method!r}.")
+    if method == "FDEM":
+        # Refused once, here. Per sounding, the solver's own refusal is caught
+        # by the keep-the-line-going handlers, so the line would finish with
+        # every station failed and the reason only in the log.
+        _one_fdem_field(geom)
     moment = (
         _normalise_temcompany_moment(str(geom.get("tem_moment", "HM")))
         if (is_temcompany_source(path) or is_ttem_source(path))

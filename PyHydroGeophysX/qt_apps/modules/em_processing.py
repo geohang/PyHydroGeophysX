@@ -50,6 +50,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     set_rows_enabled,
     select_directory,
 )
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets.curve_viewer import CurveViewer
 from PyHydroGeophysX.qt_apps.widgets.em_overview_view import EMOverviewView
 from PyHydroGeophysX.qt_apps.widgets.em_gate_view import EMGateView
@@ -185,8 +186,11 @@ class EMProcessingModule(BaseModule):
         self._curve = CurveViewer()
         # Result sections stay here; project-wide maps live in Project Map.
         self._inv_view = ZoomableImageView()       # page 0: single-sounding profile
-        self._overview_view = EMOverviewView(section_only=True)
-        self._section_view = Model3DView()
+        # The section and the volume are one EM model, so they share one colour
+        # map; the session keeps it for every EM section in the studio.
+        shared = cmaps.colormap_settings(self.state)
+        self._overview_view = EMOverviewView(section_only=True, colormaps=shared)
+        self._section_view = Model3DView(colormaps=shared, colormap_key=cmaps.EM_SECTION)
         self._model_stack = QStackedWidget()
         self._model_stack.addWidget(self._inv_view)
         self._model_stack.addWidget(self._overview_view)
@@ -211,7 +215,7 @@ class EMProcessingModule(BaseModule):
         # Two views of the data as it stands, before anything is inverted: where
         # the stations are and what the gate selection keeps of each, and the
         # acquisition description the forward will model.
-        self._survey_view = EMSurveyView()
+        self._survey_view = EMSurveyView(colormaps=shared)
         self._survey_view.stationPicked.connect(self._on_station_picked)
         self._metadata_view = EMMetadataView()
         # Whether a thinning line is resistive ground or a risen noise floor.
@@ -513,7 +517,13 @@ class EMProcessingModule(BaseModule):
             "sharing a geometry share one warmed-up forward operator, which is "
             "well inside what the response can resolve.")
         self._orient = QComboBox(); self._orient.addItems(["z", "x", "y"])
-        self._component = QComboBox(); self._component.addItems(["secondary", "total", "both"])
+        # No "both": this page inverts, and a sounding carries one field per
+        # frequency. Offered, it fitted secondary and total values alternately
+        # against successive frequencies; the inversion now refuses it.
+        self._component = QComboBox(); self._component.addItems(["secondary", "total"])
+        self._component.setToolTip(
+            "Which field the sounding's values are: the secondary field alone, or the "
+            "total field including the primary. The inversion fits the one chosen.")
         self._waveform = QComboBox()
         self._src_radius_label = QLabel("Source radius (m)")
         form.addRow(self._src_radius_label, self._src_radius)
@@ -2509,7 +2519,7 @@ class EMProcessingModule(BaseModule):
                           "the inversion still uses the survey.")},
                 {"name": "set_params", "args": {"params": {"<key>": "value"}},
                  "desc": ("Set parameters. Geometry: source_radius, loop_area, tx_rx_sep, height, orientation "
-                          "(z/x/y), component (secondary/total/both), waveform. Inversion: n_layers, "
+                          "(z/x/y), component (secondary/total), waveform. Inversion: n_layers, "
                           "min_thickness, max_thickness, starting_resistivity, smoothness, "
                           "rel_error, min_rel_error (floor on the recorded stack "
                           "error; 0 is off), max_rel_error (cap that limits how "
@@ -2746,6 +2756,15 @@ class EMProcessingModule(BaseModule):
                 raise ValueError(f"must be one of {items}")
             combo.setCurrentText(str(value))
 
+        def set_component(value):
+            if str(value).strip().lower() == "both":
+                message = ("an FDEM inversion fits one field per frequency, and 'both' "
+                           "does not say which one the sounding holds. Choose "
+                           "'secondary' or 'total'.")
+                self.log(f"Component not changed: {message}", "warn")
+                raise ValueError(message)
+            set_combo(self._component, str(value).strip().lower())
+
         def set_combo_data(combo, value):
             """Select by the item's userData, for combos whose label reads as prose."""
             index = combo.findData(str(value).strip().lower())
@@ -2765,7 +2784,7 @@ class EMProcessingModule(BaseModule):
             "per_station_geometry":
                 lambda v: self._per_station_geometry.setChecked(bool(v)),
             "orientation": lambda v: set_combo(self._orient, v),
-            "component": lambda v: set_combo(self._component, v),
+            "component": lambda v: set_component(v),
             "waveform": lambda v: set_combo(self._waveform, v),
             "tem_moment": lambda v: set_combo(self._tem_moment, str(v).upper()),
             "use_project_flags": lambda v: self._use_flags.setChecked(bool(v)),

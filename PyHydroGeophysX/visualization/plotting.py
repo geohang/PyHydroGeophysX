@@ -24,6 +24,38 @@ def _try_pg_show(ax, mesh, values, **kwargs):
     return False
 
 
+def _coverage_mask(coverage) -> np.ndarray:
+    """Boolean show-mask for a coverage array, whatever convention it uses.
+
+    ERT coverage here is log10 sensitivity, masked below -1 as before. SRT
+    coverage is pyGIMLi's standardized 0/1 ray coverage (or a non-negative ray
+    count), for which the old fixed '> -1' kept every cell, so nothing was ever
+    masked; a coverage with no negative values masks its zero cells instead. A
+    boolean array is taken as the mask itself.
+    """
+    cov = np.asarray(coverage).ravel()
+    if cov.dtype == bool:
+        return cov
+    cov = cov.astype(float)
+    finite = cov[np.isfinite(cov)]
+    if finite.size and finite.min() >= 0.0:
+        return cov > 0.0
+    return cov > -1
+
+
+def _log_symmetric_ratio_limit(ratios) -> float:
+    """Upper colour limit v for ratios drawn on [1/v, v]: max(max r, 1/min r).
+
+    Only positive, finite ratios take part, and v never drops below 1.01 so
+    an unchanged model still gets a usable colour range.
+    """
+    r = np.asarray(ratios, dtype=float).ravel()
+    r = r[np.isfinite(r) & (r > 0)]
+    if r.size == 0:
+        return 1.01
+    return float(max(np.max(r), 1.0 / np.min(r), 1.01))
+
+
 def _get_cmap(name: Optional[str] = None):
     """Return a matplotlib colormap, trying palettable first."""
     if name is not None:
@@ -99,7 +131,7 @@ def plot_model_section(
     if cmax is not None:
         kw["cMax"] = cmax
     if coverage is not None:
-        kw["coverage"] = np.asarray(coverage).ravel() > -1
+        kw["coverage"] = _coverage_mask(coverage)
 
     arr = np.asarray(values, dtype=float).ravel()
     ax, cbar = pg.show(mesh, arr, ax=ax, **kw)
@@ -189,7 +221,7 @@ def plot_timelapse_snapshots(
             kw["cMax"] = cmax
         if cov_arr is not None:
             c = cov_arr if single_cov else cov_arr[idx]
-            kw["coverage"] = np.asarray(c).ravel() > -1
+            kw["coverage"] = _coverage_mask(c)
 
         # Axis labels only on edges
         if col == 0:
@@ -276,13 +308,19 @@ def plot_difference_map(
     if symmetric:
         vmax = np.nanmax(np.abs(vals))
         if mode == "ratio":
-            kw["cMin"] = 1.0 / max(vmax, 1.01)
-            kw["cMax"] = max(vmax, 1.01)
+            # Symmetric in log space, where a ratio of 0.2 is as big a change
+            # as 5, and on a log scale so the diverging map centres on 1. Only
+            # max|r| was used, so ratios below 1 never widened the range
+            # (0.2 to 0.9 were drawn between 0.99 and 1.01).
+            vmax = _log_symmetric_ratio_limit(vals)
+            kw["cMin"] = 1.0 / vmax
+            kw["cMax"] = vmax
+            kw["logScale"] = True
         else:
             kw["cMin"] = -vmax
             kw["cMax"] = vmax
     if coverage is not None:
-        kw["coverage"] = np.asarray(coverage).ravel() > -1
+        kw["coverage"] = _coverage_mask(coverage)
 
     ax, cbar = pg.show(mesh, vals, ax=ax, **kw)
     if title:
@@ -539,8 +577,11 @@ def _convert_pygimli_to_simpeg(data_obj):
     """
     import pygimli as pg
     from pygimli.physics import ert as pgert
-    from SimPEG import data as simpeg_data
-    from SimPEG.electromagnetics.static import resistivity as dc
+    # 'simpeg', not the deprecated 'SimPEG' shim: with simpeg >= 0.25 the shim
+    # loads a second copy of the package, whose Survey is not the BaseSurvey
+    # that simpeg.data.Data checks for, so every conversion raised TypeError.
+    from simpeg import data as simpeg_data
+    from simpeg.electromagnetics.static import resistivity as dc
 
     # Load if path
     if isinstance(data_obj, (str, os.PathLike)):
@@ -557,15 +598,22 @@ def _convert_pygimli_to_simpeg(data_obj):
     n_idx = np.asarray(data_obj["n"], dtype=int)
     rhoa = np.asarray(data_obj["rhoa"])
 
+    # pyGIMLi marks a remote (infinite) electrode with index -1. Indexing the
+    # sensor arrays with it put every remote electrode at the last electrode
+    # (x = 70.19 m on fielddataline2), so pole-dipole readings were drawn at
+    # the wrong pseudo-positions. Remote electrodes become SimPEG poles.
+    def _loc(idx):
+        return None if idx < 0 else np.array([xx[idx], yy[idx]])
+
     # Build SimPEG source list
     # Group by unique current electrode pairs (A, B)
     # Use 2D coordinates (x, z) for 2D pseudosection compatibility
     source_dict = {}
     for i in range(len(a_idx)):
-        a_loc = np.array([xx[a_idx[i]], yy[a_idx[i]]])
-        b_loc = np.array([xx[b_idx[i]], yy[b_idx[i]]])
-        m_loc = np.array([xx[m_idx[i]], yy[m_idx[i]]])
-        n_loc = np.array([xx[n_idx[i]], yy[n_idx[i]]])
+        a_loc, b_loc = _loc(a_idx[i]), _loc(b_idx[i])
+        m_loc, n_loc = _loc(m_idx[i]), _loc(n_idx[i])
+        if (a_loc is None and b_loc is None) or (m_loc is None and n_loc is None):
+            continue  # both electrodes of a pair at infinity: nothing to place
 
         key = (a_idx[i], b_idx[i])
         if key not in source_dict:
@@ -575,20 +623,35 @@ def _convert_pygimli_to_simpeg(data_obj):
                 "m_locs": [],
                 "n_locs": [],
                 "rhoa_vals": [],
+                "pole_locs": [],
+                "pole_vals": [],
             }
-        source_dict[key]["m_locs"].append(m_loc)
-        source_dict[key]["n_locs"].append(n_loc)
-        source_dict[key]["rhoa_vals"].append(rhoa[i])
+        if m_loc is not None and n_loc is not None:
+            source_dict[key]["m_locs"].append(m_loc)
+            source_dict[key]["n_locs"].append(n_loc)
+            source_dict[key]["rhoa_vals"].append(rhoa[i])
+        else:
+            source_dict[key]["pole_locs"].append(m_loc if m_loc is not None else n_loc)
+            source_dict[key]["pole_vals"].append(rhoa[i])
 
     source_list = []
     dobs_list = []
     for key, info in source_dict.items():
-        m_locs = np.array(info["m_locs"])
-        n_locs = np.array(info["n_locs"])
-        rx = dc.receivers.Dipole(m_locs, n_locs)
-        src = dc.sources.Dipole([rx], info["a_loc"], info["b_loc"])
+        # SimPEG orders data source by source, then receiver by receiver, so
+        # dobs follows the same order: dipole readings, then pole readings.
+        receivers = []
+        if info["m_locs"]:
+            receivers.append(dc.receivers.Dipole(np.array(info["m_locs"]), np.array(info["n_locs"])))
+            dobs_list.extend(info["rhoa_vals"])
+        if info["pole_locs"]:
+            receivers.append(dc.receivers.Pole(np.array(info["pole_locs"])))
+            dobs_list.extend(info["pole_vals"])
+        if info["a_loc"] is not None and info["b_loc"] is not None:
+            src = dc.sources.Dipole(receivers, info["a_loc"], info["b_loc"])
+        else:
+            pole = info["a_loc"] if info["a_loc"] is not None else info["b_loc"]
+            src = dc.sources.Pole(receivers, pole)
         source_list.append(src)
-        dobs_list.extend(info["rhoa_vals"])
 
     survey = dc.Survey(source_list)
     dc_data_out = simpeg_data.Data(survey, dobs=np.array(dobs_list))
@@ -672,13 +735,13 @@ def plot_apparent_resistivity_pseudosection(
     """
     import os as _os
 
-    from SimPEG.electromagnetics.static.utils.static_utils import (
+    from simpeg.electromagnetics.static.utils.static_utils import (
         plot_pseudosection,
     )
 
     # Determine if we need to convert from PyGimli
     try:
-        from SimPEG import data as simpeg_data
+        from simpeg import data as simpeg_data
         if isinstance(data_obj, simpeg_data.Data):
             dc_data = data_obj
             topo_xyz = None
@@ -788,7 +851,7 @@ def plot_apparent_resistivity_timelapse(
     -------
     fig, axes
     """
-    from SimPEG.electromagnetics.static.utils.static_utils import (
+    from simpeg.electromagnetics.static.utils.static_utils import (
         plot_pseudosection,
     )
 
@@ -819,7 +882,7 @@ def plot_apparent_resistivity_timelapse(
 
         # Convert data
         try:
-            from SimPEG import data as simpeg_data
+            from simpeg import data as simpeg_data
             if isinstance(data_objs[idx], simpeg_data.Data):
                 dc_data = data_objs[idx]
             else:

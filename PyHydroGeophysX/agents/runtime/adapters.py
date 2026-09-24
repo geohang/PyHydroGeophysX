@@ -74,6 +74,28 @@ SAFE_BUILTINS = {
 #: anything longer is a loop that will not end.
 TIMEOUT_SECONDS = 5.0
 
+#: The file name generated code is compiled under, which is how the tracer that
+#: stops it recognises its frames and leaves every other frame untraced.
+_SOURCE_NAME = "<generated adapter>"
+
+#: How long a reader that ran out of time gets to notice it has been stopped.
+#: It stops at its next line, so this is only ever waited in full by one stuck
+#: inside a single long call into C.
+_CANCEL_GRACE_SECONDS = 1.0
+
+#: A bare ``except:`` catches the exception that stops a reader that ran out of
+#: time, and the tracer that raised it is gone once it has fired - so a reader
+#: looping inside ``try: ... except: continue`` could never be stopped.
+_BARE_EXCEPT = re.compile(r"\bexcept\s*:")
+
+
+class _Cancelled(BaseException):
+    """Raised inside a generated reader to stop it once its time is up.
+
+    A ``BaseException``, not an ``Exception``, so an ``except Exception`` in the
+    generated code cannot swallow it.
+    """
+
 ADAPTER_PROMPT = """A coordinate file could not be read. Write a reader for it.
 
 The file: {name}
@@ -124,6 +146,8 @@ def check_source(code: str) -> str:
     for name in FORBIDDEN:
         if name in text:
             return f"generated code may not use '{name}'"
+    if _BARE_EXCEPT.search(text):
+        return "generated code may not use a bare 'except:'; name the exception"
     if len(text) > 4000:
         return "generated code is too long to review"
     return ""
@@ -168,6 +192,7 @@ def run_adapter(code: str, text: str, columns: int,
     Traceback (most recent call last):
     ValueError: the generated reader returned no rows
     """
+    import sys
     import threading
 
     objection = check_source(code)
@@ -175,7 +200,7 @@ def run_adapter(code: str, text: str, columns: int,
         raise ValueError(objection)
     namespace: Dict[str, Any] = {"__builtins__": dict(SAFE_BUILTINS), "np": np}
     try:
-        exec(compile(code, "<generated adapter>", "exec"), namespace)  # noqa: S102
+        exec(compile(code, _SOURCE_NAME, "exec"), namespace)  # noqa: S102
     except Exception as exc:  # noqa: BLE001
         raise ValueError(f"the generated reader would not compile: {exc}")
     adapt = namespace.get("adapt")
@@ -183,19 +208,39 @@ def run_adapter(code: str, text: str, columns: int,
         raise ValueError("generated code must define a function called adapt")
 
     box: Dict[str, Any] = {}
+    stop = threading.Event()
+
+    def line(frame, event, arg):
+        if stop.is_set():
+            raise _Cancelled()
+        return line
+
+    def enter(frame, event, arg):
+        # Only the generated code's own frames are traced line by line.
+        return line if frame.f_code.co_filename == _SOURCE_NAME else None
 
     def call():
+        # Python cannot kill a thread, and abandoning this one left a runaway
+        # reader holding a core and the GIL for the rest of the process - every
+        # later test in the same process crawled. So it stops itself: the
+        # tracer raises at its next line once the time is up.
+        previous = sys.gettrace()
+        sys.settrace(enter)
         try:
             box["rows"] = adapt(text)
+        except _Cancelled:
+            pass
         except Exception as exc:  # noqa: BLE001
             box["error"] = exc
+        finally:
+            sys.settrace(previous)
 
-    worker = threading.Thread(target=call, daemon=True)
+    worker = threading.Thread(target=call, daemon=True, name="generated-adapter")
     worker.start()
     worker.join(timeout)
     if worker.is_alive():
-        # The thread is abandoned rather than killed - Python offers no way to
-        # kill one - so it is a daemon and the interpreter will not wait for it.
+        stop.set()
+        worker.join(_CANCEL_GRACE_SECONDS)
         raise ValueError(f"the generated reader did not finish within {timeout:g}s")
     if "error" in box:
         raise ValueError(f"the generated reader failed: {box['error']}")

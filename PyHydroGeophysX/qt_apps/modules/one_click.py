@@ -164,6 +164,8 @@ class OneClickModule(BaseModule):
         # The page currently hosting a pending question, so it can be cleared
         # wherever the run happened to put it.
         self._asked_on = None
+        # The step a pending approval is about, so the answer can name it.
+        self._asked_step = None
         # Module key to how many times it has been offered the run's data.
         # Counted rather than flagged: a page can be visited before the step
         # that produces what it opens has finished, and re-offering the same
@@ -692,11 +694,11 @@ class OneClickModule(BaseModule):
         produces a file list and an empty plot, which is what a panel showing
         "the same data" must not do.
         """
-        from PyHydroGeophysX.agents.runtime.catalog import (DEFAULT_INSTRUMENT,
-                                                            MODEL_BUNDLE_DIR)
-        # The same default the run itself applies, taken from the run's own
-        # code rather than written out a second time here.
-        config = {'instrument': DEFAULT_INSTRUMENT}
+        from PyHydroGeophysX.agents.runtime.catalog import MODEL_BUNDLE_DIR
+        # No instrument unless the run names one. When nobody chose, the run
+        # reads it from each file's header; filling in E4D here had the studio
+        # open, say, a DAS-1 run's files with the E4D reader.
+        config = {}
         if not self._output:
             return config
         try:
@@ -781,6 +783,8 @@ class OneClickModule(BaseModule):
             label = str(event.get('label') or event.get('tool') or 'the next step')
             reason = str(event.get('reason') or '')
             prompt = f'Next: {label}' + (f' — {reason}' if reason else '')
+            # Kept for the answer, which names the step it set running.
+            self._asked_step = label
             options = [
                 {'id': 'proceed', 'label': 'Run this step',
                  'detail': 'Carry out this step and pause again before the next one.'},
@@ -820,15 +824,34 @@ class OneClickModule(BaseModule):
 
     def _answer(self, decision):
         """Send the user's decision back to the running workflow."""
+        step = getattr(self, '_asked_step', None)
         self._clear_pause()
         if self._worker is None:
             return
         self._worker.answer(decision)
         self.details.appendPlainText(f'-> answered: {decision}')
-        self.status.setText(f'Continuing · {decision}')
+        self.status.setText(self._answered_status(step, decision))
+
+    @staticmethod
+    def _answered_status(step, decision):
+        """The status line once the user has answered, naming what happens now.
+
+        It read "Continuing · proceed" until the approved step had finished -
+        through a whole inversion and the choice of the step after it - which
+        looks as though nothing started. The step is named as running at once;
+        the workflow's own announcement of it follows a moment later.
+        """
+        if step and decision == 'proceed':
+            return f'Running · {step}'
+        if step and decision == 'skip':
+            return f'Skipped · {step} · choosing the next step'
+        if step and decision == 'stop':
+            return f'Stopping · the run ends before {step}'
+        return f'Continuing · {decision}'
 
     def _clear_pause(self):
         """Take the prompt down, wherever it was put, and forget its buttons."""
+        self._asked_step = None
         asked_on = getattr(self, '_asked_on', None)
         activity = getattr(asked_on, '_run_activity', None) if asked_on else None
         if activity is not None:

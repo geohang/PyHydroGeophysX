@@ -119,8 +119,9 @@ This is not a processing agent but an orchestration layer that:
 **Dependency Pre-check**:
 
 ``preview_workflow()`` automatically calls ``_check_dependencies(plan)`` to
-test whether required packages (``pygimli``, ``gmsh``, ``anthropic``,
-``google-generativeai``) are importable **before** the workflow runs.  Missing
+test whether required packages (``pygimli``, ``gmsh``, ``anthropic``, and
+``google-genai`` or the older ``google-generativeai``) are importable **before**
+the workflow runs.  Missing
 dependencies appear in ``validation_warnings``.
 
 ContextInputAgent

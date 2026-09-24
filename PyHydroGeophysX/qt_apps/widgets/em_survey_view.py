@@ -38,6 +38,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+
 #: Columns of the station table, as (heading, row key, format).
 _COLUMNS = (
     ("Station", "station", None),
@@ -123,12 +125,16 @@ class _SortingItem(QTableWidgetItem):
 
 
 class EMSurveyView(QWidget):
-    """Map and table of every station, and what the current QC keeps of it."""
+    """Map and table of every station, and what the current QC keeps of it.
+
+    ``colormaps`` is the studio state's shared colormap dict, which keeps the
+    station map's colour map for the session.
+    """
 
     #: Emitted with the 0-based sounding index of a station the user picked.
     stationPicked = Signal(int)
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent=None, *, colormaps=None) -> None:
         super().__init__(parent)
         self._rows: List[Dict[str, Any]] = []
         #: Set while the table is being rebuilt, so that clearing and
@@ -144,6 +150,10 @@ class EMSurveyView(QWidget):
             self._colour_by.addItem(label, key)
         self._colour_by.currentIndexChanged.connect(lambda _i: self._draw_map())
         row.addWidget(self._colour_by)
+        # ... and in which colours: viridis until another map is chosen.
+        self._colormap = cmaps.ColormapChooser(cmaps.EM_STATIONS, "viridis", shared=colormaps)
+        self._colormap.colormapChanged.connect(lambda _name: self._draw_map())
+        row.addWidget(self._colormap)
         row.addSpacing(12)
         self._totals = QLabel("")
         self._totals.setToolTip(
@@ -183,6 +193,10 @@ class EMSurveyView(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(controls)
         layout.addWidget(split, stretch=1)
+
+    @property
+    def colormap_chooser(self) -> "cmaps.ColormapChooser":
+        return self._colormap
 
     # -- population ----------------------------------------------------------
     def set_summary(self, summary: Optional[Dict[str, Any]]) -> None:
@@ -245,7 +259,7 @@ class EMSurveyView(QWidget):
         low = float(finite.min()) if finite.size else 0.0
         high = float(finite.max()) if finite.size else 1.0
         span = (high - low) or 1.0
-        colormap = pg.colormap.get("viridis")
+        colormap = cmaps.to_pyqtgraph(self._colormap.colormap())
         spots = []
         for index in np.flatnonzero(good):
             value = values[index]

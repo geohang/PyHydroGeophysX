@@ -15,7 +15,7 @@ re-deriving percentage change slightly differently.
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 from PySide6.QtWidgets import (
@@ -76,17 +76,24 @@ def series_color_limits(models: Any, mode: str = "model",
 
 
 class TimeLapseSeriesView(QWidget):
-    """Step through a series of models on one mesh, absolute or as change."""
+    """Step through a series of models on one mesh, absolute or as change.
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    ``colormaps`` is the studio state's shared colormap dict, handed to the
+    section view: the model and the change each keep the colour map chosen for
+    them, here and on every other page that shows one.
+    """
+
+    def __init__(self, parent: Optional[QWidget] = None, *,
+                 colormaps: Optional[Dict[str, str]] = None) -> None:
         super().__init__(parent)
         self._mesh = None
         self._models: Optional[np.ndarray] = None
         self._coverage: Optional[np.ndarray] = None
         self._titles: List[str] = []
+        self._base_titles: List[str] = []   # as set_series gave them, unsuffixed
         self._kind = "ert"
 
-        self._view = MeshResultView()
+        self._view = MeshResultView(colormaps=colormaps)
 
         bar = QHBoxLayout()
         self._step = QComboBox()
@@ -130,6 +137,28 @@ class TimeLapseSeriesView(QWidget):
         matches the mesh is taken as the cells. A one-dimensional array is shown
         as a single model with the series controls hidden.
         """
+        self._load(mesh, models, coverage, titles, kind)
+        self._base_titles = list(self._titles)
+        self._select(0, 0)
+
+    def update_models(self, models: Any, title_suffix: str = "") -> None:
+        """Swap in new values for the series on screen, keeping its step and mode.
+
+        For a change that alters every value but not what is being looked at - a
+        temperature correction: sending the user back to the first survey would
+        hide the very change they just applied. ``title_suffix`` is added to every
+        step's title, so a corrected section says it is one.
+        """
+        if self._mesh is None:
+            return
+        index, mode = self.current_index(), self._mode.currentIndex()
+        self._load(self._mesh, models, self._coverage,
+                   [f"{title}{title_suffix}" for title in self._base_titles], self._kind)
+        self._select(index, mode)
+
+    def _load(self, mesh: Any, models: Any, coverage: Any,
+              titles: Optional[Sequence[str]], kind: str) -> None:
+        """Take on a series and list its steps, without drawing anything yet."""
         values = np.asarray(models, dtype=float)
         n_cells = int(mesh.cellCount()) if mesh is not None else 0
         if values.ndim == 1:
@@ -147,13 +176,18 @@ class TimeLapseSeriesView(QWidget):
         self._step.clear()
         for index in range(n_steps):
             self._step.addItem(f"{index + 1}/{n_steps}  ·  {self._titles[index]}", index)
-        self._step.setCurrentIndex(0)
         self._step.blockSignals(False)
-        self._mode.blockSignals(True)
-        self._mode.setCurrentIndex(0)
-        self._mode.blockSignals(False)
         # A single model has no baseline to change from and nothing to step to.
         self._bar_row.setVisible(n_steps > 1)
+
+    def _select(self, index: int, mode: int) -> None:
+        """Show step ``index`` in display mode ``mode``, on the series' own scale."""
+        self._step.blockSignals(True)
+        self._step.setCurrentIndex(min(max(int(index), 0), self._step.count() - 1))
+        self._step.blockSignals(False)
+        self._mode.blockSignals(True)
+        self._mode.setCurrentIndex(int(mode))
+        self._mode.blockSignals(False)
         self._seed_color_range()
         self._show_current()
 

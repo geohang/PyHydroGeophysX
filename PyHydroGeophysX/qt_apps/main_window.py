@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
 
 import pyqtgraph as pg
 from PySide6.QtCore import QSettings, QTimer, Qt
@@ -40,6 +40,15 @@ from PyHydroGeophysX.qt_apps.widgets.log_panel import LogPanel
 from PyHydroGeophysX.qt_apps.widgets.project_tree import ProjectTree
 
 WINDOW_TITLE = "PyHydroGeophysX Professional Studio"
+
+
+def _stop_page_workers(pages) -> None:
+    """Cancel and join every page's workers; stopping is best effort."""
+    for page in list(pages):
+        try:
+            page.stop_workers()
+        except Exception:  # noqa: BLE001 - shutdown is best effort
+            pass
 
 
 class PyHydroGeophysXStudio(QMainWindow):
@@ -525,22 +534,47 @@ class PyHydroGeophysXStudio(QMainWindow):
             except Exception:  # noqa: BLE001 - refreshing a view is best effort
                 pass
 
-    def _resolve_unsaved_runs(self, reason: str) -> bool:
-        """Ask what to do with unsaved runs. False means the user cancelled."""
-        pending = [item for item in self.state.unsaved_runs() if item.status != "running"]
-        if not pending:
+    def _resolve_unsaved_runs(self, reason: str,
+                              stop_running: Optional[Callable[[], None]] = None) -> bool:
+        """Ask what to do with unsaved runs. False means the user cancelled.
+
+        ``stop_running``, when given, stops the computations still going. They
+        count towards the question, because stopping one leaves an unsaved
+        record of it, but they are stopped only once the user has answered:
+        Cancel must leave them running. The answer is then applied once, over
+        everything pending after the stop.
+        """
+        runs = self.state.unsaved_runs()
+        pending = [item for item in runs if item.status != "running"]
+        running = ([item for item in runs if item.status == "running"]
+                   if stop_running is not None else [])
+        if not pending and not running:
+            if stop_running is not None:
+                stop_running()
             return True
-        plural = "" if len(pending) == 1 else "s"
+        lines = []
+        if pending:
+            plural = "" if len(pending) == 1 else "s"
+            lines.append(f"{len(pending)} finished run{plural} "
+                         f"{'is' if len(pending) == 1 else 'are'} not in the "
+                         "Project's history yet.")
+        if running:
+            plural = "" if len(running) == 1 else "s"
+            lines.append(f"{len(running)} computation{plural} "
+                         f"{'is' if len(running) == 1 else 'are'} still running and "
+                         "will be stopped; Cancel leaves "
+                         f"{'it' if len(running) == 1 else 'them'} running.")
         answer = QMessageBox.question(
             self, "Unsaved runs",
-            f"{len(pending)} finished run{plural} {'is' if len(pending) == 1 else 'are'} "
-            f"not in the Project's history yet.\n\n{reason}\n\n"
+            " ".join(lines) + f"\n\n{reason}\n\n"
             "Save keeps them; Discard deletes their folders.",
             QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
             QMessageBox.Save,
         )
         if answer == QMessageBox.Cancel:
             return False
+        if stop_running is not None:
+            stop_running()
         try:
             if answer == QMessageBox.Save:
                 saved = self.state.save_all_runs()
@@ -670,9 +704,19 @@ class PyHydroGeophysXStudio(QMainWindow):
         path, _ = QFileDialog.getOpenFileName(self, "Open project context", "", "JSON (*.json)")
         if not path:
             return
+        # The whole state is replaced, runs and all, so this leaves the Project
+        # as Open Project does: its unsaved runs are settled first, and what is
+        # still computing is stopped only once the user has agreed to it.
+        if not self._resolve_unsaved_runs(
+                "They belong to the Project you are leaving.",
+                stop_running=lambda: _stop_page_workers(self._pages.values())):
+            return
         self._reset_pages()
         self.state = StudioState.from_context(path)
+        # The window's own hook, or the unsaved-run count and Save stop updating.
+        self.state.on_runs_changed = self._refresh_unsaved_state
         self._activate_results_store(self.state.output_dir or Path(path).parent)
+        self._refresh_unsaved_state()
         self.log(f"Loaded context {path}", "success")
         self.show_module(self.state.selected_module or "home")
 
@@ -743,18 +787,17 @@ class PyHydroGeophysXStudio(QMainWindow):
 
     # -- shutdown ------------------------------------------------------------
     def closeEvent(self, event) -> None:
-        """Settle unsaved runs, persist the layout, then join module workers.
+        """Settle unsaved runs, join module workers, then persist the layout.
 
-        Stopping the workers cancels any run still going, which itself produces
-        an unsaved record, so the workers are stopped first and the question is
-        asked once afterwards over everything that is pending.
+        The question comes before anything is stopped, so Cancel keeps the
+        window open with every computation still running - stopping them first
+        had already killed an inversion the user then chose to keep. Stopping a
+        worker cancels its run, which leaves an unsaved record of its own, so
+        the running ones count in the question and the answer covers them too.
         """
-        for page in list(self._pages.values()):
-            try:
-                page.stop_workers()
-            except Exception:  # noqa: BLE001 - shutdown is best effort
-                pass
-        if not self._resolve_unsaved_runs("They are lost if you close without saving."):
+        if not self._resolve_unsaved_runs(
+                "They are lost if you close without saving.",
+                stop_running=lambda: _stop_page_workers(self._pages.values())):
             event.ignore()
             return
         try:

@@ -48,6 +48,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     select_directory,
     set_rows_enabled,
 )
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import Model3DView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
 from PyHydroGeophysX.qt_apps.workers import WorkflowWorker
@@ -77,7 +78,12 @@ class GravMagProcessingModule(BaseModule):
         self._inv_worker: Optional[WorkflowWorker] = None
         self._inv_busy: Optional[BusyStateController] = None
         self._gravmag_recipe_path: str = ""
-        self._cmap = pg.colormap.get("viridis")
+        # The anomaly maps' colour map, chosen beside the QC map and kept for the
+        # session. The QC map and the station map both open in viridis.
+        self._qc_colormap = cmaps.ColormapChooser(
+            cmaps.GRAVMAG, "viridis", shared=cmaps.colormap_settings(self.state))
+        self._qc_colormap.colormapChanged.connect(self._on_anomaly_colormap_changed)
+        self._cmap = cmaps.to_pyqtgraph(self._qc_colormap.colormap())
         self._qc: Optional[Dict[str, Any]] = None
         self._qc_picks = []
 
@@ -89,7 +95,10 @@ class GravMagProcessingModule(BaseModule):
         self._scatter = pg.ScatterPlotItem(size=13)
         self._plot_widget.getPlotItem().addItem(self._scatter)
         self._qc_tab = self._build_qc_tab()
-        self._model_view = Model3DView()
+        # Density and susceptibility each keep their own colour map; the one in
+        # use is named when a model is shown.
+        self._model_view = Model3DView(colormaps=cmaps.colormap_settings(self.state),
+                                       colormap_key=cmaps.DENSITY)
         self._quality_view = InversionQualityView()
         self._tabs.addTab(self._plot_widget, "Station map")
         self._tabs.addTab(self._qc_tab, "Data QC")
@@ -412,12 +421,20 @@ class GravMagProcessingModule(BaseModule):
         self._qc_plot.addItem(self._qc_stations); self._qc_plot.addItem(self._qc_picks_item)
         self._qc_hist = pg.HistogramLUTItem()
         self._qc_hist.setImageItem(self._qc_image)
+        # Attaching the histogram recolours the image with the histogram's own grey
+        # gradient, so the map in use is set on the histogram after that.
+        self._apply_qc_colormap(self._qc_colormap.colormap())
         self._qc_graphics.addItem(self._qc_hist, row=0, col=1)
         layout.addWidget(self._qc_graphics, stretch=3)
 
         self._qc_stats = QLabel("Load station data to calculate QC maps.")
         self._qc_stats.setWordWrap(True)
-        layout.addWidget(self._qc_stats)
+        # The colour map under the colour bar it changes. The row above is the
+        # widest on the page, so the choice shares the statistics line instead.
+        stats_row = QHBoxLayout()
+        stats_row.addWidget(self._qc_stats, 1)
+        stats_row.addWidget(self._qc_colormap, 0, Qt.AlignTop)
+        layout.addLayout(stats_row)
         self._profile_plot = pg.PlotWidget(); self._profile_plot.setBackground("w")
         self._profile_plot.showGrid(x=True, y=True, alpha=0.3)
         self._profile_plot.setLabel("bottom", "Distance (m)")
@@ -508,6 +525,20 @@ class GravMagProcessingModule(BaseModule):
         if auto_range:
             self._qc_plot.autoRange()
 
+    def _apply_qc_colormap(self, name: str) -> None:
+        """Colour the QC map through its histogram, which drives the image.
+
+        Grey is loaded as the histogram's own grey preset, the gradient this map
+        showed before it had a chooser.
+        """
+        cmaps.apply_to_histogram(self._qc_hist, name, preset="grey" if name == "gray" else None)
+
+    def _on_anomaly_colormap_changed(self, name: str) -> None:
+        """Recolour the QC map and the station map from what is already loaded."""
+        self._apply_qc_colormap(name)
+        self._cmap = cmaps.to_pyqtgraph(name)
+        self._refresh_scatter(show=False)
+
     def _clear_qc_profile(self) -> None:
         self._qc_picks = []
         if hasattr(self, "_qc_picks_item"):
@@ -553,7 +584,8 @@ class GravMagProcessingModule(BaseModule):
         return available
 
     # -- station map ---------------------------------------------------------
-    def _refresh_scatter(self) -> None:
+    def _refresh_scatter(self, show: bool = True) -> None:
+        """Colour the stations by the observed field; ``show`` brings the map up."""
         vals = self._fields.get("Observed")
         if vals is None or self._x is None:
             return
@@ -566,7 +598,8 @@ class GravMagProcessingModule(BaseModule):
                   "size": 13, "pen": pg.mkPen("#333333", width=0.5)}
                  for i in range(self._x.size)]
         self._scatter.setData(spots)
-        self._tabs.setCurrentWidget(self._plot_widget)
+        if show:
+            self._tabs.setCurrentWidget(self._plot_widget)
 
     # -- data ----------------------------------------------------------------
     def _load(self) -> None:
@@ -750,9 +783,12 @@ class GravMagProcessingModule(BaseModule):
         self._export_btn.setEnabled(True)
         for view in (self._model_view, self._quality_view):
             self._tabs.setTabEnabled(self._tabs.indexOf(view), True)
+        gravity = str(result.get("kind", "")).lower().startswith("grav")
         self._model_view.show_model(result["edges"], result["model3d"],
                                     label=result["label"], cmap=result["cmap"],
-                                    log_scale=result.get("log_scale", False))
+                                    log_scale=result.get("log_scale", False),
+                                    colormap_key=cmaps.DENSITY if gravity
+                                    else cmaps.SUSCEPTIBILITY)
         self._tabs.setCurrentWidget(self._model_view)
         rng = result.get("model_range", [0.0, 0.0]); chi2 = result.get("chi2")
         chi_txt = f", chi2={chi2:.1f}" if isinstance(chi2, float) and chi2 == chi2 else ""

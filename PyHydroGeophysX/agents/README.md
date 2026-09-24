@@ -42,13 +42,13 @@ The multi-agent system requires the LLM API packages:
 pip install openai>=1.0.0
 
 # For Google Gemini
-pip install google-generativeai>=0.3.0
+pip install google-genai
 
 # For Anthropic Claude
 pip install anthropic>=0.18.0
 
-# For climate data integration
-pip install pydaymet>=0.16.0 pandas>=1.3.0 xarray>=0.19.0
+# For climate data integration (no API key; data from Open-Meteo)
+pip install pandas>=1.3.0 requests>=2.25
 ```
 
 For full functionality, install PyHydroGeophysX with all dependencies:
@@ -181,8 +181,8 @@ if results['status'] == 'success':
 ## Workflow Steps
 
 0. **Fetch Climate Data** (optional)
-   - Retrieves meteorological data from PyDaymet
-   - Computes PET using multiple methods
+   - Retrieves daily ERA5 weather from the Open-Meteo historical API
+   - Uses FAO-56 Penman-Monteith reference ET0 as PET
    - Aligns climate data with ERT timestamps
    - Generates derived features (antecedent precipitation, P-PET)
    - LLM provides hydrologic context
@@ -297,11 +297,11 @@ config = {
 - Interprets velocity structure
 
 ### ClimateDataAgent
-- Fetches daily climate data from PyDaymet
-- Computes PET using multiple methods (Penman-Monteith, Priestley-Taylor, Hargreaves-Samani)
+- Fetches daily precipitation, temperature and FAO-56 reference ET0 (ERA5, via the
+  Open-Meteo historical API: global, no API key; attribute "Weather data by Open-Meteo.com")
 - Aligns climate data with ERT timestamps
 - Generates derived features (antecedent precipitation, P-PET)
-- Supports both point and gridded data
+- Samples one point per site (several points are averaged)
 - Provides climate context for resistivity interpretation
 
 ### ReportAgent
@@ -364,7 +364,7 @@ When an LLM API key is provided (OpenAI/Gemini/Claude), agents can:
 
 **LLM APIs (optional but recommended):**
 - `openai>=1.0.0` - For OpenAI GPT models
-- `google-generativeai>=0.3.0` - For Google Gemini models
+- `google-genai` - For Google Gemini models (the older `google-generativeai` still works)
 - `anthropic>=0.18.0` - For Anthropic Claude models
 
 **Geophysics:**
@@ -372,9 +372,8 @@ When an LLM API key is provided (OpenAI/Gemini/Claude), agents can:
 - `resipy>=3.4.0` - For ERT data processing
 
 **Climate data (optional):**
-- `pydaymet>=0.16.0` - For meteorological data retrieval
+- `requests>=2.25` - For meteorological data retrieval (Open-Meteo)
 - `pandas>=1.3.0` - For data manipulation
-- `xarray>=0.19.0` - For gridded data handling
 
 **Other:**
 - `markdown>=3.0` - HTML report generation (optional)

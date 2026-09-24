@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QF
 
 from .base import BaseModule
 from PyHydroGeophysX.qt_apps.project_map import ProjectMapStore, em_result
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.workers import TaskWorker
 from PyHydroGeophysX.visualization.basemap import TILE_SOURCES, basemap_image
 
@@ -195,6 +196,14 @@ class ProjectMapModule(BaseModule):
         slices = QHBoxLayout()
         slices.addWidget(QLabel('Slice:'))
         slices.addWidget(self._depth)
+        # The colour map of the slice on the map, beside the slice it colours:
+        # turbo for a resistivity slice and coolwarm for other layers until one
+        # is chosen for the map. Off while no slice is drawn.
+        shared = cmaps.colormap_settings(self.state)
+        self._map_colormap = cmaps.ColormapChooser(cmaps.MAP_LAYER, 'coolwarm', shared=shared)
+        self._map_colormap.colormapChanged.connect(self._draw_map)
+        self._map_colormap.setEnabled(False)
+        slices.addWidget(self._map_colormap)
         slices.addStretch(1)
         surface = QHBoxLayout()
         surface.addWidget(QLabel('Surface:'))
@@ -259,7 +268,7 @@ class ProjectMapModule(BaseModule):
         self._empty = QLabel('Select a survey to inspect its saved result.')
         self._empty.setAlignment(Qt.AlignCenter)
         self._result_stack.addWidget(self._empty)
-        self._em = EMOverviewView(section_only=True)
+        self._em = EMOverviewView(section_only=True, colormaps=shared)
         self._em._line.currentIndexChanged.connect(self._draw_map)
         self._result_stack.addWidget(self._em)
         self._section_fig = Figure(figsize=(9, 3), layout='constrained')
@@ -267,7 +276,16 @@ class ProjectMapModule(BaseModule):
         section = QWidget()
         sl = QVBoxLayout(section)
         sl.setContentsMargins(0, 0, 0, 0)
-        sl.addWidget(NavigationToolbar2QT(self._section_canvas, self))
+        # The section's colour map beside its toolbar. A resistivity or velocity
+        # section shares the choice made for those sections on their own pages;
+        # a grid or point product shares the map layer's.
+        self._section_colormap = cmaps.ColormapChooser(cmaps.MAP_LAYER, 'coolwarm', shared=shared)
+        self._section_colormap.colormapChanged.connect(self._redraw_section)
+        section_bar = QHBoxLayout()
+        section_bar.setContentsMargins(0, 0, 0, 0)
+        section_bar.addWidget(NavigationToolbar2QT(self._section_canvas, self), 1)
+        section_bar.addWidget(self._section_colormap)
+        sl.addLayout(section_bar)
         sl.addWidget(self._section_canvas)
         self._mesh_view = section
         self._result_stack.addWidget(section)
@@ -449,7 +467,11 @@ class ProjectMapModule(BaseModule):
         if low == high:
             low, high = (low * .99, high * 1.01) if log_scale else (low - 1, high + 1)
         norm = LogNorm(low, high) if log_scale else Normalize(low, high)
-        cmap = 'turbo' if log_scale else 'coolwarm'
+        # The map layer's chosen colour map, or what this kind of slice has
+        # always been drawn with: turbo for resistivity, coolwarm otherwise.
+        cmap = cmaps.to_matplotlib(self._map_colormap.set_target(
+            cmaps.MAP_LAYER, 'turbo' if log_scale else 'coolwarm'))
+        self._map_coloured = True
         surface = self._plan_surface(entry, xy, values, log_scale, norm, cmap, errors)
         mappable = surface
         if surface is None or self._stations.isChecked():
@@ -537,6 +559,36 @@ class ProjectMapModule(BaseModule):
         except Exception as exc:
             QMessageBox.warning(self, 'Export grid', str(exc))
 
+    def _section_key(self, entry):
+        """What a section figure shows, as the key its colour map is kept under."""
+        if entry['kind'] != 'mesh':
+            return cmaps.MAP_LAYER          # the same product the map layer shows
+        if entry.get('units') == '%':
+            return cmaps.RESISTIVITY_CHANGE
+        return {'ERT': cmaps.RESISTIVITY, 'Seismic': cmaps.VELOCITY}.get(
+            entry['method'], cmaps.MAP_LAYER)
+
+    def _section_cmap(self, entry, default):
+        """The colour map for ``entry``'s section: the one chosen, or ``default``."""
+        return cmaps.to_matplotlib(
+            self._section_colormap.set_target(self._section_key(entry), default))
+
+    def _redraw_section(self, *_):
+        """Redraw the selected survey's section in the chosen colours."""
+        entry = self._entry()
+        if entry is None or entry['kind'] == 'em':
+            return
+        try:
+            arrays = self._data(entry)
+            if entry['kind'] == 'grid':
+                self._draw_grid(entry, arrays)
+            elif entry['kind'] == 'points':
+                self._draw_points(entry, arrays)
+            else:
+                self._draw_section(entry, arrays)
+        except Exception as exc:
+            self._note.setText(f"Cannot redraw {entry['name']}: {exc}")
+
     def _draw_grid(self, entry, arrays):
         self._section_fig.clear()
         plan, section = self._section_fig.subplots(1, 2)
@@ -548,9 +600,10 @@ class ProjectMapModule(BaseModule):
         low, high = (float(finite.min()), float(finite.max())) if finite.size else (0., 1.)
         if low == high:
             low, high = low - 1, high + 1
-        image = plan.pcolormesh(x, y, model[:, :, index].T, cmap='coolwarm', vmin=low, vmax=high)
+        cmap = self._section_cmap(entry, 'coolwarm')
+        image = plan.pcolormesh(x, y, model[:, :, index].T, cmap=cmap, vmin=low, vmax=high)
         plan.set(xlabel='Source X (m)', ylabel='Source Y (m)', title=f"{entry['name']} · Z={(z[index]+z[index+1])/2:g} m")
-        section.pcolormesh(x, z, model[:, model.shape[1]//2, :].T, cmap='coolwarm', vmin=low, vmax=high)
+        section.pcolormesh(x, z, model[:, model.shape[1]//2, :].T, cmap=cmap, vmin=low, vmax=high)
         section.set(xlabel='Source X (m)', ylabel='Model Z (m)', title='Central Y section')
         self._section_fig.colorbar(image, ax=[plan, section], label=entry['units'])
         self._section_canvas.draw_idle()
@@ -559,7 +612,8 @@ class ProjectMapModule(BaseModule):
         self._section_fig.clear()
         ax = self._section_fig.add_subplot(111)
         xy = arrays['source_xy']
-        points = ax.scatter(xy[:, 0], xy[:, 1], c=np.ma.masked_invalid(arrays['values']), cmap='coolwarm', s=20)
+        points = ax.scatter(xy[:, 0], xy[:, 1], c=np.ma.masked_invalid(arrays['values']),
+                            cmap=self._section_cmap(entry, 'coolwarm'), s=20)
         ax.set(xlabel=f"Source X ({entry['crs']})", ylabel='Source Y', title=entry['name'])
         ax.set_aspect('equal', adjustable='box')
         self._section_fig.colorbar(points, ax=ax, label=entry['units'])
@@ -581,7 +635,8 @@ class ProjectMapModule(BaseModule):
         if low == high:
             low, high = (low * 0.99, high * 1.01) if low > 0 else (low - 1, high + 1)
         norm = LogNorm(low, high) if entry['method'] == 'ERT' else Normalize(low, high)
-        collection = PolyCollection(polygons, array=valid, cmap='turbo', norm=norm, edgecolors='none')
+        collection = PolyCollection(polygons, array=valid, cmap=self._section_cmap(entry, 'turbo'),
+                                    norm=norm, edgecolors='none')
         ax.add_collection(collection)
         ax.autoscale_view()
         ax.set(xlabel='Profile distance (m)', ylabel='Section elevation (m)', title=entry['name'])
@@ -595,6 +650,7 @@ class ProjectMapModule(BaseModule):
         self._ax = self._fig.add_subplot(111)
         self._artists = {}
         self._surface, self._surface_note = None, ''
+        self._map_coloured = False     # set by _draw_slice when a slice is coloured
         all_xy = []
         errors = []
         for entry in self._filtered():
@@ -685,6 +741,7 @@ class ProjectMapModule(BaseModule):
         for spine in self._ax.spines.values():
             spine.set_color('#bacbd7')
         self._load_tiles.setEnabled(geographic and bool(all_xy) and self._tile_worker is None)
+        self._map_colormap.setEnabled(self._map_coloured)
         self._export_grid.setEnabled(self._surface is not None)
         self._variogram_button.setEnabled(
             self._surface is not None and bool(self._surface[1].get('variogram')))

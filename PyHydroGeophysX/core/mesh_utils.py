@@ -333,11 +333,14 @@ def add_velocity_interface(
             # Interpolate the interface height at this x position
             interface_y = np.interp(cell_x, input_points[:, 0], input_points[:, 1])
             
-            # Set marker based on position relative to interface
-            if abs(cell_y) < abs(interface_y):
-                markers[i] = 2  # Below interface
+            # Set marker based on position relative to interface. Compare
+            # elevations, not their magnitudes: abs() matched this only while
+            # both were negative, and swapped the layers for a survey at a real
+            # (positive) elevation, handing bedrock parameters to the regolith.
+            if cell_y > interface_y:
+                markers[i] = 2  # Above interface
             else:
-                markers[i] = 3  # Above interface
+                markers[i] = 3  # Below interface
     
     # Keep original markers for outside cells
     markers[meshafter.cellMarkers()==1] = 1

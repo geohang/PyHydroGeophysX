@@ -104,16 +104,14 @@ def _execute(payload, progress, *, context_factory=None, run_fn=None, events=Non
     if payload.get('step_mode') and approve is not None:
         from PyHydroGeophysX.agents.runtime import step_by_step
         on_step = step_by_step(approve)
+    # Which hooks the run takes is read off its signature before it starts. It
+    # used to be tried and caught: any TypeError raised inside the workflow
+    # then restarted it from scratch, without the hooks, so a step-by-step run
+    # went on without asking and its calls were recorded twice.
+    hooks = _accepted(run_fn, on_step=on_step, ask_user=approve)
     with record_calls() as calls:
-        try:
-            results, plan, interpretation, files = run_fn(
-                config, key, model, provider, output, progress_callback=progress,
-                on_step=on_step, ask_user=approve)
-        except TypeError:
-            # A run_fn that predates these hooks - an older caller, or a stub
-            # in a test - still runs; it simply cannot pause or ask.
-            results, plan, interpretation, files = run_fn(
-                config, key, model, provider, output, progress_callback=progress)
+        results, plan, interpretation, files = run_fn(
+            config, key, model, provider, output, progress_callback=progress, **hooks)
     if isinstance(results, dict) and (results.get('success') is False or
             str(results.get('status', '')).lower() in {'failed', 'error'} or results.get('error')):
         raise RuntimeError(str(results.get('error') or results.get('message') or 'Workflow failed'))
@@ -170,6 +168,27 @@ def _execute(payload, progress, *, context_factory=None, run_fn=None, events=Non
     (output / 'numerical_results.json').write_text(json.dumps(results, default=encode), encoding='utf-8')
     (output / 'workflow_result.json').write_text(json.dumps(result, indent=2, default=str), encoding='utf-8')
     return result
+
+
+def _accepted(fn, **hooks):
+    """The ``hooks`` that ``fn`` takes, by name or through ``**kwargs``.
+
+    A run function that predates them - an older caller, or a stub in a test -
+    still runs; it simply cannot pause or ask. One whose signature cannot be
+    read is given them all, as every workflow here takes them.
+    """
+    import inspect
+
+    try:
+        parameters = list(inspect.signature(fn).parameters.values())
+    except (TypeError, ValueError):
+        return dict(hooks)
+    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters):
+        return dict(hooks)
+    names = {p.name for p in parameters
+             if p.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                           inspect.Parameter.KEYWORD_ONLY)}
+    return {name: value for name, value in hooks.items() if name in names}
 
 
 def ask_via_stdio(event, out=None, inp=None):

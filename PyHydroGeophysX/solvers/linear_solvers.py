@@ -129,6 +129,19 @@ def _precond_lsmr_solve(A, b, maxiter=400, tol=1e-8, damp=0.0, **kwargs):
         A = scipy.sparse.csr_matrix(A)
     b_flat = np.asarray(b, dtype=float).ravel()
 
+    # LSMR's own damp would act on the scaled unknowns y = D x, i.e. penalise
+    # damp^2 ||D x||^2, so the preconditioner changed the answer (0.21 away
+    # from the Tikhonov solution on a 20 x 5 test). Stack the damping rows
+    # [A; damp I] x = [b; 0] instead: the same problem as 'scipy_lsmr'.
+    if damp:
+        n_col = A.shape[1]
+        A = scipy.sparse.vstack(
+            [A, float(damp) * scipy.sparse.identity(n_col, format="csr")],
+            format="csr",
+        )
+        b_flat = np.concatenate([b_flat, np.zeros(n_col)])
+        damp = 0.0
+
     # Column-norm scaling
     col_norms = scipy.sparse.linalg.norm(A, axis=0)
     col_norms = np.asarray(col_norms, dtype=float).ravel()
@@ -546,6 +559,95 @@ def spd_solve(A: Any, B: Any, what: Any = "matrix") -> Any:
         return np.linalg.pinv(A_arr) @ B_arr
 
 
+def block_tridiagonal_cholesky_solve(diagonal: Any, lower: Any, b: Any, *,
+                                    overwrite: bool = False) -> Any:
+    """Solve ``H x = b`` for a symmetric positive definite block-tridiagonal ``H``.
+
+    ``diagonal[k]`` is the dense block ``H[k, k]``; ``lower[k]`` is the block
+    ``H[k + 1, k]`` below it, either a dense matrix or a vector standing for
+    that diagonal matrix - the form in which a temporal-difference penalty
+    couples adjacent surveys of a time-lapse inversion.
+
+    The Cholesky factor of such a matrix is block lower-bidiagonal, so this is
+    the dense Cholesky factorization with its zero blocks left out: a Cholesky
+    of each Schur complement, a triangular solve for the block below it and a
+    symmetric rank update of the next diagonal block - the operations a
+    blocked dense factorization performs on the blocks that are not zero, in
+    O(N n^3) work and O(N n^2) memory rather than O((N n)^3) and O((N n)^2).
+
+    With ``overwrite`` the factors are written into the ``diagonal`` blocks
+    (float64, contiguous) and nothing of that size is allocated. A block that is
+    not positive definite raises ``LinAlgError``: as for ``spd_cholesky`` with
+    ``overwrite_a=True``, there is no ridge retry.
+
+    >>> H = np.array([[4.0, 1.0, -0.5, 0.0], [1.0, 3.0, 0.0, -0.5],
+    ...               [-0.5, 0.0, 5.0, 2.0], [0.0, -0.5, 2.0, 6.0]])
+    >>> x = block_tridiagonal_cholesky_solve(
+    ...     [H[:2, :2], H[2:, 2:]], [np.array([-0.5, -0.5])], np.ones(4))
+    >>> bool(np.allclose(H @ x.ravel(), 1.0))
+    True
+    """
+    solve_triangular = scipy.linalg.solve_triangular
+    n_blocks = len(diagonal)
+    if len(lower) != max(n_blocks - 1, 0):
+        raise ValueError(f"{n_blocks} diagonal blocks need {n_blocks - 1} coupling blocks, "
+                         f"got {len(lower)}.")
+    sizes = [int(np.shape(block)[0]) for block in diagonal]
+    edges = np.concatenate([[0], np.cumsum(sizes)]).astype(int)
+    rhs = np.asarray(b, dtype=float).reshape(-1)
+    if rhs.size != edges[-1]:
+        raise ValueError(f"b has {rhs.size} entries for a matrix of order {edges[-1]}.")
+
+    def coupling_t(k, vec):
+        """``H[k + 1, k]^T @ vec`` for a dense block or a diagonal one."""
+        block = np.asarray(lower[k], dtype=float)
+        return block * vec if block.ndim == 1 else block.T @ vec
+
+    factors = []
+    for k in range(n_blocks):
+        block = diagonal[k]
+        writable = (overwrite and isinstance(block, np.ndarray) and block.dtype == np.float64
+                    and block.flags.writeable
+                    and (block.flags.c_contiguous or block.flags.f_contiguous))
+        S = block if writable else np.array(block, dtype=float, order="F")
+        if k:
+            E = np.asarray(lower[k - 1], dtype=float)
+            # Y = L_{k-1}^{-1} E^T; the factor's block below the diagonal is Y^T,
+            # and the Schur complement of this block is A_k - Y^T Y.
+            Y = solve_triangular(factors[k - 1], np.diag(E) if E.ndim == 1 else E.T,
+                                 lower=True, check_finite=False)
+            S -= Y.T @ Y
+            del Y
+        try:
+            factors.append(scipy.linalg.cholesky(S, lower=True, overwrite_a=True,
+                                                 check_finite=False))
+        except np.linalg.LinAlgError as exc:
+            raise np.linalg.LinAlgError(
+                f"Cholesky factorization failed at diagonal block {k}: the matrix is "
+                "not positive definite to working precision.") from exc
+
+    # L y = b, forward; L^T x = y, backward. Row k of L is Y_{k-1}^T, L_k with
+    # Y_{k-1} = L_{k-1}^{-1} E_{k-1}^T, so products with it are two triangular
+    # solves with a vector and the coupling block, not a stored n-by-n matrix.
+    y = []
+    for k in range(n_blocks):
+        rhs_k = rhs[edges[k]:edges[k + 1]].copy()
+        if k:
+            back = solve_triangular(factors[k - 1], y[k - 1], lower=True, trans="T",
+                                    check_finite=False)
+            E = np.asarray(lower[k - 1], dtype=float)
+            rhs_k -= E * back if E.ndim == 1 else E @ back
+        y.append(solve_triangular(factors[k], rhs_k, lower=True, check_finite=False))
+    x = [None] * n_blocks
+    for k in range(n_blocks - 1, -1, -1):
+        rhs_k = y[k]
+        if k < n_blocks - 1:
+            rhs_k = rhs_k - solve_triangular(factors[k], coupling_t(k, x[k + 1]),
+                                             lower=True, check_finite=False)
+        x[k] = solve_triangular(factors[k], rhs_k, lower=True, trans="T", check_finite=False)
+    return np.concatenate(x).reshape(-1, 1)
+
+
 def symmetrize(A: Any) -> Any:
     """Return ``(A + A.T) / 2``.
 
@@ -697,7 +799,9 @@ def generalized_solver(
         r = b.copy()
     else:
         x = xp.asarray(x)
-        r = b - A.dot(x)
+        # Match b's shape: a 1-D x0 against a column b (or the reverse) would
+        # otherwise broadcast the residual to an (m, m) matrix.
+        r = b - A.dot(x).reshape(b.shape)
 
     # Precompute initial quantities
     s = A.T.dot(r)
@@ -781,7 +885,10 @@ def _cgls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
     CGLS solver for linear least squares problems.
     
     This implements the Conjugate Gradient Least Squares method for solving
-    the normal equations A^T A x = A^T b.
+    the normal equations A^T A x = A^T b. With ``damp > 0`` it solves the
+    damped (Tikhonov) problem min ||A x - b||^2 + damp^2 ||x||^2, whose normal
+    equations are (A^T A + damp^2 I) x = A^T b, the convention the SciPy
+    methods above already follow.
     
     Args:
         A: System matrix
@@ -812,6 +919,29 @@ def _cgls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
     if s.ndim == 1:
         s = s.reshape(-1, 1)
     
+    # The damping enters the normal equations as damp^2 I. It used to be added
+    # as ``q += damp * p`` and ``s += damp * r``: for a rectangular A those
+    # shapes do not broadcast, and for a square A the iteration solved
+    # (A + damp I) x = b, which is not a least-squares problem at all. The
+    # data residual r = b - A x stays undamped; the damping only reaches the
+    # gradient s and the step length.
+    shift = float(damp) ** 2 if damp > 0 else 0.0
+    if shift:
+        # s is the damped gradient at the initial guess, which need not be 0.
+        s = s - shift * x
+        gamma = _scalar_dot(xp, s, s)
+    gamma0 = gamma
+    # CGLS minimises ||A x - b||^2 + damp^2 ||x||^2 over a growing Krylov space,
+    # so in exact arithmetic that objective never rises. Past convergence on an
+    # inconsistent system - where ||r|| stays finite and the test on it cannot
+    # fire - rounding noise does make it rise, without bound (a 20 x 5 system:
+    # 2.9e152 error after 2000 iterations). The best iterate is kept and a
+    # tenfold rise ends the loop; neither can cut short a solve still making
+    # progress. x is rebound each step, never updated in place, so holding the
+    # best one costs no copy.
+    best_x = x
+    best_f = float(rr) + (shift * _scalar_dot(xp, x, x) if shift else 0.0)
+
     # Initialize search direction
     p = s.copy()
     
@@ -822,30 +952,31 @@ def _cgls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
         # Compute A*p
         q = _matrix_multiply(A, p, use_gpu, parallel, n_jobs, xp)
         
-        # Add damping if requested
-        if damp > 0:
-            q += damp * p
-        
         # Ensure q is a column vector
         q = q.reshape(-1, 1)
         
-        # Compute step size
+        # Compute step size: p^T (A^T A + damp^2 I) p
         denom = _scalar_dot(xp, q, q)
+        if shift:
+            denom += shift * _scalar_dot(xp, p, p)
+        if denom <= 0.0:
+            # p = 0: the gradient has vanished, so x already solves the
+            # problem, and dividing by it would only turn x into NaN.
+            break
         alpha = gamma / denom
         
-        # Update solution and residual
-        x += alpha * p
+        # Update solution and residual. x out of place: it can be a view of
+        # the caller's initial guess, which must not change under them.
+        x = x + alpha * p
         r -= alpha * q
         
         # Compute new gradient
         s = _matrix_multiply(A.T, r, use_gpu, parallel, n_jobs, xp)
         
-        # Add damping if requested
-        if damp > 0:
-            s += damp * r
-        
         # Ensure s is a column vector
         s = s.reshape(-1, 1)
+        if shift:
+            s = s - shift * x
         
         # Compute new gamma and beta
         gamma_new = _scalar_dot(xp, s, s)
@@ -859,13 +990,29 @@ def _cgls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
         
         # Check convergence
         rr = _scalar_dot(xp, r, r)
+        objective = float(rr) + (shift * _scalar_dot(xp, x, x) if shift else 0.0)
+        if objective <= best_f:
+            best_x, best_f = x, objective
+        elif objective > 10.0 * best_f:
+            if verbose:
+                _info(f"CGLS stopped after {i+1} iterations: rounding noise took over")
+            break
         if rr / rr0 < tol:
             if verbose:
                 _info(f"CGLS converged after {i+1} iterations")
             break
-    
+        if shift and gamma < tol * gamma0:
+            # A damped solution keeps a nonzero data residual, so the test
+            # above cannot fire; the damped gradient s is what vanishes (same
+            # squared-ratio scale as rr / rr0). Iterating on past that point
+            # only amplifies rounding noise: a 5 x 5 damped solve went from
+            # 1e-16 to 1e48 error between iteration 8 and 500.
+            if verbose:
+                _info(f"CGLS converged after {i+1} iterations")
+            break
+
     # Return solution (convert back to CPU if on GPU)
-    return x.get() if use_gpu else x
+    return best_x.get() if use_gpu else best_x
 
 
 # ---------------------------------------------------------------------------
@@ -877,7 +1024,9 @@ def _lsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
     LSQR solver for linear least squares problems.
     
     This implements the LSQR algorithm of Paige and Saunders for solving
-    the least squares problem min ||Ax - b||_2.
+    the least squares problem min ||Ax - b||_2, or with ``damp > 0`` the
+    damped problem min ||Ax - b||^2 + damp^2 ||x||^2 (the same convention as
+    ``_cgls`` and the SciPy methods).
     
     Args: (same as _cgls)
         
@@ -895,19 +1044,45 @@ def _lsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
     if r.ndim == 1:
         r = r.reshape(-1, 1)
     
-    # Initialize u and beta
+    # damp > 0 runs LSQR on the stacked system [A; damp I] x = [b; 0], with u2
+    # holding the lower block of each left Lanczos vector. Solving for the
+    # correction from an initial guess x0 puts -damp x0 in that lower block,
+    # which Paige and Saunders' cheaper damping rotation assumes is zero, so
+    # the stacked form is what keeps a warm start exact. It used to ignore
+    # damp altogether. With damp == 0, u2 stays None: the classic iteration.
+    d = float(damp) if damp > 0 else 0.0
+    u2 = -d * x if d else None
+
+    def _norm(top, low):
+        sq = _scalar_dot(xp, top, top)
+        if low is not None:
+            sq += _scalar_dot(xp, low, low)
+        return math.sqrt(sq)
+
+    # Initialize u and beta. The norms go through _scalar_dot: u and v are
+    # (n, 1) columns, so ``xp.dot(u.T, u)`` is a (1, 1) array, and NumPy >= 2.4
+    # refuses ``float()`` on anything that is not 0-d. Every 'lsqr' call raised
+    # TypeError before reaching its first iteration.
     u = r.copy()
-    beta = xp.sqrt(float(xp.dot(u.T, u)))
+    beta = _norm(u, u2)
     if beta > 0:
         u = u / beta
+        if d:
+            u2 = u2 / beta
     
     # Initialize v and alpha
     v = _matrix_multiply(A.T, u, use_gpu, parallel, n_jobs, xp)
     if v.ndim == 1:
         v = v.reshape(-1, 1)
-    alpha = xp.sqrt(float(xp.dot(v.T, v)))
+    if d:
+        v = v + d * u2
+    alpha = _norm(v, None)
     if alpha > 0:
         v = v / alpha
+    if beta == 0.0 or alpha == 0.0:
+        # The residual, or its projection A^T r, is already zero: x0 solves
+        # the problem, and the rotation below would divide by zero.
+        return x.get() if use_gpu else x
     
     w = v.copy()
     phi_bar = beta
@@ -922,22 +1097,29 @@ def _lsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
         if u_next.ndim == 1:
             u_next = u_next.reshape(-1, 1)
         u_next = u_next - alpha * u
+        u2_next = d * v - alpha * u2 if d else None
         
-        beta = xp.sqrt(float(xp.dot(u_next.T, u_next)))
+        beta = _norm(u_next, u2_next)
         if beta > 0:
             u = u_next / beta
+            if d:
+                u2 = u2_next / beta
             
         v_next = _matrix_multiply(A.T, u, use_gpu, parallel, n_jobs, xp)
         if v_next.ndim == 1:
             v_next = v_next.reshape(-1, 1)
+        if d:
+            v_next = v_next + d * u2
         v_next = v_next - beta * v
         
-        alpha = xp.sqrt(float(xp.dot(v_next.T, v_next)))
+        alpha = _norm(v_next, None)
         if alpha > 0:
             v = v_next / alpha
         
-        # Apply orthogonal transformation
-        rho = xp.sqrt(rho_bar**2 + beta**2)
+        # Apply orthogonal transformation. The rotation runs on host floats.
+        rho = math.hypot(rho_bar, beta)
+        if rho == 0.0:
+            break  # exact breakdown: nothing is left to reduce
         c = rho_bar / rho
         s = beta / rho
         theta = s * alpha
@@ -966,95 +1148,23 @@ def _lsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
 def _rrlsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
           use_gpu, parallel, n_jobs, xp):
     """
-    Regularized LSQR solver.
-    
-    This implements a regularized version of the LSQR algorithm.
+    Regularized LSQR solver: LSQR on the damped problem
+    min ||Ax - b||^2 + damp^2 ||x||^2.
     
     Args: (same as _lsqr)
         
     Returns:
         Solution vector
     """
-    # Ensure x and r are column vectors
-    if x is None:
-        x = xp.zeros((A.shape[1], 1))
-    else:
-        x = xp.asarray(x)
-        if x.ndim == 1:
-            x = x.reshape(-1, 1)
-    
-    if r.ndim == 1:
-        r = r.reshape(-1, 1)
-    
-    # Initialize u and beta
-    u = r.copy()
-    beta = xp.sqrt(float(xp.dot(u.T, u)))
-    if beta > 0:
-        u = u / beta
-    
-    # Initialize v and alpha with regularization
-    v = _matrix_multiply(A.T, u, use_gpu, parallel, n_jobs, xp)
-    if v.ndim == 1:
-        v = v.reshape(-1, 1)
-    if damp > 0:
-        v = v + damp * x
-        
-    alpha = xp.sqrt(float(xp.dot(v.T, v)))
-    if alpha > 0:
-        v = v / alpha
-    
-    w = v.copy()
-    phi_bar = beta
-    rho_bar = alpha
-    
-    for i in range(maxiter):
-        if verbose and i % 10 == 0:
-            _info("RRLSQR Iteration:", i, "residual:", float(rr), "relative:", float(rr / rr0))
-        
-        # Bidiagonalization with regularization
-        u_next = _matrix_multiply(A, v, use_gpu, parallel, n_jobs, xp)
-        if u_next.ndim == 1:
-            u_next = u_next.reshape(-1, 1)
-        u_next = u_next - alpha * u
-        
-        beta = xp.sqrt(float(xp.dot(u_next.T, u_next)))
-        if beta > 0:
-            u = u_next / beta
-            
-        v_next = _matrix_multiply(A.T, u, use_gpu, parallel, n_jobs, xp)
-        if v_next.ndim == 1:
-            v_next = v_next.reshape(-1, 1)
-        v_next = v_next - beta * v
-        
-        if damp > 0:
-            v_next = v_next + damp * x
-            
-        alpha = xp.sqrt(float(xp.dot(v_next.T, v_next)))
-        if alpha > 0:
-            v = v_next / alpha
-        
-        # Apply orthogonal transformation
-        rho = xp.sqrt(rho_bar**2 + beta**2 + damp**2)
-        c = rho_bar / rho
-        s = beta / rho
-        theta = s * alpha
-        rho_bar = -c * alpha
-        phi = c * phi_bar
-        phi_bar = s * phi_bar
-        
-        # Update x and w
-        t = phi / rho
-        x = x + t * w
-        w = v - (theta / rho) * w
-        
-        # Check convergence
-        rr = phi_bar**2
-        if rr / rr0 < tol:
-            if verbose:
-                _info(f"RRLSQR converged after {i+1} iterations")
-            break
-    
-    return x.get() if use_gpu else x
+    # This used to be a copy of the LSQR loop that added ``damp * x`` to each
+    # right Lanczos vector and damp**2 under the rotation's square root. That
+    # destroys the orthogonality the recurrences rely on, so it converged to no
+    # defined problem: on a 20 x 5 system with damp=0.5 it returned a model
+    # 3.4e4 away from the Tikhonov solution. RRLSQRSolver (damping=0.1 by
+    # default) is also the rectangular fallback of get_optimal_solver. _lsqr
+    # solves exactly the damped problem this was meant to, so defer to it.
+    return _lsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
+                 use_gpu, parallel, n_jobs, xp)
 
 
 # ---------------------------------------------------------------------------
@@ -1085,6 +1195,14 @@ def _rrls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
     if s.ndim == 1:
         s = s.reshape(-1, 1)
         
+    # Damped, this is steepest descent on min ||Ax - b||^2 + damp^2 ||x||^2,
+    # whose descent direction is A^T r - damp^2 x. It used to add ``damp * x``,
+    # the wrong sign and power: the fixed point then solved
+    # (A^T A - damp I) x = A^T b, which removes regularization instead.
+    shift = float(damp) ** 2 if damp > 0 else 0.0
+    if shift:
+        s = s - shift * x
+
     w = s.copy()
     
     for i in range(maxiter):
@@ -1096,10 +1214,16 @@ def _rrls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
             p = p.reshape(-1, 1)
             
         denom = _scalar_dot(xp, p, p)
+        if shift:
+            denom += shift * _scalar_dot(xp, w, w)
         if xp.isclose(denom, 0.0):
             break
             
-        lam = _scalar_dot(xp, p, r) / denom
+        # Exact line search along w for the (damped) quadratic.
+        lam = _scalar_dot(xp, p, r)
+        if shift:
+            lam -= shift * _scalar_dot(xp, x, w)
+        lam = lam / denom
         x = x + w * float(lam)  # Convert lam to scalar
         r = r - p * float(lam)
         
@@ -1107,8 +1231,8 @@ def _rrls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
         if s.ndim == 1:
             s = s.reshape(-1, 1)
             
-        if damp > 0:
-            s = s + damp * x
+        if shift:
+            s = s - shift * x
             
         w = s
         rr = _scalar_dot(xp, r, r)

@@ -35,6 +35,29 @@ def backend_status() -> Dict[str, Any]:
     return {"available": True, "error": ""}
 
 
+def station_footprint(x, y) -> Tuple[float, float, float, float]:
+    """The horizontal extent ``(x0, x1, y0, y1)`` a 3-D model is built over.
+
+    Stations on one line have no extent across it: a zero cell size there made
+    zero-width cells and NaN predictions, and the joint inversion's 1 m floor a
+    model about 1.7 m wide. The collapsed axis takes the other one's extent,
+    centred on the line, so the model reaches across the profile.
+
+    >>> station_footprint([0.0, 50.0, 100.0], [5.0, 5.0, 5.0])
+    (0.0, 100.0, -45.0, 55.0)
+    """
+    x = np.asarray(x, dtype=float); y = np.asarray(y, dtype=float)
+    x0, x1 = float(x.min()), float(x.max()); y0, y1 = float(y.min()), float(y.max())
+    span = max(x1 - x0, y1 - y0)
+    if span <= 0.0:
+        raise ValueError("All stations share one position; a 3-D inversion needs a footprint.")
+    if x1 - x0 <= 1e-9 * span:
+        mid = 0.5 * (x0 + x1); x0, x1 = mid - 0.5 * span, mid + 0.5 * span
+    if y1 - y0 <= 1e-9 * span:
+        mid = 0.5 * (y0 + y1); y0, y1 = mid - 0.5 * span, mid + 0.5 * span
+    return x0, x1, y0, y1
+
+
 def invert_gravmag(x, y, value, kind: str, *, z: Optional[np.ndarray] = None,
                    field: Optional[Dict[str, Any]] = None, detrend: int = 0,
                    n_xy: int = 22, n_z: int = 12, max_iterations: int = 20,
@@ -91,12 +114,17 @@ def invert_gravmag(x, y, value, kind: str, *, z: Optional[np.ndarray] = None,
         x, y, value, z = x[idx], y[idx], value[idx], z[idx]
     log(f"{kind} inversion: {x.size} stations")
 
-    x0, x1 = float(x.min()), float(x.max()); y0, y1 = float(y.min()), float(y.max())
+    x0, x1, y0, y1 = station_footprint(x, y)
     csx = (x1 - x0) / int(n_xy); csy = (y1 - y0) / int(n_xy)
     csz = max(csx, csy) * 0.6
     padx, pady = 0.15 * (x1 - x0), 0.15 * (y1 - y0)
     nx, ny, nz = int(n_xy) + 4, int(n_xy) + 4, int(n_z)
-    ox, oy, oz = x0 - padx - 2 * csx, y0 - pady - 2 * csy, -csz * nz
+    # Top of the mesh just below the lowest station, the rule
+    # JointGravityMagneticsInversion uses (its baseline calls this with the same
+    # z). It used to be fixed at z = 0, so stations given at 300 m elevation
+    # floated 300 m above the model.
+    surface_z = float(np.min(z)) - 0.05 * csz
+    ox, oy, oz = x0 - padx - 2 * csx, y0 - pady - 2 * csy, surface_z - csz * nz
     mesh = TensorMesh([[(csx, nx)], [(csy, ny)], [(csz, nz)]], origin=[ox, oy, oz])
     actv = np.ones(mesh.n_cells, dtype=bool)
     model_map = maps.IdentityMap(nP=mesh.n_cells)

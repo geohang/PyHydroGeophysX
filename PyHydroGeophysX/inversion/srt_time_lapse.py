@@ -370,6 +370,7 @@ class TimeLapseSRTInversion(InversionBase):
         spatial_gram = self.Wm.T.dot(self.Wm)
         temporal_gram = self.Wt.T.dot(self.Wt)
 
+        model_moved = False
         for iteration in range(int(self.parameters["max_iterations"])):
             pred, J = self._forward_and_jacobian(m)
             residual = self.t_obs - pred
@@ -386,6 +387,7 @@ class TimeLapseSRTInversion(InversionBase):
             phi_t = float(reg_temporal.T.dot(reg_temporal).item())
             chi2 = phi_d / max(self.t_obs.size, 1)
             chi2_history.append(float(chi2))
+            model_moved = False
 
             if len(chi2_history) > 1:
                 d_phi = abs(chi2_history[-1] - chi2_history[-2]) / max(abs(chi2_history[-2]), 1e-12)
@@ -435,26 +437,44 @@ class TimeLapseSRTInversion(InversionBase):
             directional = float(dm.T.dot(g).item())
             step = 1.0
             accepted = False
+            # Armijo: f(m + s dm) <= f(m) + c s (dm . g), with dm . g < 0 for a
+            # descent step. The sign was reversed, which passed steps that did
+            # not lower the objective; see SRTInversion.run.
+            best_m, best_obj = None, current_obj
 
             for _ in range(int(self.parameters.get("line_search_maxiter", 12))):
                 m_trial = np.clip(self._to_col(m) + step * dm, min_m, max_m).ravel()
                 phi_d_trial, phi_m_trial, phi_t_trial, _ = self._objective_terms(m_trial)
                 obj_trial = phi_d_trial + lam * phi_m_trial + alpha * phi_t_trial
-                armijo = current_obj - float(self.parameters.get("line_search_c", 1e-4)) * step * directional
+                armijo = current_obj + float(self.parameters.get("line_search_c", 1e-4)) * step * directional
+                if obj_trial < best_obj:
+                    best_m, best_obj = m_trial, obj_trial
 
-                if obj_trial < armijo:
+                if obj_trial <= armijo and obj_trial < current_obj:
                     m = m_trial
                     accepted = True
                     break
                 step *= 0.5
 
-            if not accepted:
-                m = np.clip((self._to_col(m) + 0.1 * dm).ravel(), min_m, max_m)
+            if not accepted and best_m is not None:
+                # Never step uphill: this used to take 0.1 * dm whatever it did
+                # to the objective. Keep the best trial that lowered it, or stay.
+                m = best_m
+            model_moved = True
 
             if lam_rate > 0:
                 lam = max(lam_min, lam * lam_rate)
 
         pred_final, _ = self._forward_and_jacobian(m)
+        if model_moved:
+            # chi2_history is scored before each update, so a run that ends on
+            # its iteration cap would otherwise report the model from before
+            # the final step, not the one returned.
+            wd_final = self.Wd_diag.reshape(-1, 1)
+            res_final = self.t_obs - self._to_col(pred_final)
+            chi2_history.append(float(
+                (wd_final * res_final).T.dot(wd_final * res_final).item())
+                / max(self.t_obs.size, 1))
         final_models = np.exp(-np.reshape(m, (self.n_cells, self.n_times), order="F"))
 
         all_coverage = []

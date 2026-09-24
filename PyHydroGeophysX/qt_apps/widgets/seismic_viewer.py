@@ -28,18 +28,15 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+
 pg.setConfigOptions(imageAxisOrder="row-major")
 
 # Bipolar seismic colour scale (blue negative, white zero, red positive) — the
-# same stops the Streamlit app uses.
-_SEIS_STOPS = np.array([0.0, 0.48, 0.5, 0.52, 1.0])
-_SEIS_COLORS = np.array([
-    [8, 48, 107, 255],
-    [247, 251, 255, 255],
-    [255, 255, 255, 255],
-    [255, 245, 240, 255],
-    [153, 0, 13, 255],
-], dtype=np.ubyte)
+# same stops the Streamlit app uses. Defined with the other colour maps, where
+# it is the gather's own entry in the chooser; kept under these names too.
+_SEIS_STOPS = cmaps.GATHER_STOPS
+_SEIS_COLORS = cmaps.GATHER_COLORS
 
 # source -> (colour, pyqtgraph symbol, size)
 _PICK_STYLES: Dict[str, Tuple[str, str, int]] = {
@@ -136,12 +133,16 @@ class _PickViewBox(pg.ViewBox):
 
 
 class SeismicViewer(QWidget):
-    """Interactive seismic gather display with web-matched styling."""
+    """Interactive seismic gather display with web-matched styling.
+
+    ``colormaps`` is the studio state's shared colormap dict; the gather's
+    colour map is kept there for the session, next to every other view's.
+    """
 
     pointPicked = Signal(int, float, float)  # trace_index, time_s, amplitude
     linePicked = Signal(list)  # [(trace_index, time_s, amplitude), ...]
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent=None, *, colormaps=None) -> None:
         super().__init__(parent)
         self._disp: Optional[np.ndarray] = None     # processed (samples, traces)
         self._time: Optional[np.ndarray] = None     # y axis values (s or samples)
@@ -164,6 +165,12 @@ class SeismicViewer(QWidget):
         self._style_combo.addItems(_STYLES)
         self._style_combo.currentTextChanged.connect(lambda *_: self._render())
         bar.addWidget(self._style_combo)
+        # The amplitude image's colour map, beside the display style. Opens on
+        # the gather's own blue-white-red.
+        self._colormap = cmaps.ColormapChooser(
+            cmaps.SEISMIC_GATHER, cmaps.GATHER, shared=colormaps)
+        self._colormap.colormapChanged.connect(self._apply_colormap)
+        bar.addWidget(self._colormap)
         bar.addWidget(QLabel("Wiggle/N"))
         self._stride = QSpinBox()
         self._stride.setRange(1, 64)
@@ -183,9 +190,12 @@ class SeismicViewer(QWidget):
         self._auto_btn.setToolTip("Auto-fit the time window to the first arrivals.")
         self._auto_btn.clicked.connect(self._reset_window)
         bar.addWidget(self._auto_btn)
-        bar.addStretch(1)
+        # The readout takes the row's spare width itself, its text kept at the
+        # right edge: the page lets long labels elide, and an eliding label beside
+        # a separate stretch is given no width at all.
         self._readout = QLabel("trace: -, time: -, amp: -")
-        bar.addWidget(self._readout)
+        self._readout.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        bar.addWidget(self._readout, 1)
         layout.addLayout(bar)
 
         self._glw = pg.GraphicsLayoutWidget()
@@ -202,7 +212,8 @@ class SeismicViewer(QWidget):
 
         self._img = pg.ImageItem()
         self._img.setZValue(-10)
-        self._lut = pg.ColorMap(_SEIS_STOPS, _SEIS_COLORS).getLookupTable(0.0, 1.0, 256)
+        # The gather's own map builds exactly the table it always had.
+        self._lut = cmaps.lookup_table(self._colormap.colormap(), 256)
         self._img.setLookupTable(self._lut)
         self._plot.addItem(self._img)
 
@@ -340,6 +351,16 @@ class SeismicViewer(QWidget):
         from pyqtgraph.exporters import ImageExporter
 
         ImageExporter(self._plot).export(str(path))
+
+    # -- colour map ----------------------------------------------------------
+    @property
+    def colormap_chooser(self) -> "cmaps.ColormapChooser":
+        return self._colormap
+
+    def _apply_colormap(self, name: str) -> None:
+        """Recolour the image on screen; the gather itself is not redrawn."""
+        self._lut = cmaps.lookup_table(name, 256)
+        self._img.setLookupTable(self._lut)
 
     # -- rendering -----------------------------------------------------------
     def _clip(self) -> float:

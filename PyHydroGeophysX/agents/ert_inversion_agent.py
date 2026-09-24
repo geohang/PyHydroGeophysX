@@ -134,9 +134,22 @@ constraints, structural constraints, and convergence criteria."""
             
             # Handle structure-constrained inversion if seismic data provided
             mesh = None
-            if use_structure and seismic_structure:
+            constraint_warning = None
+            if use_structure:
                 self._log_execution("Creating mesh with seismic structure constraints")
-                mesh = self._create_structured_mesh(ert_data, seismic_structure)
+                try:
+                    # From the exported container: the interface mesh is built
+                    # around pyGIMLi sensor positions.
+                    mesh = self._create_structured_mesh(data_file, seismic_structure)
+                except Exception as exc:  # noqa: BLE001 - reported on the result
+                    # Said on the result, not only in the log: a constrained
+                    # inversion that quietly ran unconstrained is what this
+                    # used to do, because the mesh builder it imported was gone.
+                    constraint_warning = (
+                        f"A structure-constrained inversion was requested but the "
+                        f"constraint could not be built ({exc}); this model is an "
+                        f"unconstrained inversion.")
+                    self._log_execution(constraint_warning, level='WARNING')
             
             # Perform inversion
             self._log_execution("Running ERT inversion...")
@@ -196,6 +209,15 @@ constraints, structural constraints, and convergence criteria."""
                 'use_source_error': bool(use_source_error),
                 'inversion_params': dict(inversion_params),
             }
+            if use_structure:
+                self.results['structure_constrained'] = mesh is not None
+                if mesh is not None:
+                    self.results['inversion_method'] = (
+                        "Structure-constrained inversion: the seismic velocity "
+                        "interface is built into the mesh as a boundary, so the "
+                        "smoothing does not act across it")
+                else:
+                    self.results['warnings'] = [constraint_warning]
             
             final_chi2 = float(inversion_result.meta.get('final_chi2')) if inversion_result.meta.get('final_chi2') is not None else (float(np.asarray(inversion_result.iteration_chi2[-1]).item()) if inversion_result.iteration_chi2 else 0.0)
             n_iterations = int(inversion_result.meta.get('native_iterations')) if inversion_result.meta.get('native_iterations') is not None else len(inversion_result.iteration_chi2)
@@ -270,34 +292,51 @@ Return as: lambda=XX, max_iterations=YY"""
             self._log_execution(f"Could not get LLM recommendations: {e}, using defaults")
             return {'lambda': 20.0, 'max_iterations': 10}
     
-    def _create_structured_mesh(self, ert_data, seismic_structure) -> Any:
+    def _create_structured_mesh(self, data, seismic_structure) -> Any:
         """
         Create mesh with seismic structural constraints.
-        
+
         Args:
-            ert_data: ERT data
-            seismic_structure: Seismic structure information
-            
+            data: The survey as a pyGIMLi ERT container, or the path of one
+            seismic_structure: A SeismicAgent result (``interfaces`` keyed by
+                velocity threshold) or anything carrying ``interface_coords``
+                as ``(x, z)``
+
         Returns:
-            Structured mesh
+            Mesh with the velocity interface built in as a region boundary
+            (markers 2 above it, 3 below, 1 outside the survey)
+
+        Raises:
+            ValueError: If there is no interface to build in. The caller says
+                so on its result; returning None used to leave the inversion
+                running unconstrained with nothing but a log line to show it.
         """
-        try:
-            from PyHydroGeophysX.Geophy_modular.structure_integration import (
-                create_ert_mesh_with_structure,
-            )
-            
-            interface_coords = seismic_structure.get('interface_coords')
-            if interface_coords:
-                mesh, markers, regions = create_ert_mesh_with_structure(
-                    ert_data,
-                    interface_coords
-                )
-                self._log_execution("Created structured mesh with seismic constraints")
-                return mesh
-        except Exception as e:
-            self._log_execution(f"Could not create structured mesh: {str(e)}")
-        
-        return None
+        from pygimli.physics import ert
+
+        # create_ert_mesh_with_structure, which this imported, was removed from
+        # Geophy_modular.structure_integration; this is the builder the
+        # structure-constraint agent uses.
+        from PyHydroGeophysX.core.mesh_utils import add_velocity_interface
+
+        structure = seismic_structure or {}
+        coords = structure.get('interface_coords')
+        if coords is None:
+            # SeismicAgent returns {threshold: {'x': ..., 'z': ...}}, and the
+            # coordinator hands that result over as it is.
+            from .runtime.catalog import interface_coords
+
+            thresholds = (structure.get('velocity_thresholds')
+                          or [structure.get('velocity_threshold', 1200.0)])
+            coords = interface_coords(structure, thresholds[0])
+        if coords is None or len(coords) != 2 or not len(coords[0]):
+            raise ValueError("the seismic structure carries no velocity interface")
+        container = ert.load(str(data)) if isinstance(data, (str, os.PathLike)) else data
+        _, mesh = add_velocity_interface(container,
+                                         np.asarray(coords[0], dtype=float),
+                                         np.asarray(coords[1], dtype=float))
+        self._log_execution(f"Created structured mesh with seismic constraints "
+                            f"({mesh.cellCount()} cells)")
+        return mesh
     
     def _interpret_results(self, inversion_result, params) -> str:
         """

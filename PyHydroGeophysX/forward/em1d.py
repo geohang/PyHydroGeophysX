@@ -97,7 +97,13 @@ def _fdem_config(geom: Dict[str, Any], frequencies: np.ndarray):
 
 
 def fdem_forward(model: Dict[str, Any], geom: Dict[str, Any], log: LogFn = _noop) -> Dict[str, Any]:
-    """1D FDEM forward response (secondary field, real/imag per frequency)."""
+    """1D FDEM forward response, real/imag per frequency.
+
+    ``real``/``imag`` hold the field named by ``geom["component"]``. For
+    ``"both"`` they hold the secondary field and ``total_real``/``total_imag``
+    (with ``total_amplitude``/``total_phase_deg``) the total field, all on the
+    same ``frequencies``.
+    """
     try:
         from PyHydroGeophysX.forward.fdem_forward import FDEMForwardModeling
     except Exception as exc:  # noqa: BLE001
@@ -110,12 +116,28 @@ def fdem_forward(model: Dict[str, Any], geom: Dict[str, Any], log: LogFn = _noop
     modeler = FDEMForwardModeling(thicknesses=thick, survey_config=_fdem_config(geom, freqs))
     resp = np.asarray(modeler.forward(sigma))
     resp = resp.ravel()
-    if resp.size == 2 * freqs.size and not np.iscomplexobj(resp):
+    if resp.size % 2 == 0 and not np.iscomplexobj(resp):
         resp = resp[0::2] + 1j * resp[1::2]
-    resp = np.asarray(resp, dtype=complex).ravel()[: freqs.size]
-    return {"frequencies": freqs, "real": resp.real, "imag": resp.imag,
-            "amplitude": np.abs(resp), "phase_deg": np.degrees(np.angle(resp)),
-            "resistivity": res, "thickness": thick}
+    resp = np.asarray(resp, dtype=complex).ravel()
+    # One complex value per frequency and field, frequency-major: for "both"
+    # that is [secondary(f1), total(f1), secondary(f2), ...]. This used to be
+    # cut to freqs.size, which labelled sec(f1), tot(f1), sec(f2), tot(f2) as
+    # f1..f4 and dropped the upper half of the band.
+    n_fields = resp.size // max(freqs.size, 1)
+    if n_fields < 1 or n_fields * freqs.size != resp.size:
+        raise ValueError(
+            f"FDEM forward returned {resp.size} values for {freqs.size} frequencies.")
+    fields = resp.reshape(freqs.size, n_fields)
+    first = fields[:, 0]
+    out = {"frequencies": freqs, "real": first.real, "imag": first.imag,
+           "amplitude": np.abs(first), "phase_deg": np.degrees(np.angle(first)),
+           "resistivity": res, "thickness": thick}
+    if n_fields == 2:
+        total = fields[:, 1]
+        out.update({"total_real": total.real, "total_imag": total.imag,
+                    "total_amplitude": np.abs(total),
+                    "total_phase_deg": np.degrees(np.angle(total))})
+    return out
 
 
 def _gate_window_name(geom: Dict[str, Any]) -> str:

@@ -54,6 +54,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     make_double_spinbox,
     select_directory,
 )
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.workers import WorkflowWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
@@ -1085,7 +1086,8 @@ class JointInversionModule(BaseModule):
         self._result_tabs = QTabWidget(); layout.addWidget(self._result_tabs, stretch=1)
         self._overview = QTextBrowser(); self._result_tabs.addTab(self._overview, "Overview")
         self._models_figure = Figure(figsize=(8, 4), tight_layout=True)
-        self._models_canvas = FigureCanvas(self._models_figure); self._result_tabs.addTab(self._models_canvas, "Models")
+        self._models_canvas = FigureCanvas(self._models_figure)
+        self._result_tabs.addTab(self._build_models_page(), "Models")
         self._fit_figure = Figure(figsize=(8, 4), tight_layout=True)
         self._fit_canvas = FigureCanvas(self._fit_figure); self._result_tabs.addTab(self._fit_canvas, "Data Fit")
         baseline_page = QWidget(); baseline_layout = QVBoxLayout(baseline_page)
@@ -1142,8 +1144,58 @@ class JointInversionModule(BaseModule):
                         for name, path in result.artifacts.items())
         self._files.setHtml(f"<ul>{files}</ul>")
 
+    #: The quantity each joint model is, as (colormap key, the map the Models
+    #: tab has always drawn it with): PyGIMLi's own viridis for the ERT and SRT
+    #: sections, RdBu_r for density contrast and viridis otherwise. The keys are
+    #: the ones those quantities have on their own pages, so a map chosen for
+    #: resistivity sections on the ERT page is the one used here too.
+    _MODEL_COLOURS = {
+        "ERT": (cmaps.RESISTIVITY, "viridis"),
+        "SRT": (cmaps.VELOCITY, "viridis"),
+        "Gravity": (cmaps.DENSITY, "RdBu_r"),
+        "Magnetics": (cmaps.SUSCEPTIBILITY, "viridis"),
+        "FDEM–TDEM": (cmaps.EM_SECTION, "viridis"),
+    }
+
+    def _build_models_page(self) -> QWidget:
+        """The Models tab: a colour map per panel above the panels it colours."""
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        row = QHBoxLayout()
+        row.setContentsMargins(6, 2, 6, 2)
+        row.addStretch(1)
+        shared = cmaps.colormap_settings(self.state)
+        self._model_colour_labels: List[QLabel] = []
+        self._model_colours: List[cmaps.ColormapChooser] = []
+        for _panel in range(2):
+            label = QLabel("")
+            chooser = cmaps.ColormapChooser(cmaps.RESISTIVITY, "viridis", shared=shared)
+            chooser.colormapChanged.connect(self._on_model_colormap_changed)
+            for widget in (label, chooser):
+                widget.setVisible(False)   # shown for the panels a result draws
+                row.addWidget(widget)
+            self._model_colour_labels.append(label)
+            self._model_colours.append(chooser)
+        layout.addLayout(row)
+        layout.addWidget(self._models_canvas, stretch=1)
+        return page
+
+    def _panel_colormap(self, panel: int, name: str, used: set) -> Any:
+        """Point panel ``panel``'s chooser at model ``name``; return its map."""
+        key, default = self._MODEL_COLOURS[name]
+        self._model_colour_labels[panel].setText(name)
+        used.add(panel)
+        return cmaps.to_matplotlib(self._model_colours[panel].set_target(key, default))
+
+    def _on_model_colormap_changed(self, _name: str) -> None:
+        """Redraw the models on screen in the new colours; nothing is re-inverted."""
+        if self._result is not None:
+            self._plot_models(self._result)
+
     def _plot_models(self, result: JointInversionResult) -> None:
         self._models_figure.clear()
+        coloured: set = set()
         if result.methods == ("ERT", "SRT"):
             mesh = result.meta.get("mesh")
             for index, method in enumerate(result.methods, start=1):
@@ -1157,7 +1209,9 @@ class JointInversionModule(BaseModule):
                     continue
                 try:
                     import pygimli as pg
-                    pg.show(mesh, values, ax=axis, label="Resistivity (Ω m)" if method == "ERT" else "Velocity (m/s)")
+                    pg.show(mesh, values, ax=axis,
+                            label="Resistivity (Ω m)" if method == "ERT" else "Velocity (m/s)",
+                            cMap=self._panel_colormap(index - 1, method, coloured))
                 except Exception:
                     axis.plot(values); axis.set_xlabel("Cell index")
                 axis.set_title(f"{method} joint model")
@@ -1172,7 +1226,7 @@ class JointInversionModule(BaseModule):
                     y_index = shape[1] // 2
                     image = axis.pcolormesh(
                         edges[0], edges[2], model3d[:, y_index, :].T,
-                        shading="auto", cmap="RdBu_r" if method == "Gravity" else "viridis",
+                        shading="auto", cmap=self._panel_colormap(index - 1, method, coloured),
                     )
                     self._models_figure.colorbar(
                         image, ax=axis,
@@ -1193,10 +1247,16 @@ class JointInversionModule(BaseModule):
                 axis.step(model, depths, where="post"); axis.invert_yaxis()
                 axis.set_xscale("log"); axis.set_xlabel("Resistivity (Ω m)"); axis.set_ylabel("Depth (m)")
             else:
-                image = axis.imshow(model.T, aspect="auto", origin="upper", cmap="viridis")
+                image = axis.imshow(model.T, aspect="auto", origin="upper",
+                                    cmap=self._panel_colormap(0, "FDEM–TDEM", coloured))
                 self._models_figure.colorbar(image, ax=axis, label="Resistivity (Ω m)")
                 axis.set_xlabel("Matched sounding"); axis.set_ylabel("Layer")
             axis.set_title("Shared FDEM–TDEM resistivity model")
+        # A chooser for each panel drawn in colour, and none for a line plot.
+        for panel, (label, chooser) in enumerate(zip(self._model_colour_labels,
+                                                     self._model_colours)):
+            label.setVisible(panel in coloured)
+            chooser.setVisible(panel in coloured)
         self._models_canvas.draw_idle()
 
     def _plot_fits(self, result: JointInversionResult) -> None:

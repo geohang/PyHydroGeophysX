@@ -1,7 +1,7 @@
 """Turning a place name into coordinates, without asking the model for them.
 
-Climate retrieval needs a longitude and latitude: :mod:`pydaymet` samples a
-gridded product at a point, so "somewhere in Wyoming" is not enough. The
+Climate retrieval needs a longitude and latitude: the reanalysis is sampled
+at a point, so "somewhere in Wyoming" is not enough. The
 temptation is to ask the LLM for the coordinates directly, and that is the one
 thing not to do — models state plausible, wrong coordinates with complete
 confidence, and a silently misplaced site produces a climate series for the

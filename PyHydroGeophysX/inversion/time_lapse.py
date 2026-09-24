@@ -13,7 +13,10 @@ from scipy.sparse import csr_matrix, diags
 from scipy.sparse.linalg import lsqr
 
 from ..forward.ert_forward import ertforandjac2, ertforward2
-from ..solvers.linear_solvers import generalized_solver
+from ..solvers.linear_solvers import (
+    block_tridiagonal_cholesky_solve,
+    generalized_solver,
+)
 from .base import InversionBase, TimeLapseInversionResult
 from .temporal_weights import DEFAULT_LIMIT as DEFAULT_TEMPORAL_LIMIT
 from .temporal_weights import temporal_weights
@@ -35,14 +38,53 @@ def _sparse_temporal_difference_matrix(cell_count: int, size: int, dtype):
     )
 
 
+class _BlockDiagonal:
+    """A block-diagonal matrix held as its blocks: the time-lapse Jacobian.
+
+    Each survey's sensitivities fill one block and every other entry is zero.
+    Assembled densely it stores N^2 blocks to hold N, and every product with it
+    multiplies the zeros as well. This supports what the Gauss-Newton loop asks
+    of the Jacobian - ``@`` with a vector, ``.transpose()`` - and gives the
+    normal-matrix assembly the blocks themselves.
+    """
+
+    def __init__(self, blocks, transposed: bool = False):
+        self.blocks = blocks
+        self._transposed = transposed
+        self._row_edges = np.concatenate([[0], np.cumsum([b.shape[0] for b in blocks])])
+        self._col_edges = np.concatenate([[0], np.cumsum([b.shape[1] for b in blocks])])
+
+    @property
+    def shape(self):
+        rows, cols = int(self._row_edges[-1]), int(self._col_edges[-1])
+        return (cols, rows) if self._transposed else (rows, cols)
+
+    def transpose(self):
+        return _BlockDiagonal(self.blocks, not self._transposed)
+
+    @property
+    def T(self):
+        return self.transpose()
+
+    def __matmul__(self, vec):
+        vec = np.asarray(vec)
+        edges = self._row_edges if self._transposed else self._col_edges
+        parts = [(block.T if self._transposed else block) @ vec[edges[k]:edges[k + 1]]
+                 for k, block in enumerate(self.blocks)]
+        return np.concatenate(parts, axis=0)
+
+    dot = __matmul__
+
+
 # ---------------------------------------------------------------------------
 # calculate jacobian
 # ---------------------------------------------------------------------------
 def _calculate_jacobian(fwd_operators, model, mesh, size, as_sparse: bool = False,
-                        dtype=np.float64):
+                        dtype=np.float64, responses=None, with_responses: bool = False,
+                        as_blocks: bool = False):
     """
     Calculate Jacobian matrix for multi-time model.
-    
+
     Args:
         fwd_operators: List of forward operators
         model: Natural-log resistivity, reshaped to (cells, timesteps) in
@@ -51,18 +93,30 @@ def _calculate_jacobian(fwd_operators, model, mesh, size, as_sparse: bool = Fals
         size: Number of timesteps
         as_sparse: Return a CSR block-diagonal Jacobian instead of a dense array.
         dtype: Floating-point dtype for responses and sensitivities.
-        
+        as_blocks: Return the dense blocks as a ``_BlockDiagonal`` instead of
+            assembling them into one array.
+        responses: Each operator's linear response to its block of ``model``,
+            when every operator's last forward solve was exactly that block (as
+            ``_calculate_forward(..., with_responses=True)`` just returned
+            them). The solves are then not repeated; see ``ertforandjac2``.
+        with_responses: Also return the operators' linear responses.
+
     Returns:
         obs: Predicted log apparent resistivity, stacked as a column vector.
         J: Jacobian matrix
+        With ``with_responses``, the list of linear responses as a third value.
     """
     model_reshaped = np.reshape(model, (-1, size), order='F')
     obs = []
-    
+    linear = []
+
     jac_blocks = []
-    
+
     for i in range(size):
-        dr, Jr = ertforandjac2(fwd_operators[i], model_reshaped[:, i], mesh)
+        dr, Jr, response = ertforandjac2(
+            fwd_operators[i], model_reshaped[:, i], mesh,
+            response=None if responses is None else responses[i], with_response=True)
+        linear.append(response)
         dr = dr.astype(dtype, copy=False)
         obs.append(dr)
         jac_blocks.append(csr_matrix(Jr, dtype=dtype) if as_sparse else Jr.astype(dtype, copy=False))
@@ -72,37 +126,51 @@ def _calculate_jacobian(fwd_operators, model, mesh, size, as_sparse: bool = Fals
     
     if as_sparse:
         J = sparse_block_diag(jac_blocks, format="csr", dtype=dtype)
+    elif as_blocks:
+        J = _BlockDiagonal(jac_blocks)
     else:
         J = dense_block_diag(*jac_blocks).astype(dtype, copy=False)
-    
+
+    if with_responses:
+        return obs_stacked, J, linear
     return obs_stacked, J
 
 
 # ---------------------------------------------------------------------------
 # calculate forward
 # ---------------------------------------------------------------------------
-def _calculate_forward(fwd_operators, model, mesh, size):
+def _calculate_forward(fwd_operators, model, mesh, size, with_responses: bool = False):
     """
     Calculate forward response for multi-time model.
-    
+
     Args:
         fwd_operators: List of forward operators
         model: Model parameters (cells x timesteps)
         mesh: Mesh
         size: Number of timesteps
-        
+        with_responses: Also return each operator's linear response, which
+            ``_calculate_jacobian(..., responses=)`` can build on.
+
     Returns:
-        obs: Observed data for all timesteps
+        obs: Observed data for all timesteps, and with ``with_responses`` the
+        list of linear responses as a second value.
     """
     model_reshaped = np.reshape(model, (-1, size), order='F')
     obs = []
-    
+    linear = []
+
     for i in range(size):
-        dr = ertforward2(fwd_operators[i], model_reshaped[:, i], mesh)
+        if with_responses:
+            dr, response = ertforward2(fwd_operators[i], model_reshaped[:, i], mesh,
+                                       with_response=True)
+            linear.append(response)
+        else:
+            dr = ertforward2(fwd_operators[i], model_reshaped[:, i], mesh)
         obs.append(dr)
-    
+
     # Stack observations
-    return np.vstack([response.reshape(-1, 1) for response in obs])
+    stacked = np.vstack([response.reshape(-1, 1) for response in obs])
+    return (stacked, linear) if with_responses else stacked
 
 
 # ---------------------------------------------------------------------------
@@ -150,14 +218,20 @@ class TimeLapseERTInversion(InversionBase):
                 - lambda_val: Regularization parameter
                 - alpha: Temporal regularization parameter
                 - decay_rate: Temporal decay rate
-                - method: Solver method ('cgls', 'lsqr', etc.)
+                - method: Solver method. 'spd_cholesky' (the default) factors
+                  the block-tridiagonal normal matrix block by block, an exact
+                  Cholesky in O(N n^3) work and O(N n^2) memory; any other
+                  method ('spd_cg', 'cgls', 'lsqr', ...) gets the whole matrix.
                 - model_constraints: (min, max) model parameter bounds
                 - max_iterations: Maximum iterations
                 - absoluteError: Absolute resistance error floor [Ohm] (default 0.0001)
                 - relativeError: Relative data error
                 - lambda_rate: Lambda reduction rate
                 - lambda_min: Minimum lambda value
-                - save_memory: Use sparse operators to reduce RAM consumption
+                - save_memory: Use sparse operators and a float32 Jacobian to
+                  reduce RAM consumption. With 'spd_cholesky' the normal matrix
+                  is factored block by block in float64 in either mode, so this
+                  mainly halves the Jacobian's memory.
                 - temporal_weighting: 'interval' (default) weights each adjacent
                   pair by the interval between the two surveys, so the temporal
                   constraint penalizes the rate of change; 'uniform' weights every
@@ -264,8 +338,15 @@ class TimeLapseERTInversion(InversionBase):
             # Get apparent resistivity
             if np.all(dataert['rhoa']) != 0.0:
                 rhos.append(dataert['rhoa'].array())
-            else:
+            elif dataert.haveData('r'):
                 rhos.append(dataert['r'].array() * k)
+            else:
+                # pyGIMLi lists 'r' even when the file has none; r * k would
+                # replace this survey's rhoa with zeros, and log(0) with -inf.
+                raise ValueError(
+                    f"Dataset {fname}: some readings have zero apparent "
+                    "resistivity and the file has no resistances to rebuild them "
+                    "from. Filter those readings out before the time-lapse run.")
             
             # Get or estimate data errors
             if np.all(dataert['err']) != 0.0:
@@ -274,9 +355,11 @@ class TimeLapseERTInversion(InversionBase):
                 # Seb's per-measurement formula: err_i = relativeError + absoluteError / |r_i|
                 abs_e = float(self.parameters['absoluteError'])
                 rel_e = float(self.parameters['relativeError'])
-                if 'r' in dataert.dataMap():
+                # haveData, not "in dataMap": a zero-filled 'r' gave |r| = 0 and
+                # put every reading of the survey at the 50 % error cap.
+                if dataert.haveData('r'):
                     r_abs = np.abs(dataert['r'].array())
-                elif 'k' in dataert.dataMap():
+                elif dataert.haveData('k'):
                     r_abs = np.abs(dataert['rhoa'].array()) / np.maximum(
                         np.abs(dataert['k'].array()), 1e-10)
                 else:
@@ -323,7 +406,11 @@ class TimeLapseERTInversion(InversionBase):
         Wm_r = pg.utils.sparseMatrix2coo(Ctmp)
         cw = rm.constraintWeights().array().astype(self.dtype, copy=False)
         Wm_r = diags(cw).dot(Wm_r)
-        
+        # One survey's spatial operator, kept sparse for the block-wise normal
+        # matrix; its Gram matrix is built on first use.
+        self._Wm_block = sp.csr_matrix(Wm_r, dtype=self.dtype)
+        self._WmTWm_block = None
+
         if self.use_sparse:
             Wm_r = Wm_r.tocsr().astype(self.dtype, copy=False)
             self.Wm = sparse_block_diag([Wm_r for _ in range(self.size)], format="csr", dtype=self.dtype)
@@ -345,6 +432,7 @@ class TimeLapseERTInversion(InversionBase):
         )
         temporal_weights_full = np.repeat(pair_weights, cell_count).astype(
             self.dtype, copy=False)
+        self._temporal_row_weights = temporal_weights_full
         if self.use_sparse:
             Wt = _sparse_temporal_difference_matrix(
                 cell_count,
@@ -368,6 +456,77 @@ class TimeLapseERTInversion(InversionBase):
                 ] = -identity
         self.Wt = diags(temporal_weights_full, dtype=self.dtype).dot(Wt)
     
+    def _normal_blocks(self, jacobian, data_weights, Lambda, alpha,
+                       model_weights=None, temporal_weights=None, shift=0.0):
+        """The Gauss-Newton normal matrix as its blocks: ``(diagonal, couplings)``.
+
+        ``H = J^T D J + Lambda Wm^T M Wm + alpha Wt^T T Wt + shift I``, with ``D``,
+        ``M`` and ``T`` diagonal (their diagonals given; ``None`` is the
+        identity). ``J`` is block-diagonal, one survey per block, and ``Wm`` is
+        the same spatial operator on every block, so those two terms fill only
+        the diagonal blocks. ``Wt`` differences adjacent surveys, so its term
+        adds a diagonal to each diagonal block and couples each pair of
+        neighbours through a diagonal matrix. ``H`` is therefore block
+        tridiagonal: ``diagonal[k]`` is ``H[k, k]`` and ``couplings[k]`` the
+        diagonal of ``H[k + 1, k]``. Blocks are float64 whatever ``self.dtype``,
+        because the factorization of a normal matrix needs the precision.
+        """
+        blocks = jacobian.blocks
+        n_cells = blocks[0].shape[1]
+        spatial = self._Wm_block
+        n_rows_m = spatial.shape[0]
+        if model_weights is None and self._WmTWm_block is None:
+            self._WmTWm_block = (spatial.T @ spatial).toarray().astype(np.float64, copy=False)
+        # Wt = diag(w) D with D = [I -I] per adjacent pair, so
+        # Wt^T T Wt = D^T diag(w^2 t) D.
+        pair = np.asarray(self._temporal_row_weights, dtype=np.float64) ** 2
+        if temporal_weights is not None:
+            pair = pair * np.asarray(temporal_weights, dtype=np.float64)
+        couplings = [alpha * pair[k * n_cells:(k + 1) * n_cells] for k in range(len(blocks) - 1)]
+        diagonal, idx, rows = [], np.arange(n_cells), 0
+        for k, block in enumerate(blocks):
+            J = np.asarray(block, dtype=np.float64)
+            weights = np.asarray(data_weights[rows:rows + J.shape[0]], dtype=np.float64)
+            rows += J.shape[0]
+            A = J.T @ (weights.reshape(-1, 1) * J)
+            if model_weights is None:
+                A += Lambda * self._WmTWm_block
+            else:
+                m_k = np.asarray(model_weights[k * n_rows_m:(k + 1) * n_rows_m], dtype=np.float64)
+                A += Lambda * (spatial.T @ diags(m_k) @ spatial).toarray()
+            if k:
+                A[idx, idx] += couplings[k - 1]
+            if k < len(blocks) - 1:
+                A[idx, idx] += couplings[k]
+            if shift:
+                A[idx, idx] += shift
+            diagonal.append(A)
+        return diagonal, [-v for v in couplings]
+
+    def _block_normal_matrix(self, jacobian, data_weights, Lambda, alpha,
+                             model_weights=None, temporal_weights=None, shift=0.0):
+        """The dense Gauss-Newton normal matrix, assembled from its blocks.
+
+        For a solver other than ``spd_cholesky``, which needs the whole matrix.
+        Multiplying the full block-diagonal arrays did this arithmetic plus
+        N^2 - N blocks of zeros, and the constant spatial and temporal products
+        again every iteration: a third of a four-survey run, growing as N^3.
+        The matrix is the same one; only the order of the sums differs.
+        """
+        diagonal, couplings = self._normal_blocks(jacobian, data_weights, Lambda, alpha,
+                                                  model_weights, temporal_weights, shift)
+        n_cells = diagonal[0].shape[0]
+        H = np.zeros((n_cells * len(diagonal),) * 2, dtype=self.dtype)
+        idx = np.arange(n_cells)
+        for k, A in enumerate(diagonal):
+            cells = slice(k * n_cells, (k + 1) * n_cells)
+            H[cells, cells] = A
+        for k, e in enumerate(couplings):
+            here, there = k * n_cells + idx, (k + 1) * n_cells + idx
+            H[there, here] = e
+            H[here, there] = e
+        return H
+
     def run(self, initial_model: Optional[np.ndarray] = None) -> TimeLapseInversionResult:
         """
         Run time-lapse ERT inversion.
@@ -383,6 +542,11 @@ class TimeLapseERTInversion(InversionBase):
             self.setup()
         
         use_sparse = self.use_sparse
+        # The default solver factors the block-tridiagonal normal matrix block
+        # by block, in either memory mode; any other method needs it whole. In
+        # low-memory mode this replaced sparse products of the Jacobian's dense
+        # blocks and a SuperLU solve, 70 % of a ten-survey run.
+        block_cholesky = str(self.parameters.get('method', '')).lower().strip() == 'spd_cholesky'
 
         def _as_col(vec):
             arr = np.asarray(vec)
@@ -414,11 +578,20 @@ class TimeLapseERTInversion(InversionBase):
         cell_count = self.fwd_operators[0].paraDomain.cellCount()
         
         if initial_model is None:
-            # Create initial model with median resistivity for each time step
+            # Create initial model with median resistivity for each time step,
+            # taken from the apparent resistivities the inversion fits
+            # (self.rhos1, stacked survey by survey, rebuilt from r * k where
+            # needed). This used to test hasattr(dataset, 'rhoa'), which is
+            # always False for a DataContainerERT (its tokens are not
+            # attributes), so every survey started from 100 ohm-m.
+            sizes = [int(d.size()) for d in self.datasets]
+            per_survey = np.split(np.asarray(self.rhos1, dtype=float).ravel(),
+                                  np.cumsum(sizes)[:-1])
             initial_rhos = []
-            for i in range(self.size):
-                if hasattr(self.datasets[i], 'rhoa') and np.any(self.datasets[i]['rhoa'] > 0):
-                    initial_rhos.append(np.median(self.datasets[i]['rhoa'].array()))
+            for log_rhoa in per_survey:
+                rhoa_i = np.exp(log_rhoa[np.isfinite(log_rhoa)])
+                if rhoa_i.size:
+                    initial_rhos.append(float(np.median(rhoa_i)))
                 else:
                     # Use default value if no apparent resistivity data
                     initial_rhos.append(100.0)
@@ -456,6 +629,15 @@ class TimeLapseERTInversion(InversionBase):
         # Track errors for each iteration
         Err_tot = []
         chi2_old = np.inf
+        # True once mr has changed since Err_tot last scored it.
+        model_moved = False
+        # What the forward operators last solved: (log model, linear responses,
+        # whether the Jacobians followed). The line search solves every survey
+        # for the model it accepts, and each iteration used to solve them all
+        # again before building the Jacobians. pyGIMLi's createJacobian reads
+        # the potentials of an operator's last response() without checking the
+        # model, so the solves are reused only while this record holds.
+        solved = None
 
         # Choose inversion type
         inversion_type = self.parameters['inversion_type'].upper()
@@ -481,11 +663,16 @@ class TimeLapseERTInversion(InversionBase):
                 if verbose:
                     print(f'-------------------ERT Iteration: {nn} ---------------------------')
                 
-                # Forward modeling and Jacobian computation
-                dr, Jr = _calculate_jacobian(
+                # Forward modeling and Jacobian computation; the forward solves
+                # are skipped when the operators already hold this model's.
+                held = solved is not None and np.array_equal(solved[0], mr)
+                dr, Jr, linear = _calculate_jacobian(
                     self.fwd_operators, mr, self.mesh, self.size,
-                    as_sparse=use_sparse, dtype=self.dtype
+                    as_sparse=use_sparse and not block_cholesky, dtype=self.dtype,
+                    responses=solved[1] if held else None, with_responses=True,
+                    as_blocks=block_cholesky or not use_sparse
                 )
+                solved = (mr, linear, True)
                 dr = dr.reshape(-1, 1)
                 
                 # Data misfit calculation
@@ -595,6 +782,7 @@ class TimeLapseERTInversion(InversionBase):
 
                 # Store iteration data
                 Err_tot.append([chi2_ert, fmert, ftert])
+                model_moved = False
                 progress_callback = self.parameters.get('progress_callback')
                 if callable(progress_callback):
                     progress_callback({
@@ -621,61 +809,79 @@ class TimeLapseERTInversion(InversionBase):
                         print(f"Convergence reached at iteration {nn}")
                     break
                 
-                # Compute Hessian (or approximation)
-                if inversion_type == 'L2':
-                    # Standard Gauss-Newton Hessian
-                    if use_sparse:
-                        H = (Jr.transpose().dot(self.Wd_sq.dot(Jr)) + 
-                             Lambda * self.Wm.transpose().dot(self.Wm) + 
-                             alpha * self.Wt.transpose().dot(self.Wt))
+                if block_cholesky:
+                    # spd_cholesky on the block-tridiagonal matrix as it is: the same
+                    # exact factorization, block by block, without forming (N n)^2
+                    # entries or multiplying the zeros around the Jacobian's blocks.
+                    if inversion_type == 'L2':
+                        weights = {'data_weights': self.Wd_sq.diagonal()}
                     else:
-                        H = (Jr.T @ self.Wd_sq @ Jr + 
-                             Lambda * self.Wm.T @ self.Wm + 
-                             alpha * self.Wt.T @ self.Wt)
-                elif inversion_type == 'L1':
-                    # IRLS modified Hessian
-                    if use_sparse:
-                        weighted_J = Rd.dot(self.Wd.dot(Jr))
-                        weighted_J = self.Wd.transpose().dot(weighted_J)
-                        H = (Jr.transpose().dot(weighted_J) + 
-                             Lambda * self.Wm.transpose().dot(Rs.dot(self.Wm)) + 
-                             alpha * self.Wt.transpose().dot(Rt.dot(self.Wt)))
-                    else:
-                        H = (Jr.T @ self.Wd.T @ Rd @ self.Wd @ Jr + 
-                             Lambda * self.Wm.T @ Rs @ self.Wm + 
-                             alpha * self.Wt.T @ Rt @ self.Wt)
-                else:  # L1L2
-                    # Hybrid Hessian with damping
-                    if use_sparse:
-                        weighted_J = Rd.dot(self.Wd.dot(Jr))
-                        weighted_J = self.Wd.transpose().dot(weighted_J)
-                        H = (Jr.transpose().dot(weighted_J) + 
-                             Lambda * self.Wm.transpose().dot(Rs.dot(self.Wm)) + 
-                             alpha * self.Wt.transpose().dot(Rt.dot(self.Wt)) + 
-                             l1_epsilon * sp.eye(Jr.shape[1], format='csr', dtype=self.dtype))
-                    else:
-                        H = (Jr.T @ self.Wd.T @ Rd @ self.Wd @ Jr + 
-                             Lambda * self.Wm.T @ Rs @ self.Wm + 
-                             alpha * self.Wt.T @ Rt @ self.Wt + 
-                             l1_epsilon * np.eye(Jr.shape[1]))
+                        weights = {
+                            'data_weights': self.Wd.diagonal() ** 2 * Rd.diagonal(),
+                            'model_weights': Rs.diagonal(),
+                            'temporal_weights': Rt.diagonal(),
+                            'shift': l1_epsilon if inversion_type == 'L1L2' else 0.0,
+                        }
+                    diagonal_blocks, couplings = self._normal_blocks(
+                        Jr, Lambda=Lambda, alpha=alpha, **weights)
+                    del Jr
+                    d_mr = block_tridiagonal_cholesky_solve(
+                        diagonal_blocks, couplings, -gc_r, overwrite=True)
+                    del diagonal_blocks
+                else:
+                    # Compute Hessian (or approximation)
+                    if inversion_type == 'L2':
+                        # Standard Gauss-Newton Hessian
+                        if use_sparse:
+                            H = (Jr.transpose().dot(self.Wd_sq.dot(Jr)) + 
+                                 Lambda * self.Wm.transpose().dot(self.Wm) + 
+                                 alpha * self.Wt.transpose().dot(self.Wt))
+                        else:
+                            H = self._block_normal_matrix(Jr, self.Wd_sq.diagonal(), Lambda, alpha)
+                    elif inversion_type == 'L1':
+                        # IRLS modified Hessian
+                        if use_sparse:
+                            weighted_J = Rd.dot(self.Wd.dot(Jr))
+                            weighted_J = self.Wd.transpose().dot(weighted_J)
+                            H = (Jr.transpose().dot(weighted_J) + 
+                                 Lambda * self.Wm.transpose().dot(Rs.dot(self.Wm)) + 
+                                 alpha * self.Wt.transpose().dot(Rt.dot(self.Wt)))
+                        else:
+                            H = self._block_normal_matrix(
+                                Jr, self.Wd.diagonal() ** 2 * Rd.diagonal(), Lambda, alpha,
+                                model_weights=Rs.diagonal(), temporal_weights=Rt.diagonal())
+                    else:  # L1L2
+                        # Hybrid Hessian with damping
+                        if use_sparse:
+                            weighted_J = Rd.dot(self.Wd.dot(Jr))
+                            weighted_J = self.Wd.transpose().dot(weighted_J)
+                            H = (Jr.transpose().dot(weighted_J) + 
+                                 Lambda * self.Wm.transpose().dot(Rs.dot(self.Wm)) + 
+                                 alpha * self.Wt.transpose().dot(Rt.dot(self.Wt)) + 
+                                 l1_epsilon * sp.eye(Jr.shape[1], format='csr', dtype=self.dtype))
+                        else:
+                            H = self._block_normal_matrix(
+                                Jr, self.Wd.diagonal() ** 2 * Rd.diagonal(), Lambda, alpha,
+                                model_weights=Rs.diagonal(), temporal_weights=Rt.diagonal(),
+                                shift=l1_epsilon)
                 
-                # After using Jr for gradient computation
-                del Jr  # No longer needed
+                    # After using Jr for gradient computation
+                    del Jr  # No longer needed
 
-                # Solve for model update. overwrite_a lets 'spd_cholesky'
-                # factor in H's own buffer, which for a dense 4D normal matrix
-                # is the difference between one working copy and none; nothing
-                # reads H after this call. It is ignored by the other methods.
-                d_mr = generalized_solver(
-                    H, -gc_r,
-                    method=self.parameters['method'],
-                    use_gpu=self.parameters.get('use_gpu', False),
-                    parallel=self.parameters.get('parallel', False),
-                    n_jobs=self.parameters.get('n_jobs', -1),
-                    overwrite_a=True,
-                )
-                d_mr = d_mr.reshape(-1, 1)
-                del H  # consumed by the solve, and rebuilt next iteration
+                    # Solve for model update. overwrite_a lets 'spd_cholesky'
+                    # factor in H's own buffer, which for a dense 4D normal matrix
+                    # is the difference between one working copy and none; nothing
+                    # reads H after this call. It is ignored by the other methods.
+                    d_mr = generalized_solver(
+                        H, -gc_r,
+                        method=self.parameters['method'],
+                        use_gpu=self.parameters.get('use_gpu', False),
+                        parallel=self.parameters.get('parallel', False),
+                        n_jobs=self.parameters.get('n_jobs', -1),
+                        overwrite_a=True,
+                    )
+                    d_mr = d_mr.reshape(-1, 1)
+                    del H  # consumed by the solve, and rebuilt next iteration
                 
                 # Line search
                 mu_LS = 1.0
@@ -683,64 +889,72 @@ class TimeLapseERTInversion(InversionBase):
                 best_mr = mr.copy()
                 best_f = ftot
                 
-                # Different line search strategies based on inversion type
-                if inversion_type == 'L1L2':
-                    # Trust region approach for L1L2
-                    mr1 = mr + d_mr
+                # One line search for every norm. L1L2 used to take the full step
+                # unchecked; it still does whenever that step lowers the objective,
+                # which is the first trial. Its IRLS weights are those of this
+                # iteration, so the L1 form of the objective below is its own.
+                for iarm in range(20):
+                    mr1 = mr + mu_LS * d_mr
                     mr1 = np.clip(mr1, min_mr, max_mr)
-                    success = True
-                else:
-                    # Standard line search for L2 and L1
-                    for iarm in range(20):
-                        mr1 = mr + mu_LS * d_mr
-                        mr1 = np.clip(mr1, min_mr, max_mr)
+                    
+                    try:
+                        dr_new, linear = _calculate_forward(
+                            self.fwd_operators, mr1, self.mesh, self.size, with_responses=True)
+                        solved = (mr1, linear, False)
+                        dr_new = dr_new.reshape(-1, 1)
+                        dataerror_new = _as_col(self.rhos1 - dr_new)
                         
-                        try:
-                            dr_new = _calculate_forward(self.fwd_operators, mr1, self.mesh, self.size)
-                            dr_new = dr_new.reshape(-1, 1)
-                            dataerror_new = _as_col(self.rhos1 - dr_new)
+                        # Compute new objective function
+                        if inversion_type == 'L2':
+                            data_weighted_new = _matvec(self.Wd_sq, dataerror_new)
+                            fdert_new = _quad(data_weighted_new, dataerror_new)
+                            model_term_new = _ttm(self.Wm, mr1)
+                            fmert_new = Lambda * _quad(model_term_new, mr1)
+                            temp_term_new = _ttm(self.Wt, mr1)
+                            ftert_new = alpha * _quad(temp_term_new, mr1)
+                        else:  # L1 and L1L2, with this iteration's IRLS weights
+                            data_weighted_new = _apply_data_weights(Rd, dataerror_new)
+                            fdert_new = _quad(data_weighted_new, dataerror_new)
+                            model_diff_new = _matvec(self.Wm, mr1)
+                            model_weighted_new = _matvec(Rs, model_diff_new)
+                            fmert_new = Lambda * _quad(model_weighted_new, model_diff_new)
+                            temp_diff_new = _matvec(self.Wt, mr1)
+                            temp_weighted_new = _matvec(Rt, temp_diff_new)
+                            ftert_new = alpha * _quad(temp_weighted_new, temp_diff_new)
+                        
+                        ftot_new = fdert_new + fmert_new + ftert_new
+                        
+                        if ftot_new < ftot:
+                            best_f = ftot_new
+                            best_mr = mr1.copy()
+                            success = True
+                            break
                             
-                            # Compute new objective function
-                            if inversion_type == 'L2':
-                                data_weighted_new = _matvec(self.Wd_sq, dataerror_new)
-                                fdert_new = _quad(data_weighted_new, dataerror_new)
-                                model_term_new = _ttm(self.Wm, mr1)
-                                fmert_new = Lambda * _quad(model_term_new, mr1)
-                                temp_term_new = _ttm(self.Wt, mr1)
-                                ftert_new = alpha * _quad(temp_term_new, mr1)
-                            else:  # L1
-                                data_weighted_new = _apply_data_weights(Rd, dataerror_new)
-                                fdert_new = _quad(data_weighted_new, dataerror_new)
-                                model_diff_new = _matvec(self.Wm, mr1)
-                                model_weighted_new = _matvec(Rs, model_diff_new)
-                                fmert_new = Lambda * _quad(model_weighted_new, model_diff_new)
-                                temp_diff_new = _matvec(self.Wt, mr1)
-                                temp_weighted_new = _matvec(Rt, temp_diff_new)
-                                ftert_new = alpha * _quad(temp_weighted_new, temp_diff_new)
-                            
-                            ftot_new = fdert_new + fmert_new + ftert_new
-                            
-                            if ftot_new < ftot:
-                                best_f = ftot_new
-                                best_mr = mr1.copy()
-                                success = True
-                                break
-                                
-                        except Exception as e:
-                            if verbose:
-                                print(f"Line search iteration {iarm} failed: {str(e)}")
+                    except Exception as e:
+                        if verbose:
+                            print(f"Line search iteration {iarm} failed: {str(e)}")
 
-                        mu_LS *= 0.5
+                    mu_LS *= 0.5
                 
                 # Update model
                 if success:
                     mr = best_mr
                     if Lambda > self.parameters['lambda_min']:
                         Lambda *= self.parameters['lambda_rate']
-                else:
-                    # Take conservative step along negative gradient
-                    mr = mr - 0.01 * gc_r / np.linalg.norm(gc_r)
-                    mr = np.clip(mr, min_mr, max_mr)
+                model_moved = success
+                if not success:
+                    # No trial lowered the objective. This used to take a fixed
+                    # 0.01 step down the gradient regardless, which could raise
+                    # it; the model stays instead. With the model and weights
+                    # unchanged, the next L2 or L1 iteration would repeat this one
+                    # exactly - Jacobians and all - so the misfit has stopped
+                    # changing and the loop ends. L1L2 re-weights each iteration,
+                    # so it tries again.
+                    if verbose:
+                        print("Line search found no decrease; keeping the current model")
+                    if inversion_type != 'L1L2':
+                        stop_reason = 'plateau'
+                        break
             
             # Check IRLS convergence
             if inversion_type in ['L1', 'L1L2'] and irls_iter > 0:
@@ -755,15 +969,50 @@ class TimeLapseERTInversion(InversionBase):
             if inversion_type in ['L1', 'L1L2']:
                 mr_previous = mr.copy()
         
+        # Every row of Err_tot is scored before that iteration's update, so when
+        # the loop ends on its iteration cap the last row, meta['chi2'] and
+        # chi2_history described the model from before the final step, not the
+        # one returned. Score the returned model the same way the loop does.
+        iterations_run = len(Err_tot)
+        if model_moved:
+            if solved is not None and np.array_equal(solved[0], mr):
+                # The line search has just solved the model it accepted.
+                dr_final = np.vstack([np.log(r).reshape(-1, 1) for r in solved[1]])
+            else:
+                dr_final = _calculate_forward(self.fwd_operators, mr, self.mesh, self.size)
+            err_final = _as_col(self.rhos1 - dr_final.reshape(-1, 1))
+            chi2_final = _quad(_matvec(self.Wd_sq, err_final), err_final) / len(err_final)
+            if inversion_type == 'L2':
+                fm_final = Lambda * _quad(_ttm(self.Wm, mr), mr)
+                ft_final = alpha * _quad(_ttm(self.Wt, mr), mr)
+            else:
+                md_final = _matvec(self.Wm, mr)
+                fm_final = Lambda * _quad(_matvec(Rs, md_final), md_final)
+                td_final = _matvec(self.Wt, mr)
+                ft_final = alpha * _quad(_matvec(Rt, td_final), td_final)
+            Err_tot.append([chi2_final, fm_final, ft_final])
+        
         # Process final results
         # Reshape to (cells, timesteps)
         final_model = np.reshape(mr, (-1, self.size), order='F').astype(self.dtype, copy=False)
         final_model = np.exp(final_model).astype(self.dtype if self.use_sparse else np.float64, copy=False)
         
-        # Compute coverage for middle time step
+        # Compute coverage for middle time step. Its operator usually holds this
+        # model's solve already, and its Jacobian when the loop stopped at the
+        # start of an iteration; they are the same only if the model handed to
+        # pyGIMLi here is the one the forward wrappers passed (no resistivity
+        # clip, and not the float32 copy of low-memory mode).
         mid_idx = self.size // 2
-        dr = self.fwd_operators[mid_idx].response(pg.Vector(final_model[:, mid_idx]))
-        self.fwd_operators[mid_idx].createJacobian(pg.Vector(final_model[:, mid_idx]))
+        block = np.reshape(mr, (-1, self.size), order='F')[:, mid_idx]
+        held = (solved is not None and np.array_equal(solved[0], mr)
+                and np.array_equal(np.clip(np.exp(np.clip(block, -20, 20)), 0.001, 1e6),
+                                   final_model[:, mid_idx]))
+        if held:
+            dr = pg.Vector(solved[1][mid_idx])
+        else:
+            dr = self.fwd_operators[mid_idx].response(pg.Vector(final_model[:, mid_idx]))
+        if not (held and solved[2]):
+            self.fwd_operators[mid_idx].createJacobian(pg.Vector(final_model[:, mid_idx]))
         
         covTrans = pg.core.coverageDCtrans(
             self.fwd_operators[mid_idx].jacobian(), 
@@ -787,7 +1036,7 @@ class TimeLapseERTInversion(InversionBase):
         # Why the loop ended, so a caller driving lambda can tell "this lambda is
         # spent" apart from "this run ran out of iterations".
         result.meta['stop_reason'] = stop_reason
-        result.meta['iterations'] = len(Err_tot)
+        result.meta['iterations'] = iterations_run
         result.meta['chi2'] = float(Err_tot[-1][0]) if Err_tot else float('nan')
         result.meta['lambda'] = float(self.parameters['lambda_val'])
         result.meta['final_lambda'] = float(Lambda)

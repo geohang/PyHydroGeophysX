@@ -226,8 +226,14 @@ class RunContext:
         return any(s.tool == tool and s.status == "ok" for s in self.steps)
 
     def attempted(self, tool: str) -> int:
-        """How many times ``tool`` has been tried, successfully or not."""
-        return sum(1 for s in self.steps if s.tool == tool)
+        """How many times ``tool`` has been tried, successfully or not.
+
+        A ``blocked`` step is not an attempt: the tool never ran, because
+        something it needed was missing or it was not on offer. Counting it made
+        a premature choice permanent - a conversion named before the evaluation
+        existed was never offered again once the evaluation did exist.
+        """
+        return sum(1 for s in self.steps if s.tool == tool and s.status != "blocked")
 
     # -- views -------------------------------------------------------------
     def transcript(self, limit: int = 40) -> str:

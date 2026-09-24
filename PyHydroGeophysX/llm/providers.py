@@ -37,15 +37,77 @@ never requires either to be installed.
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import json
 import os
+import threading
 from typing import Any, Dict, List, Optional, Tuple
 
 #: Per-request timeout in seconds for LLM calls. The SDK defaults (about ten
 #: minutes) leave a chat UI hanging when a provider stalls; override with the
 #: PHGX_LLM_TIMEOUT_S environment variable when longer calls are expected.
 REQUEST_TIMEOUT_S = float(os.getenv("PHGX_LLM_TIMEOUT_S", "120"))
+
+#: How long an idle connection to the provider is kept for the next request, in
+#: seconds. The SDKs drop one after 5 s, which is less time than a person takes
+#: to read a proposed step and approve it, so step-by-step chat opened a new TCP
+#: and TLS connection before nearly every request. Override with the
+#: PHGX_LLM_KEEPALIVE_S environment variable; it never goes below the SDK's own.
+KEEPALIVE_S = float(os.getenv("PHGX_LLM_KEEPALIVE_S", "120"))
+
+
+#: Held while a provider's client is built or discarded. The client is built on
+#: first use, and first use can now come from two threads at once - the warm-up
+#: started when the user begins typing, and the request itself.
+_CLIENT_LOCK = threading.Lock()
+
+
+def keepalive_http_client(sdk: Any) -> Optional[Any]:
+    """The SDK's own HTTP client, keeping idle connections for :data:`KEEPALIVE_S`.
+
+    Only the idle expiry differs from what the SDK would build for itself;
+    connection limits, redirects, proxies and timeouts stay the SDK's defaults.
+    Shared with ``BaseAgent``, whose workflow agents talk to the same APIs.
+
+    Parameters
+    ----------
+    sdk : module
+        The imported ``openai`` or ``anthropic`` package.
+
+    Returns
+    -------
+    httpx.Client or None
+        None when the SDK does not expose its default client and limits, which
+        leaves the SDK to build its own exactly as before.
+    """
+    base = getattr(sdk, "DefaultHttpxClient", None)
+    limits = getattr(sdk, "DEFAULT_CONNECTION_LIMITS", None)
+    if base is None or limits is None:
+        return None
+    import httpx
+
+    class _KeptAliveClient(base):
+        """Closed when dropped, as the client the SDK builds for itself is.
+
+        A provider's client is replaced whenever the key, the endpoint or the
+        provider changes, and nothing else would close the old one's sockets.
+        """
+
+        def __del__(self) -> None:
+            try:
+                if not self.is_closed:
+                    self.close()
+            except Exception:  # noqa: BLE001 - may run during interpreter shutdown
+                pass
+
+    expiry = limits.keepalive_expiry
+    if expiry is not None:
+        expiry = max(KEEPALIVE_S, float(expiry))
+    return _KeptAliveClient(limits=httpx.Limits(
+        max_connections=limits.max_connections,
+        max_keepalive_connections=limits.max_keepalive_connections,
+        keepalive_expiry=expiry))
 
 
 # -- neutral -> provider tool schemas -----------------------------------------
@@ -248,17 +310,32 @@ def to_anthropic_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]
         elif role == "assistant":
             raw = m.get("_anthropic_content")
             if raw is not None:
-                out.append({"role": "assistant", "content": raw})
-                continue
-            blocks: List[Dict[str, Any]] = []
-            if m.get("content"):
-                blocks.append({"type": "text", "text": m["content"]})
-            for c in (m.get("tool_calls") or []):
-                blocks.append({"type": "tool_use", "id": c["id"], "name": c["name"],
-                               "input": c.get("arguments") or {}})
-            out.append({"role": "assistant", "content": blocks or [{"type": "text", "text": ""}]})
+                blocks = [b for b in raw if not _is_empty_text(b)]
+            else:
+                blocks = []
+                if m.get("content"):
+                    blocks.append({"type": "text", "text": m["content"]})
+                for c in (m.get("tool_calls") or []):
+                    blocks.append({"type": "tool_use", "id": c["id"], "name": c["name"],
+                                   "input": c.get("arguments") or {}})
+            # The Messages API rejects an assistant turn with no content, or with
+            # a text block that is empty, anywhere but last - and once one is in
+            # the history every later call fails with a 400. Such a turn says
+            # nothing and asks for no tool, so it is left out; the user turns on
+            # either side then merge, as adjacent user turns always do.
+            if blocks:
+                out.append({"role": "assistant", "content": blocks})
     flush_results()
     return out
+
+
+def _is_empty_text(block: Any) -> bool:
+    """A text block holding only whitespace, as an SDK object or a plain dict."""
+    if isinstance(block, dict):
+        kind, text = block.get("type"), block.get("text")
+    else:
+        kind, text = getattr(block, "type", None), getattr(block, "text", None)
+    return kind == "text" and not str(text or "").strip()
 
 
 def cap_images(messages: List[Dict[str, Any]], max_images: int = 2) -> List[Dict[str, Any]]:
@@ -331,12 +408,16 @@ class Provider:
             self._model = model
 
     def set_api_key(self, api_key: str) -> None:
-        self._api_key = (api_key or "").strip() or None
-        self._client = None
+        # Under the lock, so a client a warm-up is building with the old key
+        # cannot be stored after this has discarded it.
+        with _CLIENT_LOCK:
+            self._api_key = (api_key or "").strip() or None
+            self._client = None
 
     def set_base_url(self, base_url: str) -> None:
-        self._base_url = (base_url or "").strip() or None
-        self._client = None
+        with _CLIENT_LOCK:
+            self._base_url = (base_url or "").strip() or None
+            self._client = None
 
     def available(self) -> Tuple[bool, str]:  # pragma: no cover - overridden
         raise NotImplementedError
@@ -347,6 +428,13 @@ class Provider:
 
     def complete(self, system: str, messages, specs, max_tokens: int = 0) -> Dict[str, Any]:  # pragma: no cover
         raise NotImplementedError
+
+    def _warm(self) -> None:
+        """Do a first request's one-off work ahead of it: imports, the client.
+
+        Run by :func:`prewarm` on a background thread. May raise; the caller
+        treats any failure as "nothing to warm".
+        """
 
 
 class OpenAIProvider(Provider):
@@ -364,12 +452,28 @@ class OpenAIProvider(Provider):
     def _ensure_client(self):
         import openai
 
-        if self._client is None:
-            kwargs: Dict[str, Any] = {"api_key": self._api_key, "timeout": REQUEST_TIMEOUT_S}
-            if self._base_url:
-                kwargs["base_url"] = self._base_url
-            self._client = openai.OpenAI(**kwargs)
-        return self._client
+        with _CLIENT_LOCK:
+            if self._client is None:
+                kwargs: Dict[str, Any] = {"api_key": self._api_key,
+                                          "timeout": REQUEST_TIMEOUT_S}
+                if self._base_url:
+                    kwargs["base_url"] = self._base_url
+                http_client = keepalive_http_client(openai)
+                if http_client is not None:
+                    kwargs["http_client"] = http_client
+                self._client = openai.OpenAI(**kwargs)
+            return self._client
+
+    def _warm(self) -> None:
+        # The package and the chat resource: the SDK imports that on first
+        # attribute access, which cost a first request about 0.3 s on its own.
+        # Not openai.resources.responses: building its types holds the GIL for
+        # about 100 ms at a stretch, which froze the window while the user
+        # typed. The first request still imports it, as it always did.
+        importlib.import_module("openai")
+        importlib.import_module("openai.resources.chat")
+        if self.available()[0]:
+            self._ensure_client()
 
     def complete(self, system, messages, specs, max_tokens: int = 1024) -> Dict[str, Any]:
         from .runtime_options import openai_options
@@ -446,9 +550,21 @@ class AnthropicProvider(Provider):
     def _ensure_client(self):
         import anthropic
 
-        if self._client is None:
-            self._client = anthropic.Anthropic(api_key=self._api_key, timeout=REQUEST_TIMEOUT_S)
-        return self._client
+        with _CLIENT_LOCK:
+            if self._client is None:
+                kwargs: Dict[str, Any] = {"api_key": self._api_key,
+                                          "timeout": REQUEST_TIMEOUT_S}
+                http_client = keepalive_http_client(anthropic)
+                if http_client is not None:
+                    kwargs["http_client"] = http_client
+                self._client = anthropic.Anthropic(**kwargs)
+            return self._client
+
+    def _warm(self) -> None:
+        importlib.import_module("anthropic")
+        importlib.import_module("anthropic.resources.messages")
+        if self.available()[0]:
+            self._ensure_client()
 
     def complete(self, system, messages, specs, max_tokens: int = 4096) -> Dict[str, Any]:
         client = self._ensure_client()
@@ -748,3 +864,52 @@ def make_provider(
     if base_url is None and meta.get("base_url_env"):
         base_url = os.getenv(meta["base_url_env"])
     return cls(model=model, api_key=api_key, base_url=base_url)
+
+
+def prewarm(provider: Any) -> Optional[threading.Thread]:
+    """Start a first request's one-off work on a background thread.
+
+    The first request of a session paid about 1.5 s before anything reached the
+    network: importing the SDK, then the resource module behind the endpoint,
+    then building the client. None of that depends on what the user is about to
+    ask, so the chat starts it as soon as they begin typing and the request
+    finds it done.
+
+    Parameters
+    ----------
+    provider : Provider
+        The provider to warm. Anything without a ``_warm`` method is ignored.
+
+    Returns
+    -------
+    threading.Thread or None
+        The daemon thread doing the work, or None when there is nothing to do.
+        Nothing waits for it: a request that starts first simply does the same
+        work itself, and the lock in ``_ensure_client`` keeps the two from each
+        building a client.
+
+    Raises
+    ------
+    None
+        Failures are swallowed: a missing SDK, a missing key or a broken
+        install is reported by the request that needs it, not by a warm-up
+        nobody asked for.
+
+    Examples
+    --------
+    >>> prewarm(object()) is None
+    True
+    """
+    warm = getattr(provider, "_warm", None)
+    if not callable(warm):
+        return None
+
+    def run() -> None:
+        try:
+            warm()
+        except Exception:  # noqa: BLE001 - a warm-up must never surface an error
+            pass
+
+    thread = threading.Thread(target=run, name="phgx-llm-prewarm", daemon=True)
+    thread.start()
+    return thread

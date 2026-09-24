@@ -51,6 +51,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     make_double_spinbox,
     select_directory,
 )
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import VTKVolumeView
 from PyHydroGeophysX.qt_apps.workers import WorkflowWorker
@@ -532,7 +533,10 @@ class Seismic3DModule(BaseModule):
         layout.addLayout(header)
 
         self._results_tabs = QTabWidget()
-        self._volume_view = VTKVolumeView()
+        # A velocity volume, so it takes the colour map chosen for velocity
+        # models - the seismic page's sections use the same one.
+        self._volume_view = VTKVolumeView(colormaps=cmaps.colormap_settings(self.state),
+                                          colormap_key=cmaps.VELOCITY)
         self._results_tabs.addTab(self._volume_view, "3D Volume")
         self._gallery_scroll = QScrollArea(); self._gallery_scroll.setWidgetResizable(True)
         self._gallery_host = QWidget(); self._gallery_layout = QVBoxLayout(self._gallery_host)

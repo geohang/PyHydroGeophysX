@@ -40,6 +40,19 @@ does not care which instrument produced the survey.
        mismatch visible. IP decay windows are read when the acquisition
        recorded them.
    * - ERT
+     - Subsurface Insights ``results_processed_*.csv``
+     - Read by column name, because the firmware inserts columns between
+       releases (2026-05 builds add ``resistance_contact[ohms]``).
+       ``cable-electrode`` labels are numbered along the cables in order, so
+       cables of unequal length share one numbering. The file carries no
+       coordinates, only the instrument's geometric factors; on a straight,
+       evenly spaced line those fix the spacing exactly, and the positions are
+       rebuilt from them and checked against every measurement - anything else
+       needs the surveyed electrode file. Potential, current and contact
+       resistance come along for QC. The potential's sample spread is kept as
+       a diagnostic but is not used as a data error: it describes the samples
+       within one reading, not the reading.
+   * - ERT
      - ``.ohm``, ``.dat``
      - E4D and pyGIMLi/BERT files, plus ResIPy for processing.
    * - Seismic

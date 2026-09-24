@@ -51,6 +51,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     make_double_spinbox,
     select_directory,
 )
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets.array_viewer import ArrayViewer
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.workers import TaskWorker, WorkflowWorker
@@ -330,11 +331,18 @@ class HydroGeophysicsModule(BaseModule):
         self._profile_mode = QCheckBox("Pick mode (two clicks)")
         self._profile_mode.setChecked(True)
         controls.addWidget(self._profile_mode)
+        # One colour map for the map and the profile preview beside it, which
+        # show the same model: viridis until another is chosen.
+        shared = cmaps.colormap_settings(self.state)
+        self._hydro_colormap = cmaps.ColormapChooser(cmaps.HYDRO, "viridis", shared=shared)
+        self._hydro_colormap.colormapChanged.connect(self._on_hydro_colormap_changed)
+        controls.addWidget(self._hydro_colormap)
         controls.addStretch(1)
         outer.addLayout(controls)
 
         split = QHBoxLayout()
-        self._map = ArrayViewer()
+        self._map = ArrayViewer(colormaps=shared, colormap_key=cmaps.HYDRO,
+                                colormap_control=False)
         self._map.profileSelected.connect(self._on_profile_selected)
         self._profile_mode.toggled.connect(self._map.set_profile_mode)
         self._map.set_profile_mode(True)
@@ -361,13 +369,18 @@ class HydroGeophysicsModule(BaseModule):
         self._profile_label.setWordWrap(True)
         side.addWidget(self._profile_label)
         side.addWidget(QLabel("<b>Live profile preview</b>"))
-        self._preview = ArrayViewer()
-        self._preview.set_colormap("viridis")
+        self._preview = ArrayViewer(colormaps=shared, colormap_key=cmaps.HYDRO,
+                                    colormap_control=False)
         side.addWidget(self._preview, stretch=1)
         wrap = QWidget(); wrap.setLayout(side); wrap.setMaximumWidth(360)
         split.addWidget(wrap)
         outer.addLayout(split, stretch=1)
         return page
+
+    def _on_hydro_colormap_changed(self, name: str) -> None:
+        """Recolour the map and the preview; neither is re-extracted."""
+        for view in (self._map, self._preview):
+            view.set_colormap(name)
 
     # -- Step 3: Methods -----------------------------------------------------
     def _build_methods_step(self) -> QWidget:

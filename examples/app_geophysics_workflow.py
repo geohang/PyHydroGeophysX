@@ -3719,7 +3719,8 @@ def render_config_confirm_form(config: Dict[str, Any]) -> Dict[str, Any]:
         st.caption(f"Detected workflow type: {workflow_guess}")
 
         if "instrument" in edited or edited.get("ert_file") or edited.get("data_file"):
-            instruments = ["DAS-1", "E4D", "Syscal", "ABEM-Lund", "BERT", "Sting", "ARES", "Protocol DC", "Custom"]
+            instruments = ["DAS-1", "E4D", "Syscal", "ABEM-Lund", "BERT", "Sting", "ARES", "Protocol DC",
+                           "Subsurface Insights", "Custom"]
             current = edited.get("instrument", "DAS-1")
             edited["instrument"] = st.selectbox(
                 "ERT instrument",
@@ -10583,6 +10584,7 @@ def render_ert_processing_tab(sidebar_state: Dict[str, Any]) -> None:
             "Sting",
             "ARES",
             "E4D",
+            "Subsurface Insights",
             "Custom",
         ]
         instrument = st.selectbox(

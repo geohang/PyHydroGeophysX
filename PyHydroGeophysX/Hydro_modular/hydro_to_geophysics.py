@@ -365,6 +365,17 @@ def run_hydro_forward(
         raise BackendUnavailable(str(exc))
 
     methods = [m for m in methods if m in ALL_METHODS]
+    # Without SimPEG the EM and gravity converters are placeholders (see
+    # Hydro_modular). A run that needs one is refused here, as a missing backend
+    # always was, rather than after ERT and SRT have been computed for nothing.
+    for method, converter in (("TDEM", hydro_to_tdem), ("FDEM", hydro_to_fdem),
+                              ("Gravity", hydro_to_gravity)):
+        error = getattr(converter, "unavailable_because", None)
+        if method in methods and error is not None:
+            raise BackendUnavailable(
+                f"{method} needs SimPEG, which could not be imported ({error}). Install "
+                f"it with pip install \"pyhydrogeophysx[geophysics]\", or leave {method} "
+                f"out to run the other methods.")
     profile = extract_profile(context, params, point1, point2, log=log)
     interpolator = profile["interpolator"]
     L_profile = profile["L_profile"]

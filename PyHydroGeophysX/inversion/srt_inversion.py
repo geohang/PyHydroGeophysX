@@ -699,6 +699,12 @@ class SRTInversion(InversionBase):
             step = 1.0
             accepted = False
             accepted_step = step
+            # Armijo: f(m + s dm) <= f(m) + c s (dm . g), where dm . g < 0 for a
+            # descent step, so the goal lies below f(m). The sign was reversed,
+            # which put the goal above f(m) and passed steps that did not lower
+            # the objective. The best trial that did lower it is kept for the
+            # case where none meets the test.
+            best_m, best_obj, best_step = None, current_obj, 0.0
 
             for _ in range(int(self.parameters.get("line_search_maxiter", 12))):
                 m_trial = np.clip(self._to_col(m) + step * dm, min_m, max_m).ravel()
@@ -711,9 +717,13 @@ class SRTInversion(InversionBase):
                 phi_m_trial = float(reg_trial.T.dot(reg_trial).item())
 
                 obj_trial = phi_d_trial + lam * phi_m_trial
-                armijo = current_obj - float(self.parameters.get("line_search_c", 1e-4)) * step * directional
+                armijo = current_obj + float(self.parameters.get("line_search_c", 1e-4)) * step * directional
+                if obj_trial < best_obj:
+                    best_m, best_obj, best_step = m_trial, obj_trial, step
 
-                if obj_trial < armijo:
+                # 'obj_trial < current_obj' only matters when dm . g >= 0 (an
+                # inexact solve), where the Armijo goal alone admits an increase.
+                if obj_trial <= armijo and obj_trial < current_obj:
                     m = m_trial
                     accepted = True
                     accepted_step = step
@@ -721,11 +731,14 @@ class SRTInversion(InversionBase):
                 step *= 0.5
 
             if not accepted:
-                accepted_step = 0.1
                 line_search_failures += 1
                 if verbose:
                     print("Line search FAIL EXIT")
-                m = np.clip((self._to_col(m) + accepted_step * dm).ravel(), min_m, max_m)
+                # Never step uphill. This used to take 0.1 * dm whatever it did
+                # to the objective; keep the best trial that lowered it, or stay.
+                if best_m is not None:
+                    m = best_m
+                accepted_step = best_step
 
             if verbose:
                 print(f"accepted_step: {accepted_step:.6f}")

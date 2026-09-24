@@ -23,8 +23,9 @@ survey acquired warmer than the reference, which is the direction that matters w
 reading a section: without it, a summer survey looks wetter than it is.
 
 The temperature itself comes from one of four sources - a constant, a measured
-depth profile, a 1-D heat-conduction simulation driven by a measured surface
-record, or the analytical damped sine of the seasonal wave - built by
+profile (with depth, and with time too when it was logged that way), a 1-D
+heat-conduction simulation driven by a measured surface record, or the analytical
+damped sine of the seasonal wave - built by
 :func:`temperature_field` into the ``(cells, times)`` array the correction consumes.
 The conduction mode is the one most sites can actually use: a logger at the ground
 surface, or an air-temperature record from a nearby station, is usually all there
@@ -35,8 +36,11 @@ correct the deep ground by what happened at the surface, which it never felt.
 
 from __future__ import annotations
 
+import csv
 import datetime as _dt
 import math
+import re
+from pathlib import Path
 from typing import Any, Dict, Optional, Sequence, Tuple
 
 import numpy as np
@@ -52,6 +56,8 @@ __all__ = [
     "sensitivity_percent_per_degree",
     "seasonal_temperature",
     "profile_temperature",
+    "profile_series_temperature",
+    "load_temperature_profiles",
     "simulate_temperature_1d",
     "annual_damping_depth",
     "load_surface_temperature",
@@ -92,6 +98,11 @@ DEFAULT_TEMPERATURE_SPEC: Dict[str, Any] = {
     "mode": "constant",               # constant | profile | surface | seasonal
     "value": 15.0,                    # 'constant'
     "profile": None,                  # 'profile': [[depth_m, temperature_C], ...]
+    # A logged profile that varies with time as well as depth - a thermistor
+    # string. Supplied instead of 'profile'; nothing then has to be modelled.
+    "profile_depths": None,           # sensor depths, m
+    "profile_times": None,            # dates or days of the readings
+    "profile_values": None,           # (depths, times) degC
     # 'surface': 1-D conduction driven by a measured surface record. The usual
     # case in the field: one logger at the surface, and the ground's own diffusion
     # supplies the depth structure.
@@ -423,6 +434,324 @@ def load_surface_temperature(path: Any) -> Tuple[list, list, bool]:
     return times, values, bool(dated)
 
 
+def profile_series_temperature(depths: Any, days: Any, profile_depths: Any,
+                               profile_days: Any, values: Any,
+                               diffusivity: Optional[float] = None) -> np.ndarray:
+    """Interpolate a logged ``(depth, time)`` temperature record onto a section.
+
+    A borehole thermistor string is the best temperature data a monitoring site
+    can have: it measures both the depth structure and its evolution, so nothing
+    has to be modelled. This puts that record on the inversion's own cells and
+    survey times.
+
+    Interpolation is linear in time and then in depth. Outside the record's time
+    span, and above its shallowest sensor, the nearest reading is held: a string
+    says nothing from before it was installed. Below its deepest sensor the
+    seasonal swing that sensor recorded is damped with depth, towards its mean,
+    at the annual damping depth of ``diffusivity`` - as conduction damps it.
+    Holding the deepest reading instead carried a shallow sensor's full seasonal
+    range to every deeper cell: sensors down to 0.5 m made a 100 Ohm m cell at
+    10 m read 57 Ohm m in January and 86 in July.
+
+    Args:
+        depths: depth of every cell below ground, m.
+        days: time of every survey, on the same clock as ``profile_days``.
+        profile_depths: depths of the logged sensors, m.
+        profile_days: times of the logged readings.
+        values: ``(len(profile_depths), len(profile_days))`` temperatures, degC.
+        diffusivity: thermal diffusivity of the ground below the string, m2/day;
+            defaults to :data:`DEFAULT_DIFFUSIVITY`.
+
+    Returns:
+        ``(len(depths), len(days))`` array in degC.
+    """
+    z_out = np.asarray(depths, dtype=float).ravel()
+    t_out = np.asarray(days, dtype=float).ravel()
+    z_in = np.asarray(profile_depths, dtype=float).ravel()
+    t_in = np.asarray(profile_days, dtype=float).ravel()
+    table = np.asarray(values, dtype=float)
+    if table.shape != (z_in.size, t_in.size):
+        raise ValueError(
+            f"the logged temperatures are {table.shape}, expected "
+            f"({z_in.size}, {t_in.size}) for the given depths and times")
+    if z_in.size < 1 or t_in.size < 1:
+        raise ValueError("the logged profile is empty")
+
+    depth_order = np.argsort(z_in)
+    time_order = np.argsort(t_in)
+    z_in, t_in = z_in[depth_order], t_in[time_order]
+    table = table[np.ix_(depth_order, time_order)]
+
+    # In time first, at every logged depth; then in depth, at every survey.
+    in_time = np.vstack([np.interp(t_out, t_in, row) for row in table])
+    field = np.vstack([np.interp(z_out, z_in, in_time[:, column])
+                       for column in range(t_out.size)]).T
+    below = z_out > z_in[-1]
+    if below.any():
+        mean = float(np.nanmean(table[-1]))
+        decay = np.exp(-(z_out[below] - z_in[-1]) / annual_damping_depth(diffusivity))
+        field[below] = mean + (in_time[-1][None, :] - mean) * decay[:, None]
+    return field
+
+
+def _is_number(token: str) -> bool:
+    try:
+        float(token)
+    except ValueError:
+        return False
+    return True
+
+
+def _read_cells(path: Any) -> list:
+    """Rows of cells, blank lines and ``#`` comments dropped, empty cells kept.
+
+    The empty cells are what put a value under its sensor. Splitting on
+    whitespace dropped them, which shifted a pandas table's header - its first
+    cell is empty - one column to the left and moved a gap's neighbours into it.
+    """
+    text = Path(str(path)).read_text(encoding="utf-8-sig", errors="replace")
+    lines = [line for line in text.splitlines()
+             if line.strip() and not line.lstrip().startswith("#")]
+    sample = "\n".join(lines[:20])
+    delimiter = next((mark for mark in (",", ";", "\t") if mark in sample), None)
+    if delimiter is None:
+        rows = [line.split() for line in lines]
+    else:
+        rows = [[cell.strip() for cell in row]
+                for row in csv.reader(lines, delimiter=delimiter)]
+    for row in rows:
+        while row and not row[-1]:
+            row.pop()          # a trailing delimiter is not an empty sensor column
+    return [row for row in rows if row]
+
+
+#: A column header that names a depth: "0.5", "0.5m", "50 cm", "T_0.5", "depth 0.5 m".
+_DEPTH_LABEL = re.compile(r"^[A-Za-z_\s]*?([-+]?\d*\.?\d+)\s*(mm|cm|m)?\s*$", re.IGNORECASE)
+_DEPTH_UNIT = {"mm": 1e-3, "cm": 1e-2, "m": 1.0}
+
+#: Slash dates the survey-time parser does not read, month-first and day-first.
+_SLASH_CLOCKS = ("", " %H:%M", " %H:%M:%S", " %I:%M %p", " %I:%M:%S %p")
+_MONTH_FIRST = tuple(f"%m/%d/{year}{clock}" for year in ("%Y", "%y") for clock in _SLASH_CLOCKS)
+_DAY_FIRST = tuple(f"%d/%m/{year}{clock}" for year in ("%Y", "%y") for clock in _SLASH_CLOCKS)
+
+
+def _depth_of(label: str) -> Optional[float]:
+    """The depth a column header names, in metres, or None."""
+    found = _DEPTH_LABEL.match(str(label).strip())
+    if not found:
+        return None
+    return float(found.group(1)) * _DEPTH_UNIT[(found.group(2) or "m").lower()]
+
+
+def _value(cell: str) -> float:
+    """A temperature, or NaN for an empty cell, a missing-value word or a sentinel.
+
+    Loggers write gaps as empty cells, NaN, NA or -9999; anything below absolute
+    zero is a sentinel, not a reading.
+    """
+    try:
+        value = float(cell)
+    except (TypeError, ValueError):
+        return float("nan")
+    return value if value > -273.15 else float("nan")
+
+
+def _strptime(text: str, formats: Sequence[str]) -> Optional[_dt.datetime]:
+    for fmt in formats:
+        try:
+            return _dt.datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _parse_times(texts: Sequence[str]) -> Optional[list]:
+    """Datetimes for a column of time stamps, numbers for a plain day count, else None.
+
+    Slash dates the survey-time parser does not read are tried month-first and
+    day-first. The reading under which every stamp is a date wins; when both are,
+    the one that runs forward in time does - a logger writes in order.
+    """
+    from PyHydroGeophysX.data_processing.survey_timing import parse_timestamp
+
+    texts = [str(text).strip() for text in texts]
+    if not texts or not all(texts):
+        return None
+    if all(_is_number(text) for text in texts):
+        return [float(text) for text in texts]
+    parsed = [parse_timestamp(text) for text in texts]
+    if all(item is not None for item in parsed):
+        return [item[0] for item in parsed]
+    readings = []
+    for formats in (_MONTH_FIRST, _DAY_FIRST):
+        times = [_strptime(text, formats) for text in texts]
+        if all(when is not None for when in times):
+            readings.append(times)
+    forward = [times for times in readings
+               if all(a <= b for a, b in zip(times, times[1:]))]
+    return (forward or readings or [None])[0]
+
+
+def _as_days(times: Sequence[Any]) -> np.ndarray:
+    if times and isinstance(times[0], _dt.datetime):
+        return np.asarray([(when - times[0]).total_seconds() / 86400.0 for when in times])
+    return np.asarray(times, dtype=float)
+
+
+def _fill_gaps(values: Any, times: Sequence[Any]) -> np.ndarray:
+    """Each sensor's missing readings interpolated in time; a sensor with none is an error.
+
+    A gap left as NaN reached the corrected sections as NaN while the ranges the
+    panel reports, taken with nanmin/nanmax, looked normal.
+    """
+    values = np.array(values, dtype=float)
+    x = _as_days(times)
+    for index, row in enumerate(values):
+        known = np.isfinite(row)
+        if not known.any():
+            raise ValueError("one logged depth has no readings at all; drop it from the file")
+        if not known.all():
+            values[index] = np.interp(x, x[known], row[known])
+    return values
+
+
+def _wide_by_depth(header: list, body: list):
+    """A header naming the sensor depths after the time column(s); a row per reading."""
+    depths = [_depth_of(cell) for cell in header]
+    first = next((i for i, depth in enumerate(depths) if depth is not None), None)
+    if not body or not first or any(depth is None for depth in depths[first:]):
+        return None
+    label = " ".join(cell for cell in header[:first] if cell)
+    if label and _parse_times([label]) is not None:
+        # A first cell that is itself a time makes the row a reading, not a
+        # header: a long-form file written without a header line starts exactly
+        # like a wide one, and read as one its depth and temperature become
+        # sensor depths.
+        return None
+    width = len(header)
+    stamps, readings = [], []
+    for row in body:
+        row = list(row) + [""] * (width - len(row))
+        stamp = " ".join(cell for cell in row[:first] if cell)
+        values = [_value(cell) for cell in row[first:width]]
+        if stamp and not all(math.isnan(value) for value in values):
+            stamps.append(stamp)
+            readings.append(values)
+    if not stamps:
+        return None
+    times = _parse_times(stamps)
+    if times is None:
+        columns = "column" if first == 1 else f"{first} columns"
+        raise ValueError(f"the header names sensor depths, but the first {columns} "
+                         f"could not be read as times (for example {stamps[0]!r})")
+    order = sorted(range(len(times)), key=lambda i: times[i])
+    times = [times[i] for i in order]
+    values = np.asarray([readings[i] for i in order], dtype=float).T   # (depths, times)
+    sensor_depths = np.asarray(depths[first:], dtype=float)
+    if np.all(sensor_depths <= 0) and np.any(sensor_depths < 0):
+        sensor_depths = -sensor_depths          # depths written as negative elevations
+    return (sensor_depths, times, _fill_gaps(values, times),
+            isinstance(times[0], _dt.datetime))
+
+
+def _wide_by_time(header: list, body: list):
+    """A header of dates after a label, and a row per depth: the transposed table."""
+    if len(header) < 3 or not body:
+        return None
+    times = _parse_times(header[1:])
+    if times is None or not isinstance(times[0], _dt.datetime):
+        return None
+    width = len(header)
+    depths, readings = [], []
+    for row in body:
+        if not row or not _is_number(row[0]):
+            continue
+        row = list(row) + [""] * (width - len(row))
+        depths.append(float(row[0]))
+        readings.append([_value(cell) for cell in row[1:width]])
+    if not depths:
+        return None
+    order = sorted(range(len(times)), key=lambda i: times[i])
+    times = [times[i] for i in order]
+    values = np.asarray(readings, dtype=float)[:, order]
+    return np.asarray(depths, dtype=float), times, _fill_gaps(values, times), True
+
+
+def _long_or_single(rows: list):
+    """One reading per row - time cell(s), depth, temperature - or one (depth, temperature) profile."""
+    candidates, pairs = [], []
+    for row in rows:
+        cells = [cell for cell in row if cell]
+        if len(cells) >= 3 and _is_number(cells[-2]) and _is_number(cells[-1]):
+            candidates.append((" ".join(cells[:-2]), float(cells[-2]), _value(cells[-1])))
+        elif len(cells) == 2 and _is_number(cells[0]) and _is_number(cells[1]):
+            pairs.append((float(cells[0]), _value(cells[1])))
+
+    if candidates:
+        times = _parse_times([text for text, _, _ in candidates])
+        if times is None:
+            # Some rows are not readings - a units line, a footer. Keep the ones
+            # that are, dates over plain numbers, and read those as a sequence.
+            one = [_parse_times([text]) for text, _, _ in candidates]
+            dated = [i for i, item in enumerate(one)
+                     if item is not None and isinstance(item[0], _dt.datetime)]
+            keep = dated or [i for i, item in enumerate(one) if item is not None]
+            candidates = [candidates[i] for i in keep]
+            times = _parse_times([text for text, _, _ in candidates]) if candidates else None
+        if times:
+            stamps = sorted(set(times))
+            depths = sorted({depth for _, depth, _ in candidates})
+            values = np.full((len(depths), len(stamps)), np.nan)
+            depth_index = {value: i for i, value in enumerate(depths)}
+            time_index = {value: i for i, value in enumerate(stamps)}
+            for (_, depth, temperature), when in zip(candidates, times):
+                values[depth_index[depth], time_index[when]] = temperature
+            return (np.asarray(depths, dtype=float), stamps, _fill_gaps(values, stamps),
+                    isinstance(stamps[0], _dt.datetime))
+    if pairs:
+        table = np.asarray(pairs, dtype=float)
+        table = table[np.isfinite(table[:, 1])]
+        if len(table):
+            return table[:, 0], None, table[:, 1], False
+    raise ValueError(
+        "could not read a temperature profile: expected 'depth, temperature', "
+        "'time, depth, temperature', or a table with one column per sensor")
+
+
+def load_temperature_profiles(path: Any):
+    """Read a measured ground-temperature record in any of the usual layouts.
+
+    Accepted, and told apart by their own shape:
+
+    ``depth, temperature``
+        a single profile, held constant in time.
+    ``time, depth, temperature``
+        one reading per row - the long form a database exports.
+    a header of depths, then one row per time
+        ``date, 0.1, 0.5, 1.0`` and a row per reading: the wide form a logger
+        exports, one column per sensor. The depth headers may carry a unit or a
+        prefix (``0.1m``, ``10 cm``, ``T_0.1``); the time may span columns
+        (``date, time``); the first header cell may be empty, as pandas writes it.
+    a header of dates, then one row per depth
+        the same table transposed, which is how it is often typed by hand.
+
+    Gaps - empty cells, NaN, -9999 - are filled along time for each sensor.
+
+    Returns ``(depths, times, values, dated)``: ``times`` is ``None`` for a
+    single profile, ``values`` is ``(len(depths), len(times))`` or a flat array
+    of depth values, and ``dated`` says whether the times are datetimes.
+    """
+    rows = _read_cells(path)
+    if not rows:
+        raise ValueError(f"{path} is empty")
+    header, body = rows[0], rows[1:]
+    for reader in (_wide_by_depth, _wide_by_time):
+        found = reader(header, body)
+        if found is not None:
+            return found
+    return _long_or_single(rows)
+
+
 def _to_days(values: Sequence[Any]) -> Tuple[np.ndarray, Optional[_dt.datetime]]:
     """Times as days from the first entry, plus the datetime that entry stands for."""
     parsed = [_coerce_time(value) for value in values]
@@ -458,17 +787,18 @@ def _coerce_time(value: Any):
 def _survey_days_on(origin: Optional[_dt.datetime], n_times: int,
                     days: Optional[Sequence[float]],
                     dates: Optional[Sequence[Any]]) -> np.ndarray:
-    """Survey times on the surface record's own clock.
+    """Survey times on a temperature record's own clock.
 
-    A dated surface record and dated surveys are placed on one absolute timeline;
-    two plain numeric series are assumed to share an origin. Mixing the two is
-    refused rather than guessed, because an offset of a few months in the forcing
-    is a sign error in the correction, not a small one.
+    A dated record - a surface series or a logged profile - and dated surveys are
+    placed on one absolute timeline; two plain numeric series are assumed to share
+    an origin. Mixing the two is refused rather than guessed, because an offset of
+    a few months in the temperature is a sign error in the correction, not a small
+    one.
     """
     if origin is not None:
         if dates is None or len(dates) != n_times:
             raise ValueError(
-                "the surface temperature record carries dates, so the surveys need "
+                "the temperature record carries dates, so the surveys need "
                 "acquisition dates too; name the survey files with their date or "
                 "enter the times in the interface")
         parsed = [_coerce_time(value) for value in dates]
@@ -478,7 +808,7 @@ def _survey_days_on(origin: Optional[_dt.datetime], n_times: int,
                            for item in parsed], dtype=float)
     if days is None or len(days) != n_times:
         raise ValueError(
-            "the surface temperature record is in plain days, so the surveys need "
+            "the temperature record is in plain days, so the surveys need "
             "numeric measurement times on the same clock")
     return np.asarray(days, dtype=float)
 
@@ -545,6 +875,26 @@ def temperature_field(spec: Dict[str, Any], depths: Any, n_times: int,
         return field, f"constant {value:g} degC"
 
     if mode == "profile":
+        # A logged profile may vary with time as well as depth - a thermistor
+        # string does - in which case nothing has to be modelled at all.
+        logged_times = options.get("profile_times")
+        logged_depths = options.get("profile_depths")
+        logged_values = options.get("profile_values")
+        if logged_times and logged_depths is not None and logged_values is not None:
+            record_days, origin = _to_days(logged_times)
+            survey_days = _survey_days_on(origin, n_times, days, dates)
+            diffusivity = float(options.get("diffusivity", DEFAULT_DIFFUSIVITY))
+            field = profile_series_temperature(z, survey_days, logged_depths,
+                                               record_days, logged_values,
+                                               diffusivity=diffusivity)
+            deepest = float(np.max(np.asarray(logged_depths, dtype=float)))
+            below = (f"; below {deepest:g} m the seasonal swing is damped (annual "
+                     f"damping depth {annual_damping_depth(diffusivity):.1f} m)"
+                     if np.any(z > deepest) else "")
+            return field, (
+                f"measured profile, {len(logged_depths)} depths logged at "
+                f"{len(logged_times)} times, {field.min():.1f} to {field.max():.1f} "
+                f"degC over the section{below}")
         profile = options.get("profile")
         if profile is None or len(profile) == 0:
             raise ValueError("temperature mode 'profile' needs a depth/temperature table")

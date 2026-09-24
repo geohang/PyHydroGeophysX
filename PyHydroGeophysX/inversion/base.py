@@ -97,7 +97,11 @@ class InversionResult:
             mesh_specific_filename = mesh_save_filename_base + '.bms'
             try:
                 self.mesh.save(mesh_specific_filename)
-                data_to_save['mesh_file'] = mesh_specific_filename  # Preserve the supplied path form.
+                # Record the name relative to the pickle, which sits in the same
+                # folder. The path as given (e.g. results/run.bms) was joined
+                # onto the pickle's folder again on load, giving
+                # results/results/run.bms, so the mesh never came back.
+                data_to_save['mesh_file'] = os.path.basename(mesh_specific_filename)
                 print(f"Mesh saved to: {mesh_specific_filename}")
             except Exception as e:
                 # Log error but continue to save other data if possible
@@ -170,7 +174,12 @@ class InversionResult:
             # Check if the path is absolute or needs to be relative to the pickle file's directory
             if not os.path.isabs(mesh_file_path):
                 pickle_dir = os.path.dirname(os.path.abspath(pickle_filename))
-                mesh_file_path = os.path.join(pickle_dir, mesh_file_path)
+                joined = os.path.join(pickle_dir, mesh_file_path)
+                # A pickle written before save() stored the name relative to it
+                # holds the path as the caller gave it (results/run.bms); the
+                # mesh sits beside the pickle under its own name.
+                beside = os.path.join(pickle_dir, os.path.basename(mesh_file_path))
+                mesh_file_path = joined if os.path.exists(joined) else beside
 
             if os.path.exists(mesh_file_path):
                 try:
@@ -337,7 +346,8 @@ class TimeLapseInversionResult(InversionResult):
             mesh_specific_filename = mesh_save_filename_base + '.bms'
             try:
                 self.mesh.save(mesh_specific_filename)
-                data_to_save['mesh_file'] = mesh_specific_filename
+                # Relative to the pickle's folder; see InversionResult.save.
+                data_to_save['mesh_file'] = os.path.basename(mesh_specific_filename)
                 print(f"Mesh saved to: {mesh_specific_filename}")
             except Exception as e:
                 print(f"Warning: Could not save mesh to '{mesh_specific_filename}'. Error: {e}")
@@ -388,7 +398,10 @@ class TimeLapseInversionResult(InversionResult):
         if mesh_file_path:
             if not os.path.isabs(mesh_file_path):
                 pickle_dir = os.path.dirname(os.path.abspath(pickle_filename))
-                mesh_file_path = os.path.join(pickle_dir, mesh_file_path)
+                joined = os.path.join(pickle_dir, mesh_file_path)
+                # Older pickles hold the caller's path form; see InversionResult.load.
+                beside = os.path.join(pickle_dir, os.path.basename(mesh_file_path))
+                mesh_file_path = joined if os.path.exists(joined) else beside
             if os.path.exists(mesh_file_path):
                 try:
                     result_instance.mesh = pg.load(mesh_file_path)

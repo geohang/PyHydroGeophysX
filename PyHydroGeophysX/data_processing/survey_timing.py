@@ -8,11 +8,14 @@ one-month gap on the figure.
 
 This module reads the timestamps and says where each one came from. Filenames are
 tried first, against a list of patterns; a pattern is accepted only when it parses
-*every* file in the set and yields distinct, increasing times, which is what lets
-ambiguous layouts (``YYMMDD`` against ``DDMMYY``) be resolved by the sequence
-rather than by guesswork. A file header is read next, and the filesystem
-modification time only if the caller opts in. When nothing parses, the fallback is
-the old ``1..n`` index - reported as such, so it is visible rather than assumed.
+*every* file in the set and yields distinct times, which is what lets ambiguous
+layouts (``YYMMDD`` against ``DDMMYY``, month against day first) be resolved by
+the sequence rather than by guesswork: of the readings that date every name, the
+one whose times increase in file order, and then the most compact, is kept - and
+the summary says when another reading was possible. A file header is read next,
+and the filesystem modification time only if the caller opts in. When nothing
+parses, the fallback is the old ``1..n`` index - reported as such, so it is
+visible rather than assumed.
 """
 
 from __future__ import annotations
@@ -60,15 +63,32 @@ _register(
     r"(?<!\d)(\d{4})(\d{2})(\d{2})[T_ -]?(\d{2})(\d{2})(\d{2})?(?!\d)",
     lambda g: _ymd_hms(*g),
 )
+# Each ambiguous layout is registered once per reading, the day-first one right
+# after its rival, so a lone string still reads the way it always did and only a
+# whole set of names (see _timestamps_by_pattern) can choose between them.
+_DASHED_DATETIME = (r"(?<!\d)(\d{2})[-_.](\d{2})[-_.](\d{4})[T_ -]+(\d{2})[:_.h-]?(\d{2})"
+                    r"(?:[:_.-]?(\d{2}))?(?!\d)")
+_SHORT_DATETIME = r"(?<!\d)(\d{2})(\d{2})(\d{2})[T_ -](\d{2})(\d{2})(\d{2})?(?!\d)"
+_DASHED_DATE = r"(?<!\d)(\d{2})[-_.](\d{2})[-_.](\d{4})(?!\d)"
 _register(
     "us_datetime",
-    r"(?<!\d)(\d{2})[-_.](\d{2})[-_.](\d{4})[T_ -]+(\d{2})[:_.h-]?(\d{2})(?:[:_.-]?(\d{2}))?(?!\d)",
+    _DASHED_DATETIME,
     lambda g: _ymd_hms(g[2], g[0], g[1], g[3], g[4], g[5]),
 )
 _register(
+    "dmy_datetime",
+    _DASHED_DATETIME,
+    lambda g: _ymd_hms(g[2], g[1], g[0], g[3], g[4], g[5]),
+)
+_register(
     "short_datetime",
-    r"(?<!\d)(\d{2})(\d{2})(\d{2})[T_ -](\d{2})(\d{2})(\d{2})?(?!\d)",
+    _SHORT_DATETIME,
     lambda g: _ymd_hms(2000 + int(g[0]), g[1], g[2], g[3], g[4], g[5]),
+)
+_register(
+    "short_dmy_datetime",
+    _SHORT_DATETIME,
+    lambda g: _ymd_hms(2000 + int(g[2]), g[1], g[0], g[3], g[4], g[5]),
 )
 _register(
     "epoch_seconds",
@@ -82,9 +102,29 @@ _register(
 )
 _register(
     "us_date",
-    r"(?<!\d)(\d{2})[-_.](\d{2})[-_.](\d{4})(?!\d)",
+    _DASHED_DATE,
     lambda g: _ymd_hms(g[2], g[0], g[1]),
 )
+_register(
+    "dmy_date",
+    _DASHED_DATE,
+    lambda g: _ymd_hms(g[2], g[1], g[0]),
+)
+
+#: Readings of the same digits in a different order, grouped: a set of names
+#: that more than one of them reads is the ambiguous case the sequence resolves.
+_RIVALS: Dict[str, str] = {
+    "us_datetime": "dashed_datetime", "dmy_datetime": "dashed_datetime",
+    "short_datetime": "short_datetime", "short_dmy_datetime": "short_datetime",
+    "us_date": "dashed_date", "dmy_date": "dashed_date",
+}
+
+#: How an ambiguous reading is named to the user.
+_LAYOUTS: Dict[str, str] = {
+    "us_datetime": "month first (MM-DD-YYYY)", "dmy_datetime": "day first (DD-MM-YYYY)",
+    "us_date": "month first (MM-DD-YYYY)", "dmy_date": "day first (DD-MM-YYYY)",
+    "short_datetime": "year first (YYMMDD)", "short_dmy_datetime": "day first (DDMMYY)",
+}
 
 
 def format_duration(seconds: Optional[float]) -> str:
@@ -139,27 +179,103 @@ def parse_timestamp(text: str, patterns: Optional[Sequence[str]] = None
     return None
 
 
-def _timestamps_by_pattern(stems: Sequence[str]) -> Tuple[List[Optional[_dt.datetime]], str]:
+def _read_all(stems: Sequence[str], name: str) -> Optional[List[_dt.datetime]]:
+    """Every stem read with one pattern; None if it misses one or repeats a time."""
+    stamps = [parse_timestamp(stem, patterns=(name,)) for stem in stems]
+    if any(item is None for item in stamps):
+        return None
+    values = [item[0] for item in stamps]
+    return values if len(set(values)) == len(values) else None
+
+
+def _choose_reading(readings: List[Tuple[str, List[_dt.datetime]]]
+                    ) -> Tuple[str, List[_dt.datetime], str]:
+    """The reading of an ambiguous set of names to keep, and what to say about it.
+
+    ``readings`` holds ``(pattern, times)`` for each rival that reads every name.
+    Files come in acquisition order, so a reading under which the times increase
+    is preferred; of those left, the most compact wins, because daily surveys read
+    the wrong way round become monthly ones (01-11 ... 09-11-2021: 8 d day first,
+    243 d month first). Neither is proof, so whenever a second reading was
+    possible the note says which, instead of letting the choice pass unseen.
+    """
+    distinct: List[Tuple[str, List[_dt.datetime]]] = []
+    for name, values in readings:
+        if all(values != kept for _, kept in distinct):
+            distinct.append((name, values))    # 01-01 and 02-02 read alike either way
+    if len(distinct) == 1:
+        return distinct[0][0], distinct[0][1], ""
+
+    def span(values: List[_dt.datetime]) -> float:
+        return (max(values) - min(values)).total_seconds()
+
+    increasing = [item for item in distinct
+                  if all(b > a for a, b in zip(item[1], item[1][1:]))]
+    pool = increasing or distinct
+    name, values = min(pool, key=lambda item: span(item[1]))   # ties: listed first
+    in_order = [item[1] for item in increasing]
+    rivals = []
+    for other, other_values in distinct:
+        if other == name:
+            continue
+        if increasing and other_values not in in_order:
+            rivals.append(f"{_LAYOUTS.get(other, other)}, which puts the files "
+                          f"out of order")
+        else:
+            rivals.append(f"{_LAYOUTS.get(other, other)}, spanning "
+                          f"{format_duration(span(other_values))}")
+    why = ("the only one in acquisition order" if len(increasing) == 1
+           else "the more compact sequence")
+    note = (f"Ambiguous dates: every name also reads {'; '.join(rivals)}. The "
+            f"{_LAYOUTS.get(name, name)} reading was kept as {why}.")
+    return name, values, note
+
+
+def _timestamps_by_pattern(stems: Sequence[str]
+                           ) -> Tuple[List[Optional[_dt.datetime]], str, str]:
     """Parse every stem with one pattern, preferring one that reads the whole set.
 
     A set of files shares a naming convention, so the right pattern is the one that
     works on all of them. Falling back to per-file parsing would let one pattern
-    read half the sequence as 2021 and another half as 2012.
+    read half the sequence as 2021 and another half as 2012. Where rival readings
+    of the same digits both work (month or day first), :func:`_choose_reading`
+    picks one from the sequence. Returns ``(times, pattern, note)``.
     """
+    tried = set()
     for name, _regex, _builder in _PATTERNS:
-        stamps = [parse_timestamp(stem, patterns=(name,)) for stem in stems]
-        if any(item is None for item in stamps):
+        family = _RIVALS.get(name, name)
+        if family in tried:
             continue
-        values = [item[0] for item in stamps]
-        if len(set(values)) == len(values):
-            return values, name
+        tried.add(family)
+        readings = []
+        for rival, _r, _b in _PATTERNS:
+            if _RIVALS.get(rival, rival) == family:
+                values = _read_all(stems, rival)
+                if values is not None:
+                    readings.append((rival, values))
+        if readings:
+            chosen, values, note = _choose_reading(readings)
+            return values, chosen, note
     # No single pattern covers everything; take what each name gives on its own so
     # a partially dated set still reports the dates it has.
     mixed: List[Optional[_dt.datetime]] = []
     for stem in stems:
         found = parse_timestamp(stem)
         mixed.append(found[0] if found else None)
-    return mixed, "mixed"
+    return mixed, "mixed", ""
+
+
+#: ``key,value`` header rows that name when the survey was acquired. They win over
+#: the first date-shaped text, which in a Subsurface Insights export is the
+#: firmware's build date - weeks before any survey the file records.
+_ACQUISITION_KEYS = ("system_datetime", "gps_datetime")
+
+#: Header rows whose date is not an acquisition time at all.
+_NOT_ACQUISITION_KEYS = ("code_version_date",)
+
+
+def _header_key(line: str) -> str:
+    return line.split(",", 1)[0].strip().lower()
 
 
 def timestamp_from_header(path: str, max_lines: int = 80) -> Optional[_dt.datetime]:
@@ -168,7 +284,9 @@ def timestamp_from_header(path: str, max_lines: int = 80) -> Optional[_dt.dateti
     Most instrument exports carry the date in their header (Syscal, ABEM, Res2DInv
     and the E4D survey files all do, in their own layouts). Rather than a parser
     per vendor, the first timestamp-shaped text in the header wins - enough to
-    recover a sequence whose filenames were renamed on download.
+    recover a sequence whose filenames were renamed on download - except where the
+    header names its acquisition time outright (``system_datetime``), which is
+    taken first, and a software build date, which is never taken.
     """
     try:
         with open(path, "r", errors="ignore") as handle:
@@ -176,7 +294,12 @@ def timestamp_from_header(path: str, max_lines: int = 80) -> Optional[_dt.dateti
     except (OSError, ValueError):
         return None
     for line in head:
-        if not line.strip():
+        if _header_key(line) in _ACQUISITION_KEYS:
+            found = parse_timestamp(line)
+            if found is not None:
+                return found[0]
+    for line in head:
+        if not line.strip() or _header_key(line) in _NOT_ACQUISITION_KEYS:
             continue
         found = parse_timestamp(line)
         if found is not None:
@@ -212,6 +335,9 @@ class SurveyTiming:
     source: str = "index"
     pattern: str = ""
     unit: str = ""
+    #: Set when the names also read another way (month or day first) and the
+    #: sequence, not the names, decided; ``summary()`` carries it.
+    note: str = ""
 
     @property
     def dated(self) -> bool:
@@ -250,14 +376,15 @@ class SurveyTiming:
         head = (f"{n} surveys, {self.timestamps[0]:%Y-%m-%d %H:%M} to "
                 f"{self.timestamps[-1]:%Y-%m-%d %H:%M} (span {span}), "
                 f"times from the {self.source}")
+        note = f" {self.note}" if self.note else ""
         if not gaps:
-            return head + "."
+            return head + "." + note
         median = statistics.median(gaps)
         text = head + f". Interval: median {format_duration(median)}"
         if max(gaps) - min(gaps) > 0.02 * max(abs(median), 1.0):
             text += (f", {format_duration(min(gaps))} to {format_duration(max(gaps))}"
                      f" - the sampling is irregular")
-        return text + "."
+        return text + "." + note
 
     def rows(self) -> List[Tuple[Any, ...]]:
         """Table rows for the times CSV: index, file, timestamp, elapsed, gap."""
@@ -306,6 +433,7 @@ class SurveyTiming:
                 format_duration(statistics.median(gaps)) if gaps else ""),
             "total_seconds": self.total_seconds,
             "total_duration": format_duration(self.total_seconds),
+            "note": self.note,
             "summary": self.summary(),
         }
 
@@ -347,14 +475,14 @@ def survey_timing(files: Sequence[str], *, allow_header: bool = True,
     if not paths:
         return SurveyTiming()
 
-    source, pattern = "index", ""
+    source, pattern, note = "index", "", ""
     stamps: List[Optional[_dt.datetime]] = [None] * len(paths)
 
     if timestamps is not None and len(timestamps) == len(paths):
         stamps = [t if isinstance(t, _dt.datetime) else None for t in timestamps]
         source, pattern = "supplied times", "supplied"
     else:
-        stamps, pattern = _timestamps_by_pattern([Path(p).stem for p in paths])
+        stamps, pattern, note = _timestamps_by_pattern([Path(p).stem for p in paths])
         if all(s is not None for s in stamps):
             source = "file names"
         if allow_header and any(s is None for s in stamps):
@@ -386,7 +514,8 @@ def survey_timing(files: Sequence[str], *, allow_header: bool = True,
         if len(set(times)) == len(times):
             return SurveyTiming(files=paths, timestamps=list(stamps), times=times,
                                 labels=_labels_for(stamps), source=source,
-                                pattern=pattern, unit="d")
+                                pattern=pattern, unit="d",
+                                note=note if source == "file names" else "")
         # Identical stamps cannot order a sequence; the index at least can.
 
     n = len(paths)

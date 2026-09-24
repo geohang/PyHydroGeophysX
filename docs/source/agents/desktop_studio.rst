@@ -293,12 +293,23 @@ The defaults provide a reasonable first diagnostic run:
 - **Relative error = 0.05** assigns a 5% data error for weighting.
 - **Mesh quality = 34** controls the inversion triangulation.
 
-Click **Run inversion**. Follow progress in the bottom Log. When the run
+Click **Run inversion**. Follow progress in the bottom Log. While it runs,
+**Pause** beside the progress bar freezes the inversion where it stands - in the
+middle of a forward solve as much as between iterations - and **Resume**
+continues it from the same point, with nothing recomputed. A paused run keeps its
+memory, and closing the studio still ends it. When the run
 finishes, inspect:
 
 - **Resistivity model** for the recovered section and coverage-aware opacity;
 - **Inversion quality** for observed-versus-predicted behavior and convergence;
 - the Log for the final chi-squared value and saved intermediate paths.
+
+The **Colour map** swatch under the section's display controls chooses its colour
+map, and the arrows beside it reverse it; the section is redrawn in place, keeping
+its log scale, locked limits, contours and clipping. The choice is kept for the
+session for each kind of display (resistivity, % change, velocity, EM section and
+so on), so a run reopened in **Saved Results** (the Model Viewer) shows the same
+colours, and every colour-mapped view in the studio offers the same chooser.
 
 Step 5 -- edit geometry and export
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -331,7 +342,8 @@ The ERT loader also manages an ordered time series:
 5. For long sequences, enable **Windowed (sliding window)** and choose a window
    size, or enable **Low memory (sparse)**. Low-memory mode is also selected
    automatically for sufficiently large problems.
-6. Click **Run time-lapse inversion**. After completion, select time steps in
+6. Click **Run time-lapse inversion**; **Pause** and **Resume** work as for a
+   single inversion. After completion, select time steps in
    the Resistivity model tab and click **Export results (VTK + npy + mesh)...**
    to save combined and per-step VTK files, ``final_models.npy``, the mesh,
    acquisition times, and the result figure.
@@ -594,8 +606,10 @@ Modules
        files can be uploaded and inverted directly.
    * - ERT Processing
      - Load resistivity files by instrument format (BERT / unified, E4D, Syscal,
-       and more), edit electrodes, QC the apparent-resistivity pseudosection, filter
-       data, and run single or time-lapse inversion with per-step results.
+       Subsurface Insights, and more), edit electrodes, QC the apparent-resistivity
+       pseudosection, filter data, and run single or time-lapse inversion with
+       per-step results. The Resistivity model tab corrects the model on screen to
+       a reference temperature, for one survey or a whole series.
    * - 3D Mesh Builder
      - Build ERT meshes (surface grid, borehole, crosshole arrays; flat, tilted,
        Gaussian-hill, file-based, or custom topography), view meshes in 3D with a

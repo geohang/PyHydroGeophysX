@@ -17,7 +17,10 @@ from .models import ArtifactRef, RunContext, WorkflowRunResult, WorkflowSpec
 
 def _load_array(value: Any, context: RunContext, *, name: str) -> np.ndarray:
     if isinstance(value, ArtifactRef):
-        cache_key = context.cache_key(value)
+        # One .npz holds several arrays, so the member read is part of the key:
+        # keyed by the artifact alone, x, y and values taken from one archive
+        # all came back as whichever of them was read first.
+        cache_key = f"{context.cache_key(value)}#{value.metadata.get('array_key') or name}"
         if cache_key in context.object_cache:
             return np.asarray(context.object_cache[cache_key], dtype=float)
         path = context.resolve_artifact(value)

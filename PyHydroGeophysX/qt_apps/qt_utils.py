@@ -6,7 +6,7 @@ import datetime as _dt
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Sequence
 
-from PySide6.QtCore import QObject, Qt, QTimer, QUrl, Signal
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QDesktopServices, QGuiApplication
 from PySide6.QtWidgets import (
     QAbstractButton,
@@ -16,10 +16,14 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QStackedWidget,
     QWidget,
 )
+
+#: Qt's QWIDGETSIZE_MAX, the "no maximum" of setMaximumWidth.
+_NO_MAXIMUM = 16777215
 
 
 def noop(*_args, **_kwargs) -> None:
@@ -127,6 +131,49 @@ def set_rows_enabled(widgets: Iterable[QWidget], enabled: bool) -> None:
         label = row_label(widget)
         if label is not None:
             label.setEnabled(bool(enabled))
+
+
+class ContentWidthScrollArea(QScrollArea):
+    """A vertically scrolling column that is never narrower than its content.
+
+    With the horizontal scroll bar off, a column narrower than its widest row
+    cuts that row off at the right edge, with nothing to scroll to - and a fixed
+    pixel width turns out too narrow as soon as the font, the display scaling or
+    the widest row changes. ``minimum`` and ``maximum`` are kept as preferences;
+    the column widens past them when its content needs it, and is measured again
+    whenever the content's layout changes (a panel shown, a group expanded).
+    """
+
+    def __init__(self, minimum: int = 0, maximum: int = _NO_MAXIMUM,
+                 parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self._floor, self._ceiling = int(minimum), int(maximum)
+        self.setWidgetResizable(True)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setMinimumWidth(self._floor)
+        self.setMaximumWidth(self._ceiling)
+
+    def setWidget(self, widget: QWidget) -> None:  # noqa: N802 - Qt override
+        super().setWidget(widget)
+        widget.installEventFilter(self)
+        self.fit_to_content()
+
+    def eventFilter(self, watched, event) -> bool:  # noqa: N802 - Qt override
+        if watched is self.widget() and event.type() == QEvent.LayoutRequest:
+            self.fit_to_content()
+        return super().eventFilter(watched, event)
+
+    def fit_to_content(self) -> int:
+        """Widen to the content's minimum if the preferences are too narrow."""
+        content = self.widget()
+        if content is None:
+            return self.minimumWidth()
+        needed = (content.minimumSizeHint().width()
+                  + self.verticalScrollBar().sizeHint().width()
+                  + 2 * self.frameWidth())
+        self.setMinimumWidth(max(self._floor, needed))
+        self.setMaximumWidth(max(self._ceiling, needed))
+        return needed
 
 
 class ReproduceBar(QWidget):

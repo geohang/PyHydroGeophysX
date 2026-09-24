@@ -50,6 +50,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     make_double_spinbox,
     select_directory,
 )
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.workers import TaskWorker, WorkflowWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
@@ -146,6 +147,7 @@ class Mesh3DModule(BaseModule):
 
         right = QVBoxLayout()
         right.addLayout(self._build_toolbar())
+        right.addLayout(self._build_colour_row())
         if ok:
             try:
                 self._plotter = qt_interactor(self)
@@ -203,6 +205,45 @@ class Mesh3DModule(BaseModule):
             bar.addWidget(btn)
         bar.addStretch(1)
         return bar
+
+    def _build_colour_row(self) -> QHBoxLayout:
+        """The colour map of whatever the viewer is colouring.
+
+        Region markers, or the scalar of a volume loaded into it. Each opens on
+        the map it always had, and a change swaps the lookup table in place, so
+        the camera and a clip plane stay put. Off while nothing on screen is
+        colour-mapped. A row of its own under the view tools, which are already
+        the widest row on the page.
+        """
+        self._colormap = cmaps.ColormapChooser(
+            cmaps.MESH_REGIONS, "coolwarm", shared=cmaps.colormap_settings(self.state))
+        self._colormap.colormapChanged.connect(self._on_colormap_changed)
+        self._colormap.setEnabled(False)
+        self._scalar_actors: list = []
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.addStretch(1)
+        row.addWidget(QLabel("Colour map"))
+        row.addWidget(self._colormap)
+        return row
+
+    def _colour_actor(self, actor, key: str, default: str, scalars) -> None:
+        """Hand ``actor`` to the chooser when it is drawn through a colour map."""
+        self._scalar_actors = [actor] if (actor is not None and scalars) else []
+        self._colormap.set_target(key, default)
+        self._colormap.setEnabled(bool(self._scalar_actors))
+
+    def _on_colormap_changed(self, name: str) -> None:
+        """Recolour the actor on screen; nothing is re-read or re-added."""
+        changed = False
+        for actor in self._scalar_actors:
+            try:
+                actor.mapper.lookup_table.cmap = cmaps.to_pyvista(name)
+                changed = True
+            except Exception:  # noqa: BLE001 - an actor without a table is left alone
+                pass
+        if changed:
+            self._refresh_plotter()
 
     # -- controls panel ------------------------------------------------------
     def _build_controls(self) -> QScrollArea:
@@ -874,6 +915,8 @@ class Mesh3DModule(BaseModule):
             import numpy as np
 
             self._plotter.clear()
+            # Electrodes and a translucent terrain: nothing drawn through a map.
+            self._colour_actor(None, cmaps.MESH_REGIONS, "coolwarm", None)
             self._overlay_sensors(sensors_df, labels=True)
             if cfg["array_type"] == "Surface grid" and cfg["mesh_type"] == "Surface with topography":
                 topo = mesh3d_builder.topography_function(cfg)
@@ -906,9 +949,11 @@ class Mesh3DModule(BaseModule):
                 if key in pv_mesh.cell_data:
                     scalars = key
                     break
-            self._plotter.add_mesh(
+            cmap = self._colormap.set_target(cmaps.MESH_REGIONS, "coolwarm")
+            actor = self._plotter.add_mesh(
                 pv_mesh, scalars=scalars, show_edges=True, edge_color="#555555",
-                line_width=0.5, cmap="coolwarm", show_scalar_bar=bool(scalars))
+                line_width=0.5, cmap=cmaps.to_pyvista(cmap), show_scalar_bar=bool(scalars))
+            self._colour_actor(actor, cmaps.MESH_REGIONS, "coolwarm", scalars)
             if sensors_df is not None:
                 self._overlay_sensors(sensors_df, labels=False)
             self._plotter.add_axes()
@@ -940,7 +985,10 @@ class Mesh3DModule(BaseModule):
         try:
             mesh = self._pv.read(path)
             self._plotter.clear()
-            self._plotter.add_mesh(mesh, cmap="viridis", show_edges=False)
+            cmap = self._colormap.set_target(cmaps.MODEL3D, "viridis")
+            actor = self._plotter.add_mesh(mesh, cmap=cmaps.to_pyvista(cmap), show_edges=False)
+            self._colour_actor(actor, cmaps.MODEL3D, "viridis",
+                               getattr(mesh, "active_scalars_name", None))
             self._plotter.add_axes()
             self._plotter.reset_camera()
             self.log(f"Loaded mesh {Path(path).name} ({getattr(mesh, 'n_points', 0)} points)", "success")
@@ -970,9 +1018,11 @@ class Mesh3DModule(BaseModule):
                     scalars = key
                     break
             self._plotter.clear()
-            self._plotter.add_mesh(mesh, scalars=scalars, cmap="turbo",
-                                   opacity=0.6 if scalars == "Velocity" else 1.0,
-                                   show_edges=False, show_scalar_bar=bool(scalars))
+            cmap = self._colormap.set_target(cmaps.MODEL3D, "turbo")
+            actor = self._plotter.add_mesh(mesh, scalars=scalars, cmap=cmaps.to_pyvista(cmap),
+                                           opacity=0.6 if scalars == "Velocity" else 1.0,
+                                           show_edges=False, show_scalar_bar=bool(scalars))
+            self._colour_actor(actor, cmaps.MODEL3D, "turbo", scalars)
             try:
                 self._plotter.add_mesh(mesh.outline(), color="grey")
             except Exception:  # noqa: BLE001 - outline is cosmetic
@@ -1001,7 +1051,10 @@ class Mesh3DModule(BaseModule):
             self._mesh.exportVTK(str(tmp))
             pv_mesh = self._pv.read(str(tmp))
             self._plotter.clear()
-            self._plotter.add_mesh_clip_plane(pv_mesh, cmap="coolwarm")
+            cmap = self._colormap.set_target(cmaps.MESH_REGIONS, "coolwarm")
+            actor = self._plotter.add_mesh_clip_plane(pv_mesh, cmap=cmaps.to_pyvista(cmap))
+            self._colour_actor(actor, cmaps.MESH_REGIONS, "coolwarm",
+                               getattr(pv_mesh, "active_scalars_name", None))
             self._plotter.add_axes()
             self._plotter.reset_camera()
             self.log("Added interactive clipping plane.", "success")

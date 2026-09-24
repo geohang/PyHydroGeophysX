@@ -193,7 +193,8 @@ optimal regularization parameter selection."""
             best_evaluation = evaluation
             best_params = original_params.copy()
             current_params = original_params.copy()
-            
+            retry_errors: List[str] = []
+
             for attempt in range(1, max_attempts):
                 # Adjust parameters based on evaluation
                 adjusted_params = self._adjust_parameters(
@@ -218,6 +219,7 @@ optimal regularization parameter selection."""
                 
                 if new_results.get('status') != 'success':
                     self._log_execution(f"Re-inversion failed: {new_results.get('error')}")
+                    retry_errors.append(str(new_results.get('error') or 'no error given'))
                     break
                 
                 # Evaluate new results
@@ -255,16 +257,21 @@ optimal regularization parameter selection."""
             if self.api_key:
                 interpretation = self._generate_interpretation(best_results, self.history, best_evaluation)
             
+            summary = (
+                'Inversion quality reached the configured threshold.'
+                if best_evaluation['is_acceptable']
+                else (
+                    f'Quality optimization stopped after {len(self.history)} attempts '
+                    f'with score {best_score:.1f}; one or more quality criteria were not met.'
+                )
+            )
+            if retry_errors:
+                summary += (f' A re-inversion with adjusted parameters failed '
+                            f'({retry_errors[-1]}), so the best model before it was kept.')
             return {
                 'status': 'success' if best_evaluation['is_acceptable'] else 'needs_review',
-                'summary': (
-                    'Inversion quality reached the configured threshold.'
-                    if best_evaluation['is_acceptable']
-                    else (
-                        f'Quality optimization stopped after {len(self.history)} attempts '
-                        f'with score {best_score:.1f}; one or more quality criteria were not met.'
-                    )
-                ),
+                'summary': summary,
+                'retry_errors': retry_errors,
                 'quality_score': best_score,
                 'quality_metrics': best_evaluation['metrics'],
                 'recommendations': best_evaluation['recommendations'],
@@ -730,9 +737,15 @@ optimal regularization parameter selection."""
         # Remove evaluation-specific keys
         for key in ['inversion_results', 'auto_adjust', 'max_attempts', 'custom_thresholds']:
             reinversion_input.pop(key, None)
-        
-        # Run inversion
-        return inversion_agent.execute(reinversion_input)
+
+        # Run inversion. ERTInversionAgent raises on failure rather than
+        # returning a failed status, and the exception left the retry loop
+        # through the outer handler - replacing a finished first evaluation
+        # with quality 0. A retry that fails is an outcome of the loop.
+        try:
+            return inversion_agent.execute(reinversion_input)
+        except Exception as exc:  # noqa: BLE001 - reported by the loop
+            return {'status': 'failed', 'error': f"{type(exc).__name__}: {exc}"}
     
     def _extract_final_model(self, results: Dict[str, Any]) -> Optional[np.ndarray]:
         """Extract final model from results."""

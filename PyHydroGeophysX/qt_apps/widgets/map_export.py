@@ -86,8 +86,12 @@ def result_snapshot(page):
     if key in ('ert', 'ert_processing'):
         tl = getattr(page, '_tl_models', None)
         if tl is not None and getattr(page, '_map_result_kind', '') == 'timelapse':
+            from PyHydroGeophysX.qt_apps.widgets.temperature_panel import title_suffix
+
             index = max(0, page._tl_step_combo.currentIndex())
-            label = page._tl_step_combo.currentText()
+            # A temperature-corrected section is named as one on the map too.
+            label = (page._tl_step_combo.currentText()
+                     + title_suffix(getattr(page, '_tl_correction', None)))
             # Follow the display mode. Adding a percentage-change section to the
             # map as though it were resistivity puts a number near zero on a
             # resistivity colour scale, and nothing on the map would say why.
@@ -104,6 +108,15 @@ def result_snapshot(page):
             coverage = manager.coverage()
         except Exception:
             coverage = None
+        # What is on screen: a temperature-corrected model goes to the map as one.
+        corrected = getattr(page, '_inv_corrected', None)
+        if corrected is not None:
+            from PyHydroGeophysX.qt_apps.widgets.temperature_panel import title_suffix
+
+            return mesh_snapshot(
+                manager.paraDomain, corrected, 'ERT',
+                'ERT' + title_suffix(getattr(page, '_inv_correction', None)),
+                coverage=coverage)
         return mesh_snapshot(manager.paraDomain, manager.model, 'ERT', coverage=coverage)
     if key in ('seismic', 'seismic_processing'):
         manager = getattr(page, '_srt_mgr', None)

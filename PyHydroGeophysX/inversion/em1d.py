@@ -883,6 +883,14 @@ def _fdem_pieces(data: Dict[str, Any], geom: Dict[str, Any], inv: Dict[str, Any]
     except Exception as exc:  # noqa: BLE001
         raise BackendUnavailable(str(exc))
 
+    if str(geom.get("component", "secondary")).lower() == "both":
+        # A sounding carries one field per frequency, and the forward for
+        # "both" returns two, [secondary(f), total(f)] per frequency. Taking
+        # the first nf of those fitted sec(f1), tot(f1), sec(f2), ... against
+        # f1, f2, f3, ... without a word, so say which choice is needed.
+        raise ValueError(
+            "FDEM inversion fits one field per frequency; component='both' "
+            "does not say which one the data hold. Choose 'secondary' or 'total'.")
     freqs = np.asarray(data["frequencies"], dtype=float).ravel()
     scale = float(inv.get("data_scale", 1.0))
     obs_r = np.asarray(data["real"], dtype=float).ravel() * scale

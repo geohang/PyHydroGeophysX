@@ -15,11 +15,11 @@ from __future__ import annotations
 
 from pathlib import Path
 import shutil
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QEventLoop, Qt
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QAbstractSpinBox,
@@ -37,7 +37,6 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QProgressBar,
     QPushButton,
-    QScrollArea,
     QSpinBox,
     QTabWidget,
     QVBoxLayout,
@@ -47,16 +46,21 @@ from PySide6.QtWidgets import (
 from PyHydroGeophysX.data_processing import run_inputs
 from PyHydroGeophysX.data_processing import ert_io as ert_load
 from PyHydroGeophysX.data_processing import survey_timing
+from PyHydroGeophysX.data_processing import table_io
 from PyHydroGeophysX.qt_apps import io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.qt_utils import (
     BusyStateController,
+    ContentWidthScrollArea,
     ReproduceBar,
     merged_row,
     select_directory,
 )
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets import temperature_panel
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
+from PyHydroGeophysX.qt_apps.widgets.run_controls import PauseButton, progress_with_pause
 from PyHydroGeophysX.qt_apps.workers import (
     ProcessProbeWorker,
     ProcessWorkflowWorker,
@@ -77,6 +81,17 @@ from PyHydroGeophysX.inversion.lambda_search import (  # noqa: E402
     LAMBDA_BOUNDS as _LAMBDA_BOUNDS,
 )
 
+_TC_WAITING = ("Run an inversion - one survey or a time-lapse series; Apply then "
+               "corrects the model shown here, without inverting again.")
+
+
+def _value_name(correction: Optional[Dict[str, Any]]) -> str:
+    """Column name for exported resistivity: it says the temperature when corrected."""
+    if not correction:
+        return "resistivity"
+    reference = float(correction.get("reference_temperature_C", 25.0))
+    return f"resistivity_at_{reference:g}C".replace(".", "p")
+
 _ELEC_FILTER = "Electrodes (*.csv *.txt *.dat);;All files (*)"
 _DATA_FILTER = "ERT data (*.dat *.ohm *.txt *.csv *.Data *.bin *.stg *.amp *.udf);;All files (*)"
 
@@ -93,6 +108,7 @@ _INSTRUMENTS: List[Tuple[str, Optional[str]]] = [
     ("ARES", "ARES"),
     ("Lippmann", "Lippmann"),
     ("Electra", "Electra"),
+    ("Subsurface Insights (.csv)", "Subsurface Insights"),
     ("Custom", "Custom"),
 ]
 
@@ -109,7 +125,16 @@ class ERTProcessingModule(BaseModule):
         self._electrode_origins: List[Optional[int]] = []
         self._selected: Optional[int] = None
         self._electrode_path: Optional[Path] = None
+        # The electrodes as chosen from that file, as plain x y z columns: what
+        # the instrument readers are handed on the next load.
+        self._electrode_table: Optional[Path] = None
         self._data_path: Optional[Path] = None
+        # The file the single-inversion model on screen was inverted from. A
+        # preview loaded since replaces _data_path while that model stays up.
+        self._inv_source: Optional[Path] = None
+        # The thresholds of the last "Apply filter", until Reset: what a
+        # time-lapse run applies to every one of its surveys.
+        self._qc_applied: Optional[Dict[str, Any]] = None
         self._pseudo: List[Tuple[float, float, float]] = []
         self._n_meas = 0
         self._ert_data = None        # pygimli DataContainerERT for inversion (filtered)
@@ -137,6 +162,11 @@ class ERTProcessingModule(BaseModule):
         # and _inv_mgr always points at the one on screen.
         self._inv_mgr = None
         self._inv_choices: List[Dict[str, Any]] = []
+        # A temperature correction of the single-inversion model on screen: what
+        # was applied, and the corrected model. The manager keeps the model as
+        # inverted, so the correction can be changed or taken off.
+        self._inv_correction: Optional[Dict[str, Any]] = None
+        self._inv_corrected: Optional[np.ndarray] = None
         self._load_worker: Optional[TaskWorker] = None
         self._tl_files: List[str] = []
         self._tl_labels: List[str] = []
@@ -149,9 +179,20 @@ class ERTProcessingModule(BaseModule):
         self._tl_result: Optional[dict] = None
         self._tl_mesh = None              # in-memory time-lapse result for the
         self._tl_models = None            # interactive per-step viewer
+        # The models as inverted, kept beside the ones on screen so a
+        # temperature correction can be applied, changed and taken off again
+        # without inverting; and what that correction was, or None.
+        self._tl_models_raw = None
+        self._tl_correction: Optional[Dict[str, Any]] = None
         self._tl_coverage = None
         self._tl_step_titles: List[str] = []
-        self._cmap = pg.colormap.get("viridis")
+        # The pseudosection's colour map: viridis unless the user picks another,
+        # remembered for the session like every other view's.
+        self._pseudo_colormap = cmaps.ColormapChooser(
+            cmaps.APPARENT_RESISTIVITY, "viridis",
+            shared=cmaps.colormap_settings(self.state))
+        self._pseudo_colormap.colormapChanged.connect(self._on_pseudo_colormap_changed)
+        self._cmap = cmaps.to_pyqtgraph(self._pseudo_colormap.colormap())
 
         root = QHBoxLayout(self)
         self._tabs = QTabWidget()
@@ -189,23 +230,17 @@ class ERTProcessingModule(BaseModule):
         legend_layout = QVBoxLayout(self._pseudo_legend)
         legend_layout.setContentsMargins(8, 0, 8, 0)
         legend_layout.setSpacing(1)
-        legend_layout.addWidget(QLabel("Apparent resistivity (Ω·m)"))
+        # The colour map beside the colour scale it changes. The title takes the
+        # stretch itself: the page lets long labels elide, and an eliding label
+        # beside a separate stretch is given no width at all.
+        legend_title = QHBoxLayout()
+        legend_title.setContentsMargins(0, 0, 0, 0)
+        legend_title.addWidget(QLabel("Apparent resistivity (Ω·m)"), 1)
+        legend_title.addWidget(self._pseudo_colormap)
+        legend_layout.addLayout(legend_title)
         self._pseudo_scale_bar = QFrame()
         self._pseudo_scale_bar.setFixedHeight(12)
-        stops = []
-        fractions = np.linspace(0.0, 1.0, 9)
-        colours = self._cmap.map(fractions, mode="byte")
-        for fraction, colour in zip(fractions, colours):
-            stops.append(
-                f"stop:{fraction:.3f} rgb({int(colour[0])},"
-                f"{int(colour[1])},{int(colour[2])})"
-            )
-        self._pseudo_scale_bar.setStyleSheet(
-            "QFrame { border: 1px solid #8b949e; border-radius: 2px; "
-            "background: qlineargradient(x1:0, y1:0, x2:1, y2:0, "
-            + ", ".join(stops)
-            + "); }"
-        )
+        self._paint_pseudo_scale()
         legend_layout.addWidget(self._pseudo_scale_bar)
         scale_row = QHBoxLayout()
         scale_row.setContentsMargins(0, 0, 0, 0)
@@ -221,7 +256,14 @@ class ERTProcessingModule(BaseModule):
         legend_layout.addLayout(scale_row)
         pseudo_layout.addWidget(self._pseudo_legend)
 
-        self._model_view = MeshResultView()
+        # The studio state's colormap choices, shared with Saved Results: a
+        # section recoloured on either page is recoloured on both.
+        self._model_view = MeshResultView(colormaps=cmaps.colormap_settings(self.state))
+        # Tools that act on the model sit beside it and serve whichever result is
+        # on screen - a single inversion or a time-lapse step - rather than living
+        # in one run mode's settings, where the other mode's results cannot reach
+        # them. Saved Results puts the same panel in the same place.
+        self._model_view.add_side_panel(self._build_temperature_group())
         # The "Resistivity model" tab shows the single inversion OR any time step
         # of a time-lapse run, picked with the step selector (hidden until a
         # time-lapse result is available) — so there is no separate time-lapse tab.
@@ -292,14 +334,12 @@ class ERTProcessingModule(BaseModule):
 
     # -- controls ------------------------------------------------------------
     def _build_controls(self) -> QWidget:
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        # Wide enough that the time-lapse list, button row, and long labels fit
-        # without a horizontal scrollbar (vertical scrolling only). The minimum
-        # covers the widest group + the vertical scrollbar gutter so nothing clips.
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        scroll.setMinimumWidth(450)
-        scroll.setMaximumWidth(500)
+        # Vertical scrolling only, so the column must never be narrower than its
+        # widest row: 450-500 px is the preferred width, and the column widens
+        # past it when the content needs more - a fixed 500 px cut the file-list
+        # buttons and hint off at the right edge once the font was wider than
+        # the one it was sized with.
+        scroll = ContentWidthScrollArea(minimum=450, maximum=500)
         panel = QWidget()
         scroll.setWidget(panel)
         layout = QVBoxLayout(panel)
@@ -357,9 +397,16 @@ class ERTProcessingModule(BaseModule):
         sort_btn.clicked.connect(self._sort_tl_files_by_time)
         clr_btn = QPushButton("Clear"); clr_btn.setIcon(theme.icon("fa5s.trash"))
         clr_btn.clicked.connect(self._clear_tl_files)
-        for b in (add_btn, rm_btn, up_btn, down_btn, sort_btn, clr_btn):
+        # Two rows rather than one: all six in a row were the widest thing in the
+        # column. Adding and removing files on top, ordering them below.
+        for b in (add_btn, rm_btn, clr_btn):
             tl_btns.addWidget(b)
         lform.addRow(tl_btns)
+        order_btns = QHBoxLayout()
+        for b in (up_btn, down_btn, sort_btn):
+            order_btns.addWidget(b)
+        order_btns.addStretch(1)
+        lform.addRow(order_btns)
 
         self._tl_info = QLabel("No files added."); self._tl_info.setWordWrap(True)
         lform.addRow(self._tl_info)
@@ -411,12 +458,15 @@ class ERTProcessingModule(BaseModule):
             "once it is set above zero.")
         mform.addRow(self._qc_drop_neg)
 
+        # Six decimals, because files that report volts and amperes need floors
+        # of a tenth of a millivolt or milliampere; three decimals silently turned
+        # 0.0001 into 0, which switches the check off.
         self._qc_min_v = QDoubleSpinBox(); self._qc_min_v.setRange(0.0, 1e6)
-        self._qc_min_v.setDecimals(3); self._qc_min_v.setValue(0.0)
+        self._qc_min_v.setDecimals(6); self._qc_min_v.setValue(0.0)
         mform.addRow("Min |V|", self._qc_min_v)
 
         self._qc_min_i = QDoubleSpinBox(); self._qc_min_i.setRange(0.0, 1e6)
-        self._qc_min_i.setDecimals(3); self._qc_min_i.setValue(0.0)
+        self._qc_min_i.setDecimals(6); self._qc_min_i.setValue(0.0)
         mform.addRow("Min |I|", self._qc_min_i)
 
         self._qc_max_k = QDoubleSpinBox(); self._qc_max_k.setRange(0.0, 1e9)
@@ -426,6 +476,11 @@ class ERTProcessingModule(BaseModule):
             "|k| multiplies the measured resistance, and its noise with it, which is how "
             "a clean-looking rhoa outlier is produced by geometry rather than by ground.")
         mform.addRow("Max |k|", self._qc_max_k)
+
+        self._qc_max_rc = QDoubleSpinBox(); self._qc_max_rc.setRange(0.0, 1e9)
+        self._qc_max_rc.setDecimals(0); self._qc_max_rc.setValue(0.0)
+        self._qc_max_rc.setSuffix(" Ω")
+        mform.addRow("Max contact R", self._qc_max_rc)
 
         self._qc_max_recip = QDoubleSpinBox(); self._qc_max_recip.setRange(0.0, 100.0)
         self._qc_max_recip.setDecimals(2); self._qc_max_recip.setValue(0.0); self._qc_max_recip.setSuffix(" %")
@@ -734,7 +789,9 @@ class ERTProcessingModule(BaseModule):
         iform.addRow(self._invert_btn)
         self._inv_progress = QProgressBar()
         self._inv_progress.setVisible(False)
-        iform.addRow(self._inv_progress)
+        self._inv_pause = PauseButton(progress=self._inv_progress,
+                                      log=lambda text: self.log(text, "info"))
+        iform.addRow(progress_with_pause(self._inv_progress, self._inv_pause))
 
         iform.addRow(self._build_timelapse_panel())
         # Reflect the initial checkbox states; setChecked() above emitted nothing.
@@ -769,6 +826,7 @@ class ERTProcessingModule(BaseModule):
         layout.addWidget(exp)
 
         layout.addStretch(1)
+        scroll.fit_to_content()
         return scroll
 
     def _build_timelapse_panel(self) -> QWidget:
@@ -838,15 +896,16 @@ class ERTProcessingModule(BaseModule):
         tlform.addRow(self._tl_clip)
         tlform.addRow("Clip at coverage", self._tl_clip_cut)
 
-        tlform.addRow(self._build_temperature_group())
-
         self._tl_btn = QPushButton("Run time-lapse inversion")
         self._tl_btn.setProperty("primary", True)
         self._tl_btn.setIcon(theme.icon("fa5s.history", color="#ffffff"))
         self._tl_btn.clicked.connect(self._run_timelapse)
         tlform.addRow(self._tl_btn)
         self._tl_progress = QProgressBar(); self._tl_progress.setVisible(False)
-        tlform.addRow(self._tl_progress)
+        self._tl_pause = PauseButton(progress=self._tl_progress,
+                                     log=lambda text: self.log(text, "info"),
+                                     what="The time-lapse inversion")
+        tlform.addRow(progress_with_pause(self._tl_progress, self._tl_pause))
         self._tl_export_btn = QPushButton("Export results (VTK + npy + mesh)…")
         self._tl_export_btn.setIcon(theme.icon("fa5s.cube"))
         self._tl_export_btn.setToolTip("Saves the time-lapse models to a chosen folder: a combined VTK, "
@@ -865,24 +924,146 @@ class ERTProcessingModule(BaseModule):
         return panel
 
     def _build_temperature_group(self) -> QWidget:
-        """The shared temperature-correction options.
+        """The shared temperature-correction panel, beside the model it corrects.
 
-        Off by default: a correction applied with a guessed ground temperature is
-        its own error source, so it has to be a decision. The panel itself lives
-        in widgets/temperature_panel.py, so the saved-results browser offers the
-        same settings on a result that was inverted somewhere else.
+        Nothing is decided before the run. The inversion does not depend on the
+        ground temperature, only what its models are reported at, so the user
+        inverts, then sets the options and presses Apply, and the model on screen
+        is corrected in place - and can be corrected differently, or put back,
+        without inverting again. That holds for one survey as much as for a
+        series. A correction applied with a guessed temperature is its own error
+        source, which is why it is a button and never a default.
+
+        The panel lives in widgets/temperature_panel.py and keeps its settings in
+        the studio state, so Saved Results offers the same correction, with the
+        same choices, on a result reopened there.
         """
-        from PyHydroGeophysX.qt_apps.widgets.temperature_panel import TemperatureOptions
+        self._tc_box = temperature_panel.TemperatureOptions(
+            shared=getattr(self.state, "temperature_settings", None))
+        self._tc_box.applyRequested.connect(self._apply_temperature)
+        self._tc_box.removeRequested.connect(lambda: self._apply_temperature(None))
+        self._tc_box.set_available(False, _TC_WAITING)
+        side = ContentWidthScrollArea()
+        side.setWidget(self._tc_box)
+        return side
 
-        self._tc_box = TemperatureOptions(self)
-        return self._tc_box
+    def _apply_temperature(self, spec: Optional[Dict[str, Any]]) -> Tuple[bool, str]:
+        """Correct the model on screen, whichever kind of result it is."""
+        kind = getattr(self, "_map_result_kind", "")
+        if kind == "timelapse" and self._tl_models_raw is not None:
+            return self._apply_tl_temperature(spec)
+        if kind == "single" and self._inv_mgr is not None:
+            return self._apply_single_temperature(spec)
+        self._tc_box.set_available(False, _TC_WAITING)
+        return False, "Run an inversion first."
 
-    def _temperature_spec(self) -> Tuple[Optional[Dict[str, Any]], str]:
-        """The temperature-correction options, or an error saying what is missing."""
-        timing = getattr(self, "_tl_timing", None)
-        self._tc_box.set_context(len(self._tl_files),
-                                 bool(timing is not None and timing.dated))
-        return self._tc_box.spec()
+    def _single_survey_times(self) -> Tuple[Optional[list], Optional[list]]:
+        """``(days, dates)`` of the one survey behind the single inversion.
+
+        Its acquisition date, from the file name or header, is what places it
+        in a dated temperature record; undated, only a constant or a
+        single profile can correct it, and the correction says so. The file is
+        the one recorded with the model, not whichever was previewed since.
+        """
+        if self._inv_source is None:
+            return None, None
+        stamp = survey_timing.survey_timing([str(self._inv_source)]).timestamps[0]
+        return ([0.0], [stamp]) if stamp is not None else (None, None)
+
+    def _apply_single_temperature(self, spec: Optional[Dict[str, Any]]) -> Tuple[bool, str]:
+        """Correct the single-inversion model on screen, or put the inverted one back."""
+        mgr = self._inv_mgr
+        if spec is None:
+            self._inv_correction = None
+            self._show_single_model(None)
+            self.log("Temperature correction removed; the section shows the "
+                     "resistivity as inverted.", "info")
+            self._tc_box.show_applied(None)
+            return True, ""
+        days, dates = self._single_survey_times()
+        try:
+            corrected, report = temperature_panel.correct_series(
+                mgr.paraDomain, np.asarray(mgr.model, dtype=float), spec,
+                days=days, dates=dates)
+        except Exception as exc:  # noqa: BLE001 - report it, never lose the result
+            self.log(f"Temperature correction not applied: {exc}", "warn")
+            self._tc_box.show_problem(f"Not applied: {exc}")
+            return False, str(exc)
+        self._inv_correction = {**report, "spec": dict(spec)}
+        self._show_single_model(corrected)
+        self.log(f"Temperature correction: {report['note']}", "success")
+        self._tc_box.show_applied(report)
+        return True, str(report["note"])
+
+    def _show_single_model(self, corrected: Optional[np.ndarray]) -> None:
+        """Draw the single model: as inverted, or corrected and titled as such."""
+        mgr = self._inv_mgr
+        self._inv_corrected = None if corrected is None else np.asarray(corrected, dtype=float)
+        if self._inv_corrected is None:
+            self._model_view.show_model(mgr, kind="ert")
+        else:
+            # The coverage the uncorrected view would fade by, accepted on the same
+            # terms: a flat or empty coverage is no mask at all, and handed over as
+            # one it would make every cell transparent.
+            coverage = None
+            try:
+                cov = np.asarray(mgr.coverage(), dtype=float)
+                if (cov.size == self._inv_corrected.size and np.isfinite(cov).any()
+                        and float(np.nanmax(cov)) > float(np.nanmin(cov))):
+                    coverage = cov
+            except Exception:  # noqa: BLE001 - coverage is optional
+                pass
+            self._model_view.show_field(
+                mgr.paraDomain, self._inv_corrected, kind="ert", coverage=coverage,
+                title="Resistivity" + temperature_panel.title_suffix(self._inv_correction))
+        self._tabs.setCurrentWidget(self._model_tab)
+
+    def _tl_summary(self) -> Dict[str, Any]:
+        """The time-lapse result as its run recorded it, step titles included."""
+        return {**(self._tl_result or {}), "step_titles": list(self._tl_step_titles)}
+
+    def _apply_tl_temperature(self, spec: Optional[Dict[str, Any]]) -> Tuple[bool, str]:
+        """Correct the time-lapse sections on screen, or put the inverted ones back.
+
+        Works on the models this page holds; the correction is the same code
+        Saved Results uses, so a run corrected on either page reads the same.
+        Returns ``(ok, message)``.
+        """
+        raw = self._tl_models_raw
+        if raw is None or self._tl_mesh is None:
+            self._tc_box.set_available(False, _TC_WAITING)
+            return False, "Run the time-lapse inversion first."
+        if spec is None:
+            self._tl_models = raw
+            self._tl_correction = None
+            self._redraw_tl()
+            self.log("Temperature correction removed; the sections show the "
+                     "resistivity as inverted.", "info")
+            self._tc_box.show_applied(None)
+            return True, ""
+        days, dates = temperature_panel.series_survey_times(
+            self._tl_summary(), raw.shape[1])
+        try:
+            corrected, report = temperature_panel.correct_series(
+                self._tl_mesh, raw, spec, days=days, dates=dates)
+        except Exception as exc:  # noqa: BLE001 - report it, never lose the result
+            self.log(f"Temperature correction not applied: {exc}", "warn")
+            self._tc_box.show_problem(f"Not applied: {exc}")
+            return False, str(exc)
+        self._tl_models = corrected
+        # The spec travels with the report: it is what an export records as
+        # having been applied, and it embeds the temperature data it read.
+        self._tl_correction = {**report, "spec": dict(spec)}
+        self._redraw_tl()
+        self.log(f"Temperature correction: {report['note']}", "success")
+        self._tc_box.show_applied(report)
+        return True, str(report["note"])
+
+    def _redraw_tl(self) -> None:
+        """Show the current step again, on a scale fitted to the models now held."""
+        self._seed_tl_color_range()
+        self._show_tl_step(max(0, self._tl_step_combo.currentIndex()))
+        self._tabs.setCurrentWidget(self._model_tab)
 
     def _on_tl_time_source_changed(self, *_args: Any) -> None:
         """Re-read the acquisition times when the allowed sources change."""
@@ -983,21 +1164,96 @@ class ERTProcessingModule(BaseModule):
         self._adtlert_status.setStyleSheet("color:#b42318; font-size:8pt;")
 
     # -- loading -------------------------------------------------------------
-    def _start_load(self, path: str) -> None:
+    def _start_load(self, path: str,
+                    done: Optional[Callable[[str, Any], None]] = None) -> None:
         """Load one ERT file (off the UI thread) into the electrode + pseudosection
         view and make it the current single-inversion dataset. Used when a file is
-        added and when a row in the file list is clicked to preview it."""
+        added and when a row in the file list is clicked to preview it.
+
+        ``done(outcome, value)`` is told how this load ended, once the page has
+        been updated: ``("loaded", result)``, ``("failed", message)``, or
+        ``("superseded", None)`` when a newer load replaced it first. It is
+        connected before the worker starts, so a fast parse cannot be missed."""
         instrument = self._instrument.currentData()
         # Capture widget/state values on the UI thread; the parse runs off-thread.
         out_dir = self.state.ensure_results_store().scratch_dir(self.module_key)
-        elec_file = str(self._electrode_path) if self._electrode_path and self._electrode_path.exists() else None
+        elec_file = self._electrode_file()
         spacing = None  # geometry comes from the file; instrument loaders handle layout
         self._info.setText(f"Loading {Path(path).name}…")
         worker = TaskWorker(self._parse_ert, path, instrument, out_dir, elec_file, spacing)
-        worker.succeeded.connect(lambda res: self._on_ert_loaded(path, res))
-        worker.failed.connect(self._on_ert_load_failed)
+        # Only the latest request may land. Each click starts a load without
+        # waiting for the one before, and a slow earlier file finishing last
+        # replaced the data under a list highlighting the newer one - so the
+        # next inversion ran on a survey nobody had selected.
+        def landed(res, w=worker):
+            if w is not self._load_worker:
+                if done is not None:
+                    done("superseded", None)
+                return
+            if done is None:
+                self._on_ert_loaded(path, res)
+                return
+            try:
+                self._on_ert_loaded(path, res)
+            except Exception as exc:  # noqa: BLE001 - the caller reports it, as it did
+                done("failed", str(exc))
+            else:
+                done("loaded", res)
+
+        def refused(message, w=worker):
+            if w is self._load_worker:
+                self._on_ert_load_failed(message)
+                if done is not None:
+                    done("failed", message)
+            elif done is not None:
+                done("superseded", None)
+
+        worker.succeeded.connect(landed)
+        worker.failed.connect(refused)
+        if done is not None:
+            # A cancelled load emits no result at all, only ``finished``.
+            worker.finished.connect(lambda: done("superseded", None))
+        self._supersede_load()
         self._load_worker = self.register_worker(worker)
         worker.start()
+
+    def _load_and_wait(self, path: str) -> Tuple[str, Any]:
+        """Load ``path`` through :meth:`_start_load` and wait for it to land.
+
+        For callers that need the outcome before they can answer - the
+        assistant's ``load_data``, which reports the loaded counts. They run on
+        the UI thread, and parsing there froze the studio for 0.65-0.9 s per
+        survey; the parse now runs on the worker while a local event loop keeps
+        the window painting and responding until this load has settled.
+
+        Returns
+        -------
+        tuple
+            ``(outcome, value)`` as :meth:`_start_load` reports them.
+        """
+        settled: Dict[str, Any] = {}
+        loop = QEventLoop()
+
+        def done(outcome: str, value: Any) -> None:
+            if not settled:        # the first report wins; ``finished`` follows it
+                settled.update(outcome=outcome, value=value)
+                loop.quit()
+
+        self._start_load(path, done)
+        if not settled:
+            loop.exec()
+        return settled["outcome"], settled["value"]
+
+    def _supersede_load(self) -> None:
+        """Drop a load still in flight: a newer request replaces it."""
+        previous, self._load_worker = self._load_worker, None
+        if previous is not None and previous.isRunning():
+            previous.cancel()
+
+    def _electrode_file(self) -> Optional[str]:
+        """The electrode table the instrument readers are handed, if any."""
+        table = self._electrode_table
+        return str(table) if table is not None and table.exists() else None
 
     @staticmethod
     def _resipy_version() -> str:
@@ -1057,7 +1313,7 @@ class ERTProcessingModule(BaseModule):
             reader = "PyGIMLi"
         else:
             try:
-                elec, pseudo, nmeas, data, note = self._load_resipy(
+                elec, pseudo, nmeas, data, note, (reader, reason) = self._load_resipy(
                     path, instrument, out_dir, elec_file, spacing)
             except NotImplementedError:
                 # No reader for this format. PyGIMLi's reader would accept the
@@ -1066,6 +1322,16 @@ class ERTProcessingModule(BaseModule):
                 # rather than hand back a section nobody can trust.
                 raise
             except Exception as exc:  # noqa: BLE001
+                # PyGIMLi's reader answers for the unified family only; outside
+                # it the chosen reader's refusal is the answer. Retried natively,
+                # a DAS-1 file missing its data section loaded as one reading and
+                # the reader's own explanation was lost. Same rule, and message,
+                # as ert_io.load_ert_container, so a file fails the same way
+                # here as in a time-lapse run.
+                if ert_load._canonical_instrument(str(instrument)) not in ert_load._NATIVE_RETRY:
+                    raise ValueError(
+                        f"'{Path(path).name}' could not be read as {instrument}: {exc}"
+                    ) from exc
                 warning = f"{instrument} loader failed ({exc}); fell back to pygimli's native reader."
                 elec, pseudo, nmeas, data, note = self._load_pygimli(path)
                 reader, reason = "PyGIMLi", "ResIPy could not parse this file"
@@ -1192,7 +1458,34 @@ class ERTProcessingModule(BaseModule):
                 if np.isfinite(xs).all():
                     span = float(np.max(xs) - np.min(xs))
                     pseudo.append((float(np.mean(xs)), max(span * 0.19, 0.01), float(obs.app_res)))
-        return elec, pseudo, len(std.observations or []), data, note
+        return elec, pseudo, len(std.observations or []), data, note, self._reader_of(std)
+
+    @staticmethod
+    def _reader_of(std) -> Tuple[str, str]:
+        """``(reader, detail)`` naming what actually read the file.
+
+        The instrument loader falls back to this package's own readers when
+        ResIPy is absent or has no reader for the format, so "ResIPy" is not a
+        safe assumption. The detail carries what the reader worked out beyond the
+        table - above all where the electrode positions came from, since a
+        format with no coordinates has to get them from somewhere.
+        """
+        meta = dict(getattr(std, "metadata", None) or {})
+        if meta.get("loader") != "local_parsers_resipy_fallback":
+            return "ResIPy", ""
+        reader = f"PyHydroGeophysX's {meta.get('parser_used') or meta.get('instrument')} reader"
+        notes = dict(meta.get("reader_notes") or {})
+        parts = []
+        if notes.get("sequence_file"):
+            parts.append(f"sequence {notes['sequence_file']}")
+        cables = notes.get("cables") or {}
+        if cables:
+            count = sum(int(size) for size in cables.values())
+            parts.append(f"{count} electrodes on {len(cables)} "
+                         f"cable{'s' if len(cables) != 1 else ''}")
+        if notes.get("geometry_note"):
+            parts.append(str(notes["geometry_note"]))
+        return reader, "; ".join(parts)
 
     @staticmethod
     def _container_failure_reason(std) -> str:
@@ -1325,7 +1618,8 @@ class ERTProcessingModule(BaseModule):
 
         data = self._ert_data_full
         if data is None:
-            for w in (self._qc_min_v, self._qc_min_i, self._qc_max_k, self._qc_max_recip):
+            for w in (self._qc_min_v, self._qc_min_i, self._qc_max_k, self._qc_max_rc,
+                      self._qc_max_recip):
                 gate(w, False, "Load ERT data first.")
             self._qc_support_note.setText(
                 "Load data to see which checks are available."
@@ -1361,6 +1655,20 @@ class ERTProcessingModule(BaseModule):
             gate(self._qc_max_k, False, "This file carries no geometric factors.")
             unavailable.append("Max |k| (no geometric factors)")
 
+        if data.haveData("rc"):
+            rc = np.asarray(data["rc"], dtype=float)
+            rc = rc[np.isfinite(rc)]
+            span = (f"{rc.min():.3g} to {rc.max():.3g} Ω, median {float(np.median(rc)):.3g} Ω"
+                    if rc.size else "empty")
+            gate(self._qc_max_rc, True,
+                 "Drop readings whose transmitter contact resistance exceeds this (0 = off). "
+                 "A failed or dried-out electrode shows up here before it shows up in the "
+                 f"section. This file's contacts run {span}.")
+        else:
+            gate(self._qc_max_rc, False,
+                 "This file carries no contact resistance, so there is nothing to test.")
+            unavailable.append("Max contact R (no contact resistance)")
+
         rec = self._reciprocal_error(data)
         paired = 0 if rec is None else int(np.isfinite(rec).sum())
         if paired:
@@ -1388,7 +1696,37 @@ class ERTProcessingModule(BaseModule):
                 "each numerical check off."
             )
 
-    def _apply_extra_filters(self, data, keep: np.ndarray) -> List[str]:
+    def _qc_settings(self) -> Dict[str, Any]:
+        """The QC thresholds as set in the panel, as plain values.
+
+        Plain values so the same filter can run off the UI thread, over every
+        survey of a time-lapse series, exactly as Apply filter ran it here.
+        """
+        return {
+            "min_rhoa": float(self._rmin.value()), "max_rhoa": float(self._rmax.value()),
+            "max_error": float(self._max_err.value()),
+            # Folding the section away also switches its criteria off.
+            "more_checks": bool(self._qc_more.isChecked()),
+            "drop_nonpositive": bool(self._qc_drop_neg.isChecked()),
+            "min_voltage": float(self._qc_min_v.value()),
+            "min_current": float(self._qc_min_i.value()),
+            "max_k": float(self._qc_max_k.value()),
+            "max_contact_r": float(self._qc_max_rc.value()),
+            "max_reciprocal": float(self._qc_max_recip.value()),
+        }
+
+    @classmethod
+    def _qc_keep(cls, data, qc: Dict[str, Any]) -> Tuple[np.ndarray, List[str]]:
+        """``(keep, reasons)``: which measurements pass ``qc``, and what cut the rest."""
+        rhoa = np.asarray(data["rhoa"], dtype=float)
+        keep = np.isfinite(rhoa) & (rhoa >= qc["min_rhoa"]) & (rhoa <= qc["max_rhoa"])
+        if qc["max_error"] > 0 and data.haveData("err"):
+            keep &= np.asarray(data["err"], dtype=float) <= (qc["max_error"] / 100.0)
+        reasons = cls._apply_extra_filters(data, keep, qc) if qc["more_checks"] else []
+        return keep, reasons
+
+    @classmethod
+    def _apply_extra_filters(cls, data, keep: np.ndarray, qc: Dict[str, Any]) -> List[str]:
         """Apply the folded QC criteria to ``keep`` in place; report what each cost.
 
         A criterion whose field is missing is skipped rather than failing the
@@ -1405,18 +1743,21 @@ class ERTProcessingModule(BaseModule):
             if lost:
                 reasons.append(f"{label} dropped {lost}")
 
-        if self._qc_drop_neg.isChecked():
+        if qc["drop_nonpositive"]:
             cut(np.asarray(data["rhoa"], dtype=float) > 0.0, "ρa ≤ 0")
-        for widget, token, label in ((self._qc_min_v, "u", "|V| floor"),
-                                     (self._qc_min_i, "i", "|I| floor")):
-            if widget.value() > 0 and data.haveData(token):
-                cut(np.abs(np.asarray(data[token], dtype=float)) >= widget.value(), label)
-        if self._qc_max_k.value() > 0 and data.haveData("k"):
-            cut(np.abs(np.asarray(data["k"], dtype=float)) <= self._qc_max_k.value(), "|k| ceiling")
-        if self._qc_max_recip.value() > 0:
-            rec = self._reciprocal_error(data)
+        for key, token, label in (("min_voltage", "u", "|V| floor"),
+                                  ("min_current", "i", "|I| floor")):
+            if qc[key] > 0 and data.haveData(token):
+                cut(np.abs(np.asarray(data[token], dtype=float)) >= qc[key], label)
+        if qc["max_k"] > 0 and data.haveData("k"):
+            cut(np.abs(np.asarray(data["k"], dtype=float)) <= qc["max_k"], "|k| ceiling")
+        if qc["max_contact_r"] > 0 and data.haveData("rc"):
+            cut(np.asarray(data["rc"], dtype=float) <= qc["max_contact_r"],
+                "contact R ceiling")
+        if qc["max_reciprocal"] > 0:
+            rec = cls._reciprocal_error(data)
             if rec is not None:
-                limit = self._qc_max_recip.value() / 100.0
+                limit = qc["max_reciprocal"] / 100.0
                 # An unpaired measurement has no reciprocal to disagree with, so it
                 # is kept rather than judged against a test it cannot take.
                 cut(~(np.isfinite(rec) & (rec > limit)), "reciprocal error")
@@ -1429,16 +1770,12 @@ class ERTProcessingModule(BaseModule):
         try:
             import pygimli as pg
             data = pg.DataContainerERT(self._ert_data_full)
-            rhoa = np.asarray(data["rhoa"], dtype=float)
-            keep = np.isfinite(rhoa) & (rhoa >= self._rmin.value()) & (rhoa <= self._rmax.value())
-            if self._max_err.value() > 0 and data.haveData("err"):
-                keep &= np.asarray(data["err"], dtype=float) <= (self._max_err.value() / 100.0)
-            # Folding the section away also switches its criteria off, so what the
-            # panel shows is what the filter did.
-            if self._qc_more.isChecked():
-                reasons = self._apply_extra_filters(data, keep)
-                if reasons:
-                    self.log("Extra QC: " + "; ".join(reasons), "info")
+            # Folding "More checks" away also switches its criteria off, so what
+            # the panel shows is what the filter did.
+            qc = self._qc_settings()
+            keep, reasons = self._qc_keep(data, qc)
+            if reasons:
+                self.log("Extra QC: " + "; ".join(reasons), "info")
             removed = int((~keep).sum())
             self._qc_mask = keep.astype(bool).tolist()
             data.set("valid", pg.Vector(keep.astype(float)))
@@ -1447,6 +1784,7 @@ class ERTProcessingModule(BaseModule):
             self.log(f"Filter failed: {exc}", "error")
             return
         self._ert_data = data
+        self._qc_applied = qc
         self._pseudo = self._pseudo_from_data(data)
         self._n_meas = int(data.size())
         self._draw_pseudosection()
@@ -1455,6 +1793,7 @@ class ERTProcessingModule(BaseModule):
         self.log(f"Filter applied: kept {data.size()}, removed {removed}.", "success")
 
     def _reset_filter(self) -> None:
+        self._qc_applied = None
         if self._ert_data_full is None:
             return
         try:
@@ -1469,17 +1808,46 @@ class ERTProcessingModule(BaseModule):
         self._refresh()
         self.log("Filter reset.", "info")
 
+    @staticmethod
+    def _read_electrodes(path: str) -> Tuple[List[float], List[float], str]:
+        """``(x, z, how)`` from an electrode file, its columns chosen by meaning.
+
+        ``table_io.read_electrode_table`` decides, the reader the data loaders
+        use as well, and z is each electrode's elevation. Taking the first
+        column as x and the last as z read an ID column as the elevation, the
+        electrode number as the position, or - for a table written the PyGIMLi
+        way, x, elevation, 0 - a flat line at zero.
+        """
+        coords, elevation, how = table_io.read_electrode_table(path)
+        return coords[:, 0].tolist(), elevation.tolist(), how
+
+    def _use_electrode_file(self, path: str, x: List[float], z: List[float]) -> None:
+        """Take ``x``/``z`` as the electrodes, and hand later loads a plain copy.
+
+        The instrument readers take the electrode file as positional x y z
+        columns, so the vendor table itself would be misread there the way it
+        was here. They get the columns as chosen above instead.
+        """
+        self._x = [float(v) for v in x]
+        self._z = [float(v) for v in z]
+        self._electrode_table = None
+        try:
+            table = self.state.ensure_results_store().scratch_dir(self.module_key) / "electrodes_xyz.txt"
+            np.savetxt(table, np.column_stack([self._x, np.zeros(len(self._x)), self._z]))
+            self._electrode_table = table
+        except Exception as exc:  # noqa: BLE001 - the positions above still stand
+            self.log(f"Later loads cannot use {Path(path).name}: {exc}", "warn")
+
     def _load_electrodes(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Load electrode file", "", _ELEC_FILTER)
         if not path:
             return
         try:
-            table = io_utils.load_xyz_table(path, min_cols=2)
+            x, z, how = self._read_electrodes(path)
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not load electrodes: {exc}", "error")
             return
-        self._x = [float(v) for v in table[:, 0]]
-        self._z = [float(v) for v in table[:, -1]]
+        self._use_electrode_file(path, x, z)
         self._labels = [str(i + 1) for i in range(len(self._x))]
         original_count = (
             int(self._ert_data.sensorCount()) if self._ert_data is not None else 0
@@ -1491,7 +1859,7 @@ class ERTProcessingModule(BaseModule):
         self._selected = None
         self._electrode_path = Path(path)
         self._refresh()
-        self.log(f"Loaded {len(self._x)} electrodes from {Path(path).name}", "success")
+        self.log(f"Loaded {len(self._x)} electrodes from {Path(path).name} ({how})", "success")
 
     # -- inversion -----------------------------------------------------------
     def _report_data_health(self) -> None:
@@ -1685,11 +2053,15 @@ class ERTProcessingModule(BaseModule):
             run.result_path,
         )
         self._inv_worker.logged.connect(lambda msg: self.log(msg, "info"))
-        self._inv_worker.succeeded.connect(self._on_ert_workflow_ok)
+        # The survey goes with its result: a preview loaded while this runs
+        # replaces _data_path, and would date the model by the wrong file.
+        self._inv_worker.succeeded.connect(
+            lambda result, source=self._data_path: self._on_ert_workflow_ok(result, source))
         self._inv_worker.failed.connect(self._on_inversion_failed)
         self._inv_worker.finished.connect(self._reset_invert_button)
         self.register_worker(self._inv_worker)
         self._inv_worker.start()
+        self._inv_pause.attach(self._inv_worker)
 
     def _abs_path(self, value: Any) -> str:
         """Resolve a workflow-relative output path against the recipe directory."""
@@ -1700,7 +2072,8 @@ class ERTProcessingModule(BaseModule):
             return str(path)
         return str(Path(self._ert_recipe_path).resolve().parent / path)
 
-    def _on_ert_workflow_ok(self, result: WorkflowRunResult) -> None:
+    def _on_ert_workflow_ok(self, result: WorkflowRunResult,
+                            source: Optional[Path] = None) -> None:
         summary = dict(result.summary)
         manager = result.objects.get("manager")
         fixed_manager = result.objects.get("fixed_manager")
@@ -1749,6 +2122,7 @@ class ERTProcessingModule(BaseModule):
             "convergence_stop": summary.get("convergence_stop", ""),
             "engine": summary.get("engine", ""),
             "engine_requested": summary.get("engine_requested", ""),
+            "data_path": source,
         }
         try:
             self._on_inversion_ok(payload)
@@ -1905,9 +2279,21 @@ class ERTProcessingModule(BaseModule):
 
         if choices:
             self._tl_step_row.setVisible(False)  # single result: no step selector
+            # A new result arrives as inverted; any earlier correction was of a
+            # different model.
+            self._inv_correction = None
+            # Recorded with the result, because the correction dates the model
+            # by it. A caller that does not say which file it inverted means
+            # the one loaded now.
+            source = result.get("data_path", self._data_path)
+            self._inv_source = Path(source) if source else None
             self._show_lambda_choice(0)
             self._tabs.setCurrentWidget(self._model_tab)
             self._model_export_btn.setEnabled(True)
+            days, dates = self._single_survey_times()
+            self._tc_box.set_context(1, dates is not None, days=days, dates=dates)
+            self._tc_box.set_available(True)
+            self._tc_box.show_applied(None)
         else:
             self._inv_mgr = None
             self._quality_view.show_quality(
@@ -2002,7 +2388,12 @@ class ERTProcessingModule(BaseModule):
         self._map_result_kind = 'single'
         self._inv_mgr = choice["mgr"]
         if self._inv_mgr is not None:
-            self._model_view.show_model(self._inv_mgr, kind="ert")
+            if self._inv_correction:
+                # The correction stays on when the other model is picked: it is a
+                # statement about the ground, not about either inversion.
+                self._apply_single_temperature(self._inv_correction["spec"])
+            else:
+                self._show_single_model(None)
         self._quality_view.show_quality(
             choice["metrics"], choice["convergence"],
             title=f"ERT inversion — {choice['label']}")
@@ -2194,11 +2585,18 @@ class ERTProcessingModule(BaseModule):
         if not rows:
             return
         order = list(range(len(self._tl_files)))
-        seq = rows if delta < 0 else list(reversed(rows))
-        for r in seq:
-            j = r + delta
-            if 0 <= j < len(order):
-                order[r], order[j] = order[j], order[r]
+        chosen = set(rows)
+        # The selection moves as a block: a row steps past an unselected
+        # neighbour, and one against the edge - or behind a selected row that
+        # is - stays put. Swapped one at a time, a block already at the top was
+        # reversed, and the top row is the baseline every survey is compared to.
+        steps = range(1, len(order)) if delta < 0 else range(len(order) - 2, -1, -1)
+        for i in steps:
+            j = i - 1 if delta < 0 else i + 1
+            if order[i] in chosen and order[j] not in chosen:
+                order[i], order[j] = order[j], order[i]
+        if order == list(range(len(order))):
+            return
         self._tl_files = [self._tl_files[i] for i in order]
         self._read_tl_times()
         moved = {order.index(i) for i in rows}
@@ -2291,12 +2689,6 @@ class ERTProcessingModule(BaseModule):
         }
         if self._tl_lowmem.isChecked():
             params["save_memory"] = True
-        temperature, problem = self._temperature_spec()
-        if problem:
-            self.log(f"Temperature correction: {problem}", "error")
-            return
-        if temperature is not None:
-            params["temperature_correction"] = temperature
         if self._tl_clip.isChecked():
             params["figure_clip"] = "envelope"
             params["figure_clip_threshold"] = float(self._tl_clip_cut.value())
@@ -2317,7 +2709,111 @@ class ERTProcessingModule(BaseModule):
         # new one writes. They are ordinary in-memory arrays now, but releasing
         # them keeps a stale model out of the viewer if the run fails.
         self._tl_models = None
+        self._tl_models_raw = None
+        self._tl_correction = None
         self._tl_coverage = None
+        if getattr(self, "_map_result_kind", "") == "timelapse":
+            # The series the panel was correcting is gone; a single inversion on
+            # screen instead stays correctable while this one runs.
+            self._tc_box.set_available(False, _TC_WAITING)
+        # The list can be edited while the surveys are filtered below, so the run
+        # keeps the sequence as it stood when Run was pressed.
+        sources, labels = list(self._tl_files), list(self._tl_labels)
+        self._tl_busy = BusyStateController([self._tl_btn])
+        self._tl_busy.start()
+        self._tl_btn.setText("Inverting…")
+        self._tl_progress.setVisible(True); self._tl_progress.setRange(0, 0)
+        qc = self._qc_applied
+        if qc is None:
+            self.log("Time-lapse QC: no filter applied, so every survey is inverted as "
+                     "loaded. The Data QC thresholds take effect with Apply filter, and "
+                     "then filter every survey of the series.", "info")
+            self._launch_timelapse(run, sources, sources, labels, params, times, stamps, None)
+            return
+        # The QC applied on this page holds for the whole series, as it did for
+        # the survey on screen. Each survey is filtered on its own - the
+        # pipeline accepts surveys with different measurement sets, and ADTLERT
+        # aligns them - and handed over in PyGIMLi's own format, which it reads
+        # back as written, as the single inversion's filtered data is.
+        self.log(f"Time-lapse QC: filtering each of the {len(sources)} surveys as "
+                 f"Apply filter did ({self._describe_qc(qc)})…", "info")
+        worker = TaskWorker(self._qc_series, sources, instrument, qc,
+                            run.inputs_dir / "ert_timesteps_qc", with_log=True)
+        worker.logged.connect(lambda message: self.log(message, "info"))
+        worker.succeeded.connect(lambda out: self._launch_timelapse(
+            run, sources, out["files"], labels, {**params, "instrument": None},
+            times, stamps, {"thresholds": qc, "source_instrument": instrument,
+                            "steps": out["steps"]}))
+        worker.failed.connect(self._on_tl_qc_failed)
+        self.register_worker(worker)
+        worker.start()
+
+    @staticmethod
+    def _describe_qc(qc: Dict[str, Any]) -> str:
+        """The thresholds in ``qc`` that cut anything, in the panel's terms."""
+        parts = [f"ρa {qc['min_rhoa']:g}–{qc['max_rhoa']:g} Ω·m"]
+        if qc["max_error"] > 0:
+            parts.append(f"error ≤ {qc['max_error']:g} %")
+        if qc["more_checks"]:
+            extra = [(qc["drop_nonpositive"], "ρa > 0"),
+                     (qc["min_voltage"] > 0, f"|V| ≥ {qc['min_voltage']:g}"),
+                     (qc["min_current"] > 0, f"|I| ≥ {qc['min_current']:g}"),
+                     (qc["max_k"] > 0, f"|k| ≤ {qc['max_k']:g}"),
+                     (qc["max_contact_r"] > 0, f"contact R ≤ {qc['max_contact_r']:g} Ω"),
+                     (qc["max_reciprocal"] > 0, f"reciprocal error ≤ {qc['max_reciprocal']:g} %")]
+            parts.extend(text for on, text in extra if on)
+        return ", ".join(parts)
+
+    @classmethod
+    def _qc_series(cls, files: List[str], instrument: Optional[str], qc: Dict[str, Any],
+                   staging: Path, log=None) -> Dict[str, Any]:
+        """Filter every survey of a series with ``qc``; runs off the UI thread.
+
+        Each file is read the way the time-lapse pipeline reads it and written
+        back filtered. Returns the filtered files, in order, and per survey
+        what was kept.
+        """
+        import pygimli as pg
+
+        log = log or (lambda _message: None)
+        staging = Path(staging)
+        staging.mkdir(parents=True, exist_ok=True)
+        out_files: List[str] = []
+        steps: List[Dict[str, Any]] = []
+        for index, source in enumerate(files):
+            data = ert_load.load_ert_container(source, instrument=instrument, log=log)
+            keep, reasons = cls._qc_keep(data, qc)
+            kept, total = int(keep.sum()), int(keep.size)
+            if kept < 4:
+                raise ValueError(
+                    f"the QC filter leaves {kept} of {total} measurements in "
+                    f"{Path(source).name}, and a time-lapse step needs at least four. "
+                    "Loosen the Data QC thresholds, or Reset them.")
+            data.set("valid", pg.Vector(keep.astype(float)))
+            data.removeInvalid()
+            target = staging / f"step_{index:04d}.dat"
+            data.save(str(target))
+            out_files.append(str(target))
+            steps.append({"file": Path(source).name, "kept": kept, "total": total,
+                          "cut": list(reasons)})
+            log(f"QC {index + 1}/{len(files)} {Path(source).name}: kept {kept} of {total}"
+                + (f" ({'; '.join(reasons)})" if reasons else ""))
+        return {"files": out_files, "steps": steps}
+
+    def _on_tl_qc_failed(self, message: str) -> None:
+        """A survey could not be read or filtered, so the inversion never started."""
+        self._on_tl_failed(message, False)
+        self._reset_tl_button()
+
+    def _launch_timelapse(self, run, sources: List[str], files: List[str],
+                          labels: List[str], params: Dict[str, Any], times, stamps,
+                          qc: Optional[Dict[str, Any]]) -> None:
+        """Persist the series as it will be inverted, and start the workflow.
+
+        ``sources`` are the files as the user listed them, ``files`` what is
+        inverted: the same files, or their QC-filtered copies when ``qc`` says
+        what filtered them.
+        """
         # One compressed bundle rather than a copy of every step. A time-lapse
         # run is as many raw files as it has time steps, and BERT data files are
         # ASCII, so this is where the run directory grew fastest.
@@ -2326,20 +2822,29 @@ class ERTProcessingModule(BaseModule):
                 run.inputs_dir / "ert_timesteps",
                 {
                     f"step_{index:04d}{Path(source).suffix}": Path(source)
-                    for index, source in enumerate(self._tl_files)
+                    for index, source in enumerate(files)
                 },
                 kind="ert_timelapse_observations",
                 meta={
                     "measurement_times": [
                         float(times[index]) if times is not None else float(index)
-                        for index in range(len(self._tl_files))
+                        for index in range(len(files))
                     ]
                 },
             )
+            if qc is not None:
+                io_utils.write_json(run.inputs_dir / "ert_qc.json", {
+                    **qc, "source_files": [Path(source).name for source in sources]})
+                # The bundle holds the filtered surveys; the loose copies go.
+                shutil.rmtree(run.inputs_dir / "ert_timesteps_qc", ignore_errors=True)
         except Exception as exc:  # noqa: BLE001
             self.fail_persisted_run(str(exc), "ert.timelapse_inversion")
             self.log(f"Could not persist time-lapse inputs: {exc}", "error")
+            self._reset_tl_button()
             return
+        metadata: Dict[str, Any] = {"source": "qt", "sequence_order_persisted": True}
+        if qc is not None:
+            metadata.update(qc_filtered=True, source_instrument=qc.get("source_instrument"))
         spec = WorkflowSpec(
             workflow_id="ert.timelapse_inversion",
             inputs={
@@ -2348,30 +2853,26 @@ class ERTProcessingModule(BaseModule):
                     artifact_id="ert-timesteps",
                     kind="ert_timelapse_observations",
                     base_dir=run.run_dir,
-                    metadata={"step_count": len(self._tl_files)},
+                    metadata={"step_count": len(files)},
                 ),
-                "measurement_times": list(times or range(len(self._tl_files))),
+                "measurement_times": list(times or range(len(files))),
                 # The bundle renames the files, so the acquisition dates parsed
                 # from the originals have to travel with the times or the panels
                 # end up headed by a bare elapsed-day number.
-                "time_labels": list(self._tl_labels),
+                "time_labels": list(labels),
                 "timestamps": stamps,
                 "time_unit": "d" if times is not None else "",
             },
             parameters=params,
-            metadata={"source": "qt", "sequence_order_persisted": True},
+            metadata=metadata,
         )
         recipe_path, script_path = export_workflow_bundle(
             spec, run.run_dir, stem="ert_timelapse"
         )
         self._reproduce.set_bundle(recipe_path, script_path)
         self._tl_recipe_path = str(recipe_path)
-        self._tl_busy = BusyStateController([self._tl_btn])
-        self._tl_busy.start()
-        self._tl_btn.setText("Inverting…")
-        self._tl_progress.setVisible(True); self._tl_progress.setRange(0, 0)
         self.log(f"Starting {params['inversion_type']} time-lapse ERT inversion "
-                 f"({len(self._tl_files)} steps)…", "info")
+                 f"({len(files)} steps)…", "info")
         # Both supported time-lapse engines execute long native/GPU kernels.
         # Keep every time-lapse run outside Qt's interpreter so PyGIMLi cannot
         # retain the GIL and ADTLERT cannot monopolize the GUI CUDA context.
@@ -2390,6 +2891,7 @@ class ERTProcessingModule(BaseModule):
         self._tl_worker.finished.connect(self._reset_tl_button)
         self.register_worker(self._tl_worker)
         self._tl_worker.start()
+        self._tl_pause.attach(self._tl_worker)
 
     def _on_tl_progress(self, current: int, total: int, label: str) -> None:
         """Show completed ADTLERT windows while retaining the text log."""
@@ -2464,6 +2966,16 @@ class ERTProcessingModule(BaseModule):
         self._tl_out = result.get("output_dir")
         self._tl_open.setEnabled(bool(self._tl_out))
         self._tl_export_btn.setEnabled(True)
+        self._tl_correction = None
+        self._tl_models_raw = None
+        if self._tl_models is not None and self._tl_mesh is not None:
+            self._tl_models_raw = np.asarray(self._tl_models, dtype=float)
+            n_steps = int(self._tl_models_raw.shape[1])
+            days, dates = temperature_panel.series_survey_times(
+                self._tl_summary(), n_steps)
+            self._tc_box.set_context(n_steps, dates is not None, days=days, dates=dates)
+            self._tc_box.set_available(True)
+            self._tc_box.show_applied(None)
 
         self._populate_tl_steps()
         engine = str(result.get("engine") or "pyhydro")
@@ -2489,21 +3001,6 @@ class ERTProcessingModule(BaseModule):
                  f"{result.get('n_times')} steps, {result.get('mesh_cells')} cells. "
                  f"Saved VTK (combined + {n_vtk} per-step), npy, mesh. "
                  f"Pick a step in the Resistivity model tab; “Export results…” saves them.", "success")
-        # What the models on screen are. A section corrected to a reference
-        # temperature looks exactly like an uncorrected one, so the run says which
-        # it produced rather than leaving the viewer to assume.
-        correction = result.get("temperature_correction") or {}
-        if correction.get("applied"):
-            self.log(
-                f"Sections are reported at "
-                f"{correction.get('reference_temperature_C', 25.0):g} °C — "
-                f"{correction.get('note', '')} The raw inverted models are saved "
-                f"as final_models_uncorrected.npy.", "success")
-        elif correction.get("requested"):
-            self.log(
-                f"Temperature correction was requested but not applied "
-                f"({correction.get('error', 'reason not recorded')}). The sections "
-                f"are raw inverted resistivity.", "warn")
         if requested_engine == "adtlert" and engine != "adtlert":
             self.log(
                 "ADTLERT was requested but the time-lapse run used the original "
@@ -2600,12 +3097,18 @@ class ERTProcessingModule(BaseModule):
             title = f"{title} − {baseline}" if idx else f"{title} (baseline)"
         else:
             values, kind = models[:, idx], "ert"
+        # A corrected section looks exactly like an uncorrected one, so its
+        # title says which it is.
+        title += temperature_panel.title_suffix(self._tl_correction)
         self._model_view.show_field(self._tl_mesh, values, kind=kind, coverage=cov, title=title)
 
     def _on_tl_failed(self, message: str, backend: bool) -> None:
         self.fail_persisted_run(message, "ert.timelapse_inversion")
-        self.log(f"Time-lapse inversion {'unavailable' if backend else 'failed'}: {message}",
-                 "warn" if backend else "error")
+        text = f"Time-lapse inversion {'unavailable' if backend else 'failed'}: {message}"
+        self.log(text, "warn" if backend else "error")
+        # On the panel too: a survey its reader refused is the usual cause, and
+        # the reason belongs where the files are listed, not only in the log.
+        self._tl_info.setText(text)
 
     def _reset_tl_button(self) -> None:
         if self._tl_busy is not None:
@@ -2660,8 +3163,55 @@ class ERTProcessingModule(BaseModule):
             except Exception as exc:  # noqa: BLE001
                 self.log(f"Could not copy {Path(f).name}: {exc}", "warn")
         written = self._write_tl_csv(dest)
+        written += self._write_tl_correction(dest)
         self.log(f"Exported {copied + written} time-lapse result file(s) to {dest}", "success")
+        if self._tl_correction:
+            reference = float(self._tl_correction.get("reference_temperature_C", 25.0))
+            self.log(
+                f"The series on screen, corrected to {reference:g} °C, is in "
+                f"final_models_temperature_corrected.npy, "
+                f"timelapse_resistivity_temperature_corrected.vtk and the cell CSV; "
+                f"temperature_correction.json records what was applied. "
+                f"final_models.npy, the per-step VTKs and the figure are the "
+                f"models as inverted.", "info")
         return str(dest)
+
+    def _write_tl_correction(self, dest: Path) -> int:
+        """Write the temperature-corrected series beside the inverted one.
+
+        The files copied from the run are the models as inverted. With a
+        correction on screen, an export of only those would hand over a different
+        series from the one being looked at, and nothing in it would say so.
+        Returns how many files it added.
+        """
+        correction = self._tl_correction
+        if not correction or self._tl_models is None:
+            return 0
+        models = np.asarray(self._tl_models, dtype=float)
+        written = 0
+        try:
+            np.save(dest / "final_models_temperature_corrected.npy", models)
+            written += 1
+            io_utils.write_json(dest / "temperature_correction.json", correction)
+            written += 1
+        except Exception as exc:  # noqa: BLE001 - the copies already succeeded
+            self.log(f"Could not write the temperature-corrected models: {exc}", "warn")
+            return written
+        try:
+            import pygimli as pygimli
+
+            from PyHydroGeophysX.core.mesh_serialization import via_ascii_path
+
+            mesh = pygimli.Mesh(self._tl_mesh)
+            for index in range(models.shape[1]):
+                mesh[f"resistivity_t{index}"] = models[:, index]
+            via_ascii_path(mesh.exportVTK,
+                           dest / "timelapse_resistivity_temperature_corrected.vtk",
+                           mode="write")
+            written += 1
+        except Exception as exc:  # noqa: BLE001 - the arrays are already written
+            self.log(f"Temperature-corrected VTK skipped: {exc}", "warn")
+        return written
 
     def _write_tl_csv(self, dest: Path) -> int:
         """Write the per-cell time-lapse table; return how many files it added.
@@ -2680,9 +3230,11 @@ class ERTProcessingModule(BaseModule):
         try:
             from PyHydroGeophysX.data_processing.model_csv import export_model_csv
 
+            # The table holds the series on screen; with a correction applied its
+            # columns say the temperature they are reported at.
             paths = export_model_csv(
                 dest, self._tl_mesh, self._tl_models,
-                value_name="resistivity", units="ohm.m",
+                value_name=_value_name(self._tl_correction), units="ohm.m",
                 coverage=self._tl_coverage,
                 step_labels=self._tl_step_titles or None,
             )
@@ -2701,6 +3253,30 @@ class ERTProcessingModule(BaseModule):
             self.log("No time-lapse output yet.", "warn")
 
     # -- pseudosection -------------------------------------------------------
+    def _paint_pseudo_scale(self) -> None:
+        """Draw the legend's colour bar in the pseudosection's colour map."""
+        stops = []
+        fractions = np.linspace(0.0, 1.0, 9)
+        colours = self._cmap.map(fractions, mode="byte")
+        for fraction, colour in zip(fractions, colours):
+            stops.append(
+                f"stop:{fraction:.3f} rgb({int(colour[0])},"
+                f"{int(colour[1])},{int(colour[2])})"
+            )
+        self._pseudo_scale_bar.setStyleSheet(
+            "QFrame { border: 1px solid #8b949e; border-radius: 2px; "
+            "background: qlineargradient(x1:0, y1:0, x2:1, y2:0, "
+            + ", ".join(stops)
+            + "); }"
+        )
+
+    def _on_pseudo_colormap_changed(self, name: str) -> None:
+        """Recolour the pseudosection from the measurements already loaded."""
+        self._cmap = cmaps.to_pyqtgraph(name)
+        self._paint_pseudo_scale()
+        if self._pseudo:
+            self._draw_pseudosection()
+
     def _show_pseudosection_message(self, message: str) -> None:
         """Show a stable empty-state message on the static section canvas."""
         self._pseudo_ax.clear()
@@ -2903,6 +3479,9 @@ class ERTProcessingModule(BaseModule):
             out = io_utils.ensure_dir(folder)
             mesh = mgr.paraDomain
             model = np.asarray(mgr.model, dtype=float)  # resistivity (ohm-m)
+            # The table holds what is on screen, so a temperature-corrected model
+            # is exported as one, with the temperature in its column name.
+            shown = self._inv_corrected if self._inv_corrected is not None else model
             np.save(out / "resistivity_model.npy", model)
             try:
                 cov = np.asarray(mgr.coverage(), dtype=float)
@@ -2913,8 +3492,9 @@ class ERTProcessingModule(BaseModule):
             # a collaborator without PyGIMLi can actually open, and a .bms write
             # that fails should not cost them the table as well.
             export_model_csv(
-                out, mesh, model,
-                value_name="resistivity", units="ohm.m", coverage=cov,
+                out, mesh, shown,
+                value_name=_value_name(self._inv_correction if shown is not model else None),
+                units="ohm.m", coverage=cov,
             )
             # numpy takes wide paths, PyGIMLi's writers do not; a folder Windows'
             # ANSI codepage cannot represent needs the write staged through a
@@ -2923,6 +3503,21 @@ class ERTProcessingModule(BaseModule):
             via_ascii_path(mesh.save, out / "resistivity_mesh.bms", mode="write")
             mesh["resistivity"] = model
             via_ascii_path(mesh.exportVTK, out / "resistivity_model.vtk", mode="write")
+            if shown is not model:
+                # Beside the inverted model, never in place of it.
+                np.save(out / "resistivity_model_temperature_corrected.npy", shown)
+                io_utils.write_json(out / "temperature_correction.json", self._inv_correction)
+                mesh["resistivity"] = shown
+                via_ascii_path(mesh.exportVTK,
+                               out / "resistivity_model_temperature_corrected.vtk",
+                               mode="write")
+                mesh["resistivity"] = model
+                self.log(
+                    f"The model on screen, corrected to "
+                    f"{float(self._inv_correction['reference_temperature_C']):g} °C, is "
+                    f"in resistivity_model_temperature_corrected.npy/.vtk and the cell "
+                    f"CSV; temperature_correction.json records what was applied. "
+                    f"resistivity_model.npy/.vtk are the model as inverted.", "info")
             self.log(f"Exported resistivity model (csv + npy + bms + vtk) to {out}", "success")
         except Exception as exc:  # noqa: BLE001
             self.log(f"Resistivity model export failed: {exc}", "error")
@@ -2983,6 +3578,9 @@ class ERTProcessingModule(BaseModule):
         # column taken for electrode A, and every quadrupole then lands out of
         # bounds. The panel listed the files and drew nothing.
         instrument = str(inputs.get("instrument") or "").strip()
+        if not instrument and (surveys or single):
+            # Nobody chose one, so the header decides - as it does in the run.
+            instrument = self._instrument_from_header((surveys or [str(single)])[0])
         if instrument:
             self._agent_set_instrument(instrument)
         # Electrodes first: a survey file carrying no geometry of its own picks
@@ -3019,6 +3617,16 @@ class ERTProcessingModule(BaseModule):
             return ""
         self._tabs.setCurrentWidget(widget)
         return name
+
+    @staticmethod
+    def _instrument_from_header(path: str) -> str:
+        """The instrument a file's header names, as the run reads it; "" if none."""
+        try:
+            from PyHydroGeophysX.agents.ert_loader_agent import ERTLoaderAgent
+
+            return str(ERTLoaderAgent()._detect_instrument_from_header(str(path)) or "")
+        except Exception:  # noqa: BLE001 - nothing detected is no choice made
+            return ""
 
     def _agent_set_instrument(self, instrument: str) -> bool:
         """Point the format dropdown at ``instrument``. True when it matched."""
@@ -3058,8 +3666,17 @@ class ERTProcessingModule(BaseModule):
                  "desc": "Rename electrode `index` (0-based)."},
                 {"name": "clear_electrodes", "args": {},
                  "desc": "Remove every electrode. Load a geometry file to start over."},
-                {"name": "apply_filter", "args": {"min_rhoa": "float", "max_rhoa": "float", "max_error": "float (%)"},
-                 "desc": "Filter measurements by apparent resistivity range and max relative error."},
+                {"name": "apply_filter",
+                 "args": {"min_rhoa": "float", "max_rhoa": "float", "max_error": "float (%)",
+                          "drop_nonpositive_rhoa": "bool",
+                          "min_voltage": "float (the file's units)",
+                          "min_current": "float (the file's units)",
+                          "max_geometric_factor": "float",
+                          "max_contact_resistance": "float (ohm)",
+                          "max_reciprocal_error": "float (fraction)"},
+                 "desc": ("Filter measurements by apparent resistivity range and max relative "
+                          "error. The optional criteria turn on 'More checks'; each is skipped "
+                          "where the loaded file does not carry the field it tests.")},
                 {"name": "set_params", "args": {"params": {"<key>": "value"}},
                  "desc": ("Set parameters. Shared by single + time-lapse inversion: lambda, "
                           "max_iterations, relative_error, mesh_quality, time_lapse (bool). "
@@ -3200,15 +3817,16 @@ class ERTProcessingModule(BaseModule):
                 return {"status": "failed", "error": f"Unknown instrument '{instrument}'.",
                         "valid": [v for _, v in _INSTRUMENTS if v]}
             self._instrument.setCurrentIndex(idx)
-        inst = self._instrument.currentData()
-        out_dir = self.state.ensure_results_store().scratch_dir(self.module_key)
-        elec_file = str(self._electrode_path) if self._electrode_path and self._electrode_path.exists() else None
-        spacing = None  # geometry comes from the file
-        try:
-            res = self._parse_ert(str(p), inst, out_dir, elec_file, spacing)
-            self._on_ert_loaded(str(p), res)
-        except Exception as exc:  # noqa: BLE001
-            return {"status": "failed", "error": f"Could not load: {exc}"}
+        # The parse runs on the page's load worker - the path a click in the
+        # file list takes - and this waits for it with the window live; it used
+        # to parse right here and freeze the studio for the whole read. Starting
+        # it supersedes a preview still in flight, as this always did.
+        outcome, value = self._load_and_wait(str(p))
+        if outcome == "failed":
+            return {"status": "failed", "error": f"Could not load: {value}"}
+        if outcome != "loaded":
+            return {"status": "failed",
+                    "error": f"A newer load replaced {p.name} before it finished."}
         # Reflect the loaded file in the file list (it doubles as the loader).
         if str(p) not in self._tl_files:
             self._set_tl_files(self._tl_files + [str(p)])
@@ -3223,16 +3841,22 @@ class ERTProcessingModule(BaseModule):
         if not p.exists():
             return {"status": "failed", "error": f"File not found: {p}"}
         try:
-            table = io_utils.load_xyz_table(str(p), min_cols=2)
+            x, z, how = self._read_electrodes(str(p))
         except Exception as exc:  # noqa: BLE001
             return {"status": "failed", "error": f"Could not load electrodes: {exc}"}
-        self._x = [float(v) for v in table[:, 0]]
-        self._z = [float(v) for v in table[:, -1]]
+        self._use_electrode_file(str(p), x, z)
         self._labels = [str(i + 1) for i in range(len(self._x))]
+        original_count = (
+            int(self._ert_data.sensorCount()) if self._ert_data is not None else 0
+        )
+        self._electrode_origins = [
+            index if index < original_count else None
+            for index in range(len(self._x))
+        ]
         self._selected = None
         self._electrode_path = Path(p)
         self._refresh()
-        return {"status": "ok", "electrodes": len(self._x)}
+        return {"status": "ok", "electrodes": len(self._x), "columns": how}
 
     # -- electrode editing (no UI panel; these are the whole surface) --------
     def _electrode_index(self, index: Any) -> int:
@@ -3334,6 +3958,7 @@ class ERTProcessingModule(BaseModule):
                      "min_voltage": lambda v: self._qc_min_v.setValue(float(v)),
                      "min_current": lambda v: self._qc_min_i.setValue(float(v)),
                      "max_geometric_factor": lambda v: self._qc_max_k.setValue(float(v)),
+                     "max_contact_resistance": lambda v: self._qc_max_rc.setValue(float(v)),
                      "max_reciprocal_error": lambda v: self._qc_max_recip.setValue(float(v) * 100.0)}
             used = [key for key in extra if key in args]
             for key in used:

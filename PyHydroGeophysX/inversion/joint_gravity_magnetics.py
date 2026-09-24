@@ -15,6 +15,7 @@ from PyHydroGeophysX.data_processing.gravmag import (
 from PyHydroGeophysX.inversion.gravmag import (
     InversionBackendUnavailable,
     invert_gravmag,
+    station_footprint,
 )
 
 ProgressFn = Callable[[Dict[str, Any]], None]
@@ -96,9 +97,21 @@ def _station_data(value: Mapping[str, Any], name: str) -> Dict[str, np.ndarray]:
 
 def _overlap(a: Dict[str, np.ndarray], b: Dict[str, np.ndarray]) -> bool:
     """Return whether two station footprints overlap in both horizontal axes."""
-    x_overlap = min(a["x"].max(), b["x"].max()) > max(a["x"].min(), b["x"].min())
-    y_overlap = min(a["y"].max(), b["y"].max()) > max(a["y"].min(), b["y"].min())
-    return bool(x_overlap and y_overlap)
+    return bool(_axis_overlap(a["x"], b["x"]) and _axis_overlap(a["y"], b["y"]))
+
+
+def _axis_overlap(a: np.ndarray, b: np.ndarray) -> bool:
+    """Whether two station ranges share an interval, or one lies on a line inside the other.
+
+    A profile has no extent across itself, so two surveys along the same line
+    shared no interval on that axis and were refused as not overlapping.
+    """
+    lo, hi = max(a.min(), b.min()), min(a.max(), b.max())
+    if hi > lo:
+        return True
+    tolerance = 1e-9 * max(np.ptp(a), np.ptp(b), abs(hi), 1.0)
+    collapsed = min(np.ptp(a), np.ptp(b)) <= tolerance
+    return bool(collapsed and hi >= lo - tolerance)
 
 
 class JointGravityMagneticsInversion:
@@ -252,10 +265,10 @@ class JointGravityMagneticsInversion:
         all_x = np.r_[grav["x"], mag["x"]]
         all_y = np.r_[grav["y"], mag["y"]]
         all_z = np.r_[grav["z"], mag["z"]]
-        x0, x1 = float(all_x.min()), float(all_x.max())
-        y0, y1 = float(all_y.min()), float(all_y.max())
-        x_span = max(x1 - x0, 1.0)
-        y_span = max(y1 - y0, 1.0)
+        # The rule invert_gravmag uses: a profile's collapsed axis takes the other
+        # one's extent. A 1 m floor made a single-line model about 1.7 m wide.
+        x0, x1, y0, y1 = station_footprint(all_x, all_y)
+        x_span, y_span = x1 - x0, y1 - y0
         csx, csy = x_span / self.n_xy, y_span / self.n_xy
         csz = max(csx, csy) * 0.6
         nx = self.n_xy + 4

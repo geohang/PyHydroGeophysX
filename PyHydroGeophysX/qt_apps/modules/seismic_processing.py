@@ -48,6 +48,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     select_directory,
     set_rows_enabled,
 )
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
 from PyHydroGeophysX.qt_apps.widgets.seismic_viewer import SeismicViewer, first_arrival_onsets
@@ -121,7 +122,8 @@ class SeismicProcessingModule(BaseModule):
         self._recompute_debounced = Debouncer(self._recompute, 80)
 
         root = QHBoxLayout(self)
-        self._viewer = SeismicViewer()
+        # Both views keep their colour maps in the session's shared choices.
+        self._viewer = SeismicViewer(colormaps=cmaps.colormap_settings(self.state))
         self._viewer.pointPicked.connect(self._on_point_picked)
         self._viewer.linePicked.connect(self._on_line_picked)
         self._center_tabs = QTabWidget()
@@ -134,7 +136,7 @@ class SeismicProcessingModule(BaseModule):
         self._tt_plot = self._tt_widget.getPlotItem()
         self._tt_plot.addLegend()
         self._center_tabs.addTab(self._tt_widget, "Travel-time")
-        self._vel_view = MeshResultView()
+        self._vel_view = MeshResultView(colormaps=cmaps.colormap_settings(self.state))
         self._center_tabs.addTab(self._vel_view, "Velocity model")
         self._quality_view = InversionQualityView()
         self._center_tabs.addTab(self._quality_view, "Inversion quality")
@@ -579,7 +581,10 @@ class SeismicProcessingModule(BaseModule):
         p = Path(path)
         suffix = p.suffix.lower()
         if _SEISMIC_OK and suffix in (".sgy", ".segy"):
-            return {"kind": "dataset", "dataset": read_segy(str(p), max_traces=4000), "warning": ""}
+            # Every trace: this is the working dataset - its shots are picked and
+            # inverted - not a preview. A 4000-trace cap dropped the later shots
+            # without a word, and the metadata then reported the cut count.
+            return {"kind": "dataset", "dataset": read_segy(str(p)), "warning": ""}
         if _SEISMIC_OK and suffix == ".dat":
             try:
                 return {"kind": "dataset", "dataset": read_geometrics_dat(str(p)), "warning": ""}

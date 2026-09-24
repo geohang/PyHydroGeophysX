@@ -95,7 +95,7 @@ reports suitable for scientists and engineers. You should integrate climate insi
             climate_ert_analysis = self._generate_climate_ert_analysis(workflow_data)
             
             # 7. Visualizations (create plots)
-            visualization_files = self._generate_visualizations(workflow_data, output_dir)
+            visualization_files = self._generate_visualizations(workflow_data, output_dir, config)
             
             # 8. Generate LLM-enhanced narrative report
             narrative_report = None
@@ -165,7 +165,7 @@ reports suitable for scientists and engineers. You should integrate climate insi
 **Workflow Configuration:**
 - Data File: {config.get('data_file', 'N/A')}
 - Instrument: {config.get('instrument', 'N/A')}
-- Seismic Integration: {'Yes' if config.get('use_seismic', False) else 'No'}
+- Seismic Integration: {'Yes' if config.get('use_seismic', False) or workflow_data.get('seismic_structure') else 'No'}
 
 **Key Results:**
 """
@@ -231,9 +231,12 @@ reports suitable for scientists and engineers. You should integrate climate insi
         
         if 'inversion_results' in workflow_data:
             inv = workflow_data['inversion_results']
+            # Named when it is not the plain smoothness inversion, so the report
+            # says which method produced the section it shows.
+            method = f"- Method: {inv['inversion_method']}\n" if inv.get('inversion_method') else ""
             summary += f"""
 ### ERT Inversion
-- Final chi2: {inv.get('chi2', 'N/A')}
+{method}- Final chi2: {inv.get('chi2', 'N/A')}
 - Iterations: {inv.get('iterations', 'N/A')}
 - Quality assessment: {(workflow_data.get('evaluation_results') or {}).get('status', 'not evaluated')}
 - Assessment details: {(workflow_data.get('evaluation_results') or {}).get('summary', 'A completed solver run alone does not establish convergence or model validity.')}
@@ -387,7 +390,7 @@ reports suitable for scientists and engineers. You should integrate climate insi
 - Date Range: {metadata.get('dates', 'N/A')}
 - Variables: {', '.join(metadata.get('variables', []))}
 - PET Method: {metadata.get('pet_method', 'N/A')}
-- Region: {metadata.get('region', 'N/A')}
+- Source: {metadata.get('source', metadata.get('region', 'N/A'))}
 """
         
         # Add derived features info
@@ -551,11 +554,17 @@ including detection of post-rainfall infiltration and high-PET drying periods.
         
         return analysis
     
-    def _generate_visualizations(self, workflow_data: Dict, output_dir: str) -> Dict[str, str]:
+    def _generate_visualizations(self, workflow_data: Dict, output_dir: str,
+                                 config: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
         """Generate visualization plots with dynamic colormap limits based on data."""
         import matplotlib
         import matplotlib.pyplot as plt
         import numpy as np
+
+        # Every figure below reads its colormap and colorbar orientation from
+        # this; without it each one failed on a NameError that the per-figure
+        # try/except turned into a log line, so the report had no figures.
+        style = figstyle.style_from_config(config)
 
         # Set Arial font for all plots
         matplotlib.rcParams['font.family'] = 'Arial'
@@ -794,7 +803,7 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                 if 'mesh' in inv and 'resistivity_model' in inv:
                     try:
                         import pygimli as pg
-                        fig = plt.figure(figsize=(8, 3))
+                        fig = figstyle.detached_figure((8, 3))
                         ax = fig.add_subplot(111)
                         
                         # Get coverage if available
@@ -816,7 +825,7 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                         self._log_execution(f"Resistivity colormap: {cMin_res:.1f} to {cMax_res:.1f} ohm-m")
                         
                         # Plot with coverage masking
-                        ax, cbar = pg.show(
+                        ax, cbar = figstyle.pg_show(
                             inv['mesh'],
                             inv['resistivity_model'],
                             ax=ax,
@@ -861,7 +870,7 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                 if 'mesh' in wc and 'water_content_mean' in wc:
                     try:
                         import pygimli as pg
-                        fig = plt.figure(figsize=(8, 3))
+                        fig = figstyle.detached_figure((8, 3))
                         ax = fig.add_subplot(111)
                         
                         wc_mean = wc['water_content_mean']
@@ -882,7 +891,7 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                         cMax_wc = min(1.0, cMax_wc) if cMax_wc > 0 else 0.5
                         self._log_execution(f"Water content colormap: {cMin_wc:.3f} to {cMax_wc:.3f}")
                         
-                        ax, cbar = pg.show(
+                        ax, cbar = figstyle.pg_show(
                             wc['mesh'],
                             wc_mean,
                             ax=ax,
@@ -914,7 +923,7 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                     if 'water_content_std' in wc:
                         try:
                             import pygimli as pg
-                            fig = plt.figure(figsize=(8, 3))
+                            fig = figstyle.detached_figure((8, 3))
                             ax = fig.add_subplot(111)
                             
                             wc_std = wc['water_content_std']
@@ -933,7 +942,7 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                             cMin_std = max(0.0, cMin_std)
                             self._log_execution(f"Uncertainty colormap: {cMin_std:.4f} to {cMax_std:.4f}")
                             
-                            ax, cbar = pg.show(
+                            ax, cbar = figstyle.pg_show(
                                 wc['mesh'],
                                 wc_std,
                                 ax=ax,
@@ -1025,129 +1034,6 @@ Generated by PyHydroGeophysX Multi-Agent System
 """
         
         return report
-    
-    def _save_pdf_report(self, markdown_report: str, output_dir: str, 
-                        visualization_files: Dict[str, str],
-                        filename: str = 'workflow_report') -> Optional[str]:
-        """Convert markdown report to PDF using matplotlib for better control."""
-        try:
-            import textwrap
-
-            import matplotlib.pyplot as plt
-            from matplotlib.backends.backend_pdf import PdfPages
-            from matplotlib.figure import Figure
-            
-            pdf_file = os.path.join(output_dir, f'{filename}.pdf')
-            
-            with PdfPages(pdf_file) as pdf:
-                # Initialize first page
-                fig = plt.figure(figsize=(8.5, 11))
-                y_position = 0.95
-                
-                # Process markdown content
-                lines = markdown_report.split('\n')
-                
-                for line in lines:
-                    # Skip image markdown references (we'll add them as separate pages)
-                    if line.strip().startswith('!['):
-                        continue
-                    
-                    # Check if we need a new page
-                    if y_position < 0.08:
-                        pdf.savefig(fig, bbox_inches='tight')
-                        plt.close(fig)
-                        fig = plt.figure(figsize=(8.5, 11))
-                        y_position = 0.95
-                    
-                    if line.startswith('# ') and not line.startswith('## '):
-                        # Main heading (single #)
-                        text = line.replace('# ', '').strip()
-                        if text:  # Only add if not empty
-                            fig.text(0.1, y_position, text, fontsize=16, fontweight='bold', 
-                                    fontfamily='Arial', wrap=True)
-                            y_position -= 0.035
-                    elif line.startswith('### '):
-                        # Subsection heading
-                        text = line.replace('### ', '').strip()
-                        if text:
-                            fig.text(0.1, y_position, text, fontsize=11, fontweight='bold',
-                                    fontfamily='Arial', color='#555555')
-                            y_position -= 0.022
-                    elif line.startswith('## '):
-                        # Section heading
-                        text = line.replace('## ', '').strip()
-                        if text:
-                            fig.text(0.1, y_position, text, fontsize=13, fontweight='bold',
-                                    fontfamily='Arial', color='#333333')
-                            y_position -= 0.028
-                    elif line.startswith('**') and line.endswith('**'):
-                        # Bold text (key-value pairs)
-                        text = line.replace('**', '').strip()
-                        if text:
-                            fig.text(0.1, y_position, text, fontsize=10, fontweight='bold',
-                                    fontfamily='Arial')
-                            y_position -= 0.018
-                    elif line.startswith('- '):
-                        # Bullet point
-                        text = line.replace('- ', '• ').strip()
-                        if text:
-                            wrapped = textwrap.fill(text, width=85, subsequent_indent='  ')
-                            for wrapped_line in wrapped.split('\n'):
-                                if y_position < 0.08:
-                                    pdf.savefig(fig, bbox_inches='tight')
-                                    plt.close(fig)
-                                    fig = plt.figure(figsize=(8.5, 11))
-                                    y_position = 0.95
-                                fig.text(0.12, y_position, wrapped_line, fontsize=9, 
-                                        fontfamily='Arial')
-                                y_position -= 0.016
-                    elif line.strip().startswith('---'):
-                        # Horizontal rule - add space
-                        y_position -= 0.02
-                    elif line.strip():
-                        # Regular text - wrap long lines
-                        wrapped = textwrap.fill(line, width=90)
-                        for wrapped_line in wrapped.split('\n'):
-                            if y_position < 0.08:
-                                pdf.savefig(fig, bbox_inches='tight')
-                                plt.close(fig)
-                                fig = plt.figure(figsize=(8.5, 11))
-                                y_position = 0.95
-                            fig.text(0.1, y_position, wrapped_line, fontsize=9, 
-                                    fontfamily='Arial')
-                            y_position -= 0.016
-                    else:
-                        # Empty line - small spacing
-                        y_position -= 0.012
-                
-                plt.axis('off')
-                pdf.savefig(fig, bbox_inches='tight')
-                plt.close(fig)
-                
-                # Add visualization pages
-                for vis_name, vis_path in visualization_files.items():
-                    if os.path.exists(vis_path):
-                        fig = plt.figure(figsize=(8.5, 11))
-                        
-                        # Add title for visualization
-                        title = vis_name.replace('_', ' ').title()
-                        fig.text(0.5, 0.96, title, ha='center', fontsize=13, 
-                                fontweight='bold', fontfamily='Arial')
-                        
-                        # Load and display image
-                        img = plt.imread(vis_path)
-                        ax = fig.add_axes([0.1, 0.1, 0.8, 0.82])
-                        ax.imshow(img)
-                        ax.axis('off')
-                        
-                        pdf.savefig(fig, bbox_inches='tight')
-                        plt.close(fig)
-            
-            return pdf_file
-            
-        except Exception as e:
-            self._log_execution(f"Could not generate PDF: {e}", level='WARNING')
-            return None
     
     def generate_timelapse_report(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -1983,7 +1869,7 @@ Correlation between mean resistivity changes and climate variables:
                     ax_baseline = _axes[0]
                     
                     # Plot with baseline-masked coverage - PyGIMLi will handle the masking internally
-                    ax_baseline, cbar = pg.show(
+                    ax_baseline, cbar = figstyle.pg_show(
                         mesh,
                         baseline,
                         ax=ax_baseline,
@@ -1999,7 +1885,7 @@ Correlation between mean resistivity changes and climate variables:
                     )
                     figstyle.apply(ax_baseline, style,
                                    figstyle.survey_title(0, survey_dates))
-                    plt.tight_layout()
+                    fig_baseline.tight_layout()
                     baseline_file = os.path.join(output_dir, 'baseline_resistivity.png')
                     figstyle.save(fig_baseline, baseline_file, style)
                     vis_files['baseline_resistivity'] = baseline_file
@@ -2064,7 +1950,7 @@ Correlation between mean resistivity changes and climate variables:
                         timestep_data = final_models[:, i][cell_markers] if len(final_models) > len(cell_markers) else final_models[:, i]
                         
                         # Plot with baseline-masked coverage
-                        ax, cbar = pg.show(
+                        ax, cbar = figstyle.pg_show(
                             mesh,
                             timestep_data,
                             ax=ax,
@@ -2083,7 +1969,7 @@ Correlation between mean resistivity changes and climate variables:
                                        figstyle.survey_title(i, survey_dates),
                                        ylabel='Elevation (m)' if i == 0 else '')
                     
-                    plt.tight_layout()
+                    fig.tight_layout()
                     all_timesteps_file = os.path.join(output_dir, 'timelapse_all_resistivity.png')
                     figstyle.save(fig, all_timesteps_file, style)
                     vis_files['timelapse_all_resistivity'] = all_timesteps_file
@@ -2138,7 +2024,7 @@ Correlation between mean resistivity changes and climate variables:
                     
                     # Plot 1: Baseline resistivity
                     ax = axes[0]
-                    ax, cbar = pg.show(
+                    ax, cbar = figstyle.pg_show(
                         mesh,
                         baseline,
                         ax=ax,
@@ -2171,7 +2057,7 @@ Correlation between mean resistivity changes and climate variables:
                                                 baseline[mask] * 100.0)
                         
                         # Plot with baseline-masked coverage - PyGIMLi will handle the masking internally
-                        ax, cbar = pg.show(
+                        ax, cbar = figstyle.pg_show(
                             mesh,
                             percent_change,
                             ax=ax,
@@ -2189,7 +2075,7 @@ Correlation between mean resistivity changes and climate variables:
                                        figstyle.change_title(i, survey_dates),
                                        ylabel='')
                     
-                    plt.tight_layout()
+                    fig.tight_layout()
                     tl_changes_file = os.path.join(output_dir, 'timelapse_resistivity_changes_percent.png')
                     figstyle.save(fig, tl_changes_file, style)
                     vis_files['timelapse_changes_percent'] = tl_changes_file
@@ -2243,7 +2129,7 @@ Correlation between mean resistivity changes and climate variables:
                     
                     # Plot 1: Baseline resistivity
                     ax = axes[0]
-                    ax, cbar = pg.show(
+                    ax, cbar = figstyle.pg_show(
                         mesh,
                         baseline,
                         ax=ax,
@@ -2270,7 +2156,7 @@ Correlation between mean resistivity changes and climate variables:
                         change = timestep_data - baseline
                         
                         # Plot with baseline-masked coverage - PyGIMLi will handle the masking internally
-                        ax, cbar = pg.show(
+                        ax, cbar = figstyle.pg_show(
                             mesh,
                             change,
                             ax=ax,
@@ -2288,7 +2174,7 @@ Correlation between mean resistivity changes and climate variables:
                                        figstyle.change_title(i, survey_dates),
                                        ylabel='')
                     
-                    plt.tight_layout()
+                    fig.tight_layout()
                     tl_changes_abs_file = os.path.join(output_dir, 'timelapse_resistivity_changes_absolute.png')
                     figstyle.save(fig, tl_changes_abs_file, style)
                     vis_files['timelapse_changes_absolute'] = tl_changes_abs_file
@@ -2439,7 +2325,7 @@ Correlation between mean resistivity changes and climate variables:
                         ax_bottom.legend(loc='best', fontsize=style.tick_size, framealpha=0.9, 
                                        edgecolor='gray', fancybox=True, ncol=2)
                     
-                    plt.tight_layout()
+                    fig.tight_layout()
                     climate_corr_file = os.path.join(output_dir, 'climate_data_visualization.png')
                     figstyle.save(fig, climate_corr_file, style)
                     vis_files['climate_correlation'] = climate_corr_file
@@ -2505,14 +2391,14 @@ Correlation between mean resistivity changes and climate variables:
             for i, values in enumerate(steps):
                 data = (values[cell_markers]
                         if len(values) > len(cell_markers) else values)
-                pg.show(mesh, data, ax=axes[i], fig=fig, cMap=style.cmap_for('water_content'),
+                figstyle.pg_show(mesh, data, ax=axes[i], fig=fig, cMap=style.cmap_for('water_content'),
                         cMin=lo, cMax=hi, logScale=False,
                         label='Water content (-)', pad=0.3,
                         orientation=style.colorbar_orientation)
                 figstyle.apply(axes[i], style,
                                figstyle.survey_title(i, dates),
                                ylabel='Elevation (m)' if i == 0 else '')
-            plt.tight_layout()
+            fig.tight_layout()
             wc_file = os.path.join(output_dir, 'timelapse_water_content.png')
             figstyle.save(fig, wc_file, style)
             vis_files['timelapse_water_content'] = wc_file
@@ -2938,10 +2824,11 @@ that effectively combines temporal ERT analysis with meteorological context."""
                 coverage = structure_results['coverage']
                 coverage_numeric = np.array(coverage, dtype=float)
                 
-                fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 12))
+                fig = figstyle.detached_figure((12, 12))
+                ax1, ax2, ax3 = fig.subplots(3, 1)
                 
                 # Top: Velocity with coverage
-                pg.show(velocity_mesh, velocity_model, ax=ax1, cMap='jet',
+                figstyle.pg_show(velocity_mesh, velocity_model, ax=ax1, cMap='jet',
                        colorBar=True, label='Velocity (m/s)',
                        coverage=seismic_coverage, cMin=500, cMax=3600)
                 ax1.set_title('Seismic Velocity Model ',
@@ -2949,7 +2836,7 @@ that effectively combines temporal ERT analysis with meteorological context."""
                 ax1.set_xlabel('Distance (m)')
                 ax1.set_ylabel('Depth (m)' )                 
                 # Middle: Velocity with interface
-                pg.show(velocity_mesh, velocity_model, ax=ax2, cMap='jet',
+                figstyle.pg_show(velocity_mesh, velocity_model, ax=ax2, cMap='jet',
                        colorBar=True, label='Velocity (m/s)', cMin=500, cMax=3600,
                        coverage=seismic_coverage)
                 ax2.plot(interface_x, interface_z, 'r-', linewidth=2,
@@ -2960,7 +2847,7 @@ that effectively combines temporal ERT analysis with meteorological context."""
                 ax2.set_xlabel('Distance (m)')
                 ax2.set_ylabel('Depth (m)' )               
                 # Bottom: Structure-constrained resistivity
-                pg.show(para_mesh, resistivity_model, ax=ax3, cMap='jet',
+                figstyle.pg_show(para_mesh, resistivity_model, ax=ax3, cMap='jet',
                        colorBar=True, label='Resistivity (Ωm)',
                        coverage=coverage_numeric>coverage_threshold,
                        logScale=True, cMin=10, cMax=2000)
@@ -2969,7 +2856,7 @@ that effectively combines temporal ERT analysis with meteorological context."""
                 ax3.set_xlabel('Distance (m)')
                 ax3.set_ylabel('Depth (m)')
                 
-                plt.tight_layout()
+                fig.tight_layout()
                 workflow_file = os.path.join(output_dir, 'complete_workflow.png')
                 fig.savefig(workflow_file, dpi=300, bbox_inches='tight')
                 plt.close(fig)
@@ -3005,10 +2892,11 @@ that effectively combines temporal ERT analysis with meteorological context."""
                         wc_mean_flat = wc_mean_flat[:mesh_cells]
                         wc_std_flat = wc_std_flat[:mesh_cells]
                 
-                fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+                fig = figstyle.detached_figure((14, 5))
+                ax1, ax2 = fig.subplots(1, 2)
                 
                 # Left: Mean water content
-                pg.show(para_mesh, wc_mean_flat, ax=ax1,
+                figstyle.pg_show(para_mesh, wc_mean_flat, ax=ax1,
                        cMap='Blues', colorBar=True, label='Water Content (-)',
                        coverage=coverage_numeric>coverage_threshold,
                        cMin=0, cMax=0.5, logScale=False)
@@ -3018,7 +2906,7 @@ that effectively combines temporal ERT analysis with meteorological context."""
                 ax1.set_ylabel('Depth (m)')
                 
                 # Right: Uncertainty
-                pg.show(para_mesh, wc_std_flat, ax=ax2,
+                figstyle.pg_show(para_mesh, wc_std_flat, ax=ax2,
                        cMap='Reds', colorBar=True, label='Uncertainty (std)',
                        coverage=coverage_numeric>coverage_threshold,
                        cMin=0, cMax=0.1, logScale=False)
@@ -3027,7 +2915,7 @@ that effectively combines temporal ERT analysis with meteorological context."""
                 ax2.set_xlabel('Distance (m)')
                 ax2.set_ylabel('Depth (m)')
                 
-                plt.tight_layout()
+                fig.tight_layout()
                 wc_file = os.path.join(output_dir, 'water_content_uncertainty.png')
                 fig.savefig(wc_file, dpi=300, bbox_inches='tight')
                 plt.close(fig)

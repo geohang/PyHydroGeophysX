@@ -162,8 +162,12 @@ def hydro_to_ert(
                     profile_interpolator.L_profile, 
                     profile_interpolator.surface_profile)
     
-    mesh.setCellMarkers(np.ones(mesh.cellCount())*2)
-    grid = pg.meshtools.appendTriangleBoundary(mesh, marker=1,
+    # Relabel a copy as the single parameter region. Relabelling the caller's
+    # mesh wiped its layer markers, so the model_mesh.bms run_hydro_forward
+    # saves afterwards, and any later use of the mesh, had no layers left.
+    forward_mesh = pg.Mesh(mesh)
+    forward_mesh.setCellMarkers(np.ones(forward_mesh.cellCount())*2)
+    grid = pg.meshtools.appendTriangleBoundary(forward_mesh, marker=1,
                                             xbound=100, ybound=100)
     
     pos = np.hstack((xpos.reshape(-1,1),ypos.reshape(-1,1)))

@@ -37,10 +37,13 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX.qt_apps.artifact_renderers import select_renderer
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
+from PyHydroGeophysX.qt_apps.qt_utils import ContentWidthScrollArea
 from PyHydroGeophysX.qt_apps.results_store import ResultsStore, RunRecord
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets.array_viewer import ArrayViewer
 from PyHydroGeophysX.qt_apps.widgets.curve_viewer import CurveViewer
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
+from PyHydroGeophysX.qt_apps.widgets import temperature_panel
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
 from PyHydroGeophysX.qt_apps.workers import TaskWorker
 
@@ -246,7 +249,7 @@ class ModelViewerModule(BaseModule):
         self._current_artifacts: List[Dict[str, Any]] = []
         self._series = None        # the time-lapse view currently on screen
         self._series_source = None # its models as inverted, before any correction
-        self._correction_note = None
+        self._temperature_panel = None  # the correction panel beside it
         self._size_cache: Dict[str, int] = {}
         self._visual_resources: List[Any] = []
         self._quality_ok = False
@@ -365,6 +368,10 @@ class ModelViewerModule(BaseModule):
         splitter.setStretchFactor(1, 3)
         root.addWidget(splitter, stretch=1)
         self.use_current_store()
+
+    def _colormaps(self) -> Optional[Dict[str, str]]:
+        """The session's colormap choices, which every page's views share."""
+        return cmaps.colormap_settings(self.state)
 
     def _build_quality_view(self) -> QWidget:
         """Build the convergence chart, or a stand-in if it cannot be created.
@@ -906,7 +913,7 @@ class ModelViewerModule(BaseModule):
                 self._replace_visual(view)
             elif renderer == "vtk":
                 from PyHydroGeophysX.qt_apps.widgets.model3d_view import VTKVolumeView
-                view = VTKVolumeView(); view.show_file(path)
+                view = VTKVolumeView(colormaps=self._colormaps()); view.show_file(path)
                 self._replace_visual(view)
             elif renderer == "mesh":
                 self._render_mesh_file(path)
@@ -933,7 +940,7 @@ class ModelViewerModule(BaseModule):
         # a new artifact cannot be mapped, or corrected, as the previous one.
         self._series = None
         self._series_source = None
-        self._correction_note = None
+        self._temperature_panel = None
         self._clear_visual()
         self._visual_resources.extend(resources or [])
         self._visual_layout.addWidget(widget)
@@ -991,7 +998,7 @@ class ModelViewerModule(BaseModule):
                 self._replace_visual(view); return
             if array.ndim == 2:
                 values = np.array(array, copy=True)
-                view = ArrayViewer(); view.set_array(
+                view = ArrayViewer(colormaps=self._colormaps()); view.set_array(
                     values,
                     log=log_scale,
                     value_label=value_label,
@@ -1003,7 +1010,7 @@ class ModelViewerModule(BaseModule):
                 controls = QHBoxLayout(); step = QSpinBox()
                 step.setRange(0, array.shape[0] - 1)
                 controls.addWidget(QLabel("Step / slice:")); controls.addWidget(step); controls.addStretch(1)
-                view = ArrayViewer()
+                view = ArrayViewer(colormaps=self._colormaps())
                 sample = np.asarray(array).ravel()[::max(1, array.size // 250_000)]
                 if log_scale:
                     with np.errstate(divide="ignore", invalid="ignore"):
@@ -1072,7 +1079,7 @@ class ModelViewerModule(BaseModule):
 
         mesh = pg.load(str(path))
         markers = np.asarray(mesh.cellMarkers(), dtype=float)
-        view = MeshResultView()
+        view = MeshResultView(colormaps=self._colormaps())
         view.show_field(
             mesh, markers,
             title=f"{path.name} — {mesh.cellCount()} cells, region markers",
@@ -1095,11 +1102,13 @@ class ModelViewerModule(BaseModule):
         return []
 
     def _with_map_export(self, view: QWidget) -> QWidget:
-        """Put the section view above the actions that apply to it.
+        """Put the section view beside the actions that apply to it.
 
         A saved result is exactly the thing that should be corrected, compared and
         mapped without being inverted again: this is where someone opens a result a
-        colleague handed over.
+        colleague handed over. The temperature correction is the panel the ERT page
+        has, used the same way - set it, press Apply - next to the section it
+        changes; the splitter lets it be dragged narrower or out of the way.
         """
         host = QWidget()
         layout = QVBoxLayout(host)
@@ -1107,19 +1116,16 @@ class ModelViewerModule(BaseModule):
         layout.addWidget(view, stretch=1)
         # Carried on the host rather than assigned here: the caller swaps the page
         # in afterwards, and that swap clears the page-level handles.
-        note = QLabel("")
-        note.setWordWrap(True)
-        host.correction_note = note
-        layout.addWidget(note)
+        panel = temperature_panel.TemperatureOptions(
+            shared=getattr(self.state, "temperature_settings", None))
+        host.temperature_panel = panel
+        # Right of the section and under its toolbar, where the ERT page puts it
+        # too. As wide as the panel needs, measured rather than guessed: with the
+        # horizontal bar off, anything narrower cuts off Remove.
+        side = ContentWidthScrollArea()
+        side.setWidget(panel)
+        view.mesh_view.add_side_panel(side)
         row = QHBoxLayout()
-        temperature = QPushButton("Temperature correction…")
-        temperature.setToolTip(
-            "Report this result at one reference temperature. Resistivity moves "
-            "about 2 % per °C, so across a season the temperature signal is the "
-            "same size as the moisture signal - and the correction can be applied "
-            "here, to a result that has already been inverted.")
-        temperature.clicked.connect(self._open_temperature_dialog)
-        row.addWidget(temperature)
         row.addStretch(1)
         row.addWidget(self.map_export_button())
         layout.addLayout(row)
@@ -1127,105 +1133,84 @@ class ModelViewerModule(BaseModule):
 
     def _series_survey_times(self, n_steps: int):
         """``(days, dates)`` for the loaded series, from what the run recorded."""
-        from PyHydroGeophysX.data_processing.survey_timing import parse_timestamp
-
         summary = (self._current.summary if self._current is not None else {}) or {}
-        days = summary.get("measurement_times")
-        days = ([float(value) for value in days]
-                if isinstance(days, list) and len(days) == n_steps else None)
-        stamps = ((summary.get("survey_timing") or {}).get("timestamps")
-                  if isinstance(summary.get("survey_timing"), dict) else None)
-        dates = None
-        if isinstance(stamps, list) and len(stamps) == n_steps and all(stamps):
-            dates = []
-            for value in stamps:
-                try:
-                    dates.append(datetime.fromisoformat(str(value)))
-                except ValueError:
-                    dates = None
-                    break
-        if dates is None:
-            # A run saved before the timing was recorded still has its labels, and
-            # those are the dates the panels were headed with.
-            labels = summary.get("time_labels") or summary.get("step_titles")
-            if isinstance(labels, list) and len(labels) == n_steps:
-                parsed = [parse_timestamp(str(label)) for label in labels]
-                if all(item is not None for item in parsed):
-                    dates = [item[0] for item in parsed]
-        return days, dates
-
-    def _open_temperature_dialog(self) -> None:
-        """Correct the displayed series to a reference temperature, in place."""
-        from PySide6.QtWidgets import QDialog, QDialogButtonBox
-        from PyHydroGeophysX.qt_apps.widgets.temperature_panel import TemperatureOptions
-
-        source = getattr(self, "_series_source", None)
-        if self._series is None or not source:
-            QMessageBox.information(
-                self, "Temperature correction",
-                "Open a saved model result in the Visualization tab first.")
-            return
-        models = source["models"]
-        n_steps = 1 if models.ndim == 1 else models.shape[1]
-        _, dates = self._series_survey_times(n_steps)
-
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Temperature correction")
-        layout = QVBoxLayout(dialog)
-        panel = TemperatureOptions(dialog)
-        panel.set_context(n_steps, dates is not None)
-        panel.setChecked(bool(source.get("correction")))
-        layout.addWidget(panel)
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(dialog.accept)
-        buttons.rejected.connect(dialog.reject)
-        layout.addWidget(buttons)
-        if dialog.exec() != QDialog.Accepted:
-            return
-
-        spec, problem = panel.spec()
-        if problem:
-            QMessageBox.warning(self, "Temperature correction", problem)
-            return
-        ok, message = self.apply_temperature_spec(spec)
-        if not ok:
-            QMessageBox.warning(self, "Temperature correction", message)
+        return temperature_panel.series_survey_times(summary, n_steps)
 
     def apply_temperature_spec(self, spec: Optional[Dict[str, Any]]) -> tuple:
         """Correct the displayed series, or put the inverted models back.
 
-        Split out of the dialog so the correction can be applied without one -
-        by a test, or by a caller that already knows what it wants.
+        What the panel's Apply and Remove call, and callable without them - by
+        a test, or by a caller that already knows what it wants. The correction is
+        the same code the ERT page uses, so a run reads the same on both pages.
 
         Returns ``(ok, message)``.
         """
         source = getattr(self, "_series_source", None)
+        panel = getattr(self, "_temperature_panel", None)
         if self._series is None or not source:
             return False, "Open a saved model result in the Visualization tab first."
         models = source["models"]
-        n_steps = 1 if models.ndim == 1 else models.shape[1]
+        if models is None:
+            return False, ("This run corrected its own sections and its uncorrected "
+                           "models are missing, so they cannot be corrected again.")
         if spec is None:
-            # Unticked: put the raw inverted models back rather than leaving a
-            # corrected section on screen with nothing saying so.
+            # Put the raw inverted models back rather than leaving a corrected
+            # section on screen with nothing saying so.
             self._apply_series(models, None)
             self.log("Temperature correction removed; showing the inverted models.",
                      "info")
             return True, ""
-        days, dates = self._series_survey_times(n_steps)
+        days, dates = self._series_survey_times(
+            self._n_series_steps(source["mesh"], models))
         try:
-            from PyHydroGeophysX.core import section_geometry
-            from PyHydroGeophysX.petrophysics import temperature as temperature_model
-
-            depths = section_geometry.cell_depths(source["mesh"])
-            stack = models.reshape(-1, 1) if models.ndim == 1 else models
-            corrected, report = temperature_model.correct_time_lapse_models(
-                stack, spec, depths, days=days, dates=dates)
+            corrected, report = temperature_panel.correct_series(
+                source["mesh"], models, spec, days=days, dates=dates)
         except Exception as exc:  # noqa: BLE001 - report it, never lose the result
             self.log(f"Temperature correction not applied: {exc}", "warn")
+            if panel is not None:
+                panel.show_problem(f"Not applied: {exc}")
             return False, str(exc)
-        self._apply_series(corrected if models.ndim > 1 else corrected[:, 0], report)
+        self._apply_series(corrected, report)
         self.log(f"Temperature correction: {report['note']}", "success")
         return True, report["note"]
+
+    @staticmethod
+    def _n_series_steps(mesh: Any, models: Any) -> int:
+        """How many surveys a series holds, whichever way round it is stored."""
+        models = np.asarray(models)
+        if models.ndim == 1:
+            return 1
+        n_cells = int(mesh.cellCount())
+        return int(models.shape[1] if models.shape[0] == n_cells else models.shape[0])
+
+    def _connect_temperature_panel(self, shown: Any,
+                                   made: Optional[Dict[str, Any]]) -> None:
+        """Hook the panel beside a freshly opened series up to that series.
+
+        ``shown`` is what the series view was given - the run's saved models -
+        and ``made`` the correction the run applied to them itself, if it did.
+        """
+        panel = self._temperature_panel
+        source = self._series_source
+        if panel is None or not source:
+            return
+        n_steps = self._n_series_steps(source["mesh"], shown)
+        days, dates = self._series_survey_times(n_steps)
+        panel.set_context(n_steps, dates is not None, days=days, dates=dates)
+        panel.applyRequested.connect(self.apply_temperature_spec)
+        panel.removeRequested.connect(lambda: self.apply_temperature_spec(None))
+        panel.set_available(True)
+        if made is None:
+            panel.show_applied(None)
+            return
+        # Corrected by the run itself: the section and the panel both say so.
+        self._apply_series(shown, made)
+        if source["models"] is None:
+            panel.set_available(False, (
+                f"This run corrected its own sections "
+                f"({str(made.get('note', '')).replace('degC', '°C')}) and its "
+                f"uncorrected models are missing, so the correction cannot be "
+                f"changed here."))
 
     def _apply_series(self, models: Any, report: Optional[Dict[str, Any]]) -> None:
         """Redraw the series and say, on the page, what it is now showing."""
@@ -1233,14 +1218,12 @@ class ModelViewerModule(BaseModule):
         if self._series is None or not source:
             return
         source["correction"] = report
-        self._series.set_series(source["mesh"], models,
-                                coverage=source.get("coverage"),
-                                titles=source.get("titles"))
-        note = getattr(self, "_correction_note", None)
-        if note is not None:
-            note.setText(
-                f"Reported at {report['reference_temperature_C']:g} °C — "
-                f"{report['note']}" if report else "")
+        # The step and display mode stay where the user had them: a correction
+        # changes the values, not which survey is being looked at.
+        self._series.update_models(models, temperature_panel.title_suffix(report))
+        panel = getattr(self, "_temperature_panel", None)
+        if panel is not None:
+            panel.show_applied(report)
 
     def map_snapshot(self):
         """What "Add to Map" takes from this page: exactly what is on screen.
@@ -1291,19 +1274,28 @@ class ModelViewerModule(BaseModule):
             from PyHydroGeophysX.qt_apps.widgets.series_view import TimeLapseSeriesView
 
             titles = self._step_titles(model, mesh)
-            view = TimeLapseSeriesView()
+            # The studio state's colormap choices, shared with the ERT page: a
+            # section reopened here is drawn in the colours chosen there.
+            view = TimeLapseSeriesView(colormaps=self._colormaps())
             view.set_series(mesh, model, coverage=coverage, titles=titles)
             host = self._with_map_export(view)
             # After the swap, not before: _replace_visual drops the previous
             # page's handles so a stale one cannot be mapped or corrected.
             self._replace_visual(host)
             self._series = view
-            self._correction_note = host.correction_note
+            self._temperature_panel = host.temperature_panel
             # Keep the models as inverted, so a temperature correction can be
-            # applied, changed and taken off again without reloading the run.
-            self._series_source = {"mesh": mesh, "models": model,
+            # applied, changed and taken off again without reloading the run. A
+            # run made while the correction was chosen before the inversion
+            # corrected its own series; that one starts from its raw models, or
+            # the temperature would be taken out twice.
+            inverted, made = temperature_panel.run_correction(
+                self._current.summary, model,
+                lambda path: self._store.locate_run_artifact(self._current, path))
+            self._series_source = {"mesh": mesh, "models": inverted,
                                    "coverage": coverage, "titles": titles,
                                    "correction": None}
+            self._connect_temperature_panel(model, made)
         except Exception as exc:
             self._clear_visual(f"Mesh viewer is unavailable or the bundle is incomplete:\n{exc}")
 

@@ -53,6 +53,65 @@ def _active_console_python() -> Path:
     return executable
 
 
+def _suspend_process_tree(pid: int, suspended: bool) -> None:
+    """Freeze or thaw a process and every process it started.
+
+    The operating system stops the process where it stands - inside a native
+    forward solve as much as in Python - and continues it from the same
+    instruction, so nothing is recomputed or lost. A workflow can start workers
+    of its own (joblib, multiprocessing), and pausing only the parent would
+    leave those computing; psutil reaches the whole tree. Without psutil only
+    the workflow process itself is paused, through the call psutil would make.
+    """
+    try:
+        import psutil
+    except ImportError:
+        psutil = None
+    if psutil is not None:
+        try:
+            root = psutil.Process(int(pid))
+            if suspended:
+                # The parent first, so it cannot start another child meanwhile.
+                root.suspend()
+                tree = root.children(recursive=True)
+            else:
+                tree = root.children(recursive=True)
+        except psutil.Error as exc:
+            raise OSError(f"Could not reach the workflow process {pid}: {exc}") from exc
+        for child in tree:
+            try:
+                child.suspend() if suspended else child.resume()
+            except psutil.NoSuchProcess:
+                continue
+        if not suspended:
+            try:
+                root.resume()
+            except psutil.NoSuchProcess:
+                pass
+        return
+    if sys.platform == "win32":
+        import ctypes
+
+        process_suspend_resume = 0x0800
+        handle = ctypes.windll.kernel32.OpenProcess(process_suspend_resume, False, int(pid))
+        if not handle:
+            raise OSError(f"Could not open the workflow process {pid} to pause it.")
+        try:
+            call = (ctypes.windll.ntdll.NtSuspendProcess if suspended
+                    else ctypes.windll.ntdll.NtResumeProcess)
+            status = call(handle)
+        finally:
+            ctypes.windll.kernel32.CloseHandle(handle)
+        if status:
+            raise OSError(f"The workflow process {pid} could not be "
+                          f"{'paused' if suspended else 'resumed'} (0x{status & 0xFFFFFFFF:08X}).")
+        return
+    import os
+    import signal
+
+    os.kill(int(pid), signal.SIGSTOP if suspended else signal.SIGCONT)
+
+
 class TaskWorker(QThread):
     """Run ``fn(*args, **kwargs)`` off the UI thread.
 
@@ -350,7 +409,9 @@ class ProcessWorkflowWorker(QObject):
     Some long-running extension calls do not release that GIL often enough, so
     the window stops painting even though the workflow is nominally off-thread.
     ``QProcess`` gives the workflow its own interpreter and makes cancellation
-    enforceable without terminating the studio.
+    enforceable without terminating the studio. It also makes a pause possible:
+    :meth:`pause` freezes the process where it stands and :meth:`resume`
+    continues it from there.
     """
 
     succeeded = Signal(object)
@@ -358,6 +419,9 @@ class ProcessWorkflowWorker(QObject):
     logged = Signal(str)
     progressed = Signal(int, int, str)
     finished = Signal()
+    #: True when the workflow process was paused, False when it runs again -
+    #: including when it ends while paused.
+    pausedChanged = Signal(bool)
 
     def __init__(
         self,
@@ -374,11 +438,16 @@ class ProcessWorkflowWorker(QObject):
         self.result_path = Path(result_path).resolve()
         self._cancelled = False
         self._finished = False
+        self._paused = False
         self._output_decoders = {
             stream: codecs.getincrementaldecoder("utf-8")(errors="replace")
             for stream in ("stdout", "stderr")
         }
         self._output_pending = {"stdout": "", "stderr": ""}
+        #: The child's last exception line, e.g. "ValueError: 'x.dat' could not
+        #: be read as DAS-1: ...". A failed run reported only its exit code, and
+        #: the reason was left somewhere in the log above.
+        self._last_exception = ""
 
         self.process = QProcess(self)
         self.process.setWorkingDirectory(str(self.project_root))
@@ -427,8 +496,54 @@ class ProcessWorkflowWorker(QObject):
     def cancel(self) -> None:
         self._cancelled = True
         if self.isRunning():
+            # A stopped POSIX process does not act on SIGTERM until it is
+            # continued, so a paused run is thawed before it is asked to end.
+            self._set_paused(False)
             self.process.terminate()
             QTimer.singleShot(2000, self._kill_if_running)
+
+    def pause(self) -> bool:
+        """Freeze the running workflow where it stands; :meth:`resume` continues it.
+
+        Returns whether the run is now paused. A run that has not started, has
+        ended or is being cancelled is left as it is.
+        """
+        if self._cancelled or self._finished or not self.isRunning():
+            return False
+        return self._set_paused(True)
+
+    def resume(self) -> bool:
+        """Continue a paused workflow from the point it was frozen at.
+
+        Returns whether the run is now running.
+        """
+        if not self._paused:
+            return self.isRunning()
+        return not self._set_paused(False)
+
+    def is_paused(self) -> bool:
+        return self._paused
+
+    def _set_paused(self, paused: bool) -> bool:
+        """Suspend or resume the child process tree; returns the paused state.
+
+        Windows counts suspensions, so the flag keeps a second pause from
+        needing a second resume.
+        """
+        if paused == self._paused:
+            return self._paused
+        pid = int(self.process.processId()) if self.isRunning() else 0
+        if pid > 0:
+            try:
+                _suspend_process_tree(pid, paused)
+            except OSError as exc:
+                self.logged.emit(f"Could not {'pause' if paused else 'resume'} the run: {exc}")
+                return self._paused
+        elif paused:
+            return False
+        self._paused = paused
+        self.pausedChanged.emit(paused)
+        return paused
 
     def quit(self) -> None:
         """QThread-compatible shutdown hook used by ``BaseModule``."""
@@ -468,6 +583,9 @@ class ProcessWorkflowWorker(QObject):
                 if total > 0 and 0 <= current <= total:
                     self.progressed.emit(current, total, label)
                 rendered = label or rendered
+            if stream == "stderr" and re.match(
+                    r"^\w+(\.\w+)*(Error|Exception|Unavailable)(: |$)", rendered.strip()):
+                self._last_exception = rendered.strip()
             self.logged.emit(rendered)
 
     def _read_stdout(self) -> None:
@@ -493,6 +611,11 @@ class ProcessWorkflowWorker(QObject):
     def _on_finished(
         self, exit_code: int, _exit_status: QProcess.ExitStatus
     ) -> None:
+        if self._paused:
+            # Ended while frozen (killed, or the studio closed): nothing is
+            # paused any more, and a page showing "Resume" must hear it.
+            self._paused = False
+            self.pausedChanged.emit(False)
         if self._finished:
             return
         self._read_stdout()
@@ -505,9 +628,10 @@ class ProcessWorkflowWorker(QObject):
             return
         if int(exit_code) != 0 or _exit_status == QProcess.ExitStatus.CrashExit:
             unsigned = int(exit_code) & 0xFFFFFFFF
+            reason = f" {self._last_exception}" if self._last_exception else ""
             self._finish_with_error(
                 f"Workflow process exited with code {int(exit_code)} "
-                f"(0x{unsigned:08X})."
+                f"(0x{unsigned:08X}).{reason}"
             )
             return
         try:

@@ -107,6 +107,21 @@ def standard_to_pg(std):
         resistance = vals / np.where(np.abs(k) > 1e-12, k, np.nan)
     data.set("r", np.nan_to_num(resistance, nan=0.0, posinf=0.0, neginf=0.0))
     data.set("rhoa", rhoa)
+    # The potential and current, where the reader gave them for every reading and
+    # said they are in volts and amperes - PyGIMLi's units for these tokens. Other
+    # routes fill the same fields in their reader's own units (ResIPy's current
+    # is not in amperes), and those are left out rather than mislabelled.
+    if (std.metadata or {}).get("potential_current_units") == "V, A":
+        for token, attribute in (("u", "dV"), ("i", "I")):
+            values = [getattr(o, attribute, None) for o in valid]
+            if all(value is not None for value in values):
+                data.set(token, np.asarray(values, dtype=float))
+    # Transmitter contact resistance in ohm, under a token of its own (PyGIMLi has
+    # none for it). All or nothing: a reading with no value would otherwise fail
+    # a contact-resistance check it never took.
+    contacts = [getattr(o, "contact_r", None) for o in valid]
+    if contacts and all(value is not None for value in contacts):
+        data.set("rc", np.asarray(contacts, dtype=float))
 
     # Keep the instrument's own geometric factors under a separate token when the
     # file reported apparent resistivity, because then rhoa was formed with *those*
@@ -132,6 +147,13 @@ def standard_to_pg(std):
 _AUTO_NAMES = ("", "auto", "none", "auto-detect", "auto-detect (pygimli)")
 #: Count-prefixed / device formats tried when native pygimli load comes back empty.
 _RECOVERY_INSTRUMENTS = ("E4D", "BERT", "Syscal")
+#: Picks whose reader, having refused a file, may still be answered by pygimli's
+#: own loader: it reads the unified format (BERT, and E4D or ARES files written
+#: in it), Res2DInv, and ASCII column tables such as Terrameter LS exports.
+_NATIVE_RETRY = ("BERT", "E4D", "ARES", "ResInv", "ABEM-Lund", "Custom")
+#: Picks for which the recovery sweep's count-prefixed readers are the same
+#: family of layouts rather than a guess.
+_SWEEP_RETRY = ("BERT", "E4D", "ARES", "Custom")
 
 
 def _usable(data) -> bool:
@@ -162,7 +184,8 @@ def _ensure_rhoa(data, log: LogFn = _noop) -> None:
 
 
 def _via_instrument(path: str, instrument: str, electrode_file: Optional[str],
-                    spacing: Optional[float], log: LogFn):
+                    spacing: Optional[float], log: LogFn,
+                    failures: Optional[List[Exception]] = None):
     try:
         from PyHydroGeophysX.data_processing.ert_data_agent import load_ert_resipy
     except Exception as exc:  # noqa: BLE001
@@ -175,7 +198,17 @@ def _via_instrument(path: str, instrument: str, electrode_file: Optional[str],
             return standard_to_pg(std)
     except Exception as exc:  # noqa: BLE001
         log(f"Instrument '{instrument}' loader error: {exc}")
+        if failures is not None:
+            failures.append(exc)
         return None
+
+
+def _canonical_instrument(instrument: str) -> str:
+    try:
+        from PyHydroGeophysX.data_processing.ert_data_agent import _normalize_instrument_name
+        return _normalize_instrument_name(instrument)
+    except Exception:  # noqa: BLE001
+        return instrument
 
 
 def _via_native(path: str, log: LogFn):
@@ -200,35 +233,55 @@ def load_ert_container(path: str, instrument: Optional[str] = None,
     explicit instrument retries native pygimli; a still-empty result triggers a
     short sweep of count-prefixed device formats so an E4D-style file never
     loads empty. Raises ``ValueError`` if nothing parses.
+
+    When the explicit instrument's reader refused the file outright, the retries
+    run only where they read the same family of layouts (``_NATIVE_RETRY``,
+    ``_SWEEP_RETRY``); otherwise that reader's error is raised. Picked as DAS-1,
+    a DAS-1 file missing its data marker used to be "auto-recovered" by the
+    sweep as one reading on one electrode.
     """
     path = str(path)
     inst = str(instrument).strip() if instrument else ""
     is_auto = inst.lower() in _AUTO_NAMES
+    failures: List[Exception] = []
+    retry_native = retry_sweep = True
 
     # 1. explicit instrument
     if not is_auto:
-        data = _via_instrument(path, inst, electrode_file, spacing, log)
+        data = _via_instrument(path, inst, electrode_file, spacing, log, failures)
         if _usable(data):
             return data
+        if failures:
+            picked = _canonical_instrument(inst)
+            retry_native = picked in _NATIVE_RETRY
+            retry_sweep = picked in _SWEEP_RETRY
+            if not (retry_native or retry_sweep):
+                raise ValueError(
+                    f"'{Path(path).name}' could not be read as {inst}: {failures[0]}"
+                ) from failures[0]
         log(f"Instrument '{inst}' parsed no usable measurements; trying pygimli auto-detect.")
 
     # 2. native pygimli
-    data = _via_native(path, log)
-    if _usable(data):
-        return data
+    if retry_native:
+        data = _via_native(path, log)
+        if _usable(data):
+            return data
 
     # 3. recovery sweep across count-prefixed device formats
-    for cand in _RECOVERY_INSTRUMENTS:
+    for cand in (_RECOVERY_INSTRUMENTS if retry_sweep else ()):
         if cand.lower() == inst.lower():
             continue
-        data = _via_instrument(path, cand, electrode_file, spacing, log)
+        data = _via_instrument(path, cand, electrode_file, spacing, log, failures)
         if _usable(data):
             log(f"Auto-recovered '{Path(path).name}' using instrument='{cand}'.")
             return data
 
+    # The first reader's error is the one worth reading: it ran on the pick, or on
+    # the file's own header when a detector redirected it.
+    first = f" First error: {failures[0]}" if failures else ""
     raise ValueError(
         f"No ERT measurements could be parsed from '{Path(path).name}'. "
-        f"Pick the matching instrument/format in the loader.")
+        f"Pick the matching instrument/format in the loader.{first}")
 
 
 # ---------------------------------------------------------------------------

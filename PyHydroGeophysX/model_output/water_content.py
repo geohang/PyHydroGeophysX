@@ -89,6 +89,13 @@ class MODFLOWWaterContent(HydroModelOutput):
         """
         return self.load_time_range(timestep_idx, timestep_idx + 1, nlay)[0]
 
+    #: One record header of the UZF WaterContent file. ``maxbound`` times the
+    #: next field (1) is the number of values that follow: UZF cells x layers.
+    _RECORD_HEADER = np.dtype([
+        ("kstp", "<i4"), ("kper", "<i4"), ("pertim", "<f8"), ("totim", "<f8"),
+        ("text", "S16"), ("maxbound", "<i4"), ("1", "<i4"), ("11", "<i4"),
+    ])
+
     def load_time_range(self, start_idx: int = 0, end_idx: Optional[int] = None,
                       nlay: int = 3) -> np.ndarray:
         """
@@ -97,92 +104,51 @@ class MODFLOWWaterContent(HydroModelOutput):
         Args:
             start_idx: Starting timestep index (default: 0)
             end_idx: Ending timestep index (exclusive, default: None loads all)
-            nlay: Number of layers in the model (default: 3)
+            nlay: Number of layers in the model (default: 3). Each record's
+                header states how many values it holds; a count other than
+                nlay x the UZF cells raises ValueError instead of being read
+                across the record boundary.
 
         Returns:
             Water content array with shape (timesteps, nlay, nrows, ncols)
         """
-        # Calculate total UZ flow cells
-        nuzfcells = self.nuzfcells * nlay
+        nlay = int(nlay)
+        expected = self.nuzfcells * nlay
+        # UZF cell n of every layer sits at (rows[n], cols[n]) of the idomain grid.
+        rows = np.array([self.iuzno_dict_rev[n][0] for n in range(self.nuzfcells)], dtype=int)
+        cols = np.array([self.iuzno_dict_rev[n][1] for n in range(self.nuzfcells)], dtype=int)
 
-        # Open water content file
         fpth = os.path.join(self.model_directory, "WaterContent")
-        file = open(fpth, "rb")
-
         WC_tot = []
-
-        # Skip to starting timestep
-        for _ in range(start_idx):
-            try:
-                # Read header
-                vartype = [
-                    ("kstp", "<i4"),
-                    ("kper", "<i4"),
-                    ("pertim", "<f8"),
-                    ("totim", "<f8"),
-                    ("text", "S16"),
-                    ("maxbound", "<i4"),
-                    ("1", "<i4"),
-                    ("11", "<i4"),
-                ]
-                binaryread(file, vartype)
-
-                # Skip data for this timestep
-                vartype = [("data", "<f8")]
-                for _ in range(nuzfcells):
-                    binaryread(file, vartype)
-            except Exception:
-                print(f"Error skipping to timestep {start_idx}")
-                file.close()
-                return np.array(WC_tot)
-
-        # Read timesteps
-        timestep = 0
-        while True:
-            # Break if we've read the requested number of timesteps
-            if end_idx is not None and timestep >= (end_idx - start_idx):
-                break
-
-            try:
-                # Read header information
-                vartype = [
-                    ("kstp", "<i4"),
-                    ("kper", "<i4"),
-                    ("pertim", "<f8"),
-                    ("totim", "<f8"),
-                    ("text", "S16"),
-                    ("maxbound", "<i4"),
-                    ("1", "<i4"),
-                    ("11", "<i4"),
-                ]
-                header = binaryread(file, vartype)
-
-                # Initialize water content array for this timestep
-                WC_arr = np.zeros((nlay, self.nrows, self.ncols)) * np.nan
-
-                # Read water content data
-                vartype = [("data", "<f8")]
-
-                # Read data for each layer and cell
-                for k in range(nlay):
-                    for n in range(self.nuzfcells):
-                        i, j = self.iuzno_dict_rev[n]
-                        value = binaryread(file, vartype)
-                        if value.size != 1:
-                            raise EOFError(
-                                "WaterContent ended before the current timestep "
-                                "was complete."
-                            )
-                        WC_arr[k, i, j] = float(value["data"][0])
-
-                WC_tot.append(WC_arr)
-                timestep += 1
-
-            except Exception as e:
-                print(f"Reached end of file or error at timestep {timestep}: {str(e)}")
-                break
-
-        file.close()
+        index = 0
+        with open(fpth, "rb") as file:
+            while end_idx is None or index < end_idx:
+                header = np.fromfile(file, self._RECORD_HEADER, 1)
+                if header.size != 1:
+                    break  # end of file
+                n_values = int(header["maxbound"][0]) * int(header["1"][0])
+                if n_values != expected:
+                    layers = (f"; the file has {n_values // self.nuzfcells} layers"
+                              if self.nuzfcells and n_values % self.nuzfcells == 0 else "")
+                    raise ValueError(
+                        f"WaterContent record {index} holds {n_values} values, but "
+                        f"nlay={nlay} with {self.nuzfcells} UZF cells per layer needs "
+                        f"{expected}{layers}. Pass the model's layer count as nlay.")
+                if index < start_idx:
+                    file.seek(8 * n_values, os.SEEK_CUR)
+                else:
+                    # A whole record in one read. Reading it a value at a time
+                    # (one fromfile call per cell and layer) was the cost of the
+                    # load; the values are the same float64 either way.
+                    values = np.fromfile(file, "<f8", n_values)
+                    if values.size != n_values:
+                        print(f"Reached end of file or error at timestep {index - start_idx}: "
+                              "WaterContent ended before the current timestep was complete.")
+                        break
+                    WC_arr = np.full((nlay, self.nrows, self.ncols), np.nan)
+                    WC_arr[:, rows, cols] = values.reshape(nlay, self.nuzfcells)
+                    WC_tot.append(WC_arr)
+                index += 1
 
         return np.array(WC_tot)
 
@@ -198,7 +164,6 @@ class MODFLOWWaterContent(HydroModelOutput):
         file = open(fpth, "rb")
 
         timestep_info = []
-        nuzfcells = self.nuzfcells * 3  # Assuming 3 layers by default
 
         while True:
             try:
@@ -223,10 +188,15 @@ class MODFLOWWaterContent(HydroModelOutput):
 
                 timestep_info.append((kstp, kper, pertim, totim))
 
-                # Skip data for this timestep
-                vartype = [("data", "<f8")]
-                for _ in range(nuzfcells):
-                    binaryread(file, vartype)
+                # Skip data for this timestep. The header states how many
+                # values follow (ncol * nrow = UZF cells x layers, 1866 = 622 x 3
+                # in examples/data/modflow). This used to assume
+                # nuzfcells * 3, which lands mid-record, and then reads data as
+                # headers, for a model with any other layer count.
+                n_values = int(header[0][5]) * int(header[0][6])
+                if n_values <= 0:
+                    break
+                np.fromfile(file, dtype="<f8", count=n_values)
 
             except Exception:
                 break

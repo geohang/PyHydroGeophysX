@@ -209,6 +209,20 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
         name = choice["tool"]
         tool = (TOOLS if tools is None else tools).get(name)
         reason = choice.get("why", "")
+        if tool is not None and name not in {t.name for t in options}:
+            # Only what the menu offered may run. `invoke` checks requirements
+            # and nothing else, so a reply naming an unlisted tool ran it: a
+            # single-survey inversion replaced a time-lapse result, a climate
+            # retrieval ran with climate switched off. Recorded as blocked - it
+            # never ran - so the model reads why on its next turn, and the tool
+            # stays on offer for when it does apply.
+            why = tool.unavailable_because(ctx)
+            ctx.begin(name, reason, agent=tool.agent,
+                      description=tool.label or name, purpose=tool.description)
+            ctx.finish(status="blocked",
+                       error=f"Not offered, so not run: {why}. Choose one of: "
+                             f"{', '.join(t.name for t in options)}.")
+            continue
 
         verdict = PROCEED
         if on_step is not None:
@@ -259,10 +273,69 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
     return ctx
 
 
+def forced_choice(ctx: RunContext,
+                  tools: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+    """The decision to take without asking, when the menu leaves only one.
+
+    The model may answer with a tool from the menu, or with "done" once a
+    report has been written (:data:`CONTROLLER_PROMPT`). With one tool on the
+    menu and no report yet there is exactly one valid answer, and asking for it
+    cost a full model request: three of the six decisions in an ERT-to-water-
+    content run - load, invert, write the report - were of this kind. Taking it
+    directly is the same decision, and the step says so, so the plan and the
+    transcript show that nothing was chosen.
+
+    Parameters
+    ----------
+    ctx : RunContext
+        The run as it stands.
+    tools : dict, optional
+        The registry to choose from; the global one by default.
+
+    Returns
+    -------
+    dict or None
+        ``{"tool": name, "why": "only one action was available: name"}`` when
+        the choice is forced; None when the model has something to decide,
+        including whether to finish.
+
+    Raises
+    ------
+    None
+
+    Examples
+    --------
+    >>> from .tools import Tool
+    >>> only = {'load': Tool('load', 'Load.', lambda c: ('', {'data': 1}),
+    ...                      produces=('data',))}
+    >>> forced_choice(RunContext('x'), only)
+    {'tool': 'load', 'why': 'only one action was available: load'}
+    >>> ctx = RunContext('x')
+    >>> ctx.put('report_files', {'report_markdown': 'r.md'})
+    >>> forced_choice(ctx, only) is None        # "done" is a valid answer now
+    True
+    """
+    options = runnable_tools(ctx, tools)
+    if len(options) != 1 or _may_finish(ctx):
+        return None
+    name = options[0].name
+    return {"tool": name, "why": f"only one action was available: {name}"}
+
+
+def _may_finish(ctx: RunContext) -> bool:
+    """Whether "done" is a valid answer: the prompt allows it once a report exists."""
+    return ctx.has("report_files")
+
+
 def _decide(ctx: RunContext, ask: Optional[Callable[[str], str]],
             tools: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
     """One decision: the model's if it can make one, the policy's otherwise."""
     if ask is not None:
+        # Nothing to decide, nothing to ask. Without a model the policy below
+        # takes the same step, as it always has.
+        forced = forced_choice(ctx, tools)
+        if forced is not None:
+            return forced
         prompt = CONTROLLER_PROMPT.format(transcript=ctx.transcript(),
                                          menu=menu(ctx, tools))
         try:

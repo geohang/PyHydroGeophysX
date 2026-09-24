@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
 )
 
 from PyHydroGeophysX.inversion.em1d_lci import DOI_SENSITIVITY_THRESHOLD
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.visualization.basemap import (
     TILE_SOURCES,
     basemap_image,
@@ -50,9 +51,13 @@ _START_COLOR = "#1f77b4"
 
 
 class EMOverviewView(QWidget):
-    """Plan map plus resistivity section for one line-inversion result."""
+    """Plan map plus resistivity section for one line-inversion result.
 
-    def __init__(self, parent=None, *, section_only=False) -> None:
+    ``colormaps`` is the studio state's shared colormap dict: the section's
+    colour map is the one chosen for EM sections anywhere in the studio.
+    """
+
+    def __init__(self, parent=None, *, section_only=False, colormaps=None) -> None:
         super().__init__(parent)
         self._section_only = bool(section_only)
         from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -185,10 +190,14 @@ class EMOverviewView(QWidget):
             "the section; lower values extend it deeper. The value carries no "
             "units, so one setting applies across systems.")
         self._doi_threshold.valueChanged.connect(self._redraw)
+        # The section's colour map: the result's own (turbo) until one is chosen.
+        self._colormap = cmaps.ColormapChooser(cmaps.EM_SECTION, "turbo", shared=colormaps)
+        self._colormap.colormapChanged.connect(self._redraw)
         row.addWidget(self._style)
         row.addWidget(self._vertical)
         row.addWidget(self._below_doi)
         row.addWidget(self._doi_threshold)
+        row.addWidget(self._colormap)
         row.addStretch(1)
         self._row = QWidget()
         self._row.setLayout(row)
@@ -301,8 +310,15 @@ class EMOverviewView(QWidget):
         self._tiles = None
         self._redraw()
 
+    @property
+    def colormap_chooser(self) -> "cmaps.ColormapChooser":
+        return self._colormap
+
     def save_figure(self, path) -> Optional[str]:
-        """Write the current figure to *path*; return the path, or None."""
+        """Write the current figure to *path*; return the path, or None.
+
+        It is the figure on screen, so it carries the colour map chosen for it.
+        """
         if self._result is None:
             return None
         try:
@@ -511,7 +527,9 @@ class EMOverviewView(QWidget):
             ax = self._fig.add_axes([left + 0.01, bottom + 0.03,
                                      right - left, top - bottom - 0.03])
 
-        cmap = result.get("cmap", "turbo")
+        # The map chosen for EM sections, or the result's own when none has been.
+        cmap = cmaps.to_matplotlib(
+            self._colormap.set_target(cmaps.EM_SECTION, str(result.get("cmap", "turbo"))))
         doi = self._doi_depths()
         here = doi[:selected.size][selected] if doi is not None else None
         mode = self._below_doi_mode()
@@ -733,8 +751,6 @@ class EMOverviewView(QWidget):
         below the depth of investigation fade out smoothly with everything else,
         instead of showing a hard edge where one mesh stops and the other starts.
         """
-        from matplotlib import colormaps
-
         if distance.size < 1 or not np.isfinite(res).any():
             return
         width, height = 700, 420
@@ -805,7 +821,7 @@ class EMOverviewView(QWidget):
                            0, height - 1)
             grid = np.take_along_axis(grid, rows, axis=0)
             grid[depth_of < zs[0]] = np.nan     # above the ground surface
-        rgba = colormaps[cmap](norm(np.power(10.0, grid)))
+        rgba = cmaps.matplotlib_colormap(cmap)(norm(np.power(10.0, grid)))
         rgba[..., 3] = np.where(np.isfinite(grid), 1.0, 0.0)
         if doi is not None and np.isfinite(doi).any():
             reach = np.nan_to_num(doi)[nearest]

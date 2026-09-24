@@ -144,7 +144,7 @@ os.makedirs(os.path.join(os.path.dirname(__file__), '_static'), exist_ok=True)
 autodoc_mock_imports = [
     'pygimli', 'flopy', 'parflow', 'cupy', 'joblib', 'meshop',
     'tqdm', 'matplotlib', 'scipy', 'numpy', 'simpeg', 'discretize',
-    'resipy', 'openai', 'google', 'google.generativeai', 'anthropic'
+    'resipy', 'openai', 'google', 'google.genai', 'google.generativeai', 'anthropic'
 ]
 
 # GitHub Pages
