@@ -901,7 +901,10 @@ class OneClickModule(BaseModule):
                 self.files.addItem(item)
         self.status.setText('Complete · Report and output files are ready.' if reports else
                             'Computation complete · No report was generated; inspect Activity and output files.')
-        if result.get('warnings'):
+        if result.get('status') == 'incomplete':
+            self.status.setText('Did not complete · ' + '; '.join(
+                result.get('warnings') or ['The run ended before it finished; inspect Activity.']))
+        elif result.get('warnings'):
             self.status.setText('Complete · Needs review: ' + '; '.join(result['warnings']))
         self.tabs.setCurrentIndex(1)
         summary = str(result.get('interpretation') or '')[:1500]

@@ -37,7 +37,9 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import QRectF, Qt
 
-from PyHydroGeophysX.workflows import gravmag as gmp
+from PyHydroGeophysX.data_processing.gravmag import extract_profile, qc_products
+from PyHydroGeophysX.forward.gravmag import forward_bodies
+from PyHydroGeophysX.inversion.gravmag import backend_status
 from PyHydroGeophysX.qt_apps import io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.qt_utils import (
@@ -51,10 +53,9 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import Model3DView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
-from PyHydroGeophysX.qt_apps.workers import WorkflowWorker
+from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
-    RunContext,
     WorkflowRunResult,
     WorkflowSpec,
     export_workflow_bundle,
@@ -75,7 +76,7 @@ class GravMagProcessingModule(BaseModule):
         self._fields: Dict[str, np.ndarray] = {}
         self._source_path: Optional[Path] = None
         self._inv_result: Optional[Dict[str, Any]] = None
-        self._inv_worker: Optional[WorkflowWorker] = None
+        self._inv_worker: Optional[ProcessWorkflowWorker] = None
         self._inv_busy: Optional[BusyStateController] = None
         self._gravmag_recipe_path: str = ""
         # The anomaly maps' colour map, chosen beside the QC map and kept for the
@@ -449,7 +450,7 @@ class GravMagProcessingModule(BaseModule):
         if vals is None or self._x is None or self._y is None:
             return
         try:
-            self._qc = gmp.qc_products(self._x, self._y, vals, detrend=self._detrend.value())
+            self._qc = qc_products(self._x, self._y, vals, detrend=self._detrend.value())
         except Exception as exc:  # noqa: BLE001
             self._qc = None
             self._qc_stats.setText(f"QC unavailable: {exc}")
@@ -562,14 +563,14 @@ class GravMagProcessingModule(BaseModule):
     def _update_qc_profile(self) -> Optional[Dict[str, np.ndarray]]:
         if self._qc is None or len(self._qc_picks) != 2:
             return None
-        profile = gmp.extract_profile(self._qc["grids"][self._qc_field.currentText()],
-                                      self._qc_picks[0], self._qc_picks[1])
+        profile = extract_profile(self._qc["grids"][self._qc_field.currentText()],
+                                  self._qc_picks[0], self._qc_picks[1])
         self._profile_plot.clear()
         self._profile_plot.plot(profile["distance"], profile["value"], pen=pg.mkPen("#1f77b4", width=2))
         return profile
 
     def _refresh_backend_state(self) -> bool:
-        status = gmp.backend_status()
+        status = backend_status()
         available = bool(status["available"])
         if available:
             self._backend_label.setText("Ready: SimPEG potential-field backend available.")
@@ -616,12 +617,15 @@ class GravMagProcessingModule(BaseModule):
 
     def _load_example(self) -> Dict[str, Any]:
         """Load the gravity or magnetic demo selected by the current field type."""
-        root = Path(__file__).resolve().parents[3] / "examples" / "data" / "Gravity_Magnetics"
         kind = self._kind.currentText()
-        path = root / ("bushveld_gravity_disturbance.csv" if kind == "gravity"
-                       else "britain_aeromagnetic_anomaly.csv")
-        if not path.exists():
-            return {"status": "failed", "error": f"Example file not found: {path}"}
+        relative = "data/Gravity_Magnetics/" + (
+            "bushveld_gravity_disturbance.csv" if kind == "gravity"
+            else "britain_aeromagnetic_anomaly.csv")
+        path = io_utils.find_example(relative, self.state.project_root)
+        if path is None:
+            message = io_utils.missing_example_message(f"The {kind} example", relative)
+            self.log(message, "warn")
+            return {"status": "failed", "error": message}
         try:
             table = io_utils.load_xyz_table(path, min_cols=3)
         except Exception as exc:  # noqa: BLE001
@@ -694,7 +698,7 @@ class GravMagProcessingModule(BaseModule):
         if vals is None or self._x is None:
             self.log("Load station data first.", "warn")
             return
-        status = gmp.backend_status()
+        status = backend_status()
         if not status["available"]:
             self.log(f"3D inversion unavailable: {status['error']}", "warn")
             self._refresh_backend_state()
@@ -745,10 +749,10 @@ class GravMagProcessingModule(BaseModule):
         self._inv_progress.setVisible(True); self._inv_progress.setRange(0, 0)
         self.log(f"Running SimPEG 3D {kind} inversion ({self._x.size} stations, "
                  f"cap {self._max_stations.value()}, detrend {self._detrend.value()})…", "info")
-        worker = WorkflowWorker(
-            spec,
-            RunContext(project_root=project_root, output_dir=run.outputs_dir),
-        )
+        # In a process of its own: SimPEG's solves would otherwise hold the
+        # window still. The model grid and its cell edges come back with it.
+        worker = ProcessWorkflowWorker(recipe_path, project_root, run.outputs_dir,
+                                       run.result_path, objects=("edges", "model3d"))
         worker.logged.connect(lambda message: self.log(message, "info"))
         worker.succeeded.connect(self._on_gravmag_workflow_ok)
         worker.failed.connect(self._on_inversion_failed)
@@ -928,7 +932,7 @@ class GravMagProcessingModule(BaseModule):
             "source": str(self._source_path or ""),
             "stations": int(self._x.size) if self._x is not None else 0,
             "has_station_elevation": self._z is not None,
-            "backend": gmp.backend_status(),
+            "backend": backend_status(),
         }
 
     def _agent_load(self, path: Any) -> Dict[str, Any]:
@@ -961,7 +965,7 @@ class GravMagProcessingModule(BaseModule):
     def _agent_run_inversion(self) -> Dict[str, Any]:
         if self._x is None or self._fields.get("Observed") is None:
             return {"status": "failed", "error": "Load station data first."}
-        backend = gmp.backend_status()
+        backend = backend_status()
         if not backend["available"]:
             self._refresh_backend_state()
             return {"status": "failed", "error": f"Gravity/magnetics backend unavailable: {backend['error']}",
@@ -1025,7 +1029,7 @@ class GravMagProcessingModule(BaseModule):
             self._refresh_qc()
             if self._qc is None:
                 raise ValueError("QC products are unavailable.")
-            profile = gmp.extract_profile(self._qc["grids"][self._qc_field.currentText()], p1, p2)
+            profile = extract_profile(self._qc["grids"][self._qc_field.currentText()], p1, p2)
         except Exception as exc:  # noqa: BLE001
             return {"status": "failed", "error": str(exc)}
         finite = np.asarray(profile["value"], dtype=float)
@@ -1042,7 +1046,7 @@ class GravMagProcessingModule(BaseModule):
             field = {"strength": self._B0.value(), "inclination": self._inc.value(),
                      "declination": self._dec.value()}
         try:
-            anomaly = gmp.forward_bodies(self._x, self._y, self._kind.currentText(), bodies, field=field)
+            anomaly = forward_bodies(self._x, self._y, self._kind.currentText(), bodies, field=field)
         except Exception as exc:  # noqa: BLE001
             return {"status": "failed", "error": str(exc)}
         return {"status": "ok", "kind": self._kind.currentText(), "bodies": len(bodies),
@@ -1064,3 +1068,12 @@ class GravMagProcessingModule(BaseModule):
         lay.addWidget(browser)
         close = QPushButton("Close"); close.clicked.connect(dlg.accept); lay.addWidget(close)
         dlg.exec()
+
+
+# Names a 0.3.0 script could import from this page, which it no longer defines.
+from PyHydroGeophysX._internal.deprecations import legacy_names as _legacy_names  # noqa: E402
+
+__getattr__ = _legacy_names(__name__, {
+    "gmp": "PyHydroGeophysX.workflows.gravmag",
+    "TaskWorker": "PyHydroGeophysX.qt_apps.workers.TaskWorker",
+})

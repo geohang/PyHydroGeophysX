@@ -1,0 +1,57 @@
+{
+  "title": "ERT inversion and water content: DAS-1 example survey",
+  "caveat": "Cached output of an offline run (no API key, no LLM call) of PyHydroGeophysX 0.5.0 on data shipped in examples/data. It is not a result for your data.",
+  "summary": "Request: \"Invert this ERT survey and estimate the water content\". The run finished with status 'success' in 56 s: Load ERT data -> Run ERT inversion -> Evaluate inversion quality -> Convert to water content -> Fuse methods -> Generate report.",
+  "metrics": {
+    "resistivity (ohm m)": [
+      295.4974185070243,
+      43752.38021968496
+    ],
+    "water content (-)": [
+      0.01644965107600812,
+      0.10914760125142271
+    ],
+    "mean water-content uncertainty": "±0.079",
+    "final chi-squared": "1.87",
+    "quality score": "56.7 / 100"
+  },
+  "figures": [
+    {
+      "path": "ert_demo_resistivity_model.png",
+      "label": "Inverted resistivity (ohm m)"
+    },
+    {
+      "path": "ert_demo_water_content.png",
+      "label": "Water content, Monte Carlo mean"
+    },
+    {
+      "path": "ert_demo_water_content_uncertainty.png",
+      "label": "Water content uncertainty, Monte Carlo standard deviation"
+    }
+  ],
+  "steps": [
+    "[done] load_ert_surveys -> Loaded 1 ERT survey(s) from 1 configured file(s).",
+    "[done] invert_ert -> Recovered a resistivity model from one survey.",
+    "[done] evaluate_inversion -> Quality 56.7/100 after 3 attempt(s): Quality optimization stopped after 3 attempts with score 56.7; one or more quality criteria were not met. The run now uses the best-scoring retry's model (lambda 10), up from 56.1 on the first attempt.",
+    "[done] convert_water_content -> Converted 1 of 1 model(s) to water content by Monte Carlo petrophysics. The cell markers do not describe geological structure (1173 markers for 1173 cells), so the section is treated as a single unit with one petrophysical parameter set. Supplying a layered model is what would let parameters vary with depth.",
+    "[done] fuse_methods -> Fused ert, petrophysics (petrophysics_integration): water content was converted from the resistivity model(s) (The cell markers do not describe geological structure (1173 markers for 1173 cells), so the section is treated as a single unit with one petrophysical parameter set. Supplying a layered model is what would let parameters vary with depth).",
+    "[done] write_report -> Wrote the report and its figures."
+  ],
+  "warnings": [
+    "No instrument was named, so the files were read as DAS-1, as their headers say.",
+    "The exported model carries no layer markers: The cell markers do not describe geological structure (1173 markers for 1173 cells), so the section is treated as a single unit with one petrophysical parameter set. Supplying a layered model is what would let parameters vary with depth.",
+    "Quality optimization stopped after 3 attempts with score 56.7; one or more quality criteria were not met.",
+    "Water content is too uncertain to interpret quantitatively. The mean uncertainty (+/-0.079) covers 85% of the range of the estimate itself (0.016 to 0.109), so the wettest and driest parts of this image are not distinguishable and no moisture pattern in it is established. No petrophysical parameters were supplied for this site, so the conversion ran on generated defaults; calibrating them against samples or logs is what would narrow this."
+  ],
+  "provenance": {
+    "generated_by": "examples/demo_cache/make_demo_cache.py",
+    "generated": "2026-09-27",
+    "package_version": "0.5.0",
+    "inputs": {
+      "data_file": "examples/data/ERT/DAS/20171105_1418.Data",
+      "electrode_file": "examples/data/ERT/DAS/electrodes.dat"
+    },
+    "request": "Invert this ERT survey and estimate the water content",
+    "status": "success"
+  }
+}

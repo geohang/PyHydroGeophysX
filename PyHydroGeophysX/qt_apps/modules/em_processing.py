@@ -3,15 +3,16 @@
 Load a sounding (FDEM: frequency, real, imag; TDEM: time, response) and invert it
 for a layered resistivity model. A survey line can use joint LM+HM observations
 and same-line lateral constraints to produce a position x depth resistivity
-section. The numerics live in the Qt-free
-``PyHydroGeophysX.qt_apps.em_pipeline`` (a thin wrapper over the package's SimPEG
-forward operators). Results export to npy / csv.
+section. The numerics are Qt-free: the readers and result writers in
+``PyHydroGeophysX.data_processing.em1d``, the SimPEG forward operators in
+``PyHydroGeophysX.forward``, and the inversions in ``PyHydroGeophysX.inversion.em1d``
+and ``PyHydroGeophysX.inversion.em1d_line``. Results export to npy / csv.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from PySide6.QtCore import Qt
@@ -38,9 +39,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from PyHydroGeophysX._internal.utils import json_safe
 from PyHydroGeophysX.inversion.em1d_lci import DOI_SENSITIVITY_THRESHOLD
-from PyHydroGeophysX.workflows import em1d as em_pipeline
-from PyHydroGeophysX.qt_apps import theme
+from PyHydroGeophysX.data_processing import em1d as em_data
+from PyHydroGeophysX.forward import em1d as em_forward
+from PyHydroGeophysX.inversion import em1d as em_inversion
+from PyHydroGeophysX.inversion import em1d_line as em_line
+from PyHydroGeophysX.qt_apps import io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.qt_utils import (
     BusyStateController,
@@ -62,10 +67,9 @@ from PyHydroGeophysX.qt_apps.widgets.em_survey_view import (
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import Model3DView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
-from PyHydroGeophysX.qt_apps.workers import TaskWorker, WorkflowWorker
+from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
-    RunContext,
     WorkflowRunResult,
     WorkflowSpec,
     export_workflow_bundle,
@@ -110,19 +114,7 @@ def _plain(value: Any) -> Any:
     takes. Non-finite floats become None rather than the bare NaN some encoders
     emit and no parser accepts.
     """
-    if isinstance(value, dict):
-        return {str(key): _plain(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_plain(item) for item in value]
-    if isinstance(value, np.ndarray):
-        return [_plain(item) for item in value.tolist()]
-    if isinstance(value, np.generic):
-        value = value.item()
-    if value is None or isinstance(value, (str, bool, int)):
-        return value
-    if isinstance(value, float):
-        return float(value) if np.isfinite(value) else None
-    return str(value)
+    return json_safe(value)
 
 
 def _modelled_gates(result: Dict[str, Any]) -> Optional[Dict[str, Dict[str, Any]]]:
@@ -167,15 +159,19 @@ class EMProcessingModule(BaseModule):
         self._source_path: Optional[Path] = None
         self._last_result: Optional[Dict[str, Any]] = None
         self._last_section: Optional[Dict[str, Any]] = None
-        self._inv_worker: Optional[WorkflowWorker] = None
+        self._inv_worker: Optional[ProcessWorkflowWorker] = None
         self._inv_busy: Optional[BusyStateController] = None
         self._project_start_res = 100.0   # fallback when auto is off
-        self._line_worker: Optional[TaskWorker] = None
+        self._line_worker: Optional[ProcessWorkflowWorker] = None
         self._workflow_recipe_path = ""
+        self._line_recipe_path = ""
         self._geom_positions: Optional[np.ndarray] = None
         self._geom_heights: Optional[np.ndarray] = None
         self._geom_x: Optional[np.ndarray] = None
         self._geom_y: Optional[np.ndarray] = None
+        #: ``(first_station, x, y)`` of the running line inversion: the map
+        #: coordinates the section is given when it comes back (_attach_line_xy).
+        self._line_xy: Optional[Tuple[int, np.ndarray, np.ndarray]] = None
         self._example_id: Optional[str] = None
         self._project_layer_thicknesses: Optional[np.ndarray] = None
         self._ttem_gex_path: Optional[Path] = None
@@ -288,7 +284,7 @@ class EMProcessingModule(BaseModule):
 
     def _build_loader_group(self) -> QGroupBox:
         box = QGroupBox("Load sounding data"); v = QVBoxLayout(box)
-        self._method = QComboBox(); self._method.addItems(list(em_pipeline.METHODS))
+        self._method = QComboBox(); self._method.addItems(list(em_line.METHODS))
         self._method.currentTextChanged.connect(self._on_method_changed)
         self._data_format = QComboBox()
         self._data_format.addItems(["Generic table", _TEM2GO_FORMAT, _TTEM_FORMAT])
@@ -313,7 +309,7 @@ class EMProcessingModule(BaseModule):
         moment_form = QFormLayout(self._tem_moment_row)
         moment_form.setContentsMargins(0, 0, 0, 0)
         self._tem_moment = QComboBox()
-        self._tem_moment.addItems(list(em_pipeline.TEMCOMPANY_MOMENTS))
+        self._tem_moment.addItems(list(em_data.TEMCOMPANY_MOMENTS))
         self._tem_moment.setToolTip(
             "LM+HM fits all available gates to one shared model. HM uses later-time "
             "gates and LM uses early-time gates. In-use flags are applied automatically.")
@@ -474,7 +470,7 @@ class EMProcessingModule(BaseModule):
 
     def _build_geometry_group(self) -> QGroupBox:
         box = QGroupBox("Survey geometry (system)"); form = QFormLayout(box)
-        f = em_pipeline.DEFAULT_FDEM
+        f = em_forward.DEFAULT_FDEM
         self._src_radius = self._dspin(f["source_radius"], 0.01, 200.0, 0.1, 3)
         self._loop_area = self._dspin(8.0, 0.01, 10000.0, 0.25, 2)
         self._loop_area.setToolTip(
@@ -550,7 +546,7 @@ class EMProcessingModule(BaseModule):
     # software may change on its own. Everything configurable comes before Run.
     def _build_inversion_group(self) -> QGroupBox:
         box = QGroupBox("Inversion"); form = QFormLayout(box)
-        d = em_pipeline.DEFAULT_INVERSION
+        d = em_inversion.DEFAULT_INVERSION
         self._preset = QComboBox()
         self._preset.addItem("Ground TEM (TEM2Go, tTEM)", "ground_tem")
         self._preset.addItem("Generic / airborne", "generic")
@@ -688,7 +684,7 @@ class EMProcessingModule(BaseModule):
         file or redraw a plot on its way past.
         """
         try:
-            settings = em_pipeline.preset_inversion(name)
+            settings = em_inversion.preset_inversion(name)
         except (AttributeError, ValueError):
             return
         widgets = self._preset_targets()
@@ -767,7 +763,7 @@ class EMProcessingModule(BaseModule):
             self._sounding_stack.setCurrentIndex(1)
             return
         try:
-            report = em_pipeline.gate_report(
+            report = em_data.gate_report(
                 str(source), int(self._data.get("sounding", 0)),
                 moment=str(self._tem_moment.currentText()), **self._gate_qc())
         except Exception as exc:  # noqa: BLE001 - a view must not stop a load
@@ -789,7 +785,7 @@ class EMProcessingModule(BaseModule):
         source = self._source_path
         if source is not None and self._data is not None and self._data.get("temcompany"):
             try:
-                summary = em_pipeline.survey_summary(
+                summary = em_data.survey_summary(
                     str(source), moment=str(self._tem_moment.currentText()),
                     **self._gate_qc())
             except Exception as exc:  # noqa: BLE001 - a view must not stop a load
@@ -894,7 +890,7 @@ class EMProcessingModule(BaseModule):
     def _build_line_group(self) -> QGroupBox:
         """Line-only controls, shown when the file holds several soundings."""
         box = QGroupBox("Line"); form = QFormLayout(box)
-        d = em_pipeline.DEFAULT_INVERSION
+        d = em_inversion.DEFAULT_INVERSION
         self._line_spacing = self._dspin(50.0, 0.1, 100000.0, 10.0, 2)
         self._line_spacing.setToolTip("Uniform sounding spacing used for the section's x-axis "
                                       "when no geometry file is loaded.")
@@ -1278,7 +1274,7 @@ class EMProcessingModule(BaseModule):
 
     def _refresh_backend_state(self) -> bool:
         """Reflect the method-specific SimPEG availability in the run controls."""
-        status = em_pipeline.backend_status(self._method.currentText())
+        status = em_line.backend_status(self._method.currentText())
         available = bool(status["available"])
         if available:
             self._backend_label.setText("Ready: SimPEG backend available.")
@@ -1394,8 +1390,8 @@ class EMProcessingModule(BaseModule):
             "lci_solver": str(self._lci_solver.currentData()),
             "lci_max_nfev": int(self._trf_nfev.value()),
             "lci_ftol": float(self._trf_ftol.value()),
-            "lci_xtol": float(em_pipeline.DEFAULT_INVERSION["lci_xtol"]),
-            "lci_gtol": float(em_pipeline.DEFAULT_INVERSION["lci_gtol"]),
+            "lci_xtol": float(em_inversion.DEFAULT_INVERSION["lci_xtol"]),
+            "lci_gtol": float(em_inversion.DEFAULT_INVERSION["lci_gtol"]),
             "auto_lambda": bool(self._auto_lam.isChecked()),
             "target_chi2": float(self._target_chi2.value()),
             "chi2_tolerance": float(self._chi2_tol.value()),
@@ -1505,12 +1501,12 @@ class EMProcessingModule(BaseModule):
             path, _ = QFileDialog.getOpenFileName(self, "Load EM data", "", _FILE_FILTER)
         if not path:
             return
-        if em_pipeline.is_ttem_source(path):
+        if em_data.is_ttem_source(path):
             self._method.setCurrentText("TDEM")
             self._data_format.setCurrentText(_TTEM_FORMAT)
             self._auto_detect_ttem_calibration(Path(path))
             self._select_preset("ground_tem")
-        elif em_pipeline.is_temcompany_source(path):
+        elif em_data.is_temcompany_source(path):
             self._method.setCurrentText("TDEM")
             self._data_format.setCurrentText(_TEM2GO_FORMAT)
             self._select_preset("ground_tem")
@@ -1569,18 +1565,21 @@ class EMProcessingModule(BaseModule):
 
     def _load_example(self, example_id: str) -> Dict[str, Any]:
         """Load a documented demo dataset and apply its compatible settings."""
-        catalog = em_pipeline.example_catalog()
+        catalog = em_data.example_catalog()
         spec = catalog.get(example_id)
         if spec is None:
             return {"status": "failed", "error": f"Unknown EM example '{example_id}'.",
                     "valid_examples": sorted(catalog)}
         path = Path(spec["path"])
         if not path.exists():
-            return {"status": "failed", "error": f"Example file not found: {path}"}
+            message = io_utils.missing_example_message(
+                f"The EM example '{spec['label']}'", "data/EM")
+            self.log(message, "warn")
+            return {"status": "failed", "error": message}
         self._method.setCurrentText(str(spec["method"]))
         self._data_format.setCurrentText(
             _TEM2GO_FORMAT
-            if em_pipeline.is_temcompany_source(str(path))
+            if em_data.is_temcompany_source(str(path))
             else "Generic table"
         )
         self._agent_set_params(dict(spec.get("params", {})))
@@ -1618,7 +1617,7 @@ class EMProcessingModule(BaseModule):
             else float(self._loop_area.value())
         )
         try:
-            self._data = em_pipeline.load_sounding(
+            self._data = em_data.load_sounding(
                 str(self._source_path), self._method.currentText(), sounding=int(index),
                 moment=self._tem_moment.currentText(),
                 use_flags=bool(self._use_flags.isChecked()),
@@ -1727,7 +1726,7 @@ class EMProcessingModule(BaseModule):
             if not self._data.get("temcompany"):
                 resource_payload = {
                     "soundings": [
-                        em_pipeline.load_sounding(
+                        em_data.load_sounding(
                             str(self._source_path), method, sounding=index,
                             moment=self._tem_moment.currentText()
                         )
@@ -1900,7 +1899,7 @@ class EMProcessingModule(BaseModule):
         if found is None:
             return
         try:
-            g = em_pipeline.load_line_geometry(str(found))
+            g = em_data.load_line_geometry(str(found))
         except Exception:  # noqa: BLE001 - a bad companion file just means manual load
             return
         self._geom_positions = g["positions"]
@@ -1918,7 +1917,7 @@ class EMProcessingModule(BaseModule):
         if not path:
             return
         try:
-            g = em_pipeline.load_line_geometry(path)
+            g = em_data.load_line_geometry(path)
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not load geometry: {exc}", "error")
             return
@@ -1962,7 +1961,7 @@ class EMProcessingModule(BaseModule):
             self.log("Load a sounding first.", "warn")
             return
         method = self._method.currentText()
-        status = em_pipeline.backend_status(method)
+        status = em_line.backend_status(method)
         if not status["available"]:
             self.log(f"{method} inversion unavailable: {status['error']}", "warn")
             self._refresh_backend_state()
@@ -1976,13 +1975,13 @@ class EMProcessingModule(BaseModule):
             try:
                 if ref > 0 and n_snd == 1:
                     self.log(f"Calibrating to reference {ref:.0f} Ω·m…", "info")
-                    k = em_pipeline.calibrate_to_reference(
+                    k = em_line.calibrate_to_reference(
                         str(self._source_path), method, self._collect_geom(),
                         self._collect_inv(), ref, log=lambda m: self.log(m, "info"))
                     self._data_scale.setValue(float(k))
                 elif ref <= 0 and self._auto_scale.isChecked():
-                    k = em_pipeline.estimate_data_scale(str(self._source_path), method,
-                                                        self._collect_geom(), log=lambda m: self.log(m, "info"))
+                    k = em_line.estimate_data_scale(str(self._source_path), method,
+                                                    self._collect_geom(), log=lambda m: self.log(m, "info"))
                     self._data_scale.setValue(float(k))
             except Exception as exc:  # noqa: BLE001
                 self.log(f"Calibration failed ({exc}); using data_scale="
@@ -2039,10 +2038,11 @@ class EMProcessingModule(BaseModule):
         )
         self._reproduce.set_bundle(recipe_path, script_path)
         self._workflow_recipe_path = str(recipe_path)
-        self._inv_worker = WorkflowWorker(
-            spec,
-            RunContext(project_root=run.run_dir, output_dir=run.outputs_dir),
-        )
+        # In a process of its own, so the window keeps painting through the
+        # forward solves; the fitted model, the data and the fit are small
+        # arrays and all of them come back.
+        self._inv_worker = ProcessWorkflowWorker(
+            recipe_path, run.run_dir, run.outputs_dir, run.result_path, objects=("*",))
         self._inv_worker.logged.connect(lambda m: self.log(m, "info"))
         self._inv_worker.succeeded.connect(self._on_workflow_ok)
         self._inv_worker.failed.connect(lambda message: self._on_inversion_failed(message, False))
@@ -2064,7 +2064,7 @@ class EMProcessingModule(BaseModule):
 
     def _start_line(self, method: str) -> None:
         try:
-            run = self.begin_persisted_run("em.line_inversion")
+            run = self.begin_persisted_run("em.line_inversion", "em.line_inversion")
         except Exception as exc:  # noqa: BLE001
             self._on_line_failed(f"Could not prepare Project run: {exc}")
             self._reset_inv_button()
@@ -2094,19 +2094,58 @@ class EMProcessingModule(BaseModule):
                                + " are left out of the section entirely")
             self.log(f"Max soundings is {cap} of {loaded} loaded: the last "
                      f"{loaded - cap} station(s) are not inverted{dropped}.", "warn")
-        worker = TaskWorker(
-            em_pipeline.invert_line, str(source), method,
-            self._collect_geom(), self._collect_inv(), with_log=True,
-            spacing=float(self._line_spacing.value()), positions=self._geom_positions,
-            heights=self._geom_heights, max_soundings=int(self._line_max.value()),
-            lines=self._selected_lines(),
-            ref_resistivity=float(self._ref_res.value()), out_dir=Path(out_dir),
-            # The whole model comes back with its sensitivity; the Resistivity
-            # model tab applies the depth cut, so the threshold can be moved
-            # without inverting again (the ERT view works the same way).
-            doi_blank=False)
+        inputs = {"data": ArtifactRef.from_path(
+            source, artifact_id="em-line-soundings", kind="em_sounding", base_dir=run.run_dir)}
+        # Along-line distance and sensor height per sounding, when the survey
+        # has them: arrays, so a file of the run's rather than recipe numbers.
+        arrays = {key: np.asarray(value, dtype=float) for key, value in
+                  (("positions", self._geom_positions), ("heights", self._geom_heights))
+                  if value is not None}
+        if arrays:
+            geometry_path = run.inputs_dir / "em_line_geometry.npz"
+            np.savez(geometry_path, **arrays)
+            for key in arrays:
+                inputs[key] = ArtifactRef.from_path(
+                    geometry_path, artifact_id=f"em-line-{key}", kind="em_line_geometry",
+                    base_dir=run.run_dir, metadata={"array_key": key})
+        # The workflow carries only the map coordinates the survey file embeds;
+        # those of a geometry file loaded beside it are handed to the section
+        # here when it comes back, so Add to Map can place it by them.
+        self._line_xy = self._line_coordinates(self._selected_lines())
+        spec = WorkflowSpec(
+            workflow_id="em.line_inversion",
+            inputs=inputs,
+            parameters={
+                "method": method,
+                "geometry": self._collect_geom(),
+                "inversion": self._collect_inv(),
+                "spacing": float(self._line_spacing.value()),
+                "max_soundings": int(self._line_max.value()),
+                "lines": self._selected_lines(),
+                "ref_resistivity": float(self._ref_res.value()),
+                # The whole model comes back with its sensitivity; the
+                # Resistivity model tab applies the depth cut, so the threshold
+                # can be moved without inverting again (as in the ERT view).
+                "doi_blank": False,
+            },
+            metadata={"source": "qt"},
+        )
+        try:
+            recipe_path, script_path = export_workflow_bundle(
+                spec, run.run_dir, stem="em_line_inversion")
+        except Exception as exc:  # noqa: BLE001 - said, and the run closed
+            self._on_line_failed(f"Could not write the run's recipe: {exc}")
+            self._reset_inv_button()
+            return
+        self._reproduce.set_bundle(recipe_path, script_path)
+        self._line_recipe_path = str(recipe_path)
+        # In a process of its own: a line is a forward solve per gate per
+        # sounding per iteration, which in a thread held the window still. The
+        # section, the fits and the per-sounding statistics all come back.
+        worker = ProcessWorkflowWorker(recipe_path, run.run_dir, run.outputs_dir,
+                                       run.result_path, objects=("*",))
         worker.logged.connect(lambda m: self.log(m, "info"))
-        worker.succeeded.connect(self._on_line_ok)
+        worker.succeeded.connect(lambda result: self._on_line_ok(result.legacy_payload()))
         worker.failed.connect(self._on_line_failed)
         worker.finished.connect(self._reset_inv_button)
         self._line_worker = self.register_worker(worker)
@@ -2127,7 +2166,7 @@ class EMProcessingModule(BaseModule):
         source = self._source_path
         geom = self._collect_geom()
         try:
-            return em_pipeline.save_sounding_container(
+            return em_data.save_sounding_container(
                 inputs_dir / "em_soundings",
                 str(source),
                 method,
@@ -2209,7 +2248,66 @@ class EMProcessingModule(BaseModule):
                             "n_layers": int(np.asarray(result["resistivity"]).size)})
         self.offer_map_export()
 
+    def _line_coordinates(
+        self, lines: Optional[List[int]]
+    ) -> Optional[Tuple[int, np.ndarray, np.ndarray]]:
+        """``(first_station, x, y)`` from the loaded geometry, for a line run.
+
+        ``first_station`` is where the run's block of stations starts, found the
+        way ``invert_line`` finds it: the first station on the selected lines,
+        or the first of the file.
+        """
+        if self._geom_x is None or self._geom_y is None:
+            return None
+        x = np.asarray(self._geom_x, dtype=float).ravel()
+        y = np.asarray(self._geom_y, dtype=float).ravel()
+        n_total = int((self._data or {}).get("n_soundings", 1))
+        if x.size < n_total or y.size < n_total:
+            return None
+        first = 0
+        if lines:
+            numbers = np.asarray((self._data or {}).get("line_numbers", []), dtype=int).ravel()
+            found = np.flatnonzero(np.isin(numbers[:n_total], list(lines)))
+            if not found.size:
+                return None
+            first = int(found[0])
+        return first, x, y
+
+    def _attach_line_xy(self, result: dict) -> None:
+        """Give a section without map coordinates those of its geometry file.
+
+        The label reads "+ map x,y" once a geometry file with easting and
+        northing is loaded, but the section came back with NaN there, so Add to
+        Map could offer only a straight line and the coordinates had to be typed
+        in again. A survey that embeds its own coordinates keeps them.
+        """
+        carried, self._line_xy = self._line_xy, None
+        n = int(result.get("n_soundings") or 0)
+        if carried is None or n <= 0:
+            return
+        own = [np.asarray(result.get(key, []), dtype=float).ravel() for key in ("x", "y")]
+        if all(values.size == n and np.isfinite(values).all() for values in own):
+            return
+        first, x, y = carried
+        if first + n > min(x.size, y.size):
+            return
+        # The stations it inverted are the ones the geometry describes: the
+        # section's distances are the geometry's own, cut to the same block.
+        positions = np.asarray(result.get("positions", []), dtype=float).ravel()
+        geometry = (np.asarray(self._geom_positions, dtype=float).ravel()
+                    if self._geom_positions is not None else np.array([]))
+        if (positions.size == n and geometry.size >= first + n
+                and not np.allclose(positions, geometry[first:first + n])):
+            return
+        xy = np.column_stack([x[first:first + n], y[first:first + n]])
+        if not np.isfinite(xy).all():
+            return
+        result["x"], result["y"] = xy[:, 0].copy(), xy[:, 1].copy()
+        self.log(f"Section placed by the geometry file's map coordinates "
+                 f"({n} stations).", "info")
+
     def _on_line_ok(self, result: dict) -> None:
+        self._attach_line_xy(result)
         self._last_section = result
         self._last_result = None    # the export button now writes the section
         self._inv_export.setEnabled(True)
@@ -2352,7 +2450,7 @@ class EMProcessingModule(BaseModule):
         self.offer_map_export()
 
     def _finish_line_run(self, result: dict) -> None:
-        self.finish_persisted_run({
+        record = {
             "status": "success",
             "summary": {
                 "method": result.get("method"),
@@ -2369,7 +2467,14 @@ class EMProcessingModule(BaseModule):
             "artifacts": [],
             "warnings": [],
             "provenance": {"operation_id": "em.line_inversion"},
-        }, "em.line_inversion")
+        }
+        if hasattr(self.state, "update_workflow_result"):
+            # Recorded with the recipe it ran from, as the other workflows are.
+            self.state.update_workflow_result(
+                self.module_key, "em.line_inversion", record,
+                recipe_path=getattr(self, "_line_recipe_path", ""))
+        else:
+            self.finish_persisted_run(record, "em.line_inversion")
 
     def _populate_overview(self, result: dict) -> None:
         """Render and save the result section; Project Map owns result maps."""
@@ -2456,12 +2561,12 @@ class EMProcessingModule(BaseModule):
         # so the failure has to reach the log rather than only stderr.
         try:
             if section:
-                paths = em_pipeline.save_line_csv(section, Path(folder))
+                paths = em_data.save_line_csv(section, Path(folder))
                 self.log(f"Exported the section as {len(paths)} CSV file(s) to {folder}: "
                          f"{int(section.get('n_soundings', 0))} soundings x "
                          f"{int(section.get('n_layers', 0))} layers.", "success")
                 return
-            paths = em_pipeline.save_inversion(self._last_result, folder)
+            paths = em_data.save_inversion(self._last_result, folder)
             self.log(f"Exported recovered model ({len(paths)} files) to {folder}", "success")
         except Exception as exc:  # noqa: BLE001
             self.log(f"EM model export failed: {exc}", "error")
@@ -2507,11 +2612,11 @@ class EMProcessingModule(BaseModule):
                  "desc": ("Load a documented EM example. Default is east_river_vtem; "
                           "synthetic_fdem is the reproducible FDEM demo and "
                           "synthetic_tem_lci is the LM+HM line/LCI test.")},
-                {"name": "set_method", "args": {"method": list(em_pipeline.METHODS)},
+                {"name": "set_method", "args": {"method": list(em_line.METHODS)},
                  "desc": "Choose the EM method (FDEM or TDEM)."},
                 {"name": "load_data",
                  "args": {"path": "str", "sounding": "int (optional, 1-based)",
-                          "moment": list(em_pipeline.TEMCOMPANY_MOMENTS)},
+                          "moment": list(em_data.TEMCOMPANY_MOMENTS)},
                  "desc": ("Load a sounding file or TEMcompany/TEM2Go project directory. "
                           "For TEMcompany data, moment selects LM+HM, HM, or LM and "
                           "defaults to the joint LM+HM workflow. "
@@ -2642,7 +2747,7 @@ class EMProcessingModule(BaseModule):
                 self._tem_moment.currentText()
                 if self._data and self._data.get("temcompany") else None
             ),
-            "backend": em_pipeline.backend_status(self._method.currentText()),
+            "backend": em_line.backend_status(self._method.currentText()),
             "last_result_keys": sorted(last.keys()),
         }
 
@@ -2686,7 +2791,7 @@ class EMProcessingModule(BaseModule):
         return out
 
     def _agent_set_method(self, method: Any) -> Dict[str, Any]:
-        methods = list(em_pipeline.METHODS)
+        methods = list(em_line.METHODS)
         if method not in methods:
             return {"status": "failed", "error": f"Unknown method '{method}'.", "valid": methods}
         self._method.setCurrentText(method)
@@ -2703,29 +2808,29 @@ class EMProcessingModule(BaseModule):
         p = Path(str(path))
         if not p.exists():
             return {"status": "failed", "error": f"File not found: {p}"}
-        if em_pipeline.is_ttem_source(str(p)):
+        if em_data.is_ttem_source(str(p)):
             self._method.setCurrentText("TDEM")
             self._data_format.setCurrentText(_TTEM_FORMAT)
             self._auto_detect_ttem_calibration(p)
             if moment is not None:
                 selected = str(moment).upper()
-                if selected not in em_pipeline.TEMCOMPANY_MOMENTS:
+                if selected not in em_data.TEMCOMPANY_MOMENTS:
                     return {
                         "status": "failed",
                         "error": f"TEMcompany moment must be one of "
-                                 f"{em_pipeline.TEMCOMPANY_MOMENTS}.",
+                                 f"{em_data.TEMCOMPANY_MOMENTS}.",
                     }
                 self._tem_moment.setCurrentText(selected)
-        elif em_pipeline.is_temcompany_source(str(p)):
+        elif em_data.is_temcompany_source(str(p)):
             self._method.setCurrentText("TDEM")
             self._data_format.setCurrentText(_TEM2GO_FORMAT)
             if moment is not None:
                 selected = str(moment).upper()
-                if selected not in em_pipeline.TEMCOMPANY_MOMENTS:
+                if selected not in em_data.TEMCOMPANY_MOMENTS:
                     return {
                         "status": "failed",
                         "error": f"TEMcompany moment must be one of "
-                                 f"{em_pipeline.TEMCOMPANY_MOMENTS}.",
+                                 f"{em_data.TEMCOMPANY_MOMENTS}.",
                     }
                 self._tem_moment.setCurrentText(selected)
         self._example_id = None
@@ -2866,7 +2971,7 @@ class EMProcessingModule(BaseModule):
     def _agent_run_inversion(self) -> Dict[str, Any]:
         if self._data is None:
             return {"status": "failed", "error": "Load a sounding first."}
-        backend = em_pipeline.backend_status(self._method.currentText())
+        backend = em_line.backend_status(self._method.currentText())
         if not backend["available"]:
             self._refresh_backend_state()
             return {"status": "failed", "error": f"EM backend unavailable: {backend['error']}",
@@ -2882,8 +2987,8 @@ class EMProcessingModule(BaseModule):
         if self._data is None or self._source_path is None:
             return {"status": "failed", "error": "Load a sounding first."}
         try:
-            k = em_pipeline.estimate_data_scale(str(self._source_path), self._method.currentText(),
-                                                self._collect_geom(), log=lambda m: self.log(m, "info"))
+            k = em_line.estimate_data_scale(str(self._source_path), self._method.currentText(),
+                                            self._collect_geom(), log=lambda m: self.log(m, "info"))
         except Exception as exc:  # noqa: BLE001
             return {"status": "failed", "error": f"Auto-calibration failed: {exc}"}
         self._data_scale.setValue(float(k))
@@ -2896,7 +3001,7 @@ class EMProcessingModule(BaseModule):
         if not p.exists():
             return {"status": "failed", "error": f"File not found: {p}"}
         try:
-            g = em_pipeline.load_line_geometry(str(p))
+            g = em_data.load_line_geometry(str(p))
         except Exception as exc:  # noqa: BLE001
             return {"status": "failed", "error": f"Could not load geometry: {exc}"}
         self._geom_positions = g["positions"]
@@ -2908,3 +3013,13 @@ class EMProcessingModule(BaseModule):
         self._register_observed_resource()
         return {"status": "ok", "n": g["n"], "has_heights": g["has_heights"],
                 "has_xy": bool(g.get("has_xy"))}
+
+
+# Names a 0.3.0 script could import from this page, which it no longer defines.
+from PyHydroGeophysX._internal.deprecations import legacy_names as _legacy_names  # noqa: E402
+
+__getattr__ = _legacy_names(__name__, {
+    "em_pipeline": "PyHydroGeophysX.workflows.em1d",
+    "PlanSliceView": "PyHydroGeophysX.qt_apps.widgets.plan_slice_view.PlanSliceView",
+    "TaskWorker": "PyHydroGeophysX.qt_apps.workers.TaskWorker",
+})

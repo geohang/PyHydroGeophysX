@@ -373,7 +373,7 @@ def test_tx0_reads_geometry_and_measurements(tmp_path) -> None:
     assert elec.shape == (6, 3)
     np.testing.assert_allclose(elec[:, 0], [0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
     np.testing.assert_allclose(elec[:, 2], [0.0, -0.1, -0.2, -0.3, -0.4, -0.5])
-    assert len(df) == 3
+    assert len(df) == 3             # neither the units row nor the trailing warnings
     assert df["rhoa"].tolist() == [3500.708, 5676.085, 4098.229]
     assert df["ip"].tolist() == [57.195, -14.332, 54.706]
 
@@ -401,17 +401,6 @@ def test_tx0_reports_the_error_as_a_fraction(tmp_path) -> None:
     _, df = parse_tx0(path)
 
     np.testing.assert_allclose(df["error"], [0.005, 0.010, 0.025])
-
-
-def test_tx0_ignores_the_units_row_and_the_trailing_warnings(tmp_path) -> None:
-    """Both begin with '*', which is what separates them from measurements."""
-    path = tmp_path / "demo.tx0"
-    path.write_text(TX0, encoding="utf-8")
-
-    _, df = parse_tx0(path)
-
-    assert len(df) == 3
-    assert np.isfinite(df[["a", "b", "m", "n", "rhoa"]].to_numpy()).all()
 
 
 def test_tx0_without_an_electrode_block_is_refused(tmp_path) -> None:

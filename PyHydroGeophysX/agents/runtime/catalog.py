@@ -17,6 +17,7 @@ agents did not previously have: ``BaseAgent.context`` is per-agent, so nothing
 an agent concluded ever reached another one.
 """
 
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -424,10 +425,15 @@ def _invert_time_lapse(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         "time_lapse_method": config.get("time_lapse_method", IMPLEMENTED_SCHEME),
         "temporal_regularization": config.get("temporal_regularization", 10.0),
         "baseline_index": 0,
+        # No linear solver: the library's own default (spd_cholesky for the
+        # time-lapse normal equations) applies unless the caller chose one.
+        # 'cgls' here overrode it, and the solver then warned that a
+        # least-squares method had been handed a normal matrix.
         "inversion_params": config.get("inversion_params",
-                                       {"lambda": 15.0, "max_iterations": 10,
-                                        "method": "cgls"}),
+                                       {"lambda": 15.0, "max_iterations": 10}),
         "output_dir": str(Path(ctx.output_dir) / "inversion"),
+        # The evaluation step interprets the model the run keeps, once.
+        "interpret": False,
     })
     if results.get("status") != "success":
         raise ValueError(str(results.get("error") or "Time-lapse inversion failed."))
@@ -465,6 +471,8 @@ def _invert_single(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         "output_dir": str(Path(ctx.output_dir) / "inversion"),
         "project_dir": config.get("project_dir", "."),
         "instrument": config.get("instrument", DEFAULT_INSTRUMENT),
+        # The evaluation step interprets the model the run keeps, once.
+        "interpret": False,
     })
     if results.get("status") != "success":
         raise ValueError(str(results.get("error") or "Inversion failed."))
@@ -595,6 +603,121 @@ def _water_content_wanted(ctx: RunContext) -> bool:
     return wants_water_content(ctx.config)
 
 
+#: The tools that make each product a request can name (``_intent.PRODUCTS``).
+PRODUCERS = {"water_content": ("convert_water_content", "convert_tdem_water_content"),
+             "climate": ("fetch_climate",)}
+
+#: The steps that recover a resistivity model a conversion can start from.
+_MODEL_STEPS = ("load_ert_surveys", "invert_time_lapse", "invert_ert", "invert_tdem")
+
+
+def plain_error(error: Any) -> str:
+    """A step's error for a reader, without the exception class a tool raised it as.
+
+    The tools raise ``ValueError`` to explain themselves, and the step records
+    ``"ValueError: <explanation>"``; the class name means nothing to a reader
+    of the report. Any other class is kept, because there it is information.
+
+    >>> plain_error("ValueError: no site coordinates")
+    'no site coordinates'
+    >>> plain_error("KeyError: 'rhoa'")
+    "KeyError: 'rhoa'"
+    """
+    return re.sub(r"^(?:ValueError|RuntimeError):\s*", "", str(error or "")).strip()
+
+
+def _last_failure(ctx: RunContext, tools: Sequence[str]) -> Any:
+    """The latest failed step among ``tools`` that no later attempt recovered."""
+    return next((step for step in reversed(ctx.steps)
+                 if step.tool in tools and step.status == "failed" and not ctx.ran(step.tool)),
+                None)
+
+
+def _water_content_failure(ctx: RunContext, results: Mapping[str, Any]) -> Optional[str]:
+    """Why water content the request asked for is missing, or None.
+
+    The report states a failed conversion as a failure, with its reason; it
+    used to read as "not requested", or leave the section out. With no
+    resistivity model to convert, the reason is the step that failed to make
+    one - a TDEM file that could not be read, say - rather than a bare "this
+    run produced none".
+    """
+    if (not _water_content_wanted(ctx) or results.get("water_content_mean") is not None
+            or results.get("time_lapse_water_content") or ctx.has("water_content")):
+        return None
+    failed = _last_failure(ctx, PRODUCERS["water_content"])
+    if failed is not None:
+        return plain_error(failed.error or failed.summary)
+    if not (ctx.has("inversion_results") or ctx.has("tdem_results")):
+        broken = _last_failure(ctx, _MODEL_STEPS)
+        return ("no resistivity model was recovered to convert"
+                + (f": {broken.description or broken.tool} failed "
+                   f"({plain_error(broken.error)})" if broken is not None else ""))
+    return "the conversion step did not run"
+
+
+def shortfall_reasons(ctx: RunContext,
+                      results: Optional[Mapping[str, Any]] = None) -> Dict[str, str]:
+    """Why each product the request can name is missing from this run, where it is.
+
+    For :func:`~PyHydroGeophysX.agents._intent.unmet_requests`, which on its
+    own can say only that a product is missing; the reason is what the user can
+    act on.
+
+    Examples
+    --------
+    >>> ctx = RunContext('x', {'user_request': 'estimate the water content'})
+    >>> _ = ctx.begin('invert_tdem', description='Run TDEM inversion')
+    >>> ctx.finish(status='failed', error='ValueError: no time column')
+    >>> shortfall_reasons(ctx)['water_content']
+    'no resistivity model was recovered to convert: Run TDEM inversion failed (no time column)'
+    """
+    reasons: Dict[str, str] = {}
+    water = _water_content_failure(
+        ctx, results if results is not None else (ctx.get("inversion_results") or {}))
+    if water:
+        reasons["water_content"] = water
+    if wants_climate(ctx.config) and not ctx.has("climate_data"):
+        failed = _last_failure(ctx, PRODUCERS["climate"])
+        reasons["climate"] = (plain_error(failed.error) if failed is not None
+                              else climate_blocker(ctx.config) or "the climate step did not run")
+    return reasons
+
+
+def not_delivered_items(ctx: RunContext, delivered: Mapping[str, Any]) -> List[Tuple[str, str]]:
+    """``(what, why)`` for everything a report must say it does not contain.
+
+    The products the request named and the run did not make, then each step
+    that failed and was not recovered, once and with its reason. A run with a
+    broken TDEM file beside good ERT data used to write a complete-looking
+    report that never mentioned TDEM, and to call itself a success.
+
+    Examples
+    --------
+    >>> ctx = RunContext('x', {'data_file': 'a.ohm'})
+    >>> _ = ctx.begin('invert_tdem', description='Run TDEM inversion')
+    >>> ctx.finish(status='failed', error='ValueError: TDEM data file not found: s.csv')
+    >>> not_delivered_items(ctx, {})
+    [('Run TDEM inversion', 'TDEM data file not found: s.csv')]
+    """
+    from .._intent import PRODUCTS, unmet_products
+
+    items: List[Tuple[str, str]] = []
+    covered: set = set()
+    for product, reason in unmet_products(ctx.config, dict(delivered),
+                                          shortfall_reasons(ctx, delivered)):
+        items.append((PRODUCTS[product], str(reason or "it was not produced")))
+        # The step that makes a missing product is stated through the product.
+        covered.update(PRODUCERS.get(product, ()))
+    last: Dict[str, Any] = {}
+    for step in ctx.steps:
+        if step.status == "failed" and not ctx.ran(step.tool) and step.tool not in covered:
+            last[step.tool] = step
+    items += [(step.description or step.tool, plain_error(step.error) or "the step failed")
+              for step in last.values()]
+    return items
+
+
 def _structure_pending(ctx: RunContext) -> bool:
     """Whether a seismic structural constraint is still to come for the model.
 
@@ -629,14 +752,31 @@ def _convert_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         raise ValueError("The inversion returned no resistivity model to convert.")
 
     layers = results.get("cell_markers")
+    requested = config.get("layer_params") or None
+    layer_params = None
     if layers is not None and np.asarray(layers).size == np.asarray(models[0]).size:
         # The layers a structural constraint drew (above and below the seismic
         # interface), one per model cell. The parameter mesh's own markers only
         # number its cells, and would make the conversion a single unit.
         markers = np.asarray(layers)
+        # Parameters the request gave per named layer (regolith, fractured
+        # bedrock) apply to these layers in order, as the fusion pipeline this
+        # replaced applied them; without it they were dropped for defaults.
+        layer_params = requested
     else:
         markers = (np.array(mesh.cellMarkers()) if mesh is not None
                    else np.zeros(len(models[0])))
+        if requested:
+            # Nothing to assign them to. Say so, here and in the report,
+            # rather than convert with other parameters in silence.
+            ctx.note("Layer parameters given for " + ", ".join(map(str, requested))
+                     + " were not applied: this model has no structural layers "
+                     "(a seismic interface draws them), so the conversion used "
+                     + ("petrophysical_params." if config.get("petrophysical_params")
+                        else "generated petrophysical parameters."))
+    # What the report states about the parameters, from what was applied.
+    results["layer_params_applied"] = layer_params or {}
+    results["layer_params_not_applied"] = {} if layer_params else (requested or {})
     agent = PetrophysicsAgent(**agent_kwargs(ctx))
     per_step: List[Dict[str, Any]] = []
     for index, model in enumerate(models):
@@ -645,6 +785,7 @@ def _convert_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
             "mesh": mesh,
             "cell_markers": markers,
             "petrophysical_params": config.get("petrophysical_params", {}),
+            "layer_params": layer_params,
             "n_realizations": config.get("n_realizations", 100),
             "geological_context": config.get("geological_context", "generic watershed"),
             "output_dir": str(Path(ctx.output_dir) / "petrophysics"
@@ -658,6 +799,10 @@ def _convert_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
 
     if not per_step:
         raise ValueError("No time step could be converted to water content.")
+    # Where the conversion completed the request's per-layer parameters with
+    # defaults, or two named layers fell on one; the same for every step.
+    for note in per_step[0].get("layer_param_notes") or []:
+        ctx.note(note)
 
     results["time_lapse_water_content"] = per_step
     results["water_content_mean"] = per_step[0].get("water_content_mean")
@@ -698,6 +843,39 @@ register(Tool(
 # ---------------------------------------------------------------------------
 # 6. other methods
 # ---------------------------------------------------------------------------
+#: The request parser's seismic stage writes its settings at the top level, in
+#: snake case; SeismicAgent reads them by these names.
+_SEISMIC_TOP_LEVEL = (("lam", "lam"), ("z_weight", "zWeight"), ("v_top", "vTop"),
+                      ("v_bottom", "vBottom"), ("para_depth", "paraDepth"),
+                      ("velocity_limits", "limits"))
+
+
+def seismic_inversion_params(config: Mapping[str, Any]) -> Dict[str, Any]:
+    """The seismic inversion settings a configuration gives, under any of its names.
+
+    ``seismic_inversion_params`` is this runtime's own key and wins, setting by
+    setting. The request parser writes ``seismic_params`` (its fusion stage)
+    and, for a seismic-only request, top-level ``lam``, ``z_weight`` and the
+    like; reading the first key alone sent SeismicAgent an empty dictionary, so
+    every value the request stated was replaced by the agent's defaults.
+
+    Examples
+    --------
+    >>> seismic_inversion_params({'seismic_params': {'lam': 5, 'zWeight': 1.0}})
+    {'lam': 5, 'zWeight': 1.0}
+    >>> seismic_inversion_params({'seismic_params': {'lam': 5},
+    ...                           'seismic_inversion_params': {'lam': 30}, 'z_weight': 0.5})
+    {'zWeight': 0.5, 'lam': 30}
+    """
+    merged: Dict[str, Any] = {name: config[key] for key, name in _SEISMIC_TOP_LEVEL
+                              if config.get(key) is not None}
+    for key in ("seismic_params", "seismic_inversion_params"):
+        given = config.get(key)
+        if isinstance(given, Mapping):
+            merged.update({k: v for k, v in given.items() if v is not None})
+    return merged
+
+
 def _invert_seismic(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     from ..seismic_agent import SeismicAgent
 
@@ -713,7 +891,7 @@ def _invert_seismic(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         "geophone_file": config.get("geophone_file"),
         "topography_file": config.get("topography_file"),
         "velocity_threshold": config.get("velocity_threshold", 1200.0),
-        "inversion_params": config.get("seismic_inversion_params", {}),
+        "inversion_params": seismic_inversion_params(config),
         "output_dir": str(Path(ctx.output_dir) / "seismic"),
         "align_origin": config.get("align_origin"),
     }
@@ -815,6 +993,98 @@ register(Tool(
     label="Run TDEM inversion",
     module="em",
     when=_configured("tdem_file", "em_file"),
+))
+
+
+def _tdem_water_content_wanted(ctx: RunContext) -> bool:
+    """Water content is asked for, and the TDEM sounding is the run's resistivity model.
+
+    With ERT data in the run the ERT model carries the conversion. A sounding
+    on its own used to end the run "incomplete" with no reason given, although
+    its layered model converts exactly as an ERT section does.
+    """
+    return _water_content_wanted(ctx) and not survey_files(ctx.config)
+
+
+def _convert_tdem_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    from .._uncertainty import result_caveats
+    from ..petrophysics_agent import PetrophysicsAgent
+
+    config = ctx.config
+    tdem = dict(ctx.get("tdem_results") or {})
+    resistivity = tdem.get("recovered_resistivity")
+    if resistivity is None and tdem.get("recovered_conductivity") is not None:
+        resistivity = 1.0 / np.asarray(tdem["recovered_conductivity"], dtype=float)
+    if resistivity is None:
+        raise ValueError("The TDEM inversion returned no layered resistivity model "
+                         "to convert.")
+    resistivity = np.asarray(resistivity, dtype=float).ravel()
+    n_layers = resistivity.size
+    thicknesses = np.asarray(tdem.get("thicknesses") if tdem.get("thicknesses") is not None
+                             else [], dtype=float).ravel()
+    if thicknesses.size == n_layers - 1:
+        # The last layer of a 1D model is the half-space below the others.
+        top = np.concatenate([[0.0], np.cumsum(thicknesses)])
+        bottom = np.concatenate([np.cumsum(thicknesses), [np.inf]])
+    else:
+        top = bottom = np.full(n_layers, np.nan)
+    if config.get("layer_params"):
+        ctx.note("Layer parameters given for " + ", ".join(map(str, config["layer_params"]))
+                 + " were not applied: the TDEM model's layers are not divided into "
+                   "geological units, so the conversion used "
+                 + ("petrophysical_params." if config.get("petrophysical_params")
+                    else "generated petrophysical parameters."))
+    # The sounding's layers are one unit: a smooth 1D model draws no interface
+    # between them, so there is no layer boundary to hang a second set on.
+    step = PetrophysicsAgent(**agent_kwargs(ctx)).execute({
+        "resistivity_model": resistivity,
+        "cell_markers": np.zeros(n_layers, dtype=int),
+        "petrophysical_params": config.get("petrophysical_params", {}),
+        "n_realizations": config.get("n_realizations", 100),
+        "geological_context": config.get("geological_context", "generic watershed"),
+        "output_dir": str(Path(ctx.output_dir) / "tdem" / "petrophysics"),
+    })
+    if step.get("status") != "success":
+        raise ValueError(str(step.get("error") or "The TDEM water-content conversion failed."))
+    mean = np.asarray(step.get("water_content_mean"), dtype=float).ravel()
+    std = np.asarray(step.get("water_content_std"), dtype=float).ravel()
+    table = Path(ctx.output_dir) / "tdem" / "water_content_by_layer.csv"
+    try:
+        table.parent.mkdir(parents=True, exist_ok=True)
+        np.savetxt(table, np.column_stack([top, bottom, resistivity, mean, std]),
+                   delimiter=",", fmt="%.6g", comments="",
+                   header="depth_top_m,depth_bottom_m,resistivity_ohm_m,"
+                          "water_content_mean,water_content_std")
+    except Exception as exc:  # noqa: BLE001 - a table is not the result
+        ctx.note(f"The TDEM water-content table could not be written ({exc}).")
+        table = None
+    step = {**step, "layering": (
+        f"The {n_layers}-layer TDEM model was converted as one unit with one "
+        f"petrophysical parameter set; no interface divides its layers into "
+        f"geological units."), "depth_top_m": top, "depth_bottom_m": bottom}
+    tdem.update({"water_content_mean": mean, "water_content_std": std,
+                 "water_content_table": str(table) if table else None})
+    for caveat in result_caveats(config, tdem):
+        ctx.note(caveat)
+    return (f"Converted the {n_layers}-layer TDEM resistivity model to water content by "
+            f"Monte Carlo petrophysics: {float(np.nanmin(mean)):.3f} to "
+            f"{float(np.nanmax(mean)):.3f} (mean uncertainty {float(np.nanmean(std)):.3f}).",
+            {"tdem_results": tdem, "water_content": [step]})
+
+
+register(Tool(
+    name="convert_tdem_water_content",
+    description="Convert the TDEM sounding's layered resistivity model to volumetric "
+                "water content, layer by layer, propagating petrophysical "
+                "uncertainty by Monte Carlo. Required when the request asks about "
+                "water content and the sounding is the run's only resistivity model.",
+    handler=_convert_tdem_water_content,
+    requires=("tdem_results",),
+    produces=("water_content",),
+    agent="PetrophysicsAgent",
+    label="Convert TDEM model to water content",
+    module="em",
+    when=_tdem_water_content_wanted,
 ))
 
 
@@ -1264,11 +1534,17 @@ def _survey_report_input(ctx: RunContext, results: Dict[str, Any]) -> Dict[str, 
     had written them.
     """
     config = ctx.config
+    failure = _water_content_failure(ctx, results)
     workflow_data: Dict[str, Any] = {
         "inversion_results": results,
         "evaluation_results": ctx.get("evaluation_results") or {},
-        "skip_petrophysics": results.get("water_content_mean") is None,
+        # "Not requested" only when it was not: a conversion that was asked for
+        # and failed used to be reported as never requested.
+        "skip_petrophysics": (results.get("water_content_mean") is None
+                              and not _water_content_wanted(ctx)),
     }
+    if failure:
+        workflow_data["water_content_failed"] = failure
     surveys = ctx.get("ert_data") or []
     if surveys:
         electrodes = len(getattr(surveys[0], "electrodes", None) or [])
@@ -1287,7 +1563,10 @@ def _survey_report_input(ctx: RunContext, results: Dict[str, Any]) -> Dict[str, 
             "layer_params_used": step.get("layer_params_used", {}),
             "layer_params": step.get("layer_params", {}),
             "petrophysical_params": config.get("petrophysical_params", {}),
+            "layer_params_applied": results.get("layer_params_applied") or {},
+            "layer_params_not_applied": results.get("layer_params_not_applied") or {},
             "n_realizations": config.get("n_realizations", 100),
+            "interpretation": step.get("interpretation"),
         }
         workflow_data["petrophysics_results"] = step
         workflow_data["petrophysical_params"] = config.get("petrophysical_params", {})
@@ -1298,11 +1577,13 @@ def _survey_report_input(ctx: RunContext, results: Dict[str, Any]) -> Dict[str, 
         # The report's seismic section and its "Seismic Integration" line read
         # this; without it a constrained run was reported as ERT alone.
         structure = ctx.get("structure_results") or {}
+        # An interpretation nobody wrote is left out, not printed as "N/A".
         workflow_data["seismic_structure"] = {
             "velocity_threshold": structure.get("velocity_threshold"),
-            "interpretation": (ctx.get("seismic_results") or {}).get("interpretation")
-                              or "N/A",
+            "interpretation": (ctx.get("seismic_results") or {}).get("interpretation"),
         }
+    delivered = {**results, "climate_data": ctx.get("climate_data")}
+    workflow_data["not_delivered"] = not_delivered_items(ctx, delivered)
     return {"workflow_data": workflow_data, "config": config,
             "output_dir": str(ctx.output_dir)}
 
@@ -1319,8 +1600,14 @@ def _write_report(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         results.get("time_lapse_models"))
 
     site_info = build_site_info(ctx)
+    failure = _water_content_failure(ctx, results)
+    # Climate data are a step output of their own, not part of the inversion
+    # results; without them here every run that retrieved them was told it had not.
+    delivered = {**results, "climate_data": ctx.get("climate_data")}
     payload = {
-        "inversion_results": results,
+        "inversion_results": ({**results, "water_content_failed": failure} if failure
+                              else results),
+        "not_delivered": not_delivered_items(ctx, delivered),
         "climate_data": ctx.get("climate_data"),
         "site_info": site_info,
         "comparison_data": ctx.get("comparison_data"),
@@ -1337,11 +1624,9 @@ def _write_report(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     for warning in report.get("warnings") or []:
         ctx.note(warning)
     # Products the request named and the run did not deliver, stated here rather
-    # than left for the reader to notice.
-    # Climate data are a step output of their own, not part of the inversion
-    # results; without them here every run that retrieved them was told it had not.
-    delivered = {**results, "climate_data": ctx.get("climate_data")}
-    for warning in unmet_requests(config, delivered) + result_caveats(config, results):
+    # than left for the reader to notice, with the reason each is missing.
+    for warning in (unmet_requests(config, delivered, shortfall_reasons(ctx, delivered))
+                    + result_caveats(config, results)):
         ctx.note(warning)
 
     files = {"report_markdown": report.get("report_file")}
@@ -1393,21 +1678,31 @@ def build_site_info(ctx: RunContext) -> Dict[str, Any]:
     }
 
 
-def summarise_run(ctx: RunContext) -> str:
+def summarise_run(ctx: RunContext, incomplete: Sequence[str] = ()) -> str:
     """The interpretation text, written from the steps that actually ran.
 
     Replaces an f-string that restated the configuration - it reported the
     configured time-lapse method and the configured regularization whether or
     not the inversion had used them, because it was written beside the config
     rather than beside the result.
+
+    ``incomplete`` - why the run cannot be called complete, when it cannot -
+    heads the text in place of "completed", so its first line never claims a
+    run finished that did not.
     """
     results = ctx.get("inversion_results") or {}
-    lines = [f"Workflow completed in {ctx.elapsed():.0f} s.", "", "**Steps taken:**"]
-    lines += [f"- {step.line()}" for step in ctx.steps]
+    if incomplete:
+        lines = [f"Workflow did not complete ({ctx.elapsed():.0f} s):"]
+        lines += [f"- {reason}" for reason in incomplete] + [""]
+    else:
+        lines = [f"Workflow completed in {ctx.elapsed():.0f} s.", ""]
+    lines.append("**Steps taken:**")
+    lines += [f"- {step.line()}" for step in ctx.steps] or ["- none"]
     history = chi2_summary(results.get("chi2_values"))
     if history != "N/A":
         lines += ["", f"**Data fit:** chi-squared {history}."]
-    if ctx.warnings:
+    raised = [w for w in ctx.warnings if w not in incomplete]
+    if raised:
         lines += ["", "**Raised during the run:**"]
-        lines += [f"- {w}" for w in ctx.warnings]
+        lines += [f"- {w}" for w in raised]
     return "\n".join(lines)

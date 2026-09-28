@@ -38,6 +38,18 @@ DEFAULT_TL = {
     "windowed": False, "window_size": 3, "save_memory": False, "instrument": None,
     "engine": "pyhydro",
     "para_depth": 0.0,
+    "para_max_cell_size": 0.0,
+    # The rest of the generated mesh's sizing, as build_inversion_mesh takes it;
+    # at these values PyGIMLi builds its own default mesh.
+    "para_boundary": 2.0, "surface_nodes": 1, "outer_width": 0.0,
+    "outer_max_cell_size": 0.0,
+    # A mesh built elsewhere to invert on instead of the generated one, and the
+    # a-priori resistivity zones drawn on it (see ert_zones): whether the mesh
+    # follows their outlines, and whether the smoothness stops at them.
+    "mesh_file": "",
+    "zones": None,
+    "conform_to_zones": False,
+    "decouple_zones": False,
     "max_error": None,
     # Lambda relaxation. A trial here is a full joint inversion over every time
     # step, so the default budget is smaller than the single-inversion search.
@@ -174,8 +186,11 @@ def _resolve_timing(source_files: Sequence[str],
     A caller that also supplies numeric ``measurement_times`` keeps them: they may
     be in a unit of its own choosing and they are what the temporal regularization
     sees. Only the reporting - the labels, the intervals, the span - comes from the
-    timestamps.
+    timestamps, and the dates the temperature correction runs on; the filenames
+    are read for them whether or not numeric times came with the files.
     """
+    from dataclasses import replace
+
     from PyHydroGeophysX.data_processing.survey_timing import (
         SurveyTiming, survey_timing,
     )
@@ -203,15 +218,24 @@ def _resolve_timing(source_files: Sequence[str],
         return SurveyTiming(files=files, timestamps=stamps, times=times,
                             labels=labels, source=source, unit="d")
 
-    if has_times:
-        labels = ([str(lbl) for lbl in time_labels]
-                  if time_labels is not None and len(time_labels) == n
-                  else [f"{float(t):g}" for t in measurement_times])
-        return SurveyTiming(files=files, timestamps=[None] * n,
-                            times=[float(t) for t in measurement_times],
-                            labels=labels, source="supplied times", unit="")
-
-    return survey_timing(files)
+    named = survey_timing(files)
+    if not has_times:
+        return named
+    # Numeric times place each survey for the temporal regularization; they say
+    # nothing about when it was measured, and the file names often do. Numeric
+    # times used to skip the names, so the same two dated files had a seasonal
+    # temperature correction without times and none with them.
+    supplied = [float(t) for t in measurement_times]
+    if time_labels is not None and len(time_labels) == n:
+        labels = [str(lbl) for lbl in time_labels]
+    elif named.dated:
+        labels = list(named.labels)
+    else:
+        labels = [f"{t:g}" for t in supplied]
+    if named.dated:
+        return replace(named, times=supplied, labels=labels)
+    return SurveyTiming(files=files, timestamps=[None] * n, times=supplied,
+                        labels=labels, source="supplied times", unit="")
 
 
 def _sensor_positions(data) -> Optional[np.ndarray]:
@@ -330,6 +354,9 @@ def build_timelapse_config(data_files: Sequence[str], measurement_times: Sequenc
             "lambda_val", "alpha", "inversion_type", "max_iterations",
             "relativeError", "method", "mesh_quality", "rho_min", "rho_max",
             "windowed", "window_size", "save_memory", "engine", "para_depth",
+            "para_max_cell_size", "para_boundary", "surface_nodes", "outer_width",
+            "outer_max_cell_size", "mesh_file", "zones", "conform_to_zones",
+            "decouple_zones",
             "max_error", "temporal_weighting", "temporal_weight_limit")},
         # Post-processing that changes what the sections show has to travel with
         # the configuration, or a re-run reproduces different pictures.
@@ -348,8 +375,14 @@ def run_timelapse_ert(
     time_labels: Optional[Sequence[str]] = None,
     time_unit: str = "",
     timestamps: Optional[Sequence[Any]] = None,
+    electrode_file: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Run a full temporal-regularized time-lapse ERT inversion.
+
+    ``electrode_file`` places the electrodes of every survey, rows matched to
+    each file's electrodes in order, as it does for a single survey; a survey
+    whose electrode count differs from the file's is refused. Without it each
+    file's own electrode table is used.
 
     ``time_labels`` is what the per-step panel titles read — acquisition dates,
     typically. Pass them whenever ``measurement_times`` is given: the times alone
@@ -439,18 +472,72 @@ def run_timelapse_ert(
     # what makes the time-lapse inversion actually work on those files.
     instrument = p.get("instrument")
     log(f"Preparing {len(source_files)} ERT files"
-        + (f" (instrument: {instrument})" if instrument else " (auto-detect)") + " …")
+        + (f" (instrument: {instrument})" if instrument else " (auto-detect)")
+        + (f", electrode positions from {Path(electrode_file).name}" if electrode_file else "")
+        + " …")
     clean_dir, basenames, containers = ert_load.normalize_for_timelapse(
         source_files, instrument, out_dir, log=log,
-        max_error=p.get("max_error"), engine=engine)
+        max_error=p.get("max_error"), engine=engine,
+        electrode_file=str(electrode_file) if electrode_file else None)
     files = [os.path.join(clean_dir, b) for b in basenames]
 
-    log(f"Building mesh from {Path(source_files[0]).name} (quality {p['mesh_quality']})")
+    # The same mesh builder as the single-survey run and the ERT page's mesh
+    # preview, so the preview of the first survey is the mesh inverted here.
+    from .ert_inversion import _zone_notes
+    from .ert_mesh import build_inversion_mesh, mark_zone_interfaces
+    from .ert_zones import normalize_zones, zone_prior
+
     data0 = containers[0]
-    mesh_kwargs: Dict[str, Any] = {"quality": float(p["mesh_quality"])}
-    if float(p.get("para_depth", 0.0)) > 0.0:
-        mesh_kwargs["paraDepth"] = float(p["para_depth"])
-    mesh = pg_ert.ERTManager(data0).createMesh(data=data0, **mesh_kwargs)
+    p["mesh_file"] = str(p.get("mesh_file") or "")
+    zones = normalize_zones(p.get("zones"))
+    p["zones"] = zones or None
+    if p["mesh_file"]:
+        log(f"Loading the inversion mesh {Path(p['mesh_file']).name}")
+    else:
+        log(f"Building mesh from {Path(source_files[0]).name} (quality {p['mesh_quality']})")
+    mesh_report: Dict[str, Any] = {}
+    mesh = build_inversion_mesh(
+        data0, mesh_quality=float(p["mesh_quality"]),
+        para_depth=float(p.get("para_depth", 0.0) or 0.0),
+        para_max_cell_size=float(p.get("para_max_cell_size", 0.0) or 0.0),
+        para_boundary=float(p.get("para_boundary", 2.0) or 2.0),
+        surface_nodes=int(p.get("surface_nodes", 1) or 1),
+        outer_width=float(p.get("outer_width", 0.0) or 0.0),
+        outer_max_cell_size=float(p.get("outer_max_cell_size", 0.0) or 0.0),
+        conform_zones=zones if p.get("conform_to_zones") else None,
+        mesh_file=p["mesh_file"], log=log, report=mesh_report)
+    # The smoothness stops at the zone outlines for every engine: the in-house
+    # one and PyGIMLi read the marked edges, ADTLERT turns them into units.
+    decoupled_edges = 0
+    if p.get("decouple_zones") and zones:
+        mesh, decoupled_edges = mark_zone_interfaces(mesh, zones)
+        log(f"  smoothness dropped across {decoupled_edges} cell edges along the "
+            "zone outlines" if decoupled_edges else
+            "  (no cell edge lies on a zone outline, so the smoothness is unchanged)")
+
+    # A-priori zones. The PyHydro engine starts every survey from them and holds
+    # the fixed ones; the ADTLERT backend builds its own start model and takes
+    # none, so a zone list it would silently drop is reported instead.
+    zone_report: List[Dict[str, Any]] = []
+    zones_not_applied: List[str] = []
+    if zones and engine == "adtlert":
+        log(f"Note: the ADTLERT time-lapse backend does not take a-priori zone "
+            f"values, so the {len(zones)} zone(s) defined set neither its start "
+            "nor its reference model"
+            + (" (the smoothness still stops at their outlines)" if decoupled_edges
+               else "")
+            + ". Use the PyHydro engine to invert with them.")
+        zones_not_applied = [zone["name"] for zone in zones]
+        zones = []
+    elif zones:
+        fop = pg_ert.ERTModelling()
+        fop.setData(data0)
+        fop.setMesh(mesh)
+        prior = zone_prior(fop.paraDomain, zones,
+                           bounds=(float(p["rho_min"]), float(p["rho_max"])))
+        for line in _zone_notes(engine, prior):
+            log(line)
+        zone_report = [dict(entry) for entry in prior.report]
 
     # Pick dense vs. sparse (low-memory) solve. Honor an explicit choice; otherwise
     # auto-enable sparse once the dense Gauss-Newton matrices would get large.
@@ -472,6 +559,8 @@ def run_timelapse_ert(
         temporal_weighting=str(p.get("temporal_weighting", "interval")),
         temporal_weight_limit=p.get("temporal_weight_limit", 10.0),
     )
+    if zones:
+        inv_kwargs["zones"] = zones
     lambda_report: Dict[str, Any] = {"enabled": False}
     # The GPU backend builds its own temporal operator and does not take these,
     # so say that rather than let the setting look as if it applied.
@@ -694,6 +783,7 @@ def run_timelapse_ert(
         log(f"VTK export skipped: {exc}")
 
     config = build_timelapse_config(source_files, times, p)
+    config["electrode_file"] = str(electrode_file) if electrode_file else None
     io_utils.write_json(out / "timelapse_config.json", config)
 
     return {
@@ -713,8 +803,18 @@ def run_timelapse_ert(
         ),
         "n_times": int(n_time),
         "mesh_cells": int(res_mesh.cellCount()),
+        "mesh_file": p["mesh_file"],
+        # The a-priori zones as applied (cells covered, values after clipping);
+        # empty when none were defined or the engine could not take them.
+        "zones": zone_report,
+        "zones_fixed_held": bool(any(z["fixed"] and z["cells"] for z in zone_report)),
+        "zones_not_applied": zones_not_applied,
+        "mesh_zone_outline_edges": int(mesh_report.get("zone_outline_edges", 0)),
+        "zone_edges_decoupled": int(decoupled_edges),
         "inversion_type": str(p["inversion_type"]),
         "instrument": instrument,
+        # Where the electrode positions came from, when not each file's header.
+        "electrode_file": Path(electrode_file).name if electrode_file else "",
         "save_memory": bool(save_memory),
         "chi2": final_chi2,
         "chi2_history": chi2_history,

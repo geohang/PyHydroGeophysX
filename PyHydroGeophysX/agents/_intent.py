@@ -35,11 +35,14 @@ instead of claiming success.
 """
 
 import contextvars
-import json
 import re
 from concurrent.futures import ThreadPoolExecutor
 from difflib import SequenceMatcher
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+
+# Models wrap JSON in prose or a code fence often enough that requiring a bare
+# object would throw away good answers.
+from PyHydroGeophysX._internal.utils import parse_json_object as _parse_json_object
 
 #: Phrases that mean "convert resistivity to water content". Matched fuzzily,
 #: so near-misses and ordinary misspellings still count.
@@ -84,6 +87,175 @@ def _mentions(text: str, phrases) -> bool:
     return False
 
 
+#: Words that rule out the term right after them ("not TDEM", "no seismic").
+NEGATIONS = ("no", "not", "without", "except", "excluding", "skip", "never", "nor",
+             "don't", "dont", "doesn't", "isn't")
+#: Two-word phrases that do the same ("ERT instead of TDEM").
+_NEGATION_PHRASES = ("instead of", "rather than")
+#: The same in Chinese, matched immediately before the term. Not "除了":
+#: "除了TDEM之外，还要…" means besides as often as it means except.
+_NEGATIONS_ZH = ("不", "不要", "不用", "无", "没有", "非", "别",
+                 "不需要", "无需", "不做", "不必", "不进行")
+#: Questions and suggestions that end in a negation and rule nothing out:
+#: "要不TDEM也做一下" (how about TDEM too), "有没有TDEM数据" (is there any).
+_NOT_NEGATIONS_ZH = ("要不", "有没有", "是不是", "能不能", "可不可以")
+#: Where a clause ends. A negation does not reach past it: in "No ERT, TDEM
+#: only" the "No" is about ERT.
+_CLAUSE_END = re.compile(r"[,;:!?，。；：！？]|\.(?=\s|$)")
+#: A refusal written after the term that ends its clause: "TDEM is not needed.",
+#: "TDEM数据不需要，…". In "TDEM不需要单独处理" (needs no separate processing)
+#: or "TDEM不要忘了" (do not forget it) the negation is of what follows.
+_NEGATED_AFTER = re.compile(
+    r"\s*(?:(?:data|files?|soundings?|surveys?)\s+)?"
+    r"(?:(?:is|are)\s+not|isn't|aren't|not)\s+(?:needed|required|necessary|wanted)"
+    r"(?:\s+(?:here|now|anymore|either|for\s+(?:this|now)\b[\w\s]*?))?"
+    r"(?=\s*(?:$|[,;:!?，。；：！？]|\.(?:\s|$)))"
+    r"|\s*(?:数据|文件)?\s*就?(?:不需要|不用|不要|无需|不做|不必)(?:做|处理|反演)?[了的啦吧]?"
+    r"(?=\s*(?:$|[,;:!?，。；：！？.]))")
+
+
+def names_unnegated(text: str, term: str, prefix: bool = False) -> bool:
+    """Whether ``text`` names ``term`` other than to rule it out.
+
+    A substring test reads "ERT on line2.dat, not TDEM" as a request for TDEM.
+    An occurrence counts unless, within its own clause, one of the three words
+    before it is a negation ("not only" and "don't forget" are not), the two
+    before are "instead of" or "rather than", a Chinese negation immediately
+    precedes it, or a refusal follows it and ends the clause ("TDEM is not
+    needed.", "TDEM不需要，"). Reading a refusal where there is none drops a
+    product the user asked for, so the refusals are read narrowly. The term
+    must stand as a word; with ``prefix`` it may begin a longer one ("seismic"
+    in "seismics" or "SeismicAgent").
+
+    Examples
+    --------
+    >>> names_unnegated("Invert the TDEM sounding", "tdem")
+    True
+    >>> names_unnegated("ERT on line2.dat, not TDEM", "tdem")
+    False
+    >>> names_unnegated("Do not use TDEM here", "tdem")
+    False
+    >>> names_unnegated("不要TDEM，只做ERT", "tdem")
+    False
+    >>> names_unnegated("只做ERT反演，不需要TDEM", "tdem")
+    False
+    >>> names_unnegated("Invert a.ohm. TDEM is not needed.", "tdem")
+    False
+    >>> names_unnegated("Run ERT instead of TDEM", "tdem")
+    False
+    >>> names_unnegated("Use TDEM instead of ERT", "tdem")
+    True
+    >>> names_unnegated("no seismic, but a TDEM file", "tdem")
+    True
+    >>> names_unnegated("No ERT, TDEM only: sounding.csv", "tdem")
+    True
+    >>> names_unnegated("TDEM不需要单独处理，和ERT一起反演", "tdem")
+    True
+    >>> names_unnegated("Don't forget the TDEM sounding", "tdem")
+    True
+    >>> names_unnegated("Run the SeismicAgent", "seismic", prefix=True)
+    True
+    >>> names_unnegated("an aseismic site", "seismic", prefix=True)
+    False
+    """
+    lowered = str(text or "").lower()
+    target = term.lower()
+    ending = "" if prefix else r"(?![a-z0-9])"
+    for match in re.finditer(r"(?<![a-z0-9])" + re.escape(target) + ending, lowered):
+        before = _CLAUSE_END.split(lowered[max(0, match.start() - 40):match.start()])[-1]
+        words = re.findall(r"[a-z']+", before)
+        if (any(word in NEGATIONS for word in words[-3:])
+                and words[-2:] != ["not", "only"] and "forget" not in words[-3:]):
+            continue
+        if " ".join(words[-2:]) in _NEGATION_PHRASES:
+            continue
+        chinese = before.rstrip()
+        if chinese.endswith(_NEGATIONS_ZH) and not chinese.endswith(_NOT_NEGATIONS_ZH):
+            continue
+        if _NEGATED_AFTER.match(lowered, match.end()):
+            continue
+        return True
+    return False
+
+
+def names_tdem(text: str) -> bool:
+    """Whether ``text`` asks for TDEM, under any of the names a request uses.
+
+    Examples
+    --------
+    >>> names_tdem("Invert a.ohm and the TEM sounding")
+    True
+    >>> names_tdem("a time-domain electromagnetics survey in tem.csv")
+    True
+    >>> names_tdem("ERT only, not TDEM; check the system temperature")
+    False
+    """
+    return (names_unnegated(text, "tdem") or names_unnegated(text, "tem")
+            or names_unnegated(text, "time-domain electromagnetic", prefix=True)
+            or names_unnegated(text, "transient electromagnetic", prefix=True))
+
+
+def infer_instrument(text: str) -> Optional[str]:
+    """The ERT instrument that ``text`` names, or ``None`` when it names none.
+
+    Used for a request and for a data file's header alike: both mention the
+    instrument by name, and both contain ordinary words that hold one. The names
+    are therefore matched as whole words - "existing" holds "sting", "compares"
+    "ares", "Albert" "bert" and "Canadas" "das", and a substring test read each
+    of those as an instrument, so a file was handed to the wrong reader. The
+    boundaries are ASCII, so a name written straight into Chinese text
+    ("用Syscal测的") still counts.
+
+    Parameters
+    ----------
+    text : str
+        A request, or the opening lines of a data file.
+
+    Returns
+    -------
+    str or None
+        The canonical instrument name the loaders use.
+
+    Examples
+    --------
+    >>> infer_instrument("DAS-1 data")
+    'DAS-1'
+    >>> infer_instrument("invert the existing survey; Albert compares Canadas lines") is None
+    True
+    >>> infer_instrument("用SuperSting测的数据")
+    'Sting'
+    >>> infer_instrument("ABEM Terrameter LS 2")
+    'ABEM-Lund'
+    """
+    lower = (text or "").lower()
+
+    def named(word: str, prefix: bool = False) -> bool:
+        ending = "" if prefix else r"(?![a-z0-9])"
+        return re.search(r"(?<![a-z0-9])" + word + ending, lower) is not None
+
+    # The company's name, not the word "subsurface", which half of all
+    # requests contain.
+    if re.search(r"sub\s*surface[\s-]*insight|subinsight", lower):
+        return "Subsurface Insights"
+    if named("abem") or named("terr?ameters?"):
+        return "ABEM-Lund"
+    if named("syscal", prefix=True):
+        return "Syscal"
+    if named("e4d"):
+        return "E4D"
+    if named("das"):
+        return "DAS-1"
+    if named("(?:py)?bert"):
+        return "BERT"
+    if named(r"(?:super\s*)?sting"):
+        return "Sting"
+    if named("ares"):
+        return "ARES"
+    if named(r"protocol\s*dc"):
+        return "Protocol DC"
+    return None
+
+
 def wants_water_content(config: Dict[str, Any]) -> bool:
     """Whether this run should convert resistivity to water content.
 
@@ -92,8 +264,8 @@ def wants_water_content(config: Dict[str, Any]) -> bool:
     config : dict
         Workflow configuration. ``convert_to_water_content`` is honoured first
         when present (the request parser or the user set it deliberately), then
-        non-empty ``petrophysical_params``, then the wording of
-        ``user_request``.
+        non-empty ``petrophysical_params`` or ``layer_params`` (parameters
+        given per named layer), then the wording of ``user_request``.
 
     Returns
     -------
@@ -115,11 +287,13 @@ def wants_water_content(config: Dict[str, Any]) -> bool:
     >>> wants_water_content({"convert_to_water_content": False,
     ...                      "user_request": "water content please"})
     False
+    >>> wants_water_content({"layer_params": {"regolith": {"n_range": [1.3, 2.2]}}})
+    True
     """
     explicit = config.get("convert_to_water_content")
     if explicit is not None:
         return bool(explicit)
-    params = config.get("petrophysical_params") or {}
+    params = config.get("petrophysical_params") or config.get("layer_params") or {}
     if params:
         return True
     request = str(config.get("user_request", ""))
@@ -274,7 +448,44 @@ def climate_blocker(config: Dict[str, Any]) -> Optional[str]:
     return f"no site coordinates: {detail}"
 
 
-def unmet_requests(config: Dict[str, Any], results: Dict[str, Any]) -> List[str]:
+#: What each product a request can name is called in a report.
+PRODUCTS = {"water_content": "Water content", "climate": "Meteorological data"}
+
+
+def unmet_products(config: Dict[str, Any], results: Dict[str, Any],
+                   why: Optional[Dict[str, str]] = None) -> List[Tuple[str, Optional[str]]]:
+    """``(product, reason)`` for each product the request named and the results lack.
+
+    ``product`` is a key of :data:`PRODUCTS`. ``reason`` is the caller's, from
+    ``why``, when it knows one - a failed step's error, say; otherwise, for
+    meteorological data, the obstacle :func:`climate_blocker` finds, and None.
+
+    Examples
+    --------
+    >>> unmet_products({"user_request": "estimate water content"}, {},
+    ...                why={"water_content": "no resistivity model was recovered"})
+    [('water_content', 'no resistivity model was recovered')]
+    >>> unmet_products({"use_climate": True, "climate_config": {"coords": [-106.2, 41.4]}}, {})
+    [('climate', None)]
+    """
+    missing: List[Tuple[str, Optional[str]]] = []
+    if not isinstance(results, dict):
+        return missing
+    why = why or {}
+    if wants_water_content(config):
+        produced = (results.get("water_content_mean") is not None
+                    or results.get("water_content") is not None
+                    or bool(results.get("petrophysics_results"))
+                    or bool(results.get("time_lapse_water_content")))
+        if not produced:
+            missing.append(("water_content", why.get("water_content")))
+    if wants_climate(config) and not results.get("climate_data"):
+        missing.append(("climate", why.get("climate") or climate_blocker(config)))
+    return missing
+
+
+def unmet_requests(config: Dict[str, Any], results: Dict[str, Any],
+                   why: Optional[Dict[str, str]] = None) -> List[str]:
     """Products the request named that the results do not contain.
 
     The safety net, deliberately independent of which workflow branch ran: it
@@ -287,12 +498,16 @@ def unmet_requests(config: Dict[str, Any], results: Dict[str, Any]) -> List[str]
         Workflow configuration, including ``user_request``.
     results : dict
         The finished workflow results.
+    why : dict, optional
+        Why each product is missing, by :data:`PRODUCTS` key, when the caller
+        knows. A sentence that says only that a product is missing leaves the
+        user nothing to act on.
 
     Returns
     -------
     list of str
-        One plain-English sentence per missing product; empty when the run
-        delivered everything it was asked for.
+        One plain-English sentence per missing product, with its reason when
+        one is known; empty when the run delivered everything it was asked for.
 
     Raises
     ------
@@ -304,23 +519,20 @@ def unmet_requests(config: Dict[str, Any], results: Dict[str, Any]) -> List[str]
     ['Water content was requested but this run produced none.']
     >>> unmet_requests({"user_request": "invert the ERT data"}, {"status": "success"})
     []
+    >>> unmet_requests({"user_request": "water content"}, {},
+    ...                why={"water_content": "the TDEM inversion failed."})
+    ['Water content was requested but this run produced none: the TDEM inversion failed.']
     """
-    missing: List[str] = []
-    if not isinstance(results, dict):
-        return missing
-    if wants_water_content(config):
-        produced = (results.get("water_content_mean") is not None
-                    or results.get("water_content") is not None
-                    or bool(results.get("petrophysics_results"))
-                    or bool(results.get("time_lapse_water_content")))
-        if not produced:
-            missing.append("Water content was requested but this run produced none.")
-    if wants_climate(config) and not results.get("climate_data"):
-        blocker = climate_blocker(config)
-        reason = f" ({blocker})" if blocker else ""
-        missing.append("Meteorological data were requested but none were "
-                       f"retrieved{reason}.")
-    return missing
+    sentences: List[str] = []
+    for product, reason in unmet_products(config, results, why):
+        reason = str(reason or "").strip().rstrip(".")
+        if product == "water_content":
+            sentences.append("Water content was requested but this run produced none"
+                             + (f": {reason}." if reason else "."))
+        else:
+            sentences.append("Meteorological data were requested but none were "
+                             "retrieved" + (f" ({reason})." if reason else "."))
+    return sentences
 
 
 #: What the model is asked about the request. Deliberately small and closed: one
@@ -431,24 +643,6 @@ def _config_from(answer: Dict[str, Any]) -> Dict[str, Any]:
         if not looks_numeric:
             out["site_location"] = cleaned
     return out
-
-
-def _parse_json_object(reply) -> Any:
-    """The first JSON object in ``reply``, or None.
-
-    Models wrap JSON in prose or a code fence often enough that requiring a bare
-    object would throw away good answers.
-    """
-    if not isinstance(reply, str):
-        return None
-    text = reply.strip()
-    start, end = text.find("{"), text.rfind("}")
-    if start < 0 or end <= start:
-        return None
-    try:
-        return json.loads(text[start:end + 1])
-    except ValueError:
-        return None
 
 
 #: The extraction stages the request parser can run, and what each is for. A

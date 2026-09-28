@@ -1088,6 +1088,18 @@ def _reciprocal_key(frame: pd.DataFrame) -> Tuple[pd.Series, np.ndarray]:
     return pd.Series([tuple(row) for row in quad], index=frame.index), sign
 
 
+def _reciprocal_direction(frame: pd.DataFrame, key: pd.Series) -> np.ndarray:
+    """Whether each row was measured with its dipoles exchanged against ``key``.
+
+    ``key`` is ``_reciprocal_key``'s label, which puts the lower pair first; a
+    row whose current pair is that pair is one direction, a row injecting on
+    the other pair the reciprocal. Only rows of opposite directions pair.
+    """
+    current = np.sort(frame[["a", "b"]].to_numpy(dtype=np.int64), axis=1)
+    first = np.array([label[:2] for label in key], dtype=np.int64).reshape(-1, 2)
+    return ~(current == first).all(axis=1)
+
+
 def reciprocal_errors(
     df: pd.DataFrame,
     max_reciprocal_error: float = 0.05,
@@ -1117,6 +1129,11 @@ def reciprocal_errors(
     better value to invert: the two readings are independent measurements of the
     same quantity, so averaging them halves the variance.
 
+    Only exchanging the current and potential pairs makes a reciprocal. The
+    same quadrupole repeated in the same direction is a stack of one
+    measurement: repeats are averaged within each direction before the two
+    directions are compared, and repeats with no reciprocal stay unpaired.
+
     A measurement with no reciprocal keeps its row and takes NaN, so a survey
     that was never measured reciprocally passes through unchanged. With
     ``drop_failed`` set, pairs above the threshold are removed; the caller keeps
@@ -1133,18 +1150,23 @@ def reciprocal_errors(
     # Compare in one sign convention, then report in the row's own convention.
     canonical = pd.to_numeric(out["resist"], errors="coerce") * sign
 
-    grouped = canonical.groupby(key)
-    mean = grouped.transform("mean")
-    span = grouped.transform(lambda s: s.max() - s.min())
-    counts = grouped.transform("size")
+    # A repeat in the same direction used to be scored as a reciprocal, so a
+    # 1.00 / 1.08 stack read as a 7.7 % reciprocal error and both rows went at a
+    # 5 % cut. Stack each direction first, then compare the two directions.
+    exchanged = pd.Series(_reciprocal_direction(out, key), index=out.index)
+    stacks = canonical.groupby([key, exchanged]).transform("mean")
+    normal = stacks.where(~exchanged).groupby(key).transform("mean")
+    reverse = stacks.where(exchanged).groupby(key).transform("mean")
+    paired = normal.notna() & reverse.notna()
+    mean = (normal + reverse) / 2.0
 
     with np.errstate(divide="ignore", invalid="ignore"):
-        error = np.abs(span) / np.abs(mean)
+        error = np.abs(reverse - normal) / np.abs(mean)
     # A pair straddling zero has a mean near zero and an error that says nothing
     # about the measurement, so it is left unscored rather than rejected.
-    error = error.where(np.isfinite(error) & (counts >= 2))
+    error = error.where(np.isfinite(error) & paired)
     out["reciprocalErrRel"] = error
-    out["reciprocalMean"] = np.where(counts >= 2, mean * sign, canonical * sign)
+    out["reciprocalMean"] = np.where(paired, mean * sign, canonical * sign)
 
     if drop_failed and np.isfinite(error).any():
         keep = ~(error > float(max_reciprocal_error))    # NaN stays, being unpaired

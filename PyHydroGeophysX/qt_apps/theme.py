@@ -36,16 +36,22 @@ MONO_FONT_FAMILY = "Consolas"
 
 
 def _logo_path() -> Optional[Path]:
-    """Locate logo.png at the repository root (parents[2]) or package data."""
+    """Locate logo.png at the repository root (parents[2]) or in the package.
+
+    None when neither has it: the studio then runs without a window icon or a
+    header logo, and says nothing about it.
+    """
     here = Path(__file__).resolve()
     candidates = [
         here.parents[2] / "logo.png",          # repo root
-        here.parents[1] / "data" / "logo.png",  # packaged data
-        here.parents[1] / "logo.png",
+        here.parents[1] / "logo.png",          # the package's own copy (wheels)
     ]
     for candidate in candidates:
-        if candidate.exists():
-            return candidate
+        try:
+            if candidate.is_file():
+                return candidate
+        except OSError:
+            continue
     return None
 
 

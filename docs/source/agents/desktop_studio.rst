@@ -282,7 +282,147 @@ Do not use a narrow resistivity range simply to make a smooth-looking plot.
 Check suspicious points against acquisition notes, reciprocal error, contact
 resistance, and neighboring measurements before deleting them.
 
-Step 4 -- configure and run the inversion
+Step 4 -- check the mesh and set a-priori zones
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The **Mesh** tab, between **Pseudosection** and **Resistivity model**, shows the
+mesh the next inversion will run on before any time goes into the run. It is
+built by the same function the inversion uses, from the loaded survey as the run
+will read it (QC filter and electrode edits applied) and from the mesh settings
+beside it; in time-lapse mode it is the mesh of the first survey of the series.
+It is rebuilt when the tab is opened after a setting changed, a moment after a
+change made while it is open, and on **Rebuild**. The line under the plot gives
+the cell counts, the size of the inverted region, the range of its cell areas
+and the size of the whole mesh, so the effect of a setting can be read off
+rather than guessed. The **Mesh** row of the **Inversion** panel summarises the
+settings and links to the tab.
+
+The **Mesh** group at the top of the tab holds every setting of the mesh.
+**Source** imports a mesh built elsewhere (**Import mesh...**, **✕** to go back);
+an imported mesh describes its own domain, so the settings below it are switched
+off. A generated mesh is pyGIMLi's parameter mesh: an **inverted region** under
+the electrodes and a coarse **outer region** around it. Each setting is one of
+pyGIMLi's options under a name that says what it does, and plays the same part
+as a setting of an E4D mesh configuration (see :ref:`e4d-meshes`); at their
+defaults the mesh is the one pyGIMLi builds by itself.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 40 16 16 10
+
+   * - Setting
+     - What it does
+     - pyGIMLi
+     - E4D
+     - Default
+   * - Depth
+     - How deep the inverted region reaches; *auto* is 0.4 times the
+       electrode spread. Capping it removes unknowns the data cannot resolve.
+     - ``paraDepth``
+     - fine-zone depth padding
+     - auto
+   * - Side margin
+     - How far the inverted region reaches past the end electrodes, in
+       electrode spacings.
+     - ``paraBoundary``
+     - fine-zone padding
+     - 2
+   * - Surface nodes
+     - Nodes on the surface between two electrodes; more gives smaller cells
+       near the surface.
+     - ``addNodes``
+     - refinement points
+     - 1
+   * - Largest cell
+     - Upper limit on the area of an inverted cell (m²).
+     - ``paraMaxCellSize``
+     - fine-zone max volume
+     - no limit
+   * - Quality
+     - Smallest angle a triangle may have. Triangle cannot finish much above
+       34°, so the setting stops there.
+     - ``quality``
+     - TetGen quality
+     - 34°
+   * - Width
+     - How far the outer region reaches beyond the inverted region, sideways
+       and down, in lengths of the electrode spread.
+     - ``boundary``
+     - outer boundary distance
+     - 4
+   * - Largest cell (outer)
+     - Upper limit on the cell area of the outer region (m²).
+     - ``boundaryMaxCellSize``
+     - outer-zone max volume
+     - no limit
+
+**Restore defaults** puts them all back. The assistant sets them through
+``set_params`` under the names ``para_depth``, ``para_boundary``,
+``surface_nodes``, ``para_max_cell_size``, ``mesh_quality``, ``outer_width`` and
+``outer_max_cell_size``, and a value outside a setting's range is refused rather
+than clipped.
+
+By default the view shows the parameter domain, the cells that are inverted.
+Tick **Outer region** to see the rest of the mesh as well: the coarse cells
+pyGIMLi appends around the parameter domain so that the boundary condition sits
+far from the electrodes. They are part of the forward calculation but are never
+inverted, and they reach many times further than the section, so the view zooms
+out to show them. **Cell edges** switches the cell boundaries on and off.
+
+**A-priori zones** carry what is known before the inversion - a clay layer from a
+borehole log, a foundation, the water in a tank. Click **Draw zone**, click the
+vertices on the mesh, and click the first vertex again to close the polygon
+(**Esc** starts it over). The zone appears in the table at the survey's median
+apparent resistivity; set its resistivity there, rename it, and tick **Fixed** to
+keep it out of the inversion altogether. **Cells** counts the cells whose centre
+lies inside the polygon; where zones overlap, the one lower in the list takes the
+cell.
+
+Two options below the table decide what the zones do beyond their values; both
+are off by default.
+
+- **Mesh follows the zones** rebuilds the mesh so that the zone outlines become
+  cell edges, the way E4D meshes its internal boundaries: no cell straddles an
+  outline, so a zone's value, and a fixed zone, covers exactly the area drawn
+  rather than a staircase of the cells nearest to it. The mesh is rebuilt after
+  every zone that is drawn, moved or removed; changing a zone's value does not
+  touch the mesh. Only the parts of an outline inside the inverted region are
+  used, so a zone drawn across the ground surface ends at the surface. An
+  outline meets the surface at the nearest surface node, and a vertex within a
+  fifth of an electrode spacing of the surface or of a node is moved onto it,
+  which keeps slivers of tiny cells out of the mesh; each move is well below what
+  the data resolve. It applies to a generated mesh only.
+- **Sharp zone edges** drops the smoothness constraint between the cells on
+  either side of an outline - between two zones, or a zone and the ground around
+  it - so the inversion may put a sharp contrast there instead of smearing it
+  out. Use it for a boundary whose position is known from a borehole, GPR or an
+  excavation, even when its resistivity is not. The cell edges it cuts are drawn
+  in black; with **Mesh follows the zones** they are the outlines themselves.
+  Every engine honours it: the in-house engine and PyGIMLi's manager through
+  pyGIMLi's region manager, which leaves no constraint across a marked cell
+  edge, and ADTLERT through its structure-guided smoothness.
+
+What a zone does depends on the engine, and the note under the table says so for
+the engine selected:
+
+- **In-house Gauss-Newton** starts from the zone values and regularizes toward
+  them: the smoothness constraint acts on the departure from the a-priori model,
+  so the contrast at a zone's edge costs nothing unless the data argue against
+  it. A fixed zone is not inverted. The same holds for every survey of a
+  time-lapse run.
+- **PyGIMLi ERTManager** and **ADTLERT** start from the zone values but invert
+  every cell, fixed zones included.
+- The **ADTLERT** time-lapse backend takes no zone values; the run log says they
+  were not applied. **Sharp zone edges** still applies to it.
+
+The zones, the two options and the mesh settings are part of the run's recipe and
+of its reproduction script, and the run log lists every zone with the cells it
+covered, the outline edges the mesh gained and the cell edges the smoothness no
+longer crosses. The assistant sets zones through ``set_params`` (``zones``,
+``conform_to_zones``, ``decouple_zones``) and shows the mesh with
+``preview_mesh``.
+
+Step 5 -- configure and run the inversion
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The defaults provide a reasonable first diagnostic run:
@@ -291,7 +431,8 @@ The defaults provide a reasonable first diagnostic run:
   decrease it only when the data quality and coverage justify more structure.
 - **Max iterations = 15** limits the Gauss-Newton iterations.
 - **Relative error = 0.05** assigns a 5% data error for weighting.
-- **Mesh quality = 34** controls the inversion triangulation.
+- The mesh, its quality (34° by default) among its settings, is set on the
+  **Mesh** tab (Step 4).
 
 Click **Run inversion**. Follow progress in the bottom Log. While it runs,
 **Pause** beside the progress bar freezes the inversion where it stands - in the
@@ -311,7 +452,7 @@ session for each kind of display (resistivity, % change, velocity, EM section an
 so on), so a run reopened in **Saved Results** (the Model Viewer) shows the same
 colours, and every colour-mapped view in the studio offers the same chooser.
 
-Step 5 -- edit geometry and export
+Step 6 -- edit geometry and export
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Use **Add electrode (click to place)** or **Edit (click select, click move)**
@@ -336,7 +477,10 @@ The ERT loader also manages an ordered time series:
    one time step.
 2. Verify that the list is chronological. Use the up and down arrow buttons to
    reorder selected rows. Clicking a row previews that time step.
-3. Check **Time-lapse (multiple ERT files)**. The temporal controls appear.
+3. Check **Time-lapse (multiple ERT files)**. The temporal controls appear, and
+   the **Mesh** tab shows the mesh of the first survey, which every time step is
+   inverted on - an imported mesh included. Zones drawn there hold for every
+   step.
 4. Set **Alpha (temporal)**, then choose **L2** for smooth changes, **L1** for
    blockier changes, or **L1L2** for the hybrid formulation.
 5. For long sequences, enable **Windowed (sliding window)** and choose a window
@@ -348,11 +492,154 @@ The ERT loader also manages an ordered time series:
    to save combined and per-step VTK files, ``final_models.npy``, the mesh,
    acquisition times, and the result figure.
 
+.. _e4d-meshes:
+
+E4D-Style 3-D Meshes
+--------------------------------------------------------------------------------
+
+`E4D <https://e4d-userguide.pnnl.gov>`_, PNNL's parallel ERT/IP code, does not
+take a mesh; it takes a *mesh configuration file* (``.cfg``) and builds the mesh
+itself. The geometry is a list of **control points**, each with a flag: ``1`` a
+surface point (a surface electrode, or a point of known elevation), ``2`` a
+corner of the outer boundary, far from the survey, and ``0`` an internal point
+(a borehole electrode, a refinement point, or a vertex of an internal boundary).
+Internal boundaries are planar polygons through control points that divide the
+domain into **zones**, each with a seed point, a largest element volume and a
+starting conductivity. E4D triangulates the surface first (Triangle), with the
+internal boundaries' traces as segments, joins the outer boundary points into
+vertical walls down to the mesh bottom, and hands the result to TetGen as
+``tetgen -pnq<quality>a<volume>aAA``: the zones become the elements' region
+numbers, each with its volume limit.
+
+The 3D Mesh Builder's **E4D (Triangle + TetGen)** engine does the same. From the
+sensor array it lays out what an E4D user lays out for a crosshole survey: the
+electrodes, a refinement point beside each buried one and under each borehole
+top, a fine zone (zone 2) a set padding beyond the electrodes whose walls and
+floor are internal boundaries, and an outer zone (zone 1) reaching the outer
+boundary distance beyond it, down to the mesh bottom. The defaults are those of
+a Van Nuys crosshole configuration: 1 m padding, 1 m³ elements in the fine zone,
+the outer boundary 100 m beyond it and the bottom 150 m down, quality 1.28.
+**Preview E4D layout** shows every control point by its role, the fine zone and
+the outer boundary before anything is meshed; the topography settings apply to
+the surface for every array type. **Load E4D .cfg...**, in the Mesh engine step,
+builds from a configuration written for E4D instead. The file sets the
+electrodes, the domain and the element sizes itself, so the Sensor array, Domain
+and topography and Mesh refinement steps are greyed out while it is loaded. For
+the Van Nuys file the piecewise linear complex built here matches the one E4D
+wrote, node for node and face for face.
+
+TetGen runs as the program when one is on ``PATH``, and otherwise through its
+Python package (``pip install tetgen``, AGPL-licensed and therefore optional).
+Without either, Gmsh stands in: it aims at each zone's volume rather than
+enforcing it, so the log gives every zone's largest element against its limit.
+The package wraps TetGen 1.6, which can leave a few elements slightly over a
+zone's limit where the older TetGen E4D ships does not; those are re-meshed with
+the limit tightened, and the log says so. Cell markers are the zone numbers, so
+zone 1 is the background region when the mesh is inverted in PyGIMLi.
+
+Beside the mesh the engine saves the E4D ``.cfg``, the TetGen ``.poly`` and the
+``.trn`` translation, so E4D can be run on exactly the same geometry.
+**Open E4D mesh...**, above the 3D view, views a mesh E4D built (``.1.node`` /
+``.1.ele``, the ``.trn`` beside them putting it back in survey coordinates, and
+the ``.sig`` as resistivity). On the ERT page, **Import mesh...** takes the same
+E4D mesh files as an inversion mesh, or a ``.cfg``, which is meshed once on
+import.
+
+Please cite E4D and TetGen when you use these meshes; see :doc:`../citation`.
+
+.. _mesh3d-zones:
+
+Zones in 3-D Meshes
+--------------------------------------------------------------------------------
+
+The 3D Mesh Builder's **Zones** step holds what is known of the ground before a
+survey is modelled - a clay layer, a tank, a plume - as boxes in the survey's
+coordinates, each with a resistivity. **Add zone** places a box under the middle
+of the survey, inside the thickest layer when there are layers; **Add layer**
+places a zone spanning the whole mesh sideways, down a third of the inverted
+region from the ground or from the layer added before it, without cutting
+through a box already there. The selected zone's extent is set under the table:
+x and y from and to, and z as the elevations of its bottom and top, a top at or
+above the ground taking the zone up to the ground. Where zones overlap, the one
+lower in the list takes the cells, so a new layer goes in before the other zones
+and a box inside it keeps its own. Only inverted cells are zoned - down to the
+investigation depth, or inside E4D's fine zone - and the outer region keeps its
+marker. **Cells** counts what each zone took in the last mesh built, in red for
+a zone that took none.
+
+The two options of the ERT page's Mesh tab decide what the zones do to the mesh;
+both are off by default, which builds the mesh as it would be without zones.
+
+- **Mesh follows the zones** builds the mesh so that every zone face is made of
+  cell faces, and a zone's resistivity covers exactly its box. Each engine does
+  it its own way: the structured grid puts a grid line on every face; the
+  PyGIMLi prism mesh adds the zone outlines to its plan triangulation and ends a
+  layer of cells at every zone top and bottom; Gmsh cuts the boxes into its
+  domain with its OpenCASCADE kernel; the E4D engine meshes each zone as an E4D
+  zone of its own, as below. Generate the mesh again after moving a zone - the
+  note under the options says when the mesh no longer follows the list.
+- **Sharp zone edges** makes each zone a region of its own, markers 3, 4, ... in
+  the order of the list. PyGIMLi puts no smoothness constraint between regions,
+  so an inversion of the mesh may put a sharp contrast at a zone's faces. Off,
+  the zones stay in the inverted region, marker 2.
+
+Without **Mesh follows the zones** a zone takes the cells whose centre lies
+inside it. The 3D forward model gives every cell whose centre lies in a zone that
+zone's resistivity; on a mesh that follows the zones that is the box exactly.
+The viewer draws the zones as boxes over the sensor preview and, after a build,
+the cells each zone took - a zone that a later one overlaps drawn see-through -
+with the current boxes as outlines, so a zone moved after the build shows beside
+the cells it had.
+
+With **Mesh follows the zones**, the E4D engine meshes zones only inside its fine
+zone, and only as E4D can mesh them. A zone
+reaching the fine zone's walls on every side is a *layer* across it: its top and
+bottom are faces across the fine zone, whose walls are cut into strips where the
+layers meet. Any other zone is a *block*, a box of its own that stops half an
+element short of the fine zone's walls and floor and of any layer face, since
+TetGen needs the faces apart; blocks may stand apart, share a whole face, or lie
+inside a layer or a block listed before them. A zone outside the fine zone,
+zones that overlap or touch along part of a face, a block crossing a layer face,
+and one left no room between the faces around it are refused, naming the zones
+and what to change. What was moved to fit is noted under the E4D layout preview
+and in the run log, and the zone still takes all its cells by centre once the
+mesh is built: the fine zone is marker 2 again and, with **Sharp zone edges**,
+the zones 3, 4, ..., however E4D numbered them. The zones are written into the E4D ``.cfg`` with their
+starting conductivities, so E4D itself runs on the same zones. Without the
+option, the E4D layout has no zones and they take the fine zone's cells by
+centre. A loaded E4D ``.cfg`` defines its own zones, and the list is then not
+used.
+
+The zones and the two options are part of the run's recipe and reproduction
+script, and the run log lists every zone with its region and cells. The
+assistant sets them through ``set_params`` (``zones``, ``conform_to_zones``,
+``decouple_zones``), and ``get_status`` reports each zone with the cells it took.
+
 Module-by-Module Workflows
 --------------------------------------------------------------------------------
 
 Each module follows the same left-to-right logic. The shortest reliable path
 through each one is summarized below.
+
+Every run - a mesh build, a forward model, an inversion, a Monte Carlo
+estimate - works in a Python process of its own, started from the run's
+recipe, so the window keeps painting and answering however long the solver
+holds on. **Cancel**, where a module has it, stops that process at once rather
+than after the current step. The result comes back when the run ends: the
+summary the Log reports, and the meshes, arrays and fitted models the module
+draws, read back from files the run wrote beside its result - on a thread of
+their own, while the Log says "Loading the results…", so a large mesh does not
+stop the window. Warnings the solver prints appear in the Log as well.
+
+A process for the next run is started ahead of it, a couple of seconds after
+the studio opens and again whenever a run begins, and it loads the numerical
+libraries while nobody is waiting for them. That is about a second a run no
+longer spends before its first step. Each process still serves one run only, so
+**Cancel** and a crash behave as before, and PyHydroGeophysX's own code is
+imported by the run itself, so a module edited while the studio is open is used
+by the next run. The waiting process holds some 200 MB; set
+``PHGX_WARM_WORKER=0`` before starting the studio to have every run start its
+own process instead.
 
 .. list-table::
    :header-rows: 1
@@ -369,10 +656,21 @@ through each one is summarized below.
      - Picks CSV, PyGIMLi travel-time ``.dat``, velocity ``.npy``, mesh, VTK,
        and inversion-quality plots.
    * - **3D Mesh Builder**
-     - Choose surface-grid, borehole, or crosshole geometry; select mesh engine
-       and topography; set domain and refinement; click **1. Preview sensors**;
-       then **2. Generate mesh**; inspect the 3D viewer.
-     - BMS, VTK, sensor CSV, and a reusable survey/mesh configuration.
+     - Work down the numbered steps in the column on the right, as on the ERT
+       page: **1. Sensor array** (surface grid, borehole, crosshole, or
+       surface-to-borehole); **2. Mesh engine**, whose note says what will
+       actually build the mesh; **3. Domain and topography**; **4. Mesh
+       refinement**; **5. Zones**; **6. Build and save** - the files to save,
+       **Preview sensors**, then **Generate mesh**; inspect the 3D viewer. Each
+       step shows only the settings the mesher that will run reads. With the
+       **E4D (Triangle + TetGen)** engine the mesh is laid out the way E4D lays
+       one out (see :ref:`e4d-meshes` below); **Load E4D .cfg...** builds from
+       an existing E4D configuration, and **Open E4D mesh...**, above the view,
+       views one E4D built. **Zones** add boxes of known resistivity that the
+       mesh can follow and make regions of their own (see :ref:`mesh3d-zones`
+       below).
+     - BMS, VTK, sensor CSV, and a reusable survey/mesh configuration; with the
+       E4D engine also the E4D ``.cfg``, TetGen ``.poly`` and ``.trn``.
    * - **EM Processing**
      - Select FDEM or TDEM; load one or multiple soundings; load line geometry
        when available; confirm system geometry; configure the 1D Occam
@@ -608,12 +906,15 @@ Modules
      - Load resistivity files by instrument format (BERT / unified, E4D, Syscal,
        Subsurface Insights, and more), edit electrodes, QC the apparent-resistivity
        pseudosection, filter data, and run single or time-lapse inversion with
-       per-step results. The Resistivity model tab corrects the model on screen to
-       a reference temperature, for one survey or a whole series.
+       per-step results. The Mesh tab previews the inversion mesh, outer region
+       included on request, and holds the a-priori resistivity zones drawn on
+       it. The Resistivity model tab corrects the model on screen to a reference
+       temperature, for one survey or a whole series.
    * - 3D Mesh Builder
      - Build ERT meshes (surface grid, borehole, crosshole arrays; flat, tilted,
-       Gaussian-hill, file-based, or custom topography), view meshes in 3D with a
-       clipping plane, and run 3D ERT forward modeling on the generated mesh.
+       Gaussian-hill, file-based, or custom topography), including E4D-style
+       meshes and E4D configurations, view meshes in 3D with a clipping plane,
+       and run 3D ERT forward modeling on the generated mesh.
    * - EM Processing
      - Load TDEM / FDEM soundings (single or multi-sounding line files), invert one
        sounding or a whole line into a stitched resistivity section, and inspect
@@ -683,6 +984,14 @@ Pick a slice, then a method:
 
 Resistivity is interpolated in log space and returned in Ω·m; signed products
 such as gravity and magnetics are interpolated in their own units.
+
+Click **Interpolate** after choosing the slice, method and grid settings.
+Calculation runs in the background; the status row shows the current stage
+and progress through the kriging grid cells. **Cancel** stops the request at
+the next calculation checkpoint. Changing the slice or grid settings discards
+the old request, so its result cannot replace the newly selected map.
+When interpolation finishes, **Variogram…** and **Export grid…** become available
+as appropriate. If it fails, the status explains the error and you can retry.
 
 A survey drawn as a surface loses its own station markers and line traces: the
 surface already carries those values, and the markers would only cover the

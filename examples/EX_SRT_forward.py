@@ -55,9 +55,7 @@ from PyHydroGeophysX.petrophysics.velocity_models import HertzMindlinModel, DEMM
 
 # %%
 output_dir = os.path.join(current_dir, "results", "SRT_forward")
-seismic_data_dir = os.path.join(current_dir, "data", "Seismic")
 os.makedirs(output_dir, exist_ok=True)
-os.makedirs(seismic_data_dir, exist_ok=True)
 
 # %% [markdown]
 # ## 1. Follow the workflow to create the mesh and model
@@ -393,6 +391,7 @@ plt.savefig(os.path.join(output_dir, "velocity_porosity_saturation.tiff"), dpi=3
 # .. image:: /auto_examples/images/EX_SRT_forward_fig_02.png
 #    :align: center
 #    :width: 800px
+
 # %% [markdown]
 # ## Short distance seismic survey
 
@@ -448,6 +447,7 @@ fig.savefig(os.path.join(output_dir, "synthetic_seismic_data_first_picks_short.t
 # .. image:: /auto_examples/images/EX_SRT_forward_fig_03.png
 #    :align: center
 #    :width: 600px
+
 # %% [markdown]
 # ## Long distance seismic survey
 
@@ -567,7 +567,10 @@ vel_parameters = {
     }
 }
 mesh_markers = np.array(mesh.cellMarkers())
-# 13. Now we call hydro_to_srt with the pre-processed mesh values
+# 13. Now we call hydro_to_srt with the pre-processed mesh values.
+# The travel times are written to this example's results folder. The copy
+# shipped as data/Seismic/synthetic_seismic_data.dat, which Ex_SRT_inv and
+# Ex_Structure_resinv read, was produced by this same call.
 synth_data, velocity_mesh = hydro_to_srt(
     water_content=water_content,           # Use pre-interpolated mesh values
     porosity=porosity,          # Use pre-interpolated mesh values
@@ -583,7 +586,7 @@ synth_data, velocity_mesh = hydro_to_srt(
     shot_distance=5,                 
     noise_level=0.05,                
     noise_abs=0.00001,               
-    save_path=os.path.join(seismic_data_dir, "synthetic_seismic_data.dat"),
+    save_path=os.path.join(output_dir, "synthetic_seismic_data.dat"),
     mesh_markers=mesh_markers,       # Pass the mesh markers directly
     verbose=True,
     seed=1334                        

@@ -28,14 +28,6 @@ PyHydroGeophysX.agents.climate\_data\_agent module
    :show-inheritance:
    :undoc-members:
 
-PyHydroGeophysX.agents.code\_generation\_agent module
------------------------------------------------------
-
-.. automodule:: PyHydroGeophysX.agents.code_generation_agent
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 PyHydroGeophysX.agents.context\_input\_agent module
 ---------------------------------------------------
 
@@ -64,22 +56,6 @@ PyHydroGeophysX.agents.ert\_loader\_agent module
 ------------------------------------------------
 
 .. automodule:: PyHydroGeophysX.agents.ert_loader_agent
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-PyHydroGeophysX.agents.fetch\_climate\_data module
---------------------------------------------------
-
-.. automodule:: PyHydroGeophysX.agents.fetch_climate_data
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-PyHydroGeophysX.agents.geophysical\_inversion\_agent module
------------------------------------------------------------
-
-.. automodule:: PyHydroGeophysX.agents.geophysical_inversion_agent
    :members:
    :show-inheritance:
    :undoc-members:
@@ -152,14 +128,6 @@ PyHydroGeophysX.agents.water\_content\_agent module
 ---------------------------------------------------
 
 .. automodule:: PyHydroGeophysX.agents.water_content_agent
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-PyHydroGeophysX.agents.workflow\_orchestrator\_agent module
------------------------------------------------------------
-
-.. automodule:: PyHydroGeophysX.agents.workflow_orchestrator_agent
    :members:
    :show-inheritance:
    :undoc-members:

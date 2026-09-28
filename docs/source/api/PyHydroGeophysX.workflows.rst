@@ -4,14 +4,6 @@ PyHydroGeophysX.workflows package
 Submodules
 ----------
 
-PyHydroGeophysX.workflows.builtin module
-----------------------------------------
-
-.. automodule:: PyHydroGeophysX.workflows.builtin
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 PyHydroGeophysX.workflows.bundle module
 ---------------------------------------
 
@@ -64,6 +56,14 @@ PyHydroGeophysX.workflows.models module
 ---------------------------------------
 
 .. automodule:: PyHydroGeophysX.workflows.models
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.workflows.objects module
+----------------------------------------
+
+.. automodule:: PyHydroGeophysX.workflows.objects
    :members:
    :show-inheritance:
    :undoc-members:

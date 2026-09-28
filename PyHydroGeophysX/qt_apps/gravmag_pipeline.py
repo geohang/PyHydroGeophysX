@@ -20,6 +20,9 @@ from PyHydroGeophysX.workflows.gravmag import (
 
 warn_legacy_path("qt_apps.gravmag_pipeline", "workflows.gravmag")
 
+# 0.3.0's module imported this helper module, so scripts could reach it here.
+from PyHydroGeophysX.qt_apps import io_utils  # noqa: E402,F401
+
 __all__ = [
     "regional_residual",
     "spatially_balanced_indices",

@@ -215,6 +215,10 @@ class TimeLapseSeriesView(QWidget):
     def current_index(self) -> int:
         return max(0, self._step.currentIndex())
 
+    def step_count(self) -> int:
+        """How many surveys the series holds; 1 for a single model."""
+        return 0 if self._models is None else int(self._models.shape[1])
+
     def current_mode(self) -> str:
         return str(self._mode.currentData() or "model")
 

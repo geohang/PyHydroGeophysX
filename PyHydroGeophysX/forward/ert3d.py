@@ -15,7 +15,7 @@ and the geophysics helpers are imported lazily inside :func:`run_ert3d_forward`.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 
@@ -33,6 +33,7 @@ def run_ert3d_forward(
     seed: int = 42,
     output_dir: str = ".",
     log: Optional[Callable[[str], None]] = None,
+    zones: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Run a 3D ERT forward simulation and save synthetic data.
 
@@ -56,6 +57,11 @@ def run_ert3d_forward(
         Directory under which an ``ert3d_forward`` folder is written.
     log : callable, optional
         Progress callback taking one string.
+    zones : list of dict, optional
+        Boxes of known resistivity (see ``core.mesh_3d.normalize_box_zones``):
+        every cell whose centre lies in one takes its resistivity, after
+        ``marker_res``, the later zone where they overlap. On a mesh built to
+        follow the zones that is the box exactly.
     """
     say = log or (lambda *_: None)
     try:
@@ -81,6 +87,19 @@ def run_ert3d_forward(
         if mask.any():
             res[mask] = float(r)
             applied_markers[int(m)] = float(r)
+    applied_zones = []
+    if zones:
+        from PyHydroGeophysX.core.mesh_3d import box_zone_owner, normalize_box_zones
+
+        zones = normalize_box_zones(zones)
+        owner = box_zone_owner(np.asarray(mesh.cellCenters(), dtype=float), zones)
+        for index, zone in enumerate(zones):
+            cells = owner == index
+            res[cells] = zone["resistivity"]
+            applied_zones.append({"name": zone["name"], "resistivity": zone["resistivity"],
+                                  "cells": int(cells.sum())})
+        say("Zones: " + "; ".join(f"{z['name']} {z['resistivity']:g} ohm-m in "
+                                  f"{z['cells']} cells" for z in applied_zones))
     res = np.clip(res, 1e-3, 1e6)
 
     say(f"Running 3D ERT forward ({data.size()} measurements, {n_cells} cells)…")
@@ -116,6 +135,7 @@ def run_ert3d_forward(
         "n_cells": n_cells,
         "background_res": float(background_res),
         "marker_res": applied_markers,
+        "zones": applied_zones,
         "noise": float(noise),
         "rhoa_min": float(np.nanmin(finite)) if finite.size else None,
         "rhoa_max": float(np.nanmax(finite)) if finite.size else None,

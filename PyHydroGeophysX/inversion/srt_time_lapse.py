@@ -234,16 +234,26 @@ class TimeLapseSRTInversion(InversionBase):
         J = sparse_block_diag(jac_blocks, format="csr")
         return pred, J
 
-    def _objective_terms(self, model_log_slowness: np.ndarray) -> Tuple[float, float, float, float]:
+    def _objective_terms(self, model_log_slowness: np.ndarray,
+                         reference: Optional[np.ndarray] = None) -> Tuple[float, float, float, float]:
+        """``(phi_d, phi_m, phi_t, chi2)`` of one stacked log-slowness model.
+
+        ``phi_m`` is the spatial roughness of the departure from ``reference``
+        (``None`` is a zero reference). ``run`` passes its starting model, the
+        reference its gradient and its acceptance test use: scored against a
+        zero reference instead, the line search charged every trial for the
+        roughness of the start model itself and stopped the descent early.
+        """
         pred, _ = self._forward_and_jacobian(model_log_slowness)
         residual = self.t_obs - pred
 
         wd = self.Wd_diag.reshape(-1, 1)
         phi_d = float((wd * residual).T.dot(wd * residual).item())
 
-        delta_m = self._to_col(model_log_slowness)
+        m_col = self._to_col(model_log_slowness)
+        delta_m = m_col if reference is None else m_col - self._to_col(reference)
         reg_spatial = self.Wm.dot(delta_m)
-        reg_temporal = self.Wt.dot(delta_m)
+        reg_temporal = self.Wt.dot(m_col)
 
         phi_m = float(reg_spatial.T.dot(reg_spatial).item())
         phi_t = float(reg_temporal.T.dot(reg_temporal).item())
@@ -444,7 +454,7 @@ class TimeLapseSRTInversion(InversionBase):
 
             for _ in range(int(self.parameters.get("line_search_maxiter", 12))):
                 m_trial = np.clip(self._to_col(m) + step * dm, min_m, max_m).ravel()
-                phi_d_trial, phi_m_trial, phi_t_trial, _ = self._objective_terms(m_trial)
+                phi_d_trial, phi_m_trial, phi_t_trial, _ = self._objective_terms(m_trial, m_ref)
                 obj_trial = phi_d_trial + lam * phi_m_trial + alpha * phi_t_trial
                 armijo = current_obj + float(self.parameters.get("line_search_c", 1e-4)) * step * directional
                 if obj_trial < best_obj:

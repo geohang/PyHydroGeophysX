@@ -218,7 +218,7 @@ class EMOverviewView(QWidget):
     # -- public --------------------------------------------------------------
     def show_result(self, result: Dict[str, Any], *, x=None, y=None,
                     lon=None, lat=None) -> None:
-        """Display an :func:`PyHydroGeophysX.workflows.em1d.invert_line` result.
+        """Display an :func:`PyHydroGeophysX.inversion.em1d_line.invert_line` result.
 
         ``x`` / ``y`` are the per-sounding map coordinates (easting/northing).
         Without them the map panel is dropped and the section uses the full

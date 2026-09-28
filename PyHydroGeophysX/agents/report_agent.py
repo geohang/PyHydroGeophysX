@@ -14,7 +14,8 @@ from ._document import bullets, control_block, facts, numbered, renumber, table
 from . import _figstyle as figstyle
 from ._figures import (FIGURE_CATALOG, llm_figure_topics,
                        missing_figure_warnings, plan_figures)
-from ._method import SCHEME_DESCRIPTION, SCHEME_LABEL, resolve_scheme
+from ._intent import PRODUCTS, climate_blocker, wants_climate
+from ._method import SCHEME_DESCRIPTION, SCHEME_LABEL, SINGLE_SURVEY_LABEL, resolve_scheme
 from ._uncertainty import water_content_reliability
 
 import numpy as np
@@ -28,6 +29,122 @@ WET_PERIOD_THRESHOLD_MM = 25.0  # 7-day antecedent for wet periods
 DRY_PERIOD_THRESHOLD_MM = 5.0  # 7-day antecedent for dry periods
 PET_DEFICIT_THRESHOLD_MM = -2.0  # P-PET deficit indicating drying
 HIGH_TEMP_THRESHOLD_C = 30.0  # High temperature affecting measurements
+
+
+def _given(value: Any) -> bool:
+    """Whether a report field has anything to print.
+
+    None, an empty value, "N/A", "None" and the placeholder an interpretation
+    that failed leaves behind are not content: a deliverable omits the field
+    rather than print "**Interpretation:** None".
+
+    >>> [_given(v) for v in (None, 'N/A', '', [], 'Could not generate interpretation', 0, 'ok')]
+    [False, False, False, False, False, True, True]
+    """
+    if value is None:
+        return False
+    if isinstance(value, float) and not np.isfinite(value):
+        return False
+    if isinstance(value, str):
+        text = value.strip().lower()
+        return bool(text) and text not in ('n/a', 'none', 'nan') and not text.startswith(
+            ('could not generate', 'llm insights not available'))
+    if isinstance(value, dict):
+        # A metrics dictionary holding only the error that stopped it is not metrics.
+        return bool(value) and set(value) != {'error'}
+    if isinstance(value, (list, tuple, set)):
+        return bool(value)
+    return True
+
+
+def _sig(value: Any, digits: int = 3) -> str:
+    """A number to ``digits`` significant figures, as a report prints it.
+
+    >>> _sig(1.6250000000000002), _sig(0.04123), _sig(12.0)
+    ('1.63', '0.0412', '12')
+    """
+    return f"{float(value):.{digits}g}"
+
+
+def _final_chi2(inv: Dict[str, Any]) -> Optional[float]:
+    """The final chi-squared of an inversion result, or None when it reports none."""
+    value = inv.get('chi2')
+    if value is None:
+        history = chi2_history(inv.get('chi2_values') or inv.get('all_chi2'))
+        value = history[-1] if history else None
+    try:
+        value = float(np.asarray(value, dtype=float).ravel()[-1])
+    except (TypeError, ValueError, IndexError):
+        return None
+    return value if np.isfinite(value) else None
+
+
+def _inversion_method(inv: Dict[str, Any]) -> str:
+    """The inversion that produced a single-survey model, as the report names it.
+
+    >>> _inversion_method({'lambda': 20.0, 'solver': 'cgls'}).endswith('; lambda = 20, cgls linear solver')
+    True
+    """
+    if _given(inv.get('inversion_method')):
+        return str(inv['inversion_method'])
+    params = (inv.get('inversion_params')
+              or (inv.get('processing') or {}).get('inversion_params') or {})
+    lam = inv.get('lambda', params.get('lambda'))
+    solver = inv.get('solver') or params.get('method')
+    details = ([f"lambda = {_sig(lam)}"] if _given(lam) else []) + (
+        [f"{solver} linear solver"] if _given(solver) else [])
+    return SINGLE_SURVEY_LABEL + (f"; {', '.join(details)}" if details else "")
+
+
+def _not_delivered_rows(items: Any) -> list:
+    """``(what, why)`` pairs from a report input, whatever sequence type carried them."""
+    rows = []
+    for item in items or []:
+        try:
+            what, why = item[0], item[1]
+        except (TypeError, IndexError, KeyError):
+            continue
+        if _given(what):
+            rows.append((str(what), str(why or 'it was not produced').strip().rstrip('.')))
+    return rows
+
+
+def not_delivered_section(items: Any) -> str:
+    """The report's "Not Delivered" section, or "" when everything was delivered.
+
+    A product the user asked for is delivered or said to be missing, with the
+    reason; a report that looks complete without it is the failure this guards.
+
+    >>> print(not_delivered_section([('Run TDEM inversion', 'TDEM data file not found: s.csv')]))
+    ## Not Delivered
+    <BLANKLINE>
+    The request asked for the following, or the run attempted it, and this report does not contain it:
+    <BLANKLINE>
+    - **Run TDEM inversion:** TDEM data file not found: s.csv.
+    <BLANKLINE>
+    """
+    rows = _not_delivered_rows(items)
+    if not rows:
+        return ""
+    lines = "\n".join(f"- **{what}:** {why}." for what, why in rows)
+    return ("## Not Delivered\n\n"
+            "The request asked for the following, or the run attempted it, and this "
+            f"report does not contain it:\n\n{lines}\n")
+
+
+def _requested_missing(not_delivered: Any, config: Optional[Dict[str, Any]],
+                       product: str) -> Optional[str]:
+    """Why ``product`` (a key of ``_intent.PRODUCTS``) was asked for and is absent.
+
+    None when it was not asked for. The caller's list states the reason; for
+    meteorological data, the obstacle ``climate_blocker`` finds is the fallback.
+    """
+    for what, why in _not_delivered_rows(not_delivered):
+        if what == PRODUCTS[product]:
+            return why
+    if product == 'climate' and wants_climate(config or {}):
+        return (climate_blocker(config or {}) or 'the climate step did not run').rstrip('.')
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -82,8 +199,8 @@ reports suitable for scientists and engineers. You should integrate climate insi
             # 2. Data Processing Summary
             data_summary = self._generate_data_summary(workflow_data)
             
-            # 3. Climate Data Summary (if available)
-            climate_summary = self._generate_climate_summary(workflow_data)
+            # 3. Climate Data Summary (if available, or asked for)
+            climate_summary = self._generate_climate_summary(workflow_data, config)
             
             # 4. Inversion Results Summary
             inversion_summary = self._generate_inversion_summary(workflow_data)
@@ -115,7 +232,8 @@ reports suitable for scientists and engineers. You should integrate climate insi
                 wc_summary,
                 climate_ert_analysis,
                 narrative_report,
-                visualization_files
+                visualization_files,
+                not_delivered_section(workflow_data.get('not_delivered')),
             )
             
             # Save report to file
@@ -154,34 +272,49 @@ reports suitable for scientists and engineers. You should integrate climate insi
             raise
     
     def _generate_executive_summary(self, workflow_data: Dict, config: Dict) -> str:
-        """Generate executive summary section."""
+        """Generate executive summary section.
+
+        A field with nothing behind it is left out rather than printed as
+        "N/A", and the chi-squared is given to three significant figures.
+        """
+        settings = [('Data File', config.get('data_file') or config.get('ert_file')),
+                    ('Instrument', config.get('instrument'))]
         summary = f"""# Executive Summary
 
 **Workflow Execution Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 **Original User Request:**
-{config.get('user_request', 'Not provided')}
+{config.get('user_request') or 'Not provided'}
 
 **Workflow Configuration:**
-- Data File: {config.get('data_file', 'N/A')}
-- Instrument: {config.get('instrument', 'N/A')}
-- Seismic Integration: {'Yes' if config.get('use_seismic', False) or workflow_data.get('seismic_structure') else 'No'}
-
-**Key Results:**
 """
-        
+        summary += "".join(f"- {label}: {value}\n" for label, value in settings if _given(value))
+        # Integrated only when a seismic structure reached the run: a seismic
+        # step that failed was reported here as "Yes" on the strength of the flag.
+        summary += (f"- Seismic Integration: "
+                    f"{'Yes' if workflow_data.get('seismic_structure') else 'No'}\n")
+        summary += "\n**Key Results:**\n"
+
         # Add key findings from each step
         if 'ert_data' in workflow_data:
             ert = workflow_data['ert_data']
             num_elec = ert.get('num_electrodes') or ert.get('n_electrodes')
             num_meas = ert.get('num_measurements') or ert.get('n_measurements')
-            summary += f"- Loaded {num_elec if num_elec is not None else 'N/A'} electrodes with {num_meas if num_meas is not None else 'N/A'} measurements\n"
-        
+            if _given(num_elec) and _given(num_meas):
+                summary += f"- Loaded {num_elec} electrodes with {num_meas} measurements\n"
+            elif _given(num_meas):
+                summary += f"- Loaded {num_meas} measurements\n"
+
         if 'inversion_results' in workflow_data:
             inv = workflow_data['inversion_results']
-            summary += f"- Inversion completed {inv.get('iterations', 'N/A')} iterations (chi2: {inv.get('chi2', 'N/A')})\n"
+            chi2 = _final_chi2(inv)
+            fit = [f"{inv['iterations']} iterations"] if _given(inv.get('iterations')) else []
+            if chi2 is not None:
+                fit.append(f"final chi-squared {_sig(chi2)}")
+            summary += (f"- Inversion: {_inversion_method(inv)}"
+                        + (f"; {', '.join(fit)}" if fit else "") + "\n")
             evaluation = workflow_data.get('evaluation_results') or {}
-            summary += f"- Quality assessment: {evaluation.get('status', 'not evaluated')} — {evaluation.get('summary', 'Review convergence and data fit.')}\n"
+            summary += f"- Quality assessment: {evaluation.get('status') or 'not evaluated'} — {evaluation.get('summary') or 'Review convergence and data fit.'}\n"
             processing = inv.get('processing') or {}
             if processing:
                 summary += (f"- Measurements supplied to inversion: {processing.get('inverted_measurements', 'N/A')} "
@@ -204,25 +337,26 @@ reports suitable for scientists and engineers. You should integrate climate insi
             ert = workflow_data['ert_data']
             num_elec = ert.get('num_electrodes') or ert.get('n_electrodes')
             num_meas = ert.get('num_measurements') or ert.get('n_measurements')
-            summary += f"""
-### ERT Data Loading
-- Number of electrodes: {num_elec if num_elec is not None else 'N/A'}
-- Number of measurements: {num_meas if num_meas is not None else 'N/A'}
-- Quality metrics: {ert.get('qc_results', 'N/A')}
+            lines = [f"- {label}: {value}" for label, value in (
+                ('Number of electrodes', num_elec), ('Number of measurements', num_meas),
+                ('Quality metrics', ert.get('qc_results'))) if _given(value)]
+            if lines:
+                summary += "\n### ERT Data Loading\n" + "\n".join(lines) + "\n"
+            if _given(ert.get('insights')):
+                summary += f"\n**Insights:** {ert['insights']}\n"
 
-**Insights:** {ert.get('insights', 'N/A')}
-"""
-        
         if 'seismic_structure' in workflow_data:
             seis = workflow_data['seismic_structure']
-            summary += f"""
-### Seismic Data Processing
-- Velocity threshold: {seis.get('velocity_threshold', 'N/A')} m/s
-- Interface extracted: Yes
+            threshold = seis.get('velocity_threshold')
+            if not _given(threshold):
+                threshold = (seis.get('velocity_thresholds') or [None])[0]
+            summary += "\n### Seismic Data Processing\n"
+            if _given(threshold):
+                summary += f"- Velocity threshold: {threshold} m/s\n"
+            summary += "- Interface extracted: Yes\n"
+            if _given(seis.get('interpretation')):
+                summary += f"\n**Interpretation:** {seis['interpretation']}\n"
 
-**Interpretation:** {seis.get('interpretation', 'N/A')}
-"""
-        
         return summary
     
     def _generate_inversion_summary(self, workflow_data: Dict) -> str:
@@ -231,19 +365,23 @@ reports suitable for scientists and engineers. You should integrate climate insi
         
         if 'inversion_results' in workflow_data:
             inv = workflow_data['inversion_results']
-            # Named when it is not the plain smoothness inversion, so the report
-            # says which method produced the section it shows.
-            method = f"- Method: {inv['inversion_method']}\n" if inv.get('inversion_method') else ""
-            summary += f"""
-### ERT Inversion
-{method}- Final chi2: {inv.get('chi2', 'N/A')}
-- Iterations: {inv.get('iterations', 'N/A')}
-- Quality assessment: {(workflow_data.get('evaluation_results') or {}).get('status', 'not evaluated')}
-- Assessment details: {(workflow_data.get('evaluation_results') or {}).get('summary', 'A completed solver run alone does not establish convergence or model validity.')}
+            evaluation = workflow_data.get('evaluation_results') or {}
+            # The method that ran is always named, so the reader knows what
+            # produced the section, and a field with no value is left out.
+            chi2 = _final_chi2(inv)
+            lines = [f"- Method: {_inversion_method(inv)}"]
+            if chi2 is not None:
+                lines.append(f"- Final chi-squared: {_sig(chi2)}")
+            if _given(inv.get('iterations')):
+                lines.append(f"- Iterations: {inv['iterations']}")
+            lines.append(f"- Quality assessment: {evaluation.get('status') or 'not evaluated'}")
+            lines.append("- Assessment details: " + (
+                evaluation.get('summary') or 'A completed solver run alone does not '
+                'establish convergence or model validity.'))
+            summary += "\n### ERT Inversion\n" + "\n".join(lines) + "\n"
+            if _given(inv.get('interpretation')):
+                summary += f"\n**Interpretation:** {inv['interpretation']}\n"
 
-**Interpretation:** {inv.get('interpretation', 'N/A')}
-"""
-        
         return summary
     
     def _generate_wc_summary(self, workflow_data: Dict) -> str:
@@ -255,6 +393,13 @@ reports suitable for scientists and engineers. You should integrate climate insi
         if workflow_data.get('skip_petrophysics', False):
             summary += "Water content conversion was not requested for this workflow.\n"
             summary += "Only resistivity inversion results are available.\n"
+            return summary
+        # Asked for, and not produced: say so, with the reason, rather than
+        # leave the section empty or call it not requested.
+        failure = workflow_data.get('water_content_failed')
+        if failure:
+            summary += ("**Water content was requested, but the conversion did not complete:** "
+                        f"{failure}\n\nOnly resistivity inversion results are available.\n")
             return summary
         
         if 'water_content' in workflow_data:
@@ -284,8 +429,9 @@ reports suitable for scientists and engineers. You should integrate climate insi
 ### Uncertainty Analysis
 - Mean uncertainty (σ): {mean_uncertainty:.3f}
 - Maximum uncertainty: {max_uncertainty:.3f}
-- Number of realizations: {wc.get('n_realizations', 'N/A')}
 """
+                if _given(wc.get('n_realizations')):
+                    summary += f"- Number of realizations: {wc['n_realizations']}\n"
             
             # Layer parameters used (means +/- std)
             # Collect petrophysical parameters from multiple sources
@@ -313,15 +459,31 @@ reports suitable for scientists and engineers. You should integrate climate insi
                         'porosity': {'mean': scalar_params.get('porosity'), 'std': scalar_params.get('porosity_std', 'N/A')},
                     }
                 }
+            # Parameters the request gave per layer and the conversion applied
+            # count as the user's; they were reported as defaults.
+            not_applied = wc.get('layer_params_not_applied') or {}
             if layer_params:
                 # Check if user provided explicit parameters or defaults were used
-                user_provided_params = workflow_data.get('petrophysical_params', {}) or wc.get('petrophysical_params', {})
+                user_provided_params = (workflow_data.get('petrophysical_params', {})
+                                        or wc.get('petrophysical_params', {})
+                                        or wc.get('layer_params_applied', {}))
                 if not user_provided_params:
                     summary += f"\n### Petrophysical Parameters (Defaults Applied)\n"
-                    summary += "**Note:** No explicit petrophysical parameters were provided. Default Archie parameters were used based on geological layer type.\n\n"
+                    if not_applied:
+                        summary += ("**Note:** Layer parameters were given for "
+                                    f"{', '.join(map(str, not_applied))}, but this model has no "
+                                    "structural layers to assign them to, so they were not applied. "
+                                    "Default Archie parameters were used based on geological layer type.\n\n")
+                    else:
+                        summary += ("**Note:** No explicit petrophysical parameters were provided. "
+                                    "Default Archie parameters were used based on geological layer type.\n\n")
                 else:
                     summary += f"\n### Petrophysical Parameters (User-Specified)\n"
                     summary += f"**User input parameters:** {user_provided_params}\n\n"
+                    if not_applied:
+                        summary += ("**Note:** Layer parameters were also given for "
+                                    f"{', '.join(map(str, not_applied))}; this model has no "
+                                    "structural layers to assign them to, so they were not applied.\n\n")
                 
                 summary += "**Parameters used per layer (means +/- std):**\n"
                 for marker, params in layer_params.items():
@@ -341,46 +503,58 @@ reports suitable for scientists and engineers. You should integrate climate insi
                         layer_name = "Layer 3 (Bedrock)"
                     
                     use_rho_sat = params.get('use_rho_sat', False)
-                    
-                    def fmt(comp: str) -> str:
-                        if isinstance(params.get(comp), dict):
-                            mean_val = params[comp].get('mean', 'N/A')
-                            std_val = params[comp].get('std', 'N/A')
-                            if mean_val != 'N/A' and std_val != 'N/A':
-                                return f"{mean_val:.3f} ± {std_val:.3f}"
-                            return f"{mean_val}"
-                        return str(params.get(comp, 'N/A'))
-                    
-                    if use_rho_sat:
-                        summary += (
-                            f"- **{layer_name}**: "
-                            f"ρ_sat={fmt('rho_sat')} Ωm, "
-                            f"n={fmt('n')}, "
-                            f"φ={fmt('porosity')}\n"
-                        )
-                    else:
-                        summary += (
-                            f"- **{layer_name}**: "
-                            f"m={fmt('m')}, "
-                            f"n={fmt('n')}, "
-                            f"φ={fmt('porosity')}, "
-                            f"ρ_sat={fmt('rho_sat')} Ωm\n"
-                        )
+
+                    def fmt(comp: str) -> Optional[str]:
+                        """``mean ± std``, the mean alone, or None when there is no value."""
+                        value = params.get(comp)
+                        if isinstance(value, dict):
+                            mean_val, std_val = value.get('mean'), value.get('std')
+                            if not _given(mean_val):
+                                return None
+                            try:
+                                return (f"{_sig(mean_val)} ± {_sig(std_val)}"
+                                        if _given(std_val) else _sig(mean_val))
+                            except (TypeError, ValueError):
+                                return str(mean_val)
+                        return str(value) if _given(value) else None
+
+                    # A parameter this layer does not use - ρ_sat on the Archie
+                    # route - is left out rather than printed as "ρ_sat=N/A Ωm".
+                    order = ((('rho_sat', 'ρ_sat', ' Ωm'), ('n', 'n', ''), ('porosity', 'φ', ''))
+                             if use_rho_sat else
+                             (('m', 'm', ''), ('n', 'n', ''), ('porosity', 'φ', ''),
+                              ('rho_sat', 'ρ_sat', ' Ωm')))
+                    shown = [f"{symbol}={text}{unit}" for comp, symbol, unit in order
+                             for text in [fmt(comp)] if text]
+                    if shown:
+                        summary += f"- **{layer_name}**: " + ", ".join(shown) + "\n"
             else:
                 summary += "\n### Petrophysical Parameters\n"
                 summary += "Default Archie parameters were applied for the resistivity-to-water-content conversion.\n"
             
-            summary += f"\n**Interpretation:** {wc.get('interpretation', 'N/A')}\n"
-        
+            if _given(wc.get('interpretation')):
+                summary += f"\n**Interpretation:** {wc['interpretation']}\n"
+
         return summary
     
-    def _generate_climate_summary(self, workflow_data: Dict) -> str:
-        """Generate climate data summary section."""
+    def _generate_climate_summary(self, workflow_data: Dict,
+                                  config: Optional[Dict] = None) -> str:
+        """Generate climate data summary section.
+
+        Without climate data the section is left out, unless the request asked
+        for them: then it says so, and why none were retrieved. "No climate
+        data was integrated" read as if none had been asked for.
+        """
         summary = "\n## Climate Data Integration\n\n"
-        
-        if 'climate_data' not in workflow_data:
-            summary += "No climate data was integrated in this workflow.\n"
-            return summary
+
+        if not workflow_data.get('climate_data'):
+            reason = _requested_missing(workflow_data.get('not_delivered'), config, 'climate')
+            if reason is None:
+                return ""
+            return summary + (f"Meteorological data were requested, but none were "
+                              f"retrieved: {reason}. No climate context enters this "
+                              f"report, and no climate-resistivity relationship should "
+                              f"be inferred from it.\n")
         
         climate = workflow_data['climate_data']
         metadata = climate.get('metadata', {})
@@ -424,10 +598,10 @@ reports suitable for scientists and engineers. You should integrate climate insi
         in terms of climate forcings (rainfall, drying, etc.).
         """
         analysis = "\n## Cross-Modal Climate-ERT Analysis\n\n"
-        
-        if 'climate_data' not in workflow_data:
-            analysis += "Climate data not available for cross-modal analysis.\n"
-            return analysis
+
+        if not workflow_data.get('climate_data'):
+            # Nothing to analyse; the climate section says why, when it was asked for.
+            return ""
         
         climate = workflow_data['climate_data']
         
@@ -544,7 +718,7 @@ including detection of post-rainfall infiltration and high-PET drying periods.
             chi2 = inv.get('chi2')
             if chi2 is not None:
                 analysis += f"\n**Inversion Quality Metrics:**\n"
-                analysis += f"- Chi-squared: {chi2:.3f}\n"
+                analysis += f"- Chi-squared: {_sig(chi2)}\n"
                 
                 # Provide climate-contextualized interpretation
                 if chi2 < 1.0:
@@ -1005,14 +1179,20 @@ incorporates cross-modal climate-geophysics reasoning."""
             return ""
     
     def _compile_report(self, exec_summary: str, data_summary: str,
-                       climate_summary: str, inv_summary: str, wc_summary: str, 
+                       climate_summary: str, inv_summary: str, wc_summary: str,
                        climate_ert_analysis: str, narrative: str,
-                       vis_files: Dict[str, str]) -> str:
-        """Compile full report."""
+                       vis_files: Dict[str, str], not_delivered: str = '') -> str:
+        """Compile full report.
+
+        ``not_delivered`` - what the request asked for, or the run attempted,
+        that the report does not contain - follows the summary, where a reader
+        who stops there still sees it.
+        """
         report = f"""# Geophysical Workflow Report
 Generated by PyHydroGeophysX Multi-Agent System
 
 {exec_summary}
+{chr(10) + not_delivered if not_delivered else ''}
 {narrative if narrative else ''}
 {data_summary}
 {climate_summary}
@@ -1072,10 +1252,14 @@ Generated by PyHydroGeophysX Multi-Agent System
             self._log_execution("Generating time-lapse report sections")
             
             workflow_config = input_data.get('workflow_config') or {}
+            not_delivered = input_data.get('not_delivered') or []
+            climate_missing = (None if climate_data else
+                               _requested_missing(not_delivered, workflow_config, 'climate'))
             evaluation_results = (input_data.get('evaluation_results')
                                   or inversion_results.get('evaluation_results'))
             key_findings = self._timelapse_key_findings(
-                inversion_results, climate_data, evaluation_results, workflow_config)
+                inversion_results, climate_data, evaluation_results, workflow_config,
+                climate_missing)
 
             # 1. Time-Lapse Executive Summary
             try:
@@ -1102,7 +1286,7 @@ Generated by PyHydroGeophysX Multi-Agent System
             # 3. Climate Data Section (if available)
             try:
                 tl_climate_section = self._generate_timelapse_climate_section(
-                    climate_data, site_info
+                    climate_data, site_info, climate_missing
                 )
             except Exception as e:
                 self._log_execution(f"Error generating climate section: {e}", level='ERROR')
@@ -1153,7 +1337,8 @@ Generated by PyHydroGeophysX Multi-Agent System
             # Compile full time-lapse report
             full_report = self._compile_timelapse_report(
                 self._timelapse_front_matter(
-                    inversion_results, site_info, workflow_config),
+                    inversion_results, site_info, workflow_config,
+                    model_written=bool(tl_narrative)),
                 tl_exec_summary,
                 tl_method_section,
                 tl_inversion_section,
@@ -1164,7 +1349,8 @@ Generated by PyHydroGeophysX Multi-Agent System
                 self._figures_section(tl_vis_files, figure_plan),
                 tl_narrative,
                 self._timelapse_recommendations(
-                    climate_data, inversion_results, workflow_config),
+                    climate_data, inversion_results, workflow_config, climate_missing),
+                not_delivered=not_delivered_section(not_delivered),
             )
             
             # Save report to file
@@ -1216,8 +1402,21 @@ Generated by PyHydroGeophysX Multi-Agent System
         "number in it."
     )
 
+    #: The notice for a report no language model wrote any part of - a run
+    #: without an API key, or one whose narrative call failed. Saying a model
+    #: wrote its text misdescribed it.
+    NOTICE_COMPUTED = (
+        "This report was produced by an automated multi-agent workflow. The "
+        "numerical results are computed, and the text is generated from them by "
+        "fixed rules; it has not been reviewed by a geophysicist. Both must be "
+        "checked against field observations before they are relied upon. The "
+        "limitations stated at the end of this document qualify every number "
+        "in it."
+    )
+
     def _timelapse_front_matter(self, inversion_results: Dict, site_info: Dict,
-                                config: Optional[Dict] = None) -> str:
+                                config: Optional[Dict] = None,
+                                model_written: bool = True) -> str:
         """Title and document-control block.
 
         The equivalent of a deliverable's cover page: what this is, which site
@@ -1241,7 +1440,7 @@ Generated by PyHydroGeophysX Multi-Agent System
         ]
         block = control_block(
             'Time-Lapse Electrical Resistivity Tomography: Monitoring Report',
-            pairs, notice=self.NOTICE)
+            pairs, notice=self.NOTICE if model_written else self.NOTICE_COMPUTED)
         if scheme_note:
             block += f"\n{scheme_note}\n"
         return block
@@ -1438,7 +1637,11 @@ Generated by PyHydroGeophysX Multi-Agent System
         section += self._temperature_correction_note(
             inversion_results.get('temperature_correction'))
 
-        petro = config.get('petrophysical_params')
+        # Layer parameters the conversion applied are site-specific too; ones it
+        # could not apply (no structural layers) were supplied but not used.
+        petro = (config.get('petrophysical_params')
+                 or inversion_results.get('layer_params_applied'))
+        not_applied = inversion_results.get('layer_params_not_applied') or {}
         if (inversion_results.get('time_lapse_water_content')
                 or config.get('convert_to_water_content')):
             section += "\n### Petrophysical Conversion\n\n"
@@ -1448,13 +1651,26 @@ Generated by PyHydroGeophysX Multi-Agent System
                 "of that relationship drawn repeatedly from their distributions "
                 "so that the spread of the resulting water content reports the "
                 "uncertainty of the conversion. ")
-            section += (
-                "Site-specific petrophysical parameters were supplied and used.\n"
-                if petro else
-                "No site-specific petrophysical parameters were supplied, so "
-                "generated defaults were used. The conversion is therefore "
-                "indicative rather than calibrated, and the water-content "
-                "uncertainty reported below is dominated by that choice.\n")
+            if petro:
+                section += "Site-specific petrophysical parameters were supplied and used.\n"
+                if not_applied:
+                    section += (
+                        "Layer parameters given for "
+                        f"{', '.join(map(str, not_applied))} were not applied: the "
+                        "model has no structural layers to assign them to.\n")
+            else:
+                section += (
+                    "Layer parameters were supplied for "
+                    f"{', '.join(map(str, not_applied))}, but the model has no "
+                    "structural layers to assign them to, so they were not "
+                    "applied and generated defaults were used. "
+                    if not_applied else
+                    "No site-specific petrophysical parameters were supplied, so "
+                    "generated defaults were used. ")
+                section += (
+                    "The conversion is therefore "
+                    "indicative rather than calibrated, and the water-content "
+                    "uncertainty reported below is dominated by that choice.\n")
         return section
 
     def _generate_timelapse_inversion_section(self, inversion_results: Dict,
@@ -1532,15 +1748,25 @@ Generated by PyHydroGeophysX Multi-Agent System
                         "Statistics unavailable - see the run log.\n")
         return section
 
-    def _generate_timelapse_climate_section(self, climate_data: Dict, site_info: Dict) -> str:
-        """Generate climate data section for time-lapse report."""
+    def _generate_timelapse_climate_section(self, climate_data: Dict, site_info: Dict,
+                                            missing_reason: Optional[str] = None) -> str:
+        """Generate climate data section for time-lapse report.
+
+        ``missing_reason`` is why meteorological data the request asked for are
+        absent; the section then says so instead of being left out.
+        """
         section = """## Climate Data Integration
 
 ### Meteorological Context
 
 """
-        
+
         if not climate_data:
+            if missing_reason:
+                return ("## Climate Data Integration\n\n"
+                        f"Meteorological data were requested for this report, but none "
+                        f"were retrieved: {missing_reason}. No climate-resistivity "
+                        f"relationship was computed.\n")
             # Nothing to report and nothing was asked for: a heading whose
             # only content is "there is none" invites the reader to wonder
             # what went wrong. The Key Findings say plainly that none were
@@ -1706,10 +1932,16 @@ Correlation between mean resistivity changes and climate variables:
         then left out of the document that reports the run.
 
         Returns an empty string when no conversion ran, so the heading only
-        appears where there is something under it.
+        appears where there is something under it - unless the request asked
+        for water content, when the section says the conversion did not
+        complete, and why.
         """
         per_step = (inversion_results or {}).get('time_lapse_water_content') or []
         if not per_step:
+            failure = (inversion_results or {}).get('water_content_failed')
+            if failure:
+                return ("## Water Content\n\n**Water content was requested, but the "
+                        f"conversion did not complete:** {failure}\n\n")
             return ""
 
         section = "## Water Content\n\n"
@@ -2443,7 +2675,8 @@ that effectively combines temporal ERT analysis with meteorological context."""
             return ""
     
     def _timelapse_key_findings(self, inversion_results, climate_data,
-                                evaluation_results, config=None) -> str:
+                                evaluation_results, config=None,
+                                climate_missing: Optional[str] = None) -> str:
         """Key findings written from what the run produced, not from a template.
 
         The fixed text this replaced asserted three things every time: that
@@ -2485,6 +2718,13 @@ that effectively combines temporal ERT analysis with meteorological context."""
             findings.append(
                 "**Climate-Resistivity Relationships:** Meteorological data were integrated; "
                 "see the correlation section for the relationships actually computed.")
+        elif climate_missing:
+            # Asked for and not retrieved is a different finding from never asked.
+            findings.append(
+                "**Climate-Resistivity Relationships:** Meteorological data were requested "
+                f"but could not be retrieved ({climate_missing}), so no "
+                "climate-resistivity relationship was computed and none should be "
+                "inferred from this report.")
         else:
             findings.append(
                 "**Climate-Resistivity Relationships:** No meteorological data were supplied, "
@@ -2618,7 +2858,8 @@ that effectively combines temporal ERT analysis with meteorological context."""
 
     def _timelapse_recommendations(self, climate_data: Optional[Dict],
                                    inversion_results: Dict,
-                                   config: Optional[Dict] = None) -> str:
+                                   config: Optional[Dict] = None,
+                                   climate_missing: Optional[str] = None) -> str:
         """Next steps that follow from this run, not a standing wish list.
 
         A recommendation to integrate climate data is useful to a run that had
@@ -2630,25 +2871,24 @@ that effectively combines temporal ERT analysis with meteorological context."""
         items = []
         if not climate_data:
             items.append(
-                "**Supply meteorological data.** Precipitation, temperature and "
+                "**Supply meteorological data.** "
+                + (f"They were requested but could not be retrieved "
+                   f"({climate_missing}). " if climate_missing else "")
+                + "Precipitation, temperature and "
                 "potential evapotranspiration covering the survey dates would "
                 "let the recovered changes be tested against the forcing that "
                 "plausibly caused them. Until that is done, no hydrological "
                 "cause for these changes is established.")
-        if inversion_results.get('time_lapse_water_content') and not config.get(
-                'petrophysical_params'):
+        if inversion_results.get('time_lapse_water_content') and not (
+                config.get('petrophysical_params')
+                or inversion_results.get('layer_params_applied')):
             items.append(
                 "**Calibrate the petrophysical relationship.** Samples or "
                 "borehole logs from this site would replace the generated "
                 "default parameters, which are the largest single contributor "
                 "to the water-content uncertainty reported above.")
         items += [
-            "**Extend the time series.** Five surveys over five days resolve "
-            "an event, not a seasonal cycle; repeat surveys through a wetting "
-            "and a drying season would separate the two."
-            if (inversion_results.get('n_timesteps') or 0) <= 6 else
-            "**Continue monitoring** on the established schedule so the "
-            "seasonal envelope of the site can be established.",
+            self._series_recommendation(inversion_results),
             "**Examine the depth dependence of the recovered changes** against "
             "model sensitivity, so that changes reported at depth can be "
             "distinguished from the inversion's decreasing resolution there.",
@@ -2658,12 +2898,53 @@ that effectively combines temporal ERT analysis with meteorological context."""
         ]
         return numbered(items)
 
+    @staticmethod
+    def _series_recommendation(inversion_results: Dict) -> str:
+        """What the length of this series supports, from its own surveys and span.
+
+        The text this replaced was written for one run - "Five surveys over five
+        days" - and was printed for every series of six or fewer, including a
+        four-survey series spanning 92 days.
+
+        >>> ReportAgent._series_recommendation(
+        ...     {'n_timesteps': 4, 'survey_timing': {'total_seconds': 92 * 86400}})[:59]
+        '**Extend the time series.** 4 surveys over 92 days sample p'
+        """
+        count = int(inversion_results.get('n_timesteps') or 0)
+        seconds = (inversion_results.get('survey_timing') or {}).get('total_seconds')
+        try:
+            days = float(seconds) / 86400.0
+        except (TypeError, ValueError):
+            days = None
+        if days is not None and days >= 365:
+            return ("**Continue monitoring** on the established schedule so the "
+                    "seasonal envelope of the site can be established.")
+        if days is None:
+            if count > 6:
+                return ("**Continue monitoring** on the established schedule, recording "
+                        "the acquisition time of every survey, so the seasonal envelope "
+                        "of the site can be established.")
+            return (f"**Extend the time series.** {count or 'These'} surveys without "
+                    f"recorded acquisition times cannot be placed in the seasonal "
+                    f"cycle; record when each survey is made, and repeat surveys "
+                    f"through a wetting and a drying season.")
+        span = (f"{days:.0f} days" if days >= 2 else f"{days * 24:.0f} hours"
+                if days * 24 >= 2 else f"{days * 1440:.0f} minutes")
+        if days < 30:
+            return (f"**Extend the time series.** {count} surveys over {span} resolve "
+                    f"an event, not a seasonal cycle; repeat surveys through a wetting "
+                    f"and a drying season would separate the two.")
+        return (f"**Extend the time series.** {count} surveys over {span} sample part of "
+                f"one seasonal cycle; repeat surveys through a full wetting and drying "
+                f"season would separate seasonal change from the response to "
+                f"individual events.")
+
     def _compile_timelapse_report(self, front_matter: str, exec_summary: str,
                                   method_section: str, inv_section: str,
                                   water_content_section: str,
                                   climate_section: str, corr_section: str,
                                   figures_section: str, narrative: str,
-                                  recommendations: str) -> str:
+                                  recommendations: str, not_delivered: str = '') -> str:
         """Assemble the deliverable in the order a reader needs it.
 
         Scope and findings first, then how the work was done, then what it
@@ -2679,7 +2960,9 @@ that effectively combines temporal ERT analysis with meteorological context."""
         leave gaps in the numbering.
         """
         body = "\n\n".join(part.strip() for part in [
-            exec_summary, method_section, inv_section, water_content_section,
+            # What the report does not contain follows the summary, where a
+            # reader who stops there still sees it.
+            exec_summary, not_delivered, method_section, inv_section, water_content_section,
             climate_section, corr_section, figures_section,
             f"## Interpretation\n\n{narrative.strip()}" if narrative else '',
             f"## Recommendations\n\n{recommendations.strip()}"

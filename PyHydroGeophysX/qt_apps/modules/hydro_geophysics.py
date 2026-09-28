@@ -54,10 +54,9 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets.array_viewer import ArrayViewer
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
-from PyHydroGeophysX.qt_apps.workers import TaskWorker, WorkflowWorker
+from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker, TaskWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
-    RunContext,
     WorkflowRunResult,
     WorkflowSpec,
     export_workflow_bundle,
@@ -75,6 +74,8 @@ _STEP_ICONS = [
     "fa5s.chart-area",
 ]
 _P = theme.PALETTE
+#: The "Use example" hydrology grids, under the source repository's examples/.
+_EXAMPLE_HYDRO = "data/synthetic/timelapse_infiltration"
 
 _INPUT_FORMAT_FALLBACK = (
     "# Hydro input data format\n\n"
@@ -98,7 +99,7 @@ class HydroGeophysicsModule(BaseModule):
         self._point1: Optional[List[float]] = None
         self._point2: Optional[List[float]] = None
         self._profile: Optional[Dict[str, Any]] = None
-        self._worker: Optional[WorkflowWorker] = None
+        self._worker: Optional[ProcessWorkflowWorker] = None
         self._run_busy: Optional[BusyStateController] = None
         self._workflow_recipe_path = ""
         self._preview_worker: Optional[TaskWorker] = None
@@ -822,6 +823,9 @@ class HydroGeophysicsModule(BaseModule):
         self._manual_dir = None
         if self.state.hydro_data_dir is None:
             self._manual_dir = self._example_data_dir()
+            if self._manual_dir is None:
+                self.log(io_utils.missing_example_message(
+                    "The synthetic hydrology example", _EXAMPLE_HYDRO), "warn")
         self._reload()
         if self._top is not None or self._wc is not None:
             self._agent_data_source_confirmed = True
@@ -835,19 +839,14 @@ class HydroGeophysicsModule(BaseModule):
         Points at the synthetic ``timelapse_infiltration`` dataset produced by
         ``examples/generate_synthetic_examples.py``. The real Treeline demo in
         ``examples/data`` is preserved and can still be opened via "Select
-        folder...".
+        folder...". Both are in the source repository, not the pip package
+        (``io_utils.example_dirs`` says where they are looked for).
         """
-        rel = ("examples", "data", "synthetic", "timelapse_infiltration")
-        candidates: List[Path] = []
-        if self.state.project_root:
-            candidates.append(Path(self.state.project_root).joinpath(*rel))
-        here = Path(__file__).resolve()
-        candidates.extend(p.joinpath(*rel) for p in here.parents)
-        for cand in candidates:
-            files = hydro_pipeline.find_hydro_files(cand)
-            if files.get("top") is not None or files.get("water_content") is not None:
-                return cand
-        return None
+        def usable(folder: Path) -> bool:
+            files = hydro_pipeline.find_hydro_files(folder)
+            return files.get("top") is not None or files.get("water_content") is not None
+
+        return io_utils.find_example(_EXAMPLE_HYDRO, self.state.project_root, usable)
 
     def _show_format_help(self) -> None:
         """Pop a dialog rendering the input-data-format documentation."""
@@ -1237,14 +1236,10 @@ class HydroGeophysicsModule(BaseModule):
         self._progress.setRange(0, 0)  # busy
         self._run_status.setText("Starting forward modeling…")
         self.log("Starting hydro → geophysics forward modeling…", "info")
+        # In a process of its own, so the window keeps painting through the
+        # forward runs; the results are files, and nothing else comes back.
         self._worker = self.register_worker(
-            WorkflowWorker(
-                spec,
-                RunContext(
-                    project_root=run.run_dir,
-                    output_dir=run.outputs_dir,
-                ),
-            )
+            ProcessWorkflowWorker(recipe_path, run.run_dir, run.outputs_dir, run.result_path)
         )
         self._worker.logged.connect(lambda message: self._on_worker_log(message, "info"))
         self._worker.succeeded.connect(self._on_workflow_ok)

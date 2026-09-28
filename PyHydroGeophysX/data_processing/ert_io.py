@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Callable, List, Optional, Sequence, Tuple
 
 import numpy as np
@@ -43,6 +44,110 @@ def electrode_elevation(electrodes) -> np.ndarray:
     ys = np.array([float(e.y) for e in electrodes])
     zs = np.array([float(e.z) for e in electrodes])
     return ys if ys.std() >= zs.std() else zs
+
+
+def _geometric_ratio(k_after, k_before) -> np.ndarray:
+    """``k_after / k_before`` per reading; 1 where either factor is unusable."""
+    k_after = np.asarray(k_after, dtype=float)
+    k_before = np.asarray(k_before, dtype=float)
+    usable = np.isfinite(k_after) & np.isfinite(k_before) & (np.abs(k_before) > 1e-12)
+    ratio = np.ones_like(k_after)
+    ratio[usable] = k_after[usable] / k_before[usable]
+    return ratio
+
+
+def follow_moved_sensors(data, before) -> int:
+    """Carry k and rhoa over to electrodes that moved, keeping each measured R.
+
+    ``before`` holds the same readings on the electrodes' old positions. The
+    instrument measured the transfer resistance R = rhoa/k, and moving an
+    electrode changes k but not R, so ``k``, ``rhoa`` and the file's own
+    ``k_file`` are scaled by how much the move changed each reading's
+    half-space factor. A reading whose electrodes stayed put is left exactly as
+    it was, whatever convention its k followed. Left alone, a file's apparent
+    resistivities described the old geometry: doubling the spacing doubled k and
+    halved the R the data implied.
+
+    Returns how many readings changed.
+    """
+    from pygimli.physics import ert as pg_ert
+
+    ratio = _geometric_ratio(pg_ert.createGeometricFactors(data, numerical=False),
+                             pg_ert.createGeometricFactors(before, numerical=False))
+    changed = int(np.count_nonzero(np.abs(ratio - 1.0) > 1e-9))
+    if changed:
+        for token in ("k", "rhoa", "k_file"):
+            if data.haveData(token):
+                data.set(token, np.asarray(data[token], dtype=float) * ratio)
+    return changed
+
+
+def place_electrodes(data, electrode_file, log: LogFn = _noop) -> int:
+    """Move ``data``'s electrodes to where ``electrode_file`` puts them.
+
+    Rows are matched to the data's electrodes in order, as the instrument
+    readers match them, so both must list the same number of electrodes; a file
+    that cannot be matched is refused rather than applied in part. k and rhoa
+    follow the electrodes that moved (:func:`follow_moved_sensors`). This is how
+    a file read by PyGIMLi's own reader takes an electrode file, which that
+    reader has no way to be given. Returns how many readings changed.
+    """
+    import pygimli as pg
+
+    from PyHydroGeophysX.data_processing.table_io import read_electrode_table
+
+    coords, elevation, how = read_electrode_table(electrode_file)
+    name = Path(electrode_file).name
+    count = int(data.sensorCount())
+    if len(coords) != count:
+        raise ValueError(f"{name} lists {len(coords)} electrodes, but the data file's "
+                         f"electrode table has {count}.")
+    before = pg.DataContainerERT(data)
+    for index in range(count):
+        data.setSensorPosition(index, pg.Pos(float(coords[index, 0]), float(elevation[index])))
+    moved = follow_moved_sensors(data, before)
+    log(f"Electrode positions from {name} ({how})"
+        + (f"; k and rhoa follow them in {moved} readings" if moved else ""))
+    return moved
+
+
+def _header_ratio(std, valid) -> Optional[np.ndarray]:
+    """How much an electrode file changed each reading's half-space k.
+
+    ``None`` unless a reader replaced the positions the data file's own header
+    gave, which it records as ``header_electrodes`` in the numbering of
+    ``std.electrodes``.
+    """
+    header = (std.metadata or {}).get("header_electrodes")
+    if not header:
+        return None
+    import pygimli as pg
+    from pygimli.physics import ert as pg_ert
+
+    keys = ("A", "B", "M", "N")
+
+    def factors(rows) -> Optional[np.ndarray]:
+        """Half-space k of the ``valid`` readings on electrodes placed at ``rows``."""
+        placed = pg.DataContainerERT()
+        elevation = electrode_elevation(rows)
+        index = {int(row.id): int(placed.createSensor(pg.Pos(float(row.x), float(elevation[i]))))
+                 for i, row in enumerate(rows)}
+        if not all(int(getattr(o.quad, key)) in index for o in valid for key in keys):
+            return None
+        placed.resize(len(valid))
+        for name, key in zip(("a", "b", "m", "n"), keys):
+            placed.set(name, [index[int(getattr(o.quad, key))] for o in valid])
+        return np.asarray(pg_ert.createGeometricFactors(placed, numerical=False), dtype=float)
+
+    try:
+        before = factors([SimpleNamespace(id=number, x=row[0], y=row[1], z=row[2])
+                          for number, row in enumerate(header, start=1)])
+        after = factors(std.electrodes or [])
+    except Exception:  # noqa: BLE001 - the data stay as read
+        return None
+    if before is None or after is None:
+        return None
+    return _geometric_ratio(after, before)
 
 
 def standard_to_pg(std):
@@ -76,8 +181,13 @@ def standard_to_pg(std):
         # chi2 never moves, so nothing else in the pipeline notices: createMesh
         # reads the same container as a 2D section with topography and builds the
         # right mesh. Only k is affected, and only silently.
-        data.createSensor(pg.Pos(float(e.x), float(elev[i])))
-        id_to_idx[int(e.id)] = i
+        #
+        # createSensor snaps to a sensor already within 1 mm and returns that
+        # one's index instead of adding another, so two electrode ids at one
+        # position (a repeated row, the shared station of a roll-along) share a
+        # sensor. Every electrode must take the index it returns: counting the
+        # list put each later electrode on the next electrode's position.
+        id_to_idx[int(e.id)] = int(data.createSensor(pg.Pos(float(e.x), float(elev[i]))))
     keys = ("A", "B", "M", "N")
     valid = [
         o for o in (std.observations or [])
@@ -85,6 +195,24 @@ def standard_to_pg(std):
     ]
     if not valid:
         return None
+    # A reading whose distinct electrodes land on one sensor has no geometric
+    # factor (a zero distance in it), so the electrode table must be wrong.
+    ids_of = [{int(getattr(o.quad, k)) for k in keys} for o in valid]
+    clashing = [ids for ids in ids_of if len({id_to_idx[i] for i in ids}) < len(ids)]
+    if clashing:
+        shared = {}
+        for ident, index in id_to_idx.items():
+            shared.setdefault(index, []).append(ident)
+        groups = sorted({tuple(sorted(shared[id_to_idx[i]])) for ids in clashing
+                         for i in ids if len(shared[id_to_idx[i]]) > 1})
+        described = "; ".join(
+            "electrodes " + ", ".join(str(g) for g in group) + " at x = "
+            f"{float(data.sensorPosition(id_to_idx[group[0]]).x()):g} m"
+            for group in groups)
+        raise ValueError(
+            f"{len(clashing)} reading(s) use two electrodes at one position "
+            f"({described}), which leaves them no geometric factor. Correct the "
+            "electrode positions (or the electrode file) and load again.")
     data.resize(len(valid))
     for name, qk in zip(("a", "b", "m", "n"), keys):
         data.set(name, [id_to_idx[int(getattr(o.quad, qk))] for o in valid])
@@ -96,6 +224,13 @@ def standard_to_pg(std):
     except Exception:  # noqa: BLE001
         k = np.ones(len(valid))
     source = str((std.metadata or {}).get("app_res_source", "")).lower()
+    # An electrode file moved the electrodes the data file's own header placed,
+    # and an apparent resistivity the file reports was formed on the header's
+    # geometry. The measured R = rhoa/k does not change with the move, so rhoa
+    # and the file's own factors follow k to the new positions.
+    moved = _header_ratio(std, valid) if source != "resistance" else None
+    if moved is not None:
+        vals = vals * moved
     if source == "resistance":
         resistance, rhoa = vals, vals * k
     else:
@@ -122,6 +257,13 @@ def standard_to_pg(std):
     contacts = [getattr(o, "contact_r", None) for o in valid]
     if contacts and all(value is not None for value in contacts):
         data.set("rc", np.asarray(contacts, dtype=float))
+    # The potential's sample spread as a fraction of |V| (Subsurface Insights),
+    # for QC and the optional "stack" error model. All or nothing as well: the
+    # token is saved with the inversion input, and a NaN in a saved row ends the
+    # data block for ResIPy's BERT reader, which then returns the rows before it.
+    spreads = [getattr(o, "stack", None) for o in valid]
+    if spreads and all(value is not None for value in spreads):
+        data.set("stack", np.asarray(spreads, dtype=float))
 
     # Keep the instrument's own geometric factors under a separate token when the
     # file reported apparent resistivity, because then rhoa was formed with *those*
@@ -135,7 +277,8 @@ def standard_to_pg(std):
             [float(o.K) if o.K is not None else np.nan for o in valid], dtype=float
         )
         if np.all(np.isfinite(file_k)) and not np.allclose(file_k, 1.0):
-            data.set("k_file", file_k)
+            # Moved with the electrodes, as rhoa was, when an electrode file did.
+            data.set("k_file", file_k * moved if moved is not None else file_k)
 
     data.markValid(data("rhoa") > 0)
     return data
@@ -261,10 +404,14 @@ def load_ert_container(path: str, instrument: Optional[str] = None,
                 ) from failures[0]
         log(f"Instrument '{inst}' parsed no usable measurements; trying pygimli auto-detect.")
 
-    # 2. native pygimli
+    # 2. native pygimli. It cannot be handed an electrode file, which is then
+    # applied here: this is where a pick whose reader refused the file lands,
+    # and it used to return the header's positions without a word.
     if retry_native:
         data = _via_native(path, log)
         if _usable(data):
+            if electrode_file:
+                place_electrodes(data, electrode_file, log=log)
             return data
 
     # 3. recovery sweep across count-prefixed device formats
@@ -346,6 +493,11 @@ def save_edited_ert_container(
     for index in reversed([i for i in range(original_count) if i not in set(retained)]):
         edited.removeSensorIdx(index)
 
+    # The readings as they stand, before any electrode moves: k and rhoa follow
+    # the moved ones from here (follow_moved_sensors). Left as they were, the
+    # saved input paired the new positions with apparent resistivities formed
+    # on the old ones.
+    before = pg.DataContainerERT(edited)
     retained_rows = [
         item for item in electrodes if item.get("original_index") is not None
     ]
@@ -357,6 +509,8 @@ def save_edited_ert_container(
     for item in electrodes:
         if item.get("original_index") is None:
             edited.createSensor(pg.Pos(float(item["x"]), float(item["z"])))
+    if edited.size():
+        follow_moved_sensors(edited, before)
 
     target = Path(destination)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -441,17 +595,21 @@ def align_timelapse_abmn(containers, log: LogFn = _noop):
 def normalize_for_timelapse(files: Sequence[str], instrument: Optional[str],
                             out_dir: str, log: LogFn = _noop,
                             max_error: Optional[float] = None,
-                            engine: str = "pyhydro"):
+                            engine: str = "pyhydro",
+                            electrode_file: Optional[str] = None):
     """Write native files, filtering each survey independently.
 
     PyHydro keeps each survey's own measurement count and ordering. ADTLERT
     aligns the union of surviving ABMN rows and fills missing rows at 100% error.
+    ``electrode_file`` places every survey's electrodes, as it does one survey's
+    in :func:`load_ert_container`.
     """
     if engine not in ("pyhydro", "adtlert"):
         raise ValueError(f"Unsupported time-lapse engine: {engine}")
     base = Path(out_dir) / "qt_ert_timelapse" / "normalized"
     base.mkdir(parents=True, exist_ok=True)
-    containers = [load_ert_container(f, instrument=instrument, log=log) for f in files]
+    containers = [load_ert_container(f, instrument=instrument, log=log,
+                                     electrode_file=electrode_file) for f in files]
     if not containers:
         raise ValueError("Time-lapse normalization needs at least one ERT file.")
     for index, data in enumerate(containers):

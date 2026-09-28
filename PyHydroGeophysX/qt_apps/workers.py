@@ -1,22 +1,30 @@
 """Generic background worker for the studio.
 
 ``TaskWorker`` handles non-workflow support tasks such as file parsing and
-preview generation. ``WorkflowWorker`` runs cooperative workflows in a Qt
-thread, while ``ProcessProbeWorker`` and ``ProcessWorkflowWorker`` isolate
-native-library probes and workflows in separate Python processes.
+preview generation. ``ProcessProbeWorker`` and ``ProcessWorkflowWorker``
+isolate native-library probes and workflows in separate Python processes;
+every studio page runs its workflows that way, the live objects of a result
+coming back through ``workflows.objects`` and read on a thread of their own.
+The process a run needs is usually already started and waiting, its libraries
+loaded (:class:`_Standby`). ``WorkflowWorker`` runs a workflow in a Qt thread
+of this process, for a caller that wants it there.
 """
 
 from __future__ import annotations
 
 import codecs
+from collections import deque
 import json
 from concurrent.futures import CancelledError
+import os
 from pathlib import Path
 import re
+import shutil
 import sys
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 from PySide6.QtCore import (
+    QCoreApplication,
     QObject,
     QProcess,
     QProcessEnvironment,
@@ -32,12 +40,68 @@ from PyHydroGeophysX.workflows import (
     WorkflowSpec,
     run_workflow,
 )
+from PyHydroGeophysX.workflows.objects import load_objects, objects_folder
 
 
 def _error_message(exc: Exception) -> str:
     if isinstance(exc, BackendUnavailable):
         return f"Backend unavailable: {exc}"
     return str(exc)
+
+
+#: Windows exit codes of a process ended by the system rather than by Python:
+#: the code a native solver dies with, which on its own tells a user nothing.
+_NATIVE_CRASHES = {
+    0xC0000005: "a Windows access violation",
+    0xC0000409: "a fatal Windows runtime error",
+    0xC00000FD: "a stack overflow",
+}
+#: SIGSEGV as QProcess reports it (-11) and as a shell does (128 + 11).
+_SEGFAULT_CODES = {-11, 139}
+#: What a native solver or Python prints when memory runs out. CHOLMOD, the
+#: sparse Cholesky solver behind the inversions, prints its errors as ordinary
+#: output and the process then dies on a native exception.
+_MEMORY_LINE = re.compile(
+    r"CHOLMOD error|out of memory|MemoryError|bad_alloc|unable to allocate|"
+    r"cannot allocate memory|not enough memory|insufficient memory",
+    re.IGNORECASE,
+)
+#: Lines of a workflow process's output kept for its run's logs folder.
+_OUTPUT_TAIL_LINES = 2000
+OUTPUT_LOG_NAME = "workflow_output.log"
+
+
+def _process_failure_message(
+    exit_code: int,
+    crashed: bool,
+    last_exception: str = "",
+    memory_hint: str = "",
+    log_path: Path | None = None,
+) -> str:
+    """Say in plain words why a workflow process ended, and what to try.
+
+    A native crash is reported as one, most likely a lack of memory (the
+    solvers' usual way of dying), with the line the process printed about it if
+    it printed one; anything else keeps the exit code and the last exception.
+    """
+    code = int(exit_code)
+    unsigned = code & 0xFFFFFFFF
+    where = f" The last lines it printed are in {log_path}." if log_path else ""
+    advice = (" Close other programs to free memory, or use a coarser mesh or fewer "
+              "cells, and run again.")
+    native = _NATIVE_CRASHES.get(unsigned)
+    if native or code in _SEGFAULT_CODES or crashed:
+        how = (f"{native} (0x{unsigned:08X})" if native
+               else "a segmentation fault" if code in _SEGFAULT_CODES
+               else f"exit code {code} (0x{unsigned:08X})")
+        cause = (f"after reporting \"{memory_hint}\", so it ran out of memory" if memory_hint
+                 else "most likely because it ran out of memory")
+        return f"The solver process crashed with {how}, {cause}.{advice}{where}"
+    if memory_hint:
+        said = last_exception or memory_hint
+        return f"The solver ran out of memory: {said}.{advice}{where}"
+    reason = f" {last_exception}" if last_exception else ""
+    return f"Workflow process exited with code {code} (0x{unsigned:08X}).{reason}{where}"
 
 
 def _active_console_python() -> Path:
@@ -51,6 +115,204 @@ def _active_console_python() -> Path:
         if console_python.is_file():
             executable = console_python
     return executable
+
+
+def _package_root() -> Path:
+    """The folder holding the PyHydroGeophysX package this studio runs."""
+    return Path(__file__).resolve().parents[2]
+
+
+def _workflow_environment() -> QProcessEnvironment:
+    """The environment a workflow process runs in.
+
+    A GUI process on Chinese Windows can give redirected Python streams the
+    system GBK encoding. Workflow logs legitimately contain Unicode text such as
+    ``chi²`` and an ellipsis; printing either would then raise
+    UnicodeEncodeError after a successful inversion. UTF-8 matches the decoder
+    ``ProcessWorkflowWorker._emit_output`` reads the streams with.
+    """
+    environment = QProcessEnvironment.systemEnvironment()
+    environment.insert("PYTHONUTF8", "1")
+    environment.insert("PYTHONIOENCODING", "utf-8")
+    # The process must import the PyHydroGeophysX this studio runs. Started from
+    # a checkout, the studio found the package through its own working folder
+    # or sys.path, which a process started in the project folder does not
+    # share, and that process imported whatever other copy the environment
+    # held: an older checkout lacked workflow_standby and every run failed. An
+    # installed package is already on the child's path and is left alone.
+    package_root = _package_root()
+    if package_root.name.lower() not in ("site-packages", "dist-packages"):
+        existing = [entry for entry in environment.value("PYTHONPATH", "").split(os.pathsep)
+                    if entry and os.path.normcase(os.path.abspath(entry))
+                    != os.path.normcase(str(package_root))]
+        environment.insert("PYTHONPATH", os.pathsep.join([str(package_root), *existing]))
+    return environment
+
+
+#: Set to 0 to start every workflow process when its run starts, as before
+#: :class:`_Standby` kept one waiting.
+WARM_WORKER_ENV = "PHGX_WARM_WORKER"
+
+
+class _Standby:
+    """The workflow process started ahead of the next run.
+
+    Starting a workflow process cost about a second before the workflow ran -
+    the interpreter and the numerical libraries it imports - and every run paid
+    it while the user watched. One process is kept started and waiting instead
+    (``PyHydroGeophysX._internal.workflow_standby``), having loaded those
+    libraries while nobody was waiting; a run takes it over, and the next one is
+    started at once. Each still serves one run only, so a run is cancelled by
+    ending its process and cannot inherit anything from the one before.
+
+    Idle, it holds the libraries in memory, about 200 MB; ``PHGX_WARM_WORKER=0``
+    turns it off. One that dies while waiting is replaced, and after three such
+    deaths no more are started this session: every run then starts its own
+    process, as it always did.
+    """
+
+    MODULE = "PyHydroGeophysX._internal.workflow_standby"
+    MAX_FAILURES = 3
+
+    def __init__(self) -> None:
+        self._process: QProcess | None = None
+        self._slots: list = []            # what the waiting process is connected to
+        self._failures = 0
+        self._quit_hooked = False
+
+    @staticmethod
+    def enabled() -> bool:
+        flag = str(os.environ.get(WARM_WORKER_ENV, "1")).strip().lower()
+        return flag not in {"0", "false", "no", "off"}
+
+    def prepare(self) -> None:
+        """Start a process for the next run, unless one is already waiting."""
+        app = QCoreApplication.instance()
+        if (app is None or not self.enabled() or self._failures >= self.MAX_FAILURES
+                or (self._process is not None
+                    and self._process.state() != QProcess.ProcessState.NotRunning)):
+            return
+        if not self._quit_hooked:
+            app.aboutToQuit.connect(self.shutdown)
+            self._quit_hooked = True
+        # It waits in the folder holding the package it runs, which the studio
+        # never deletes; a run moves it to the run's own folder. Windows will not
+        # delete a folder that is a process's working directory, and waiting in
+        # the folder of the run that started it left that run impossible to
+        # discard (WinError 32) until the next run took the process away.
+        process = QProcess(app)
+        process.setWorkingDirectory(str(_package_root()))
+        process.setProcessEnvironment(_workflow_environment())
+        process.setProgram(str(_active_console_python()))
+        process.setArguments(["-m", self.MODULE])
+        # Nothing it says while it waits is anyone's: the warm-up is quiet, and
+        # a run's output begins once a run owns the process.
+        self._slots = [
+            (process.readyReadStandardOutput, lambda: process.readAllStandardOutput()),
+            (process.readyReadStandardError, lambda: process.readAllStandardError()),
+            (process.finished, lambda *_args: self._on_ended(process)),
+        ]
+        for signal, slot in self._slots:
+            signal.connect(slot)
+        process.start()
+        self._process = process
+
+    def take(self) -> QProcess | None:
+        """The waiting process, handed over; None when there is none to hand."""
+        process, self._process = self._process, None
+        slots, self._slots = self._slots, []
+        if process is None:
+            return None
+        for signal, slot in slots:
+            try:
+                signal.disconnect(slot)
+            except (RuntimeError, TypeError):
+                pass
+        if process.state() == QProcess.ProcessState.NotRunning:
+            self._failures += 1           # it died waiting, before its end was heard
+            process.deleteLater()
+            return None
+        return process
+
+    def _on_ended(self, process: QProcess) -> None:
+        """A waiting process ended before any run took it."""
+        if process is self._process:
+            self._process = None
+            self._slots = []
+            self._failures += 1
+        try:
+            process.deleteLater()
+        except RuntimeError:
+            # Being destroyed with the application, which ended the process.
+            pass
+
+    def shutdown(self) -> None:
+        """End the waiting process: end of input tells it no run is coming."""
+        process, self._process = self._process, None
+        try:
+            if process is None or process.state() == QProcess.ProcessState.NotRunning:
+                return
+            process.closeWriteChannel()
+            if not process.waitForFinished(1500):
+                process.kill()
+                process.waitForFinished(1500)
+        except RuntimeError:
+            pass                          # already destroyed, with the application
+
+
+_STANDBY = _Standby()
+
+
+def prepare_workflow_process() -> None:
+    """Have a workflow process started and waiting for the next run.
+
+    Called once the studio is up, so its first run does not wait either; each
+    run that takes the process starts the next one itself.
+    """
+    _STANDBY.prepare()
+
+
+def _kill_process_tree(pid: int) -> None:
+    """Freeze the task tree, then kill descendants before their parent.
+
+    Keeping psutil Process objects also guards against PID reuse. Freezing each
+    parent before enumerating its children prevents it from starting workers
+    while cancellation is collecting the tree. No waits block the Qt event loop.
+    """
+    try:
+        import psutil
+    except ImportError as exc:
+        raise OSError("Cancelling a process tree requires the desktop dependency psutil") from exc
+
+    tree = []
+    try:
+        try:
+            pending = [psutil.Process(int(pid))]
+        except psutil.NoSuchProcess:
+            return
+        while pending:
+            process = pending.pop()
+            try:
+                process.suspend()
+                tree.append(process)
+                pending.extend(process.children())
+            except psutil.NoSuchProcess:
+                continue
+        # Parent-before-child collection gives a child-before-parent kill order.
+        for process in reversed(tree):
+            try:
+                process.kill()
+            except psutil.NoSuchProcess:
+                pass
+    except psutil.Error as exc:
+        raise OSError(f"Could not end the workflow process tree {pid}: {exc}") from exc
+    finally:
+        # A permission error must not strand any surviving process suspended.
+        for process in reversed(tree):
+            try:
+                process.resume()
+            except psutil.Error:
+                pass
 
 
 def _suspend_process_tree(pid: int, suspended: bool) -> None:
@@ -402,6 +664,43 @@ class ProcessProbeWorker(QObject):
         self.finished.emit()
 
 
+class _ResultLoader(QThread):
+    """Read a finished run's result, and the objects it sent back, off the UI thread.
+
+    Reading a large result took the window half a second: the JSON, then the
+    mesh and the arrays the page shows (``workflows.objects``). Here that work
+    no longer stops the window painting - except while PyGIMLi builds a mesh,
+    which holds the interpreter wherever it runs.
+    """
+
+    loaded = Signal(object, object)       # the result, what did not come back
+    failed = Signal(str)
+
+    def __init__(self, result_path: Path, parent: QObject | None = None) -> None:
+        super().__init__(parent)
+        self.result_path = Path(result_path)
+
+    def run(self) -> None:  # noqa: D401 - QThread entry point
+        try:
+            payload = json.loads(self.result_path.read_text(encoding="utf-8"))
+            result = WorkflowRunResult.from_dict(payload)
+        except Exception as exc:  # noqa: BLE001 - report malformed child output
+            self.failed.emit(f"Could not read workflow result {self.result_path}: {exc}")
+            return
+        problems: list = []
+        # The meshes, arrays and models the page shows, which a result read
+        # from JSON would otherwise lack; one that did not come back is said.
+        manifest = payload.get("objects") if isinstance(payload, dict) else None
+        if manifest:
+            folder = objects_folder(self.result_path)
+            objects, problems = load_objects(manifest, folder)
+            result.objects.update(objects)
+            # Read into memory: the copies need not stay in the Project, whose
+            # record of the run is the outputs the workflow saved.
+            shutil.rmtree(folder, ignore_errors=True)
+        self.loaded.emit(result, problems)
+
+
 class ProcessWorkflowWorker(QObject):
     """Execute a recipe in an isolated Python process.
 
@@ -430,12 +729,20 @@ class ProcessWorkflowWorker(QObject):
         output_dir: str | Path,
         result_path: str | Path,
         parent: QObject | None = None,
+        *,
+        objects: Sequence[str] = (),
     ) -> None:
+        """``objects`` names what of the result's live objects - a mesh, an
+        array, a table - the page needs back in ``result.objects``; the
+        workflow process writes those beside its result and they are read in
+        here (``workflows.objects``). A run in a thread handed over all of
+        them; asking for what is shown saves loading what is not."""
         super().__init__(parent)
         self.recipe_path = Path(recipe_path).resolve()
         self.project_root = Path(project_root).resolve()
         self.output_dir = Path(output_dir).resolve()
         self.result_path = Path(result_path).resolve()
+        self.objects = tuple(str(name) for name in objects)
         self._cancelled = False
         self._finished = False
         self._paused = False
@@ -448,18 +755,16 @@ class ProcessWorkflowWorker(QObject):
         #: be read as DAS-1: ...". A failed run reported only its exit code, and
         #: the reason was left somewhere in the log above.
         self._last_exception = ""
+        #: The first line the child printed about running out of memory, which a
+        #: native solver prints as ordinary output just before it crashes.
+        self._memory_hint = ""
+        #: The end of the child's output, kept in the run's logs folder.
+        self._output_tail: deque = deque(maxlen=_OUTPUT_TAIL_LINES)
+        self._loader: _ResultLoader | None = None
 
         self.process = QProcess(self)
         self.process.setWorkingDirectory(str(self.project_root))
-        # A GUI process on Chinese Windows can give redirected Python streams
-        # the system GBK encoding.  Workflow logs legitimately contain Unicode
-        # text such as ``chi²`` and an ellipsis; printing either would then raise
-        # UnicodeEncodeError after a successful inversion.  Make the child's
-        # encoder match the UTF-8 decoder used by ``_emit_output`` below.
-        environment = QProcessEnvironment.systemEnvironment()
-        environment.insert("PYTHONUTF8", "1")
-        environment.insert("PYTHONIOENCODING", "utf-8")
-        self.process.setProcessEnvironment(environment)
+        self.process.setProcessEnvironment(_workflow_environment())
         # ``sys.executable`` can resolve to the Windows Store base executable
         # even when the studio was launched through ``.venv\Scripts``.  A
         # direct QProcess launch of that MSIX executable bypasses the venv
@@ -478,7 +783,9 @@ class ProcessWorkflowWorker(QObject):
             str(self.output_dir),
             "--result-file",
             str(self.result_path),
+            *(["--objects", ",".join(self.objects)] if self.objects else []),
         ])
+        self.process.started.connect(self._cancel_if_requested)
         self.process.readyReadStandardOutput.connect(self._read_stdout)
         self.process.readyReadStandardError.connect(self._read_stderr)
         self.process.errorOccurred.connect(self._on_process_error)
@@ -488,19 +795,53 @@ class ProcessWorkflowWorker(QObject):
         try:
             self.result_path.parent.mkdir(parents=True, exist_ok=True)
             self.result_path.unlink(missing_ok=True)
+            shutil.rmtree(objects_folder(self.result_path), ignore_errors=True)
         except OSError as exc:
             self._finish_with_error(f"Could not prepare workflow result {self.result_path}: {exc}")
             return
-        self.process.start()
+        waiting = _STANDBY.take()
+        if waiting is None:
+            self.process.start()
+        else:
+            self._run_in(waiting)
+        # The next run's process, loading its libraries while this one runs.
+        _STANDBY.prepare()
+
+    def _run_in(self, process: QProcess) -> None:
+        """Run on a process started ahead of this run (see :class:`_Standby`).
+
+        The command line is the one a process of its own would have been given,
+        handed over on standard input; from there the process is this run's as
+        if it had been started for it.
+        """
+        own, self.process = self.process, process
+        process.setParent(self)
+        process.started.connect(self._cancel_if_requested)
+        process.readyReadStandardOutput.connect(self._read_stdout)
+        process.readyReadStandardError.connect(self._read_stderr)
+        process.errorOccurred.connect(self._on_process_error)
+        process.finished.connect(self._on_finished)
+        arguments = list(own.arguments())
+        job = {"module": arguments[1], "argv": arguments[2:], "cwd": str(self.project_root)}
+        own.deleteLater()
+        line = (json.dumps(job) + "\n").encode("utf-8")
+        if process.state() == QProcess.ProcessState.Running:
+            process.write(line)
+        else:                                   # still starting
+            process.started.connect(lambda: process.write(line))
 
     def cancel(self) -> None:
         self._cancelled = True
         if self.isRunning():
-            # A stopped POSIX process does not act on SIGTERM until it is
-            # continued, so a paused run is thawed before it is asked to end.
+            # Balance a prior pause before collecting and ending the tree.
             self._set_paused(False)
-            self.process.terminate()
+            self._kill_if_running()
             QTimer.singleShot(2000, self._kill_if_running)
+
+    def _cancel_if_requested(self) -> None:
+        # Cancellation can arrive while QProcess is Starting and has no PID yet.
+        if self._cancelled:
+            self._kill_if_running()
 
     def pause(self) -> bool:
         """Freeze the running workflow where it stands; :meth:`resume` continues it.
@@ -550,16 +891,27 @@ class ProcessWorkflowWorker(QObject):
         self.cancel()
 
     def wait(self, timeout_ms: int = 30000) -> bool:
-        return bool(self.process.waitForFinished(int(timeout_ms)))
+        done = bool(self.process.waitForFinished(int(timeout_ms)))
+        if self._loader is not None:
+            self._loader.wait(int(timeout_ms))
+        return done
 
     def isRunning(self) -> bool:  # noqa: N802 - mirror QThread's public API
-        return self.process.state() != QProcess.ProcessState.NotRunning
+        # Still running while its result is read: nothing has been delivered.
+        return (self.process.state() != QProcess.ProcessState.NotRunning
+                or (self._loader is not None and self._loader.isRunning()))
 
     def is_cancelled(self) -> bool:
         return self._cancelled
 
     def _kill_if_running(self) -> None:
-        if self.isRunning():
+        if self.process.state() != QProcess.ProcessState.NotRunning:
+            pid = int(self.process.processId())
+            if pid > 0:
+                try:
+                    _kill_process_tree(pid)
+                except OSError as exc:
+                    self.logged.emit(str(exc))
             self.process.kill()
 
     def _emit_output(self, raw: bytes, stream: str = "stdout", *, final: bool = False) -> None:
@@ -574,6 +926,9 @@ class ProcessWorkflowWorker(QObject):
             rendered = line.rstrip()
             if not rendered.strip():
                 continue
+            self._output_tail.append(rendered if stream == "stdout" else f"[stderr] {rendered}")
+            if not self._memory_hint and _MEMORY_LINE.search(rendered):
+                self._memory_hint = rendered.strip()[:300]
             match = re.match(
                 r"^\[progress\s+(\d+)/(\d+)\]\s*(.*)$", rendered.strip()
             )
@@ -593,6 +948,26 @@ class ProcessWorkflowWorker(QObject):
 
     def _read_stderr(self) -> None:
         self._emit_output(bytes(self.process.readAllStandardError()), "stderr")
+
+    def _write_output_log(self, exit_code: int) -> Path | None:
+        """Keep the end of the child's output in its run's ``logs`` folder.
+
+        The page's log panel is gone with the session, and a run that crashed
+        otherwise left an empty ``logs`` folder and an exit code behind. Written
+        only where the result sits in a run folder that has one.
+        """
+        folder = self.result_path.parent / "logs"
+        if not self._output_tail or not folder.is_dir():
+            return None
+        path = folder / OUTPUT_LOG_NAME
+        try:
+            path.write_text(
+                "\n".join([*self._output_tail, f"[exit code {exit_code} "
+                           f"(0x{exit_code & 0xFFFFFFFF:08X})]"]) + "\n",
+                encoding="utf-8")
+        except OSError:
+            return None
+        return path
 
     def _on_process_error(self, error: QProcess.ProcessError) -> None:
         if error == QProcess.ProcessError.FailedToStart and not self._finished:
@@ -626,25 +1001,35 @@ class ProcessWorkflowWorker(QObject):
             self._finished = True
             self.finished.emit()
             return
-        if int(exit_code) != 0 or _exit_status == QProcess.ExitStatus.CrashExit:
-            unsigned = int(exit_code) & 0xFFFFFFFF
-            reason = f" {self._last_exception}" if self._last_exception else ""
-            self._finish_with_error(
-                f"Workflow process exited with code {int(exit_code)} "
-                f"(0x{unsigned:08X}).{reason}"
-            )
+        log_path = self._write_output_log(int(exit_code))
+        crashed = _exit_status == QProcess.ExitStatus.CrashExit
+        if int(exit_code) != 0 or crashed:
+            self._finish_with_error(_process_failure_message(
+                int(exit_code), crashed, self._last_exception, self._memory_hint, log_path))
             return
-        try:
-            payload = json.loads(self.result_path.read_text(encoding="utf-8"))
-            result = WorkflowRunResult.from_dict(payload)
-        except Exception as exc:  # noqa: BLE001 - report malformed child output
-            self._finish_with_error(
-                f"Could not read workflow result {self.result_path}: {exc}"
-            )
+        self.logged.emit("Loading the results…")
+        loader = _ResultLoader(self.result_path, self)
+        loader.loaded.connect(self._on_loaded)
+        loader.failed.connect(self._on_load_failed)
+        self._loader = loader
+        loader.start()
+
+    def _on_loaded(self, result: WorkflowRunResult, problems) -> None:
+        if self._loader is not None:
+            self._loader.wait()           # at the end of run(); it returns at once
+        for problem in problems or ():
+            self.logged.emit(f"Not brought back from the workflow process: {problem}")
+        if self._finished:
             return
         self._finished = True
-        self.succeeded.emit(result)
+        if not self._cancelled:
+            self.succeeded.emit(result)
         self.finished.emit()
+
+    def _on_load_failed(self, message: str) -> None:
+        if self._loader is not None:
+            self._loader.wait()
+        self._finish_with_error(message)
 
 
 __all__ = [

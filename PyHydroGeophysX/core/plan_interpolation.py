@@ -278,7 +278,8 @@ def ordinary_kriging(xy: np.ndarray,
                      targets: np.ndarray,
                      variogram: Dict[str, object],
                      neighbors: Optional[int] = None,
-                     chunk: int = 1024) -> Tuple[np.ndarray, np.ndarray]:
+                     chunk: int = 1024,
+                     progress=None) -> Tuple[np.ndarray, np.ndarray]:
     """Ordinary kriging of ``values`` onto ``targets``.
 
     The unbiasedness constraint is imposed with a Lagrange multiplier, so the
@@ -296,6 +297,8 @@ def ordinary_kriging(xy: np.ndarray,
     xy = np.asarray(xy, dtype=float)
     values = np.asarray(values, dtype=float).ravel()
     targets = np.atleast_2d(np.asarray(targets, dtype=float))
+    if progress is not None:
+        progress(0, len(targets))
     if len(values) < 3:
         raise ValueError('Kriging needs at least three samples.')
     gamma = variogram_function(str(variogram['model']), variogram['nugget'],
@@ -322,6 +325,8 @@ def ordinary_kriging(xy: np.ndarray,
             estimate[start:start + chunk] = values @ weights[:count]
             variance[start:start + chunk] = (
                 np.einsum('ij,ij->j', weights[:count], right[:count]) + weights[count])
+            if progress is not None:
+                progress(min(start + chunk, len(targets)), len(targets))
         return estimate, np.maximum(variance, 0.0)
     count = int(min(neighbors or DEFAULT_NEIGHBORS, len(values)))
     _, nearest = cKDTree(xy).query(targets, k=count)
@@ -342,6 +347,8 @@ def ordinary_kriging(xy: np.ndarray,
         estimate[start:start + size] = np.einsum('ck,ck->c', values[index], weights[:, :count, 0])
         variance[start:start + size] = (
             np.einsum('ck,ck->c', weights[:, :count, 0], right[:, :count, 0]) + weights[:, count, 0])
+        if progress is not None:
+            progress(start + size, len(targets))
     return estimate, np.maximum(variance, 0.0)
 
 
@@ -405,7 +412,9 @@ def plan_grid(xy: np.ndarray,
               max_distance: Optional[float] = None,
               padding: float = 0.04,
               bounds: Optional[Sequence[float]] = None,
-              min_spread: float = 0.02) -> Dict[str, object]:
+              min_spread: float = 0.02,
+              progress=None,
+              cancelled=None) -> Dict[str, object]:
     """Interpolate one scattered map layer onto a regular plan grid.
 
     Args:
@@ -431,6 +440,10 @@ def plan_grid(xy: np.ndarray,
         bounds: Explicit ``(xmin, xmax, ymin, ymax)`` instead of the data extent.
         min_spread: Smallest minor/major axis ratio accepted. Below it the
             samples are treated as a single line and gridding is refused.
+        progress: Optional callback ``(percent, message)``. Kriging reports
+            completed target cells after each chunk; other methods report stages.
+        cancelled: Optional predicate checked at stages and kriging chunks.
+            Cancellation raises concurrent.futures.CancelledError.
 
     Returns:
         Dict with ``grid`` ``(ny, nx)`` in physical units and NaN where blanked,
@@ -442,6 +455,14 @@ def plan_grid(xy: np.ndarray,
         caller can tell a trimmed line spacing from a gutted map -- and the
         settings applied.
     """
+    def report(percent, message):
+        if cancelled is not None and cancelled():
+            from concurrent.futures import CancelledError
+            raise CancelledError()
+        if progress is not None:
+            progress(percent, message)
+
+    report(0, 'Preparing station values…')
     method = str(method).lower()
     if method not in METHODS:
         raise ValueError(f'Unknown interpolation method {method!r}; expected one of {METHODS}.')
@@ -454,6 +475,7 @@ def plan_grid(xy: np.ndarray,
         raise ValueError('These positions are effectively a single line. A plan map of them '
                          'would show the interpolator, not the survey; use the section view.')
     work = np.log10(values) if log_values else values
+    report(5, 'Building the map grid…')
     x, y = _grid_axes(xy, resolution, padding, bounds)
     mesh_x, mesh_y = np.meshgrid(x, y)
     targets = np.column_stack([mesh_x.ravel(), mesh_y.ravel()])
@@ -482,20 +504,29 @@ def plan_grid(xy: np.ndarray,
     fit = None
     variance = None
     if method == 'kriging':
+        report(10, 'Fitting the kriging variogram…')
         fit = dict(variogram) if isinstance(variogram, dict) else auto_variogram(
             xy, work, model=variogram or 'auto')
-        estimate, spread = ordinary_kriging(xy, work, wanted, fit, neighbors=neighbors)
+        def grid_progress(done, total):
+            report(20 + int(75 * done / max(total, 1)),
+                   f'Interpolating map cells: {done:,} / {total:,}')
+        estimate, spread = ordinary_kriging(xy, work, wanted, fit, neighbors=neighbors,
+                                            progress=grid_progress)
         variance = np.full(len(targets), np.nan)
         variance[keep] = spread
     elif method == 'idw':
+        report(20, 'Interpolating map cells…')
         estimate = inverse_distance(xy, work, wanted, power=power, neighbors=neighbors)
     elif method == 'rbf':
+        report(20, 'Interpolating map cells…')
         estimate = RBFInterpolator(xy, work, kernel='thin_plate_spline',
                                    smoothing=float(smoothing),
                                    neighbors=min(len(work), 64))(wanted)
     else:
+        report(20, 'Interpolating map cells…')
         estimate = griddata(xy, work, wanted, method=method)
 
+    report(97, 'Preparing the map surface…')
     flat = np.full(len(targets), np.nan)
     flat[keep] = estimate
     grid = flat.reshape(mesh_x.shape)
@@ -503,6 +534,7 @@ def plan_grid(xy: np.ndarray,
         grid = np.power(10.0, grid)
     cell = float(x[1] - x[0]) if x.size > 1 else float(y[1] - y[0])
     edges = [np.r_[axis - cell / 2, axis[-1] + cell / 2] for axis in (x, y)]
+    report(100, 'Interpolation complete.')
     return {'grid': grid, 'x': x, 'y': y, 'x_edges': edges[0], 'y_edges': edges[1],
             'cell_size': cell,
             'variance': None if variance is None else variance.reshape(mesh_x.shape),

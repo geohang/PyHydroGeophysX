@@ -53,8 +53,10 @@ Open the App
 What It Does
 ^^^^^^^^^^^^
 
-- Starts in demo mode with bundled cached ERT and joint ERT+SRT results: no API
-  key required for a first click-through.
+- Offers a demo mode, off by default: switch on **Demo mode** at the top of the
+  sidebar to browse bundled cached results — an ERT inversion with water
+  content and a joint ERT and seismic refraction run — with no API key and no
+  LLM calls.
 - Collects workflow goals and optional context in natural language.
 - Shows the parsed configuration for review before running on user data.
 - Shows an estimated LLM cost in the sidebar when the live LLM path is used.

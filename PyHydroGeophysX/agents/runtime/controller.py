@@ -21,9 +21,9 @@ continues. The model sees its own mistake in the transcript on the next turn,
 which is how it corrects. Raising instead would end the run over a typo.
 """
 
-import json
 from typing import Any, Callable, Dict, List, Optional
 
+from ..._internal.utils import parse_json_object
 from .context import RunContext
 from .tools import TOOLS, invoke, menu, runnable_tools
 
@@ -58,16 +58,7 @@ Rules:
 
 def _parse_choice(reply: Any) -> Optional[Dict[str, Any]]:
     """The controller's decision, or None when the reply is unusable."""
-    if not isinstance(reply, str):
-        return None
-    text = reply.strip()
-    start, end = text.find("{"), text.rfind("}")
-    if start < 0 or end <= start:
-        return None
-    try:
-        answer = json.loads(text[start:end + 1])
-    except ValueError:
-        return None
+    answer = parse_json_object(reply)
     if not isinstance(answer, dict):
         return None
     if answer.get("done"):
@@ -126,6 +117,11 @@ def next_by_policy(ctx: RunContext,
 #: run.
 PROCEED, SKIP, STOP = "proceed", "skip", "stop"
 
+#: How the loop ended, as ``RunContext.ended`` records it: the model finished
+#: once a report existed, nothing more could run, the user stopped the run, or
+#: it used every step it was allowed.
+FINISHED, EXHAUSTED, STOPPED, STEP_LIMIT = "finished", "exhausted", "stopped", "step_limit"
+
 
 def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
                    max_steps: int = DEFAULT_MAX_STEPS,
@@ -174,8 +170,10 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
     Returns
     -------
     RunContext
-        The same context, carrying the steps taken, the artifacts produced and
-        any warnings raised.
+        The same context, carrying the steps taken, the artifacts produced, any
+        warnings raised and, in ``ended``, how the loop ended. A model's "done"
+        ends it only once a report exists; before that the next available step
+        is taken instead.
 
     Raises
     ------
@@ -196,15 +194,31 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
     ['load', 'report']
     >>> ctx.steps[0].summary
     'Loaded 3 files.'
+    >>> ctx.ended
+    'exhausted'
     """
     # Recoveries spent per tool, so one bad setting cannot be retried forever.
     spent: Dict[str, int] = {}
     for index in range(max_steps):
         options = runnable_tools(ctx, tools)
         if not options:
+            ctx.ended = EXHAUSTED
             break
         choice = _decide(ctx, ask, tools)
+        if choice is not None and choice.get("done") and not _may_finish(ctx):
+            # "done" is a valid answer only once a report exists: the prompt
+            # says so and forced_choice counts on it. Taken at its word here, a
+            # model answering "done" with steps on offer ended the run on the
+            # spot - nothing run, no report, reported as a success. The step
+            # taken instead records why, which is how the model reads the
+            # refusal on its next turn.
+            name = next_by_policy(ctx, tools)
+            choice = None if name is None else {
+                "tool": name,
+                "why": "the model answered 'done' before a report was written, "
+                       "so the next available step was taken"}
         if choice is None or choice.get("done"):
+            ctx.ended = FINISHED if choice is not None else EXHAUSTED
             break
         name = choice["tool"]
         tool = (TOOLS if tools is None else tools).get(name)
@@ -234,6 +248,7 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
             ctx.begin(name, reason, agent=getattr(tool, "agent", ""),
                       description=getattr(tool, "label", "") or name)
             ctx.finish(status="skipped", error="Stopped here at the user's request.")
+            ctx.ended = STOPPED
             break
         if verdict == SKIP:
             # Recorded, not silently dropped: a step the user chose to skip is
@@ -270,6 +285,8 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
                 on_result(ctx, ctx.steps[-1])
             except Exception:  # noqa: BLE001 - a UI hook must not stop a run
                 pass
+    else:
+        ctx.ended = STEP_LIMIT
     return ctx
 
 

@@ -50,6 +50,13 @@ class FDEMInversion:
     1D FDEM inversion using SimPEG.
 
     Follows the same pattern used in TDEMInversion.
+    Source, receiver and ``waveform_type`` are checked, and an omitted receiver
+    placed, as in FDEMSurveyConfig: the origin, unless that is directly below
+    or above a dipole source (then 10 m along x from it) or away from a loop's
+    centre (then the centre on z = 0). Explicit zero horizontal dipole offsets
+    are rejected rather than producing a non-finite prediction. Receivers at
+    (n, 3) locations take complex ``dobs`` ordered as FDEMForwardModeling
+    returns them: the n receivers of each frequency together.
     """
 
     def __init__(
@@ -73,16 +80,11 @@ class FDEMInversion:
         self.dobs = np.asarray(dobs)
         self.uncertainties = np.asarray(uncertainties)
 
-        self.source_location = (
-            np.asarray(source_location, dtype=float)
-            if source_location is not None
-            else np.array([0.0, 0.0, 0.0], dtype=float)
-        )
-        self.receiver_location = (
-            np.asarray(receiver_location, dtype=float)
-            if receiver_location is not None
-            else np.array([0.0, 0.0, 0.0], dtype=float)
-        )
+        geometry = FDEMSurveyConfig(source_location=source_location,
+                                    receiver_location=receiver_location,
+                                    waveform_type=waveform_type)
+        self.source_location = geometry.source_location
+        self.receiver_location = geometry.receiver_location
         self.source_radius = float(source_radius)
         self.receiver_orientation = receiver_orientation
         self.receiver_component = receiver_component
@@ -116,21 +118,34 @@ class FDEMInversion:
         self._setup_complete = False
 
     @staticmethod
-    def _to_simpeg_vector(arr: np.ndarray) -> np.ndarray:
+    def _receiver_groups(values: np.ndarray, n_receivers: int) -> np.ndarray:
+        """One row per (frequency, field), one column per receiver location."""
+        values = np.asarray(values).ravel()
+        n = max(int(n_receivers), 1)
+        return values.reshape(-1, n if values.size % n == 0 else 1)
+
+    @staticmethod
+    def _to_simpeg_vector(arr: np.ndarray, n_receivers: int = 1) -> np.ndarray:
         arr = np.asarray(arr)
         if np.iscomplexobj(arr):
-            return np.column_stack((arr.real, arr.imag)).ravel()
+            # SimPEG wants the real parts of every receiver location, then the
+            # imaginary parts, per (frequency, field) block.
+            groups = FDEMInversion._receiver_groups(arr, n_receivers)
+            return np.stack((groups.real, groups.imag), axis=1).ravel()
         return arr.ravel().astype(float)
 
     @staticmethod
-    def _pack_complex(response: np.ndarray) -> np.ndarray:
+    def _pack_complex(response: np.ndarray, n_receivers: int = 1) -> np.ndarray:
         response = np.asarray(response, dtype=float).ravel()
-        if response.size % 2 != 0:
+        block = 2 * max(int(n_receivers), 1)
+        if response.size % block != 0:
             return response.astype(np.complex128)
-        return response[0::2].astype(np.complex128) + 1j * response[1::2].astype(np.complex128)
+        pairs = response.astype(np.complex128).reshape(-1, 2, block // 2)
+        return (pairs[:, 0, :] + 1j * pairs[:, 1, :]).ravel()
 
     @staticmethod
-    def _expand_uncertainties(uncertainties: np.ndarray, target_size: int) -> np.ndarray:
+    def _expand_uncertainties(uncertainties: np.ndarray, target_size: int,
+                              n_receivers: int = 1) -> np.ndarray:
         unc = np.asarray(uncertainties)
         if np.iscomplexobj(unc):
             unc = np.abs(unc)
@@ -140,7 +155,8 @@ class FDEMInversion:
             return np.clip(unc, 1e-12, None)
 
         if unc.size * 2 == target_size:
-            expanded = np.column_stack((unc, unc)).ravel()
+            groups = FDEMInversion._receiver_groups(unc, n_receivers)
+            expanded = np.stack((groups, groups), axis=1).ravel()
             return np.clip(expanded, 1e-12, None)
 
         if unc.size == 1:
@@ -323,13 +339,14 @@ class FDEMInversion:
                     f"starting_model must have {self.mesh.nC} entries, got {starting_model.size}."
                 )
 
-        dobs_vec = self._to_simpeg_vector(self.dobs)
+        n_receivers = np.atleast_2d(self.receiver_location).shape[0]
+        dobs_vec = self._to_simpeg_vector(self.dobs, n_receivers)
         if dobs_vec.size != self.survey.nD:
             raise ValueError(
                 f"Observed data size ({dobs_vec.size}) does not match survey data count ({self.survey.nD})."
             )
 
-        uncertainty_vec = self._expand_uncertainties(self.uncertainties, dobs_vec.size)
+        uncertainty_vec = self._expand_uncertainties(self.uncertainties, dobs_vec.size, n_receivers)
 
         data_object = data.Data(
             self.survey,
@@ -398,7 +415,7 @@ class FDEMInversion:
             result.l2_conductivity = self.model_mapping * inv_prob.l2model
 
         pred_vec = np.asarray(self.simulation.dpred(recovered_model), dtype=float).ravel()
-        result.predicted_data = self._pack_complex(pred_vec)
+        result.predicted_data = self._pack_complex(pred_vec, n_receivers)
         result.mesh = self.mesh
         result.thicknesses = self.thicknesses
         result.frequencies = self.frequencies

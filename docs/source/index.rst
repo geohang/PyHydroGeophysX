@@ -312,3 +312,4 @@ and any numerical engines your analysis actually ran.
    Data and processing <data_and_processing>
    Usage and downloads <usage>
    Citation <citation>
+   Changelog <changelog>

@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 import numpy as np
 
+from PyHydroGeophysX._internal.utils import utc_now as _utc_now
 from PyHydroGeophysX.data_processing import run_inputs, table_io
 from PyHydroGeophysX.data_processing import temcompany_project, temcompany_stb
 from PyHydroGeophysX.data_processing.ttem import is_ttem_source, load_ttem_sounding
@@ -2079,6 +2080,26 @@ def load_sounding(
             "n_soundings": n_soundings, "sounding": s}
 
 
+def sounding_options(geom: Mapping[str, Any]) -> Dict[str, Any]:
+    """The :func:`load_sounding` keywords a geometry dictionary carries.
+
+    The studio keeps the reader's settings - which gates to keep, and the tTEM
+    loop area and calibration files - in the same dictionary as the forward
+    geometry, under these names, so every run that reads soundings from a
+    geometry passes them on through here.
+    """
+    return {
+        "use_flags": bool(geom.get("use_project_flags", True)),
+        "max_relative_std": geom.get("tail_max_relative_std"),
+        "gate_rejection": str(geom.get("gate_rejection", "truncate")),
+        "reject_negative": bool(geom.get("reject_negative", False)),
+        "min_gates_per_moment": geom.get("min_gates_per_moment"),
+        "ttem_loop_area": geom.get("loop_area"),
+        "ttem_gex_path": geom.get("ttem_gex_path"),
+        "ttem_tfi_path": geom.get("ttem_tfi_path"),
+    }
+
+
 def save_sounding_container(
     destination: str | Path, path: str, method: str, *, moment: str = "HM",
     use_flags: bool = True, max_relative_std: Optional[float] = None,
@@ -2200,6 +2221,218 @@ def load_line_geometry(path: str) -> Dict[str, Any]:
             "y": np.asarray(ys, dtype=float).ravel() if ys is not None else None,
             "n": int(positions.size), "has_heights": heights is not None, "has_xy": has_xy}
 
+
+def example_catalog() -> Dict[str, Dict[str, Any]]:
+    """Return the desktop EM examples and their documented settings.
+
+    The example soundings ship with the source repository (``examples/data/EM``),
+    not with the pip package. They are looked for in the checkout this package
+    runs from, then in the clone that ``PHGX_EXAMPLES_DIR`` names (the clone or
+    its ``examples`` folder), then under the working folder and its parents.
+    When none has them the paths still point at the checkout layout, so a
+    caller can report the file as missing.
+    """
+    import os
+
+    package_root = Path(__file__).resolve().parents[1]
+    checkout_root = package_root.parent / "examples" / "data" / "EM"
+    bases = [package_root.parent]
+    configured = os.environ.get("PHGX_EXAMPLES_DIR", "").strip()
+    if configured:
+        bases.append(Path(configured).expanduser())
+    try:
+        cwd = Path.cwd().resolve()
+        bases.extend([cwd, *cwd.parents])
+    except OSError:
+        pass
+    candidates = [
+        (base if base.name.lower() == "examples" else base / "examples") / "data" / "EM"
+        for base in bases
+    ]
+    root = next((folder for folder in candidates if folder.is_dir()), checkout_root)
+    east_river = root / "EastRiver_VTEM"
+    return {
+        "east_river_vtem": {
+            "label": "East River VTEM (recommended)",
+            "method": "TDEM",
+            "path": east_river / "eastriver_vtem_line22030.csv",
+            "geometry_path": east_river / "eastriver_vtem_line22030_geometry.csv",
+            "params": {
+                "source_radius": 13.0, "height": 82.0, "orientation": "z",
+                "waveform": "step_off", "n_layers": 13, "min_thickness": 8.0,
+                "max_thickness": 55.0, "smoothness": 0.5, "rel_error": 0.08,
+                "max_iterations": 10, "ref_resistivity": 320.0,
+                "auto_scale": False, "max_soundings": 22,
+            },
+            "note": "Configured VTEM line with companion geometry and reference calibration.",
+        },
+        "skytem_bhmar": {
+            "label": "SkyTEM BHMAR (quick preview)",
+            "method": "TDEM",
+            "path": root / "skytem_bhmar_tdem.csv",
+            "geometry_path": root / "skytem_bhmar_geometry.csv",
+            "params": {"auto_scale": True, "ref_resistivity": 0.0, "max_soundings": 5},
+            "note": "Relative airborne TDEM preview; system calibration is not supplied.",
+        },
+        "synthetic_fdem": {
+            "label": "Synthetic FDEM (1D)",
+            "method": "FDEM",
+            "path": root / "synthetic_fdem.csv",
+            "params": {
+                "source_radius": 10.0, "tx_rx_sep": 10.0, "height": 30.0,
+                "orientation": "z", "component": "secondary", "waveform": "dipole",
+                "auto_scale": False, "ref_resistivity": 0.0,
+            },
+            "note": "Deterministic 3% noisy response of 50/200/20 ohm-m layers (10/20 m).",
+        },
+        "synthetic_tem_lci": {
+            "label": "Synthetic LM+HM line (LCI)",
+            "method": "TDEM",
+            "path": root / "synthetic_tem_lci",
+            "params": {
+                "tem_moment": "LM+HM", "data_scale": 1.0,
+                "auto_scale": False, "ref_resistivity": 0.0,
+                "max_iterations": 6, "max_soundings": 9,
+                "lateral_smoothness": 1.3, "lci_passes": 1,
+            },
+            "note": (
+                "Nine-station synthetic LM+HM line with 3% deterministic noise "
+                "and a known smooth lateral resistivity trend."
+            ),
+        },
+    }
+
+
+def save_line_csv(result: Dict[str, Any], out_dir: Path) -> List[str]:
+    """Write the section as two flat tables; return the paths written.
+
+    ``model_cells.csv`` is one row per layer per sounding, which is the form a
+    GIS or a gridding package wants: every row carries its own map coordinate
+    and its own elevation, so the section can be reconstructed without knowing
+    anything about the layer grid. ``soundings.csv`` is the per-station summary
+    that would otherwise have to be recovered by grouping the first table.
+
+    Depths are below each station's own ground level, and ``z`` is the elevation
+    of the cell centre where the survey carries ground elevations. A cell below
+    the depth of investigation is written out with its resistivity and flagged
+    rather than dropped: what the inversion produced there is still the answer
+    to a question the data cannot settle, and a reader filtering on the flag can
+    decide for themselves.
+    """
+    out = table_io.ensure_dir(out_dir)
+    res = np.asarray(result["model3d"], dtype=float)[:, 0, :][:, ::-1]  # surface first
+    depth_edges = np.asarray(result["depth_edges"], dtype=float).ravel()
+    n_pos, n_layers = res.shape
+    top, bottom = depth_edges[:n_layers], depth_edges[1:n_layers + 1]
+    centre = 0.5 * (top + bottom)
+
+    def column(key: str, fill=np.nan) -> np.ndarray:
+        values = np.asarray(result.get(key, []), dtype=float).ravel()
+        return values[:n_pos] if values.size >= n_pos else np.full(n_pos, fill)
+
+    lines = np.asarray(result.get("line_numbers", []), dtype=int).ravel()
+    lines = lines[:n_pos] if lines.size >= n_pos else np.zeros(n_pos, dtype=int)
+    stations = np.asarray(result.get("station_ids", []), dtype=object).ravel()
+    stations = stations[:n_pos] if stations.size >= n_pos else np.arange(1, n_pos + 1)
+    surface = column("surface_elevation")
+    x, y = column("x"), column("y")
+    longitude, latitude = column("longitude"), column("latitude")
+    position, chi2 = column("positions"), column("chi2_list")
+    doi = column("doi", fill=np.inf)
+    counts = np.asarray(result.get("data_count_list", []), dtype=float).ravel()
+    counts = counts[:n_pos] if counts.size >= n_pos else np.zeros(n_pos)
+    sensitivity = np.asarray(result.get("sensitivity", []), dtype=float)
+    has_sensitivity = sensitivity.shape == res.shape
+
+    cells = []
+    for s in range(n_pos):
+        for k in range(n_layers):
+            cells.append((
+                int(lines[s]), stations[s], _round(x[s], 3), _round(y[s], 3),
+                _round(longitude[s], 8), _round(latitude[s], 8),
+                _round(surface[s], 3), _round(position[s], 3),
+                _round(top[k], 3), _round(bottom[k], 3), _round(centre[k], 3),
+                _round(surface[s] - centre[k], 3),
+                _round(res[s, k], 6),
+                _round(sensitivity[s, k], 6) if has_sensitivity else "",
+                int(centre[k] > doi[s]),
+                _round(chi2[s], 4),
+            ))
+    paths = [str(table_io.write_csv(
+        out / "model_cells.csv", cells,
+        header=["line", "station", "x", "y", "longitude", "latitude",
+                "surface_elevation", "distance_m", "depth_top_m",
+                "depth_bottom_m", "depth_center_m", "z", "resistivity_ohm_m",
+                "sensitivity", "below_doi", "chi2"]))]
+    summary = [(
+        int(lines[s]), stations[s], _round(x[s], 3), _round(y[s], 3),
+        _round(longitude[s], 8), _round(latitude[s], 8),
+        _round(surface[s], 3), _round(position[s], 3), _round(chi2[s], 4),
+        int(counts[s]), _round(doi[s], 3) if np.isfinite(doi[s]) else "",
+    ) for s in range(n_pos)]
+    paths.append(str(table_io.write_csv(
+        out / "soundings.csv", summary,
+        header=["line", "station", "x", "y", "longitude", "latitude",
+                "surface_elevation", "distance_m", "chi2", "n_data", "doi_m"])))
+    return paths
+
+
+def _round(value: float, digits: int):
+    """A finite number rounded for a table; an empty field for anything else."""
+    number = float(value)
+    return round(number, digits) if np.isfinite(number) else ""
+
+
+def build_em_config(method: str, model: Dict[str, Any], geom: Dict[str, Any],
+                    inv: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "created_time": _utc_now(),
+        "method": method,
+        "model": {"thickness": list(model.get("thickness", [])),
+                  "resistivity": list(model.get("resistivity", []))},
+        "geometry": dict(geom),
+        "inversion": dict(inv),
+    }
+
+
+def save_inversion(result: Dict[str, Any], out_dir: Path) -> List[str]:
+    """Save recovered model + data fit to npy/csv; return written paths."""
+    out = table_io.ensure_dir(out_dir)
+    paths: List[str] = []
+    res = np.asarray(result["resistivity"], dtype=float)
+    thick = np.asarray(result["thickness"], dtype=float)
+    np.save(out / "recovered_resistivity.npy", res); paths.append(str(out / "recovered_resistivity.npy"))
+    rows = [(float(t),) for t in thick]
+    table_io.write_csv(out / "recovered_thickness.csv", rows, header=["thickness_m"])
+    paths.append(str(out / "recovered_thickness.csv"))
+    depth = np.asarray(result["depth"], dtype=float)
+    rstep = np.asarray(result["resistivity_step"], dtype=float)
+    table_io.write_csv(out / "model_depth_resistivity.csv",
+                       list(zip(depth.tolist(), rstep.tolist())),
+                       header=["depth_m", "resistivity_ohm_m"])
+    paths.append(str(out / "model_depth_resistivity.csv"))
+    robust = result.get("robust") or {}
+    if robust.get("enabled"):
+        keys = ("observed", "predicted", "uncertainty_original", "uncertainty_effective",
+                "error_factor", "weights", "residual_original")
+        if result["method"] == "FDEM":
+            labels = [(name, i, float(f)) for name in ("real", "imag")
+                      for i, f in enumerate(result["frequencies"])]
+        else:
+            moments = result.get("moments") or {"TDEM": result}
+            labels = [(name, i, float(t)) for name, item in moments.items()
+                      for i, t in enumerate(item["times"])]
+        rows = [(*labels[i], *(robust[key][i] for key in keys))
+                for i in range(robust["kept"])]
+        paths.append(str(table_io.write_csv(
+            out / "robust_gate_errors.csv", rows,
+            header=["moment", "gate_index", "time_s_or_frequency_hz", "observed", "predicted",
+                    "error_original", "error_effective", "error_factor",
+                    "inverse_variance_weight", "residual_original"])))
+        paths.append(str(table_io.write_json(out / "robust_errors.json", robust)))
+    return paths
+
+
 __all__ = [
     "SOUNDING_CONTAINER_KIND",
     "TEMCOMPANY_MOMENTS",
@@ -2211,4 +2444,9 @@ __all__ = [
     "load_sounding_container",
     "load_line_geometry",
     "save_sounding_container",
+    "sounding_options",
+    "build_em_config",
+    "example_catalog",
+    "save_inversion",
+    "save_line_csv",
 ]

@@ -82,7 +82,8 @@ MODULE_DESCRIPTORS: Dict[str, ModuleDescriptor] = {
         "mesh3d", "mesh3d", ("mesh3d.build", "ert3d.forward"),
     ),
     "em": ModuleDescriptor(
-        "em", "em_processing", ("em.inversion",), aliases=("em_processing",),
+        "em", "em_processing", ("em.inversion", "em.line_inversion"),
+        aliases=("em_processing",),
     ),
     "gravmag": ModuleDescriptor(
         "gravmag", "gravmag_processing",
@@ -147,19 +148,19 @@ def _register_builtins(descriptors: Iterable[WorkflowDescriptor]) -> None:
 _register_builtins([
     WorkflowDescriptor(
         "gravmag.process",
-        "PyHydroGeophysX.workflows.builtin:run_gravmag_process",
+        "PyHydroGeophysX.workflows.domain:run_gravmag_process",
         "QC, regional/residual separation, gridding, and optional profile extraction.",
         module_key="gravmag",
     ),
     WorkflowDescriptor(
         "gravmag.forward_bodies",
-        "PyHydroGeophysX.workflows.builtin:run_gravmag_forward_bodies",
+        "PyHydroGeophysX.workflows.domain:run_gravmag_forward_bodies",
         "Analytic gravity or magnetic response for a set of bodies.",
         module_key="gravmag",
     ),
     WorkflowDescriptor(
         "seismic.srt_inversion",
-        "PyHydroGeophysX.workflows.builtin:run_srt_inversion",
+        "PyHydroGeophysX.workflows.domain:run_srt_inversion",
         "PyGIMLi travel-time inversion from a persisted travel-time artifact.",
         module_key="seismic",
     ),
@@ -181,6 +182,12 @@ _register_builtins([
         "PyHydroGeophysX.workflows.domain:run_ert_timelapse",
         "Temporal-regularized ERT inversion from persisted datasets.",
         module_key="ert",
+    ),
+    WorkflowDescriptor(
+        "em.line_inversion",
+        "PyHydroGeophysX.workflows.domain:run_em_line_inversion",
+        "Laterally constrained FDEM or TDEM inversion of a persisted line of soundings.",
+        module_key="em",
     ),
     WorkflowDescriptor(
         "em.inversion",

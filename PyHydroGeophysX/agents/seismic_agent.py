@@ -29,9 +29,9 @@ class SeismicAgent(BaseAgent):
     - 'inversion': Load seismic data file and run SRT inversion
     - 'interface': Extract velocity interfaces from existing velocity model
     
-    Example:
+    Example (with your own travel-time file):
         >>> agent = SeismicAgent()
-        >>> result = agent.execute({
+        >>> result = agent.execute({  # doctest: +SKIP
         ...     'seismic_file': 'seismic_data.dat',
         ...     'velocity_threshold': 1200,
         ...     'output_dir': 'results/seismic'
@@ -55,21 +55,28 @@ and fresh bedrock (>3000 m/s)."""
         
         Args:
             input_data: Dictionary containing ``seismic_file`` or
-                pre-loaded ``seismic_data``, optional velocity thresholds,
+                pre-loaded ``seismic_data`` (a path given as ``seismic_data``
+                is read as ``seismic_file``), optional velocity thresholds,
                 inversion parameters, an output directory, and an
                 ``extract_interfaces`` flag. Supported inversion parameters
                 include ``lam``, ``zWeight``, ``vTop``, ``vBottom``,
                 ``paraDepth``, ``paraMaxCellSize``, and ``limits``.
-                
+
         Returns:
             Dictionary containing velocity model, mesh, interfaces, and visualizations
         """
         self._log_execution("Starting seismic data processing")
-        
+
         try:
             seismic_file = input_data.get('seismic_file')
             raw_seismic_file = input_data.get('raw_seismic_file')
             seismic_data = input_data.get('seismic_data')
+            # AgentCoordinator documents seismic_data as a file, and the
+            # workflow guide passes one; used as a loaded container, a path
+            # failed with "'str' object is not callable".
+            if isinstance(seismic_data, (str, os.PathLike)):
+                seismic_file = seismic_file or str(seismic_data)
+                seismic_data = None
             velocity_threshold = input_data.get('velocity_threshold', 1200)
             velocity_thresholds = input_data.get('velocity_thresholds', [velocity_threshold])
             inversion_params = input_data.get('inversion_params', {})
@@ -582,7 +589,3 @@ Provide a concise interpretation (2-3 sentences) covering:
             return self._interpret_velocity_results(velocity_model, velocity_range, {}, 0, 0)
         except Exception:
             return "Could not generate interpretation"
-    
-    def _log_execution(self, message: str, level: str = 'INFO'):
-        """Log execution message."""
-        print(f"[{self.name}] [{level}] {message}")

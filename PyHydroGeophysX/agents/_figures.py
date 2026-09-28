@@ -27,8 +27,9 @@ is the failure this exists to prevent. So when the model cannot be reached, or
 answers unusably, every available figure is drawn.
 """
 
-import json
 from typing import Any, Callable, Dict, List, Optional, Sequence
+
+from PyHydroGeophysX._internal.utils import parse_json_object as _parse_json_object
 
 #: Figure key -> the topic it belongs to and how to describe it. The keys are
 #: the ones the report agent stores in its ``vis_files`` mapping.
@@ -205,20 +206,6 @@ def _style_request(style: Any) -> Dict[str, Any]:
         out["resistivity_cmap"] = colormap.strip()
         out["water_content_cmap"] = colormap.strip()
     return out
-
-
-def _parse_json_object(reply: Any) -> Any:
-    """The first JSON object in ``reply``, or None."""
-    if not isinstance(reply, str):
-        return None
-    text = reply.strip()
-    start, end = text.find("{"), text.rfind("}")
-    if start < 0 or end <= start:
-        return None
-    try:
-        return json.loads(text[start:end + 1])
-    except ValueError:
-        return None
 
 
 def plan_figures(available: Sequence[str], user_request: str = "",

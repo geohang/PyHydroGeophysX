@@ -43,8 +43,9 @@ from PyHydroGeophysX.inversion.joint_api import (
     validate_profile_interface,
 )
 from PyHydroGeophysX.data_processing.joint_io import save_joint_observations
-from PyHydroGeophysX.workflows import em1d as em_pipeline
-from PyHydroGeophysX.workflows import gravmag as gravmag_pipeline
+from PyHydroGeophysX.data_processing import em1d as em_data
+from PyHydroGeophysX.inversion import em1d_line as em_line
+from PyHydroGeophysX.inversion import gravmag as gravmag_inversion
 from PyHydroGeophysX.qt_apps import io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.qt_utils import (
@@ -55,10 +56,9 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     select_directory,
 )
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
-from PyHydroGeophysX.qt_apps.workers import WorkflowWorker
+from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
-    RunContext,
     WorkflowRunResult,
     WorkflowSpec,
     export_workflow_bundle,
@@ -84,7 +84,7 @@ class JointInversionModule(BaseModule):
         self._validated = False
         self._pairing_table: Optional[List[Dict[str, int]]] = None
         self._result: Optional[JointInversionResult] = None
-        self._worker: Optional[WorkflowWorker] = None
+        self._worker: Optional[ProcessWorkflowWorker] = None
         self._run_busy: Optional[BusyStateController] = None
         self._workflow_recipe_path = ""
 
@@ -270,11 +270,11 @@ class JointInversionModule(BaseModule):
                     "PyGIMLi is required. Install pyhydrogeophysx[geophysics]."
                 )
             if capability.methods == ("FDEM", "TDEM"):
-                statuses = [em_pipeline.backend_status(method) for method in capability.methods]
+                statuses = [em_line.backend_status(method) for method in capability.methods]
                 errors = [item["error"] for item in statuses if not item["available"]]
                 return "" if not errors else "; ".join(errors)
             if capability.methods == ("Gravity", "Magnetics"):
-                status = gravmag_pipeline.backend_status()
+                status = gravmag_inversion.backend_status()
                 return "" if status["available"] else (
                     f"{status['error']}. Install pyhydrogeophysx[geophysics]."
                 )
@@ -433,16 +433,24 @@ class JointInversionModule(BaseModule):
 
     @staticmethod
     def _load_em_file(path: str, method: str) -> Any:
-        first = em_pipeline.load_sounding(path, method, sounding=0)
+        first = em_data.load_sounding(path, method, sounding=0)
         count = int(first.get("n_soundings", 1))
         if count == 1:
             return first
-        return {"soundings": [em_pipeline.load_sounding(path, method, sounding=index)
+        return {"soundings": [em_data.load_sounding(path, method, sounding=index)
                               for index in range(count)]}
 
     def _use_example(self) -> None:
         pair = self._selected_methods()
-        root = Path(__file__).resolve().parents[3] / "examples" / "data"
+        # ERT + SRT and FDEM + TDEM read the source repository's example files;
+        # Gravity + Magnetics is computed here and needs none.
+        needed = {("ERT", "SRT"): "data/ERT", ("FDEM", "TDEM"): "data/EM"}.get(pair)
+        found = io_utils.find_example(needed, self.state.project_root) if needed else None
+        if needed and found is None:
+            self.log(io_utils.missing_example_message(
+                f"The {pair[0]} + {pair[1]} joint example", needed), "warn")
+            return
+        root = found.parent if found is not None else Path(".")
         try:
             if pair == ("ERT", "SRT"):
                 ert_path = root / "ERT" / "Bert" / "fielddataline2.dat"
@@ -986,10 +994,10 @@ class JointInversionModule(BaseModule):
         self._run_busy.start(enabled_while_busy=[self._cancel_button])
         self._progress.setVisible(True); self._progress.setRange(0, 0)
         self._run_status.setText("Starting joint inversion…")
-        worker = WorkflowWorker(
-            spec,
-            RunContext(project_root=run.run_dir, output_dir=run.outputs_dir),
-        )
+        # In a process of its own, so the window keeps painting through both
+        # methods' solves; the result object comes back through files.
+        worker = ProcessWorkflowWorker(recipe_path, run.run_dir, run.outputs_dir,
+                                       run.result_path, objects=("domain_result",))
         worker.logged.connect(self._on_workflow_progress)
         worker.succeeded.connect(self._on_workflow_success)
         worker.failed.connect(self._on_failure)
@@ -1020,7 +1028,8 @@ class JointInversionModule(BaseModule):
 
     def _cancel(self) -> None:
         if self._worker is not None:
-            self._worker.cancel(); self._run_status.setText("Cancelling after the current solver step…")
+            # The run's process is stopped where it stands, not at a step's end.
+            self._worker.cancel(); self._run_status.setText("Stopping the run…")
             self.cancel_persisted_run("Cancelled by user", "joint_inversion.run")
 
     def _on_progress(self, record: Dict[str, Any]) -> None:

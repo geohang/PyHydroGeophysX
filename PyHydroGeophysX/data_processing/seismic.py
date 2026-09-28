@@ -953,13 +953,24 @@ def _numeric_file_sort_key(path: Path) -> Tuple[int, str]:
         return 10**9, path.name
 
 
+#: SEG-2 data format codes (byte 12 of a trace descriptor block) and the sample
+#: type each stands for. Code 3, 20-bit SEG-D floating point, is not read.
+_SEG2_SAMPLE_TYPES = {1: "<i2", 2: "<i4", 4: "<f4", 5: "<f8"}
+
+
 def _read_geometrics_dat_file(
     file: Path,
     field_record_fallback: int,
     max_traces: Optional[int],
     load_traces: bool,
 ) -> Tuple[List[np.ndarray], List[SeismicTraceHeader], float, int]:
-    """Read one Geometrics binary DAT shot gather."""
+    """Read one Geometrics binary DAT shot gather.
+
+    Geometrics writes SEG-2. Byte 12 of each trace descriptor is the data
+    format code, not a size in bytes: read as a size, only float32 (code 4)
+    came out right, while 16- and 32-bit integer traces were decoded as 8- and
+    16-bit ones - the right number of samples, all of them wrong.
+    """
 
     raw = file.read_bytes()
     if len(raw) < 64:
@@ -981,8 +992,9 @@ def _read_geometrics_dat_file(
 
     traces: List[np.ndarray] = []
     headers: List[SeismicTraceHeader] = []
-    dt = 0.001
-    n_samples = 0
+    dt: Optional[float] = None
+    n_samples: Optional[int] = None
+    delay: Optional[float] = None
     trace_limit = len(trace_offsets) if max_traces is None else min(len(trace_offsets), int(max_traces))
 
     for local_index, trace_offset in enumerate(trace_offsets[:trace_limit]):
@@ -991,11 +1003,15 @@ def _read_geometrics_dat_file(
         header_length = _read_u2_le(raw, trace_offset + 2)
         data_bytes = _read_u4_le(raw, trace_offset + 4)
         samples_per_trace = _read_u4_le(raw, trace_offset + 8)
-        bytes_per_sample = _read_u4_le(raw, trace_offset + 12)
+        format_code = raw[trace_offset + 12]
         if header_length < 32 or trace_offset + header_length > len(raw):
             raise ValueError(f"Invalid Geometrics DAT trace-header length in {file}.")
-        if samples_per_trace <= 0 or bytes_per_sample <= 0:
+        if samples_per_trace <= 0:
             raise ValueError(f"Invalid Geometrics DAT sample metadata in {file}.")
+        if format_code not in _SEG2_SAMPLE_TYPES:
+            raise ValueError(
+                f"Unsupported SEG-2 data format code {format_code} in {file} "
+                "(read: 1 = int16, 2 = int32, 4 = float32, 5 = float64).")
 
         data_start = trace_offset + header_length
         data_stop = data_start + data_bytes
@@ -1003,8 +1019,34 @@ def _read_geometrics_dat_file(
             raise ValueError(f"Truncated Geometrics DAT trace samples in {file}.")
 
         tags = _parse_geometrics_tags(raw, trace_offset + 32, trace_offset + header_length)
-        dt = _float_tag(tags, "SAMPLE_INTERVAL", dt)
-        n_samples = int(samples_per_trace)
+        # One time axis serves the whole record, so every trace must share it:
+        # taking whichever trace came last put the others on the wrong clock.
+        # A trace without the tag says nothing about its interval either way.
+        trace_dt = _float_tag(tags, "SAMPLE_INTERVAL", math.nan)
+        if math.isnan(trace_dt):
+            pass
+        elif dt is None:
+            dt = trace_dt
+        elif not math.isclose(trace_dt, dt, rel_tol=0.0, abs_tol=max(dt * 1e-6, 1e-12)):
+            raise ValueError(
+                f"{file}: trace {local_index + 1} is sampled every {trace_dt:g} s, an "
+                f"earlier one every {dt:g} s; a record needs one sample interval.")
+        if n_samples is None:
+            n_samples = int(samples_per_trace)
+        elif int(samples_per_trace) != n_samples:
+            raise ValueError(
+                f"{file}: trace {local_index + 1} has {samples_per_trace} samples, an "
+                f"earlier one {n_samples}; a record needs one trace length.")
+        trace_delay = _float_tag(tags, "DELAY", math.nan)
+        if math.isnan(trace_delay):
+            pass
+        elif delay is None:
+            delay = trace_delay
+        elif not math.isclose(trace_delay, delay, rel_tol=0.0,
+                              abs_tol=max((dt or 0.001) * 1e-3, 1e-12)):
+            raise ValueError(
+                f"{file}: trace {local_index + 1} starts {trace_delay:g} s after the "
+                f"shot, an earlier one {delay:g} s; a record needs one start time.")
         channel_number = _int_tag(tags, "CHANNEL_NUMBER", local_index + 1)
         field_record = _int_tag(tags, "SHOT_SEQUENCE_NUMBER", field_record_fallback)
         source_x = _float_tag(tags, "SOURCE_LOCATION", float(field_record_fallback))
@@ -1029,27 +1071,24 @@ def _read_geometrics_dat_file(
         if not load_traces:
             continue
         sample_raw = raw[data_start:data_stop]
-        expected_bytes = int(samples_per_trace) * int(bytes_per_sample)
+        sample_type = np.dtype(_SEG2_SAMPLE_TYPES[format_code])
+        expected_bytes = int(samples_per_trace) * sample_type.itemsize
         if len(sample_raw) < expected_bytes:
             raise ValueError(f"Truncated Geometrics DAT sample payload in {file}.")
         sample_raw = sample_raw[:expected_bytes]
-        if bytes_per_sample == 4:
-            trace = np.frombuffer(sample_raw, dtype="<f4").astype(np.float32)
-        elif bytes_per_sample == 2:
-            trace = np.frombuffer(sample_raw, dtype="<i2").astype(np.float32)
+        trace = np.frombuffer(sample_raw, dtype=sample_type).astype(np.float32)
+        if sample_type.kind == "i":
+            # Integer samples are counts; the descaling factor makes them units.
             trace *= _float_tag(tags, "DESCALING_FACTOR", 1.0)
-        elif bytes_per_sample == 1:
-            trace = np.frombuffer(sample_raw, dtype=np.int8).astype(np.float32)
-            trace *= _float_tag(tags, "DESCALING_FACTOR", 1.0)
-        else:
-            raise ValueError(f"Unsupported Geometrics DAT sample size ({bytes_per_sample} bytes) in {file}.")
         if trace.size != samples_per_trace:
             raise ValueError(f"Geometrics DAT trace has {trace.size} samples; expected {samples_per_trace}.")
         traces.append(trace)
 
+    if dt is None:
+        dt = 0.001
     if dt <= 0:
         raise ValueError(f"Invalid Geometrics DAT sample interval in {file}.")
-    return traces, headers, float(dt), int(n_samples)
+    return traces, headers, float(dt), int(n_samples or 0)
 
 
 def read_geometrics_dat(

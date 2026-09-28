@@ -36,6 +36,14 @@ PyHydroGeophysX.inversion.em1d\_lci module
    :show-inheritance:
    :undoc-members:
 
+PyHydroGeophysX.inversion.em1d\_line module
+-------------------------------------------
+
+.. automodule:: PyHydroGeophysX.inversion.em1d_line
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.inversion.em1d\_priors module
 ---------------------------------------------
 
@@ -48,6 +56,22 @@ PyHydroGeophysX.inversion.ert\_inversion module
 -----------------------------------------------
 
 .. automodule:: PyHydroGeophysX.inversion.ert_inversion
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.inversion.ert\_mesh module
+------------------------------------------
+
+.. automodule:: PyHydroGeophysX.inversion.ert_mesh
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.inversion.ert\_zones module
+-------------------------------------------
+
+.. automodule:: PyHydroGeophysX.inversion.ert_zones
    :members:
    :show-inheritance:
    :undoc-members:
@@ -120,6 +144,14 @@ PyHydroGeophysX.inversion.metrics module
 ----------------------------------------
 
 .. automodule:: PyHydroGeophysX.inversion.metrics
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.inversion.model\_result module
+----------------------------------------------
+
+.. automodule:: PyHydroGeophysX.inversion.model_result
    :members:
    :show-inheritance:
    :undoc-members:

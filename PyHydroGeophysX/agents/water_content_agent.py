@@ -303,7 +303,3 @@ Provide a brief interpretation (2-3 sentences) about:
             return interpretation
         except Exception:
             return "Could not generate interpretation"
-    
-    def _log_execution(self, message: str, level: str = 'INFO'):
-        """Log execution message."""
-        print(f"[{self.name}] [{level}] {message}")

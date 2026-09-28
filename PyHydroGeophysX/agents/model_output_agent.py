@@ -591,6 +591,3 @@ class ModelOutputAgent(BaseAgent):
             "max": float(np.nanmax(finite)),
             "mean": float(np.nanmean(finite)),
         }
-
-    def _log_execution(self, message: str, level: str = "INFO"):
-        print(f"[{self.name}] [{level}] {message}")

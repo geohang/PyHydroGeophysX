@@ -27,6 +27,7 @@ from .ert_inversion import (
     search_lambda_for_chi2,
 )
 from .metrics import metrics_from_manager
+from .model_result import RayPathModelResult as _SRTModelResult
 
 
 class _SRTEngine:
@@ -94,23 +95,6 @@ class _SRTEngine:
                      "iterations": int(res.meta.get("iterations", len(history))),
                      "n_data": int(self.container.size())},
         )
-
-
-class _SRTModelResult(ModelResult):
-    """A travel-time result that can also hand back its ray paths.
-
-    Only built when paths were captured, so ``getRayPaths`` being present is a
-    reliable signal that the overlay has something to draw; a version that
-    always existed and sometimes returned nothing would show a control that
-    does nothing.
-    """
-
-    def __init__(self, *args, ray_paths, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._ray_paths = ray_paths
-
-    def getRayPaths(self, model=None):  # noqa: N802 - matches the PyGIMLi name
-        return self._ray_paths
 
 
 def _make_srt_result(mesh, velocity, response, coverage, ray_paths):
@@ -372,7 +356,9 @@ class SRTInversion(InversionBase):
                 - lambda_min: Minimum lambda value.
                 - relativeError: Relative data error.
                 - absoluteUError: Absolute data error (ERT-style name).
-                - zWeight: Vertical smoothness weighting.
+                - zWeight: Vertical smoothness weighting, as in pyGIMLi
+                  (default 1.0, which weights both directions alike; pyGIMLi's
+                  own examples often use 0.2 for flatter layering).
                 - vTop: Starting-model velocity near surface.
                 - vBottom: Starting-model velocity at depth.
                 - paraMaxCellSize: Inversion mesh max cell size.
@@ -418,7 +404,10 @@ class SRTInversion(InversionBase):
             # method='cgls' to reproduce a run from before this became the
             # default.
             "method": "spd_cholesky",
-            "zWeight": 0.2,
+            # Until 0.5.0 zWeight never reached the constraint matrix, so every
+            # run smoothed isotropically whatever the value; 1.0 keeps a default
+            # run's result as it was. Pass zWeight for anisotropic smoothing.
+            "zWeight": 1.0,
             "vTop": 500.0,
             "vBottom": 5000.0,
             "model_constraints": (100.0, 10000.0),
@@ -561,9 +550,12 @@ class SRTInversion(InversionBase):
         rm.setConstraintType(1)
         rm.fillConstraints(Ctmp)
 
-        # `fillConstraints` already applies region-dependent weighting
-        # (including zWeight). Do not multiply constraintWeights again.
-        self.Wm = pg.utils.sparseMatrix2coo(Ctmp).tocsr()
+        # `fillConstraints` writes the bare +-1 differences. The region weights,
+        # zWeight among them, are held apart in constraintWeights, which
+        # pyGIMLi's own inversion multiplies in, as time_lapse.py and
+        # srt_time_lapse.py do here. Without them zWeight changed nothing.
+        cw = np.asarray(rm.constraintWeights().array(), dtype=float)
+        self.Wm = diags(cw).dot(pg.utils.sparseMatrix2coo(Ctmp)).tocsr()
 
         self._setup_complete = True
 

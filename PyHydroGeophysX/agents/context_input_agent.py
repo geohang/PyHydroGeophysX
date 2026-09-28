@@ -6,11 +6,139 @@ Supports multiple LLM providers (OpenAI GPT, Google Gemini, Anthropic Claude).
 """
 
 import json
-from typing import Any, Dict, List, Optional
+import re
+from pathlib import Path
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple
 
-from ._intent import MAX_CONCURRENT_STAGES, ask_concurrently, read_request, stage_enabled
+from PyHydroGeophysX._internal.utils import parse_json_object
+
+from ._intent import (MAX_CONCURRENT_STAGES, ask_concurrently, infer_instrument, names_tdem,
+                      names_unnegated, read_request, stage_enabled)
 from ._method import IMPLEMENTED_SCHEME
 from .base_agent import AgentResult, BaseAgent
+
+
+#: What ends a file name in running text: white space, the ASCII separators the
+#: parser always stopped at, and full-width punctuation, which a Chinese request
+#: puts straight after a name where English puts a space.
+_NAME_BREAKS = r"\s,;:，；：、。！？（）【】《》「」『』〈〉〔〕［］｛｝“”‘’～—–·…｜"
+#: A name opened by a quote or a bracket starts after it.
+_NAME_OPENERS = "\"'([{<"
+#: Chinese, Japanese and Korean script, which a request runs straight into a
+#: file name: "反演a.ohm和b.ohm".
+_CJK = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uf900-\ufaff]")
+
+
+#: Words a Chinese request puts straight in front of a file name: verbs that
+#: take it, prepositions and conjunctions, and labels such as 数据 or 文件
+#: ("反演a.ohm", "和b.ohm", "ERT数据2021-10-08.ohm"). Only these are taken off
+#: a name. Other Chinese text in front of one is part of it ("测线1.ohm",
+#: "第1次测量.ohm", "2021年10月8日.ohm").
+_GLUE_WORDS = (
+    "对", "和", "与", "及", "以及", "跟", "同", "把", "将", "用", "使用", "采用",
+    "利用", "基于", "根据", "从", "在", "于", "为", "是", "即", "或", "或者", "还有",
+    "并", "然后", "再", "先", "请", "的", "反演", "处理", "分析", "读取", "读入",
+    "加载", "导入", "打开", "输入", "计算", "估算", "转换", "运行", "查看", "比较",
+    "对比", "绘制", "显示", "包括", "例如", "比如", "数据", "文件", "要", "想", "需要",
+    "只要", "只", "做", "看", "给", "一下", "这个", "那个")
+#: What names a file a run writes rather than a survey it reads: "save the
+#: model as model.bin", "Output: results.bin", "结果保存为model.bin". Not a
+#: participle: in "the data saved to 2021-10-08.ohm" the file is the input.
+_OUTPUT_BEFORE = re.compile(
+    r"(?:\b(?:saves?|saving|writes?|writing|exports?|exporting)\b[^,;:.\n]*?"
+    r"\b(?:as|to|into)|\boutputs?\s*[:=]?|保存(?:为|到|成)|输出(?:为|到)?)\s*$",
+    re.IGNORECASE)
+
+
+def _unglued(piece: str) -> str:
+    """A file name without the Chinese words run onto the front of it.
+
+    Only the first part of a path can carry them: Chinese inside a path is a
+    folder's name ("数据/测线1.ohm", "D:/野外数据2021/line1.ohm"). A reading that
+    names an existing file wins, the longest first. Failing that, the words are
+    dropped only when they end in one of :data:`_GLUE_WORDS` right before the
+    Latin letters or digits of the name; otherwise the text is left whole, as
+    a Chinese file name ("测线1.ohm") and one run onto a word ("反演测线1.ohm")
+    look the same.
+
+    Examples
+    --------
+    >>> _unglued("反演2021-10-08_1400.ohm")
+    '2021-10-08_1400.ohm'
+    >>> _unglued("帮我处理ERT数据2021-10-08_1400.ohm")
+    '2021-10-08_1400.ohm'
+    >>> _unglued("用data/测量.ohm")
+    'data/测量.ohm'
+    >>> [_unglued(name) for name in ("测线1.ohm", "第1次测量.ohm", "数据/测线1.ohm")]
+    ['测线1.ohm', '第1次测量.ohm', '数据/测线1.ohm']
+    """
+    head = len(re.split(r"[\\/]", piece, maxsplit=1)[0])
+
+    def starts_name(i: int) -> bool:
+        return re.match(r"[A-Za-z0-9_]", piece[i]) is not None
+
+    # Where the name may start: Chinese meeting a Latin letter or digit, or a
+    # glue word ending inside Chinese text ("反演|测线1.ohm").
+    cuts = [i for i in range(1, head)
+            if _CJK.match(piece[i - 1]) and (starts_name(i) or piece[:i].endswith(_GLUE_WORDS))]
+    if not cuts:
+        return piece
+    for i in (0, *cuts):
+        try:
+            if Path(piece[i:]).exists():
+                return piece[i:]
+        except (OSError, ValueError):
+            continue
+    glued = [i for i in cuts if starts_name(i) and piece[:i].endswith(_GLUE_WORDS)]
+    return piece[glued[-1]:] if glued else piece
+
+
+def _file_names(text: str, suffixes: Sequence[str]) -> Iterator[Tuple[str, bool, int]]:
+    """The file names in ``text`` that end in one of ``suffixes``, in order.
+
+    Yields ``(name, bulleted, position)``: ``bulleted`` when the name opens a
+    list item ("- a.dat"), ``position`` where it starts in ``text``. A Chinese
+    request can hold two names in one run of text
+    ("对a.ohm和b.ohm做时移反演"); each is cut after its extension and freed of
+    the words glued to its front, as is a name after a slash that separates
+    two ("a.ohm/b.ohm"). The colon of a Windows drive letter does not end the
+    name, so "C:/surveys/a.ohm" is not read as "/surveys/a.ohm", and an
+    extension must end the name (".dat" is not the start of ".Data").
+
+    Examples
+    --------
+    >>> list(_file_names("对a.ohm和b.ohm做时移反演", ["ohm"]))
+    [('a.ohm', False, 1), ('b.ohm', False, 7)]
+    >>> [name for name, _, _ in _file_names('invert "C:/surveys/a.ohm"', ["ohm"])]
+    ['C:/surveys/a.ohm']
+    >>> [name for name, _, _ in _file_names("file:///C:/data/a.ohm, a.ohm/b.ohm", ["ohm"])]
+    ['C:/data/a.ohm', 'a.ohm', 'b.ohm']
+    """
+    extension = re.compile(
+        r"\.(?:%s)(?![a-z0-9_])" % "|".join(re.escape(s.lstrip(".")) for s in suffixes),
+        re.IGNORECASE)
+    drive_colon = r"(?<=(?<![A-Za-z])[A-Za-z]):(?=[\\/])"
+    for chunk in re.finditer(rf"(?:[^{_NAME_BREAKS}]|{drive_colon})+", text):
+        bulleted = re.search(r"[-*•]\s+\Z", text[max(0, chunk.start() - 12):chunk.start()])
+        token, start = chunk.group(), 0
+        for end in extension.finditer(token):
+            piece = token[start:end.end()].lstrip(_NAME_OPENERS)
+            # A later name is joined to the one before by a slash or a word
+            # ("a.ohm和第2次测量.ohm"), which is not part of it; a file URL's
+            # slashes come before its drive letter.
+            piece = (re.sub(r"^(?:以及|或者|还有|和|与|及|跟|同|或|到|至)+", "", piece.lstrip("\\/"))
+                     if start else re.sub(r"^[\\/]+(?=[A-Za-z]:[\\/])", "", piece))
+            name = _unglued(piece)
+            start = end.end()
+            if name and not extension.fullmatch(name):   # ".ohm" alone names no file
+                yield name, bulleted is not None, chunk.start() + end.end() - len(name)
+            bulleted = None     # only the first name of the run follows the bullet
+
+
+def _same_file(a: str, b: str) -> bool:
+    """Whether two names from a request are the same file, one maybe with its folder."""
+    a, b = str(a).replace("\\", "/"), str(b).replace("\\", "/")
+    return a == b or a.endswith("/" + b) or b.endswith("/" + a)
 
 
 # ---------------------------------------------------------------------------
@@ -52,6 +180,94 @@ class ContextInputAgent(BaseAgent):
             "parameters, and petrophysical parameters from user descriptions."
         )
 
+    def request_inputs(self, user_request: str,
+                       known_files: Sequence[Any] = ()) -> Dict[str, Any]:
+        """What a request states, read by deterministic rules, without defaults.
+
+        The files it names (ERT surveys, an electrode file, seismic and TDEM
+        data), the instrument and petrophysical parameters written into it.
+        :meth:`preview_config` completes this with defaults into a runnable
+        configuration; a caller that has a configuration of its own takes only
+        this, so the parser's defaults cannot replace the caller's.
+
+        Parameters
+        ----------
+        user_request : str
+            Natural-language workflow request.
+        known_files : sequence of str, optional
+            Files the caller already uses as ERT data. The request naming them
+            does not make them seismic or TDEM data.
+
+        Returns
+        -------
+        dict
+            Only the keys the request gives a value for.
+
+        Raises
+        ------
+        None
+
+        Examples
+        --------
+        >>> agent = ContextInputAgent(api_key=None)
+        >>> agent.request_inputs("Invert a.ohm, measured with a Syscal")
+        {'data_file': 'a.ohm', 'ert_file': 'a.ohm', 'instrument': 'Syscal'}
+        >>> agent.request_inputs("Invert survey.dat with the seismic structure from srt.dat",
+        ...                      known_files=["survey.dat"])["seismic_file"]
+        'srt.dat'
+        """
+        config: Dict[str, Any] = {}
+        text = user_request or ""
+        lower = text.lower()
+
+        extracted_files = self._extract_files_regex(text)
+        if extracted_files:
+            if len(extracted_files) > 1 or "time-lapse" in lower or "timelapse" in lower:
+                config["inversion_mode"] = "time-lapse"
+                config["time_lapse_files"] = extracted_files
+            else:
+                config["data_file"] = extracted_files[0]
+                config["ert_file"] = extracted_files[0]
+
+        electrode_file = self._extract_electrode_file_regex(text)
+        if electrode_file:
+            config["electrode_file"] = electrode_file
+
+        # A file that is the ERT data or the electrode positions is not also
+        # the seismic or TDEM data: taking the first .dat named made an ERT
+        # survey.dat the travel-time file whenever seismic was mentioned.
+        taken = [str(f) for f in (*extracted_files, *known_files, electrode_file) if f]
+        raw_seismic_file = self._extract_file_by_extension(text, [".sgy", ".segy"])
+        seismic_file = self._extract_file_by_extension(text, [".dat", ".txt"], exclude=taken)
+        # As for TDEM below: "no seismic" rules seismic out, and must not turn
+        # the ERT .dat file into a travel-time file.
+        seismic_named = names_unnegated(text, "seismic", prefix=True) or names_unnegated(text, "srt")
+        # "travel times" and "travel-time picks" count as well as "travel time".
+        travel_times = any(names_unnegated(text, term, prefix=True)
+                           for term in ("travel time", "travel-time", "traveltime"))
+        if raw_seismic_file or seismic_file or seismic_named:
+            if raw_seismic_file:
+                config["raw_seismic_file"] = raw_seismic_file
+            elif seismic_file and (seismic_named or travel_times):
+                config["seismic_file"] = seismic_file
+            config["seismic_only"] = "ert" not in lower and "resistivity" not in lower
+
+        tdem_file = self._extract_file_by_extension(
+            text, [".csv", ".txt", ".dat"], exclude=[*taken, config.get("seismic_file")])
+        # "not TDEM" names TDEM only to rule it out; a substring test read it as
+        # a request and took the ERT .dat file for a TDEM sounding.
+        if names_tdem(text) and tdem_file:
+            config["tdem_file"] = tdem_file
+
+        instrument = self._infer_instrument_from_text(text)
+        if instrument:
+            config["instrument"] = instrument
+
+        params = self._extract_params_regex(text)
+        if params:
+            config["petrophysical_params"] = params
+        return config
+
     def preview_config(
         self,
         user_request: str,
@@ -82,48 +298,14 @@ class ContextInputAgent(BaseAgent):
         >>> result.get("workflow_config")["data_file"]
         'data.ohm'
         """
-        config: Dict[str, Any] = {"user_request": user_request}
         text = user_request or ""
-        lower = text.lower()
-
-        extracted_files = self._extract_files_regex(text)
-        if extracted_files:
-            if len(extracted_files) > 1 or "time-lapse" in lower or "timelapse" in lower:
-                config["inversion_mode"] = "time-lapse"
-                config["time_lapse_files"] = extracted_files
-            else:
-                config["data_file"] = extracted_files[0]
-                config["ert_file"] = extracted_files[0]
-
-        electrode_file = self._extract_electrode_file_regex(text)
-        if electrode_file:
-            config["electrode_file"] = electrode_file
-
-        raw_seismic_file = self._extract_file_by_extension(text, [".sgy", ".segy"])
-        seismic_file = self._extract_file_by_extension(text, [".dat", ".txt"])
-        if raw_seismic_file or seismic_file or "seismic" in lower or "srt" in lower:
-            if raw_seismic_file:
-                config["raw_seismic_file"] = raw_seismic_file
-            elif seismic_file and ("seismic" in lower or "srt" in lower or "travel time" in lower):
-                config["seismic_file"] = seismic_file
-            config["seismic_only"] = "ert" not in lower and "resistivity" not in lower
-
-        tdem_file = self._extract_file_by_extension(text, [".csv", ".txt", ".dat"])
-        if "tdem" in lower or "time-domain electromagnetic" in lower:
-            if tdem_file:
-                config["tdem_file"] = tdem_file
-
-        instrument = self._infer_instrument_from_text(text)
-        if instrument:
-            config["instrument"] = instrument
-
-        params = self._extract_params_regex(text)
-        if params:
-            config["petrophysical_params"] = params
-
-        if available_data:
-            for key, value in available_data.items():
-                config.setdefault(key, value)
+        available_data = dict(available_data or {})
+        known = [available_data.get("data_file"), available_data.get("ert_file"),
+                 *(available_data.get("time_lapse_files") or [])]
+        config: Dict[str, Any] = {"user_request": user_request,
+                                  **self.request_inputs(text, known_files=known)}
+        for key, value in available_data.items():
+            config.setdefault(key, value)
 
         config = self._validate_and_complete_config(config)
         missing = self._missing_or_ambiguous_fields(config, text)
@@ -216,18 +398,46 @@ class ContextInputAgent(BaseAgent):
     def parse_request(self, user_request: str, available_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Parse natural language request into workflow configuration.
-        
+
         Uses TWO focused prompts for better reliability:
         1. Inversion configuration prompt (ERT-specific parameters)
         2. Climate configuration prompt (meteorological parameters)
-        
+
+        Without an API key, or when a model call fails, the request is read by
+        the deterministic rules of :meth:`preview_config` instead, with a
+        warning saying so. It used to raise "OPENAI API key not found", so a
+        caller without a key had no configuration at all.
+
         Args:
             user_request: Natural language description of desired workflow
             available_data: Optional dict with available data files, instruments, etc.
-            
+
         Returns:
             Dict containing workflow_config ready for AgentCoordinator
         """
+        if not self.api_key:
+            return self._parse_offline(user_request, available_data,
+                                       f"no {self.llm_provider} API key is configured")
+        try:
+            return self._parse_with_model(user_request, available_data)
+        except Exception as exc:  # noqa: BLE001 - the rules still read the request
+            return self._parse_offline(user_request, available_data,
+                                       f"the model call failed ({type(exc).__name__}: {exc})")
+
+    def _parse_offline(self, user_request: str, available_data: Optional[Dict[str, Any]],
+                       why: str) -> Dict[str, Any]:
+        """The configuration :meth:`preview_config` reads from the request, said to be one."""
+        preview = self.preview_config(user_request, available_data)
+        missing = preview.get("missing_fields") or []
+        self._log_execution(
+            f"The request was read by deterministic rules, not a language model: {why}. "
+            "Review the configuration before running"
+            + (f"; it needs {', '.join(missing)}." if missing else "."), level="WARNING")
+        return preview.get("workflow_config")
+
+    def _parse_with_model(self, user_request: str,
+                          available_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """:meth:`parse_request` with a model: the multi-stage extraction."""
         user_request_lower = user_request.lower()
         print("Parsing request with multi-stage extraction:")
         
@@ -278,7 +488,7 @@ class ContextInputAgent(BaseAgent):
         tdem_keywords = ['tdem', 'tem ', 'time-domain electromagnetic', 'electromagnetic sounding',
                         'loop source', 'transient electromagnetic', 'simpeg']
         if stage_enabled(aspects, 'tdem',
-                         any(kw in user_request.lower() for kw in tdem_keywords)):
+                         any(names_unnegated(user_request, kw.strip()) for kw in tdem_keywords)):
             stages.append(('tdem', "  Stage 5: Extracting TDEM configuration...",
                            self._create_tdem_prompt(user_request)))
 
@@ -448,42 +658,48 @@ class ContextInputAgent(BaseAgent):
         - *.dat (various formats)
         - *.Data (DAS format)
         - Files with dates in names (e.g., 2021-10-08_1400.ohm)
+
+        ``.ohm``, ``.bin`` and ``.stg`` files count wherever they are named, a
+        ``.dat`` file when its name starts with a date, as instrument exports
+        do, or opens a list item, and a ``.Data`` file in a list item; a dated
+        seismic or TDEM file ("srt_2021-10-08.dat") is not an ERT survey, nor
+        is a file the run is to write ("save the model as model.bin") or a
+        mesh ("mesh.bin"). Names
+        come back in the order the request gives them, which for a time-lapse
+        series puts the baseline it names first; the patterns this replaced
+        listed list items and .ohm files ahead of the rest. In Chinese text the
+        words run onto a name are not part of it: "反演2021-10-08_1400.ohm" was
+        read as two files, that name and itself with "反演" in front, and so as
+        a time-lapse series.
+
+        Examples
+        --------
+        >>> agent = ContextInputAgent(api_key=None)
+        >>> agent._extract_files_regex("反演2021-10-08_1400.ohm和2021-11-08_1400.ohm")
+        ['2021-10-08_1400.ohm', '2021-11-08_1400.ohm']
+        >>> agent._extract_files_regex("- 2021-10-08_1400.Data\\n- 2021-10-08_1400.dat")
+        ['2021-10-08_1400.Data', '2021-10-08_1400.dat']
+        >>> agent._extract_files_regex("srt_2021-10-08.dat and data/2021-10-08.dat")
+        ['data/2021-10-08.dat']
+        >>> agent._extract_files_regex("Save the model as model.bin after inverting a.ohm")
+        ['a.ohm']
         """
-        import re
-        files = []
-        
-        # Pattern to match common ERT file extensions
-        # Look for lines with bullet points or dashes followed by filenames
-        patterns = [
-            # The extension must end the name: matched case-insensitively,
-            # '.dat' also matches the start of '.Data' and invented a phantom
-            # '...1400.Dat' beside every real '...1400.Data'.
-            r'[-*•]\s+([^\s]+\.ohm)\b',  # Bullet + .ohm files
-            r'[-*•]\s+([^\s]+\.dat)\b',  # Bullet + .dat files
-            r'[-*•]\s+([^\s]+\.Data)\b',  # Bullet + .Data files
-            r'([^\s,;:]+\.ohm)\b',  # Plain .ohm file references
-            r'([^\s,;:]+\.bin)\b',  # Plain binary ERT exports
-            r'([^\s,;:]+\.stg)\b',  # Plain SuperSting-style exports
-            r'(\d{4}-\d{2}-\d{2}[^\s]*\.ohm)\b',  # Date-based .ohm files (anywhere)
-            r'(\d{4}-\d{2}-\d{2}[^\s]*\.dat)\b',  # Date-based .dat files (anywhere)
-        ]
-        
-        for pattern in patterns:
-            matches = re.findall(pattern, text, re.MULTILINE | re.IGNORECASE)
-            for match in matches:
-                normalized = match.replace("\\", "/")
-                duplicate = any(
-                    existing.replace("\\", "/") == normalized
-                    or existing.replace("\\", "/").endswith("/" + normalized)
-                    or normalized.endswith("/" + existing.replace("\\", "/"))
-                    for existing in files
-                )
-                if not duplicate:
-                    files.append(match)
-        
+        files: List[str] = []
+        for name, bulleted, position in _file_names(text, ["ohm", "bin", "stg", "dat", "data"]):
+            suffix = name.rsplit(".", 1)[-1].lower()
+            dated = re.match(r"\d{4}-\d{2}-\d{2}", re.split(r"[\\/]", name)[-1]) is not None
+            if suffix == "data" and not bulleted or suffix == "dat" and not (bulleted or dated):
+                continue
+            # A file the run writes, or a mesh ("Use the mesh from mesh.bin").
+            if (_OUTPUT_BEFORE.search(text[max(0, position - 60):position])
+                    or re.split(r"[\\/]", name)[-1].lower().startswith("mesh")):
+                continue
+            if not any(_same_file(name, existing) for existing in files):
+                files.append(name)
         return files
 
-    def _extract_file_by_extension(self, text: str, extensions: List[str]) -> Optional[str]:
+    def _extract_file_by_extension(self, text: str, extensions: List[str],
+                                   exclude: Sequence[Any] = ()) -> Optional[str]:
         """Extract the first file path matching one of the extensions.
 
         Parameters
@@ -492,6 +708,8 @@ class ContextInputAgent(BaseAgent):
             Text to scan.
         extensions : list of str
             File extensions to match, including the leading dot.
+        exclude : sequence of str, optional
+            Files already accounted for, which are passed over.
 
         Returns
         -------
@@ -507,12 +725,15 @@ class ContextInputAgent(BaseAgent):
         >>> agent = ContextInputAgent(api_key=None)
         >>> agent._extract_file_by_extension("Use line.sgy", [".sgy"])
         'line.sgy'
+        >>> agent._extract_file_by_extension("Invert a.dat with the seismic srt.dat",
+        ...                                  [".dat"], exclude=["a.dat"])
+        'srt.dat'
         """
-        import re
-
-        suffixes = "|".join(re.escape(ext.lstrip(".")) for ext in extensions)
-        match = re.search(rf"([^\s,;:]+\.({suffixes}))\b", text, re.IGNORECASE)
-        return match.group(1) if match else None
+        skip = [str(f) for f in exclude if f]
+        for name, _, _ in _file_names(text, extensions):
+            if not any(_same_file(name, other) for other in skip):
+                return name
+        return None
 
     def _infer_instrument_from_text(self, text: str) -> Optional[str]:
         """Infer ERT instrument name from text.
@@ -533,33 +754,15 @@ class ContextInputAgent(BaseAgent):
 
         Examples
         --------
-        >>> ContextInputAgent(api_key=None)._infer_instrument_from_text("DAS-1 data")
+        >>> agent = ContextInputAgent(api_key=None)
+        >>> agent._infer_instrument_from_text("DAS-1 data")
         'DAS-1'
+        >>> agent._infer_instrument_from_text("invert the existing survey") is None
+        True
+        >>> agent._infer_instrument_from_text("用SuperSting测的数据")
+        'Sting'
         """
-        import re
-
-        lower = (text or "").lower()
-        # The company's name, not the word "subsurface", which half of all
-        # requests contain.
-        if re.search(r"sub\s*surface[\s-]*insight|subinsight", lower):
-            return "Subsurface Insights"
-        if "abem" in lower or "terameter" in lower:
-            return "ABEM-Lund"
-        if "syscal" in lower:
-            return "Syscal"
-        if re.search(r"\be4d\b", lower):
-            return "E4D"
-        if re.search(r"\bdas\b", lower) or "das-1" in lower or "das 1" in lower:
-            return "DAS-1"
-        if "bert" in lower:
-            return "BERT"
-        if "sting" in lower:
-            return "Sting"
-        if "ares" in lower:
-            return "ARES"
-        if "protocol dc" in lower:
-            return "Protocol DC"
-        return None
+        return infer_instrument(text)
 
     def _missing_or_ambiguous_fields(
         self,
@@ -609,7 +812,7 @@ class ContextInputAgent(BaseAgent):
             or "srt" in lower
             or bool(workflow_config.get("seismic_file") or workflow_config.get("raw_seismic_file"))
         )
-        wants_tdem = "tdem" in lower or bool(workflow_config.get("tdem_file"))
+        wants_tdem = names_unnegated(lower, "tdem") or bool(workflow_config.get("tdem_file"))
         instrument_is_explicit = any(
             token in lower
             for token in [
@@ -788,7 +991,8 @@ Extract ONLY ERT inversion configuration in JSON format:
 3. **Inversion parameters**:
    - lambda: Regularization parameter (extract if mentioned, default: 15-20)
    - max_iterations: Maximum iterations (extract if mentioned, default: 10)
-   - method: Solver method (extract if mentioned, default: 'cgls')
+   - method: Linear solver, ONLY if the request names one; otherwise leave it
+     out, and the inversion's own default is used
    - use_gpu: Boolean for GPU acceleration
    - Put these solver parameters in inversion_params.
    - At TOP LEVEL: max_attempts (total evaluations including the first), auto_adjust
@@ -815,7 +1019,7 @@ Example output:
   "data_file": "2021-10-08_1400.ohm",
   "project_dir": "data/ERT/E4D",
   "instrument": "E4D",
-  "inversion_params": {{"lambda": 15.0, "max_iterations": 10, "method": "cgls"}}
+  "inversion_params": {{"lambda": 15.0, "max_iterations": 10}}
 }}
 
 Generate JSON now:"""
@@ -1183,13 +1387,9 @@ Generate JSON now:"""
                     pass
             
             # Try to find anything between { and }
-            json_match = re.search(r'\{.*\}', response, re.DOTALL)
-            if json_match:
-                try:
-                    config = json.loads(json_match.group(0))
-                    return config
-                except json.JSONDecodeError:
-                    pass
+            config = parse_json_object(response)
+            if config is not None:
+                return config
         
         # If all fails, return minimal config and log warning
         print("[WARN] Could not parse JSON from LLM response. Using minimal config.")
@@ -1291,10 +1491,11 @@ Generate JSON now:"""
         defaults = {
             'crs': 'local',
             'inversion_mode': 'standard',  # or 'time-lapse'
+            # No linear solver: the inversion's own default applies (spd_cholesky
+            # for the time-lapse normal equations) unless the request names one.
             'inversion_params': {
                 'lambda': 20.0,
                 'max_iterations': 10,
-                'method': 'cgls',
                 'use_gpu': False
             },
             # No 'use_climate' default: absent means undecided, and wants_climate
@@ -1354,9 +1555,42 @@ Provide a concise explanation covering:
 4. Expected outputs
 
 Keep it brief (3-5 sentences) and avoid technical jargon where possible."""
-        
-        explanation = self.query_llm(prompt)
-        return explanation
+
+        if self.api_key:
+            try:
+                return self.query_llm(prompt)
+            except Exception as exc:  # noqa: BLE001 - the configuration is still explained
+                self._log_execution(f"The model could not explain the configuration "
+                                    f"({type(exc).__name__}: {exc}); a plain summary "
+                                    f"is given instead.", level="WARNING")
+        return self._explain_offline(config)
+
+    @staticmethod
+    def _explain_offline(config: Dict[str, Any]) -> str:
+        """A plain summary of a configuration, for a run with no model to write one.
+
+        >>> ContextInputAgent._explain_offline({"data_file": "a.ohm", "instrument": "E4D"})
+        'Standard ERT inversion of a.ohm (E4D).'
+        """
+        files = config.get("time_lapse_files") or config.get("timelapse_files") or []
+        single = config.get("data_file") or config.get("ert_file")
+        parts = []
+        if len(files) > 1:
+            parts.append(f"Time-lapse ERT inversion of {len(files)} surveys")
+        elif single:
+            parts.append(f"Standard ERT inversion of {single}")
+        for key, label in (("seismic_file", "seismic travel times"),
+                           ("raw_seismic_file", "raw seismic records"),
+                           ("tdem_file", "a TDEM sounding")):
+            if config.get(key):
+                parts.append(f"{label} from {config[key]}")
+        text = ", with ".join(parts[:1] + [", ".join(parts[1:])]) if len(parts) > 1 else (
+            parts[0] if parts else "No input data are named yet")
+        if config.get("instrument"):
+            text += f" ({config['instrument']})"
+        if config.get("convert_to_water_content") or config.get("petrophysical_params"):
+            text += "; the resistivity is converted to water content"
+        return text + "."
     
     def _normalize_timelapse_paths(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """

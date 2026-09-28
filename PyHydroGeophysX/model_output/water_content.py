@@ -6,43 +6,65 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
+from PyHydroGeophysX._internal.deprecations import renamed_keywords, warn_legacy_path
 from .base import HydroModelOutput
+
+# In 0.3.0 this module held its own copy of these readers, which named three
+# keywords differently (file_obj, sim_ws and nlay_uzf) and kept the folder as
+# the attribute ``sim_ws``. Those names still work, with a warning, until 0.6.0.
 
 
 # ---------------------------------------------------------------------------
 # binaryread
 # ---------------------------------------------------------------------------
+@renamed_keywords("binaryread", file_obj="file")
 def binaryread(
     file: Any,
-    vartype: Any,
-    shape: Any = (1,),
-    charlen: Any = 16,
-) -> Any:
+    vartype: Union[type, List[Tuple[str, str]]],
+    shape: Tuple[int, ...] = (1,),
+    charlen: int = 16,
+) -> Union[bytes, np.ndarray, np.void]:
     """
-    Uses numpy to read from binary file. This was found to be faster than the
-    struct approach and is used as the default.
+    Read one item from an open MODFLOW binary output file.
 
     Args:
-        file: Open file object in binary read mode
-        vartype: Variable type to read
-        shape: Shape of the data to read (default: (1,))
-        charlen: Length of character strings (default: 16)
+        file: Open file object in binary read mode (``file_obj`` before 0.5.0).
+            Any object with ``read`` works, an ``io.BytesIO`` included.
+        vartype: ``str``, a NumPy dtype, or a structured dtype given as a list
+            of ``(name, format)`` pairs.
+        shape: Output shape for a plain dtype (default: (1,)).
+        charlen: Number of bytes read for ``str`` (default: 16).
 
     Returns:
-        The read data
+        ``bytes`` for ``str``; for a structured dtype, the one record read, a
+        ``numpy.void`` whose fields are read by name; otherwise an array of
+        ``shape``. These are the types 0.3.0 returned.
+
+    Raises:
+        EOFError: When the file ends before the whole item is read.
+
+    Examples
+    --------
+    >>> import io
+    >>> header = [("kstp", "<i4"), ("kper", "<i4")]
+    >>> record = binaryread(io.BytesIO(np.array([(3, 7)], dtype=header).tobytes()), header)
+    >>> int(record["kstp"]), int(record["kper"])
+    (3, 7)
+    >>> binaryread(io.BytesIO(np.arange(4.0).tobytes()), np.float64, shape=(2, 2)).tolist()
+    [[0.0, 1.0], [2.0, 3.0]]
     """
-    # Read a string variable of length charlen
     if vartype == str:
-        result = file.read(charlen * 1)
-    else:
-        # Find the number of values
-        nval = np.prod(shape)
-        result = np.fromfile(file, vartype, nval)
-        if nval == 1:
-            result = result  # [0]
-        else:
-            result = np.reshape(result, shape)
-    return result
+        return file.read(charlen)
+    structured = isinstance(vartype, list)
+    dtype = np.dtype(vartype)
+    count = 1 if structured else int(np.prod(shape))
+    # read() and frombuffer rather than fromfile, which needs a real file
+    # descriptor; a short read is the end of the file, not an empty result.
+    raw = file.read(dtype.itemsize * count)
+    if len(raw) < dtype.itemsize * count:
+        raise EOFError(f"Expected {count} value(s) of {dtype}, but the file ended.")
+    values = np.frombuffer(raw, dtype=dtype, count=count).copy()
+    return values[0] if structured else values.reshape(shape)
 
 
 # ---------------------------------------------------------------------------
@@ -51,6 +73,7 @@ def binaryread(
 class MODFLOWWaterContent(HydroModelOutput):
     """Class for processing water content data from MODFLOW simulations."""
 
+    @renamed_keywords("MODFLOWWaterContent", sim_ws="model_directory")
     def __init__(self, model_directory: str, idomain: np.ndarray):
         """
         Initialize MODFLOWWaterContent processor.
@@ -76,6 +99,13 @@ class MODFLOWWaterContent(HydroModelOutput):
         # Store number of UZ flow cells
         self.nuzfcells = len(self.iuzno_dict_rev)
 
+    @property
+    def sim_ws(self) -> str:
+        """The simulation folder under its 0.3.0 name; use ``model_directory``."""
+        warn_legacy_path("MODFLOWWaterContent.sim_ws", "MODFLOWWaterContent.model_directory")
+        return self.model_directory
+
+    @renamed_keywords("MODFLOWWaterContent.load_timestep", nlay_uzf="nlay")
     def load_timestep(self, timestep_idx: int, nlay: int = 3) -> np.ndarray:
         """
         Load water content for a specific timestep.
@@ -96,6 +126,7 @@ class MODFLOWWaterContent(HydroModelOutput):
         ("text", "S16"), ("maxbound", "<i4"), ("1", "<i4"), ("11", "<i4"),
     ])
 
+    @renamed_keywords("MODFLOWWaterContent.load_time_range", nlay_uzf="nlay")
     def load_time_range(self, start_idx: int = 0, end_idx: Optional[int] = None,
                       nlay: int = 3) -> np.ndarray:
         """
@@ -181,10 +212,10 @@ class MODFLOWWaterContent(HydroModelOutput):
                 header = binaryread(file, vartype)
 
                 # Extract timestep info
-                kstp = header[0][0]
-                kper = header[0][1]
-                pertim = header[0][2]
-                totim = header[0][3]
+                kstp = header["kstp"]
+                kper = header["kper"]
+                pertim = header["pertim"]
+                totim = header["totim"]
 
                 timestep_info.append((kstp, kper, pertim, totim))
 
@@ -193,7 +224,7 @@ class MODFLOWWaterContent(HydroModelOutput):
                 # in examples/data/modflow). This used to assume
                 # nuzfcells * 3, which lands mid-record, and then reads data as
                 # headers, for a model with any other layer count.
-                n_values = int(header[0][5]) * int(header[0][6])
+                n_values = int(header["maxbound"]) * int(header["1"])
                 if n_values <= 0:
                     break
                 np.fromfile(file, dtype="<f8", count=n_values)

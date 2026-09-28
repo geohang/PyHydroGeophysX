@@ -14,11 +14,38 @@ This module defines:
 
 
 import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pygimli as pg
+
+
+def _save_mesh(mesh, filename: str) -> None:
+    """``mesh.save`` that also works in a folder the ANSI codepage cannot name.
+
+    PyGIMLi hands the path to C++ as a narrow string, so on Windows a project
+    folder with, say, Chinese characters in it fails with "No such file or
+    directory"; ``via_ascii_path`` stages the write through an ASCII folder.
+    """
+    from PyHydroGeophysX.core.mesh_serialization import via_ascii_path
+
+    via_ascii_path(mesh.save, Path(filename), mode="write")
+
+
+def _load_mesh(filename: str):
+    """Read a saved ``.bms`` mesh, staging it through an ASCII path when needed.
+
+    ``pg.load`` of a path it cannot open returns an empty matrix rather than
+    raising, so anything that is not a mesh is refused here.
+    """
+    from PyHydroGeophysX.core.mesh_serialization import read_bms
+
+    mesh = read_bms(filename)
+    if not isinstance(mesh, pg.Mesh):
+        raise TypeError(f"'{filename}' did not load as a mesh (got {type(mesh).__name__}).")
+    return mesh
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +123,7 @@ class InversionResult:
             # Use the base selected above so name.pkl and name share name.bms.
             mesh_specific_filename = mesh_save_filename_base + '.bms'
             try:
-                self.mesh.save(mesh_specific_filename)
+                _save_mesh(self.mesh, mesh_specific_filename)
                 # Record the name relative to the pickle, which sits in the same
                 # folder. The path as given (e.g. results/run.bms) was joined
                 # onto the pickle's folder again on load, giving
@@ -183,7 +210,7 @@ class InversionResult:
 
             if os.path.exists(mesh_file_path):
                 try:
-                    result_instance.mesh = pg.load(mesh_file_path)
+                    result_instance.mesh = _load_mesh(mesh_file_path)
                     print(f"Mesh loaded from: {mesh_file_path}")
                 except Exception as e:
                     print(f"Warning: Could not load mesh from '{mesh_file_path}'. Error: {e}")
@@ -345,7 +372,7 @@ class TimeLapseInversionResult(InversionResult):
         if self.mesh is not None:
             mesh_specific_filename = mesh_save_filename_base + '.bms'
             try:
-                self.mesh.save(mesh_specific_filename)
+                _save_mesh(self.mesh, mesh_specific_filename)
                 # Relative to the pickle's folder; see InversionResult.save.
                 data_to_save['mesh_file'] = os.path.basename(mesh_specific_filename)
                 print(f"Mesh saved to: {mesh_specific_filename}")
@@ -404,7 +431,7 @@ class TimeLapseInversionResult(InversionResult):
                 mesh_file_path = joined if os.path.exists(joined) else beside
             if os.path.exists(mesh_file_path):
                 try:
-                    result_instance.mesh = pg.load(mesh_file_path)
+                    result_instance.mesh = _load_mesh(mesh_file_path)
                     print(f"Mesh loaded from: {mesh_file_path}")
                 except Exception as e:
                     print(f"Warning: Could not load mesh from '{mesh_file_path}'. Error: {e}")

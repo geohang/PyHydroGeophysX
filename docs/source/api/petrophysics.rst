@@ -50,6 +50,19 @@ Porosity, saturation and mineralogy to seismic velocity.
   interpretation in gas-bearing sands. *SPE Annual Technical Conference*,
   SPE 30595. The fluid-mixing law in ``BrieModel``.
 
+``PetrophysicalCoupling.compare_inversions_to_hydro`` uses the same
+``velocity_model`` as its forward helper. Select ``"linear"``, ``"wyllie"`` or
+``"raymer"`` directly, or use ``velocity_model="empirical"`` with
+``empirical_model``. DEM and Hertz-Mindlin, including the forward helper's
+default, require a calibrated ``velocity_inverse(velocity, porosity)`` callable
+in ``petro_params``. They no longer silently use a linear inverse. Empirical
+velocities outside the physical saturation range or at the forward clipping
+limits raise ``ValueError`` instead of producing misleading clipped estimates.
+Without a usable velocity inverse, or when no cell converts, the SRT entry is
+``{"error": reason}`` and a warning is issued; the ERT and EM comparisons are
+still returned. Cells whose velocity lies outside the model's range are NaN and
+counted in ``stats['n_masked']``.
+
 .. automodule:: PyHydroGeophysX.petrophysics.velocity_models
    :members:
    :undoc-members:

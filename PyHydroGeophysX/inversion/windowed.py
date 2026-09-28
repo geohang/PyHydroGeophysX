@@ -15,10 +15,11 @@ from pygimli.physics import ert
 from .base import TimeLapseInversionResult
 from .ert_inversion import (
     _adtlert_solver_name,
+    _adtlert_spatial_term,
     _build_adtlert_forward,
     _resolve_ert_engine,
 )
-from .time_lapse import TimeLapseERTInversion
+from .time_lapse import TimeLapseERTInversion, _voltage_error
 from .temporal_weights import DEFAULT_LIMIT as _TEMPORAL_LIMIT
 from .temporal_weights import temporal_weights
 
@@ -221,6 +222,12 @@ def _process_window(start_idx: int, print_lock, data_dir: str, ert_files: List[s
         
         # Create TimeLapseERTInversion instance
         window_params = dict(inversion_params)
+        # These weights were normalized over the entire campaign. Normalizing
+        # inside a two-survey window would turn every interval weight into 1.
+        if "temporal_pair_weights" in window_params:
+            window_params["temporal_pair_weights"] = np.asarray(
+                window_params["temporal_pair_weights"]
+            )[start_idx:start_idx + window_size - 1]
         window_params["progress_callback"] = window_progress
         # The callback above is flushed after every completed iteration.  Keep
         # the legacy verbose prints off so buffered stdout does not later dump
@@ -298,7 +305,8 @@ class WindowedTimeLapseERTInversion:
             ert_files: List of ERT data filenames
             measurement_times: List of measurement times
             window_size: Size of sliding window
-            mesh: Mesh for inversion or path to mesh file
+            mesh: Mesh for inversion or path to mesh file. If omitted, one
+                shared mesh is built from all surveys' electrode positions.
             engine: ``"pyhydro"`` or the optional GPU ``"adtlert"`` backend
             **kwargs: Additional parameters to pass to TimeLapseERTInversion
         """
@@ -331,6 +339,22 @@ class WindowedTimeLapseERTInversion:
         # Middle index for extracting results from windows
         self.mid_idx = window_size // 2
 
+    def _shared_mesh(self):
+        """Use the same spatial parameters for every window, including auto mesh."""
+        if self.mesh is not None:
+            return self.mesh
+        paths = [os.path.join(self.data_dir, name) for name in self.ert_files]
+        # Keep the first survey's measurement scheme, and add the other sensor
+        # positions for meshing only. Each forward operator still uses its own
+        # survey's electrodes and readings.
+        combined = pg.DataContainerERT(ert.load(paths[0]))
+        for path in paths[1:]:
+            data = ert.load(path)
+            for position in data.sensorPositions():
+                combined.createSensor(position)
+        combined.sortSensorsX()
+        return ert.ERTManager(combined).createMesh(data=combined, quality=34)
+
     @staticmethod
     def _survey_arrays(data) -> Tuple[np.ndarray, np.ndarray]:
         sensors = np.asarray(
@@ -356,12 +380,12 @@ class WindowedTimeLapseERTInversion:
         relative_error = float(
             self.inversion_params.get("relativeError", 0.05)
         )
-        absolute_error = float(
-            self.inversion_params.get(
-                "absoluteError",
-                self.inversion_params.get("absoluteUError", 0.0),
-            )
-        )
+        # absoluteError is an ohm floor and absoluteUError a voltage error in
+        # volts, the same two meanings TimeLapseERTInversion gives them; the
+        # voltage used to be read as ohms here.
+        absolute_error = float(self.inversion_params.get("absoluteError", 0.0))
+        absolute_u_error = self.inversion_params.get("absoluteUError", 0.0)
+        absolute_current = float(self.inversion_params.get("absoluteCurrent", 0.1))
 
         for index, data in enumerate(datasets):
             sensors, abmn = self._survey_arrays(data)
@@ -399,14 +423,16 @@ class WindowedTimeLapseERTInversion:
                 or np.any(errors <= 0.0)
             )
             if invalid_errors:
-                if "r" in data.dataMap():
+                # haveData, not "in dataMap": pyGIMLi lists a zero-filled 'r'
+                # for every ERT container, and |r| = 0 made the error 5e11.
+                if data.haveData("r"):
                     resistance = np.abs(np.asarray(data["r"], dtype=float))
                 else:
                     factors = np.abs(np.asarray(data["k"], dtype=float))
                     resistance = observed / np.maximum(factors, 1.0e-12)
                 errors = relative_error + absolute_error / np.maximum(
                     resistance, 1.0e-12
-                )
+                ) + _voltage_error(data, absolute_u_error, absolute_current)
             observed_rows.append(observed)
             error_rows.append(np.maximum(errors, 0.01))
 
@@ -475,7 +501,8 @@ class WindowedTimeLapseERTInversion:
             regularization=float(
                 self.inversion_params.get("lambda_val", 50.0)
             ),
-            spatial_regularization=spatial_regularization,
+            spatial_regularization=_adtlert_spatial_term(
+                spatial_regularization, forward),
             temporal_regularization=float(
                 self.inversion_params.get("alpha", 10.0)
             ),
@@ -607,17 +634,20 @@ class WindowedTimeLapseERTInversion:
         # Initialize result
         result = TimeLapseInversionResult()
         result.timesteps = self.measurement_times
-        # Each window is its own TimeLapseERTInversion and weights the pairs it
-        # holds; this describes the same weighting over the whole series, so the
-        # run can report what it did rather than leave it to the window logs.
-        _, temporal_report = temporal_weights(
+        # Normalize once, then slice the same pair weights for every window.
+        pair_weights, temporal_report = temporal_weights(
             self.measurement_times,
             mode=str(self.inversion_params.get("temporal_weighting", "interval")),
             limit=self.inversion_params.get("temporal_weight_limit", _TEMPORAL_LIMIT),
+            decay_rate=float(self.inversion_params.get("decay_rate", 0.0)),
         )
         if temporal_report.get("applied"):
-            temporal_report["note"] += " Applied within each window."
+            temporal_report["note"] += " Normalized over the full series and sliced into each window."
         result.meta["temporal_weighting"] = temporal_report
+        window_params = dict(self.inversion_params)
+        window_params["temporal_pair_weights"] = pair_weights
+        window_params["_temporal_weight_report"] = temporal_report
+        shared_mesh = self._shared_mesh()
         
         # Create a temporary mesh file because PyGIMLi meshes are not
         # pickleable across worker processes.
@@ -628,17 +658,13 @@ class WindowedTimeLapseERTInversion:
             if window_parallel:
                 if max_window_workers is not None and max_window_workers < 1:
                     raise ValueError("max_window_workers must be at least 1")
-                if self.mesh is None:
-                    raise ValueError(
-                        "window_parallel=True requires an explicit mesh or mesh filename"
-                    )
-                if isinstance(self.mesh, pg.Mesh):
+                if isinstance(shared_mesh, pg.Mesh):
                     handle = tempfile.NamedTemporaryFile(suffix=".bms", delete=False)
                     mesh_file = handle.name
                     handle.close()
-                    self.mesh.save(mesh_file)
+                    shared_mesh.save(mesh_file)
                 else:
-                    mesh_file = str(self.mesh)
+                    mesh_file = str(shared_mesh)
 
                 handle = tempfile.NamedTemporaryFile(suffix=".bms", delete=False)
                 result_mesh_file = handle.name
@@ -665,7 +691,7 @@ class WindowedTimeLapseERTInversion:
                             self.measurement_times,
                             self.window_size,
                             mesh_file,
-                            self.inversion_params,
+                            window_params,
                             False,
                             result_mesh_file if idx == self.window_indices[0] else None,
                         )
@@ -674,7 +700,7 @@ class WindowedTimeLapseERTInversion:
                     key=lambda x: x[0],
                 )
             else:
-                mesh_file = self.mesh
+                mesh_file = shared_mesh
                 print(f"\nProcessing {len(self.window_indices)} windows sequentially...")
                 print(f"Using {self.inversion_params.get('inversion_type', 'L2')} inversion")
                 
@@ -688,7 +714,7 @@ class WindowedTimeLapseERTInversion:
                         self.measurement_times,
                         self.window_size,
                         mesh_file,
-                        self.inversion_params,
+                        window_params,
                     )
                     window_results.append(result_tuple)
             
@@ -741,7 +767,7 @@ class WindowedTimeLapseERTInversion:
             
         finally:
             # Clean up temporary mesh file
-            if window_parallel and mesh_file and isinstance(self.mesh, pg.Mesh):
+            if window_parallel and mesh_file and isinstance(shared_mesh, pg.Mesh):
                 try:
                     os.unlink(mesh_file)
                 except Exception:

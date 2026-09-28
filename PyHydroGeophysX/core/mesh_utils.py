@@ -151,6 +151,21 @@ def extract_velocity_interface(
     Returns:
     x_dense, z_dense - Arrays with x and z coordinates of the smooth interface
     """
+    x_dense, z_dense, _ = _velocity_interface(mesh, velocity_data, threshold, interval,
+                                              x_min, x_max)
+    return x_dense, z_dense
+
+
+def _velocity_interface(mesh: Any, velocity_data: Any, threshold: Any, interval: Any,
+                        x_min: Any = None, x_max: Any = None) -> Any:
+    """The threshold crossing, smoothed, and the points it was fitted to.
+
+    Shared by :func:`extract_velocity_interface` and
+    :func:`PyHydroGeophysX.Geophy_modular.seismic_processor.extract_velocity_structure`,
+    which carried the same 110 lines. Returns ``(x_dense, z_dense, points)``;
+    ``points`` holds ``raw_x`` and ``raw_z`` (the per-bin crossings, extended to
+    both ends of the range) and the ``min_x``/``max_x`` actually used.
+    """
     # Get cell centers
     cell_centers = mesh.cellCenters()
     x_coords = cell_centers[:, 0]
@@ -246,8 +261,9 @@ def extract_velocity_interface(
         interp_func = interp1d(interface_x, interface_z, kind='linear',
                                bounds_error=False, fill_value="extrapolate")
         z_dense = interp_func(x_dense)
-    
-    return x_dense, z_dense
+
+    return x_dense, z_dense, {'raw_x': interface_x, 'raw_z': interface_z,
+                              'min_x': x_min, 'max_x': x_max}
 
 
 

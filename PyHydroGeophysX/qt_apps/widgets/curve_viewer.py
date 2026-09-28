@@ -11,13 +11,13 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QFileDialog,
     QHBoxLayout,
-    QLabel,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
 from PyHydroGeophysX.qt_apps import theme
+from PyHydroGeophysX.qt_apps.widgets.readout import ReadoutLabel
 
 _CURVE_COLORS = ["#1f77b4", "#d62728", "#2ca02c", "#9467bd", "#ff7f0e", "#17becf", "#8c564b"]
 
@@ -75,7 +75,9 @@ class CurveViewer(QWidget):
         self._picked: List[Tuple[float, float]] = []
 
         bar = QHBoxLayout()
-        self._readout = QLabel("x: -, y: -")
+        # Rewritten on every mouse move: a QLabel would re-lay out the page each
+        # time (see widgets.readout).
+        self._readout = ReadoutLabel("x: -, y: -")
         self._readout.setMinimumWidth(180)
         bar.addWidget(self._readout, stretch=1)
 

@@ -17,7 +17,7 @@ Two layers:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
 import numpy as np
 
@@ -46,85 +46,18 @@ ALL_METHODS = ["Profile", "ERT", "SRT", "TDEM", "FDEM", "Gravity"]
 
 
 # ---------------------------------------------------------------------------
-# Profile helpers derived from this repository's Ex_hydro_to_multigeophys.py
+# Profile helpers derived from this repository's Ex_hydro_to_multigeophys.py.
+# They live in core.hydro_profile, which the Streamlit page imports without
+# PyGIMLi; re-exported here under the names this module always had.
 # ---------------------------------------------------------------------------
-def fill_profile_nans(values: Any) -> np.ndarray:
-    """Fill NaNs along the profile direction for each layer."""
-    arr = np.asarray(values, dtype=float).copy()
-    if arr.ndim != 2:
-        raise ValueError(f"Expected 2D array, got shape {arr.shape}.")
-    x = np.arange(arr.shape[1], dtype=float)
-    for i in range(arr.shape[0]):
-        row = arr[i, :]
-        valid = np.isfinite(row)
-        if np.any(valid):
-            if np.count_nonzero(valid) == 1:
-                row[~valid] = row[valid][0]
-            else:
-                row[~valid] = np.interp(x[~valid], x[valid], row[valid])
-        else:
-            raise RuntimeError("Profile interpolation failed: one layer is all NaN.")
-        arr[i, :] = row
-    return arr
-
-
-def get_mesh_xy(mesh: Any) -> Tuple[np.ndarray, np.ndarray]:
-    """Return mesh cell-center x/y arrays."""
-    centers = np.asarray(mesh.cellCenters(), dtype=float)
-    if centers.ndim == 2 and centers.shape[1] >= 2:
-        return centers[:, 0], centers[:, 1]
-    x = np.array([float(c[0]) for c in mesh.cellCenters()], dtype=float)
-    y = np.array([float(c[1]) for c in mesh.cellCenters()], dtype=float)
-    return x, y
-
-
-def assign_three_layer_markers(
-    mesh: Any,
-    line1: np.ndarray,
-    line2: np.ndarray,
-    top_marker: int = 0,
-    mid_marker: int = 3,
-    bot_marker: int = 2,
-) -> np.ndarray:
-    """Assign top/middle/bottom markers from two interface lines."""
-    x_cell, y_cell = get_mesh_xy(mesh)
-    y_line1 = np.interp(x_cell, line1[:, 0], line1[:, 1])
-    y_line2 = np.interp(x_cell, line2[:, 0], line2[:, 1])
-    markers = np.full(mesh.cellCount(), bot_marker, dtype=int)
-    markers[y_cell >= y_line2] = mid_marker
-    markers[y_cell >= y_line1] = top_marker
-    mesh.setCellMarkers(markers)
-    return markers
-
-
-def interpolate_profile_to_mesh(
-    profile_values: Any,
-    layer_boundaries: Any,
-    x_profile: Any,
-    mesh: Any,
-) -> np.ndarray:
-    """Interpolate a (layers x distance) profile matrix onto mesh cells."""
-    from scipy.interpolate import griddata
-
-    values = np.asarray(profile_values, dtype=float)
-    bounds = np.asarray(layer_boundaries, dtype=float)
-    n_layers, n_profile = values.shape
-    if bounds.shape != (n_layers + 1, n_profile):
-        raise ValueError(
-            f"layer_boundaries shape must be {(n_layers + 1, n_profile)}, got {bounds.shape}."
-        )
-    layer_centers = 0.5 * (bounds[:-1, :] + bounds[1:, :])
-    x2d = np.repeat(np.asarray(x_profile, dtype=float)[np.newaxis, :], n_layers, axis=0)
-    points = np.column_stack((x2d.ravel(), layer_centers.ravel()))
-    vals = values.ravel()
-    x_cell, y_cell = get_mesh_xy(mesh)
-    query = np.column_stack((x_cell, y_cell))
-    interp_linear = griddata(points, vals, query, method="linear")
-    interp_nearest = griddata(points, vals, query, method="nearest")
-    out = np.asarray(interp_linear, dtype=float)
-    nan_mask = ~np.isfinite(out)
-    out[nan_mask] = interp_nearest[nan_mask]
-    return out
+from PyHydroGeophysX.core.hydro_profile import (  # noqa: E402,F401
+    assign_three_layer_markers,
+    build_profile_mesh,
+    fill_profile_nans,
+    get_mesh_xy,
+    interpolate_profile_to_mesh,
+    sample_profile,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -177,8 +110,6 @@ def extract_profile(
     only needs numpy + scipy via ``ProfileInterpolator`` and works without
     pygimli.
     """
-    from PyHydroGeophysX.core.interpolation import ProfileInterpolator
-
     data_dir = _resolve_hydro_dir(context, params)
     files = find_hydro_files(data_dir)
     missing = [HYDRO_FILES[k] for k, v in files.items() if v is None]
@@ -206,33 +137,14 @@ def extract_profile(
     num_points = int(params.get("num_samples", 220))
     log(f"Building profile {p1} -> {p2} with {num_points} samples")
 
-    interpolator = ProfileInterpolator(
-        point1=p1,
-        point2=p2,
-        surface_data=top,
-        origin_x=0.0,
-        origin_y=0.0,
-        pixel_width=1.0,
-        pixel_height=-1.0,
-        num_points=num_points,
-    )
-
-    structure = interpolator.interpolate_layer_data(
-        [top] + [bot[i] for i in range(bot.shape[0])]
-    )
-    water_content_profile = interpolator.interpolate_3d_data(water_content_3d)
-    porosity_profile = interpolator.interpolate_3d_data(porosity_3d)
-
-    structure = fill_profile_nans(structure)
-    water_content_profile = np.clip(fill_profile_nans(water_content_profile), 0.0, 0.8)
-    porosity_profile = np.clip(fill_profile_nans(porosity_profile), 0.01, 0.6)
+    sampled = sample_profile(water_content_3d, porosity_3d, top, bot, p1, p2, num_points)
 
     return {
-        "interpolator": interpolator,
-        "L_profile": np.asarray(interpolator.L_profile, dtype=float),
-        "structure": structure,
-        "water_content_profile": water_content_profile,
-        "porosity_profile": porosity_profile,
+        "interpolator": sampled["interpolator"],
+        "L_profile": sampled["L_profile"],
+        "structure": sampled["structure"],
+        "water_content_profile": sampled["water_content_profile"],
+        "porosity_profile": sampled["porosity_profile"],
         "snapshot_index": snapshot_index,
         "data_dir": str(data_dir),
         "point1": p1,
@@ -352,8 +264,10 @@ def run_hydro_forward(
         import pygimli as pg
         import pygimli.physics.traveltime as tt
         from pygimli.physics import ert as pg_ert
-        from PyHydroGeophysX.core.interpolation import create_surface_lines
-        from PyHydroGeophysX.core.mesh_utils import MeshCreator
+        # What build_profile_mesh uses, imported here so a missing backend is
+        # reported as BackendUnavailable before any work is done.
+        from PyHydroGeophysX.core.interpolation import create_surface_lines  # noqa: F401
+        from PyHydroGeophysX.core.mesh_utils import MeshCreator  # noqa: F401
         from PyHydroGeophysX.Hydro_modular import (
             hydro_to_ert,
             hydro_to_fdem,
@@ -412,26 +326,14 @@ def run_hydro_forward(
             plt.close(fig)
 
     # Build the mesh once; ERT and SRT share it.
-    n_bounds = structure.shape[0]
-    mid_idx = max(1, min(4, n_bounds // 3))
-    bot_idx = max(mid_idx + 1, min(12, n_bounds - 2))
     log("Creating 2D mesh from layer boundaries")
-    surface, line1, line2 = create_surface_lines(
-        L_profile=L_profile, structure=structure, top_idx=0, mid_idx=mid_idx, bot_idx=bot_idx
-    )
     mesh_cfg = params.get("mesh", {})
-    mesh_creator = MeshCreator(
-        quality=float(mesh_cfg.get("quality", 32)),
-        area=float(mesh_cfg.get("area", 1.0)),
-    )
-    mesh, _ = mesh_creator.create_from_layers(
-        surface=surface, layers=[line1, line2], bottom_depth=float(np.min(line2[:, 1]) - 10.0)
-    )
-    mesh_markers = assign_three_layer_markers(mesh, line1, line2, 0, 3, 2)
-    wc_mesh = interpolate_profile_to_mesh(wc_profile, structure, L_profile, mesh)
-    porosity_mesh = interpolate_profile_to_mesh(por_profile, structure, L_profile, mesh)
-    layer_markers = [0, 3, 2]
-    layer_idx = [0, mid_idx, bot_idx]
+    built = build_profile_mesh(L_profile, structure, wc_profile, por_profile,
+                               quality=float(mesh_cfg.get("quality", 32)),
+                               area=float(mesh_cfg.get("area", 1.0)))
+    mesh, mesh_markers = built["mesh"], built["mesh_markers"]
+    wc_mesh, porosity_mesh = built["water_content"], built["porosity"]
+    layer_markers, layer_idx = built["layer_markers"], built["layer_idx"]
     l_max = float(L_profile[-1])
 
     rho_parameters = _rho_parameters(params)

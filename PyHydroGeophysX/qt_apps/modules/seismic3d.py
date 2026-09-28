@@ -54,10 +54,9 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import VTKVolumeView
-from PyHydroGeophysX.qt_apps.workers import WorkflowWorker
+from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
-    RunContext,
     WorkflowRunResult,
     WorkflowSpec,
     export_workflow_bundle,
@@ -70,11 +69,15 @@ _COLUMNS = ["Name", "x0", "y0", "x1", "y1", "Mesh", "Velocity"]
 
 # Synthetic 3D seismic demo: three non-parallel velocity sections produced by
 # ``examples/generate_synthetic_examples.py``. The folder names and map endpoints
-# below must stay in sync with ``SEISMIC_LINES`` in that generator.
+# below must stay in sync with ``SEISMIC_LINES`` in that generator. A section's
+# distance zero is that line's ``p2`` - profiles run from point2 toward point1
+# (core.interpolation.setup_profile_coordinates) - so (x0, y0) here is ``p2``
+# and (x1, y1) is ``p1``. Placed the other way round, each line lands mirrored
+# and its interface misses the 3-D truth by 3 to 12 m instead of a few tenths.
 _SYNTHETIC_LINES = [
-    {"name": "L1", "folder": "line1", "x0": 15.0, "y0": 20.0, "x1": 105.0, "y1": 25.0},
-    {"name": "L2", "folder": "line2", "x0": 20.0, "y0": 70.0, "x1": 100.0, "y1": 65.0},
-    {"name": "L3", "folder": "line3", "x0": 30.0, "y0": 15.0, "x1": 35.0, "y1": 75.0},
+    {"name": "L1", "folder": "line1", "x0": 105.0, "y0": 25.0, "x1": 15.0, "y1": 20.0},
+    {"name": "L2", "folder": "line2", "x0": 100.0, "y0": 65.0, "x1": 20.0, "y1": 70.0},
+    {"name": "L3", "folder": "line3", "x0": 35.0, "y0": 75.0, "x1": 30.0, "y1": 15.0},
 ]
 
 _INPUT_FORMAT_FALLBACK = (
@@ -94,7 +97,7 @@ class Seismic3DModule(BaseModule):
     def __init__(self, state: Any, log: LogFn, parent=None) -> None:
         super().__init__(state, log, parent)
         self._lines: List[Dict[str, Any]] = []
-        self._worker: Optional[WorkflowWorker] = None
+        self._worker: Optional[ProcessWorkflowWorker] = None
         self._run_busy: Optional[BusyStateController] = None
         self._workflow_recipe_path = ""
         self._current = 0
@@ -264,29 +267,23 @@ class Seismic3DModule(BaseModule):
     def _example_dir(self) -> Optional[Path]:
         """Locate the synthetic seismic demo root holding ``line1/``, ``line2/``, ...
 
-        Prefer a full-resolution dataset produced by
-        ``examples/generate_synthetic_examples.py`` and fall back to the compact
-        copy shipped with the package.
+        The dataset ``examples/generate_synthetic_examples.py`` writes in a clone
+        of the source repository; the pip package carries no example data.
         """
-        candidates: List[Path] = []
-        if self.state.project_root:
-            candidates.append(Path(self.state.project_root) / "examples" / "results" / "synthetic_seismic")
-        here = Path(__file__).resolve()
-        candidates.append(here.parents[2] / "data" / "qt_examples" / "seismic3d")
-        candidates.extend(p / "examples" / "results" / "synthetic_seismic" for p in here.parents)
         first = str(_SYNTHETIC_LINES[0]["folder"])
-        for cand in candidates:
-            files = seismic3d_pipeline.find_velocity_files(cand / first)
-            if files.get("mesh") is not None and files.get("velocity") is not None:
-                return cand
-        return None
+
+        def usable(folder: Path) -> bool:
+            files = seismic3d_pipeline.find_velocity_files(folder / first)
+            return files.get("mesh") is not None and files.get("velocity") is not None
+
+        return io_utils.find_example("results/synthetic_seismic", self.state.project_root, usable)
 
     def _use_example(self) -> None:
         root = self._example_dir()
         if root is None:
-            self.log("Synthetic seismic demo is missing from this installation. "
-                     "From a source checkout, run "
-                     "examples/generate_synthetic_examples.py --quick --skip-3d.", "warn")
+            self.log(io_utils.missing_example_message(
+                "The synthetic seismic lines example", "results/synthetic_seismic",
+                generated=True), "warn")
             return
         added = 0
         for spec in _SYNTHETIC_LINES:
@@ -730,11 +727,10 @@ class Seismic3DModule(BaseModule):
         self._progress.setVisible(True); self._progress.setRange(0, 0)
         self._run_status.setText("Building 3D model…")
         self.log("Starting seismic → 3D model build…", "info")
+        # In a process of its own, so the window keeps painting through the
+        # kriging; the model comes back as the files it writes.
         self._worker = self.register_worker(
-            WorkflowWorker(
-                spec,
-                RunContext(project_root=run.run_dir, output_dir=run.outputs_dir),
-            )
+            ProcessWorkflowWorker(recipe_path, run.run_dir, run.outputs_dir, run.result_path)
         )
         self._worker.logged.connect(lambda message: self._on_worker_log(message, "info"))
         self._worker.succeeded.connect(self._on_workflow_ok)

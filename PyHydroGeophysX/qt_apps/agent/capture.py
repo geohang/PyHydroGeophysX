@@ -117,6 +117,11 @@ def capture(page: QWidget, view: Optional[str] = None) -> Tuple[str, bytes]:
 # -- rendering ----------------------------------------------------------------
 def _render(widget: QWidget) -> bytes:
     """PNG bytes for one widget, by the most faithful path it supports."""
+    # A view that merges its redraws into one per turn of the event loop may
+    # still owe the latest change; capture what it is about to show.
+    flush = getattr(widget, "flush_redraw", None)
+    if callable(flush):
+        flush()
     fig = getattr(widget, "_fig", None)
     if fig is not None and hasattr(fig, "savefig"):
         try:

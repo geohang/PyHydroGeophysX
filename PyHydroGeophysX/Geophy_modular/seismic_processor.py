@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import pygimli as pg
 from pygimli.physics import traveltime as tt
-from scipy.interpolate import interp1d
-from scipy.signal import savgol_filter
+
+from PyHydroGeophysX.core.mesh_utils import _velocity_interface
 
 
 # ---------------------------------------------------------------------------
@@ -148,107 +148,19 @@ def extract_velocity_structure(
         z_coords: Vertical coordinates of interface points
         interface_data: Dictionary with interface information
     """
-    # Get cell centers
-    cell_centers = mesh.cellCenters()
-    x_coords = cell_centers[:,0]
-    z_coords = cell_centers[:,1]
-    
-    # Get x-range for complete boundary
-    x_min, x_max = np.min(x_coords), np.max(x_coords)
-    
-    if not np.isfinite(interval) or interval <= 0:
-        raise ValueError("interval must be finite and positive")
+    # The same extraction as core.mesh_utils.extract_velocity_interface, over
+    # the mesh's whole x-range, plus the points the curve was fitted to.
+    x_dense, z_dense, points = _velocity_interface(mesh, velocity_data, threshold, interval)
 
-    # Create bins across the entire x-range
-    x_bins = np.arange(x_min, x_max + interval, interval)
-    
-    # Arrays to store interface points
-    interface_x = []
-    interface_z = []
-    
-    # For each bin, find the velocity interface
-    for i in range(len(x_bins)-1):
-        # Get all cells in this x-range
-        bin_indices = np.where((x_coords >= x_bins[i]) & (x_coords < x_bins[i+1]))[0]
-        
-        if len(bin_indices) > 0:
-            # Get velocity values and depths for this bin
-            bin_velocities = velocity_data[bin_indices]
-            bin_depths = z_coords[bin_indices]
-            
-            # Sort by depth
-            sort_indices = np.argsort(bin_depths)
-            bin_velocities = bin_velocities[sort_indices]
-            bin_depths = bin_depths[sort_indices]
-            
-            # Find where velocity crosses the threshold
-            for j in range(1, len(bin_velocities)):
-                if (bin_velocities[j-1] < threshold and bin_velocities[j] >= threshold) or \
-                   (bin_velocities[j-1] >= threshold and bin_velocities[j] < threshold):
-                    # Linear interpolation for exact interface depth
-                    v1 = bin_velocities[j-1]
-                    v2 = bin_velocities[j]
-                    z1 = bin_depths[j-1]
-                    z2 = bin_depths[j]
-                    
-                    # Calculate the interpolated z-value where velocity = threshold
-                    ratio = (threshold - v1) / (v2 - v1)
-                    interface_depth = z1 + ratio * (z2 - z1)
-                    
-                    interface_x.append((x_bins[i] + x_bins[i+1]) / 2)
-                    interface_z.append(interface_depth)
-                    break
-    
-    if not interface_x:
-        raise ValueError("No velocity threshold crossing was found in the selected range")
-    # Calculate slopes from detected samples before extending either boundary.
-    left_slope = right_slope = 0.0
-    if len(interface_x) >= 2:
-        left_slope = (interface_z[1] - interface_z[0]) / (interface_x[1] - interface_x[0])
-        right_slope = (interface_z[-1] - interface_z[-2]) / (interface_x[-1] - interface_x[-2])
-    if interface_x[0] > x_min + interval:
-        left_z = interface_z[0] + left_slope * (x_min - interface_x[0])
-        interface_x.insert(0, x_min)
-        interface_z.insert(0, left_z)
-    if interface_x[-1] < x_max - interval:
-        right_z = interface_z[-1] + right_slope * (x_max - interface_x[-1])
-        interface_x.append(x_max)
-        interface_z.append(right_z)
-
-    # Create a dense interpolation grid for smoothing
-    x_dense = np.linspace(x_min, x_max, 500)  # 500 points for smooth curve
-    
-    # Apply cubic interpolation for smoother interface
-    if len(interface_x) == 1:
-        z_dense = np.full_like(x_dense, interface_z[0])
-    elif len(interface_x) > 3:
-        try:
-            interp_func = interp1d(interface_x, interface_z, kind='cubic', 
-                                  bounds_error=False, fill_value="extrapolate")
-            z_dense = interp_func(x_dense)
-            
-            # Apply additional smoothing
-            z_dense = savgol_filter(z_dense, window_length=31, polyorder=3)
-        except Exception:
-            # Fall back to linear interpolation if cubic fails
-            interp_func = interp1d(interface_x, interface_z, kind='linear',
-                                  bounds_error=False, fill_value="extrapolate")
-            z_dense = interp_func(x_dense)
-    else:
-        # Not enough points for cubic interpolation
-        interp_func = interp1d(interface_x, interface_z, kind='linear',
-                              bounds_error=False, fill_value="extrapolate")
-        z_dense = interp_func(x_dense)
-    
     # Prepare interface data dictionary
     interface_data = {
         'threshold': threshold,
-        'raw_x': interface_x,
-        'raw_z': interface_z,
+        'raw_x': points['raw_x'],
+        'raw_z': points['raw_z'],
         'smooth_x': x_dense,
         'smooth_z': z_dense,
-        'min_x': x_min,
-        'max_x': x_max
+        'min_x': points['min_x'],
+        'max_x': points['max_x']
     }
     
     return x_dense, z_dense, interface_data

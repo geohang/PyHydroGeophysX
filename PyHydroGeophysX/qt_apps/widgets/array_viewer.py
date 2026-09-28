@@ -15,7 +15,6 @@ from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
-    QLabel,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -24,6 +23,7 @@ from PySide6.QtWidgets import (
 from PyHydroGeophysX.qt_apps import theme
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets.log_scale_axis import label_axis_in_physical_units
+from PyHydroGeophysX.qt_apps.widgets.readout import ReadoutLabel
 
 # Display arrays as image[row, col] (numpy convention) rather than the pyqtgraph
 # default of image[x, y]. This makes click -> [col, row] mapping correct.
@@ -102,7 +102,9 @@ class ArrayViewer(QWidget):
 
         # Readout + action buttons.
         bar = QHBoxLayout()
-        self._readout = QLabel("x: -, y: -, value: -")
+        # Rewritten on every mouse move: a QLabel would re-lay out the page each
+        # time (see widgets.readout).
+        self._readout = ReadoutLabel("x: -, y: -, value: -")
         # The readout stretches into whatever the row leaves, so this floor only
         # matters at the narrowest; it gives up the chooser's width, so the row
         # is no wider than it was before the chooser joined it.

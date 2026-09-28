@@ -76,6 +76,45 @@ def water_content_to_velocity(water_content: np.ndarray,
     return velocity
 
 
+def velocity_to_water_content(velocity: np.ndarray,
+                             v_dry: float = 3500.0,
+                             v_sat: float = 4500.0,
+                             porosity: Union[float, np.ndarray] = 0.3,
+                             model: str = 'linear') -> np.ndarray:
+    """Invert the empirical relationship used by water_content_to_velocity.
+
+    Supports linear, Wyllie and Raymer models with the same fixed constituent
+    velocities as the forward function. Porosity must be known. Observations
+    outside the model's saturation range, or at the forward function's clipping
+    limits (200/8000 m/s), are rejected rather than silently assigned 0/1
+    saturation. Hertz-Mindlin and DEM require a separately calibrated inverse.
+    """
+    v, phi = np.broadcast_arrays(np.asarray(velocity, dtype=float),
+                                 np.asarray(porosity, dtype=float))
+    if (not np.isfinite(v).all() or not np.isfinite(phi).all()
+            or np.any((phi <= 0.) | (phi > 1.))):
+        raise ValueError("Velocity and porosity must be finite, with 0 < porosity <= 1.")
+    if np.any((v <= 200.) | (v >= 8000.)):
+        raise ValueError("Velocity at or beyond the forward clipping limits cannot be uniquely inverted.")
+    model = str(model).lower()
+    if model == 'linear':
+        if not np.isfinite([v_dry, v_sat]).all() or v_dry == v_sat:
+            raise ValueError("Linear inverse requires finite, distinct v_dry and v_sat.")
+        saturation = (v - v_dry) / (v_sat - v_dry)
+    elif model == 'wyllie':
+        # Include the two numerical epsilons used by the forward slowness rule.
+        dry_slowness = phi * (1. / 340. + 1e-10) + (1. - phi) / 6000. + 1e-10
+        saturation = (1. / v - dry_slowness) / (phi * (1. / 1500. - 1. / 340.))
+    elif model == 'raymer':
+        dry_velocity = (1. - phi) ** 2 * 6000. + phi * 340.
+        saturation = (v - dry_velocity) / (phi * (1500. - 340.))
+    else:
+        raise ValueError("Empirical inverse model must be 'linear', 'wyllie', or 'raymer'.")
+    if np.any((saturation < -1e-10) | (saturation > 1. + 1e-10)):
+        raise ValueError("Velocity lies outside the supplied model's physical saturation range.")
+    return phi * np.clip(saturation, 0., 1.)
+
+
 # ---------------------------------------------------------------------------
 # Base Velocity Model
 # ---------------------------------------------------------------------------

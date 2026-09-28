@@ -33,6 +33,16 @@ def drawFirstPicks(
     ax : matplotlib.axes
         the modified axis
     """
+    return _draw_first_picks(ax, data, tt, plotva, "Travel time (s)", **kwargs)
+
+
+def _draw_first_picks(ax: Any, data: Any, tt: Any, plotva: Any, time_label: str,
+                      **kwargs: Any) -> Any:
+    """:func:`drawFirstPicks`, with the travel-time axis label as a parameter.
+
+    ``SeismicForwardModeling.draw_first_picks`` carried a copy of this that
+    differed only in that label, so both now draw through here.
+    """
     # Extract coordinates
     px = pg.x(data)
     gx = np.array([px[int(g)] for g in data("g")])
@@ -73,7 +83,7 @@ def drawFirstPicks(
     if plotva:
         ax.set_ylabel("Apparent velocity (m s$^{-1}$)")
     else:
-        ax.set_ylabel("Travel time (s)")
+        ax.set_ylabel(time_label)
     
     ax.set_xlabel("Distance (m)")
     

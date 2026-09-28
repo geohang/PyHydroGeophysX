@@ -1,15 +1,23 @@
 """
 Hydro_modular package for hydrologic to geophysical conversion utilities.
 
-hydro_to_ert and hydro_to_srt need PyGIMLi. hydro_to_tdem, hydro_to_fdem and
-hydro_to_gravity need SimPEG as well; without it they are placeholders that say
-so when called. Imported unguarded, a missing SimPEG made this package, and so
-hydro_to_ert, fail to import at all.
+hydro_to_ert and hydro_to_srt need PyGIMLi and are imported on first use, so
+this package and its PyGIMLi-free helpers (the profile tools in
+hydro_to_geophysics) import without it; asking for either of the two without
+PyGIMLi raises an ImportError that says what is missing. hydro_to_tdem,
+hydro_to_fdem and hydro_to_gravity need SimPEG as well; without it they are
+placeholders that say so when called. Imported unguarded, a missing SimPEG made
+this package, and so hydro_to_ert, fail to import at all.
 """
 
+import importlib
+import sys
+import types
+
 from PyHydroGeophysX._internal.optional_dependencies import optional_import_error
-from PyHydroGeophysX.Hydro_modular.hydro_to_ert import hydro_to_ert
-from PyHydroGeophysX.Hydro_modular.hydro_to_srt import hydro_to_srt
+
+#: Exports that need PyGIMLi, each defined in the submodule of the same name.
+_PYGIMLI_EXPORTS = ("hydro_to_ert", "hydro_to_srt")
 
 
 def _unavailable(name, error):
@@ -44,3 +52,37 @@ __all__ = [
     'hydro_to_fdem',
     'hydro_to_gravity'
 ]
+
+
+def __getattr__(name):
+    if name not in _PYGIMLI_EXPORTS:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    try:
+        module = importlib.import_module(f"{__name__}.{name}")
+    except ImportError as exc:
+        raise optional_import_error(name, exc) from exc
+    # Importing the submodule has bound the function here too; see _Package.
+    return getattr(module, name)
+
+
+def __dir__():
+    return sorted(set(globals()) | set(__all__))
+
+
+class _Package(types.ModuleType):
+    """Keeps the PyGIMLi exports bound to the functions, not their submodules.
+
+    Importing a submodule binds it onto this package under its own name, which
+    for hydro_to_ert and hydro_to_srt is also the function it defines. Without
+    this, an ``import PyHydroGeophysX.Hydro_modular.hydro_to_ert`` anywhere
+    would make ``from PyHydroGeophysX.Hydro_modular import hydro_to_ert``
+    return the module; the eager imports this replaces never allowed that.
+    """
+
+    def __setattr__(self, name, value):
+        if name in _PYGIMLI_EXPORTS and isinstance(value, types.ModuleType):
+            value = getattr(value, name)
+        super().__setattr__(name, value)
+
+
+sys.modules[__name__].__class__ = _Package

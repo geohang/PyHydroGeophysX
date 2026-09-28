@@ -70,7 +70,8 @@ def propagate_petro_uncertainty(
     """
     Propagate resistivity uncertainty through a petrophysical transform.
 
-    Uses Monte Carlo sampling by default.
+    Uses Monte Carlo sampling by default. ``"cov"`` is always a 2-D
+    (outputs, outputs) matrix, (1, 1) for one cell or a scalar output.
     """
     rho = np.asarray(rho, dtype=float).ravel()
     rho_cov = np.asarray(rho_cov, dtype=float)
@@ -86,6 +87,8 @@ def propagate_petro_uncertainty(
     return {
         "mean": np.mean(transformed, axis=0),
         "std": np.std(transformed, axis=0),
-        "cov": np.cov(transformed.T),
+        # np.cov returns a 0-D array for a single output, which np.diag and
+        # cov[0, 0] both reject.
+        "cov": np.atleast_2d(np.cov(transformed.T)),
         "samples": transformed,
     }

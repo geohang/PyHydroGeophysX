@@ -32,9 +32,18 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 import numpy as np
 
 from PyHydroGeophysX.data_processing import table_io as io_utils
+from PyHydroGeophysX._internal.deprecations import legacy_names as _legacy_names
 from PyHydroGeophysX._internal.optional_dependencies import BackendUnavailable
 from PyHydroGeophysX._internal.utils import noop as _noop, utc_now as _utc_now
 from PyHydroGeophysX.Geophy_modular.ert_to_wc_model import ERTtoWC, plot_time_series
+
+#: 0.3.0 imported resistivity_to_saturation2 here under this name, so it takes
+#: rhos, n and sigma_sur - unlike petrophysics.resistivity_to_saturation, which
+#: takes porosity, m and rho_fluid.
+__getattr__ = _legacy_names(__name__, {
+    "resistivity_to_saturation":
+        "PyHydroGeophysX.petrophysics.resistivity_models.resistivity_to_saturation2",
+})
 
 LogFn = Callable[[str], None]
 

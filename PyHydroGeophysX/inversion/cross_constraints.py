@@ -5,11 +5,12 @@ These utilities enable information sharing between geophysical methods and
 provide hydrology-to-geophysics coupling helpers.
 """
 
+import warnings
 from typing import Any, Dict, Iterable, Optional, Sequence, Tuple
 
 import numpy as np
 import pygimli as pg
-from scipy.sparse import diags, issparse
+from scipy.sparse import csr_matrix, diags, issparse
 
 from PyHydroGeophysX.petrophysics.resistivity_models import (
     resistivity_to_water_content,
@@ -19,6 +20,7 @@ from PyHydroGeophysX.petrophysics.velocity_models import (
     DEMModel,
     HertzMindlinModel,
     water_content_to_velocity,
+    velocity_to_water_content,
 )
 
 
@@ -322,23 +324,30 @@ class StructuralConstraint:
             weighted = diags(row_scale).dot(Wm_coo).tocsr()
             return weighted if is_sparse_input else weighted.toarray()
 
+        # A dense Wm is scaled with NumPy and a sparse one with SciPy. Mixing
+        # them, ndarray.dot(sparse) does not multiply: it returns an object
+        # array whose entries are sparse matrices.
         if np.ndim(boundary_weights) == 1:
             weights = np.asarray(boundary_weights, dtype=float).ravel()
             if weights.size == Wm.shape[0]:
-                scaled = diags(weights).dot(Wm)
-                return scaled if is_sparse_input else np.asarray(scaled)
+                if is_sparse_input:
+                    return diags(weights).dot(Wm)
+                return weights[:, None] * np.asarray(Wm, dtype=float)
             if weights.size == Wm.shape[1]:
-                scaled = Wm.dot(diags(weights))
-                return scaled if is_sparse_input else np.asarray(scaled)
+                if is_sparse_input:
+                    return Wm.dot(diags(weights))
+                return np.asarray(Wm, dtype=float) * weights[None, :]
             raise ValueError("boundary_weights length must match Wm rows or columns.")
 
         bw = np.asarray(boundary_weights, dtype=float)
         if bw.shape[0] == Wm.shape[0]:
-            scaled = bw.dot(Wm)
-            return scaled
+            if is_sparse_input:
+                return csr_matrix(bw).dot(Wm)
+            return bw.dot(np.asarray(Wm, dtype=float))
         if bw.shape[0] == Wm.shape[1]:
-            scaled = Wm.dot(bw)
-            return scaled
+            if is_sparse_input:
+                return Wm.dot(csr_matrix(bw))
+            return np.asarray(Wm, dtype=float).dot(bw)
 
         raise ValueError("Unsupported boundary_weights format for Wm scaling.")
 
@@ -348,6 +357,17 @@ class StructuralConstraint:
 # ---------------------------------------------------------------------------
 class PetrophysicalCoupling:
     """Coupling helpers from hydrological state to multi-method geophysics."""
+
+    @staticmethod
+    def _velocity_model(params):
+        """Resolve the same model selection in both coupling directions."""
+        mode = str(params.get("velocity_model", "hertz_mindlin")).lower()
+        if mode == "empirical":
+            mode = str(params.get("empirical_model", "linear")).lower()
+        if mode not in {"linear", "wyllie", "raymer", "dem", "differential_effective_medium",
+                        "hm", "hertz_mindlin"}:
+            raise ValueError(f"Unknown velocity model: {mode}.")
+        return mode
 
     @staticmethod
     def _as_array(values, size=None) -> np.ndarray:
@@ -386,7 +406,7 @@ class PetrophysicalCoupling:
         )
         conductivity = 1.0 / np.clip(resistivity, 1e-12, None)
 
-        vel_mode = str(params.get("velocity_model", "hertz_mindlin")).lower()
+        vel_mode = PetrophysicalCoupling._velocity_model(params)
 
         if vel_mode in {"dem", "differential_effective_medium"}:
             dem_model = DEMModel()
@@ -418,7 +438,7 @@ class PetrophysicalCoupling:
                 porosity=phi,
                 v_dry=float(params.get("v_dry", 3500.0)),
                 v_sat=float(params.get("v_sat", 4500.0)),
-                model=str(params.get("empirical_model", "linear")),
+                model=vel_mode,
             )
 
         return {
@@ -446,11 +466,77 @@ class PetrophysicalCoupling:
         ref = np.asarray(reference, dtype=float).ravel()
         est = PetrophysicalCoupling._align_to_reference(ref, estimate)
         err = est - ref
+        # A cell with no estimate (NaN) is left out rather than turning every
+        # statistic into NaN; how many were left out is part of the result.
+        err = err[np.isfinite(err)]
+        if not err.size:
+            return {"rmse": float("nan"), "mae": float("nan"), "bias": float("nan"),
+                    "n_masked": int(ref.size)}
         return {
             "rmse": float(np.sqrt(np.mean(err**2))),
             "mae": float(np.mean(np.abs(err))),
             "bias": float(np.mean(err)),
+            "n_masked": int(ref.size - err.size),
         }
+
+    @staticmethod
+    def _convert_cells(convert, velocity: np.ndarray, porosity: np.ndarray) -> np.ndarray:
+        """``convert(velocity, porosity)`` for every cell it accepts, NaN elsewhere.
+
+        The empirical inverses refuse a whole array when one velocity lies
+        outside the model's range, which a slow near-surface cell does as a
+        matter of course. Halving a refused block finds those cells in a few
+        calls per bad cell rather than one call per cell.
+        """
+        try:
+            return np.asarray(convert(velocity, porosity), dtype=float)
+        except ValueError:
+            if velocity.size == 1:
+                return np.full(1, np.nan)
+        half = velocity.size // 2
+        return np.concatenate([
+            PetrophysicalCoupling._convert_cells(convert, velocity[:half], porosity[:half]),
+            PetrophysicalCoupling._convert_cells(convert, velocity[half:], porosity[half:]),
+        ])
+
+    @staticmethod
+    def _srt_water_content(velocity: np.ndarray, porosity: np.ndarray, params) -> np.ndarray:
+        """Water content from SRT velocity, NaN where the velocity has none.
+
+        Raises when no cell can be converted at all, with the reason.
+        """
+        vel_mode = PetrophysicalCoupling._velocity_model(params)
+        inverse = params.get("velocity_inverse")
+        if inverse is not None:
+            if not callable(inverse):
+                raise ValueError("velocity_inverse must be callable (velocity, porosity).")
+            if not np.isfinite(porosity).all() or np.any((porosity <= 0.) | (porosity > 1.)):
+                raise ValueError("porosity must be finite, with 0 < porosity <= 1.")
+            wc = np.asarray(inverse(velocity, porosity), dtype=float)
+            if wc.shape != velocity.shape:
+                raise ValueError("velocity_inverse must return one water content per cell.")
+            # Outside [0, porosity] is outside the calibration, as a NaN is.
+            wc = np.where(np.isfinite(wc) & (wc >= 0.) & (wc <= porosity), wc, np.nan)
+            if not np.isfinite(wc).any():
+                raise ValueError("velocity_inverse returned no water content in [0, porosity].")
+            return wc
+        if vel_mode not in {"linear", "wyllie", "raymer"}:
+            raise ValueError(f"{vel_mode} requires an explicit calibrated velocity_inverse; "
+                             "a linear inverse would use different petrophysics.")
+
+        def convert(v, phi):
+            return velocity_to_water_content(
+                v, porosity=phi, model=vel_mode,
+                v_dry=float(params.get("v_dry", 3500.0)),
+                v_sat=float(params.get("v_sat", 4500.0)))
+
+        try:
+            return np.asarray(convert(velocity, porosity), dtype=float)
+        except ValueError as exc:
+            wc = PetrophysicalCoupling._convert_cells(convert, velocity, porosity)
+            if not np.isfinite(wc).any():
+                raise exc
+            return wc
 
     @staticmethod
     def compare_inversions_to_hydro(
@@ -463,7 +549,20 @@ class PetrophysicalCoupling:
         """
         Compare inversion products back to hydrological water content.
 
-        Returns misfit statistics for available methods.
+        Returns misfit statistics for available methods. SRT conversion uses
+        the same ``velocity_model`` selection as water_content_to_all_geophysics.
+        Linear, Wyllie and Raymer have built-in inverses. For DEM/Hertz-Mindlin
+        (including the default), supply ``petro_params['velocity_inverse']``, a
+        calibrated callable ``(velocity, porosity) -> water_content``; these
+        models are not silently replaced with a linear mixing rule.
+
+        An SRT model that cannot be converted does not cost the ERT and EM
+        comparisons: its entry is ``{"error": reason}`` in place of
+        ``water_content`` and ``stats``, a ``UserWarning`` gives the reason, and
+        ``summary['skipped']`` names it. SRT cells whose velocity has no water
+        content under the chosen model (outside its saturation range, or at the
+        forward clipping limits) are NaN in ``water_content``, left out of the
+        statistics and counted in ``stats['n_masked']``.
         """
         params = petro_params or {}
         hydro_wc = np.asarray(hydro_wc, dtype=float).ravel()
@@ -491,14 +590,23 @@ class PetrophysicalCoupling:
         if srt_result is not None and hasattr(srt_result, "final_model") and srt_result.final_model is not None:
             velocity = np.asarray(srt_result.final_model, dtype=float).ravel()
             v = PetrophysicalCoupling._align_to_reference(hydro_wc, velocity)
-            v_dry = float(params.get("v_dry", 3500.0))
-            v_sat = float(params.get("v_sat", 4500.0))
-            saturation = np.clip((v - v_dry) / max(v_sat - v_dry, 1e-12), 0.0, 1.0)
-            wc_srt = saturation * porosity
-            results["srt"] = {
-                "water_content": wc_srt,
-                "stats": PetrophysicalCoupling._stats(hydro_wc, wc_srt),
-            }
+            try:
+                wc_srt = PetrophysicalCoupling._srt_water_content(v, porosity, params)
+            except Exception as exc:  # noqa: BLE001 - reported, and ERT/EM still compared
+                warnings.warn(f"SRT not compared with the hydrological water content: {exc}",
+                              UserWarning, stacklevel=2)
+                results["srt"] = {"error": str(exc)}
+            else:
+                masked = int(np.count_nonzero(~np.isfinite(wc_srt)))
+                if masked:
+                    warnings.warn(
+                        f"SRT: {masked} of {wc_srt.size} cells have a velocity with no "
+                        "water content under the chosen velocity model; they are NaN "
+                        "and left out of the statistics.", UserWarning, stacklevel=2)
+                results["srt"] = {
+                    "water_content": wc_srt,
+                    "stats": PetrophysicalCoupling._stats(hydro_wc, wc_srt),
+                }
 
         if em_result is not None:
             conductivity = None
@@ -523,12 +631,14 @@ class PetrophysicalCoupling:
                 }
 
         if results:
-            rmse_values = [entry["stats"]["rmse"] for entry in results.values()]
-            mae_values = [entry["stats"]["mae"] for entry in results.values()]
+            compared = [entry for entry in results.values() if "stats" in entry]
+            rmse_values = [entry["stats"]["rmse"] for entry in compared]
+            mae_values = [entry["stats"]["mae"] for entry in compared]
             results["summary"] = {
-                "mean_rmse": float(np.mean(rmse_values)),
-                "mean_mae": float(np.mean(mae_values)),
+                "mean_rmse": float(np.mean(rmse_values)) if compared else float("nan"),
+                "mean_mae": float(np.mean(mae_values)) if compared else float("nan"),
                 "n_methods": len(rmse_values),
+                "skipped": [name for name, entry in results.items() if "stats" not in entry],
             }
 
         return results

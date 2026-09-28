@@ -28,10 +28,45 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 import numpy as np
 
 from PyHydroGeophysX.data_processing import table_io as io_utils
+from PyHydroGeophysX._internal.deprecations import DEPRECATED_IN
 from PyHydroGeophysX._internal.optional_dependencies import BackendUnavailable
 from PyHydroGeophysX._internal.utils import noop as _noop, utc_now as _utc_now
 
 LogFn = Callable[[str], None]
+
+#: The functions this module held in 0.3.0, before it became the 3D-model
+#: pipeline, and what replaced each. None is a drop-in, so each refuses rather
+#: than forwarding: add_velocity_interface returns the same (markers, mesh) as
+#: integrate_velocity_interface, but has no quality argument and orders its
+#: keywords differently, and the other two returned more than a mesh.
+_REMOVED = {
+    "integrate_velocity_interface": (
+        "use PyHydroGeophysX.core.mesh_utils.add_velocity_interface, which returns the "
+        "same (markers, mesh) but takes no quality argument and orders its keywords "
+        "differently; pass them by name"),
+    "create_ert_mesh_with_structure": (
+        "build the mesh with PyHydroGeophysX.core.mesh_utils.add_velocity_interface"
+        "(ertData, smooth_x, smooth_z), which returns (markers, mesh): 2 above the "
+        "interface, 3 below, 1 outside the survey"),
+    "create_joint_inversion_mesh": (
+        "invert the travel times with PyHydroGeophysX.Geophy_modular."
+        "process_seismic_tomography, take the interface with "
+        "PyHydroGeophysX.Geophy_modular.extract_velocity_structure, and build the "
+        "mesh with PyHydroGeophysX.core.mesh_utils.add_velocity_interface"),
+}
+
+
+def __getattr__(name: str):
+    """Say what replaced a function removed from here, rather than that it is missing.
+
+    An ImportError, not an AttributeError: ``from ... import name`` - how 0.3.0
+    code used these - reports an AttributeError from here only as "cannot
+    import name", without the message.
+    """
+    if name in _REMOVED:
+        raise ImportError(
+            f"{name} was removed in PyHydroGeophysX {DEPRECATED_IN}: {_REMOVED[name]}.")
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 #: Per-line velocity-model bundle: a folder with these two files.
 VELOCITY_FILES = {"mesh": "velmesh.bms", "velocity": "Vinvmodel.npy"}
@@ -54,18 +89,12 @@ def _ensure_vtk_matplotlib_shim() -> None:
     """Stub the optional ``vtkmodules.vtkRenderingMatplotlib`` module when absent.
 
     Some conda-forge VTK builds omit it, yet pyvista imports it unconditionally.
-    Mirrors the shim in ``qt_apps.modules.mesh3d_processing``.
+    The shim is the one the 3D viewers use; imported here, when a render is
+    attempted, so importing this module does not import the plotting package.
     """
-    import sys
-    import types
+    from PyHydroGeophysX.visualization.pyvista_compat import ensure_vtk_matplotlib_shim
 
-    if "vtkmodules.vtkRenderingMatplotlib" in sys.modules:
-        return
-    try:
-        import vtkmodules.vtkRenderingMatplotlib  # noqa: F401 - real module present
-    except Exception:  # noqa: BLE001 - missing optional submodule; provide a stub
-        sys.modules["vtkmodules.vtkRenderingMatplotlib"] = types.ModuleType(
-            "vtkmodules.vtkRenderingMatplotlib")
+    ensure_vtk_matplotlib_shim()
 
 
 # ---------------------------------------------------------------------------
@@ -160,10 +189,12 @@ def extract_line_structure(
     Returns dict with ``surface_pts`` (n,3), ``interface_pts`` (m,3), ``vel_pts``
     (k,4) [x,y,z,vel] mapped into map coordinates, and the raw 2D interface.
     """
-    import pygimli as pg
+    from PyHydroGeophysX.core.mesh_serialization import read_bms
     from PyHydroGeophysX.Geophy_modular.seismic_processor import extract_velocity_structure
 
-    mesh = pg.load(str(line["mesh"]))
+    # PyGIMLi cannot open a path the Windows codepage cannot spell (a Chinese
+    # project folder); read_bms stages such a file through an ASCII path.
+    mesh = read_bms(line["mesh"])
     velocity = _load_velocity(Path(line["velocity"]))
     if velocity.size != mesh.cellCount():
         raise ValueError(
@@ -212,9 +243,9 @@ def extract_line_structure(
 
 def summarize_line(line: Dict[str, Any]) -> Dict[str, Any]:
     """Light per-line summary (cell count, velocity range, x-extent). Needs pygimli."""
-    import pygimli as pg
+    from PyHydroGeophysX.core.mesh_serialization import read_bms
 
-    mesh = pg.load(str(line["mesh"]))
+    mesh = read_bms(line["mesh"])
     velocity = _load_velocity(Path(line["velocity"]))
     cc = np.asarray(mesh.cellCenters(), dtype=float)
     return {

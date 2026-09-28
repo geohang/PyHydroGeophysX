@@ -40,6 +40,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from ..._internal.utils import parse_json_object
 from .context import RunContext
 
 #: Configuration keys an adapter may rewrite: plain numeric text tables, where
@@ -265,8 +266,6 @@ def propose(ctx: RunContext, key: str, path: Any, error: str,
     Returns ``("", "")`` when there is no model, the reply is unusable, or the
     code it proposed is not allowed to run.
     """
-    import json
-
     columns = ADAPTABLE_FILES.get(key, 0)
     if not callable(ask) or not columns:
         return "", ""
@@ -284,12 +283,8 @@ def propose(ctx: RunContext, key: str, path: Any, error: str,
         reply = ask(prompt)
     except Exception:  # noqa: BLE001 - an unreachable model proposes nothing
         return "", ""
-    match = re.search(r"\{.*\}", str(reply or ""), re.S)
-    if not match:
-        return "", ""
-    try:
-        parsed = json.loads(match.group(0))
-    except ValueError:
+    parsed = parse_json_object(str(reply or ""))
+    if not isinstance(parsed, dict):
         return "", ""
     code = str(parsed.get("code") or "")
     if check_source(code):

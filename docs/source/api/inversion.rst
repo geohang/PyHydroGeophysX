@@ -9,6 +9,11 @@ Core Inversion Classes
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: PyHydroGeophysX.inversion.ert_mesh
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: PyHydroGeophysX.inversion.srt_inversion
    :members:
    :undoc-members:

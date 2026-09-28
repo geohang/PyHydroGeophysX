@@ -57,7 +57,9 @@ def temporal_weights(measurement_times: Sequence[float], *,
         and a JSON-safe dict describing the weighting, for the log and the run
         record. Falls back to uniform weights - and says so in the report - when
         the times cannot support the weighting: a zero or negative interval means
-        two surveys carry the same time, or the sequence is out of order.
+        two surveys carry the same time, or the sequence is out of order. A time
+        that is not a finite number leaves every interval unknown, and then the
+        weights are exactly 1, the decay included.
     """
     times = np.asarray(measurement_times, dtype=float).ravel()
     n_pairs = max(times.size - 1, 0)
@@ -67,12 +69,22 @@ def temporal_weights(measurement_times: Sequence[float], *,
         return np.ones(0, dtype=float), report
 
     intervals = np.diff(times)
+    if not np.isfinite(intervals).all():
+        # Checked before anything is computed from the intervals: one NaN makes
+        # the decay NaN too, and these weights go straight into the constraint
+        # matrix, where a NaN spreads to every model the solver returns.
+        report["note"] = (
+            "Temporal constraint weighted equally: some measurement times are not "
+            "finite numbers, so the intervals between surveys are unknown. Check "
+            "the measurement times.")
+        return np.ones(n_pairs, dtype=float), report
+
     base = np.exp(-float(decay_rate) * intervals)
     if str(mode).strip().lower() != "interval":
         report["note"] = "Temporal constraint weighted equally over every pair."
         return base, report
 
-    if not np.isfinite(intervals).all() or np.any(intervals <= 0.0):
+    if np.any(intervals <= 0.0):
         report["note"] = (
             "Temporal constraint weighted equally: the measurement times do not "
             "increase (a zero or negative interval), so an interval weighting "

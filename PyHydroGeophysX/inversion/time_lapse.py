@@ -21,6 +21,44 @@ from .base import InversionBase, TimeLapseInversionResult
 from .temporal_weights import DEFAULT_LIMIT as DEFAULT_TEMPORAL_LIMIT
 from .temporal_weights import temporal_weights
 
+#: The solver 0.3.0 used for this inversion's model update (solvers.solver)
+#: stopped these iterative least-squares methods at 2000 iterations, and
+#: generalized_solver stops them at 200. 'cgls' - 0.3.0's default - is how an
+#: old run is reproduced, so a method 0.3.0 offered keeps 0.3.0's cap.
+_V030_ITERATIVE_METHODS = ("cgls", "lsqr", "rrlsqr", "rrls")
+_V030_MAXITER = 2000
+
+
+def _voltage_error(data, absolute_u_error, absolute_current: float = 0.1) -> np.ndarray:
+    """Relative error of an absolute voltage error, in pyGIMLi's meaning.
+
+    ``absoluteUError`` is a potential error in volts, as in
+    ``pygimli.physics.ert.estimateError``: it adds ``absoluteUError / |U|``,
+    where ``U`` is the file's measured potential, or else its resistance times
+    the current - the file's own ``i``, or ``absolute_current`` amperes
+    (pyGIMLi's ``absoluteCurrent``, 0.1 A) when it records none. Zero, the
+    default, adds nothing.
+    """
+    size = int(data.size())
+    value = abs(float(absolute_u_error or 0.0))
+    if value == 0.0:
+        return np.zeros(size)
+    if data.haveData('u'):
+        voltage = np.asarray(data['u'], dtype=float)
+    else:
+        current = (np.asarray(data['i'], dtype=float) if data.haveData('i')
+                   else np.full(size, float(absolute_current)))
+        if data.haveData('r'):
+            resistance = np.asarray(data['r'], dtype=float)
+        elif data.haveData('rhoa') and data.haveData('k'):
+            resistance = np.asarray(data['rhoa'], dtype=float) / np.maximum(
+                np.abs(np.asarray(data['k'], dtype=float)), 1e-12)
+        else:
+            raise ValueError("absoluteUError needs the potentials ('u'), or resistances "
+                             "('r') or apparent resistivities with geometric factors.")
+        voltage = resistance * current
+    return value / np.maximum(np.abs(voltage), 1e-12)
+
 
 def _sparse_temporal_difference_matrix(cell_count: int, size: int, dtype):
     """Build sparse first differences between adjacent model blocks."""
@@ -225,6 +263,10 @@ class TimeLapseERTInversion(InversionBase):
                 - model_constraints: (min, max) model parameter bounds
                 - max_iterations: Maximum iterations
                 - absoluteError: Absolute resistance error floor [Ohm] (default 0.0001)
+                - absoluteUError: Absolute voltage error [V], pyGIMLi's meaning:
+                  adds absoluteUError / |U|, with U the file's potentials or
+                  r * i, the current being the file's 'i' or absoluteCurrent
+                  (default 0.1 A). Default 0, which adds nothing.
                 - relativeError: Relative data error
                 - lambda_rate: Lambda reduction rate
                 - lambda_min: Minimum lambda value
@@ -239,6 +281,15 @@ class TimeLapseERTInversion(InversionBase):
                   ``meta['temporal_weighting']``.
                 - temporal_weight_limit: cap on how far an interval weight may
                   depart from the median interval, either way (default 10).
+                - temporal_pair_weights: optional precomputed weights, one per
+                  adjacent pair, including any decay. Overrides local temporal
+                  weighting so windows can share a campaign-wide normalization.
+                - zones: a-priori resistivity zones, a list of dicts with a
+                  ``polygon`` in mesh coordinates, a ``resistivity`` and an
+                  optional ``fixed`` (see ``ert_zones``). Every survey starts
+                  from its a-priori model - the zones on that survey's median
+                  apparent resistivity - the spatial constraint acts on the
+                  departure from it, and fixed zones hold in every survey.
         """
         # Load ERT data
         self.data_files = data_files
@@ -313,7 +364,27 @@ class TimeLapseERTInversion(InversionBase):
         self.Wm = None
         self.Wt = None
         self.temporal_weight_report: Dict[str, Any] = {}
-    
+        self._zone_prior = None  # the zones on the parameter mesh, once built
+
+    def zone_prior(self):
+        """The a-priori zones on this inversion's parameter mesh, or None.
+
+        Every survey shares the mesh, so one prior serves them all. See
+        ``ert_zones``.
+        """
+        zones = self.parameters.get('zones')
+        if not zones:
+            return None
+        if self._zone_prior is None:
+            if not self.fwd_operators:
+                self.setup()
+            from .ert_zones import zone_prior
+
+            self._zone_prior = zone_prior(
+                self.fwd_operators[0].paraDomain, zones,
+                bounds=self.parameters['model_constraints'])
+        return self._zone_prior
+
     def setup(self):
         """Set up time-lapse ERT inversion (load data, create operators, matrices, etc.)"""
         # Create mesh if not provided
@@ -366,6 +437,11 @@ class TimeLapseERTInversion(InversionBase):
                     raise RuntimeError(
                         f"Dataset {fname}: cannot estimate error without 'r' or 'k'.")
                 err_i = rel_e + abs_e / np.maximum(r_abs, 1e-10)
+                # absoluteUError is volts, not ohms, and used to be ignored here
+                # while the ADTLERT windowed path read it as an ohm floor.
+                err_i = err_i + _voltage_error(
+                    dataert, self.parameters.get('absoluteUError', 0.0),
+                    float(self.parameters.get('absoluteCurrent', 0.1)))
                 dataerr.append(np.clip(err_i, 0.01, 0.50))
             
             # Create forward operator
@@ -424,12 +500,26 @@ class TimeLapseERTInversion(InversionBase):
         # one on the rate of change, which is the only form that means the same
         # thing when the sampling is irregular.
         cell_count = self.fwd_operators[0].paraDomain.cellCount()
-        pair_weights, self.temporal_weight_report = temporal_weights(
-            self.measurement_times,
-            mode=str(self.parameters.get('temporal_weighting', 'interval')),
-            limit=self.parameters.get('temporal_weight_limit', DEFAULT_TEMPORAL_LIMIT),
-            decay_rate=float(self.parameters.get('decay_rate', 0.0)),
-        )
+        supplied_weights = self.parameters.get('temporal_pair_weights')
+        if supplied_weights is None:
+            pair_weights, self.temporal_weight_report = temporal_weights(
+                self.measurement_times,
+                mode=str(self.parameters.get('temporal_weighting', 'interval')),
+                limit=self.parameters.get('temporal_weight_limit', DEFAULT_TEMPORAL_LIMIT),
+                decay_rate=float(self.parameters.get('decay_rate', 0.0)),
+            )
+        else:
+            pair_weights = np.asarray(supplied_weights, dtype=float)
+            if (pair_weights.shape != (self.size - 1,)
+                    or not np.isfinite(pair_weights).all()
+                    or np.any(pair_weights < 0)):
+                raise ValueError("temporal_pair_weights must contain one finite, "
+                                 "nonnegative weight per adjacent survey pair")
+            self.temporal_weight_report = dict(self.parameters.get(
+                '_temporal_weight_report', {
+                    'mode': 'explicit', 'applied': True,
+                    'note': 'Using precomputed temporal pair weights.',
+                }))
         temporal_weights_full = np.repeat(pair_weights, cell_count).astype(
             self.dtype, copy=False)
         self._temporal_row_weights = temporal_weights_full
@@ -576,38 +666,88 @@ class TimeLapseERTInversion(InversionBase):
         
         # Set up initial model if not provided
         cell_count = self.fwd_operators[0].paraDomain.cellCount()
-        
+
+        # The median resistivity of each time step, taken from the apparent
+        # resistivities the inversion fits (self.rhos1, stacked survey by
+        # survey, rebuilt from r * k where needed): the homogeneous start model,
+        # and the background of the a-priori model when there are zones. This
+        # used to test hasattr(dataset, 'rhoa'), which is always False for a
+        # DataContainerERT (its tokens are not attributes), so every survey
+        # started from 100 ohm-m.
+        sizes = [int(d.size()) for d in self.datasets]
+        per_survey = np.split(np.asarray(self.rhos1, dtype=float).ravel(),
+                              np.cumsum(sizes)[:-1])
+        initial_rhos = []
+        for log_rhoa in per_survey:
+            rhoa_i = np.exp(log_rhoa[np.isfinite(log_rhoa)])
+            if rhoa_i.size:
+                initial_rhos.append(float(np.median(rhoa_i)))
+            else:
+                # Use default value if no apparent resistivity data
+                initial_rhos.append(100.0)
+
         if initial_model is None:
-            # Create initial model with median resistivity for each time step,
-            # taken from the apparent resistivities the inversion fits
-            # (self.rhos1, stacked survey by survey, rebuilt from r * k where
-            # needed). This used to test hasattr(dataset, 'rhoa'), which is
-            # always False for a DataContainerERT (its tokens are not
-            # attributes), so every survey started from 100 ohm-m.
-            sizes = [int(d.size()) for d in self.datasets]
-            per_survey = np.split(np.asarray(self.rhos1, dtype=float).ravel(),
-                                  np.cumsum(sizes)[:-1])
-            initial_rhos = []
-            for log_rhoa in per_survey:
-                rhoa_i = np.exp(log_rhoa[np.isfinite(log_rhoa)])
-                if rhoa_i.size:
-                    initial_rhos.append(float(np.median(rhoa_i)))
-                else:
-                    # Use default value if no apparent resistivity data
-                    initial_rhos.append(100.0)
-            
             mr = np.log(np.repeat(initial_rhos, cell_count).reshape(-1, 1)).astype(self.dtype, copy=False)
         else:
             # Use provided initial model
             if initial_model.shape != (cell_count, self.size):
                 raise ValueError(f"Initial model should have shape ({cell_count}, {self.size})")
-            
+
             # Flatten in column-major order and log-transform
             mr = np.log(initial_model.flatten(order='F').reshape(-1, 1)).astype(self.dtype, copy=False)
-        
-        # Reference model is the initial model
-        mr_R = mr.copy()
-        
+
+        # A-priori zones: every survey starts from its a-priori model, the
+        # spatial constraint acts on the departure from it - so the contrast at
+        # a zone's edge costs nothing unless the data argue against it - and a
+        # fixed zone keeps its value in every survey, whatever the run is
+        # continued from. The model vector holds the surveys one after another,
+        # so a per-cell mask repeats once per survey.
+        prior = self.zone_prior()
+        prior_mr = fixed_cells = fixed_rows = None
+        if prior is not None:
+            prior_mr = np.log(np.concatenate(
+                [prior.with_background(rho) for rho in initial_rhos])).reshape(-1, 1).astype(
+                    self.dtype, copy=False)
+            if initial_model is None:
+                mr = prior_mr.copy()
+            else:
+                held = np.tile(prior.fixed, self.size)
+                mr[held] = prior_mr[held]
+            if prior.any_fixed:
+                fixed_cells = np.flatnonzero(prior.fixed)
+                fixed_rows = np.flatnonzero(np.tile(prior.fixed, self.size))
+
+        def _spatial(model):
+            """What the spatial constraint acts on: the departure from the prior."""
+            return model if prior_mr is None else model - prior_mr
+
+        def _hold_fixed(system, rhs):
+            """Decouple the fixed cells from a normal system in place.
+
+            Their rows and columns become those of the identity and their
+            right-hand side zero, so their update is exactly zero and the free
+            cells solve the system with the fixed ones left out. The matrix stays
+            symmetric positive definite, which the Cholesky paths need.
+            """
+            rhs[fixed_rows] = 0.0
+            if isinstance(system, tuple):              # (diagonal blocks, couplings)
+                for block in system[0]:
+                    block[fixed_cells, :] = 0.0
+                    block[:, fixed_cells] = 0.0
+                    block[fixed_cells, fixed_cells] = 1.0
+                for coupling in system[1]:
+                    coupling[fixed_cells] = 0.0
+                return system
+            if sp.issparse(system):
+                keep = np.ones(system.shape[0], dtype=system.dtype)
+                keep[fixed_rows] = 0.0
+                return (diags(keep) @ system @ diags(keep)
+                        + diags(1.0 - keep)).tocsr()
+            system[fixed_rows, :] = 0.0
+            system[:, fixed_rows] = 0.0
+            system[fixed_rows, fixed_rows] = 1.0
+            return system
+
         # Regularization parameters
         Lambda = self.parameters['lambda_val']
         alpha = self.parameters['alpha']
@@ -687,8 +827,9 @@ class TimeLapseERTInversion(InversionBase):
                     # Gradient computation with memory management
                     grad_data = -_matvec(Jr.transpose(), data_weighted)
                     
-                    model_term = _ttm(self.Wm, mr)
-                    fmert = Lambda * _quad(model_term, mr)
+                    spatial = _spatial(mr)
+                    model_term = _ttm(self.Wm, spatial)
+                    fmert = Lambda * _quad(model_term, spatial)
                     grad_model = Lambda * model_term
                     
                     temp_term = _ttm(self.Wt, mr)
@@ -701,8 +842,8 @@ class TimeLapseERTInversion(InversionBase):
                 elif inversion_type == 'L1':
                     # L1 norm using IRLS
                     Rd = diags(1.0 / np.sqrt(dataerror_ert.flatten()**2 + l1_epsilon))
-                    
-                    model_diff = _matvec(self.Wm, mr)
+
+                    model_diff = _matvec(self.Wm, _spatial(mr))
                     Rs = diags(1.0 / np.sqrt(model_diff.flatten()**2 + l1_epsilon))
                     
                     temp_diff = _matvec(self.Wt, mr)
@@ -739,7 +880,7 @@ class TimeLapseERTInversion(InversionBase):
                     Rd = diags(data_weights)
                     
                     # Model and temporal weights (pure L1)
-                    model_diff = _matvec(self.Wm, mr)
+                    model_diff = _matvec(self.Wm, _spatial(mr))
                     model_weights = 1.0 / np.sqrt(model_diff.flatten()**2 + l1_epsilon)
                     model_weights = np.maximum(model_weights, 1e-10)
                     Rs = diags(model_weights)
@@ -825,8 +966,11 @@ class TimeLapseERTInversion(InversionBase):
                     diagonal_blocks, couplings = self._normal_blocks(
                         Jr, Lambda=Lambda, alpha=alpha, **weights)
                     del Jr
+                    rhs = -gc_r
+                    if fixed_rows is not None:
+                        _hold_fixed((diagonal_blocks, couplings), rhs)
                     d_mr = block_tridiagonal_cholesky_solve(
-                        diagonal_blocks, couplings, -gc_r, overwrite=True)
+                        diagonal_blocks, couplings, rhs, overwrite=True)
                     del diagonal_blocks
                 else:
                     # Compute Hessian (or approximation)
@@ -868,17 +1012,27 @@ class TimeLapseERTInversion(InversionBase):
                     # After using Jr for gradient computation
                     del Jr  # No longer needed
 
+                    rhs = -gc_r
+                    if fixed_rows is not None:
+                        H = _hold_fixed(H, rhs)
+
                     # Solve for model update. overwrite_a lets 'spd_cholesky'
                     # factor in H's own buffer, which for a dense 4D normal matrix
                     # is the difference between one working copy and none; nothing
                     # reads H after this call. It is ignored by the other methods.
+                    method = self.parameters['method']
+                    if str(method).lower().strip() in _V030_ITERATIVE_METHODS:
+                        solver_options = {'maxiter': _V030_MAXITER}
+                    else:
+                        solver_options = {}
                     d_mr = generalized_solver(
-                        H, -gc_r,
-                        method=self.parameters['method'],
+                        H, rhs,
+                        method=method,
                         use_gpu=self.parameters.get('use_gpu', False),
                         parallel=self.parameters.get('parallel', False),
                         n_jobs=self.parameters.get('n_jobs', -1),
                         overwrite_a=True,
+                        **solver_options,
                     )
                     d_mr = d_mr.reshape(-1, 1)
                     del H  # consumed by the solve, and rebuilt next iteration
@@ -908,14 +1062,15 @@ class TimeLapseERTInversion(InversionBase):
                         if inversion_type == 'L2':
                             data_weighted_new = _matvec(self.Wd_sq, dataerror_new)
                             fdert_new = _quad(data_weighted_new, dataerror_new)
-                            model_term_new = _ttm(self.Wm, mr1)
-                            fmert_new = Lambda * _quad(model_term_new, mr1)
+                            spatial_new = _spatial(mr1)
+                            model_term_new = _ttm(self.Wm, spatial_new)
+                            fmert_new = Lambda * _quad(model_term_new, spatial_new)
                             temp_term_new = _ttm(self.Wt, mr1)
                             ftert_new = alpha * _quad(temp_term_new, mr1)
                         else:  # L1 and L1L2, with this iteration's IRLS weights
                             data_weighted_new = _apply_data_weights(Rd, dataerror_new)
                             fdert_new = _quad(data_weighted_new, dataerror_new)
-                            model_diff_new = _matvec(self.Wm, mr1)
+                            model_diff_new = _matvec(self.Wm, _spatial(mr1))
                             model_weighted_new = _matvec(Rs, model_diff_new)
                             fmert_new = Lambda * _quad(model_weighted_new, model_diff_new)
                             temp_diff_new = _matvec(self.Wt, mr1)
@@ -983,10 +1138,10 @@ class TimeLapseERTInversion(InversionBase):
             err_final = _as_col(self.rhos1 - dr_final.reshape(-1, 1))
             chi2_final = _quad(_matvec(self.Wd_sq, err_final), err_final) / len(err_final)
             if inversion_type == 'L2':
-                fm_final = Lambda * _quad(_ttm(self.Wm, mr), mr)
+                fm_final = Lambda * _quad(_ttm(self.Wm, _spatial(mr)), _spatial(mr))
                 ft_final = alpha * _quad(_ttm(self.Wt, mr), mr)
             else:
-                md_final = _matvec(self.Wm, mr)
+                md_final = _matvec(self.Wm, _spatial(mr))
                 fm_final = Lambda * _quad(_matvec(Rs, md_final), md_final)
                 td_final = _matvec(self.Wt, mr)
                 ft_final = alpha * _quad(_matvec(Rt, td_final), td_final)
@@ -1046,6 +1201,8 @@ class TimeLapseERTInversion(InversionBase):
         # interval and the other did not, so the result records which it was.
         result.meta['temporal_weighting'] = dict(
             getattr(self, 'temporal_weight_report', None) or {})
+        if prior is not None:
+            result.meta['zones'] = [dict(entry) for entry in prior.report]
 
         if verbose:
             print('End of inversion')
@@ -1056,6 +1213,8 @@ class TimeLapseERTInversion(InversionBase):
 # the API while the private sibling keeps those helpers separate from the
 # numerical TimeLapseERTInversion class.
 from ._time_lapse_workflow import (  # noqa: E402
+    DEFAULT_TL,
+    INVERSION_TYPES,
     BackendUnavailable,
     build_timelapse_config,
     default_times,

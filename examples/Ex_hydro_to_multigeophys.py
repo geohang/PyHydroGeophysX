@@ -5,6 +5,8 @@ This example extracts one two-dimensional profile from a hydrological-model
 snapshot, builds a common mesh, and simulates ERT, SRT, TDEM, FDEM, and gravity
 responses. Each processing and forward-modeling stage is kept separate so the
 intermediate hydrological profiles and mesh properties can be inspected.
+
+**Memory:** the run peaks at about 8 GB on the maintainer's machine.
 """
 
 # %% [markdown]

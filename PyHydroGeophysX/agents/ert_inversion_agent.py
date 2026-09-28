@@ -49,6 +49,9 @@ constraints, structural constraints, and convergence criteria."""
                 - use_structure_constraint: Whether to use seismic structure (default: False)
                 - seismic_structure: Optional seismic structure data
                 - output_dir: Directory for saving results
+                - interpret: Ask the model to interpret the result (default:
+                  True, when there is an API key). A quality loop that
+                  re-inverts passes False: it keeps one model of several.
                 
         Returns:
             Dictionary containing inversion results
@@ -127,10 +130,13 @@ constraints, structural constraints, and convergence criteria."""
             # Set default parameters if not provided
             lambda_val = inversion_params.get('lambda', 20.0)
             max_iterations = inversion_params.get('max_iterations', 10)
-            method = inversion_params.get('method', 'cgls')
+            # The linear solver is the library's unless the caller chose one.
+            solver = ({'method': inversion_params['method']}
+                      if inversion_params.get('method') else {})
             use_gpu = inversion_params.get('use_gpu', False)
             self._log_execution(f"Inversion parameters: lambda={lambda_val}, "
-                              f"max_iter={max_iterations}, method={method}")
+                              f"max_iter={max_iterations}, "
+                              f"method={solver.get('method', 'library default')}")
             
             # Handle structure-constrained inversion if seismic data provided
             mesh = None
@@ -156,8 +162,8 @@ constraints, structural constraints, and convergence criteria."""
             inversion = ERTInversion(
                 data_file=data_file,
                 lambda_val=lambda_val,
-                method=method,
                 use_gpu=use_gpu,
+                **solver,
                 max_iterations=max_iterations,
                 mesh=mesh,
                 lambda_rate=inversion_params.get('lambda_rate', 1.0),
@@ -186,7 +192,7 @@ constraints, structural constraints, and convergence criteria."""
             
             # Get LLM interpretation of results
             interpretation = None
-            if self.api_key:
+            if self.api_key and input_data.get('interpret', True):
                 self._log_execution("Generating interpretation of results")
                 interpretation = self._interpret_results(inversion_result, inversion_params)
             
@@ -199,6 +205,10 @@ constraints, structural constraints, and convergence criteria."""
                 'chi2': float(inversion_result.meta.get('final_chi2')) if inversion_result.meta.get('final_chi2') is not None else (float(np.asarray(inversion_result.iteration_chi2[-1]).item()) if inversion_result.iteration_chi2 else None),
                 'iterations': int(inversion_result.meta.get('native_iterations')) if inversion_result.meta.get('native_iterations') is not None else len(inversion_result.iteration_chi2),
                 'interpretation': interpretation,
+                # What ran, for the report's method line: the solver is the
+                # library's default unless the caller named one.
+                'lambda': lambda_val,
+                'solver': inversion.parameters.get('method'),
                 'output_dir': output_dir
             }
             self.results['processing'] = {
@@ -443,7 +453,10 @@ Provide a brief interpretation (2-3 sentences) about:
             lambda_val = inversion_params.get('lambda', 50.0)
             alpha = temporal_reg  # Temporal regularization parameter
             decay_rate = inversion_params.get('decay_rate', 0.0)
-            method = inversion_params.get('method', 'cgls')
+            # The library's solver (spd_cholesky, for the normal equations of
+            # the 4D problem) unless the caller chose one: a 'cgls' default here
+            # overrode it, and the solver warned that it was the wrong choice.
+            method = inversion_params.get('method')
             model_constraints = inversion_params.get('model_constraints', (0.001, 1e4))
             max_iterations = inversion_params.get('max_iterations', 15)
             absoluteUError = inversion_params.get('absoluteUError', 0.0)
@@ -453,7 +466,8 @@ Provide a brief interpretation (2-3 sentences) about:
             inversion_type = inversion_params.get('inversion_type', 'L2')
             
             self._log_execution(f"Inversion parameters: lambda={lambda_val}, alpha={alpha}, "
-                              f"max_iter={max_iterations}, method={method}, type={inversion_type}")
+                              f"max_iter={max_iterations}, "
+                              f"method={method or 'library default'}, type={inversion_type}")
             
             # Measurement times. A sequential index treats a one-hour gap and a
             # one-month gap as the same spacing and gives the report a step number
@@ -493,16 +507,17 @@ Provide a brief interpretation (2-3 sentences) about:
                 lambda_val=lambda_val,
                 alpha=alpha,
                 decay_rate=decay_rate,
-                method=method,
                 model_constraints=model_constraints,
                 max_iterations=max_iterations,
                 absoluteUError=absoluteUError,
                 relativeError=relativeError,
                 lambda_rate=lambda_rate,
                 lambda_min=lambda_min,
-                inversion_type=inversion_type
+                inversion_type=inversion_type,
+                **({'method': method} if method else {}),
             )
-            
+            method = tl_inversion.parameters.get('method', method)
+
             tl_result = tl_inversion.run()
 
             self._log_execution("Time-lapse inversion completed successfully")
@@ -527,7 +542,7 @@ Provide a brief interpretation (2-3 sentences) about:
             
             # Get LLM interpretation of time-lapse results
             interpretation = None
-            if self.api_key:
+            if self.api_key and input_data.get('interpret', True):
                 self._log_execution("Generating interpretation of time-lapse results")
                 interpretation = self._interpret_time_lapse_results(tl_result, tl_method)
             

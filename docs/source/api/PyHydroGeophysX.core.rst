@@ -28,6 +28,14 @@ PyHydroGeophysX.core.kriging\_3d module
    :show-inheritance:
    :undoc-members:
 
+PyHydroGeophysX.core.e4d\_mesh module
+-------------------------------------
+
+.. automodule:: PyHydroGeophysX.core.e4d_mesh
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.core.mesh\_3d module
 ------------------------------------
 

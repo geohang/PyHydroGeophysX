@@ -15,10 +15,10 @@ PyHydroGeophysX.solvers.linear\_solvers module
 PyHydroGeophysX.solvers.solver module
 -------------------------------------
 
-.. automodule:: PyHydroGeophysX.solvers.solver
-   :members:
-   :undoc-members:
-   :show-inheritance:
+Deprecated in 0.5.0 and removed in 0.6.0: a compatibility path whose
+``generalized_solver`` warns and calls
+:func:`PyHydroGeophysX.solvers.linear_solvers.generalized_solver`, documented
+above.
 
 Module contents
 ---------------

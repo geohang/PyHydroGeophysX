@@ -37,8 +37,9 @@ def _execute(payload, progress, *, context_factory=None, run_fn=None, events=Non
         from PyHydroGeophysX.llm.providers import make_provider
         progress('Scanning selected folder', .02, 'Reading bounded file previews')
         catalog = scan_folder(payload['data_folder'])
-        provider = make_provider('anthropic' if payload.get('provider') == 'claude' else 'openai',
-                                 model=payload.get('model'), api_key=payload.get('api_key'))
+        provider = make_provider(_classifier_provider(payload.get('provider')),
+                                 model=payload.get('model'), api_key=payload.get('api_key'),
+                                 base_url=payload.get('base_url'))
         provider.reasoning_effort = payload.get('reasoning_effort') or 'medium'
         progress('Classifying files with AI', .1, f"{len(catalog['files'])} files; model {provider.model}")
         catalog = classify_catalog(catalog, payload['request'], provider, progress)
@@ -53,7 +54,9 @@ def _execute(payload, progress, *, context_factory=None, run_fn=None, events=Non
     request = str(payload['request']).strip()
     if not request:
         raise ValueError('Describe the workflow you want to run.')
-    provider = payload.get('provider', 'openai')
+    # The agents call Claude 'claude'; the chat adapters call it 'anthropic'.
+    provider = {'anthropic': 'claude'}.get(payload.get('provider') or 'openai',
+                                           payload.get('provider') or 'openai')
     key = payload.get('api_key') or None
     model = payload.get('model') or None
     output = Path(payload['output_dir']).resolve()
@@ -137,7 +140,12 @@ def _execute(payload, progress, *, context_factory=None, run_fn=None, events=Non
     from PyHydroGeophysX.agents._intent import unmet_requests
     from PyHydroGeophysX.agents._uncertainty import result_caveats
     finished = results if isinstance(results, dict) else {}
-    warnings.extend(unmet_requests(config, finished))
+    # The run states a missing product with its reason; the same sentence
+    # without one would only repeat it.
+    for sentence in unmet_requests(config, finished):
+        stem = sentence.rstrip('.').split(' (')[0]
+        if not any(str(w).startswith(stem) for w in warnings):
+            warnings.append(sentence)
     # A product that exists but cannot bear the weight put on it is its own
     # kind of warning: it will be read, and read at face value.
     warnings.extend(result_caveats(config, finished))
@@ -156,8 +164,14 @@ def _execute(payload, progress, *, context_factory=None, run_fn=None, events=Non
                          {k: payload.get(k) for k in ('model', 'provider', 'reasoning_effort', 'use_rag', 'use_mcp')})
     if payload.get('classification'):
         (output / 'reviewed_classification.json').write_text(json.dumps(payload['classification'], indent=2), encoding='utf-8')
+    # A run that fell short says so in its status, not only in a warning: the
+    # desktop reads the status to decide whether to call the run complete.
+    if isinstance(results, dict) and results.get('status') == 'incomplete':
+        status = 'incomplete'
+    else:
+        status = 'needs_review' if warnings else 'success'
     result = dict(execution_plan=plan, interpretation=interpretation, warnings=warnings,
-                  status='needs_review' if warnings else 'success',
+                  status=status,
                   report_files=files or {}, output_dir=str(output), workflow_config=config)
     def encode(value):
         if hasattr(value, 'tolist'):
@@ -168,6 +182,31 @@ def _execute(payload, progress, *, context_factory=None, run_fn=None, events=Non
     (output / 'numerical_results.json').write_text(json.dumps(results, default=encode), encoding='utf-8')
     (output / 'workflow_result.json').write_text(json.dumps(result, indent=2, default=str), encoding='utf-8')
     return result
+
+
+def _classifier_provider(name):
+    """The chat adapter that classifies files, for a desktop provider id.
+
+    Classification runs on :func:`PyHydroGeophysX.llm.providers.make_provider`,
+    which covers OpenAI, Claude and OpenAI-compatible endpoints. Every id but
+    'claude' used to be sent to OpenAI, so a Gemini or OpenAI-compatible key
+    was presented to OpenAI and refused there with an authentication error.
+
+    >>> _classifier_provider('claude'), _classifier_provider('openai_compatible')
+    ('anthropic', 'openai_compatible')
+    >>> _classifier_provider('gemini')
+    Traceback (most recent call last):
+    ...
+    ValueError: File classification cannot use the provider 'gemini'. It runs on openai, anthropic, openai_compatible; choose one of those, or assign the file roles by hand.
+    """
+    from PyHydroGeophysX.llm.providers import PROVIDER_META, PROVIDER_ORDER, normalise_provider_id
+
+    key = normalise_provider_id(name or 'openai')
+    if key not in PROVIDER_META:
+        raise ValueError(f"File classification cannot use the provider '{name}'. It runs on "
+                         f"{', '.join(PROVIDER_ORDER)}; choose one of those, or assign the "
+                         f"file roles by hand.")
+    return key
 
 
 def _accepted(fn, **hooks):

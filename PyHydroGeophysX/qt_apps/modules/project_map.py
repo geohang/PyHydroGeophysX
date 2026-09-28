@@ -1,10 +1,12 @@
 """Project-wide map membership and linked scientific result inspection."""
 from __future__ import annotations
 
+from collections import Counter
+
 import numpy as np
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QFileDialog,
-    QHBoxLayout, QInputDialog, QLabel, QMessageBox, QPushButton, QSpinBox, QSplitter,
+    QHBoxLayout, QInputDialog, QLabel, QMessageBox, QPushButton, QProgressBar, QSpinBox, QSplitter,
     QStackedWidget, QTreeWidget, QHeaderView, QTreeWidgetItem, QVBoxLayout, QWidget)
 
 from .base import BaseModule
@@ -26,10 +28,21 @@ SURFACES = [('Points only', None), ('Kriging (ordinary)', 'kriging'),
             ('Cubic (triangulation)', 'cubic'), ('Nearest neighbour', 'nearest'),
             ('Thin-plate spline', 'rbf')]
 
-SURFACE_HELP = ('Interpolate the selected slice between stations into a plan image.\n'
+SURFACE_HELP = ('Choose a slice and method, then click Interpolate to draw a smooth map.\n'
                 'Kriging fits a semivariogram and reports its own variance; the other\n'
                 'methods are deterministic. Resistivity is interpolated in log space.\n'
                 'Cells outside the convex hull of the stations are always blanked.')
+
+
+class SurfaceWorker(TaskWorker):
+    """Compute only numerical arrays in the worker; plotting stays on the UI thread."""
+
+    progressed = Signal(int, str)
+
+    def __init__(self, xy, values, options):
+        from PyHydroGeophysX.core.plan_interpolation import plan_grid
+        super().__init__(plan_grid, xy, values, **options)
+        self._kwargs.update(progress=self.progressed.emit, cancelled=self.is_cancelled)
 
 
 class SteadySpinBox:
@@ -105,9 +118,11 @@ class ProjectMapModule(BaseModule):
         from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
         from matplotlib.figure import Figure
         from PyHydroGeophysX.qt_apps.widgets.em_overview_view import EMOverviewView
+        from PyHydroGeophysX.qt_apps.widgets.readout import navigation_toolbar
         self._entries, self._arrays, self._artists = [], {}, {}
         self._store = None
         self._selected = None
+        self._slices_for = None      # the survey whose slices the Slice list holds
         self._tile = None
         self._tile_worker = None
         self._root = None
@@ -118,6 +133,9 @@ class ProjectMapModule(BaseModule):
         self._surfaces = {}
         self._surface = None
         self._surface_note = ''
+        self._surface_request = None
+        self._surface_job = None
+        self._surface_token = 0
         root = QVBoxLayout(self)
         root.setContentsMargins(4, 4, 4, 4)
         root.setSpacing(4)
@@ -218,7 +236,8 @@ class ProjectMapModule(BaseModule):
         self._interp_res.setValue(140)
         self._interp_res.setSuffix(' cells')
         self._interp_res.setKeyboardTracking(False)
-        self._interp_res.setToolTip('Square cells across the longer map axis.')
+        self._interp_res.setToolTip('Cells across the longer map axis. More cells give a finer map\n'
+                                   'but take longer to calculate. Click Interpolate after changing settings.')
         self._interp_res.valueChanged.connect(self._draw_map)
         surface.addWidget(self._interp_res)
         self._interp_blank = DistanceSpinBox()
@@ -243,6 +262,13 @@ class ProjectMapModule(BaseModule):
             'and the markers cover the image. Other surveys keep their traces.')
         self._stations.toggled.connect(self._draw_map)
         surface.addWidget(self._stations)
+        self._interpolate_button = QPushButton('Interpolate')
+        self._interpolate_button.setToolTip(
+            'Create a surface for the selected slice using the settings above.\n'
+            'You can keep using the map while it calculates. Higher resolution takes longer.')
+        self._interpolate_button.setEnabled(False)
+        self._interpolate_button.clicked.connect(self._start_surface)
+        surface.addWidget(self._interpolate_button)
         self._variogram_button = QPushButton('Variogram…')
         self._variogram_button.setEnabled(False)
         self._variogram_button.clicked.connect(self._show_variogram)
@@ -259,6 +285,21 @@ class ProjectMapModule(BaseModule):
         slices.insertWidget(0, navigation)
         ml.addLayout(slices)
         ml.addLayout(surface)
+        progress_row = QHBoxLayout()
+        self._interpolation_status = QLabel('Choose a slice and interpolation method to get started.')
+        self._interpolation_status.setWordWrap(True)
+        progress_row.addWidget(self._interpolation_status, 1)
+        self._interpolation_progress = QProgressBar()
+        self._interpolation_progress.setRange(0, 100)
+        self._interpolation_progress.setFixedWidth(160)
+        self._interpolation_progress.setVisible(False)
+        progress_row.addWidget(self._interpolation_progress)
+        self._cancel_interpolation = QPushButton('Cancel')
+        self._cancel_interpolation.setToolTip('Stop interpolation after the current calculation batch.')
+        self._cancel_interpolation.clicked.connect(lambda: self._cancel_surface())
+        self._cancel_interpolation.setVisible(False)
+        progress_row.addWidget(self._cancel_interpolation)
+        ml.addLayout(progress_row)
         ml.addWidget(self._canvas, 1)
         self._canvas.mpl_connect('pick_event', self._pick)
         self._canvas.mpl_connect('scroll_event', self._zoom_map)
@@ -283,7 +324,11 @@ class ProjectMapModule(BaseModule):
         self._section_colormap.colormapChanged.connect(self._redraw_section)
         section_bar = QHBoxLayout()
         section_bar.setContentsMargins(0, 0, 0, 0)
-        section_bar.addWidget(NavigationToolbar2QT(self._section_canvas, self), 1)
+        # Its cursor position in a readout of its own: the toolbar's label would
+        # re-lay out the page on every mouse move (see widgets.readout).
+        section_toolbar, section_coords = navigation_toolbar(self._section_canvas, self)
+        section_bar.addWidget(section_toolbar)
+        section_bar.addWidget(section_coords, 1)
         section_bar.addWidget(self._section_colormap)
         sl.addLayout(section_bar)
         sl.addWidget(self._section_canvas)
@@ -298,12 +343,22 @@ class ProjectMapModule(BaseModule):
         self._list.itemChanged.connect(self._visibility)
 
     def refresh(self):
+        # The window calls this every time the page is shown, not only when the
+        # map changes. Gridding a slice costs real time, so leaving the page and
+        # coming back must neither throw a surface away nor stop one still being
+        # computed: only what came from a survey that has since changed goes.
+        running, shown = self._surface_job, self._surface
         try:
             store = self.state.ensure_results_store()
             changed_project = self._root != store.root
             self._root = store.root
             self._store = ProjectMapStore(store.root, store.read_only)
-            self._entries = self._store.entries()
+            entries = self._store.entries()
+            before = {} if changed_project else {e['id']: self._inputs(e) for e in self._entries}
+            kept = {e['id'] for e in entries if before.get(e['id']) == self._inputs(e)}
+            reason = 'a different project is open' if changed_project else 'its survey changed or left the map'
+            self._entries = entries
+            self._keep_cached(kept)
             method = self._method.currentText()
             self._method.blockSignals(True)
             self._method.clear()
@@ -311,14 +366,16 @@ class ProjectMapModule(BaseModule):
             if self._method.findText(method) >= 0:
                 self._method.setCurrentText(method)
             self._method.blockSignals(False)
-            self._arrays, self._surfaces = {}, {}
             requested = getattr(self.state, 'map_selected_id', None)
             if changed_project:
                 self._selected = None
                 self._tile = None
             chosen = next((e for e in self._entries if e['id'] == requested), None)
             if chosen is None and changed_project and self._entries:
-                chosen = self._entries[0]
+                # A survey the map shows: opening on a hidden one, as the first
+                # saved often is, left nothing drawn to interpolate.
+                chosen = next((e for e in self._entries if e.get('visible', True)),
+                              self._entries[0])
             if chosen:
                 self._selected = chosen['id']
                 self._frame.blockSignals(True)
@@ -332,9 +389,45 @@ class ProjectMapModule(BaseModule):
                                'Map snapshots are saved immediately. Removing a layer keeps source results.')
             self._filter_changed()
         except Exception as exc:
-            self._entries, self._arrays, self._surfaces = [], {}, {}
+            kept, reason = set(), 'the project map could not be read'
+            self._entries = []
+            self._keep_cached(kept)
             self._note.setText(f'Could not read project map: {exc}')
             self._filter_changed()
+        # The redraw leaves the status line on its idle text; when work is gone,
+        # the reason goes ahead of it so nothing vanishes unexplained. A job can
+        # also stop in the redraw itself when the map now shows another survey,
+        # such as one that Add to Map has just saved from another page.
+        notice = ''
+        if running is not None and self._surface_job is None:
+            notice = 'Interpolation stopped: ' + (
+                reason if running[1][0] not in kept else 'the slice it was gridding is no longer shown')
+        elif shown is not None and shown[0]['id'] not in kept:
+            notice = f'Surface cleared: {reason}'
+        if notice:
+            self._interpolation_status.setText(f'{notice}. {self._interpolation_status.text()}')
+
+    @staticmethod
+    def _inputs(entry):
+        """What a survey's surfaces are gridded from: its record less name and visibility.
+
+        Those two are all the store edits in place, so any other difference means
+        the snapshot behind the id is not the one a cached surface came from.
+        """
+        return {k: v for k, v in entry.items() if k not in ('name', 'visible')}
+
+    def _keep_cached(self, kept):
+        """Forget what was loaded or gridded for every survey not in ``kept``.
+
+        A job still gridding one of them is stopped as well: what it returns
+        would be a surface of a snapshot the map no longer holds.
+        """
+        self._arrays = {k: v for k, v in self._arrays.items() if k in kept}
+        self._surfaces = {k: v for k, v in self._surfaces.items() if k[0] in kept}
+        if self._slices_for not in kept:
+            self._slices_for = None
+        if self._surface_job is not None and self._surface_job[1][0] not in kept:
+            self._cancel_surface()
 
     def _filtered(self):
         return [e for e in self._entries if e['frame'] == self._frame.currentData()
@@ -343,8 +436,17 @@ class ProjectMapModule(BaseModule):
     def _filter_changed(self, *_):
         self._list.blockSignals(True)
         self._list.clear()
-        for entry in self._filtered():
-            item = QTreeWidgetItem([entry['name'], entry['method']])
+        entries = self._filtered()
+        names = Counter(entry['name'] for entry in entries)
+        for entry in entries:
+            label = entry['name']
+            if names[label] > 1:
+                # Two surveys of one name ("TDEM", "TDEM") cannot be told apart
+                # in the list, and the hidden one could be selected unnoticed;
+                # the file each came from, or the day it was added, can.
+                added = str(entry.get('created_at', ''))[:16].replace('T', ' ')
+                label += f" · {entry.get('source_file') or added}"
+            item = QTreeWidgetItem([label, entry['method']])
             item.setData(0, Qt.UserRole, entry['id'])
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
             item.setCheckState(0, Qt.Checked if entry.get('visible', True) else Qt.Unchecked)
@@ -355,7 +457,12 @@ class ProjectMapModule(BaseModule):
             if entry['id'] == self._selected:
                 self._list.setCurrentItem(item)
         if self._list.currentItem() is None and self._list.topLevelItemCount():
-            self._list.setCurrentItem(self._list.topLevelItem(0))
+            # Open on a survey the map shows. A hidden one has no slice drawn to
+            # interpolate, so starting on it left Interpolate disabled beside a
+            # slice and a method that looked chosen.
+            items = [self._list.topLevelItem(i) for i in range(self._list.topLevelItemCount())]
+            shown = [item for item in items if item.checkState(0) == Qt.Checked]
+            self._list.setCurrentItem((shown or items)[0])
         self._list.blockSignals(False)
         self._ax = None
         self._choose(self._list.currentItem(), None)
@@ -371,6 +478,11 @@ class ProjectMapModule(BaseModule):
     def _choose(self, item, _previous):
         self._selected = item.data(0, Qt.UserRole) if item else None
         entry = self._entry()
+        # Rebuilding the list for the survey it already holds -- the page shown
+        # again, another layer added or renamed -- keeps the chosen slice. Back on
+        # 'Survey locations', a surface kept for that slice would drop out of
+        # view and a job still gridding it would be cancelled as a new selection.
+        keep = self._depth.currentIndex() if entry and entry['id'] == self._slices_for else 0
         self._details.setText('')
         if entry:
             kind = {'em': 'Soundings / section', 'mesh': 'Section model',
@@ -410,6 +522,11 @@ class ProjectMapModule(BaseModule):
                     self._result_stack.setCurrentWidget(self._mesh_view)
             except Exception as exc:
                 self._empty.setText(f"Cannot load {entry['name']}: {exc}")
+        if 0 < keep < self._depth.count():
+            self._depth.blockSignals(True)
+            self._depth.setCurrentIndex(keep)
+            self._depth.blockSignals(False)
+        self._slices_for = entry['id'] if entry else None
         self._depth.setEnabled(bool(entry and entry['kind'] in ('em', 'grid')))
         griddable = bool(entry and entry['kind'] in ('em', 'grid', 'points'))
         for widget in (self._interp, self._interp_res, self._interp_blank, self._stations):
@@ -492,25 +609,14 @@ class ProjectMapModule(BaseModule):
         method = self._interp.currentData()
         if method is None:
             return None
-        from PyHydroGeophysX.core.plan_interpolation import plan_grid
         blank = float(self._interp_blank.value()) or None
         key = (entry['id'], self._depth.currentIndex(), method,
                int(self._interp_res.value()), blank)
+        self._surface_request = (key, xy, values, dict(method=method, log_values=log_scale,
+                                resolution=int(self._interp_res.value()), max_distance=blank))
         result = self._surfaces.get(key, None)
         if result is None:
-            if len(self._surfaces) > 24:
-                self._surfaces.clear()
-            try:
-                result = plan_grid(xy, values, method=method, log_values=log_scale,
-                                   resolution=int(self._interp_res.value()),
-                                   max_distance=blank)
-            except ValueError as exc:
-                # A refusal is about this layer, not the map: keep the stations
-                # drawn and say why the surface is missing.
-                self._surfaces[key] = False
-                errors.append(f'{self._interp.currentText()}: {exc}')
-                return None
-            self._surfaces[key] = result
+            return None
         if result is False:
             return None
         self._surface = (entry, result, self._depth.currentText())
@@ -532,6 +638,94 @@ class ProjectMapModule(BaseModule):
         return self._ax.pcolormesh(result['x_edges'], result['y_edges'], result['grid'],
                                    cmap=cmap, norm=norm, zorder=1, alpha=.92,
                                    shading='flat', rasterized=True)
+
+    def _start_surface(self):
+        if self._surface_request is None or self._surface_job is not None:
+            return
+        key, xy, values, options = self._surface_request
+        self._surface_token += 1
+        token = self._surface_token
+        worker = SurfaceWorker(np.array(xy, copy=True), np.array(values, copy=True), options)
+        self._surface_job = (worker, key, token)
+        worker.progressed.connect(lambda percent, message: self._surface_progress(token, percent, message))
+        worker.succeeded.connect(lambda result: self._surface_ready(token, key, result))
+        worker.failed.connect(lambda message: self._surface_failed(token, message))
+        self._interpolate_button.setEnabled(False)
+        self._interpolate_button.setText('Interpolating…')
+        self._interpolation_progress.setValue(0)
+        self._interpolation_progress.setVisible(True)
+        self._cancel_interpolation.setVisible(True)
+        self._interpolation_status.setText('Preparing interpolation… You can keep using the map.')
+        self.register_worker(worker)
+        worker.start()
+
+    def _surface_progress(self, token, percent, message):
+        if self._surface_job is not None and token == self._surface_token:
+            self._interpolation_progress.setValue(percent)
+            self._interpolation_status.setText(message)
+
+    def _surface_ready(self, token, key, result):
+        if self._surface_job is None or token != self._surface_token:
+            return
+        self._surface_job = None
+        if self._surface_request is None or self._surface_request[0] != key:
+            return
+        if len(self._surfaces) > 24:
+            self._surfaces.clear()
+        self._surfaces[key] = result
+        self._draw_map()
+        self._interpolation_status.setText('Interpolation complete — the surface is ready to view or export.')
+        self._interpolation_progress.setValue(100)
+
+    def _surface_failed(self, token, message):
+        if self._surface_job is None or token != self._surface_token:
+            return
+        self._surface_job = None
+        self._sync_surface_controls()
+        self._interpolation_status.setText(f'Could not interpolate: {message} Adjust the settings and try again.')
+
+    def _cancel_surface(self, message='Interpolation cancelled. Click Interpolate to try again.'):
+        if self._surface_job is None:
+            return
+        worker, _, _ = self._surface_job
+        self._surface_token += 1
+        self._surface_job = None
+        worker.cancel()
+        self._sync_surface_controls()
+        self._interpolation_status.setText(message)
+
+    def _sync_surface_controls(self):
+        busy = self._surface_job is not None
+        self._interpolate_button.setEnabled(self._surface_request is not None and not busy)
+        self._interpolate_button.setText('Interpolating…' if busy else 'Interpolate')
+        self._cancel_interpolation.setVisible(busy)
+        self._interpolation_progress.setVisible(busy)
+        if not busy:
+            self._interpolation_status.setText(
+                'Surface ready. Change settings and click Interpolate to update.' if self._surface is not None else
+                'Ready — click Interpolate to create the map surface.' if self._surface_request is not None else
+                self._surface_hint())
+
+    def _surface_hint(self):
+        """What stands between the selection and a surface to interpolate.
+
+        The one line used to be "Choose a data slice and an interpolation method"
+        whatever the cause, which reads as a fault when both are chosen and the
+        selected survey is merely hidden on the map.
+        """
+        entry = self._entry()
+        if entry is None:
+            return 'Select a survey in the list to map its values.'
+        if not entry.get('visible', True):
+            return (f"“{entry['name']}” is hidden on the map. Tick it in the survey list "
+                    "to show its slices and interpolate them.")
+        if entry['kind'] not in ('em', 'grid', 'points'):
+            return 'A section model has no plan slice to interpolate.'
+        if entry['kind'] in ('em', 'grid') and self._depth.currentData() is None:
+            return 'Choose a data slice to map, then an interpolation method under Surface.'
+        if self._interp.currentData() is None:
+            return 'Choose an interpolation method under Surface to grid this slice.'
+        return 'This slice has no values to interpolate; the note below the map says why.'
 
     def _show_variogram(self):
         if self._surface is None or not self._surface[1].get('variogram'):
@@ -650,6 +844,7 @@ class ProjectMapModule(BaseModule):
         self._ax = self._fig.add_subplot(111)
         self._artists = {}
         self._surface, self._surface_note = None, ''
+        self._surface_request = None
         self._map_coloured = False     # set by _draw_slice when a slice is coloured
         all_xy = []
         errors = []
@@ -745,6 +940,10 @@ class ProjectMapModule(BaseModule):
         self._export_grid.setEnabled(self._surface is not None)
         self._variogram_button.setEnabled(
             self._surface is not None and bool(self._surface[1].get('variogram')))
+        if self._surface_job is not None and (
+                self._surface_request is None or self._surface_request[0] != self._surface_job[1]):
+            self._cancel_surface('Selection changed. Click Interpolate to calculate the new surface.')
+        self._sync_surface_controls()
         if errors:
             self._note.setText(' · '.join(errors))
         elif self._surface_note:
@@ -910,6 +1109,7 @@ class ProjectMapModule(BaseModule):
                 ('Interpolated plan grid (ASCII / CSV)', self._export_surface)]
 
     def stop_workers(self, wait_ms=30000):
+        self._cancel_surface()
         super().stop_workers(wait_ms)
 
     def closeEvent(self, event):

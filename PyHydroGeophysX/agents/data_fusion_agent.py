@@ -398,10 +398,6 @@ Provide a brief explanation (3-4 sentences) suitable for a user about:
             'workflow': pattern_info['workflow']
         }
     
-    def _log_execution(self, message: str, level: str = 'INFO'):
-        """Log execution message."""
-        print(f"[{self.name}] [{level}] {message}")
-    
     def execute_full_workflow(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute the complete multi-method data fusion workflow, not just planning.

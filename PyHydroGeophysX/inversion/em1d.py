@@ -76,7 +76,7 @@ DEFAULT_INVERSION = {
     # over ``reference_window`` stations each side, ``line`` gives each line one
     # half-space, ``global`` gives the survey one. A positive
     # ``reference_resistivity`` overrides the mode and pins every station to it.
-    # See :func:`PyHydroGeophysX.workflows.em1d._reference_starts`.
+    # See :func:`PyHydroGeophysX.inversion.em1d_line._reference_starts`.
     "reference_model_mode": "neighbor",
     "reference_window": 2,
     "reference_resistivity": 0.0,

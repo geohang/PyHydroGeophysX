@@ -115,16 +115,44 @@ def save_mesh_artifact(
     return bms, sidecar
 
 
+def read_bms(mesh_path: str | Path, *, neighbours: bool = True) -> Any:
+    """Read a BMS mesh file, through an ASCII path when PyGIMLi needs one.
+
+    ``neighbours`` False skips the table of each cell's neighbours, which BMS
+    does not hold and PyGIMLi rebuilds on load - on a 3-D mesh most of the
+    time a load takes (1.7 of 2.3 s for 70 000 tetrahedra), spent in one call
+    that holds the interpreter, so a window loading the mesh stops meanwhile.
+    Everything else is as ``pygimli.load`` gives it, the faces' cells on either
+    side included, and PyGIMLi builds the table when something asks for it
+    (``createNeighborInfos``).
+    """
+    import pygimli as pg
+
+    def read(path: str) -> Any:
+        if neighbours or not hasattr(pg.Mesh, "loadBinaryV2"):
+            return pg.load(path)
+        mesh = pg.Mesh(3)
+        mesh.loadBinaryV2(path)
+        return mesh
+
+    loaded: Dict[str, Any] = {}
+    via_ascii_path(lambda p: loaded.setdefault("mesh", read(p)), Path(mesh_path), mode="read")
+    return loaded["mesh"]
+
+
 def load_mesh_artifact(
     mesh_path: str | Path,
     sidecar_path: str | Path,
+    *,
+    neighbours: bool = True,
 ) -> Any:
-    """Load BMS and restore every structure recorded by its sidecar."""
+    """Load BMS and restore every structure recorded by its sidecar.
+
+    ``neighbours`` as for :func:`read_bms`.
+    """
     import pygimli as pg
 
-    loaded: Dict[str, Any] = {}
-    via_ascii_path(lambda p: loaded.setdefault("mesh", pg.load(p)), Path(mesh_path), mode="read")
-    mesh = loaded["mesh"]
+    mesh = read_bms(mesh_path, neighbours=neighbours)
     payload = json.loads(Path(sidecar_path).read_text(encoding="utf-8"))
     if int(mesh.nodeCount()) != int(payload["node_count"]):
         raise ValueError("Mesh node count changed during BMS round-trip.")
@@ -148,4 +176,5 @@ def load_mesh_artifact(
     return mesh
 
 
-__all__ = ["ansi_safe", "load_mesh_artifact", "save_mesh_artifact", "via_ascii_path"]
+__all__ = ["ansi_safe", "load_mesh_artifact", "read_bms", "save_mesh_artifact",
+           "via_ascii_path"]

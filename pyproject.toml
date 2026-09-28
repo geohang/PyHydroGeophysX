@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "PyHydroGeophysX"
-version = "0.4.0"
+version = "0.5.0"
 description = "A comprehensive Python package for integrating hydrological model outputs with geophysical forward modeling and inversion, featuring an automatic cross-modal geophysics agent for subsurface hydrology"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -36,6 +36,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "numpy>=1.21,<3.0",
@@ -99,6 +101,7 @@ webapp = [
 ]
 desktop = [
     "pyproj>=3.4",
+    "psutil>=5.9",
     "PySide6>=6.5",
     "pyqtgraph>=0.13",
     "qtawesome>=1.2",
@@ -145,7 +148,7 @@ all = [
     "pandas>=1.3.0", "requests>=2.25",
     "streamlit>=1.35,<2.0", "plotly>=5.18,<7.0", "streamlit-plotly-events>=0.0.6", "pyarrow>=14.0",
     "obspy>=1.4.0",
-    "PySide6>=6.5", "pyqtgraph>=0.13", "qtawesome>=1.2",
+    "PySide6>=6.5", "pyqtgraph>=0.13", "qtawesome>=1.2", "psutil>=5.9",
     "pyvista>=0.40", "pyvistaqt>=0.10", "vtk>=9.2",
     "sphinx>=5.0", "sphinx-gallery", "sphinx_rtd_theme",
     "pytest>=7.0", "pytest-cov", "black", "flake8",
@@ -170,18 +173,11 @@ where = ["."]
 include = ["PyHydroGeophysX*"]
 
 [tool.setuptools.package-data]
-# Include compact Qt resources when present; the larger examples/ tree is not
-# included by these package-data patterns.
+# The studio's window icon and its input-format notes. Example data and the
+# Streamlit apps live in examples/ and come with the source repository, not the
+# wheel; the pages that offer example data say so when it is absent.
 PyHydroGeophysX = [
-    "data/*",
-    "data/qt_examples/*.md",
-    "data/qt_examples/geo_hydrology/*",
-    "data/qt_examples/seismic3d/line1/*",
-    "data/qt_examples/seismic3d/line2/*",
-    "data/qt_examples/seismic3d/line3/*",
-    "data/em_examples/*",
-    "data/em_examples/EastRiver_VTEM/*",
-    "data/em_examples/synthetic_tem_lci/*",
+    "logo.png",
     "*.md",
     "qt_apps/modules/*.md",
 ]

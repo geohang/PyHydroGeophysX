@@ -31,9 +31,9 @@ it changed, and whether that worked.
 """
 
 import json
-import re
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from ..._internal.utils import parse_json_object
 from .context import RunContext
 
 #: How many times one tool may be recovered within a run. One retry catches the
@@ -106,13 +106,7 @@ def _extract_json(text: str) -> Optional[Dict[str, Any]]:
     """
     if not text:
         return None
-    match = re.search(r"\{.*\}", str(text), re.S)
-    if not match:
-        return None
-    try:
-        parsed = json.loads(match.group(0))
-    except ValueError:
-        return None
+    parsed = parse_json_object(str(text))
     return parsed if isinstance(parsed, dict) else None
 
 

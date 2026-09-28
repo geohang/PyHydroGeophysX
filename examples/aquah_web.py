@@ -232,7 +232,14 @@ def render_aquah_chat(sidebar_state: Dict[str, Any]) -> None:
     provider = providers.make_provider(prov_id, model=model, api_key=api_key or None)
     ok, reason = provider.available()
     if not ok:
-        st.warning(f"{reason} Set it in the sidebar (provider/model/API key).")
+        if reason.startswith("No API key"):
+            # The provider's own sentence says "paste a key below", which is the
+            # desktop chat's layout; this panel has no key field of its own.
+            env_key = providers.PROVIDER_META[prov_id]["env_key"]
+            reason = (f"No API key for {providers.PROVIDER_META[prov_id]['label']}. Enter one "
+                      "in the sidebar under **AI connection** and click **Initialize**, or set "
+                      f"`{env_key}` in the environment before starting the app.")
+        st.warning(reason)
         return
     tier = providers.tier_for_model(prov_id, provider.model)
     level = providers.MODEL_TIERS.get(tier, {}).get("name", "Custom")
@@ -278,7 +285,7 @@ def render_aquah_chat(sidebar_state: Dict[str, Any]) -> None:
             st.json(cfg_now)
     st.caption(
         "Next: describe your task (or refine it). AQUAH sets the config, then runs when ready; "
-        "results appear in the **Results** tab and the bridge panel."
+        "it summarizes the results here, and the full results panel appears under **🚀 One-click**."
     )
 
     # Build controller wired to the real engine.
@@ -326,8 +333,13 @@ def render_aquah_chat(sidebar_state: Dict[str, Any]) -> None:
             with st.spinner("Running workflow…"):
                 summary = run_fn(cfg)
             st.session_state.aquah_last_summary = summary
-            st.success(f"Workflow finished (status: {summary.get('status')}). "
-                       "See the Results tab for figures and the full report.")
+            message = (f"Workflow finished (status: {summary.get('status')}). "
+                       "Switch to 🚀 One-click for the figures and the full report.")
+            if summary.get("status") == "ok":
+                st.success(message)
+            else:
+                details = summary.get("error") or "; ".join(summary.get("warnings") or [])
+                st.warning(message + (f" {details}" if details else ""))
 
 
 def _render_events(st_module: Any, events: List[Dict[str, Any]]) -> str:
@@ -357,6 +369,9 @@ def _make_run_fn(output_dir: str) -> Callable[[Dict[str, Any]], Dict[str, Any]]:
     import streamlit as st
 
     def run_fn(config: Dict[str, Any]) -> Dict[str, Any]:
+        # A new run replaces the last result, so a run that fails cannot leave
+        # the previous run's results showing as if they were its own.
+        st.session_state.workflow_result = None
         try:
             from PyHydroGeophysX.agents import BaseAgent
         except Exception as exc:  # noqa: BLE001
@@ -381,8 +396,12 @@ def _make_run_fn(output_dir: str) -> Callable[[Dict[str, Any]], Dict[str, Any]]:
             "report_files": files,
             "workflow_config": cfg,
         }
+        # "ok" only for a run that completed; one that fell short says so, with
+        # the reasons, so the assistant does not tell the user it is done.
+        finished = results if isinstance(results, dict) else {}
         return {
-            "status": "ok",
+            "status": "incomplete" if finished.get("status") == "incomplete" else "ok",
+            "warnings": list(finished.get("warnings") or []),
             "interpretation": (interp or "")[:1500] if isinstance(interp, str) else "",
             "report_files": files or {},
             "steps": len(plan or []),

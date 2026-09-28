@@ -21,13 +21,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import json
-import math
 import os
 from pathlib import Path
+import re
 import shutil
 import time
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 import uuid
+
+from PyHydroGeophysX._internal.utils import json_safe
 
 
 STORE_SCHEMA_VERSION = "1"
@@ -85,44 +87,69 @@ def normalize_status(value: Any) -> str:
         return "failed"
     if raw in _CANCELLED:
         return "cancelled"
-    if raw in {"running", "interrupted"}:
+    # "incomplete": the run ended short of what it was asked for - no step ran,
+    # it was cut off before its report, or a requested product is missing. Kept
+    # as its own status because an unknown one is filed as a success.
+    if raw in {"running", "interrupted", "incomplete"}:
         return raw
     return "unknown"
 
 
 def _json_safe(value: Any) -> Any:
-    """Return a conservative JSON view without importing NumPy eagerly."""
-    if isinstance(value, float):
-        return value if math.isfinite(value) else None
-    if value is None or isinstance(value, (str, int, bool)):
-        return value
-    if isinstance(value, Path):
-        return str(value)
+    """Return a conservative JSON view without importing NumPy eagerly.
+
+    Arrays of more than 2048 values are summarised rather than listed, so a
+    run record stays small enough to reload quickly.
+    """
+    return json_safe(value, array_limit=2048)
+
+
+def _run_relative(value: Any, run_dir: Path) -> Any:
+    """``value`` with every absolute path into ``run_dir`` made run-relative.
+
+    A record that names its own files by absolute path stops resolving as soon
+    as the Project folder is moved or renamed, so a run records them relative to
+    its own folder and :meth:`ResultsStore.locate_run_artifact` resolves them
+    again. Paths outside the run are references, not files the run owns, and
+    are left as they are. Returns a new structure; ``value`` is not modified.
+    """
     if isinstance(value, Mapping):
-        return {str(key): _json_safe(item) for key, item in value.items()}
+        return {key: _run_relative(item, run_dir) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
-        return [_json_safe(item) for item in value]
-    if hasattr(value, "shape") and hasattr(value, "dtype"):
+        return [_run_relative(item, run_dir) for item in value]
+    if isinstance(value, Path):
+        value = str(value)
+    if isinstance(value, str) and 2 < len(value) < 4096 and ("/" in value or "\\" in value):
         try:
-            shape = [int(part) for part in value.shape]
-            size = int(value.size)
-            if size <= 2048 and hasattr(value, "tolist"):
-                return _json_safe(value.tolist())
-            return {
-                "$array": {
-                    "shape": shape,
-                    "dtype": str(value.dtype),
-                    "size": size,
-                }
-            }
-        except Exception:
+            candidate = Path(value)
+            if candidate.is_absolute():
+                return Path(os.path.abspath(candidate)).relative_to(run_dir).as_posix()
+        except (ValueError, OSError):
             pass
-    if hasattr(value, "item"):
+    return value
+
+
+def _rebased_into(value: str, run_dir: Path) -> Optional[Path]:
+    """The file an absolute path named in this run's earlier location, if it is here.
+
+    A record written before paths were stored run-relative names its files by
+    where the Project was then. After a move or a rename the run folder keeps
+    its own name, so the part of the path after that name still leads to the
+    file, now under ``run_dir``.
+    """
+    parts = [part for part in re.split(r"[\\/]+", str(value)) if part]
+    name = os.path.normcase(run_dir.name)
+    for index, part in enumerate(parts):
+        if os.path.normcase(part) != name:
+            continue
+        candidate = run_dir.joinpath(*parts[index + 1:]).resolve()
         try:
-            return _json_safe(value.item())
-        except Exception:
-            pass
-    return str(value)
+            candidate.relative_to(run_dir)
+        except ValueError:
+            continue
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def _atomic_write_json(
@@ -365,6 +392,11 @@ class ResultsStore:
         if record.status == "unknown":
             record.status = "success"
         record.finished_at = _utc_now()
+        # The workflow names its outputs by absolute path; the record keeps them
+        # relative to the run folder, so a moved or renamed Project still opens.
+        # Copies: the page that ran this keeps the paths it was handed.
+        run_dir = record.run_dir.resolve()
+        payload = _run_relative(payload, run_dir)
         record.summary = dict(payload.get("summary") or {})
         record.metrics = dict(payload.get("metrics") or {})
         record.warnings = [str(item) for item in payload.get("warnings") or []]
@@ -502,7 +534,17 @@ class ResultsStore:
             raise KeyError(run_id)
         if record.status == "running":
             raise RuntimeError("A running computation cannot be discarded.")
-        self._remove_run_directory(record.run_dir)
+        try:
+            self._remove_run_directory(record.run_dir)
+        except OSError as exc:
+            # A delete refused part way has already removed what it reached, so
+            # the run can no longer be saved as it ran. Left staged, a later Save
+            # put a run whose files were gone into the history.
+            self._unsaved.pop(key, None)
+            self._unsaved_payloads.pop(key, None)
+            raise OSError(f"{exc} The run itself is discarded; what is left of its "
+                          "folder is offered for removal the next time this Project "
+                          "is opened.") from exc
         self._unsaved.pop(key, None)
         self._unsaved_payloads.pop(key, None)
 
@@ -562,7 +604,22 @@ class ResultsStore:
             raise ValueError("Refusing to delete a run outside this Result Store.") from exc
         if len(relative.parts) != 1 or target == runs_root:
             raise ValueError("Refusing to delete an invalid run directory.")
-        shutil.rmtree(target)
+        try:
+            shutil.rmtree(target)
+        except OSError as exc:
+            # Windows refuses while a program has a file in the folder open, or
+            # has the folder as its working directory, and by then the delete has
+            # removed what it reached. A folder left without a record is marked
+            # unsaved again, so abandoned_run_dirs offers to clear it rather than
+            # it staying in the Project unlisted.
+            if target.is_dir() and not (target / RUN_FILENAME).exists():
+                try:
+                    (target / UNSAVED_MARKER).write_text(_UNSAVED_NOTE, encoding="utf-8")
+                except OSError:
+                    pass
+            raise OSError(f"Could not delete the run folder {target}: "
+                          f"{exc.strerror or exc}. Windows refuses while a program "
+                          "still has a file in it open.") from exc
 
     def update_run(self, run_id: str, *, label: Optional[str] = None, notes: Optional[str] = None) -> RunRecord:
         record = self.get_run(run_id)
@@ -733,9 +790,24 @@ class ResultsStore:
         base = record.run_dir.resolve()
         try:
             resolved.relative_to(base)
-        except ValueError as exc:
-            raise ValueError(f"Artifact path escapes run directory: {value}") from exc
-        return resolved
+            return resolved
+        except ValueError:
+            pass
+        # A record from before paths were kept run-relative, in a Project that
+        # has since been moved or renamed: the file is still in this run's
+        # folder, under its new location.
+        rebased = _rebased_into(str(value), base)
+        if rebased is not None:
+            return rebased
+        if any(os.path.normcase(part) == os.path.normcase(base.name)
+               for part in re.split(r"[\\/]+", str(value))):
+            raise ValueError(
+                f"This run's record names {value}, in the run's earlier location, "
+                f"and the file is not in its current folder ({base}) either.")
+        raise ValueError(
+            f"{value} is outside this run's folder ({base}), so it is not opened: "
+            "a run only reads the files it wrote into its own folder. The record "
+            "may have been copied from another Project or edited by hand.")
 
     def scratch_dir(self, module_key: str) -> Path:
         if self.read_only:

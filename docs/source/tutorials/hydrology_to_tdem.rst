@@ -25,11 +25,19 @@ Steps
    from PyHydroGeophysX.forward.tdem_forward import TDEMForwardModeling, TDEMSurveyConfig
    from PyHydroGeophysX.forward.fdem_forward import FDEMForwardModeling, FDEMSurveyConfig
 
-   cfg = TDEMSurveyConfig(source_type="VMD", source_location=[0, 0, 1], receiver_location=[0, 0, 1])
-   fwd = TDEMForwardModeling(cfg)
+   thicknesses = np.array([5.0, 10.0, 20.0])  # four layers
+
+   # Central-loop TDEM: a 10 m circular loop with the receiver at its centre
+   cfg = TDEMSurveyConfig(
+       source_location=np.array([0.0, 0.0, 1.0]),
+       source_radius=10.0,
+       receiver_location=np.array([0.0, 0.0, 1.0]),
+       times=np.logspace(-5, -2, 20),
+   )
+   fwd = TDEMForwardModeling(thicknesses=thicknesses, survey_config=cfg)
 
    fdem_cfg = FDEMSurveyConfig(frequencies=np.logspace(2, 4, 12))
-   fdem_fwd = FDEMForwardModeling(thicknesses=np.array([5.0, 10.0, 20.0]), survey_config=fdem_cfg)
+   fdem_fwd = FDEMForwardModeling(thicknesses=thicknesses, survey_config=fdem_cfg)
 
 Related Example
 ---------------

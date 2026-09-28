@@ -3,6 +3,8 @@ import json
 import os
 from pathlib import Path
 
+from PyHydroGeophysX._internal.utils import parse_json_object
+
 ROLES = ('data_file', 'time_lapse_files', 'electrode_file', 'seismic_file',
          'raw_seismic_file', 'tdem_file', 'topography_file', 'geophone_file',
          'reference_file', 'modflow_dir', 'parflow_dir', 'unknown', 'ignore')
@@ -71,10 +73,10 @@ def classify_catalog(catalog, request, provider, progress=None):
                      f'Files {start+1}–{min(start+30, len(rows))} of {len(rows)}')
         batch = [{'index': i, **row} for i, row in enumerate(rows[start:start+30], start)]
         reply = provider.complete(system, [{'role': 'user', 'content': json.dumps({'request': request, 'files': batch})}], [])
-        text = (reply.get('content') or '').strip()
-        if text.startswith('```'):
-            text = text.split('\n', 1)[1].rsplit('```', 1)[0]
-        items = json.loads(text).get('files', [])
+        answer = parse_json_object(reply.get('content') or '')
+        if not isinstance(answer, dict):
+            raise ValueError('AI returned no JSON file classification; retry classification.')
+        items = answer.get('files', [])
         indexed = {}
         for item in items:
             i = item.get('index')

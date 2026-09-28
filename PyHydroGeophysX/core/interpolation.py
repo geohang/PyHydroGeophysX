@@ -112,32 +112,44 @@ def setup_profile_coordinates(point1: List[int],
                             num_points: int = 200) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Set up profile coordinates based on surface elevation data between two points
-    
+
+    The profile starts at ``point2`` (distance zero) and runs toward ``point1``,
+    stopping one step short of it: ``num_points - 1`` samples, spaced
+    ``distance / (num_points - 1)`` apart. The examples, and the data bundled
+    with them (``TL_measurements``, ``Seismic``), were built on this layout, and
+    ``create_mesh_from_layers`` places each layer's region marker from the first
+    node of the profile, so a profile run the other way puts the regolith and
+    bedrock markers in each other's layers.
+
     Args:
-        point1: Starting point indices [col, row]
-        point2: Ending point indices [col, row]
+        point1: End point indices [col, row]; the profile stops one step before it
+        point2: Start point indices [col, row]; distance zero
         surface_data: 2D array of surface elevation data
         origin_x: X coordinate of origin
         origin_y: Y coordinate of origin
         pixel_width: Width of each pixel
         pixel_height: Height of each pixel (negative for top-down)
-        num_points: Number of points along profile
-        
+        num_points: Size of the spacing along the profile (an integer >= 2); the
+            profile holds ``num_points - 1`` of its points
+
     Returns:
         X_pro: X coordinates along profile
         Y_pro: Y coordinates along profile
         L_profile: Distances along profile
         XX: X coordinate grid
         YY: Y coordinate grid
+
+    Raises:
+        ValueError: ``num_points`` is not an integer >= 2, or the endpoints are
+            the same location.
     """
+    if isinstance(num_points, (bool, np.bool_)) or int(num_points) != num_points or num_points < 2:
+        raise ValueError("num_points must be an integer >= 2.")
+    num_points = int(num_points)
     # Create coordinate grids
     x = origin_x + pixel_width * np.arange(surface_data.shape[1])
     y = origin_y + pixel_height * np.arange(surface_data.shape[0])
     XX, YY = np.meshgrid(x, y)
-    
-    # Handle no-data values
-    surface_data = surface_data.copy()
-    surface_data[surface_data == 0] = np.nan
     
     # Calculate start and end positions
     P1_pos = np.array([x[point1[0]], y[point1[1]]])
@@ -146,7 +158,10 @@ def setup_profile_coordinates(point1: List[int],
     # Calculate total distance
     dis = np.sqrt(np.sum((P1_pos - P2_pos)**2))
     
-    # Generate profile coordinates
+    if not np.isfinite(dis) or dis <= 0:
+        raise ValueError("Profile endpoints must be distinct finite locations.")
+    # Generate profile coordinates: from point2 toward point1, num_points - 1
+    # samples (see the docstring for why this layout is kept).
     X_pro = (x[point1[0]] - x[point2[0]])/dis * np.linspace(0, dis, num_points)[:-1] + x[point2[0]]
     Y_pro = (y[point1[1]] - y[point2[1]])/dis * np.linspace(0, dis, num_points)[:-1] + y[point2[1]]
     
@@ -231,27 +246,40 @@ def interpolate_to_mesh(
     Interpolate property values from profile to mesh with layer-specific handling.
     
     Args:
-        property_values: Array shaped (vertical samples, profile points);
-            must match depth_values[:14] in this legacy implementation.
+        property_values: Array shaped (layers, profile points), any number of
+            layers.
         profile_distance: Distance along profile (n_points)
-        depth_values: Vertical coordinates (layers, profile points), in
-            the same datum/units as mesh_y; only the first 14 layers are used.
+        depth_values: Vertical coordinates (at least as many rows as
+            property_values, profile points), in the same datum/units as
+            mesh_y. Row i locates property row i, so with the usual layer
+            surfaces (top plus one bottom per layer) each layer is placed at
+            its top; rows beyond property_values' are not used.
         mesh_x: X coordinates of mesh cells
         mesh_y: Y coordinates of mesh cells
         mesh_markers: One layer marker per mesh cell. Cells outside
             layer_markers retain zero in the output.
         ID: Source layer labels shaped like property_values.
         layer_markers: List of marker values for each layer
-    
+
     Returns:
         Interpolated values for mesh cells
+
+    Raises:
+        ValueError: depth_values has fewer rows, or a different number of
+            profile points, than property_values.
     """
     # Initialize output array
     result = np.zeros_like(mesh_markers, dtype=float)
 
     L_profile_new = np.repeat(profile_distance.reshape(1,-1),property_values.shape[0],axis=0)
 
-    Depth = depth_values[:14]
+    # One depth row per property row. This took the first 14 rows whatever
+    # the layer count, so only a 14-layer model could be interpolated.
+    Depth = np.asarray(depth_values)[:property_values.shape[0]]
+    if Depth.shape != np.shape(property_values):
+        raise ValueError(
+            f"depth_values {np.shape(depth_values)} needs at least one row per row of "
+            f"property_values {np.shape(property_values)}, over the same profile points.")
 
     maxele = 0  # No elevation shift; source and mesh coordinates must agree.
 
@@ -354,9 +382,11 @@ class ProfileInterpolator:
         Interpolate property values from profile to mesh with layer-specific handling.
         
         Args:
-            property_values: Property values array (n_points or n_layers, n_points)
-            depth_values: Vertical coordinates (layers, profile points), in
-            the same datum/units as mesh_y; only the first 14 layers are used.
+            property_values: Property values array (n_layers, n_points), any
+                number of layers
+            depth_values: Vertical coordinates, at least one row per
+                property row, in the same datum/units as mesh_y; see the
+                module-level interpolate_to_mesh.
             mesh_x, mesh_y: Coordinates of mesh cells
             mesh_markers: One layer marker per mesh cell. Cells outside
             layer_markers retain zero in the output.

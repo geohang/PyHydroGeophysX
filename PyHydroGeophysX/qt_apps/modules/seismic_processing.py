@@ -52,10 +52,9 @@ from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
 from PyHydroGeophysX.qt_apps.widgets.seismic_viewer import SeismicViewer, first_arrival_onsets
-from PyHydroGeophysX.qt_apps.workers import TaskWorker, WorkflowWorker
+from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker, TaskWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
-    RunContext,
     WorkflowRunResult,
     WorkflowSpec,
     export_workflow_bundle,
@@ -109,7 +108,7 @@ class SeismicProcessingModule(BaseModule):
         self._geo_positions: Optional[Dict[int, Tuple[float, float]]] = None  # trace idx -> (x, z)
         self._shot_spacing: Optional[float] = None  # regular shot interval (m); auto-fills shot_x per record
         self._shot0_x: float = 0.0  # x of the first record's shot
-        self._srt_worker: Optional[WorkflowWorker] = None
+        self._srt_worker: Optional[ProcessWorkflowWorker] = None
         self._srt_busy: Optional[BusyStateController] = None
         self._srt_spec: Optional[WorkflowSpec] = None
         self._srt_recipe_path: str = ""
@@ -120,6 +119,8 @@ class SeismicProcessingModule(BaseModule):
         self._proc_cache: Optional[np.ndarray] = None
         self._proc_key: Optional[tuple] = None
         self._recompute_debounced = Debouncer(self._recompute, 80)
+        # Typing "0.5" passes through 0 and 0.: the picks move once, at the end.
+        self._geometry_debounced = Debouncer(self._on_geometry_changed, 250)
 
         root = QHBoxLayout(self)
         # Both views keep their colour maps in the session's shared choices.
@@ -193,9 +194,11 @@ class SeismicProcessingModule(BaseModule):
         sform.addRow("Record", self._shot_combo)
         self._spacing = QDoubleSpinBox()
         self._spacing.setRange(0.05, 1000.0); self._spacing.setValue(1.0); self._spacing.setSuffix(" m")
+        self._spacing.valueChanged.connect(self._geometry_debounced.trigger)
         sform.addRow("Geophone spacing", self._spacing)
         self._geo_start = QDoubleSpinBox()
         self._geo_start.setRange(-100000.0, 100000.0); self._geo_start.setValue(0.0); self._geo_start.setSuffix(" m")
+        self._geo_start.valueChanged.connect(self._geometry_debounced.trigger)
         sform.addRow("Geophone 0 x", self._geo_start)
         self._shot_x = QDoubleSpinBox()
         self._shot_x.setRange(-100000.0, 100000.0); self._shot_x.setValue(0.0); self._shot_x.setSuffix(" m")
@@ -842,13 +845,47 @@ class SeismicProcessingModule(BaseModule):
             return self._geo_positions[int(trace)]
         return (self._geo_start.value() + int(trace) * self._spacing.value(), 0.0)
 
+    def _geophone_xs(self) -> List[float]:
+        """x of every geophone of the record on screen, where a pick would put it."""
+        count = (int(self._raw.shape[1]) if self._raw is not None
+                 else len(self._geo_positions or {}))
+        return [float(self._receiver_position(trace)[0]) for trace in range(count)]
+
+    def _on_geometry_changed(self) -> None:
+        """Put the picks' geophones where the spacing and geophone-0 x now say.
+
+        A pick stamps its geophone's position when it is made, and the
+        travel-time plot, the exported travel times and the SRT inversion all
+        read that stamp. Nothing followed these two settings, so picks taken at
+        the default 1 m stayed 1 m apart after the spacing was set to 0.5 m -
+        offsets twice too long, and velocities twice too high.
+        """
+        if self._geo_positions:
+            # A position file places every geophone; these boxes only show its
+            # first position and step, so they go back to saying that.
+            xs = [self._geo_positions[k][0] for k in sorted(self._geo_positions)]
+            for box, value in ((self._geo_start, xs[0]),
+                               (self._spacing, abs(xs[1] - xs[0]) if len(xs) > 1 else None)):
+                if value is not None:
+                    box.blockSignals(True); box.setValue(float(value)); box.blockSignals(False)
+            self.log("The geophones are placed from the loaded position file, so the "
+                     "spacing and geophone-0 x are not used for them.", "warn")
+            return
+        self._restamp_all_picks()
+        self._redraw_markers()
+        self._update_pick_info()
+        self._tt_plot.enableAutoRange()      # the line moved; fit the plot to it
+        self._publish()
+
     @staticmethod
     def _parse_geometry_file(path: str) -> Dict[int, Tuple[float, float]]:
         """Parse a geophone position/topography file into ``{trace_index: (x, z)}``.
 
         Whitespace/comma separated; a non-numeric header row is skipped. 3+ columns
         read as (station, x, elevation); 2 as (x, elevation); 1 as x with elevation
-        0. Geophone order follows file row order.
+        0. With a station column the geophones are taken in station order, so a
+        file listing stations 3, 1, 2 still puts station 1 on the first trace;
+        without one they follow the file's row order.
         """
         rows: List[List[float]] = []
         with open(path, "r", encoding="utf-8", errors="ignore") as fh:
@@ -860,6 +897,9 @@ class SeismicProcessingModule(BaseModule):
                     rows.append([float(p) for p in parts])
                 except ValueError:
                     continue  # header / comment line
+        if rows and all(len(nums) >= 3 for nums in rows):
+            # Stable, so repeated station numbers keep their file order.
+            rows.sort(key=lambda nums: nums[0])
         positions: Dict[int, Tuple[float, float]] = {}
         for i, nums in enumerate(rows):
             if len(nums) >= 3:
@@ -1024,9 +1064,22 @@ class SeismicProcessingModule(BaseModule):
     def _update_tt_qc(self) -> None:
         if not hasattr(self, "_tt_plot"):
             return
+        self._geometry_debounced.flush()     # a spacing just typed moves the picks first
         self._tt_plot.clear()
+        # The geophones, on the t = 0 line, so the plot shows the line the picks
+        # are placed on before there are any. Empty, it kept the range of what it
+        # last drew, which read as the spacing not having taken.
+        geophones = self._geophone_xs()
+        if geophones:
+            self._tt_plot.plot(geophones, [0.0] * len(geophones), pen=None, symbol="t1",
+                               symbolSize=7, symbolBrush="#7a8794", symbolPen=None)
+            if not self._geo_positions:
+                self._geo_info.setText(
+                    f"Even spacing (no position file): {len(geophones)} geophones, "
+                    f"x {min(geophones):g} to {max(geophones):g} m.")
         picks = self._all_first_breaks()
         if not picks:
+            self._tt_plot.enableAutoRange()
             return
         from collections import defaultdict
 
@@ -1051,6 +1104,7 @@ class SeismicProcessingModule(BaseModule):
 
     # -- export --------------------------------------------------------------
     def _ordered_picks(self) -> list:
+        self._geometry_debounced.flush()     # an export reads the geophones stamped here
         return [self._picks[t] for t in self._order if t in self._picks]
 
     def _export_picks(self) -> None:
@@ -1089,6 +1143,7 @@ class SeismicProcessingModule(BaseModule):
 
     # -- SRT inversion -------------------------------------------------------
     def _all_first_breaks(self) -> list:
+        self._geometry_debounced.flush()     # so does the inversion
         self._save_current_picks()
         if not _SEISMIC_OK:
             return []
@@ -1337,8 +1392,11 @@ class SeismicProcessingModule(BaseModule):
         )
         recipe_path, script_path = export_workflow_bundle(spec, run.run_dir, stem="srt")
         self._reproduce.set_bundle(recipe_path, script_path)
-        context = RunContext(project_root=project_root, output_dir=run.outputs_dir)
-        worker = WorkflowWorker(spec, context)
+        # In a process of its own: the ray tracing and PyGIMLi's solves would
+        # otherwise hold the window still. The fitted model comes back as what
+        # the section draws - velocity, coverage, ray paths.
+        worker = ProcessWorkflowWorker(recipe_path, project_root, run.outputs_dir,
+                                       run.result_path, objects=("manager", "convergence"))
         self._srt_spec = spec
         self._srt_recipe_path = str(recipe_path)
         self._srt_busy = BusyStateController([self._srt_btn])
@@ -1709,6 +1767,9 @@ class SeismicProcessingModule(BaseModule):
                 applied["shot_x"] = self._shot_x.value()
             if "shot_x" in args:  # explicit per-record override wins
                 self._shot_x.setValue(float(args["shot_x"])); applied["shot_x"] = args["shot_x"]
+            # The picks follow now, not after the pause a typed value waits for:
+            # the assistant's next call may run the inversion.
+            self._geometry_debounced.flush()
         except Exception as exc:  # noqa: BLE001
             return {"status": "failed", "error": str(exc)}
         if not applied:
@@ -1987,3 +2048,12 @@ class SeismicProcessingModule(BaseModule):
         self._run_srt()
         return {"status": "started", "message": "SRT inversion started. Ask for status shortly.",
                 "picks": len(picks)}
+
+
+# Names a 0.3.0 script could import from this page, which it no longer defines.
+from PyHydroGeophysX._internal.deprecations import legacy_names as _legacy_names  # noqa: E402
+
+__getattr__ = _legacy_names(__name__, {
+    "metrics_from_manager": "PyHydroGeophysX.inversion.metrics.metrics_from_manager",
+    "pick_first_breaks": "PyHydroGeophysX.data_processing.seismic.pick_first_breaks",
+})

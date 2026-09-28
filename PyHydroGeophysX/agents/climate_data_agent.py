@@ -24,6 +24,8 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 import numpy as np
 import pandas as pd
 
+from PyHydroGeophysX._internal.deprecations import warn_legacy_path
+
 from .base_agent import AgentResult, BaseAgent
 
 
@@ -60,6 +62,54 @@ class ClimateDataAgent(BaseAgent):
         self.timeout = float(timeout)
         self.default_variables = list(DAILY_VARIABLES)
         self.results: Dict[str, Any] = {}
+
+    def fetch_climate_data_with_conda(self, config_file: str,
+                                      conda_path: Optional[str] = None,
+                                      env_name: str = "climate_fetch") -> Dict[str, Any]:
+        """Deprecated: the 0.3.0 route, which ran PyDaymet in a second conda environment.
+
+        The request in ``config_file`` - its ``coords`` (longitude, latitude),
+        ``dates`` and optional ``variables``, ``pet_method`` and ``crs`` - now
+        goes to :meth:`execute`, which reads the same daily series from ERA5
+        through Open-Meteo with no environment to build, and saves it to
+        ``data/climate/climate_data.csv`` in the working folder, where 0.3.0
+        put it. ``conda_path`` and ``env_name`` are not used.
+
+        Returns:
+            As in 0.3.0: ``success``, ``csv_path``, ``message`` and ``stdout``.
+            The message names the source, and any requested variable this
+            source does not have.
+        """
+        warn_legacy_path(
+            "ClimateDataAgent.fetch_climate_data_with_conda()",
+            "ClimateDataAgent.execute({'coords': ..., 'dates': ..., 'output_dir': ...}), "
+            "which reads ERA5 from Open-Meteo with no conda environment")
+        path = Path(config_file).absolute()
+        try:
+            config = json.loads(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return {"success": False, "csv_path": None, "stdout": "",
+                    "message": f"Configuration file not found: {path}"}
+        except (OSError, ValueError) as exc:
+            return {"success": False, "csv_path": None, "stdout": "",
+                    "message": f"Could not read configuration file {path}: {exc}"}
+        request = {key: config[key]
+                   for key in ("coords", "dates", "variables", "time_scale", "crs")
+                   if config.get(key) is not None}
+        # The 0.3.0 script read "pet"; the workflow that wrote these files, "pet_method".
+        pet_method = config.get("pet_method") or config.get("pet")
+        if pet_method:
+            request["pet_method"] = pet_method
+        result = self.execute({**request, "output_dir": str(Path("data") / "climate")})
+        if isinstance(result, AgentResult):
+            return {"success": False, "csv_path": None, "stdout": "",
+                    "message": " ".join(filter(None, (result.summary, result.error)))}
+        csv_path = Path(result["csv_file"])
+        message = " ".join([
+            f"Climate data fetched ({csv_path.stat().st_size / 1024:.1f} KB) from {SOURCE}.",
+            *result.get("notes", []),
+        ])
+        return {"success": True, "csv_path": str(csv_path), "message": message, "stdout": ""}
 
     def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -313,6 +363,27 @@ class ClimateDataAgent(BaseAgent):
         # "prcp (mm/day)" -> "prcp"
         climate_data = climate_data.rename(columns=lambda c: str(c).split('(')[0].strip())
 
+        # The period asked for, as a retrieval would return it. A saved series
+        # can hold decades (the bundled PyDaymet file runs 1980-2024), and
+        # reading it whole ignored the dates the request gave.
+        period = None
+        if input_data.get('dates') is not None:
+            try:
+                period = self._period(input_data['dates'])
+            except (TypeError, ValueError) as exc:
+                return AgentResult(status="failed", summary="The climate period could not be read.",
+                                   data={}, error=str(exc),
+                                   error_fix_hint="Give dates as (start_date, end_date) or a list of years.")
+            climate_data = climate_data.sort_index().loc[period[0]:period[1]]
+            if climate_data.empty:
+                return AgentResult(
+                    status="failed",
+                    summary="The saved climate series does not cover the period.",
+                    data={},
+                    error=f"{Path(csv_file).name} holds no days from {period[0]} to {period[1]}.",
+                    error_fix_hint="Give a period the file covers, or fetch the series for this one.",
+                )
+
         metadata_file = Path(input_data.get('metadata_file') or Path(csv_file).with_suffix('.json'))
         if metadata_file.exists():
             metadata = json.loads(metadata_file.read_text(encoding='utf-8'))
@@ -322,8 +393,10 @@ class ClimateDataAgent(BaseAgent):
                 'variables': [c for c in climate_data.columns if c in DAILY_VARIABLES],
                 'pet_method': 'unknown',
                 'time_scale': 'daily',
-                'source': f'pre-fetched file {Path(csv_file).name}',
             }
+        if period is not None:
+            metadata['dates'] = period
+        metadata.setdefault('source', f'pre-fetched file {Path(csv_file).name}')
         self.results = self._package(climate_data, metadata, input_data, [],
                                      data_source='pre_fetched_csv')
         self.results['csv_file'] = str(csv_file)

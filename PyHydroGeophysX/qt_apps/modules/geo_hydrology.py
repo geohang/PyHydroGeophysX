@@ -54,10 +54,9 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     select_directory,
 )
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
-from PyHydroGeophysX.qt_apps.workers import WorkflowWorker
+from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
-    RunContext,
     WorkflowRunResult,
     WorkflowSpec,
     export_workflow_bundle,
@@ -74,6 +73,9 @@ _STEP_ICONS = [
     "fa5s.chart-area",
 ]
 _P = theme.PALETTE
+#: The "Use example" model bundle, under the source repository's examples/,
+#: written there by examples/generate_synthetic_examples.py.
+_EXAMPLE_MODEL = "results/synthetic_Structure_WC"
 
 # Per-parameter spin configuration: (lo, hi, step, decimals) for mean and std.
 _PARAM_SPECS = {
@@ -135,7 +137,7 @@ class GeoHydrologyModule(BaseModule):
         self._param_values: Dict[int, Dict[str, Tuple[float, float]]] = {}
         self._last_result: Optional[Dict[str, Any]] = None
         self._markers_override: Optional[List[int]] = None
-        self._worker: Optional[WorkflowWorker] = None
+        self._worker: Optional[ProcessWorkflowWorker] = None
         self._run_busy: Optional[BusyStateController] = None
         self._workflow_recipe_path = ""
         self._current = 0
@@ -876,27 +878,25 @@ class GeoHydrologyModule(BaseModule):
         self._markers_override = None
         if self._data_dir() is None:
             self._manual_dir = self._example_data_dir()
+            if self._manual_dir is None:
+                self.log(io_utils.missing_example_message(
+                    "The synthetic inverted-model example", _EXAMPLE_MODEL, generated=True),
+                    "warn")
         self._reload()
 
     def _example_data_dir(self) -> Optional[Path]:
-        """Locate the bundled synthetic inverted-model demo for standalone launches.
+        """Locate the synthetic inverted-model demo for standalone launches.
 
-        Prefer a full-resolution dataset produced by
-        ``examples/generate_synthetic_examples.py`` and fall back to the compact
-        copy shipped with the package. The real Treeline demo in
-        ``examples/results/Structure_WC`` can still be opened via "Select folder...".
+        The dataset ``examples/generate_synthetic_examples.py`` writes in a clone
+        of the source repository; the pip package carries no example data. The
+        real Treeline demo in ``examples/results/Structure_WC`` can still be
+        opened via "Select folder...".
         """
-        candidates: List[Path] = []
-        if self.state.project_root:
-            candidates.append(Path(self.state.project_root) / "examples" / "results" / "synthetic_Structure_WC")
-        here = Path(__file__).resolve()
-        candidates.append(here.parents[2] / "data" / "qt_examples" / "geo_hydrology")
-        candidates.extend(p / "examples" / "results" / "synthetic_Structure_WC" for p in here.parents)
-        for cand in candidates:
-            files = geo_pipeline.find_model_files(cand)
-            if files.get("resistivity") is not None and files.get("mesh") is not None:
-                return cand
-        return None
+        def usable(folder: Path) -> bool:
+            files = geo_pipeline.find_model_files(folder)
+            return files.get("resistivity") is not None and files.get("mesh") is not None
+
+        return io_utils.find_example(_EXAMPLE_MODEL, self.state.project_root, usable)
 
     def _show_format_help(self) -> None:
         doc_path = Path(__file__).with_name("geo_input_format.md")
@@ -1095,11 +1095,12 @@ class GeoHydrologyModule(BaseModule):
         self._progress.setRange(0, 0)
         self._run_status.setText("Starting Monte Carlo estimation…")
         self.log("Starting geophysics → hydrology estimation…", "info")
+        # In a process of its own, so the window keeps painting through the
+        # Monte Carlo; the point series plot needs the cell centres and the
+        # water-content statistics back.
         self._worker = self.register_worker(
-            WorkflowWorker(
-                spec,
-                RunContext(project_root=run.run_dir, output_dir=run.outputs_dir),
-            )
+            ProcessWorkflowWorker(recipe_path, run.run_dir, run.outputs_dir, run.result_path,
+                                  objects=("_cell_centers", "_wc_mean", "_wc_std"))
         )
         self._worker.logged.connect(lambda message: self._on_worker_log(message, "info"))
         self._worker.succeeded.connect(self._on_workflow_ok)

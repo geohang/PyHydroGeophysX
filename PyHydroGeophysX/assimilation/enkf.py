@@ -111,6 +111,9 @@ class ESMDA:
     ):
         self.obs_operator = obs_operator
         self.obs_cov = np.asarray(obs_cov, dtype=float)
+        if (isinstance(n_steps, (bool, np.bool_)) or not float(n_steps).is_integer()
+                or int(n_steps) < 1):
+            raise ValueError(f"n_steps must be a positive integer, got {n_steps!r}.")
         self.n_steps = int(n_steps)
 
         if inflation_factors is None:
@@ -119,6 +122,24 @@ class ESMDA:
             if len(inflation_factors) != self.n_steps:
                 raise ValueError("inflation_factors length must equal n_steps.")
             self.inflation_factors = [float(v) for v in inflation_factors]
+        # ES-MDA assimilates the same data once per step, each time with its
+        # error covariance inflated by alpha. The steps add up to one use of
+        # the data only when sum(1/alpha) = 1 (Emerick and Reynolds, 2013);
+        # [1, 1, 1, 1] used it four times and shrank the ensemble accordingly.
+        # A schedule that does not qualify is refused, not normalised, since
+        # which alpha the caller meant cannot be known. Schedules are usually
+        # quoted to a few figures - [9.333, 7, 4, 2] sums to 1 + 4e-6 - so a
+        # rounding slack of 1e-3 is allowed; that much reuse of the data is
+        # far below the ensemble's own sampling error.
+        alphas = np.asarray(self.inflation_factors, dtype=float)
+        if not np.all(np.isfinite(alphas)) or np.any(alphas <= 0):
+            raise ValueError("inflation_factors must be positive and finite, got "
+                             f"{self.inflation_factors}.")
+        total = float(np.sum(1.0 / alphas))
+        if abs(total - 1.0) > 1e-3:
+            raise ValueError("inflation_factors must satisfy sum(1/alpha) = 1 so the data "
+                             f"are assimilated once in total; got sum(1/alpha) = "
+                             f"{total:.6f} ({total - 1.0:+.1e}) for {self.inflation_factors}.")
 
     def update(
         self,

@@ -25,9 +25,9 @@ The agent system requires an API key from your preferred LLM provider:
 Try Without an API Key
 ----------------------
 
-The hosted Streamlit app starts in demo mode by default. Demo mode loads bundled
-cached results, makes no LLM calls, and lets first-time users inspect the expected
-outputs before uploading their own data:
+The Streamlit app opens with demo mode off; switch on **Demo mode** at the top
+of the sidebar to load bundled cached results, make no LLM calls, and inspect
+the expected outputs before uploading your own data. The hosted app:
 
 `https://pyhydrogeophysx.streamlit.app/ <https://pyhydrogeophysx.streamlit.app/>`_
 
@@ -39,16 +39,23 @@ step, use the dry-run mode:
     from PyHydroGeophysX.agents import AgentCoordinator
     coordinator = AgentCoordinator(api_key=None)
     result = coordinator.execute_workflow(
-        {"user_request": "Run ERT inversion on examples/data/sample.ohm"},
+        {"user_request": "Run ERT inversion on examples/data/ERT/E4D/2021-10-08_1400.ohm"},
         dry_run=True,
     )
     # result contains: execution_plan, validation_warnings, cost_estimate_usd
 
-For a local no-LLM smoke test that runs a short ERT inversion on bundled data:
+For a local no-LLM smoke test that runs a short ERT inversion on a bundled
+field line (about 10 seconds on a laptop CPU), run this from the repository
+root:
 
-.. code-block:: bash
+.. code-block:: python
 
-    python examples/Ex_hello_agent.py
+    from PyHydroGeophysX.inversion.ert_inversion import run_ert_manager_inversion
+
+    result = run_ert_manager_inversion(
+        "examples/data/ERT/Bert/fielddataline2.dat", "out_cpu", max_iterations=4
+    )
+    print(result["engine"], result["chi2"])
 
 Launch the 3D Mesh Builder
 --------------------------
@@ -79,12 +86,10 @@ Before committing to a full inversion run, use ``dry_run=True`` (or
     from PyHydroGeophysX.agents import AgentCoordinator
 
     coordinator = AgentCoordinator(api_key=None, output_dir='./results')
+    config = {"data_file": "field_ert.ohm", "instrument": "E4D"}
 
     # Preview: validates files, checks dependencies, estimates LLM cost
-    preview = coordinator.execute_workflow(
-        {"data_file": "field_ert.ohm", "instrument": "E4D"},
-        dry_run=True,
-    )
+    preview = coordinator.execute_workflow(config, dry_run=True)
     print(preview["data"]["execution_plan"])
     print(preview["data"]["validation_warnings"])
     print(f"Est. cost: ${preview['cost_estimate_usd']:.4f}")

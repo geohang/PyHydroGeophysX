@@ -16,6 +16,9 @@ Time-lapse ERT inversion is crucial for monitoring subsurface water
 content changes and understanding hydrological processes in watersheds.
 The temporal regularization helps maintain consistency between consecutive
 time steps while allowing for realistic changes.
+
+**Run time:** about 42 minutes, with a memory peak of about 15 GB, on the
+maintainer's machine.
 """
 # sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_TL_inversion_fig_01.png'
 

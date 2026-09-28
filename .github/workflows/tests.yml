@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# No window to draw in, and pygimli's first plt.show() must not wait on one.
+env:
+  MPLBACKEND: Agg
+
 jobs:
   core-regressions:
     name: "Core numerical and data regressions (py3.11)"
@@ -16,39 +20,13 @@ jobs:
         with:
           python-version: "3.11"
       - run: python -m pip install -e . pytest
-      # Only the package's own dependencies are installed here, so these are the
-      # test files that run - not merely skip - without PyGIMLi, SimPEG, Qt or an
-      # LLM SDK. The tests that need one of those run in the jobs that install it.
-      - name: Run numerical, data and agent-runtime regressions
-        run: >-
-          python -m pytest -q
-          tests/test_adapters.py
-          tests/test_agent_live_regressions.py
-          tests/test_electrode_tables.py
-          tests/test_ert_formats.py
-          tests/test_figure_style.py
-          tests/test_forward_modelling.py
-          tests/test_hydro_model_coupling.py
-          tests/test_linear_solvers.py
-          tests/test_materialize_and_vtk_export.py
-          tests/test_method_paths.py
-          tests/test_plan_interpolation.py
-          tests/test_potential_fields.py
-          tests/test_project_map.py
-          tests/test_recovery.py
-          tests/test_report_figures.py
-          tests/test_report_structure.py
-          tests/test_resipy_warning_filter.py
-          tests/test_rock_physics_models.py
-          tests/test_run_modes.py
-          tests/test_runtime_contracts.py
-          tests/test_section_clip.py
-          tests/test_subsurface_insights.py
-          tests/test_survey_timing.py
-          tests/test_temperature_correction.py
-          tests/test_temporal_weights.py
-          tests/test_water_content_conversion.py
-          tests/test_workflow_handlers.py
+      # Every published test file, found by pytest rather than listed here, so
+      # removing one never breaks CI. Local-only tests are listed in .gitignore
+      # and absent from the checkout. Only the package's own dependencies are
+      # installed in this job: a test that needs an optional package must skip
+      # without it, and runs in the job that installs that package.
+      - name: Run the tests
+        run: python -m pytest -q tests/
 
   adtlert:
     name: "ADTLERT selection and CPU fallback (ubuntu, py3.11)"
@@ -86,23 +64,9 @@ jobs:
           import pygimli  # noqa: F401
           print("ADTLERT imports; without CUDA and cuDSS the ERT engine is", engine)
 
-      # This job installs PyGIMLi, so the regressions that need it run here: the
-      # Gauss-Newton loops (single, time-lapse ERT and SRT), forward modelling,
-      # the petrophysics on real meshes, and the readers checked against it.
-      - name: Run the PyGIMLi inversion and forward-modelling regressions
-        run: >-
-          python -m pytest -q
-          tests/test_agent_live_regressions.py
-          tests/test_ert_formats.py
-          tests/test_forward_modelling.py
-          tests/test_hydro_model_coupling.py
-          tests/test_inversion_numerics.py
-          tests/test_plotting_fixes.py
-          tests/test_report_figures.py
-          tests/test_rock_physics_models.py
-          tests/test_structure_mesh_and_figures.py
-          tests/test_subsurface_insights.py
-          tests/test_water_content_conversion.py
+      # The same tests with PyGIMLi installed, so those that need it run too.
+      - name: Run the tests with PyGIMLi
+        run: python -m pytest -q tests/
 
   adtlert-windows:
     name: "ADTLERT Windows metadata and engine fallback (py3.11)"
@@ -175,23 +139,16 @@ jobs:
       - name: Install lightweight desktop dependencies
         run: python -m pip install -e ".[desktop]" pytest
 
-      # The Qt tests skip themselves when Qt cannot load, which is right for a
-      # contributor's machine and wrong for the job whose whole purpose is to
-      # exercise Qt: without this it would report success having run nothing.
+      # Fail loudly if Qt itself cannot load, rather than report success having
+      # checked nothing.
       - name: Verify the Qt stack imports
         run: python -c "import PySide6.QtGui, pyqtgraph; print('Qt import OK')"
 
-      # The studio's pages and windows without PyGIMLi: these files run their Qt
-      # tests here, and skip the few that need a PyGIMLi mesh.
-      - name: Run the Qt studio tests
-        run: >-
-          pytest -q
-          tests/test_adapters.py
-          tests/test_control_column.py
-          tests/test_electrode_tables.py
-          tests/test_ert_page_inputs.py
-          tests/test_project_map.py
-          tests/test_run_modes.py
-          tests/test_studio_pages.py
-          tests/test_studio_window.py
-          tests/test_workflow_pause.py
+      # What the studio needs to start: its entry point and main window import
+      # with only the desktop extra installed.
+      - name: Check that the studio imports with the desktop extra
+        run: python -c "import PyHydroGeophysX.qt_apps.launcher, PyHydroGeophysX.qt_apps.main_window; print('Studio imports OK')"
+
+      # The same tests with Qt installed, so any that need Qt run here.
+      - name: Run the tests with Qt
+        run: python -m pytest -q tests/

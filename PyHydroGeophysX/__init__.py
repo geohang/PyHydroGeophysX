@@ -11,7 +11,7 @@ import importlib
 import os as _os
 from typing import Dict, Tuple
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 # Keep qtpy-based optional packages on the same Qt binding as the desktop app.
 # ``setdefault`` continues to respect an explicit user override.
@@ -166,7 +166,6 @@ _EXPORTS.update(_exports(
     "WaterContentAgent",
     "ReportAgent",
     "SeismicAgent",
-    "GeophysicalInversionAgent",
 ))
 _EXPORTS.update(_exports(
     "PyHydroGeophysX.forward.fdem_forward",
@@ -249,7 +248,7 @@ _EXPORTS.update(_exports(
     "fdem_invert",
 ))
 _EXPORTS.update(_exports(
-    "PyHydroGeophysX.workflows.em1d",
+    "PyHydroGeophysX.inversion.em1d_line",
     "invert_line",
     "estimate_data_scale",
     "calibrate_to_reference",
@@ -301,7 +300,6 @@ _OPTIONAL_EXPORTS = {
     "WaterContentAgent",
     "ReportAgent",
     "SeismicAgent",
-    "GeophysicalInversionAgent",
     "FDEMForwardModeling",
     "FDEMSurveyConfig",
     "SRTInversion",
@@ -345,6 +343,9 @@ def __getattr__(name: str):
         value = _backend_available(name)
         globals()[name] = value
         return value
+    if name == "GeophysicalInversionAgent":
+        # Removed in 0.5.0; the agents package warns with what replaced it.
+        return importlib.import_module("PyHydroGeophysX.agents")._removed_agent(name)
     target = _EXPORTS.get(name)
     if target is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -230,7 +230,8 @@ config = {
     'inversion_params': {
         'lambda': float,        # Regularization (default: 20.0)
         'max_iterations': int,  # Max iterations (default: 10)
-        'method': str,          # Solver method (default: 'cgls')
+        'method': str,          # Linear solver (default: the inversion's own,
+                                #  'cgls' for one survey, 'spd_cholesky' for a series)
         'use_gpu': bool,        # GPU acceleration (default: False)
     },
     
@@ -333,17 +334,17 @@ results/agents/
 
 ## Examples
 
-See example scripts for complete working examples:
+Complete working examples are notebooks in `examples/` of the source repository:
+
+- `Ex_multi_agent_workflow.ipynb`: the standard ERT workflow (Example 1), the
+  seismic-constrained workflow on the shipped `srtfieldline2.dat` line
+  (Example 2), and climate data integration with ERT (`use_climate`).
+- `Ex_Unified_Workflow_ex1.ipynb`, `Ex_Unified_Workflow_ex2.ipynb` and
+  `Ex_Unified_Workflow_ex3.ipynb`: standard ERT, time-lapse ERT and data fusion
+  driven by a natural-language request.
 
 ```bash
-# Standard ERT workflow
-python examples/Ex_multi_agent_workflow.py --mode ert
-
-# With seismic integration
-python examples/Ex_multi_agent_workflow.py --mode seismic
-
-# Climate data integration with ERT
-python examples/Ex_climate_ert_integration.py
+jupyter lab examples/Ex_multi_agent_workflow.ipynb
 ```
 
 ## LLM Features

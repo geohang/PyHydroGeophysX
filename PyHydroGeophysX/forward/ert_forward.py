@@ -321,6 +321,28 @@ def ertforward(
 # ---------------------------------------------------------------------------
 # ertforward2
 # ---------------------------------------------------------------------------
+def _bounded_ert_resistivity(xr: Any) -> Tuple[np.ndarray, np.ndarray]:
+    """Physical resistivity and its derivative with respect to the log model.
+
+    The safety limits are shared by the forward and Jacobian wrappers. Outside
+    them the response is constant with respect to that parameter, so its
+    derivative is zero. At an exact limit we use the interior one-sided
+    derivative, allowing a bounded optimizer to move back into the interval.
+    """
+    model = np.asarray(xr)
+    if not np.all(np.isfinite(model)):
+        raise ValueError(
+            f"Non-finite values in log-resistivity model: "
+            f"NaN={np.sum(np.isnan(model))}, Inf={np.sum(np.isinf(model))}")
+    if np.any(model > 20) or np.any(model < -20):
+        print(f'WARNING: Extreme log-resistivity values detected: '
+              f'min={np.min(model):.2f}, max={np.max(model):.2f}')
+    raw = np.exp(np.clip(model, -20, 20))
+    resistivity = np.clip(raw, 0.001, 1e6)
+    derivative = np.where((raw >= 0.001) & (raw <= 1e6), raw, 0.0)
+    return resistivity, derivative
+
+
 def ertforward2(
     fob: Any,
     xr: Any,
@@ -342,25 +364,7 @@ def ertforward2(
         dr (np.ndarray): Log-transformed forward response, and with
         ``with_response`` the linear response as a second value.
     """
-    # Validate input before exponentiation
-    if not np.all(np.isfinite(xr)):
-        raise ValueError(f"Non-finite values in log-resistivity model: NaN={np.sum(np.isnan(xr))}, Inf={np.sum(np.isinf(xr))}")
-
-    # Check bounds to prevent exp overflow/underflow
-    if np.any(xr > 20) or np.any(xr < -20):
-        print(f'WARNING: Extreme log-resistivity values detected: min={np.min(xr):.2f}, max={np.max(xr):.2f}')
-        xr = np.clip(xr, -20, 20)
-
-    xr1 = xr.copy()
-    xr1 = np.exp(xr)
-    rhomodel = xr1
-
-    # Validate resistivity model before PyGIMLi call
-    if not np.all(rhomodel > 0):
-        raise ValueError(f"Forward modeling received non-positive resistivity values: min={np.min(rhomodel):.2e}, max={np.max(rhomodel):.2e}")
-
-    # Clip to physically reasonable range
-    rhomodel = np.clip(rhomodel, 0.001, 1e6)
+    rhomodel, _ = _bounded_ert_resistivity(xr)
 
     dr = fob.response(rhomodel)
     if with_response:
@@ -433,25 +437,7 @@ def ertforandjac2(
         J (np.ndarray): Jacobian matrix.
         With ``with_response``, the linear response as a third value.
     """
-    # Validate input before exponentiation
-    if not np.all(np.isfinite(xr)):
-        raise ValueError(f"Non-finite values in log-resistivity model: NaN={np.sum(np.isnan(xr))}, Inf={np.sum(np.isinf(xr))}")
-
-    # Check bounds to prevent exp overflow/underflow
-    if np.any(xr > 20) or np.any(xr < -20):
-        print(f'WARNING: Extreme log-resistivity values detected: min={np.min(xr):.2f}, max={np.max(xr):.2f}')
-        xr = np.clip(xr, -20, 20)
-
-    xr1 = xr.copy()
-    xr1 = np.exp(xr)
-    rhomodel = xr1
-
-    # Validate resistivity model before PyGIMLi call
-    if not np.all(rhomodel > 0):
-        raise ValueError(f"Forward modeling received non-positive resistivity values: min={np.min(rhomodel):.2e}, max={np.max(rhomodel):.2e}")
-
-    # Clip to physically reasonable range
-    rhomodel = np.clip(rhomodel, 0.001, 1e6)
+    rhomodel, derivative = _bounded_ert_resistivity(xr)
 
     # The pyGIMLi vector is held until it is copied: an array taken from a
     # temporary one can outlive the memory it views.
@@ -459,7 +445,7 @@ def ertforandjac2(
     fob.createJacobian(rhomodel)
     J = fob.jacobian()
     J = pg.utils.gmat2numpy(J)
-    J = np.exp(xr.T)*J
+    J = derivative.T * J
     dr = np.array(solved, dtype=float)
     J = J/dr.reshape(dr.shape[0],1)
     if with_response:

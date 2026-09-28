@@ -28,9 +28,9 @@ class TDEMAgent(BaseAgent):
     - Petrophysical conversion between water content and conductivity
     - Visualization and reporting
     
-    Example:
+    Example (with your own sounding file):
         >>> agent = TDEMAgent()
-        >>> result = agent.execute({
+        >>> result = agent.execute({  # doctest: +SKIP
         ...     'data_file': 'tdem_data.txt',
         ...     'source_radius': 10.0,
         ...     'n_layers': 20,
@@ -646,7 +646,3 @@ Provide a brief interpretation (3-4 sentences) covering:
         except Exception as e:
             self._log_execution(f"Could not generate interpretation: {e}", level='WARNING')
             return f"TDEM inversion completed with chi² = {result.chi2:.3f}"
-    
-    def _log_execution(self, message: str, level: str = 'INFO'):
-        """Log execution message."""
-        print(f"[{self.name}] [{level}] {message}")

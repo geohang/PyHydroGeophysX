@@ -97,24 +97,23 @@ Observation
    :param valid: Validity flag (optional)
    :type valid: bool | None
 
-ERTDataset
-^^^^^^^^^^
+StandardERT
+^^^^^^^^^^^
 
-.. py:class:: ERTDataset
+.. py:class:: StandardERT
 
    Dataclass representing a complete ERT survey dataset.
 
+   :param crs: Coordinate reference system ('local' or 'EPSG:XXXX')
+   :type crs: str
+   :param instrument: Instrument the data were read as
+   :type instrument: str
    :param electrodes: List of electrode positions
    :type electrodes: List[Electrode]
    :param observations: List of measurements
    :type observations: List[Observation]
-   :param crs: Coordinate reference system ('local', 'EPSG:XXXX', or 'WGS84')
-   :type crs: str
-   :param local_ref: Local coordinate reference (optional)
-   :type local_ref: LocalRef | None
-   :param epsg: EPSG code for projected coordinates (optional)
-   :type epsg: int | None
-   :param metadata: Additional survey metadata
+   :param metadata: Additional survey metadata, including ``epsg`` and
+      ``local_ref`` when they were given
    :type metadata: Dict[str, Any]
 
 Functions
@@ -123,7 +122,7 @@ Functions
 load_ert_resipy
 ^^^^^^^^^^^^^^^
 
-.. py:function:: load_ert_resipy(project_dir: str, data_file: str, instrument: str, crs: str = "local", local_ref: LocalRef | None = None, epsg: int | None = None) -> ERTDataset
+.. py:function:: load_ert_resipy(project_dir: str, data_file: str, instrument: str, crs: str = "local", local_ref: LocalRef | None = None, epsg: int | None = None) -> StandardERT
 
    Load ERT field data using RESIPY library with support for multiple instruments.
 
@@ -140,7 +139,7 @@ load_ert_resipy
    :param epsg: EPSG code for projected coordinates (required if crs starts with 'EPSG:')
    :type epsg: int | None
    :return: Complete ERT dataset with electrodes, measurements, and metadata
-   :rtype: ERTDataset
+   :rtype: StandardERT
    :raises ImportError: If RESIPY is not installed
    :raises FileNotFoundError: If data_file does not exist
    :raises ValueError: If instrument type is not supported or CRS parameters are invalid
@@ -202,12 +201,12 @@ load_ert_resipy
 qc_and_visualize
 ^^^^^^^^^^^^^^^^
 
-.. py:function:: qc_and_visualize(ert: ERTDataset, outdir: str = "examples/results/ert") -> Dict[str, str]
+.. py:function:: qc_and_visualize(ert: StandardERT, outdir: str = "examples/results/ert") -> Dict[str, str]
 
    Write quality-control plots and the dataset's standardized tables.
 
    :param ert: ERT dataset from load_ert_resipy
-   :type ert: ERTDataset
+   :type ert: StandardERT
    :param outdir: Output directory for the plots and tables
    :type outdir: str
    :return: Dictionary mapping artifact types to file paths
@@ -239,25 +238,42 @@ qc_and_visualize
       )
 
       artifacts = qc_and_visualize(ert, outdir="results/qc")
-      print(f"Histogram: {artifacts['histogram']}")
-      print(f"Summary: {artifacts['summary']}")
+      print(f"Histogram: {artifacts['rhoa_hist_png']}")
+      print(f"Standardized dataset: {artifacts['standard_json']}")
 
 export_for_inversion
 ^^^^^^^^^^^^^^^^^^^^
 
-.. py:function:: export_for_inversion(ert: ERTDataset, outdir: str = "results", fmt: str = "pgimli", filename: str = "bert_data.dat") -> str
+.. py:function:: export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert", fmt: str = "pgimli", use_source_error: bool = False, export_strategy: str = "default", default_relative_error: float = 0.01, default_absolute_error: float = 0.001, default_rhoa_limits: tuple[float, float] = (0.1, 10000.0), default_reciprocal_percent: float = 10.0, default_fit_error_lin: bool = True) -> str
 
    Export ERT dataset to format suitable for inversion codes.
 
    :param ert: ERT dataset from load_ert_resipy
-   :type ert: ERTDataset
+   :type ert: StandardERT
    :param outdir: Output directory
    :type outdir: str
-   :param fmt: Export format ('pgimli' or 'bert')
+   :param fmt: Export format: 'pgimli' writes a pyGIMLi/BERT data file,
+      'resipy' returns the ResIPy project directory
    :type fmt: str
-   :param filename: Output filename (default: 'bert_data.dat')
-   :type filename: str
-   :return: Path to exported file
+   :param use_source_error: Use the errors stored in the source file
+      (legacy export only)
+   :type use_source_error: bool
+   :param export_strategy: 'default' rebuilds the survey in ResIPy and uses
+      reciprocal errors when the pairing is complete; 'legacy' uses the older
+      full-dataset export
+   :type export_strategy: str
+   :param default_relative_error: Relative error of the error model
+   :type default_relative_error: float
+   :param default_absolute_error: Absolute error of the error model
+   :type default_absolute_error: float
+   :param default_rhoa_limits: Apparent-resistivity range kept in the export
+   :type default_rhoa_limits: tuple[float, float]
+   :param default_reciprocal_percent: Largest reciprocal error kept, in percent
+   :type default_reciprocal_percent: float
+   :param default_fit_error_lin: Fit a linear error model to the reciprocals
+   :type default_fit_error_lin: bool
+   :return: Path to the exported file, ``bert_data.dat`` in ``outdir``
+      (``bert_data_legacy.dat`` for the legacy export)
    :rtype: str
 
    **Supported Formats:**
@@ -309,12 +325,11 @@ export_for_inversion
           instrument="E4D"
       )
 
-      # Export to pyGIMLi format
+      # Export to pyGIMLi format; the file is results/inversion/bert_data.dat
       bert_path = export_for_inversion(
           ert,
           outdir="results/inversion",
           fmt="pgimli",
-          filename="survey_2021-10-08.dat"
       )
       print(f"Exported to: {bert_path}")
 
@@ -389,12 +404,11 @@ For time-lapse monitoring, process each timestep separately:
            local_ref=LocalRef(origin_x=0.0, origin_y=0.0, azimuth_deg=90.0)
        )
        
-       # Export with timestamp
+       # One output folder per survey; each holds its own bert_data.dat
        bert_path = export_for_inversion(
            ert,
-           outdir="results/time_lapse",
+           outdir=f"results/time_lapse/survey_{timestamp.strftime('%Y%m%d_%H%M')}",
            fmt="pgimli",
-           filename=f"survey_{timestamp.strftime('%Y%m%d_%H%M')}.dat"
        )
        bert_files.append(bert_path)
 

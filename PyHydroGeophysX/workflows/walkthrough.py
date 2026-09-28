@@ -82,16 +82,18 @@ def _banner(title: str, width: int = 78) -> str:
 
 
 def _npz_groups(spec: WorkflowSpec) -> Dict[str, Dict[str, str]]:
-    """Map an ``npz`` artifact path to ``{variable name: array key}``."""
+    """Map an ``npz`` artifact path to ``{variable name: array key}``.
+
+    Only an input naming its ``array_key`` is an array: other ``.npz`` inputs
+    - the stored EM soundings - are files the domain function reads itself.
+    """
     groups: Dict[str, Dict[str, str]] = {}
     for name, value in spec.inputs.items():
         refs = list(iter_artifact_refs(value))
-        if len(refs) != 1 or refs[0].format != "npz":
+        if len(refs) != 1 or refs[0].format != "npz" or "array_key" not in refs[0].metadata:
             continue
         ref = refs[0]
-        groups.setdefault(ref.path, {})[name] = str(
-            ref.metadata.get("array_key", name)
-        )
+        groups.setdefault(ref.path, {})[name] = str(ref.metadata["array_key"])
     return groups
 
 
@@ -125,7 +127,7 @@ def _bundle_directory(
             "# loose files in a directory, so expand it for the length of the script.",
             '_bundle_scratch = tempfile.TemporaryDirectory(prefix="phgx_inputs_")',
             f'{constant} = expand_file_bundle('
-            f'DATA_DIR / "{Path(bundle.path).name}", _bundle_scratch.name)',
+            f'DATA_DIR / "{bundle.path}", _bundle_scratch.name)',
         ]
     refs = list(iter_artifact_refs(spec.inputs.get(key) or {}))
     if not refs:
@@ -140,22 +142,64 @@ def _bundle_directory(
 
 
 
+def _timelapse_inputs(spec: WorkflowSpec) -> List[str]:
+    """The series as the run read it: surveys in order, their times, the electrodes.
+
+    A studio run stores the surveys as one bundle named in sequence order; the
+    step below took ``data_files`` and ``measurement_times``, which nothing
+    defined for such a run, so the script stopped at a NameError.
+    """
+    lines: List[str] = []
+    bundle = next(iter(iter_artifact_refs(spec.inputs.get("data_bundle") or {})), None)
+    if bundle is not None:
+        lines += [
+            "import tempfile",
+            "from PyHydroGeophysX.data_processing.run_inputs import (",
+            "    bundle_file_names, expand_file_bundle)",
+            "",
+            "# The run stores the surveys as one compressed bundle, named in sequence",
+            "# order. The readers want loose files, so it is expanded for the script.",
+            f'_series = DATA_DIR / "{bundle.path}"',
+            '_bundle_scratch = tempfile.TemporaryDirectory(prefix="phgx_inputs_")',
+            "expand_file_bundle(_series, _bundle_scratch.name)",
+            "data_files = [Path(_bundle_scratch.name) / name "
+            "for name in bundle_file_names(_series)]",
+        ]
+    else:
+        refs = list(iter_artifact_refs(spec.inputs.get("data_files") or []))
+        lines.append("data_files = [" + ", ".join(f'DATA_DIR / "{r.path}"' for r in refs) + "]")
+    times = spec.inputs.get("measurement_times")
+    lines.append(f"measurement_times = {list(times)!r}" if times
+                 else "measurement_times = list(range(len(data_files)))")
+    electrodes = next(iter(iter_artifact_refs(spec.inputs.get("electrodes") or {})), None)
+    lines.append(f'electrode_file = DATA_DIR / "{electrodes.path}"'
+                 "   # every survey's electrodes are placed where this file puts them"
+                 if electrodes is not None else
+                 "electrode_file = None   # each survey's own electrode table")
+    return lines
+
+
 def default_inputs(spec: WorkflowSpec) -> List[str]:
-    """Load array bundles as named variables and other artifacts as paths."""
+    """Load array bundles as named variables and other artifacts as paths.
+
+    A path is the artifact's own, relative to the run directory the script is
+    written into - ``inputs/...`` for what a studio run stored - not just its
+    name, which pointed beside the script where nothing is.
+    """
     lines: List[str] = []
     groups = _npz_groups(spec)
     for path, mapping in sorted(groups.items()):
         stem = _variable(Path(path).stem)
-        lines.append(f'{stem} = np.load(DATA_DIR / "{Path(path).name}")')
+        lines.append(f'{stem} = np.load(DATA_DIR / "{path}")')
         for name, key in sorted(mapping.items()):
             lines.append(f'{_variable(name)} = {stem}["{key}"].ravel()')
     handled = set(groups)
     for name, value in sorted(spec.inputs.items()):
         refs = [ref for ref in iter_artifact_refs(value) if ref.path not in handled]
         if len(refs) == 1:
-            lines.append(f'{_variable(name)} = DATA_DIR / "{Path(refs[0].path).name}"')
+            lines.append(f'{_variable(name)} = DATA_DIR / "{refs[0].path}"')
         elif refs:
-            joined = ", ".join(f'DATA_DIR / "{Path(r.path).name}"' for r in refs)
+            joined = ", ".join(f'DATA_DIR / "{r.path}"' for r in refs)
             lines.append(f"{_variable(name)} = [{joined}]")
     return lines
 
@@ -407,13 +451,30 @@ def _ert_single_parameters(p: Mapping[str, Any]) -> Sequence[str]:
         "   # depth of the inverted domain in metres; 0 lets pyGIMLi size it",
         f'PARA_MAX_CELL_SIZE = {float(_get(p, "para_max_cell_size", 0.0))}'
         "   # largest cell in the inverted domain; 0 lets pyGIMLi size it",
+        f'PARA_BOUNDARY = {float(_get(p, "para_boundary", 2.0))}'
+        "   # how far the inverted domain reaches past the end electrodes, in electrode spacings",
+        f'SURFACE_NODES = {int(_get(p, "surface_nodes", 1))}'
+        "   # mesh nodes on the surface between two electrodes; more refines the near surface",
+        f'OUTER_WIDTH = {float(_get(p, "outer_width", 0.0))}'
+        "   # width of the outer, never inverted region in electrode spreads; 0 keeps pyGIMLi's 4",
+        f'OUTER_MAX_CELL_SIZE = {float(_get(p, "outer_max_cell_size", 0.0))}'
+        "   # largest cell of the outer region in m2; 0 leaves it unlimited",
+        f'MESH_FILE = {str(_get(p, "mesh_file", "") or "")!r}'
+        "   # a mesh built elsewhere to invert on; empty builds one from the electrodes",
+        f'ZONES = {list(_get(p, "zones", []) or [])!r}'
+        "   # a-priori zones: polygon in mesh (x, elevation), resistivity in Ohm m, fixed to hold it",
+        f'CONFORM_TO_ZONES = {bool(_get(p, "conform_to_zones", False))}'
+        "   # build the mesh along the zone outlines, so no cell straddles one",
+        f'DECOUPLE_ZONES = {bool(_get(p, "decouple_zones", False))}'
+        "   # drop the smoothness across the zone outlines, so the model may jump there",
         f'LAMBDA = {float(_get(p, "lambda", 50.0))}'
         "   # regularization strength; start on the smooth side and let the search relax it",
         f'MAX_ITERATIONS = {int(_get(p, "max_iterations", 20))}',
         f'INSTRUMENT = {_get(p, "instrument", None)!r}'
         "   # parser hint; None lets the reader auto-detect the format",
         f'ERROR_SOURCE = {str(_get(p, "error_source", "file"))!r}'
-        "   # 'file' trusts the instrument's err column, 'estimate' recomputes it",
+        "   # 'file' trusts the instrument's err column, 'estimate' recomputes it, 'max'"
+        " takes the larger, 'stack' adds each reading's stacking spread in quadrature",
         f'ABSOLUTE_ERROR = {float(_get(p, "absolute_error", 0.0))}'
         "   # resistance floor in Ohm, added as absolute/|R|; matters at low signal",
         f'ENGINE = {str(_get(p, "engine", "pyhydro"))!r}'
@@ -470,13 +531,30 @@ def _em_parameters(p: Mapping[str, Any]) -> Sequence[str]:
     )
 
 
+def _em_line_parameters(p: Mapping[str, Any]) -> Sequence[str]:
+    known = dict(p)
+    method = str(known.pop("method", "TDEM")).upper()
+    geometry = dict(known.pop("geometry", {}))
+    inversion = dict(known.pop("inversion", {}))
+    return (
+        f"METHOD = {method!r}"
+        "   # 'FDEM' (frequency domain) or 'TDEM' (time domain)",
+        f"GEOMETRY = {geometry!r}"
+        "   # loop radius, flight height, orientation, waveform",
+        f"INVERSION_PARAMETERS = {inversion!r}"
+        "   # layers, smoothness, lateral coupling (lci_mode), error floor",
+        f"LINE_OPTIONS = {known!r}"
+        "   # sounding spacing and count, which lines, reference resistivity",
+    )
+
+
 def _mesh3d_parameters(p: Mapping[str, Any]) -> Sequence[str]:
     known = dict(p)
     formats = list(known.pop("output_formats", []))
     name = str(known.pop("output_name", "mesh3d"))
     return (
         f"MESH_CONFIG = {known!r}"
-        "   # extent, cell sizes, layer markers, electrode layout",
+        "   # extent, cell sizes, layer markers, electrode layout, zones",
         f"OUTPUT_NAME = {name!r}",
         f"OUTPUT_FORMATS = {formats!r}"
         "   # any of 'bms', 'vtk', 'msh'; empty keeps the mesh in memory only",
@@ -846,7 +924,10 @@ WALKTHROUGHS["ert.single_inversion"] = Walkthrough(
                 "the error model first, iterate at LAMBDA until the misfit flattens, "
                 "drop the data the converged model cannot explain, and only then let "
                 "LAMBDA move. Reversing that order blames the regularization for a bad "
-                "error model or for an unfinished descent."
+                "error model or for an unfinished descent. ZONES carry what is known "
+                "beforehand. Every engine starts from them; the pyhydro engine also "
+                "smooths the departure from them rather than the model itself, and "
+                "does not invert a fixed zone."
             ),
             code=(
                 "result = run_ert_manager_inversion(\n"
@@ -862,6 +943,14 @@ WALKTHROUGHS["ert.single_inversion"] = Walkthrough(
                 "    mesh_quality=MESH_QUALITY,\n"
                 "    para_depth=PARA_DEPTH,\n"
                 "    para_max_cell_size=PARA_MAX_CELL_SIZE,\n"
+                "    para_boundary=PARA_BOUNDARY,\n"
+                "    surface_nodes=SURFACE_NODES,\n"
+                "    outer_width=OUTER_WIDTH,\n"
+                "    outer_max_cell_size=OUTER_MAX_CELL_SIZE,\n"
+                "    mesh_file=MESH_FILE,\n"
+                "    zones=ZONES,\n"
+                "    conform_to_zones=CONFORM_TO_ZONES,\n"
+                "    decouple_zones=DECOUPLE_ZONES,\n"
                 "    lam=LAMBDA,\n"
                 "    max_iterations=MAX_ITERATIONS,\n"
                 "    plateau_tolerance=PLATEAU_TOLERANCE,\n"
@@ -952,6 +1041,7 @@ WALKTHROUGHS["ert.timelapse_inversion"] = Walkthrough(
         "from PyHydroGeophysX.inversion.time_lapse import run_timelapse_ert",
     ),
     parameters=_passthrough_parameters,
+    inputs=_timelapse_inputs,
     steps=(
         Step(
             title="Invert the whole series at once",
@@ -968,6 +1058,7 @@ WALKTHROUGHS["ert.timelapse_inversion"] = Walkthrough(
                 "    list(measurement_times),\n"
                 "    PARAMETERS,\n"
                 "    str(OUT_DIR),\n"
+                "    electrode_file=electrode_file,\n"
                 ")\n"
                 "\n"
                 'print(f"{len(data_files)} time steps inverted")'
@@ -1132,6 +1223,64 @@ WALKTHROUGHS["em.inversion"] = Walkthrough(
 )
 
 
+WALKTHROUGHS["em.line_inversion"] = Walkthrough(
+    summary=(
+        "Laterally constrained 1D electromagnetic inversion of a line of "
+        "soundings, laid side by side as a resistivity section."
+    ),
+    imports=_NUMPY_IMPORTS + ("from PyHydroGeophysX.workflows import em1d",),
+    parameters=_em_line_parameters,
+    steps=(
+        Step(
+            title="Invert the line",
+            note=(
+                "Every sounding is inverted on the same fixed-layer grid, and "
+                "neighbouring soundings are tied together - the lateral constraint, "
+                "'lci_mode' among the inversion parameters - so the section is not a "
+                "row of unrelated 1D models. The along-line position of each sounding, "
+                "when the survey has one, is the section's x axis; otherwise the "
+                "soundings are spaced evenly. A chi2 near 1 means the models fit the "
+                "data to their errors; the per-sounding values show where they do not."
+            ),
+            code=(
+                "result = em1d.invert_line(\n"
+                "    str(data), METHOD, GEOMETRY, INVERSION_PARAMETERS,\n"
+                '    positions=globals().get("positions"), heights=globals().get("heights"),\n'
+                "    out_dir=OUT_DIR, **LINE_OPTIONS)\n"
+                "\n"
+                'for key in ("n_soundings", "chi2_global", "chi2_sounding_median"):\n'
+                "    if key in result:\n"
+                '        print(f"  {key:22s} {result[key]}")'
+            ),
+        ),
+        Step(
+            title="Plot the section",
+            note=(
+                "The models are drawn against elevation, the cells between the edges "
+                "the inversion returned. The deep part of each column lies below what "
+                "its sounding resolves; 'doi' in the result is that depth per sounding, "
+                "and a section is read above it."
+            ),
+            code=(
+                'ex, _, ez = result["edges"]\n'
+                'section = np.asarray(result["model3d"], dtype=float)[:, 0, :]\n'
+                "fig, ax = plt.subplots(figsize=(10, 4), constrained_layout=True)\n"
+                "image = ax.pcolormesh(ex, ez, np.ma.masked_invalid(np.log10(section)).T,\n"
+                '                      cmap="turbo")\n'
+                'fig.colorbar(image, ax=ax, label="log10 resistivity (ohm-m)")\n'
+                'ax.set_xlabel("distance along the line (m)"); ax.set_ylabel("elevation (m)")\n'
+                'fig.savefig(OUT_DIR / "em_line_section.png", dpi=150)'
+            ),
+        ),
+    ),
+    reading=(
+        "em1d.invert_line       - the inversion, its coupling modes and its result keys",
+        "inversion.em1d_lci     - the simultaneous laterally constrained solve",
+        "em1d.save_inversion    - writing a section's model and fits to files",
+    ),
+)
+
+
 WALKTHROUGHS["mesh3d.build"] = Walkthrough(
     summary="Build a 3D mesh with topography and layer markers for forward modelling.",
     imports=_NUMPY_IMPORTS + (
@@ -1145,16 +1294,29 @@ WALKTHROUGHS["mesh3d.build"] = Walkthrough(
                 "Cell size controls both accuracy and cost: too coarse and the forward "
                 "response is wrong near electrodes, too fine and the inversion becomes "
                 "impractical. A common compromise is cells smaller than half the minimum "
-                "electrode spacing near the surface, growing with depth."
+                "electrode spacing near the surface, growing with depth. The E4D engine "
+                "lays the mesh out as E4D does - a fine zone around the electrodes inside "
+                "a far-reaching outer zone - and writes the E4D .cfg and .poly beside it. "
+                "Zones in the config, boxes of known resistivity, take the inverted cells "
+                "inside them; with conform_to_zones the mesh is built along their faces, "
+                "and with decouple_zones each is a region of its own, which an inversion "
+                "does not smooth across."
             ),
             code=(
                 "config = dict(MESH_CONFIG)\n"
                 'config["output_dir"] = str(OUT_DIR)\n'
-                'config["topography_points"] = np.load(topography_points)\n'
+                'config["e4d_basename"] = OUTPUT_NAME   # names of the E4D engine\'s files\n'
+                "# Inputs the run had, when it had them.\n"
+                'if "topography_points" in globals():   # surface points loaded from a file\n'
+                '    config["topography_points"] = np.load(topography_points)\n'
+                'if "e4d_config" in globals():          # an E4D mesh configuration\n'
+                '    config["e4d_config_path"] = str(e4d_config)\n'
                 "result = generate_mesh(config)\n"
                 "\n"
                 'mesh = result["mesh"]\n'
-                'print(f"{mesh.cellCount()} cells, {mesh.nodeCount()} nodes")'
+                'print(f"{mesh.cellCount()} cells, {mesh.nodeCount()} nodes")\n'
+                'for zone in result.get("zones", []):   # what each zone took, and its region\n'
+                '    print(f"  {zone[\'name\']}: {zone[\'cells\']} cells, marker {zone[\'marker\']}")'
             ),
         ),
         Step(

@@ -39,6 +39,7 @@ from __future__ import annotations
 import csv
 import datetime as _dt
 import math
+import numbers
 import re
 from pathlib import Path
 from typing import Any, Dict, Optional, Sequence, Tuple
@@ -358,6 +359,12 @@ def simulate_temperature_1d(surface_times: Sequence[float],
 
     def march(record: bool) -> Optional[np.ndarray]:
         nonlocal profile
+        # The surface is the record at every step, the first one included. A
+        # cycle starts from where the last one left the ground, but its surface
+        # node still held the last day of the previous cycle - or, with no
+        # spin-up, the initial guess - so a survey on the record's first day was
+        # corrected with the wrong temperature at the shallowest cells.
+        profile[0] = float(surface[0])
         history = np.empty((n_steps + 1, n)) if record else None
         if record:
             history[0] = profile
@@ -764,13 +771,36 @@ def _to_days(values: Sequence[Any]) -> Tuple[np.ndarray, Optional[_dt.datetime]]
     return np.asarray(parsed, dtype=float), None
 
 
+def _given(value: Any) -> bool:
+    """Whether a spec entry holds anything: a list and an array alike.
+
+    ``if values:`` is ambiguous for a NumPy array of more than one element and
+    raises, so a caller passing arrays - as a library caller will - got an error
+    where a list would have worked.
+    """
+    if value is None:
+        return False
+    try:
+        return len(value) > 0
+    except TypeError:
+        return False
+
+
 def _coerce_time(value: Any):
-    """A datetime or a float from whatever a caller stored in a spec."""
+    """A datetime or a float from whatever a caller stored in a spec.
+
+    NumPy values count as well as Python's: ``np.int64`` is not an ``int``, and
+    ``np.datetime64`` is neither a date nor a number.
+    """
     if isinstance(value, _dt.datetime):
         return value
     if isinstance(value, _dt.date):
         return _dt.datetime(value.year, value.month, value.day)
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
+    if isinstance(value, np.datetime64):
+        if np.isnat(value):
+            return None
+        return value.astype("datetime64[us]").astype(_dt.datetime)
+    if isinstance(value, numbers.Real) and not isinstance(value, (bool, np.bool_)):
         return float(value)
     if isinstance(value, str) and value.strip():
         try:
@@ -820,22 +850,20 @@ def _days_of_year(n_times: int, days: Optional[Sequence[float]],
     if dates is not None and len(dates) == n_times and all(d is not None for d in dates):
         out = []
         for value in dates:
-            when = value
-            if isinstance(when, str):
-                try:
-                    when = _dt.datetime.fromisoformat(when)
-                except ValueError:
-                    return None
-            if not isinstance(when, (_dt.datetime, _dt.date)):
-                return None
+            when = _coerce_time(value)          # a datetime, date, string or datetime64
             if not isinstance(when, _dt.datetime):
-                when = _dt.datetime(when.year, when.month, when.day)
+                return None
             day = when.timetuple().tm_yday
             fraction = (when.hour * 3600 + when.minute * 60 + when.second) / 86400.0
             out.append(day + fraction)
         return np.asarray(out, dtype=float)
     if days is not None and len(days) == n_times and start_day is not None:
-        return np.mod(np.asarray(days, dtype=float) + float(start_day) - 1.0,
+        elapsed = np.asarray(days, dtype=float)
+        # start_day dates the first survey, not the numeric clock's origin.
+        # Preserve the intervals even when that clock starts at 1 or an offset.
+        if elapsed.size:
+            elapsed = elapsed - elapsed[0]
+        return np.mod(elapsed + float(start_day) - 1.0,
                       _YEAR_DAYS) + 1.0
     return None
 
@@ -849,7 +877,8 @@ def temperature_field(spec: Dict[str, Any], depths: Any, n_times: int,
         spec: options following :data:`DEFAULT_TEMPERATURE_SPEC`.
         depths: depth below ground of every cell, m.
         n_times: number of surveys.
-        days: elapsed days of each survey, when known.
+        days: elapsed days of each survey, when known. In seasonal mode with
+            ``start_day``, offsets are measured from the first supplied day.
         dates: acquisition datetimes of each survey, when known. Required by the
             seasonal mode unless ``spec['start_day']`` says where in the year the
             sequence begins - a damped annual wave is meaningless without a
@@ -880,7 +909,7 @@ def temperature_field(spec: Dict[str, Any], depths: Any, n_times: int,
         logged_times = options.get("profile_times")
         logged_depths = options.get("profile_depths")
         logged_values = options.get("profile_values")
-        if logged_times and logged_depths is not None and logged_values is not None:
+        if _given(logged_times) and _given(logged_depths) and _given(logged_values):
             record_days, origin = _to_days(logged_times)
             survey_days = _survey_days_on(origin, n_times, days, dates)
             diffusivity = float(options.get("diffusivity", DEFAULT_DIFFUSIVITY))
@@ -906,7 +935,7 @@ def temperature_field(spec: Dict[str, Any], depths: Any, n_times: int,
     if mode in ("surface", "surface_series", "conduction"):
         record_times = options.get("surface_times")
         record_values = options.get("surface_temperature")
-        if (not record_times or not record_values
+        if (not _given(record_times) or not _given(record_values)
                 or len(record_times) != len(record_values) or len(record_times) < 2):
             raise ValueError(
                 "temperature mode 'surface' needs a surface temperature record: "

@@ -7,9 +7,10 @@
 cd examples
 streamlit run app_geophysics_workflow.py
 ```
-Or use the launcher scripts:
-- **Windows**: `start_webapp.bat`
-- **Linux/Mac**: `./start_webapp.sh`
+Or use the launcher scripts, which sit in the `PyHydroGeophysX` package folder
+of the source repository:
+- **Windows**: double-click `PyHydroGeophysX\start_webapp.bat`
+- **Linux/Mac**: `./PyHydroGeophysX/start_webapp.sh` from the repository root
 
 ### Step 2: Configure API Key
 In the sidebar:
@@ -48,7 +49,7 @@ Click **"🚀 Run Workflow"** and get your results!
 ## 📓 Jupyter Notebook Users
 
 Open any of these notebooks:
-- `Ex_Unified_Workflow.ipynb` - Standard ERT
+- `Ex_Unified_Workflow_ex1.ipynb` - Standard ERT
 - `Ex_Unified_Workflow_ex2.ipynb` - Time-Lapse
 - `Ex_Unified_Workflow_ex3.ipynb` - Data Fusion
 
@@ -58,7 +59,7 @@ Run all cells and modify the `user_request` to try different workflows!
 
 ## 📚 Full Documentation
 - **Web App Guide**: `WEB_APP_GUIDE.md`
-- **System Overview**: `UNIFIED_WORKFLOW_SUMMARY.md`
+- **System Overview**: [Agent documentation](https://geohang.github.io/PyHydroGeophysX/agents/overview.html)
 - **API Docs**: `../docs/`
 
 ---

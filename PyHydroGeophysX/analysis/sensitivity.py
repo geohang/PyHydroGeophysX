@@ -27,7 +27,13 @@ def compute_resolution_matrix(
     """
     Compute model resolution matrix:
 
-    R = (J^T Wd Wd J + lam Wm^T Wm)^(-1) J^T Wd Wd J
+    R = (J^T Wd^T Wd J + lam Wm^T Wm)^(-1) J^T Wd^T Wd J
+
+    ``Wd`` whitens the data, so the data term is ``(Wd J)^T (Wd J)``. A
+    whitening matrix need not be symmetric (the inverse Cholesky factor of a
+    data covariance is triangular), and ``J^T Wd Wd J``, which this used to
+    form, is then a different matrix; for a symmetric or diagonal ``Wd`` the
+    two are the same.
 
     ``lhs`` is the Gauss-Newton normal matrix, which is symmetric positive
     definite, so the inverse is applied as a Cholesky solve rather than formed.
@@ -40,7 +46,8 @@ def compute_resolution_matrix(
     Wd_mat = _as_matrix(Wd, J.shape[0])
     Wm_mat = _as_matrix(Wm, J.shape[1])
 
-    jt_wdwd_j = J.T @ Wd_mat @ Wd_mat @ J
+    wd_j = Wd_mat @ J
+    jt_wdwd_j = wd_j.T @ wd_j
     reg_term = float(lam) * (Wm_mat.T @ Wm_mat)
 
     lhs = symmetrize(jt_wdwd_j + reg_term)

@@ -6,8 +6,9 @@ using structure-constrained petrophysical models with Monte Carlo uncertainty qu
 Implements the workflow from Ex_MC_Hydro.py.
 """
 
+import copy
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -20,6 +21,30 @@ from .base_agent import BaseAgent
 #: A layer has to hold enough cells for its own parameters to mean anything.
 #: Below this a "layer" is a handful of cells whose statistics are noise.
 MIN_CELLS_PER_LAYER = 10
+
+#: The per-layer ranges a request can give, and the parameter each one sets.
+LAYER_RANGE_KEYS = (("rho_sat_range", "rho_sat"), ("n_range", "n"),
+                    ("porosity_range", "porosity"))
+
+
+def _as_range(value: Any) -> Optional[Tuple[float, float]]:
+    """``(low, high)`` of a two-number range, or None when ``value`` is not one.
+
+    A parsed request can carry ``None``, ``[None, None]`` or a string where a
+    range belongs; unpacking those used to stop the whole conversion.
+
+    >>> _as_range([250, 50]), _as_range([None, None]), _as_range("50-250")
+    ((50.0, 250.0), None, None)
+    """
+    if isinstance(value, (str, bytes)):
+        return None
+    try:
+        low, high = (float(bound) for bound in value)
+    except (TypeError, ValueError):
+        return None
+    if not (np.isfinite(low) and np.isfinite(high)):
+        return None
+    return (low, high) if low <= high else (high, low)
 
 
 def resolve_layers(cell_markers, n_cells: int,
@@ -204,21 +229,32 @@ different geological materials and quantify uncertainties."""
             self._log_execution(f"Information level: {info_level}")
             
             # Get layer parameters
+            layer_param_notes: List[str] = []
             if layer_params is None:
                 self._log_execution("Generating layer parameters based on available information")
                 layer_params = self._get_layer_params_with_uncertainty(
-                    cell_markers, 
+                    cell_markers,
                     info_level,
                     petrophysical_params,
                     geological_context
                 )
             else:
-                # Convert named layer parameters to numeric IDs if needed
-                layer_params = self._convert_named_to_numeric_params(
-                    layer_params, 
+                # Convert named layer parameters to numeric IDs if needed. A
+                # layer the request did not describe, or a parameter it left
+                # out, takes what the conversion would have used without them;
+                # a partial set used to stop the conversion outright.
+                layer_params, layer_param_notes = self._convert_named_to_numeric_params(
+                    layer_params,
                     unique_layers,
-                    info_level
+                    info_level,
+                    lambda: self._get_layer_params_with_uncertainty(
+                        cell_markers,
+                        self._assess_information_level(geological_context, petrophysical_params),
+                        petrophysical_params,
+                        geological_context),
                 )
+                for note in layer_param_notes:
+                    self._log_execution(note, level='WARNING')
             
             # Get LLM recommendations if available
             if self.api_key and petrophysical_params is None and 'generic' not in geological_context.lower():
@@ -291,6 +327,8 @@ different geological materials and quantify uncertainties."""
                 'n_layers': int(len(unique_layers)),
                 'layer_params': layer_params,
                 'layer_params_used': layer_params,
+                # Where the per-layer parameters were completed or overridden.
+                'layer_param_notes': layer_param_notes,
                 'petrophysical_params': petrophysical_params or {},
                 'params_used': mc_results['params_used'],
                 'statistics': {
@@ -369,25 +407,59 @@ different geological materials and quantify uncertainties."""
             # Minimal information - lowest confidence, highest uncertainty
             return 'low'
     
-    def _convert_named_to_numeric_params(self, layer_params: Dict, 
+    def _convert_named_to_numeric_params(self, layer_params: Dict,
                                         unique_layers: np.ndarray,
-                                        info_level: str) -> Dict:
+                                        info_level: str,
+                                        defaults: Callable[[], Dict]) -> Tuple[Dict, List[str]]:
         """
-        Convert named layer parameters (e.g., 'regolith', 'fractured_bedrock') 
+        Convert named layer parameters (e.g., 'regolith', 'fractured_bedrock')
         to numeric layer IDs with proper uncertainty structure.
-        
+
+        A request may describe only some layers, or only some parameters of a
+        layer, and a parsed one may leave a range empty. Every layer of the
+        model still needs a complete set, so whatever the request does not give
+        comes from ``defaults()`` - the parameters the conversion uses when no
+        per-layer values are given - and each substitution is noted.
+
         Args:
             layer_params: Dictionary with named layer keys (e.g., {'regolith': {...}, 'fractured_bedrock': {...}})
             unique_layers: Array of numeric layer IDs from cell markers
             info_level: Information level for uncertainty scaling
-            
+            defaults: Returns complete parameters per numeric layer ID; called
+                only when something has to be filled in.
+
         Returns:
-            Dictionary with numeric layer IDs as keys
+            Dictionary with numeric layer IDs as keys, and notes on what was
+            filled in or overridden
         """
+        notes: List[str] = []
+        layers = [int(layer) for layer in unique_layers]
+        cached: Dict[str, Dict] = {}
+
+        def default_for(layer_id: int) -> Dict:
+            if 'params' not in cached:
+                cached['params'] = defaults()
+            return cached['params'].get(layer_id, {})
+
         # Check if already numeric
         if all(isinstance(k, (int, np.integer)) for k in layer_params.keys()):
-            return layer_params
-        
+            numeric_params = dict(layer_params)
+        else:
+            numeric_params = self._layers_from_ranges(layer_params, layers, default_for, notes)
+
+        # A layer no parameters were given for keeps the default set; it used
+        # to raise a KeyError that ended the conversion.
+        for layer_id in layers:
+            if layer_id not in numeric_params:
+                numeric_params[layer_id] = copy.deepcopy(default_for(layer_id))
+                notes.append(f"No layer parameters were given for layer {layer_id} of this "
+                             "model, so it used the default parameters.")
+        return numeric_params, notes
+
+    def _layers_from_ranges(self, layer_params: Dict, layers: List[int],
+                            default_for: Callable[[int], Dict],
+                            notes: List[str]) -> Dict:
+        """Numeric-ID parameters from ranges given per named layer."""
         # Mapping for named layers to expected markers
         # From add_velocity_interface: marker 2 = above interface (regolith), marker 3 = below interface (bedrock)
         layer_name_mapping = {
@@ -396,60 +468,82 @@ different geological materials and quantify uncertainties."""
             'bedrock': 3,
             'background': 1
         }
-        
-        numeric_params = {}
-        uncertainty_scale = {'high': 0.05, 'medium': 0.25, 'low': 0.75}.get(info_level, 0.25)
-        
-        for layer_name, params in layer_params.items():
+
+        numeric_params: Dict = {}
+        placed: Dict[int, str] = {}
+        for position, (layer_name, params) in enumerate(layer_params.items()):
             # Get numeric ID for this layer
-            layer_id = layer_name_mapping.get(layer_name.lower())
-            if layer_id is None or layer_id not in unique_layers:
+            layer_id = layer_name_mapping.get(str(layer_name).lower())
+            if layer_id is None or layer_id not in layers:
                 # Try to map to available layers
-                if len(unique_layers) == 1:
-                    layer_id = unique_layers[0]
-                elif len(unique_layers) >= 2:
+                if len(layers) == 1:
+                    layer_id = layers[0]
+                elif len(layers) >= 2:
                     # Assume first named layer maps to first numeric layer, etc.
-                    idx = list(layer_params.keys()).index(layer_name)
-                    layer_id = unique_layers[min(idx, len(unique_layers)-1)]
+                    layer_id = layers[min(position, len(layers) - 1)]
                 else:
                     continue
-            
+            if layer_id in placed:
+                notes.append(f"Layer parameters for '{placed[layer_id]}' and '{layer_name}' "
+                             f"both fall on layer {layer_id} of this model; "
+                             f"'{layer_name}' was applied there.")
+            placed[layer_id] = layer_name
+            params = params if isinstance(params, dict) else {}
+
             # Convert range parameters to mean/std format expected by Monte Carlo
-            converted = {}
-            
-            # Handle rho_sat_range
-            if 'rho_sat_range' in params:
-                rho_min, rho_max = params['rho_sat_range']
-                rho_mean = (rho_min + rho_max) / 2
-                rho_std = (rho_max - rho_min) / 4  # ~95% within range
-                converted['rho_sat'] = {'mean': rho_mean, 'std': rho_std}
-                converted['use_rho_sat'] = True
-            
-            # Handle n_range (cementation exponent)
-            if 'n_range' in params:
-                n_min, n_max = params['n_range']
-                n_mean = (n_min + n_max) / 2
-                n_std = (n_max - n_min) / 4
-                converted['n'] = {'mean': n_mean, 'std': n_std}
-            
-            # Handle porosity_range
-            if 'porosity_range' in params:
-                phi_min, phi_max = params['porosity_range']
-                phi_mean = (phi_min + phi_max) / 2
-                phi_std = (phi_max - phi_min) / 4
-                converted['porosity'] = {'mean': phi_mean, 'std': phi_std}
-            
+            converted: Dict[str, Any] = {}
+            for range_key, key in LAYER_RANGE_KEYS:
+                if range_key not in params:
+                    continue
+                bounds = _as_range(params[range_key])
+                if bounds is None:
+                    notes.append(f"The {range_key} given for '{layer_name}' "
+                                 f"({params[range_key]!r}) is not a pair of numbers, "
+                                 "so it was not used.")
+                    continue
+                low, high = bounds
+                # ~95% within range
+                converted[key] = {'mean': (low + high) / 2, 'std': (high - low) / 4}
+                if key == 'rho_sat':
+                    converted['use_rho_sat'] = True
+
             # Add default sigma_sur (surface conductivity)
             if 'sigma_sur' not in converted:
                 converted['sigma_sur'] = {'mean': 0.0, 'std': 0.001}
-            
+
+            # What the request left out takes the default for this layer. With
+            # no saturated resistivity, the layer follows whichever route its
+            # default takes: a rho_sat of its own, or Archie from m and the fluid.
+            # The defaults are generated only when something is missing: making
+            # them logs a low-information assessment a complete request is not.
+            filled = []
+            missing = [key for key in ('rho_sat', 'n', 'porosity') if key not in converted]
+            default = default_for(layer_id) if missing else {}
+            if 'rho_sat' not in converted:
+                for key in ('rho_sat', 'use_rho_sat', 'm', 'rho_fluid'):
+                    if key in default:
+                        converted[key] = copy.deepcopy(default[key])
+                filled.append('saturated resistivity')
+            for key, label in (('n', 'saturation exponent n'), ('porosity', 'porosity')):
+                if key not in converted and key in default:
+                    converted[key] = copy.deepcopy(default[key])
+                    filled.append(label)
+            if filled:
+                items = (filled[0] if len(filled) == 1
+                         else ", ".join(filled[:-1]) + " or " + filled[-1])
+                notes.append(f"'{layer_name}' gave no usable {items}, so layer {layer_id} "
+                             f"used the default for {'that' if len(filled) == 1 else 'those'}.")
+
             numeric_params[layer_id] = converted
-            
+
             self._log_execution(f"Mapped '{layer_name}' to layer ID {layer_id}")
-            self._log_execution(f"  ρ_sat: {converted.get('rho_sat', {}).get('mean', 'N/A'):.1f} ± {converted.get('rho_sat', {}).get('std', 'N/A'):.1f} Ωm")
-            self._log_execution(f"  n: {converted.get('n', {}).get('mean', 'N/A'):.2f} ± {converted.get('n', {}).get('std', 'N/A'):.2f}")
-            self._log_execution(f"  φ: {converted.get('porosity', {}).get('mean', 'N/A'):.2f} ± {converted.get('porosity', {}).get('std', 'N/A'):.2f}")
-        
+            for key, label, unit, digits in (('rho_sat', 'ρ_sat', ' Ωm', 1), ('n', 'n', '', 2),
+                                             ('porosity', 'φ', '', 2)):
+                value = converted.get(key)
+                if isinstance(value, dict):
+                    self._log_execution(f"  {label}: {value['mean']:.{digits}f} ± "
+                                        f"{value['std']:.{digits}f}{unit}")
+
         return numeric_params
     
     
@@ -701,7 +795,3 @@ Provide a brief interpretation (2-3 sentences) about:
             return interpretation
         except Exception:
             return "Petrophysical conversion completed with uncertainty quantification"
-    
-    def _log_execution(self, message: str, level: str = 'INFO'):
-        """Log execution message."""
-        print(f"[{self.name}] [{level}] {message}")

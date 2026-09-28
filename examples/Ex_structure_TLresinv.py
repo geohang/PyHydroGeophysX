@@ -5,8 +5,12 @@ Ex. Structure-Constrained Time-Lapse Resistivity Inversion
 ==========================================================
 
 This example demonstrates advanced time-lapse ERT inversion using structural
-constraints derived from seismic interpretation to monitor subsurface water 
+constraints derived from seismic interpretation to monitor subsurface water
 content changes in layered geological media.
+
+**Before you run it:** run ``Ex_Structure_resinv`` first. This example loads
+the mesh it writes, ``results/Structure_WC/mesh_with_interface.bms``. The
+windowed time-lapse inversion takes about 3 hours on the maintainer's machine.
 
 The comprehensive workflow includes:
 

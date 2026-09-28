@@ -7,6 +7,7 @@ Specialized agent for loading and quality-checking ERT field data.
 from pathlib import Path
 from typing import Dict, Any, Optional
 import numpy as np
+from ._intent import infer_instrument
 from .base_agent import AgentResult, BaseAgent
 
 
@@ -212,25 +213,13 @@ different data formats, coordinate systems, and common data quality issues."""
             return "Subsurface Insights"
         try:
             with open(data_file, "r", encoding="utf-8", errors="ignore") as handle:
-                header = " ".join([handle.readline(), handle.readline()]).lower()
+                header = " ".join([handle.readline(), handle.readline()])
         except Exception:
             return None
-
-        if "e4d" in header:
-            return "E4D"
-        if "syscal" in header:
-            return "Syscal"
-        if "abem" in header or "terameter" in header:
-            return "ABEM-Lund"
-        if "das" in header or "das-1" in header:
-            return "DAS-1"
-        if "bert" in header:
-            return "BERT"
-        if "sting" in header:
-            return "Sting"
-        if "ares" in header:
-            return "ARES"
-        return None
+        # Whole words, as for a request: a header reading "testing", "Albert" or
+        # "Canadas" named no instrument, yet sent the file to the Sting, BERT or
+        # DAS-1 reader, which could not load it.
+        return infer_instrument(header)
     
     def _analyze_data_quality(self, ert_data) -> Dict[str, Any]:
         """
@@ -282,7 +271,3 @@ Provide concise, practical insights (2-3 sentences)."""
             return insights
         except Exception:
             return "Could not generate LLM insights"
-    
-    def _log_execution(self, message: str, level: str = 'INFO'):
-        """Log execution message."""
-        print(f"[{self.name}] [{level}] {message}")

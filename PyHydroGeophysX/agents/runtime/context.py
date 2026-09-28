@@ -111,6 +111,11 @@ class RunContext:
         #: the report can say a result rests on a decision somebody made, which
         #: is otherwise invisible in the numbers.
         self.questions: List[Dict[str, Any]] = []
+        #: How the controller's loop ended: ``finished``, ``exhausted``,
+        #: ``stopped`` or ``step_limit`` (see ``controller``), "" until it has
+        #: run. A run the user or the step limit cut off did not run out of
+        #: work, and whether it is complete depends on which it was.
+        self.ended = ""
         self._open: Optional[Step] = None
         self._started = time.monotonic()
 

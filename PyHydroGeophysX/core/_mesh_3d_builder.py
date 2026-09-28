@@ -6,6 +6,11 @@ into electrode positions and a PyGIMLi 3D mesh:
 * surface grids with topography -> a PyGIMLi prism mesh (``Mesh3DCreator``);
 * box and borehole layouts -> a Gmsh-free PyGIMLi structured grid.
 
+Zones - boxes of known or assumed resistivity, a clay layer, a tank, a plume -
+can shape the mesh: every engine can build it so that the zones' faces are
+cell faces, and each zone can be its own region, which an inversion on the mesh
+does not smooth across (see :func:`normalize_box_zones`).
+
 Nothing here imports Qt, so it can run inside a worker thread and be unit-tested
 without a display. ``generate_mesh`` is the single high-level entry point.
 """
@@ -98,11 +103,12 @@ def _topography_from_points(points: Any) -> Callable[[float, float], float]:
 # ---------------------------------------------------------------------------
 # Electrodes
 # ---------------------------------------------------------------------------
-def build_electrodes(config: Dict[str, Any]):
+def build_electrodes(config: Dict[str, Any], *, create_directory: bool = True):
     """Create a ``Mesh3DCreator`` and an electrode DataFrame from the config.
 
     Returns ``(creator, electrodes_df)`` where the DataFrame has columns
-    ``x, y, z, n`` (electrode number).
+    ``x, y, z, n`` (electrode number). ``create_directory`` False leaves the
+    output directory alone, for a caller that only wants the electrodes.
     """
     import pandas as pd
 
@@ -113,6 +119,7 @@ def build_electrodes(config: Dict[str, Any]):
         elec_refinement=float(config["electrode_refinement"]),
         node_refinement=float(config["boundary_refinement"]),
         attractor_distance=float(config["attractor_distance"]),
+        create_directory=create_directory,
     )
     array_type = config["array_type"]
     mesh_type = config["mesh_type"]
@@ -156,10 +163,147 @@ def build_electrodes(config: Dict[str, Any]):
 
 
 # ---------------------------------------------------------------------------
+# Zones: boxes of known or assumed resistivity
+# ---------------------------------------------------------------------------
+#: Zone ``k`` (0-based) is region ``ZONE_MARKER_START + k`` when zones are
+#: regions of their own: marker 1 is the background and 2 the inverted region,
+#: as in PyGIMLi, and E4D numbers the zones it adds to a fine zone the same way.
+ZONE_MARKER_START = 3
+
+
+def normalize_box_zones(zones: Any) -> List[Dict[str, Any]]:
+    """Validate 3-D zones and bring each to its canonical form.
+
+    A zone is a box in the mesh's own coordinates, z being the elevation::
+
+        {"name": "Clay", "x": [x_min, x_max], "y": [y_min, y_max],
+         "z": [z_bottom, z_top], "resistivity": 20.0}
+
+    Each range may be given in either order. Raises ``ValueError`` naming the
+    zone at fault: a range without extent or a resistivity that is not a
+    positive number would otherwise surface as an empty zone or a NaN deep in a
+    forward run.
+    """
+    if isinstance(zones, (str, bytes, dict)):
+        raise ValueError("Zones are a list, one entry per zone.")
+    out: List[Dict[str, Any]] = []
+    for index, zone in enumerate(zones or []):
+        if not isinstance(zone, dict):
+            raise ValueError(f"Zone {index + 1}: a zone has a name, x, y and z ranges and "
+                             "a resistivity.")
+        zone = dict(zone)
+        name = str(zone.get("name") or f"Zone {index + 1}")
+        ranges = []
+        for axis in ("x", "y", "z"):
+            try:
+                low, high = sorted(float(value) for value in zone[axis])
+            except (KeyError, TypeError, ValueError):
+                raise ValueError(f"{name}: a zone needs x, y and z ranges, each given "
+                                 "as [from, to].") from None
+            if not (np.isfinite(low) and np.isfinite(high)) or high - low <= 0:
+                raise ValueError(f"{name}: the {axis} range must have an extent, not "
+                                 f"{low:g} to {high:g}.")
+            ranges.append([low, high])
+        try:
+            resistivity = float(zone.get("resistivity"))
+        except (TypeError, ValueError):
+            raise ValueError(f"{name}: the resistivity must be a number.") from None
+        if not np.isfinite(resistivity) or resistivity <= 0:
+            raise ValueError(f"{name}: the resistivity must be positive, not "
+                             f"{resistivity:g}.")
+        out.append({"name": name, "x": ranges[0], "y": ranges[1], "z": ranges[2],
+                    "resistivity": resistivity})
+    return out
+
+
+def box_zone_owner(points: Any, zones: Any) -> np.ndarray:
+    """The zone each point lies in, -1 for none; where zones overlap, the later
+    one takes the point, as in the 2-D zones of the ERT page."""
+    points = np.atleast_2d(np.asarray(points, dtype=float))[:, :3]
+    owner = np.full(len(points), -1, dtype=int)
+    for index, zone in enumerate(normalize_box_zones(zones)):
+        inside = np.ones(len(points), dtype=bool)
+        for axis, name in enumerate(("x", "y", "z")):
+            low, high = zone[name]
+            inside &= (points[:, axis] >= low) & (points[:, axis] <= high)
+        owner[inside] = index
+    return owner
+
+
+def apply_zone_markers(mesh: Any, zones: Any, *, separate: bool,
+                       by_centres: bool = True,
+                       reset_inverted: bool = False) -> List[Dict[str, Any]]:
+    """Give the inverted cells each zone covers the zone's region, or none.
+
+    With ``separate``, zone ``k`` becomes region ``ZONE_MARKER_START + k``: an
+    inversion on the mesh treats it as a region of its own, and PyGIMLi (like
+    E4D, zone by zone) puts no smoothness constraint between regions. Without
+    it, the zone's cells stay in the inverted region, marker 2, and are smoothed
+    across as usual. Only inverted cells (marker above 1) are zoned; the
+    background is left alone. ``by_centres`` False keeps the zone markers the
+    mesher already gave the cells (E4D does, from its zone seeds), and
+    ``reset_inverted`` first returns every inverted cell to marker 2, which
+    drops whatever numbering the mesher used inside the inverted region.
+
+    Returns one entry per zone: its ``marker`` and how many ``cells`` it took.
+    """
+    zones = normalize_box_zones(zones)
+    markers = np.asarray(mesh.cellMarkers(), dtype=int)
+    if reset_inverted and zones:
+        markers[markers > 1] = 2
+    owner = np.full(len(markers), -1, dtype=int)
+    if by_centres:
+        inverted = markers > 1
+        centres = np.asarray(mesh.cellCenters(), dtype=float)
+        owner[inverted] = box_zone_owner(centres[inverted], zones)
+    else:
+        for index in range(len(zones)):
+            owner[markers == ZONE_MARKER_START + index] = index
+    report = []
+    for index, zone in enumerate(zones):
+        cells = owner == index
+        marker = ZONE_MARKER_START + index if separate else 2
+        markers[cells] = marker
+        report.append({"name": zone["name"], "marker": int(marker),
+                       "cells": int(cells.sum()), "resistivity": zone["resistivity"]})
+    if zones:
+        import pygimli as pg
+
+        mesh.setCellMarkers(pg.IVector([int(value) for value in markers]))
+    return report
+
+
+def clear_inner_face_markers(mesh: Any) -> int:
+    """Clear the marker of every face between two cells; returns how many.
+
+    Triangle and TetGen keep an edge or a face only when it is marked, so zone
+    faces, E4D's internal boundaries and the prism mesh's plan rectangle reach
+    the mesh marked. PyGIMLi reads a marked face inside a region as a known
+    interface and puts no smoothness constraint across it - a cut nobody asked
+    for, since a zone is decoupled as a region of its own (``decouple_zones``),
+    not by its faces. The outer faces keep their markers, which carry the
+    boundary conditions.
+    """
+    cleared = 0
+    for boundary in mesh.boundaries():
+        if boundary.marker() != 0 and boundary.leftCell() is not None \
+                and boundary.rightCell() is not None:
+            boundary.setMarker(0)
+            cleared += 1
+    return cleared
+
+
+# ---------------------------------------------------------------------------
 # Structured (Gmsh-free) mesh for box / borehole layouts
 # ---------------------------------------------------------------------------
-def _axis_with_points(lower: float, upper: float, spacing: float, required_points: Any) -> np.ndarray:
-    """Float axis spanning ``[lower, upper]`` that also includes electrode coords."""
+def _axis_with_points(lower: float, upper: float, spacing: float, required_points: Any,
+                      faces: Any = ()) -> np.ndarray:
+    """Float axis spanning ``[lower, upper]`` that also includes electrode coords.
+
+    ``faces`` - zone faces the grid must have a node on - are included too, and
+    a regular node closer to one than a third of the spacing gives way to it, so
+    a face does not leave a sliver of thin cells beside it.
+    """
     lower, upper = float(lower), float(upper)
     if upper < lower:
         lower, upper = upper, lower
@@ -173,7 +317,14 @@ def _axis_with_points(lower: float, upper: float, spacing: float, required_point
     points = np.asarray(required_points, dtype=float).ravel()
     points = points[np.isfinite(points)]
     points = points[(points >= lower - 1.0e-9) & (points <= upper + 1.0e-9)]
-    axis = np.unique(np.round(np.concatenate([base, points, [lower, upper]]), 8)).astype(float)
+    faces = np.asarray(list(faces), dtype=float).ravel()
+    faces = faces[np.isfinite(faces) & (faces > lower + 1.0e-9) & (faces < upper - 1.0e-9)]
+    if faces.size:
+        keep = np.min(np.abs(base[:, None] - faces[None, :]), axis=1) > spacing / 3.0
+        keep[[0, -1]] = True
+        base = base[keep]
+    axis = np.unique(np.round(np.concatenate([base, points, faces, [lower, upper]]),
+                              8)).astype(float)
     axis.sort()
     if axis.size < 2:
         axis = np.asarray([lower, upper], dtype=float)
@@ -234,8 +385,13 @@ def _structured_bounds(electrodes_df: Any, config: Dict[str, Any]) -> Dict[str, 
     }
 
 
-def create_structured_mesh(electrodes_df: Any, config: Dict[str, Any]) -> Any:
-    """Create a Gmsh-free PyGIMLi structured 3D mesh for box/borehole layouts."""
+def create_structured_mesh(electrodes_df: Any, config: Dict[str, Any],
+                           zones: Any = None) -> Any:
+    """Create a Gmsh-free PyGIMLi structured 3D mesh for box/borehole layouts.
+
+    With ``zones`` the grid lines include every zone face, so the zones'
+    faces are cell faces.
+    """
     import pygimli as pg
 
     bounds = _structured_bounds(electrodes_df, config)
@@ -246,9 +402,14 @@ def create_structured_mesh(electrodes_df: Any, config: Dict[str, Any]) -> Any:
         xy_spacing = float(config.get("borehole_horizontal_cell", 2.0))
         z_spacing = float(config.get("borehole_vertical_cell", 1.0))
 
-    x_axis = _axis_with_points(bounds["x_min"], bounds["x_max"], xy_spacing, electrodes_df["x"])
-    y_axis = _axis_with_points(bounds["y_min"], bounds["y_max"], xy_spacing, electrodes_df["y"])
-    z_axis = _axis_with_points(bounds["z_bottom"], bounds["z_top"], z_spacing, electrodes_df["z"])
+    zones = normalize_box_zones(zones)
+    faces = {axis: [value for zone in zones for value in zone[axis]] for axis in "xyz"}
+    x_axis = _axis_with_points(bounds["x_min"], bounds["x_max"], xy_spacing, electrodes_df["x"],
+                               faces["x"])
+    y_axis = _axis_with_points(bounds["y_min"], bounds["y_max"], xy_spacing, electrodes_df["y"],
+                               faces["y"])
+    z_axis = _axis_with_points(bounds["z_bottom"], bounds["z_top"], z_spacing, electrodes_df["z"],
+                               faces["z"])
 
     mesh = pg.createGrid(x=x_axis.astype(float), y=y_axis.astype(float), z=z_axis.astype(float), marker=2)
     para_depth = float(config.get("para_depth", abs(bounds["z_top"] - bounds["z_bottom"])))
@@ -328,12 +489,14 @@ def find_gmsh_binary() -> Optional[str]:
     return None
 
 
-def _gmsh_box_mesh(creator: Any, electrodes: Any, config: Dict[str, Any]) -> Any:
+def _gmsh_box_mesh(creator: Any, electrodes: Any, config: Dict[str, Any],
+                   zones: Any = None) -> Any:
     """Refined tetrahedral mesh via Gmsh: a box domain with the sensors embedded.
 
     High mesh quality with local refinement at the sensors (single region). The
     top is flat, so it suits box / borehole / flat-terrain surveys; strong
-    topography is better served by the prism engine.
+    topography is better served by the prism engine. With ``zones`` the zone
+    boxes are cut into the domain, so their faces are cell faces.
     """
     binary = find_gmsh_binary()
     if not binary:
@@ -364,24 +527,194 @@ def _gmsh_box_mesh(creator: Any, electrodes: Any, config: Dict[str, Any]) -> Any
         width = (float(ys.max()) - float(ys.min())) + 2.0 * lateral
         height = float(zs.max()) - origin[2]
 
-    return creator.create_box_mesh(length, width, height, electrodes, output_name="gmsh_mesh", origin=origin)
+    return creator.create_box_mesh(length, width, height, electrodes, output_name="gmsh_mesh",
+                                   origin=origin, zones=zones)
+
+
+#: The engine that builds meshes the way E4D does (see ``core.e4d_mesh``).
+E4D_ENGINE = "E4D (Triangle + TetGen)"
+
+#: What the E4D engine reads from the config, and its defaults: those of the
+#: Van Nuys crosshole configuration E4D users build from.
+E4D_DEFAULTS: Dict[str, Any] = {
+    "e4d_fine_padding": 1.0, "e4d_fine_depth_padding": 1.0, "e4d_fine_volume": 1.0,
+    "e4d_outer_distance": 100.0, "e4d_bottom_depth": 150.0, "e4d_quality": 1.28,
+    "e4d_refine_offset": 0.01, "e4d_conductivity": 0.1, "e4d_mesher": "auto",
+    "e4d_tetgen": "", "e4d_config_path": "",
+}
+
+
+def e4d_configuration(config: Dict[str, Any], electrodes: Any = None, zones: Any = None):
+    """The E4D mesh configuration the E4D engine will build from.
+
+    A loaded ``.cfg`` (``e4d_config_path``) is used as it is; otherwise one is
+    laid out around the sensors as E4D users lay one out, on the surface the
+    config's topography describes, with ``zones`` as E4D zones of their own
+    inside the fine zone. Returns ``(configuration, sensors)``, the sensors
+    being the control points to show when they came from a file.
+    """
+    import pandas as pd
+
+    from PyHydroGeophysX.core import e4d_mesh as e4d
+
+    options = {**E4D_DEFAULTS, **{k: v for k, v in config.items() if k in E4D_DEFAULTS}}
+    source = str(options["e4d_config_path"] or "")
+    if source:
+        cfg = e4d.read_e4d_config(source)
+        shown = cfg.flags != e4d.OUTER
+        sensors = pd.DataFrame({"x": cfg.points[shown, 0], "y": cfg.points[shown, 1],
+                                "z": cfg.points[shown, 2],
+                                "n": np.flatnonzero(shown) + 1})
+        return cfg, sensors
+    if electrodes is None:
+        _, electrodes = build_electrodes(config)
+    if zones is None and config.get("conform_to_zones"):
+        zones = config.get("zones")
+    flat = config.get("topography_type", "Flat") == "Flat"
+    cfg, _ = e4d.e4d_config_from_electrodes(
+        electrodes,
+        surface=float(config.get("z_flat", 0.0)) if flat else topography_function(config),
+        fine_padding=float(options["e4d_fine_padding"]),
+        fine_depth_padding=float(options["e4d_fine_depth_padding"]),
+        outer_distance=float(options["e4d_outer_distance"]),
+        bottom_depth=float(options["e4d_bottom_depth"]),
+        fine_volume=float(options["e4d_fine_volume"]), quality=float(options["e4d_quality"]),
+        refine_offset=float(options["e4d_refine_offset"]),
+        conductivity=float(options["e4d_conductivity"]),
+        topography_points=0 if flat else 8, zones=normalize_box_zones(zones))
+    return cfg, electrodes
+
+
+def zone_region(config: Dict[str, Any], electrodes: Any = None) -> Dict[str, float]:
+    """Where zones act in the mesh ``config`` builds.
+
+    Zones only take inverted cells (see :func:`apply_zone_markers`), and the
+    E4D engine meshes them only inside its fine zone, so this is where a new
+    zone belongs and what a view clips the zone boxes to: the E4D engine's fine
+    zone, or for the other engines the domain they build around the sensors,
+    down to the investigation depth (the prism and Gmsh meshes reach a little
+    further). Returns ``x_min``, ``x_max``, ``y_min``, ``y_max``, ``z_bottom``
+    and ``z_top``, the highest ground over it. Nothing is written.
+    """
+    if electrodes is None:
+        _, electrodes = build_electrodes(config, create_directory=False)
+    xs, ys, zs = (np.asarray(electrodes[axis], dtype=float) for axis in ("x", "y", "z"))
+    if config.get("mesh_engine") != E4D_ENGINE:
+        bounds = _structured_bounds(electrodes, config)
+        depth = float(config.get("para_depth", bounds["z_top"] - bounds["z_bottom"]))
+        bounds["z_bottom"] = max(bounds["z_bottom"], bounds["z_top"] - depth)
+        return bounds
+    options = {**E4D_DEFAULTS, **{k: v for k, v in config.items() if k in E4D_DEFAULTS}}
+    pad = float(options["e4d_fine_padding"])
+    region = {"x_min": float(xs.min()) - pad, "x_max": float(xs.max()) + pad,
+              "y_min": float(ys.min()) - pad, "y_max": float(ys.max()) + pad,
+              "z_bottom": float(zs.min()) - float(options["e4d_fine_depth_padding"])}
+    if config.get("topography_type", "Flat") == "Flat":
+        region["z_top"] = float(config.get("z_flat", 0.0))
+    else:
+        ground = topography_function(config)
+        region["z_top"] = max(float(ground(x, y))
+                              for x in np.linspace(region["x_min"], region["x_max"], 5)
+                              for y in np.linspace(region["y_min"], region["y_max"], 5))
+    return region
+
+
+def _zone_log(say: Callable[[str], None], report: List[Dict[str, Any]], *,
+              conform: bool, separate: bool) -> None:
+    """What the zones did to the mesh, for the run log."""
+    if not report:
+        return
+    say("Zones: " + "; ".join(f"{entry['name']}: {entry['cells']} cells"
+                              + (f" (region {entry['marker']})" if separate else "")
+                              for entry in report))
+    say("  the mesh follows the zone faces" if conform else
+        "  zones take the cells whose centre lies inside them (the mesh does not "
+        "follow their faces)")
+    missed = [entry["name"] for entry in report if conform and not entry.get("follows", True)]
+    if missed:
+        say(f"  - except {', '.join(missed)}: on this slope the prism layers cannot bend to "
+            "meet their top and bottom without folding cells or squeezing a layer to a "
+            "third of its thickness, so they take the cells whose centre lies inside them "
+            "(the Gmsh and E4D engines cut zone faces into the mesh on any ground)")
+    empty = [entry["name"] for entry in report if not entry["cells"]]
+    if empty:
+        say(f"  (zone(s) {', '.join(empty)} took no cell - they lie outside the inverted "
+            "region, or zones later in the list cover them - and have no effect)")
 
 
 def generate_mesh(config: Dict[str, Any], log: Optional[Callable[[str], None]] = None) -> Dict[str, Any]:
     """Build sensors and a 3D mesh from ``config``.
 
     Honours ``config['mesh_engine']`` (Auto / Gmsh (tetrahedral) / PyGIMLi prism /
-    Structured grid) with a graceful fallback to the structured grid if Gmsh
+    Structured grid / E4D) with a graceful fallback to the structured grid if Gmsh
     fails, and ``config['single_region']`` to collapse the markers to one region.
-    Returns ``{"mesh", "electrodes", "generator"}``. Safe to call from a worker.
+
+    ``config['zones']`` are boxes of known or assumed resistivity (see
+    :func:`normalize_box_zones`). With ``conform_to_zones`` the mesh is built so
+    that their faces are cell faces - E4D meshes them as zones of its own, the
+    structured grid puts grid lines on them, the prism mesh puts them into its
+    plan triangulation and its layers, Gmsh cuts them into the domain - and with
+    ``decouple_zones`` each zone is a region of its own, which an inversion on
+    the mesh does not smooth across. Inside a region the smoothness crosses
+    every face: faces between cells carry no marker
+    (:func:`clear_inner_face_markers`).
+
+    Returns ``{"mesh", "electrodes", "generator", "zones"}``, ``zones`` saying
+    which region each zone became, how many cells it took and whether the mesh
+    follows its faces (``follows``), and for the E4D
+    engine also ``e4d_files`` and ``e4d_zones``. Safe to call from a worker.
     """
     say = log or (lambda *_: None)
+    engine = config.get("mesh_engine", "Auto")
+    zones = normalize_box_zones(config.get("zones"))
+    conform = bool(config.get("conform_to_zones")) and bool(zones)
+    separate = bool(config.get("decouple_zones"))
+    if engine == E4D_ENGINE:
+        from PyHydroGeophysX.core import e4d_mesh as e4d
+
+        loaded = bool(config.get("e4d_config_path"))
+        # A loaded E4D configuration carries its own electrodes; the sensor
+        # array is built only when the layout is made from it.
+        if not loaded:
+            say("Building sensor array…")
+        cfg, electrodes = e4d_configuration(config, zones=zones if conform else None)
+        for note in getattr(cfg, "notes", []):
+            say("  " + note)
+        say("Building the mesh the way E4D does: surface triangulation, then TetGen…")
+        built = e4d.build_e4d_mesh(
+            cfg, Path(config.get("output_dir") or "."),
+            name=str(config.get("e4d_basename") or "e4d_mesh"),
+            mesher=str(config.get("e4d_mesher", "auto")),
+            tetgen=str(config.get("e4d_tetgen", "") or ""), log=say)
+        mesh, label = built["mesh"], f"E4D-style · {built['mesher']}"
+        if config.get("single_region"):
+            for cell in mesh.cells():
+                cell.setMarker(2)
+            label += " · single region"
+        report: List[Dict[str, Any]] = []
+        if zones and loaded:
+            say("  (the zones are not used: the loaded E4D configuration defines its own)")
+        elif zones:
+            # By cell centre even when E4D meshed the zones: a zone kept off
+            # the fine zone's walls in the configuration still reaches them in
+            # the mesh, and E4D's numbering shifts when the zones fill it - so
+            # the inverted region goes back to marker 2 first.
+            report = apply_zone_markers(mesh, zones, separate=separate, reset_inverted=True)
+            for entry in report:
+                entry["follows"] = conform
+            _zone_log(say, report, conform=conform, separate=separate)
+        clear_inner_face_markers(mesh)
+        say(f"Mesh ready ({label}).")
+        return {"mesh": mesh, "electrodes": electrodes, "generator": label,
+                "e4d_files": dict(built["files"]), "e4d_zones": list(built["zones"]),
+                "zones": report, "zones_conform": conform and not loaded}
+
     say("Building sensor array…")
     creator, electrodes = build_electrodes(config)
-    engine = config.get("mesh_engine", "Auto")
     mesh_type = config.get("mesh_type")
     array_type = config.get("array_type")
     surface_topo = mesh_type == "Surface with topography" and array_type == "Surface grid"
+    shaping = zones if conform else None
 
     def _prism():
         return creator.create_3d_mesh_with_topography(
@@ -391,16 +724,17 @@ def generate_mesh(config: Dict[str, Any], log: Optional[Callable[[str], None]] =
             dz_fine=float(config["dz_fine"]),
             dz_coarse=float(config["dz_coarse"]),
             boundary_extension=float(config["boundary_extension"]),
-            use_prism_mesh=True,
+            use_prism_mesh=True, zones=shaping,
         ), "PyGIMLi topography prism"
 
+    followed = conform
     try:
         if engine == "Gmsh (tetrahedral)":
             say("Generating Gmsh tetrahedral mesh…")
-            mesh, label = _gmsh_box_mesh(creator, electrodes, config), "Gmsh tetrahedral"
+            mesh, label = _gmsh_box_mesh(creator, electrodes, config, shaping), "Gmsh tetrahedral"
         elif engine == "Structured grid":
             say("Creating PyGIMLi structured grid…")
-            mesh, label = create_structured_mesh(electrodes, config), "PyGIMLi structured grid"
+            mesh, label = create_structured_mesh(electrodes, config, shaping), "PyGIMLi structured grid"
         elif engine == "PyGIMLi prism" and surface_topo:
             say("Creating PyGIMLi topography prism mesh…")
             mesh, label = _prism()
@@ -409,11 +743,12 @@ def generate_mesh(config: Dict[str, Any], log: Optional[Callable[[str], None]] =
             mesh, label = _prism()
         else:
             say("Creating PyGIMLi structured grid…")
-            mesh, label = create_structured_mesh(electrodes, config), "PyGIMLi structured grid"
+            mesh, label = create_structured_mesh(electrodes, config, shaping), "PyGIMLi structured grid"
     except Exception as exc:  # noqa: BLE001
         if engine == "Gmsh (tetrahedral)":
             say(f"Gmsh failed ({exc}); falling back to structured grid.")
-            mesh, label = create_structured_mesh(electrodes, config), "PyGIMLi structured grid (Gmsh fallback)"
+            mesh, label = (create_structured_mesh(electrodes, config, shaping),
+                           "PyGIMLi structured grid (Gmsh fallback)")
         else:
             raise
 
@@ -422,5 +757,12 @@ def generate_mesh(config: Dict[str, Any], log: Optional[Callable[[str], None]] =
             cell.setMarker(2)
         label += " · single region"
 
+    report = apply_zone_markers(mesh, zones, separate=separate) if zones else []
+    missed = set(getattr(creator, "unfollowed_zones", ()))     # the prism mesh's
+    for index, entry in enumerate(report):
+        entry["follows"] = followed and index not in missed
+    _zone_log(say, report, conform=followed, separate=separate)
+    clear_inner_face_markers(mesh)
     say(f"Mesh ready ({label}).")
-    return {"mesh": mesh, "electrodes": electrodes, "generator": label}
+    return {"mesh": mesh, "electrodes": electrodes, "generator": label, "zones": report,
+            "zones_conform": followed}

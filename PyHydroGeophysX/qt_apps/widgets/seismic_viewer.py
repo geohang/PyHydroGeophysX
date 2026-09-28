@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets.readout import ReadoutLabel
 
 pg.setConfigOptions(imageAxisOrder="row-major")
 
@@ -192,9 +193,11 @@ class SeismicViewer(QWidget):
         bar.addWidget(self._auto_btn)
         # The readout takes the row's spare width itself, its text kept at the
         # right edge: the page lets long labels elide, and an eliding label beside
-        # a separate stretch is given no width at all.
-        self._readout = QLabel("trace: -, time: -, amp: -")
-        self._readout.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        # a separate stretch is given no width at all. Rewritten on every mouse
+        # move, so not a QLabel, which would re-lay out the page each time (see
+        # widgets.readout).
+        self._readout = ReadoutLabel("trace: -, time: -, amp: -",
+                                     alignment=Qt.AlignRight | Qt.AlignVCenter)
         bar.addWidget(self._readout, 1)
         layout.addLayout(bar)
 

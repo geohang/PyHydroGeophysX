@@ -15,9 +15,40 @@ from simpeg import maps
 # ---------------------------------------------------------------------------
 # FDEMSurvey Config
 # ---------------------------------------------------------------------------
+#: Accepted ``waveform_type`` spellings, compared ignoring case, spaces, "_" and
+#: "-". Releases up to 0.4 modelled every name except "loop" as a dipole, so
+#: the dipole names that were in use keep working.
+_WAVEFORM_ALIASES = {
+    "dipole": "dipole", "magdipole": "dipole", "magneticdipole": "dipole",
+    "vmd": "dipole", "verticalmagneticdipole": "dipole",
+    "loop": "loop", "circularloop": "loop",
+}
+
+
+def _waveform_kind(name) -> str:
+    """The source type, ``"dipole"`` or ``"loop"``, that ``name`` spells."""
+    kind = _WAVEFORM_ALIASES.get("".join(ch for ch in str(name).lower() if ch.isalnum()))
+    if kind is None:
+        raise ValueError(f"waveform_type {name!r} is not recognised; use 'dipole' "
+                         "(also 'magdipole' or 'vmd') or 'loop'.")
+    return kind
+
+
 @dataclass
 class FDEMSurveyConfig:
-    """Configuration for FDEM survey geometry."""
+    """Configuration for FDEM survey geometry.
+
+    ``source_location`` is one XYZ point, shape (3,) or (1, 3), and is stored
+    as (3,). ``receiver_location`` is one point, (3,), or several, (n, 3); it
+    keeps the shape it was given. Several receivers share every frequency.
+
+    An omitted receiver sits at the origin, as in earlier releases, except
+    where the origin cannot be modelled: below or above a dipole source (zero
+    horizontal offset, a non-finite response) it goes 10 m along x from the
+    source, and for a loop away from the origin it goes to the loop centre on
+    z = 0, the only receiver position the layered-earth loop kernel supports.
+    An explicit zero horizontal dipole offset is rejected before simulation.
+    """
 
     source_location: np.ndarray = None
     source_radius: float = 10.0
@@ -28,12 +59,33 @@ class FDEMSurveyConfig:
     waveform_type: str = "dipole"
 
     def __post_init__(self) -> None:
+        self.waveform_type = _waveform_kind(self.waveform_type)
         if self.source_location is None:
             self.source_location = np.array([0.0, 0.0, 0.0], dtype=float)
+        source = np.asarray(self.source_location, dtype=float)
+        if source.shape not in {(3,), (1, 3)} or not np.isfinite(source).all():
+            raise ValueError("source_location must be one finite XYZ point, shape (3,) or (1, 3).")
+        self.source_location = source.reshape(3)
         if self.receiver_location is None:
-            self.receiver_location = np.array([0.0, 0.0, 0.0], dtype=float)
+            self.receiver_location = self._default_receiver()
+        self.receiver_location = np.asarray(self.receiver_location, dtype=float)
+        receivers = np.atleast_2d(self.receiver_location)
+        if (receivers.ndim != 2 or receivers.shape[1] != 3 or receivers.shape[0] == 0
+                or not np.isfinite(receivers).all()):
+            raise ValueError("receiver_location must be finite XYZ points, shape (3,) or (n, 3).")
+        if self.waveform_type == "dipole" and np.any(
+                np.all(receivers[:, :2] == self.source_location[:2], axis=1)):
+            raise ValueError("A dipole survey requires nonzero horizontal source-receiver offset.")
         if self.frequencies is None:
             self.frequencies = np.logspace(1, 4, 16)
+
+    def _default_receiver(self) -> np.ndarray:
+        """Receiver used when none is given; see the class docstring."""
+        source = self.source_location
+        at_origin = not np.any(source[:2])
+        if self.waveform_type == "dipole":
+            return source + [10.0, 0.0, 0.0] if at_origin else np.zeros(3)
+        return np.array([source[0], source[1], 0.0])
 
 
 # ---------------------------------------------------------------------------
@@ -116,7 +168,7 @@ class FDEMForwardModeling:
         return receivers
 
     def _create_source(self, receiver_list, frequency: float, config: FDEMSurveyConfig):
-        waveform = str(config.waveform_type).lower()
+        waveform = _waveform_kind(config.waveform_type)
         location = np.asarray(config.source_location, dtype=float)
 
         if waveform == "loop":
@@ -161,19 +213,39 @@ class FDEMForwardModeling:
         return fdem.Survey(sources)
 
     @staticmethod
-    def _pack_complex_response(response: np.ndarray) -> np.ndarray:
+    def _pack_complex_response(response: np.ndarray, n_receivers: int = 1) -> np.ndarray:
+        """Pair SimPEG's real and imaginary receivers into complex values.
+
+        SimPEG orders data by source, receiver object, then location, so each
+        (frequency, field) block holds the real parts of all ``n_receivers``
+        locations followed by their imaginary parts. Pairing neighbouring
+        values, as this did before, is right only for a single receiver.
+        """
         response = np.asarray(response)
         if np.iscomplexobj(response):
             return response
 
         flat = response.ravel()
-        if flat.size % 2 != 0:
+        block = 2 * max(int(n_receivers), 1)
+        if flat.size % block != 0:
             return flat.astype(np.complex128)
 
-        return flat[0::2].astype(np.complex128) + 1j * flat[1::2].astype(np.complex128)
+        pairs = flat.astype(np.complex128).reshape(-1, 2, block // 2)
+        return (pairs[:, 0, :] + 1j * pairs[:, 1, :]).ravel()
+
+    def _locations_per_receiver(self) -> int:
+        """Locations in each SimPEG receiver when all share one count, else 1."""
+        counts = {np.atleast_2d(rx.locations).shape[0]
+                  for src in self.survey.source_list for rx in src.receiver_list}
+        return counts.pop() if len(counts) == 1 else 1
 
     def forward(self, conductivity: np.ndarray) -> np.ndarray:
-        """Compute FDEM response for a given conductivity model."""
+        """Compute FDEM response for a given conductivity model.
+
+        One complex value per frequency, field and receiver, in that order:
+        with receivers at (n, 3) locations the n values of a frequency (and
+        field, for ``receiver_component="both"``) are consecutive.
+        """
         sigma = np.asarray(conductivity, dtype=float).ravel()
         if sigma.size != self.n_layers:
             raise ValueError(
@@ -181,7 +253,7 @@ class FDEMForwardModeling:
             )
 
         dpred = self.simulation.dpred(sigma)
-        return self._pack_complex_response(np.asarray(dpred))
+        return self._pack_complex_response(np.asarray(dpred), self._locations_per_receiver())
 
     def forward_with_noise(
         self,
@@ -246,15 +318,9 @@ class FDEMForwardModeling:
         conductivity = 1.0 / np.clip(resistivity, 1e-12, None)
 
         config = FDEMSurveyConfig(
-            source_location=np.asarray(
-                petro_params.get("source_location", np.array([0.0, 0.0, 0.0])),
-                dtype=float,
-            ),
+            source_location=petro_params.get("source_location"),
             source_radius=float(petro_params.get("source_radius", 10.0)),
-            receiver_location=np.asarray(
-                petro_params.get("receiver_location", np.array([0.0, 0.0, 0.0])),
-                dtype=float,
-            ),
+            receiver_location=petro_params.get("receiver_location"),
             receiver_orientation=str(petro_params.get("receiver_orientation", "z")),
             receiver_component=str(petro_params.get("receiver_component", "secondary")),
             frequencies=np.asarray(

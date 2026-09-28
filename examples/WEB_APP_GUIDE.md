@@ -127,15 +127,17 @@ After workflow completion, you'll see:
 4. **Generated Files**: Download buttons for reports and visualizations
 5. **Configuration**: Full workflow configuration (expandable)
 
-## 🎯 Workflow Types (Auto-Detected)
+## 🎯 How the Steps Are Chosen
 
-The system automatically detects your workflow type:
+The workflow controller picks each step from the tools whose inputs the run already holds, and reads each result before picking the next. What the request provides therefore decides what runs:
 
-| Workflow Type | Detected When | Key Features |
-|--------------|---------------|--------------|
-| **Standard ERT** | Single ERT file mentioned | ERT inversion + petrophysics |
-| **Time-Lapse ERT** | Multiple ERT files or "time-lapse" keyword | Temporal inversion + climate integration |
-| **Data Fusion** | Seismic + ERT mentioned | Structure-constrained inversion |
+| Request Provides | Steps the Controller Offers | Key Features |
+|------------------|-----------------------------|--------------|
+| **One ERT file** | Load, invert, evaluate, convert to water content, report | ERT inversion + petrophysics |
+| **Several ERT files** | Time-lapse inversion instead of a single one; climate data when a site and a period are given | Temporal inversion + climate integration |
+| **Seismic + ERT** | Seismic inversion, then the ERT re-inverted with the velocity interface in the mesh | Structure-constrained inversion + layer-specific petrophysics |
+
+The execution plan shown with the results lists each step that ran and why it was chosen.
 
 ## 💡 Tips for Best Results
 

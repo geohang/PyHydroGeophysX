@@ -3,6 +3,12 @@
 ============================================
 An interactive GUI for creating 3D meshes for ERT forward modeling and inversion.
 
+The mesh is built by :func:`PyHydroGeophysX.core.mesh_3d.generate_mesh`, the
+builder the desktop studio's 3D mesh page uses, so both offer the same engines
+(PyGIMLi prism, structured grid, Gmsh tetrahedra, and meshes laid out the way
+E4D lays them out), the same zones - boxes of known or assumed resistivity that
+the mesh can follow and treat as regions of their own - and the same files.
+
 Usage
 -----
     streamlit run examples/app_mesh3d.py
@@ -12,7 +18,6 @@ or via the launcher:
 
 from __future__ import annotations
 
-import os
 import sys
 import traceback
 from pathlib import Path
@@ -34,11 +39,28 @@ if str(PARENT_DIR) not in sys.path:
 # Optional heavy imports (graceful degradation)
 # ---------------------------------------------------------------------------
 try:
-    from PyHydroGeophysX.core.mesh_3d import Mesh3DCreator
+    from PyHydroGeophysX.core.mesh_3d import (
+        E4D_DEFAULTS,
+        E4D_ENGINE,
+        build_electrodes,
+        find_gmsh_binary,
+        generate_mesh,
+        mesh_summary,
+        normalize_box_zones,
+        save_outputs,
+        topography_function,
+        zone_region,
+    )
     MESH3D_AVAILABLE = True
 except Exception as _e:
     MESH3D_AVAILABLE = False
     _MESH3D_ERROR = str(_e)
+    E4D_ENGINE = "E4D (Triangle + TetGen)"
+    E4D_DEFAULTS = {
+        "e4d_fine_padding": 1.0, "e4d_fine_depth_padding": 1.0, "e4d_fine_volume": 1.0,
+        "e4d_outer_distance": 100.0, "e4d_bottom_depth": 150.0, "e4d_quality": 1.28,
+        "e4d_refine_offset": 0.01, "e4d_conductivity": 0.1,
+    }
 
 try:
     import plotly.graph_objects as go
@@ -46,12 +68,11 @@ try:
 except ImportError:
     PLOTLY_AVAILABLE = False
 
-try:
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
-    MPL_AVAILABLE = True
-except ImportError:
-    MPL_AVAILABLE = False
+#: The engines of the desktop studio's 3D mesh page, in its order.
+MESH_ENGINES = ["Auto", "Gmsh (tetrahedral)", "PyGIMLi prism", "Structured grid", E4D_ENGINE]
+
+#: One row per zone in the zone table.
+ZONE_COLUMNS = ["name", "x_min", "x_max", "y_min", "y_max", "z_bottom", "z_top", "resistivity"]
 
 # ---------------------------------------------------------------------------
 # Page configuration
@@ -93,6 +114,45 @@ if not MESH3D_AVAILABLE:
         "Mesh generation is disabled, but the electrode preview is still active."
     )
 
+
+def _e4d_mesher_status() -> str:
+    """Which mesher the E4D engine will use here, said before it is used."""
+    try:
+        from PyHydroGeophysX.core import e4d_mesh
+    except Exception as exc:  # noqa: BLE001 - reported, not raised
+        return f"The E4D engine is unavailable: {exc}"
+    program = e4d_mesh.find_tetgen()
+    if program:
+        return f"TetGen program: {program}"
+    package = e4d_mesh._tetgen_module()
+    if package is not None:
+        return f"TetGen: Python package {getattr(package, '__version__', '')}"
+    if e4d_mesh._find_gmsh():
+        return "TetGen is not installed, so Gmsh stands in (pip install tetgen for E4D's own mesher)."
+    return "Neither TetGen nor Gmsh is installed, so this engine cannot mesh here: pip install tetgen."
+
+
+def _zones_from_table(table: pd.DataFrame) -> list[dict]:
+    """The zone table's rows as zones; raises ValueError naming the zone at fault.
+
+    A row with no numbers at all is one being filled in and is skipped.
+    """
+    zones = []
+    for _, row in table.iterrows():
+        if all(pd.isna(row.get(column)) for column in ZONE_COLUMNS[1:]):
+            continue
+        name = row.get("name")
+        name = "" if name is None or (not isinstance(name, str) and pd.isna(name)) else str(name).strip()
+        zones.append({
+            "name": name or f"Zone {len(zones) + 1}",
+            "x": [row.get("x_min"), row.get("x_max")],
+            "y": [row.get("y_min"), row.get("y_max")],
+            "z": [row.get("z_bottom"), row.get("z_top")],
+            "resistivity": row.get("resistivity"),
+        })
+    return normalize_box_zones(zones)
+
+
 # ===========================================================================
 # SIDEBAR
 # ===========================================================================
@@ -103,9 +163,79 @@ with st.sidebar:
     st.subheader("Mesh Type")
     mesh_type = st.radio(
         "Type",
-        ["Surface with Topography (Prism)", "Box Mesh (Simple)"],
-        help="Prism mesh follows terrain; Box mesh is a flat rectangular domain.",
+        ["Surface with topography", "Box mesh"],
+        help="The domain: a block under the ground surface, or a box with a flat top.",
     )
+
+    # ------------------------------------------------------------------ engine
+    mesh_engine = st.selectbox(
+        "Mesh engine",
+        MESH_ENGINES,
+        help=(
+            "Auto: prism for a surface grid with topography, structured grid otherwise.\n"
+            "Gmsh (tetrahedral): refined tetrahedra, flat top; falls back to the structured "
+            "grid when Gmsh is missing or fails.\n"
+            "PyGIMLi prism: follows the topography (surface grids only).\n"
+            "Structured grid: fast regular grid with a node at every sensor.\n"
+            "E4D (Triangle + TetGen): a fine zone around the electrodes inside a far-reaching "
+            "outer zone, written as an E4D .cfg that E4D itself runs on."
+        ),
+    )
+    if mesh_engine == "Gmsh (tetrahedral)" and MESH3D_AVAILABLE and not find_gmsh_binary():
+        st.caption("Gmsh was not found (install Gmsh, or resipy, which bundles it), so the "
+                   "structured grid will stand in.")
+    single_region = st.checkbox(
+        "Single region (one marker)", value=False,
+        help="Collapse the mesh to one marker instead of the parameter (2) / boundary (1) split.",
+    )
+
+    e4d_options: dict = {}
+    if mesh_engine == E4D_ENGINE:
+        with st.expander("E4D engine", expanded=True):
+            if mesh_type == "Box mesh":
+                st.caption("E4D meshes no box: it builds on flat ground at elevation 0.")
+            e4d_config_path = st.text_input(
+                "E4D .cfg to build from (optional)", value="",
+                help="An existing E4D mesh configuration; it replaces the sensor array, "
+                     "domain and refinement set here.",
+            )
+            c1, c2 = st.columns(2)
+            with c1:
+                e4d_pad = st.number_input("Fine-zone padding (m)", 0.0, 1000.0,
+                                          float(E4D_DEFAULTS["e4d_fine_padding"]), step=0.5)
+                e4d_fine_volume = st.number_input("Fine element volume (m³)", 0.001, 1.0e6,
+                                                  float(E4D_DEFAULTS["e4d_fine_volume"]), step=0.1)
+                e4d_bottom = st.number_input("Mesh bottom depth (m)", 1.0, 1.0e6,
+                                             float(E4D_DEFAULTS["e4d_bottom_depth"]), step=10.0)
+                e4d_refine = st.number_input("Refinement offset (m)", 0.0, 10.0,
+                                             float(E4D_DEFAULTS["e4d_refine_offset"]), step=0.01,
+                                             format="%.3f")
+            with c2:
+                e4d_depth_pad = st.number_input("Fine-zone depth padding (m)", 0.0, 1000.0,
+                                                float(E4D_DEFAULTS["e4d_fine_depth_padding"]),
+                                                step=0.5)
+                e4d_outer = st.number_input("Outer boundary distance (m)", 1.0, 1.0e6,
+                                            float(E4D_DEFAULTS["e4d_outer_distance"]), step=10.0)
+                e4d_quality = st.number_input("TetGen quality", 1.0, 3.0,
+                                              float(E4D_DEFAULTS["e4d_quality"]), step=0.01)
+                e4d_sigma = st.number_input("Starting conductivity (S/m)", 1.0e-6, 100.0,
+                                            float(E4D_DEFAULTS["e4d_conductivity"]), step=0.01,
+                                            format="%.4f")
+            e4d_mesher = st.selectbox(
+                "Mesher", ["auto", "tetgen", "gmsh"],
+                format_func={"auto": "Auto (TetGen, else Gmsh)", "tetgen": "TetGen",
+                             "gmsh": "Gmsh"}.get,
+            )
+            e4d_tetgen = st.text_input("TetGen program (optional)", value="")
+            st.caption(_e4d_mesher_status())
+        e4d_options = {
+            "e4d_fine_padding": e4d_pad, "e4d_fine_depth_padding": e4d_depth_pad,
+            "e4d_fine_volume": e4d_fine_volume, "e4d_outer_distance": e4d_outer,
+            "e4d_bottom_depth": e4d_bottom, "e4d_quality": e4d_quality,
+            "e4d_refine_offset": e4d_refine, "e4d_conductivity": e4d_sigma,
+            "e4d_mesher": e4d_mesher, "e4d_tetgen": e4d_tetgen.strip(),
+            "e4d_config_path": e4d_config_path.strip(),
+        }
 
     st.divider()
 
@@ -169,7 +299,7 @@ with st.sidebar:
     st.divider()
 
     # ------------------------------------------------------------------ topography
-    if mesh_type == "Surface with Topography (Prism)":
+    if mesh_type == "Surface with topography":
         st.subheader("Topography")
         topo_type = st.selectbox(
             "Topography Type",
@@ -236,14 +366,60 @@ with st.sidebar:
         help="Distance over which electrode refinement fades to boundary size.",
     )
 
-    if mesh_type == "Surface with Topography (Prism)":
+    if mesh_type == "Surface with topography":
         para_depth   = st.number_input("Investigation depth (m)", 1.0, 500.0, 20.0, step=1.0)
-        dz_fine      = st.number_input("Fine layer Δz (m)",  0.05, 10.0, 0.5,  step=0.1)
+        dz_fine      = st.number_input("Fine layer Δz (m)",  0.05, 10.0, 0.5,  step=0.1,
+                                       help="Also the vertical cell size of a structured grid "
+                                            "under a surface grid.")
         dz_coarse    = st.number_input("Coarse layer Δz (m)", 0.5, 50.0, 2.0,  step=0.5)
         boundary_ext = st.slider("Boundary extension factor", 1.0, 3.0, 1.4, 0.1)
     else:
         para_depth = box_height
-        dz_fine = dz_coarse = boundary_ext = 0.0
+        dz_fine = st.number_input("Vertical cell size (m)", 0.05, 10.0, 0.5, step=0.1,
+                                  help="The structured grid's vertical cell size under a "
+                                       "surface grid.")
+        dz_coarse, boundary_ext = 2.0, 1.4
+
+    with st.expander("Boreholes (structured grid and Gmsh)"):
+        bh_lateral_pad = st.number_input("Lateral padding (m)", 0.0, 1000.0, 10.0, step=1.0)
+        bh_top_pad = st.number_input("Top padding (m)", 0.0, 1000.0, 2.0, step=0.5)
+        bh_bottom_pad = st.number_input("Bottom padding (m)", 0.0, 1000.0, 5.0, step=0.5)
+        bh_hcell = st.number_input("Horizontal cell size (m)", 0.05, 100.0, 2.0, step=0.5)
+        bh_vcell = st.number_input("Vertical cell size (m)", 0.05, 100.0, 1.0, step=0.5)
+
+    st.divider()
+
+    # ------------------------------------------------------------------ zones
+    st.subheader("Zones (optional)")
+    st.caption(
+        "Boxes of known or assumed resistivity - a clay layer, a tank, a plume - in the "
+        "mesh's coordinates, z being elevation. A zone takes the inverted cells inside it."
+    )
+    _editor = getattr(st, "data_editor", None) or getattr(st, "experimental_data_editor", None)
+    zone_error = None
+    zones: list[dict] = []
+    if _editor is None:
+        st.caption("Editing zones needs Streamlit 1.23 or newer.")
+    else:
+        empty_zones = pd.DataFrame({
+            column: pd.Series(dtype=str if column == "name" else float) for column in ZONE_COLUMNS
+        })
+        zone_table = _editor(empty_zones, num_rows="dynamic", key="zone_table")
+        if MESH3D_AVAILABLE:
+            try:
+                zones = _zones_from_table(pd.DataFrame(zone_table))
+            except ValueError as exc:
+                zone_error = str(exc)
+                st.error(zone_error)
+    conform_to_zones = st.checkbox(
+        "Mesh follows the zone faces", value=True,
+        help="Build the mesh so that each zone's faces are cell faces; otherwise a zone takes "
+             "the cells whose centre lies inside it.",
+    )
+    decouple_zones = st.checkbox(
+        "Each zone is a region of its own", value=False,
+        help="An inversion on the mesh does not smooth across a region boundary.",
+    )
 
     st.divider()
 
@@ -253,74 +429,108 @@ with st.sidebar:
     mesh_name  = st.text_input("Mesh name",        value="my_3d_mesh")
     export_bms = st.checkbox("Export .bms (PyGIMLi native)", value=True)
     export_vtk = st.checkbox("Export .vtk (ParaView)", value=True)
+    export_csv = st.checkbox("Export sensor positions (.csv)", value=True)
 
 
 # ===========================================================================
 # Helper functions
 # ===========================================================================
 
+def _builder_config() -> dict:
+    """The sidebar's sensor and topography settings as the mesh builder's config.
+
+    Topography and electrodes are built by the same functions the desktop
+    studio's 3D mesh page uses; this app only names the choices differently.
+    """
+    topo_names = {"Flat": "Flat", "Linear Tilt": "Linear tilt",
+                  "Gaussian Hill": "Gaussian hill", "Custom Expression": "Custom expression"}
+    array_names = {"Surface Grid": "Surface grid", "Borehole": "Single borehole",
+                   "Crosshole": "Crosshole"}
+    config = {
+        "output_dir": output_dir,
+        "electrode_refinement": elec_refine,
+        "boundary_refinement": node_refine,
+        "attractor_distance": attractor_dist,
+        "mesh_type": mesh_type,
+        "array_type": array_names[array_type],
+        "topography_type": topo_names[topo_type],
+        "nx": nx, "ny": ny, "dx": dx, "dy": dy, "x_offset": x_offset, "y_offset": y_offset,
+        "bh_x": bh_x_single, "bh_y": bh_y_single, "boreholes": bh_positions,
+        "z_start": z_start, "z_end": z_end, "n_bh_elec": n_bh_elec,
+    }
+    config.update({key: value for key, value in topo_params.items() if key != "expr"})
+    if "expr" in topo_params:
+        config["topography_expr"] = topo_params["expr"]
+    return config
+
+
+def _mesh_config() -> dict:
+    """Everything ``generate_mesh`` reads, as the desktop page collects it."""
+    config = _builder_config()
+    config.update({
+        "mesh_engine": mesh_engine,
+        "single_region": single_region,
+        "para_depth": para_depth,
+        "dz_fine": dz_fine,
+        "dz_coarse": dz_coarse,
+        "boundary_extension": boundary_ext,
+        "borehole_lateral_padding": bh_lateral_pad,
+        "borehole_top_padding": bh_top_pad,
+        "borehole_bottom_padding": bh_bottom_pad,
+        "borehole_horizontal_cell": bh_hcell,
+        "borehole_vertical_cell": bh_vcell,
+        # The E4D engine writes its .cfg, .poly and mesh files under this name.
+        "e4d_basename": mesh_name,
+    })
+    if mesh_type == "Box mesh":
+        config.update(box_length=box_length, box_width=box_width, box_height=box_height)
+    config.update(e4d_options)
+    # Zones only when there are any, so a config without them reads as before.
+    if zones:
+        config["zones"] = zones
+        if conform_to_zones:
+            config["conform_to_zones"] = True
+        if decouple_zones:
+            config["decouple_zones"] = True
+    return config
+
+
+def _selected_formats() -> list[str]:
+    """The export formats ticked in the sidebar, as ``save_outputs`` names them."""
+    return ((["BMS mesh (.bms)"] if export_bms else [])
+            + (["VTK mesh (.vtk)"] if export_vtk else [])
+            + (["Sensor positions (.csv)"] if export_csv else []))
+
+
 def _build_topo_func() -> callable | None:
     """Construct a topography callable from the sidebar settings."""
-    if topo_type == "Flat":
-        z0 = topo_params["z_flat"]
-        return lambda x, y: float(z0)
-
-    if topo_type == "Linear Tilt":
-        zb = topo_params["z_base"]
-        tx = topo_params["tilt_x"]
-        ty = topo_params["tilt_y"]
-        return lambda x, y: zb + tx * x + ty * y
-
-    if topo_type == "Gaussian Hill":
-        zb  = topo_params["hill_base"]
-        amp = topo_params["hill_amp"]
-        sig = topo_params["hill_sigma"]
-        cx  = topo_params["hill_cx"]
-        cy  = topo_params["hill_cy"]
-        return lambda x, y: zb + amp * np.exp(-((x - cx) ** 2 + (y - cy) ** 2) / (2 * sig ** 2))
-
-    # Custom Expression – restricted eval for safety
-    expr = topo_params["expr"]
-    _allowed = {"np": np, "sin": np.sin, "cos": np.cos, "exp": np.exp,
-                "sqrt": np.sqrt, "abs": abs, "pi": np.pi}
-
-    def _custom(x, y):
-        try:
-            return float(eval(expr, {"__builtins__": {}}, {**_allowed, "x": x, "y": y}))  # noqa: S307
-        except Exception:
-            return 0.0
-
-    return _custom
+    return topography_function(_builder_config())
 
 
-def _build_electrodes() -> tuple[Mesh3DCreator, pd.DataFrame]:
-    """Instantiate Mesh3DCreator and compute electrode positions."""
-    creator = Mesh3DCreator(
-        mesh_directory=output_dir,
-        elec_refinement=elec_refine,
-        node_refinement=node_refine,
-        attractor_distance=attractor_dist,
-    )
+def _build_electrodes() -> pd.DataFrame:
+    """Compute electrode positions without creating the output directory."""
+    return build_electrodes(_builder_config(), create_directory=False)[1]
 
-    if array_type == "Surface Grid":
-        elec = creator.create_surface_electrode_array(
-            nx=nx, ny=ny, dx=dx, dy=dy,
-            x_offset=x_offset, y_offset=y_offset, z=0.0,
-        )
-        if mesh_type == "Surface with Topography (Prism)":
-            tf = _build_topo_func()
-            if tf is not None:
-                elec["z"] = [tf(xi, yi) for xi, yi in zip(elec["x"], elec["y"])]
 
-    elif array_type == "Borehole":
-        z_arr = np.linspace(z_start, z_end, n_bh_elec)
-        elec = creator.create_borehole_electrode_array(bh_x_single, bh_y_single, z_arr)
-
-    else:  # Crosshole
-        z_arr = np.linspace(z_start, z_end, n_bh_elec)
-        elec = creator.create_crosshole_electrode_array(bh_positions, z_arr)
-
-    return creator, elec
+def _zone_box_traces(zone_list: list[dict]) -> list:
+    """The twelve edges of each zone box, for the electrode view."""
+    traces = []
+    for zone in zone_list:
+        (x0, x1), (y0, y1), (z0, z1) = zone["x"], zone["y"], zone["z"]
+        corners = [(x0, y0), (x1, y0), (x1, y1), (x0, y1), (x0, y0)]
+        xs, ys, zs = [], [], []
+        for z in (z0, z1):                              # bottom and top rings
+            xs += [c[0] for c in corners] + [None]
+            ys += [c[1] for c in corners] + [None]
+            zs += [z] * len(corners) + [None]
+        for cx, cy in corners[:4]:                      # vertical edges
+            xs += [cx, cx, None]
+            ys += [cy, cy, None]
+            zs += [z0, z1, None]
+        traces.append(go.Scatter3d(x=xs, y=ys, z=zs, mode="lines",
+                                   line=dict(color="royalblue", width=4),
+                                   name=f"{zone['name']} ({zone['resistivity']:g} Ωm)"))
+    return traces
 
 
 def _electrode_plotly(elec: pd.DataFrame) -> go.Figure:
@@ -337,7 +547,7 @@ def _electrode_plotly(elec: pd.DataFrame) -> go.Figure:
     ))
 
     # Optionally show topography surface
-    if mesh_type == "Surface with Topography (Prism)" and array_type == "Surface Grid":
+    if mesh_type == "Surface with topography" and array_type == "Surface Grid":
         tf = _build_topo_func()
         if tf is not None:
             margin = max(dx, dy) * 2
@@ -350,6 +560,9 @@ def _electrode_plotly(elec: pd.DataFrame) -> go.Figure:
                 colorscale="earth", opacity=0.35,
                 showscale=False, name="Topography",
             ))
+
+    for trace in _zone_box_traces(zones):
+        fig.add_trace(trace)
 
     fig.update_layout(
         scene=dict(
@@ -364,17 +577,13 @@ def _electrode_plotly(elec: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def _mesh_summary(mesh) -> dict:
-    """Extract basic mesh statistics from a PyGIMLi mesh."""
-    try:
-        return {
-            "Cells": mesh.cellCount(),
-            "Nodes": mesh.nodeCount(),
-            "Boundaries": mesh.boundaryCount(),
-            "Dimension": mesh.dim(),
-        }
-    except Exception:
-        return {}
+def _download(label: str, path: Path, mime: str = "application/octet-stream") -> None:
+    """A download button for a file on disk, or a note that it is missing."""
+    if path.exists():
+        st.download_button(label, data=path.read_bytes(), file_name=path.name, mime=mime,
+                           use_container_width=True)
+    else:
+        st.caption(f"{path.name} was not written.")
 
 
 # ===========================================================================
@@ -396,7 +605,7 @@ with tab_elec:
         st.warning("Install `plotly` for interactive 3D visualization: `pip install plotly`")
     else:
         try:
-            _, elec_df = _build_electrodes()
+            elec_df = _build_electrodes()
 
             col_plot, col_info = st.columns([3, 1])
 
@@ -408,6 +617,14 @@ with tab_elec:
                 st.metric("X range (m)", f"{elec_df['x'].min():.1f} – {elec_df['x'].max():.1f}")
                 st.metric("Y range (m)", f"{elec_df['y'].min():.1f} – {elec_df['y'].max():.1f}")
                 st.metric("Z range (m)", f"{elec_df['z'].min():.2f} – {elec_df['z'].max():.2f}")
+
+            if zones:
+                region = zone_region(_mesh_config(), elec_df)
+                st.caption(
+                    "Zones act on inverted cells inside x {x_min:.1f} to {x_max:.1f}, "
+                    "y {y_min:.1f} to {y_max:.1f}, z {z_bottom:.1f} to {z_top:.1f} m."
+                    .format(**region)
+                )
 
             with st.expander("Electrode positions (full table)"):
                 st.dataframe(elec_df, use_container_width=True, height=300)
@@ -437,24 +654,26 @@ with tab_gen:
         st.error("PyHydroGeophysX is required for mesh generation.")
     else:
         st.info(
-            "Configure your electrode array and mesh parameters in the sidebar, "
-            "then press **Generate Mesh**. "
-            "Mesh generation calls PyGIMLi and may take from a few seconds to "
-            "several minutes depending on the number of electrodes and refinement settings."
+            "Configure your electrode array, engine, zones and mesh parameters in the "
+            "sidebar, then press **Generate Mesh**. "
+            "Mesh generation may take from a few seconds to several minutes depending on "
+            "the engine, the number of electrodes and the refinement settings."
         )
 
         # Parameter summary
         with st.expander("Parameter summary", expanded=False):
             cfg = {
                 "Mesh type": mesh_type,
+                "Mesh engine": mesh_engine,
                 "Array type": array_type,
                 "Electrode refinement (m)": elec_refine,
                 "Boundary refinement (m)": node_refine,
                 "Attractor distance (m)": attractor_dist,
+                "Zones": len(zones),
                 "Output directory": output_dir,
                 "Mesh name": mesh_name,
             }
-            if mesh_type == "Surface with Topography (Prism)":
+            if mesh_type == "Surface with topography":
                 cfg.update({
                     "Investigation depth (m)": para_depth,
                     "Fine Δz (m)": dz_fine,
@@ -468,65 +687,80 @@ with tab_gen:
                     "Box width Y (m)": box_width,
                     "Box depth Z (m)": box_height,
                 })
-            st.table(pd.DataFrame(cfg.items(), columns=["Parameter", "Value"]))
+            st.table(pd.DataFrame([(k, str(v)) for k, v in cfg.items()],
+                                  columns=["Parameter", "Value"]))
 
         if st.button("🚀 Generate Mesh", type="primary"):
-            with st.spinner("Running mesh generation …"):
-                try:
-                    creator, elec_df = _build_electrodes()
+            if zone_error:
+                st.error(f"Fix the zone table first: {zone_error}")
+            else:
+                log_lines: list[str] = []
+                with st.spinner("Running mesh generation …"):
+                    try:
+                        result = generate_mesh(_mesh_config(), log=log_lines.append)
+                        outputs: dict = {}
+                        formats = _selected_formats()
+                        if formats:
+                            # A mesh that generated is kept even when writing it out fails.
+                            try:
+                                outputs = save_outputs(result["mesh"], result["electrodes"],
+                                                       Path(output_dir), mesh_name, formats)
+                            except Exception as exc:
+                                log_lines.append(f"The mesh generated, but saving it to "
+                                                 f"{output_dir} failed: {exc}")
+                        # The E4D engine has already written what E4D runs on.
+                        for key, path in dict(result.get("e4d_files") or {}).items():
+                            outputs[f"e4d_{key}"] = path
+                        st.session_state["mesh_result"] = {
+                            "mesh": result["mesh"],
+                            "electrodes": result["electrodes"],
+                            "generator": result["generator"],
+                            "zones": list(result.get("zones") or []),
+                            "zones_conform": bool(result.get("zones_conform")),
+                            "e4d_zones": list(result.get("e4d_zones") or []),
+                            "outputs": outputs,
+                            "output_dir": output_dir,
+                            "mesh_name": mesh_name,
+                            "log": log_lines,
+                        }
+                        st.success(f"✅ Mesh generated: {result['generator']}")
+                    except Exception as exc:
+                        st.error(f"Mesh generation failed: {exc}")
+                        with st.expander("Full traceback"):
+                            st.code(traceback.format_exc())
+                if log_lines:
+                    with st.expander("Mesh log", expanded=False):
+                        st.code("\n".join(log_lines))
 
-                    save_fmts = (
-                        (["bms"] if export_bms else []) +
-                        (["vtk"] if export_vtk else [])
-                    )
-
-                    if mesh_type == "Box Mesh (Simple)":
-                        mesh = creator.create_box_mesh(
-                            length=box_length,
-                            width=box_width,
-                            height=box_height,
-                            electrode_positions=elec_df,
-                            output_name=mesh_name,
-                        )
-                    else:
-                        tf = _build_topo_func()
-                        mesh = creator.create_3d_mesh_with_topography(
-                            electrode_positions=elec_df,
-                            topography_func=tf,
-                            para_depth=para_depth,
-                            dz_fine=dz_fine,
-                            dz_coarse=dz_coarse,
-                            boundary_extension=boundary_ext,
-                            use_prism_mesh=True,
-                        )
-
-                    st.session_state["mesh"] = mesh
-                    st.session_state["mesh_name"] = mesh_name
-                    st.session_state["output_dir"] = output_dir
-                    st.session_state["save_fmts"] = save_fmts
-
-                    st.success("✅ Mesh generated successfully!")
-
-                except Exception as exc:
-                    st.error(f"Mesh generation failed: {exc}")
-                    with st.expander("Full traceback"):
-                        st.code(traceback.format_exc())
-
-        # Show results if mesh exists in session state
-        if "mesh" in st.session_state:
-            mesh = st.session_state["mesh"]
-            summary = _mesh_summary(mesh)
+        # Show results if a mesh exists in session state
+        if "mesh_result" in st.session_state:
+            built = st.session_state["mesh_result"]
+            mesh = built["mesh"]
+            summary = mesh_summary(mesh)
 
             st.divider()
             st.subheader("Mesh Statistics")
+            st.caption(f"Built by: {built['generator']}")
             cols = st.columns(len(summary))
             for col, (key, val) in zip(cols, summary.items()):
                 col.metric(key, val)
 
+            if built["zones"]:
+                st.markdown("**Zones** "
+                            + ("(the mesh follows their faces)" if built["zones_conform"]
+                               else "(by cell centre)"))
+                st.dataframe(pd.DataFrame(built["zones"]), use_container_width=True)
+                empty = [z["name"] for z in built["zones"] if not z["cells"]]
+                if empty:
+                    st.warning(f"{', '.join(empty)} took no cell - outside the inverted region, "
+                               "or covered by zones later in the list - and has no effect.")
+            if built["e4d_zones"]:
+                st.markdown("**E4D zones**")
+                st.dataframe(pd.DataFrame(built["e4d_zones"]), use_container_width=True)
+
             # Simple node scatter plot (subsample for performance)
             if PLOTLY_AVAILABLE:
                 try:
-                    import pygimli as pg
                     nodes = np.array(mesh.positions())
                     step = max(1, len(nodes) // 3000)
                     sub = nodes[::step]
@@ -556,76 +790,62 @@ with tab_gen:
 with tab_export:
     st.subheader("Export")
 
-    if "mesh" not in st.session_state:
+    if "mesh_result" not in st.session_state:
         st.info("Generate a mesh first (in the **Generate Mesh** tab) to enable export.")
     else:
-        mesh        = st.session_state["mesh"]
-        _mesh_name  = st.session_state.get("mesh_name", mesh_name)
-        _out_dir    = st.session_state.get("output_dir", output_dir)
-        _save_fmts  = st.session_state.get("save_fmts", [])
-
-        abs_out_dir = Path(_out_dir).resolve()
-        st.success(f"Mesh saved to: `{abs_out_dir}`")
+        built = st.session_state["mesh_result"]
+        mesh = built["mesh"]
+        outputs = built["outputs"]
+        abs_out_dir = Path(built["output_dir"]).resolve()
+        st.success(f"Files are written to: `{abs_out_dir}`")
 
         col1, col2 = st.columns(2)
 
-        # .bms file
-        bms_path = abs_out_dir / f"{_mesh_name}.bms"
+        # .bms file (with its structure sidecar)
         with col1:
             st.markdown("**PyGIMLi native (.bms)**")
-            if bms_path.exists():
-                bms_bytes = bms_path.read_bytes()
-                st.download_button(
-                    "⬇️ Download .bms",
-                    data=bms_bytes,
-                    file_name=bms_path.name,
-                    mime="application/octet-stream",
-                    use_container_width=True,
-                )
-            else:
-                if st.button("Save .bms now", use_container_width=True):
-                    try:
-                        abs_out_dir.mkdir(parents=True, exist_ok=True)
-                        mesh.save(str(bms_path))
-                        st.success(f"Saved: {bms_path}")
-                    except Exception as exc:
-                        st.error(str(exc))
+            if "bms" in outputs:
+                _download("⬇️ Download .bms", Path(outputs["bms"]))
+                if outputs.get("mesh_structure"):
+                    _download("⬇️ Download mesh structure sidecar", Path(outputs["mesh_structure"]),
+                              "application/json")
+            elif st.button("Save .bms now", use_container_width=True):
+                try:
+                    outputs.update(save_outputs(mesh, built["electrodes"], abs_out_dir,
+                                                built["mesh_name"], ["BMS mesh (.bms)"]))
+                    st.success(f"Saved: {outputs['bms']}")
+                except Exception as exc:
+                    st.error(str(exc))
 
         # .vtk file
-        vtk_path = abs_out_dir / f"{_mesh_name}.vtk"
         with col2:
             st.markdown("**ParaView / VTK (.vtk)**")
-            if vtk_path.exists():
-                vtk_bytes = vtk_path.read_bytes()
-                st.download_button(
-                    "⬇️ Download .vtk",
-                    data=vtk_bytes,
-                    file_name=vtk_path.name,
-                    mime="application/octet-stream",
-                    use_container_width=True,
-                )
-            else:
-                if st.button("Save .vtk now", use_container_width=True):
-                    try:
-                        abs_out_dir.mkdir(parents=True, exist_ok=True)
-                        mesh.exportVTK(str(vtk_path))
-                        st.success(f"Saved: {vtk_path}")
-                    except Exception as exc:
-                        st.error(str(exc))
+            if "vtk" in outputs:
+                _download("⬇️ Download .vtk", Path(outputs["vtk"]))
+            elif st.button("Save .vtk now", use_container_width=True):
+                try:
+                    outputs.update(save_outputs(mesh, built["electrodes"], abs_out_dir,
+                                                built["mesh_name"], ["VTK mesh (.vtk)"]))
+                    st.success(f"Saved: {outputs['vtk']}")
+                except Exception as exc:
+                    st.error(str(exc))
+
+        e4d_files = {key: path for key, path in outputs.items() if key.startswith("e4d_")}
+        if e4d_files:
+            st.divider()
+            st.markdown("**E4D files** (what E4D itself runs on)")
+            for key, path in e4d_files.items():
+                _download(f"⬇️ {Path(path).name}", Path(path))
 
         st.divider()
         st.markdown("**Electrode positions (.csv)**")
-        try:
-            _, elec_df = _build_electrodes()
-            csv_bytes = elec_df.to_csv(index=False).encode()
-            st.download_button(
-                "⬇️ Download electrode CSV",
-                data=csv_bytes,
-                file_name=f"{_mesh_name}_electrodes.csv",
-                mime="text/csv",
-            )
-        except Exception:
-            pass
+        csv_bytes = built["electrodes"].to_csv(index=False).encode()
+        st.download_button(
+            "⬇️ Download electrode CSV",
+            data=csv_bytes,
+            file_name=f"{built['mesh_name']}_electrodes.csv",
+            mime="text/csv",
+        )
 
         st.divider()
         st.caption(

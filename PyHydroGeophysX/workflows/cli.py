@@ -5,11 +5,13 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import shutil
 import sys
 from typing import Sequence
 
 from .codegen import generate_python
 from .models import RunContext
+from .objects import is_plain_data, objects_folder, save_objects
 from .recipe import load_recipe
 from .registry import list_workflows
 from .runner import run_workflow
@@ -29,6 +31,13 @@ def _parser() -> argparse.ArgumentParser:
         "--result-file",
         type=Path,
         help="Write the process-safe result JSON here instead of stdout.",
+    )
+    run.add_argument(
+        "--objects",
+        default="",
+        help="With --result-file: the result's live objects (meshes, arrays, "
+             "tables), by name and comma-separated, to write beside it for the "
+             "caller to read back; '*' for all of them.",
     )
     export = subparsers.add_parser("export-code", help="Generate Python from a recipe.")
     export.add_argument("recipe", type=Path)
@@ -84,15 +93,30 @@ def main(argv: Sequence[str] | None = None) -> int:
     finally:
         if block_pyarrow and previous_pyarrow is missing:
             sys.modules.pop("pyarrow", None)
-    payload = json.dumps(result.to_dict(), indent=2, sort_keys=True)
     if args.result_file is not None:
         destination = args.result_file.resolve()
         destination.parent.mkdir(parents=True, exist_ok=True)
+        document = result.to_dict()
+        folder = objects_folder(destination)
+        shutil.rmtree(folder, ignore_errors=True)     # a previous run's
+        wanted = [name.strip() for name in str(args.objects or "").split(",") if name.strip()]
+        # The caller reads these back (see workflows.objects), so a page gets
+        # what a run in a thread gave it. Heavy objects only when asked for - a
+        # mesh it does not show would cost it a load for nothing - and plain
+        # data always: it is small, and a value with a NaN in it is one.
+        chosen = {name: value for name, value in result.objects.items()
+                  if "*" in wanted or name in wanted or is_plain_data(value)}
+        if chosen or wanted:
+            document["objects"] = save_objects(chosen, folder)
+            document["objects"]["skipped"].update({
+                name: "the workflow returned no object of this name"
+                for name in wanted if name != "*" and name not in result.objects})
+        payload = json.dumps(document, indent=2, sort_keys=True)
         temporary = destination.with_name(destination.name + ".tmp")
         temporary.write_text(payload, encoding="utf-8")
         temporary.replace(destination)
     else:
-        print(payload)
+        print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
     return 0 if result.status in {"ok", "completed", "success"} else 1
 
 

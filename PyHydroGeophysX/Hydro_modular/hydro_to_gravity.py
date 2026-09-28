@@ -5,11 +5,12 @@ Hydrologic-to-gravity conversion helpers for 2D profile workflows.
 from typing import Optional, Tuple
 
 import numpy as np
-from scipy.interpolate import griddata
 
 from discretize import TensorMesh
 from simpeg import maps
 from simpeg.potential_fields import gravity
+
+from PyHydroGeophysX.core.hydro_profile import interpolate_layer_samples
 
 
 def _validate_profile_inputs(
@@ -80,7 +81,9 @@ def hydro_to_gravity(
     Simulate gravity response from a 2D hydrologic profile using SimPEG.
 
     The 2D profile is interpolated to a thin 3D TensorMesh (single y strip),
-    then ``Simulation3DIntegral`` is used to compute ``gz``.
+    then ``Simulation3DIntegral`` is used to compute ``gz``. Padding cells
+    outside the supplied top and bottom interfaces have zero density contrast;
+    the supplied water content is not extrapolated beneath the hydrological grid.
 
     Args:
         water_content: Water content matrix, shape (n_layers, n_stations).
@@ -144,15 +147,14 @@ def hydro_to_gravity(
 
     centers = mesh.cell_centers
     query = np.column_stack((centers[:, 0], centers[:, 2]))
-    rho_lin = griddata(points, values, query, method="linear")
-    rho_near = griddata(points, values, query, method="nearest")
-    rho_kgm3 = np.asarray(rho_lin, dtype=float)
-    nan_mask = ~np.isfinite(rho_kgm3)
-    rho_kgm3[nan_mask] = rho_near[nan_mask]
+    # Linear inside the samples and nearest outside; a single flat layer, whose
+    # samples lie on one line, is interpolated along it (it raised QhullError).
+    rho_kgm3 = interpolate_layer_samples(points, values, query)
 
     surface_z = np.interp(centers[:, 0], x, boundaries[0, :])
-    above_surface = centers[:, 2] > surface_z
-    rho_kgm3[above_surface] = 0.0
+    bottom_z = np.interp(centers[:, 0], x, boundaries[-1, :])
+    outside_domain = (centers[:, 2] > surface_z) | (centers[:, 2] < bottom_z)
+    rho_kgm3[outside_domain] = 0.0
 
     rho_gcc = rho_kgm3 / 1000.0
 

@@ -6,12 +6,13 @@ adjusting regularization parameters to achieve optimal results.
 """
 
 import os
-import sys
 from typing import Any, Dict, List, Optional, Tuple
 
 from ._chi2 import chi2_history
 
 import numpy as np
+
+from PyHydroGeophysX.inversion.lambda_search import LAMBDA_BOUNDS
 
 from .base_agent import BaseAgent
 
@@ -170,6 +171,7 @@ optimal regularization parameter selection."""
             
             # If quality is acceptable or auto_adjust is disabled, return
             if evaluation['is_acceptable'] or not auto_adjust:
+                self._interpret_retained(inversion_results)
                 return {
                     'status': 'success' if evaluation['is_acceptable'] else 'needs_review',
                     'summary': (
@@ -185,6 +187,7 @@ optimal regularization parameter selection."""
                     'attempts': 1,
                     'quality_threshold': quality_threshold,
                     'transparent_log': transparent_log,
+                    'lambda_search': self._lambda_search_report(evaluation),
                 }
             
             # Attempt to improve through parameter adjustment
@@ -255,6 +258,7 @@ optimal regularization parameter selection."""
             # Get LLM interpretation if available
             interpretation = None
             if self.api_key:
+                self._interpret_retained(best_results)
                 interpretation = self._generate_interpretation(best_results, self.history, best_evaluation)
             
             summary = (
@@ -282,8 +286,9 @@ optimal regularization parameter selection."""
                 'interpretation': interpretation,
                 'quality_threshold': quality_threshold,
                 'transparent_log': transparent_log,
+                'lambda_search': self._lambda_search_report(best_evaluation),
             }
-            
+
         except Exception as e:
             self._log_execution(f"Error in evaluation: {str(e)}")
             return {
@@ -704,8 +709,15 @@ optimal regularization parameter selection."""
                 new_lambda = current_lambda * 0.8
             
             self._log_execution(f"Fine-tuning: adjusting lambda to {new_lambda:.2f}")
-        
-        adjusted['lambda'] = new_lambda
+
+        # The bounds every lambda search in the package keeps to (and the Qt
+        # spin boxes offer): below them the inversion is unregularized, above
+        # them the model is flat whatever the data say.
+        bounded = float(np.clip(new_lambda, *LAMBDA_BOUNDS))
+        if bounded != new_lambda:
+            self._log_execution(f"lambda {new_lambda:g} is outside {LAMBDA_BOUNDS}; "
+                                f"using {bounded:g}")
+        adjusted['lambda'] = bounded
         
         # Adjust iterations if convergence is poor
         if metrics['convergence'].get('status') == 'still_improving':
@@ -715,6 +727,45 @@ optimal regularization parameter selection."""
         
         return adjusted
     
+    def _lambda_search_report(self, retained: Dict[str, Any]) -> Dict[str, Any]:
+        """The attempts, reported as every lambda search in the package reports.
+
+        :func:`~PyHydroGeophysX.inversion.lambda_search.search_lambda_for_chi2`
+        returns ``lam``, ``chi2``, ``trials`` and ``status``; the ERT, SRT,
+        potential-field and EM line inversions all hand that on. This agent
+        steps lambda by its own rule, towards an acceptable quality score
+        rather than a chi-squared value, so ``objective`` says which, and the
+        status is ``converged`` when the retained attempt met the threshold.
+
+        Examples
+        --------
+        >>> agent = InversionEvaluationAgent()
+        >>> agent.history = [{'parameters': {'lambda': 20},
+        ...                   'metrics': {'data_fit': {'final_chi2': 3.0}},
+        ...                   'is_acceptable': False}]
+        >>> report = agent._lambda_search_report(agent.history[0])
+        >>> report['trials'], report['status']
+        ([{'lambda': 20.0, 'chi2': 3.0}], 'best_effort')
+        """
+        def _lambda(evaluation):
+            params = evaluation.get('parameters') or {}
+            value = params.get('lambda', params.get('lam'))
+            return None if value is None else float(value)
+
+        def _chi2(evaluation):
+            value = ((evaluation.get('metrics') or {}).get('data_fit') or {}).get('final_chi2')
+            return None if value is None else float(value)
+
+        acceptable = bool(retained.get('is_acceptable'))
+        return {
+            'lam': _lambda(retained),
+            'chi2': _chi2(retained),
+            'trials': [{'lambda': _lambda(e), 'chi2': _chi2(e)} for e in self.history],
+            'status': 'converged' if acceptable else 'best_effort',
+            'reason': '' if acceptable else 'no attempt met the quality threshold',
+            'objective': 'quality score',
+        }
+
     def _rerun_inversion(self, original_input: Dict[str, Any],
                         adjusted_params: Dict[str, Any]) -> Dict[str, Any]:
         """Re-run inversion with adjusted parameters."""
@@ -733,6 +784,9 @@ optimal regularization parameter selection."""
             from pathlib import Path
             reinversion_input['output_dir'] = str(Path(original_input['output_dir']) / f'attempt_{len(self.history) + 1}')
         reinversion_input['inversion_params'] = adjusted_params
+        # An attempt is not interpreted: only the model the loop keeps is, once
+        # (_interpret_retained). Every attempt used to ask the model for one.
+        reinversion_input['interpret'] = False
         
         # Remove evaluation-specific keys
         for key in ['inversion_results', 'auto_adjust', 'max_attempts', 'custom_thresholds']:
@@ -747,6 +801,36 @@ optimal regularization parameter selection."""
         except Exception as exc:  # noqa: BLE001 - reported by the loop
             return {'status': 'failed', 'error': f"{type(exc).__name__}: {exc}"}
     
+    def _interpret_retained(self, results: Dict[str, Any]) -> None:
+        """Ask for the model interpretation once, for the model the run keeps.
+
+        ERTInversionAgent asked for one on every attempt of this loop, so a
+        simple request spent most of its model calls interpreting models the
+        loop then discarded. Attempts now run without one; the retained model -
+        the first or a retry - is interpreted here when it carries none, which
+        is the interpretation the report prints. A result without the solver's
+        own record (a structure-constrained model, say) is left as it is.
+        """
+        if not self.api_key or not isinstance(results, dict) or results.get('interpretation'):
+            return
+        from ._method import IMPLEMENTED_SCHEME
+        from .ert_inversion_agent import ERTInversionAgent
+
+        agent = ERTInversionAgent(api_key=self.api_key, model=self.model,
+                                  llm_provider=self.llm_provider)
+        if results.get('time_lapse_result') is not None:
+            text = agent._interpret_time_lapse_results(
+                results['time_lapse_result'],
+                results.get('time_lapse_method_requested') or IMPLEMENTED_SCHEME)
+        elif results.get('inversion_result') is not None:
+            text = agent._interpret_results(
+                results['inversion_result'],
+                (results.get('processing') or {}).get('inversion_params') or {})
+        else:
+            return
+        results['interpretation'] = text
+        self.llm_usage_ledger.extend(agent.llm_usage_ledger)
+
     def _extract_final_model(self, results: Dict[str, Any]) -> Optional[np.ndarray]:
         """Extract final model from results."""
         # Try different result formats
@@ -823,14 +907,3 @@ hydrogeophysical interpretation:
         except Exception as e:
             self._log_execution(f"Failed to generate interpretation: {e}")
             return None
-    
-    def _log_execution(self, message: str):
-        """Log execution messages."""
-        prefix = f"[{self.name}] "
-        try:
-            print(f"{prefix}{message}")
-        except UnicodeEncodeError:
-            # Keep logging robust on Windows terminals with non-UTF-8 code pages.
-            encoding = getattr(sys.stdout, "encoding", None) or "ascii"
-            safe_message = message.encode(encoding, errors="replace").decode(encoding, errors="replace")
-            print(f"{prefix}{safe_message}")

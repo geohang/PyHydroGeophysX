@@ -46,7 +46,10 @@ pass, e.g.::
     conda run -n pg python examples/generate_synthetic_examples.py --scenario wet_shallow --skip-ert --skip-seismic
 
 The seismic line map endpoints (``SEISMIC_LINES``) must stay in sync with
-``_SYNTHETIC_LINES`` in ``PyHydroGeophysX/qt_apps/modules/seismic3d.py``.
+``_SYNTHETIC_LINES`` in ``PyHydroGeophysX/qt_apps/modules/seismic3d.py``. Each
+section starts (distance zero) at its ``p2`` and runs toward ``p1``, the profile
+convention of ``core.interpolation.setup_profile_coordinates``, so ``p2`` is the
+line's (x0, y0) on the map.
 """
 
 from __future__ import annotations
@@ -66,7 +69,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from PyHydroGeophysX.qt_apps.hydro_pipeline import (  # noqa: E402
+from PyHydroGeophysX.Hydro_modular.hydro_to_geophysics import (  # noqa: E402
     assign_three_layer_markers,
     extract_profile,
     interpolate_profile_to_mesh,
@@ -217,7 +220,7 @@ def write_hydro_bundle(key: str, cfg: Dict, data_root: Path) -> Path:
 
 
 # ---------------------------------------------------------------------------
-# 2. Shared mesh construction (mirrors hydro_pipeline.run_hydro_forward).
+# 2. Shared mesh construction (mirrors hydro_to_geophysics.run_hydro_forward).
 # ---------------------------------------------------------------------------
 def _build_mesh(profile: Dict, cfg: Dict):
     """Build the 2D mesh, per-cell markers, and the layer-boundary indices."""
@@ -402,15 +405,20 @@ def build_kriged_3d(seismic_root: Path, cfg: Dict, out_dir: Path, log: Callable)
     Kriging (gstools), using the same engine the Seismic -> Structure module runs
     when 'kriging' is selected. Copies the outputs into ``out_dir``."""
     import shutil
-    from PyHydroGeophysX.qt_apps.seismic3d_pipeline import build_3d_model, DEFAULT_KRIGING
+    from PyHydroGeophysX.Geophy_modular.structure_integration import (
+        DEFAULT_KRIGING,
+        build_3d_model,
+    )
 
     lines = []
     for i, spec in enumerate(SEISMIC_LINES, start=1):
         d = seismic_root / f"line{i}"
+        # A section's distance zero is p2: extract_profile runs from point2
+        # toward point1, so the line starts at p2 on the map and ends at p1.
         lines.append({"name": spec["name"], "mesh": str(d / "velmesh.bms"),
                       "velocity": str(d / "Vinvmodel.npy"),
-                      "x0": float(spec["p1"][0]), "y0": float(spec["p1"][1]),
-                      "x1": float(spec["p2"][0]), "y1": float(spec["p2"][1])})
+                      "x0": float(spec["p2"][0]), "y0": float(spec["p2"][1]),
+                      "x1": float(spec["p1"][0]), "y1": float(spec["p1"][1])})
     params = {
         "output_dir": str(out_dir), "lines": lines, "threshold": 1200.0, "interval": 4.0,
         "grid_resolution": cfg["grid_res"], "depth": 50.0,

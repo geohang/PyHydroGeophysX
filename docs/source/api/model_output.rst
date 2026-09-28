@@ -15,10 +15,9 @@ PyHydroGeophysX.model\_output.base module
 PyHydroGeophysX.model\_output.modflow\_output module
 ----------------------------------------------------
 
-.. automodule:: PyHydroGeophysX.model_output.modflow_output
-   :members:
-   :undoc-members:
-   :show-inheritance:
+Deprecated in 0.5.0 and removed in 0.6.0: a compatibility path that warns and
+re-exports the MODFLOW readers from
+:mod:`PyHydroGeophysX.model_output.water_content`, documented below.
 
 PyHydroGeophysX.model\_output.parflow\_output module
 ----------------------------------------------------

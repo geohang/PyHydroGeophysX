@@ -248,7 +248,9 @@ def _parse_data_rows(rows, names):
             if k in col:
                 out['k'] = col[k]
                 break
-        for k in ('u', 'i', 'ip'):
+        # 'stack' is the potential's sample spread that ert_io.standard_to_pg
+        # saves with the inversion input; its "stack" error model needs it back.
+        for k in ('u', 'i', 'ip', 'stack'):
             if k in col:
                 out[k] = col[k]
         if 'rhoa' in out or 'resist' in out:
@@ -487,6 +489,7 @@ class Observation:
     K: float | None = None         # geometric factor
     fid: str | None = None         # field id/record id
     contact_r: float | None = None # transmitter contact resistance (ohm)
+    stack: float | None = None     # potential's sample spread, as a fraction of |V|
 
 
 @dataclass
@@ -745,6 +748,12 @@ def _warn_resipy_once() -> None:
             + resipy_install_hint())
 
 
+#: Formats 0.3.0 read with parsers adapted from ResIPy. ResIPy is GPL-3.0 and
+#: this package is Apache-2.0, so those parsers were removed in 0.5.0, and these
+#: files now need ResIPy itself.
+_READERS_REMOVED_IN_050 = ("Syscal", "Protocol DC", "Protocol IP")
+
+
 def _needs_resipy(instrument: str):
     """A reader for a format this package does not parse on its own.
 
@@ -753,10 +762,19 @@ def _needs_resipy(instrument: str):
     nonsense from it, and a quadrupole table that parsed but is wrong is worse
     than one that refused.
     """
+    removed = ""
+    if instrument in _READERS_REMOVED_IN_050:
+        removed = (
+            f"PyHydroGeophysX 0.3.0 read {instrument} files with a built-in parser "
+            "adapted from ResIPy. That parser was removed in 0.5.0 for licensing "
+            "reasons: ResIPy is GPL-3.0 and this package is Apache-2.0. Install "
+            "ResIPy, an optional dependency under its own GPL-3.0 license, to read "
+            "them:\n    pip install resipy\n\n")
+
     def _raise(fname):
         raise NotImplementedError(
             f"Reading a {instrument} file needs ResIPy.\n\n"
-            + resipy_install_hint())
+            + removed + resipy_install_hint())
     return _raise
 
 
@@ -805,6 +823,25 @@ _EMBEDDED_ONLY = ("Subsurface Insights",)
 #: column exports such as Terrameter LS ones - so that it is a second reader of
 #: the same format for them, where for any other format it is a guess.
 _PYGIMLI_READS = ("BERT", "ResInv", "ABEM-Lund", "Custom")
+
+
+def _electrode_rows(table) -> List[List[float]]:
+    """``[[x, y, z], ...]`` of an electrode table, as a reader had it.
+
+    Recorded as ``header_electrodes`` when an electrode file replaces the
+    positions the data file's own header gave, in the same numbering:
+    ``ert_io.standard_to_pg`` needs both to carry an apparent resistivity formed
+    on the header's geometry over to the file's.
+    """
+    if isinstance(table, pd.DataFrame):
+        columns = [table[axis] if axis in table.columns else 0.0 for axis in ("x", "y", "z")]
+        rows = np.column_stack([np.broadcast_to(np.asarray(col, dtype=float), (len(table),))
+                                for col in columns])
+    else:
+        rows = np.atleast_2d(np.asarray(table, dtype=float))
+        if rows.shape[1] < 3:
+            rows = np.hstack([rows, np.zeros((len(rows), 3 - rows.shape[1]))])
+    return rows[:, :3].tolist()
 
 
 def _survey_electrodes_only(electrodes_df: pd.DataFrame, df: pd.DataFrame,
@@ -969,6 +1006,7 @@ def _load_ert_embedded_parsers(
 
     # Override electrode positions from external file if provided
     # This matches ResIPy behavior: external electrode file takes priority
+    header_electrodes = None
     if electrode_file is not None:
         electrode_file_path = Path(electrode_file)
         if not electrode_file_path.is_absolute():
@@ -988,6 +1026,7 @@ def _load_ert_embedded_parsers(
             if len(elec_data) != len(electrodes_df):
                 electrodes_df, df = _survey_electrodes_only(
                     electrodes_df, df, len(elec_data), electrode_file_path.name)
+            header_electrodes = _electrode_rows(electrodes_df)
 
             # Update electrode positions in dataframe
             electrodes_df['x'] = elec_data[:, 0]
@@ -1206,6 +1245,12 @@ def _load_ert_embedded_parsers(
     # electrode shows up here long before it shows up in the section.
     contact = (pd.to_numeric(df['contact_r'], errors='coerce')
                if 'contact_r' in df.columns else None)
+    # The spread of the potential's samples within one reading, as a fraction of
+    # |V| (Subsurface Insights). It is not the reading's uncertainty, so it is
+    # never the error model by default (see parse_subsurface_insights); QC can
+    # cut on it, and the studio uses it as the error only when asked to.
+    spread = (pd.to_numeric(df['stack'], errors='coerce')
+              if 'stack' in df.columns else None)
 
     def _value_at(series, idx):
         if series is None or idx not in series.index:
@@ -1229,6 +1274,7 @@ def _load_ert_embedded_parsers(
             K=k_val,
             fid=str(idx),
             contact_r=_value_at(contact, idx),
+            stack=_value_at(spread, idx),
         ))
     
     # Build metadata
@@ -1242,6 +1288,8 @@ def _load_ert_embedded_parsers(
         'n_electrodes': len(electrodes_list),
         'n_measurements': len(obs_list),
     }
+    if header_electrodes is not None:
+        metadata['header_electrodes'] = header_electrodes
     if label_map is not None:
         metadata['electrode_label_map'] = label_map
     if volts is not None or amps is not None:
@@ -1348,6 +1396,7 @@ def _load_ert_pygimli(
 
     # Override electrode positions from external file if provided
     # This matches ResIPy behavior: external electrode file takes priority
+    header_electrodes = None
     if electrode_file is not None:
         electrode_file_path = Path(electrode_file)
         if not electrode_file_path.is_absolute():
@@ -1361,6 +1410,11 @@ def _load_ert_pygimli(
             # Columns by meaning, not position: a vendor table's ID column was
             # read as a coordinate, and a header row made loadtxt fail.
             elec_data, _, _ = read_electrode_table(electrode_file_path)
+            if len(elec_data) != len(electrodes_df):
+                raise ValueError(
+                    f"{electrode_file_path.name} lists {len(elec_data)} electrodes, but "
+                    f"the data file's electrode table has {len(electrodes_df)}.")
+            header_electrodes = _electrode_rows(electrodes_df)
 
             # Update electrode positions in dataframe
             electrodes_df['x'] = elec_data[:, 0]
@@ -1439,7 +1493,10 @@ def _load_ert_pygimli(
         error = np.where(np.isfinite(error), error, 0.05)
     else:
         error = np.ones(n_data) * 0.05  # Default 5% error
-    
+    # The potential's sample spread ert_io.standard_to_pg saves with the
+    # inversion input, which its "stack" error model reads back.
+    spread = np.asarray(data('stack'), dtype=float) if data.haveData('stack') else None
+
     # Build observations dataframe
     observations_df = pd.DataFrame({
         'a': a.astype(int),
@@ -1464,7 +1521,9 @@ def _load_ert_pygimli(
             I=None,
             rel_err=float(row['error']) if np.isfinite(row['error']) else 0.05,
             K=1.0,
-            fid=str(idx)
+            fid=str(idx),
+            stack=(float(spread[idx]) if spread is not None and np.isfinite(spread[idx])
+                   else None),
         )
         for idx, row in observations_df.iterrows()
     ]
@@ -1479,15 +1538,17 @@ def _load_ert_pygimli(
         'n_electrodes': len(electrodes_list),
         'n_measurements': len(observations_list),
     }
-    
+    if header_electrodes is not None:
+        metadata['header_electrodes'] = header_electrodes
+
     if local_ref is not None:
         metadata['local_origin_x'] = local_ref.origin_x
         metadata['local_origin_y'] = local_ref.origin_y
         metadata['azimuth_deg'] = local_ref.azimuth_deg
-    
+
     if epsg is not None:
         metadata['epsg'] = epsg
-    
+
     return StandardERT(
         electrodes=electrodes_list,
         observations=observations_list,
@@ -1795,20 +1856,23 @@ def load_ert_resipy(
     print(f"   Loaded {len(df)} raw resistance measurements from {instrument}")
 
     # Step 2: Update electrode positions from external file
+    header_electrodes = None
     if electrode_file is not None:
         electrode_file_path = Path(electrode_file)
         if not electrode_file_path.is_absolute():
             electrode_file_path = Path.cwd() / electrode_file_path
-        
+
         if not electrode_file_path.exists():
             raise FileNotFoundError(f"Electrode file not found: {electrode_file_path}")
-        
+
         # Load electrode coordinates from file
         try:
             # Columns by meaning, not position: a vendor table's ID column was
             # read as a coordinate, and a header row made loadtxt fail.
             elec_data, _, _ = read_electrode_table(electrode_file_path)
-            
+            if survey.elec is not None and len(survey.elec):
+                header_electrodes = _electrode_rows(survey.elec)
+
             # Set electrode positions in survey
             prj.setElec(elec_data)
             print(f"   Updated electrode positions from {electrode_file_path.name}")
@@ -1968,7 +2032,11 @@ def load_ert_resipy(
         app_res_source = "resistance"
     else:
         app_res_source = "unknown"
-    
+    # ResIPy's BERT reader keeps every column the file names, and 'stack' is the
+    # potential's sample spread ert_io.standard_to_pg saves with the inversion
+    # input; the "stack" error model reads it back from here.
+    stack_col = 'stack' if instrument == 'BERT' and 'stack' in df.columns else None
+
     for idx, row in df.iterrows():
         app_resistivity = None
         k_value = 1.0
@@ -1999,7 +2067,9 @@ def load_ert_resipy(
             I=float(row[i_col]) if i_col and i_col in row and np.isfinite(row[i_col]) else None,
             rel_err=float(rel_err[idx_to_pos[idx]]),
             K=k_value,  # Geometric factor if available
-            fid=str(row['id']) if 'id' in row else str(idx)
+            fid=str(row['id']) if 'id' in row else str(idx),
+            stack=(float(row[stack_col]) if stack_col and np.isfinite(row[stack_col])
+                   else None),
         ))
 
     crs_out = ("EPSG:%d" % epsg) if (crs != "local" and epsg) else crs
@@ -2013,6 +2083,8 @@ def load_ert_resipy(
         "epsg": epsg,
         "local_ref": (local_ref._asdict() if isinstance(local_ref, LocalRef) else None)
     }
+    if header_electrodes is not None:
+        meta["header_electrodes"] = header_electrodes
 
     return StandardERT(
         crs=crs_out,
@@ -2027,8 +2099,8 @@ def load_ert_resipy(
 # Diagnostics and export
 # ---------------------------
 def qc_and_visualize(ert: StandardERT, outdir: str = "examples/results/ert") -> Dict[str, str]:
-    """
-    Create basic diagnostics and export normalized artifacts:
+    """Create basic diagnostics and export normalized artifacts.
+
     - electrodes plot
     - histogram of log10 apparent resistivity
     - observations parquet (CSV without a parquet engine), electrodes CSV,

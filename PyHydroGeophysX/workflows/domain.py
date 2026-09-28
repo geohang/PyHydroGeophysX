@@ -1,13 +1,21 @@
-"""Adapters from serializable workflow contracts to canonical domain APIs."""
+"""Adapters from serializable workflow contracts to canonical domain APIs.
+
+One handler per registered workflow: it turns a recipe's inputs into the objects
+and paths a domain function takes, calls it, and files what comes back as a
+:class:`WorkflowRunResult`. Workflow IDs are registry identifiers; they do not
+imply that a same-named function exists in the scientific module.
+"""
 
 from __future__ import annotations
 
 from contextlib import contextmanager
-from dataclasses import asdict, is_dataclass
+import csv
+from dataclasses import fields, is_dataclass
+import inspect
 import json
 from pathlib import Path
 import tempfile
-from typing import Any, Dict, Iterator, Mapping, Optional
+from typing import Any, Callable, Dict, Iterator, Mapping, Optional
 
 import numpy as np
 
@@ -56,11 +64,96 @@ def _materialize(value: Any, context: RunContext) -> Any:
     return value
 
 
+def _load_array(value: Any, context: RunContext, *, name: str) -> np.ndarray:
+    if isinstance(value, ArtifactRef):
+        # One .npz holds several arrays, so the member read is part of the key:
+        # keyed by the artifact alone, x, y and values taken from one archive
+        # all came back as whichever of them was read first.
+        cache_key = f"{context.cache_key(value)}#{value.metadata.get('array_key') or name}"
+        if cache_key in context.object_cache:
+            return np.asarray(context.object_cache[cache_key], dtype=float)
+        path = context.resolve_artifact(value)
+        suffix = path.suffix.lower()
+        if suffix == ".npy":
+            array = np.load(path, allow_pickle=False)
+        elif suffix == ".npz":
+            archive = np.load(path, allow_pickle=False)
+            key = str(value.metadata.get("array_key") or name)
+            if key not in archive.files:
+                if len(archive.files) != 1:
+                    raise ValueError(
+                        f"Artifact {path} has arrays {archive.files}; metadata.array_key is required."
+                    )
+                key = archive.files[0]
+            array = archive[key]
+        else:
+            delimiter = "," if suffix == ".csv" else None
+            array = np.loadtxt(path, delimiter=delimiter)
+        context.object_cache[cache_key] = array
+        return np.asarray(array, dtype=float)
+    return np.asarray(value, dtype=float)
+
+
+def _artifact(
+    path: Path,
+    *,
+    context: RunContext,
+    artifact_id: str,
+    kind: str,
+    format: str | None = None,
+    metadata: Mapping[str, Any] | None = None,
+) -> ArtifactRef:
+    return ArtifactRef.from_path(
+        path,
+        artifact_id=artifact_id,
+        kind=kind,
+        format=format,
+        base_dir=context.project_root,
+        metadata=metadata,
+    )
+
+
+def _keywords_for(function: Callable[..., Any], parameters: Mapping[str, Any]) -> Dict[str, Any]:
+    """The recipe parameters ``function`` takes as keywords, typed as its defaults are.
+
+    A parameter the recipe leaves out, or sets to None, is not passed, so the
+    function's own default applies and cannot drift from a copy kept here. A key
+    the function does not take - page bookkeeping such as ``receiver_spacing`` -
+    stays in the recipe without reaching it. A value is converted to the type of
+    the default it replaces, as these handlers used to do one keyword at a time,
+    so a recipe written with ``20.0`` iterations still runs, and a JSON list
+    arrives as the tuple a pair of bounds defaults to. Arguments without a
+    default (the data and output paths) and ``log`` are the handler's to pass.
+    """
+    keywords: Dict[str, Any] = {}
+    for name, parameter in inspect.signature(function).parameters.items():
+        if (name == "log" or parameter.default is inspect.Parameter.empty
+                or parameter.kind not in (inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                                          inspect.Parameter.KEYWORD_ONLY)):
+            continue
+        value = parameters.get(name)
+        if value is None:
+            continue
+        default = parameter.default
+        if isinstance(default, bool):
+            value = bool(value)
+        elif isinstance(default, (int, float, str)) and not isinstance(value, bool):
+            value = type(default)(value)
+        elif isinstance(default, tuple) and isinstance(value, list):
+            value = tuple(value)            # a pair such as bounds, read back from JSON
+        keywords[name] = value
+    return keywords
+
+
 def _json_value(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, np.generic):
+        value = value.item()
+    if isinstance(value, float) and not np.isfinite(value):
+        # Not JSON: in the summary it failed the whole run as it finished (an
+        # undefined chi2, an empty range). As an object it comes back as is.
+        return False, None
     if value is None or isinstance(value, (str, int, float, bool)):
         return True, value
-    if isinstance(value, np.generic):
-        return True, value.item()
     if isinstance(value, Mapping):
         result: Dict[str, Any] = {}
         for key, item in value.items():
@@ -77,9 +170,16 @@ def _json_value(value: Any) -> tuple[bool, Any]:
                 return False, None
             result.append(encoded)
         return True, result
-    if is_dataclass(value):
-        return _json_value(asdict(value))
+    if is_dataclass(value) and not isinstance(value, type):
+        return _json_value(_fields(value))
     return False, None
+
+
+def _fields(value: Any) -> Dict[str, Any]:
+    """A dataclass's fields as they are. ``dataclasses.asdict`` deep-copies
+    each one, and a PyGIMLi mesh cannot be copied that way: a joint ERT + SRT
+    result, which holds its mesh, failed at the end of the run."""
+    return {field.name: getattr(value, field.name) for field in fields(value)}
 
 
 def _legacy_result(
@@ -87,8 +187,8 @@ def _legacy_result(
     context: RunContext,
     result: Any,
 ) -> WorkflowRunResult:
-    if is_dataclass(result):
-        raw = asdict(result)
+    if is_dataclass(result) and not isinstance(result, type):
+        raw = _fields(result)
         objects = {"domain_result": result}
     elif isinstance(result, Mapping):
         raw = dict(result)
@@ -221,9 +321,13 @@ def run_mesh3d(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
     inputs = _materialize(spec.inputs, context)
     if inputs.get("topography_points"):
         config["topography_points"] = np.load(inputs["topography_points"])
+    if inputs.get("e4d_config"):
+        config["e4d_config_path"] = str(inputs["e4d_config"])
     config["output_dir"] = str(context.output_dir)
     output_formats = list(config.pop("output_formats", []))
     output_name = str(config.pop("output_name", "mesh3d"))
+    # The E4D engine writes its .cfg, .poly and mesh files under this name.
+    config.setdefault("e4d_basename", output_name)
     result = generate_mesh(config, log=context.progress)
     if output_formats:
         # A mesh that generated is worth keeping even when writing it out fails.
@@ -243,6 +347,9 @@ def run_mesh3d(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
             result["output_error"] = str(exc)
             context.progress(
                 f"The mesh generated, but saving it to {context.output_dir} failed: {exc}")
+    # The E4D engine has already written what E4D runs on beside the mesh.
+    for key, path in dict(result.get("e4d_files") or {}).items():
+        result.setdefault("outputs", {})[f"e4d_{key}"] = path
     return _legacy_result(spec, context, result)
 
 
@@ -275,6 +382,9 @@ def run_ert_timelapse(spec: WorkflowSpec, context: RunContext) -> WorkflowRunRes
             time_labels=labels or None,
             time_unit=str(inputs.get("time_unit") or ""),
             timestamps=stamps or None,
+            # The electrode positions every survey is placed on, when the run
+            # was given an electrode file rather than each file's own header.
+            electrode_file=inputs.get("electrodes") or None,
         )
     return _legacy_result(spec, context, result)
 
@@ -319,6 +429,11 @@ def run_ert_single(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult
     if not isinstance(source, ArtifactRef):
         raise ValueError("ert.single_inversion requires inputs.data as an ArtifactRef.")
     parameters = dict(spec.parameters)
+    # The page records the regularization weight as "lambda", which cannot be a
+    # Python keyword; it is the inversion's ``lam``.
+    if "lambda" in parameters:
+        parameters["lam"] = parameters.pop("lambda")
+    options = _keywords_for(run_ert_manager_inversion, parameters)
     # The desktop workflow has already serialized its edited/QC-filtered
     # container in pygimli's native unified format.  Re-running the original
     # instrument parser here is both redundant and harmful in an isolated
@@ -326,38 +441,13 @@ def run_ert_single(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult
     # conversion remains to do.  On Windows Store Python, arrow.dll has crashed
     # during that unnecessary second parse.  Raw public workflow inputs still
     # retain the caller-selected instrument parser.
-    normalized_input = bool((source.metadata or {}).get("qc_filtered", False))
-    instrument = None if normalized_input else parameters.get("instrument")
+    if bool((source.metadata or {}).get("qc_filtered", False)):
+        options.pop("instrument", None)
     result = run_ert_manager_inversion(
         context.resolve_artifact(source),
         context.output_dir,
-        relative_error=float(parameters.get("relative_error", 0.03)),
-        absolute_error=float(parameters.get("absolute_error", 0.0)),
-        error_source=str(parameters.get("error_source", "file")),
-        mesh_quality=float(parameters.get("mesh_quality", 34.0)),
-        para_depth=float(parameters.get("para_depth", 0.0)),
-        para_max_cell_size=float(parameters.get("para_max_cell_size", 0.0)),
-        mesh_file=str(parameters.get("mesh_file", "") or ""),
-        lam=float(parameters.get("lambda", 50.0)),
-        max_iterations=int(parameters.get("max_iterations", 20)),
-        plateau_tolerance=float(parameters.get("plateau_tolerance", 0.005)),
-        max_total_iterations=int(parameters.get("max_total_iterations", 60)),
-        engine=str(parameters.get("engine", "pyhydro")),
-        geometric_factor_policy=str(parameters.get("geometric_factor_policy", "fix")),
-        geometric_factor_tolerance=float(
-            parameters.get("geometric_factor_tolerance", 0.05)),
-        instrument=instrument,
-        reject_outliers=bool(parameters.get("reject_outliers", False)),
-        outlier_threshold=float(parameters.get("outlier_threshold", 3.0)),
-        outlier_passes=int(parameters.get("outlier_passes", 2)),
-        min_data_fraction=float(parameters.get("min_data_fraction", 0.5)),
-        auto_lambda=bool(parameters.get("auto_lambda", False)),
-        target_chi2=float(parameters.get("target_chi2", 1.0)),
-        chi2_tolerance=float(parameters.get("chi2_tolerance", 0.2)),
-        max_lambda_trials=int(parameters.get("max_lambda_trials", 6)),
-        lambda_warm_start=bool(parameters.get("lambda_warm_start", True)),
-        lambda_cold_retry_chi2=float(parameters.get("lambda_cold_retry_chi2", 15.0)),
         log=context.progress,
+        **options,
     )
     workflow_result = _legacy_result(spec, context, result)
     manager = workflow_result.objects.pop("mgr", None)
@@ -374,8 +464,71 @@ def run_ert_single(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult
     return workflow_result
 
 
+def run_srt_inversion(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
+    from PyHydroGeophysX.inversion.srt_inversion import run_srt_manager_inversion
+
+    travel_time = spec.inputs.get("traveltime")
+    if not isinstance(travel_time, ArtifactRef):
+        raise ValueError(
+            "seismic.srt_inversion requires inputs.traveltime as an ArtifactRef."
+        )
+    travel_time_path = context.resolve_artifact(travel_time)
+    # Only the inversion's own knobs are forwarded; receiver_spacing and any
+    # other caller bookkeeping stay in the spec without reaching the solver.
+    options = _keywords_for(run_srt_manager_inversion, spec.parameters)
+    result = run_srt_manager_inversion(
+        travel_time_path,
+        context.output_dir,
+        log=context.progress,
+        **options,
+    )
+    artifacts = []
+    vtk = str(result.get("vtk") or "")
+    if vtk and Path(vtk).is_file():
+        artifacts.append(_artifact(
+            Path(vtk),
+            context=context,
+            artifact_id="seismic:srt:velocity_vtk",
+            kind="velocity_model",
+        ))
+    # The lambda the run settled on, and why, belong with the misfit: a chi2 is
+    # not interpretable without knowing which lambda produced it.
+    metrics = dict(result.get("metrics") or {})
+    metrics["lambda"] = float(result.get("lambda_used", options.get("lam", 0.0)))
+    if result.get("convergence_track"):
+        metrics["convergence_track"] = result["convergence_track"]
+    return WorkflowRunResult(
+        status="ok",
+        summary={
+            "workflow_id": spec.workflow_id,
+            "n": int(result["n"]),
+            "pick_source": str(spec.metadata.get("pick_source", "uploaded")),
+            "lambda_used": float(result.get("lambda_used", 0.0)),
+            "auto_lambda_status": str(result.get("auto_lambda_status", "off")),
+            "auto_lambda_note": str(result.get("auto_lambda_note", "")),
+        },
+        metrics=metrics,
+        artifacts=artifacts,
+        provenance={
+            "workflow_id": spec.workflow_id,
+            "schema_version": spec.schema_version,
+            "inputs": {"traveltime": travel_time.to_dict()["$artifact"]},
+        },
+        objects={
+            "manager": result["mgr"],
+            "convergence": result.get("convergence") or [],
+            "lambda_trials": result.get("lambda_trials") or [],
+        },
+    )
+
+
 def run_em_inversion(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
-    from PyHydroGeophysX.workflows import em1d
+    from PyHydroGeophysX.data_processing.em1d import (
+        load_sounding,
+        save_inversion,
+        sounding_options,
+    )
+    from PyHydroGeophysX.inversion.em1d import fdem_invert, tdem_invert, tdem_joint_invert
 
     source = spec.inputs.get("data")
     if not isinstance(source, ArtifactRef):
@@ -387,31 +540,50 @@ def run_em_inversion(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResu
     geometry = dict(parameters.pop("geometry", {}))
     data = context.load_object(
         source,
-        lambda path: em1d.load_sounding(
-            str(path), method, sounding=sounding, moment=moment,
-            use_flags=bool(geometry.get("use_project_flags", True)),
-            max_relative_std=geometry.get("tail_max_relative_std"),
-            gate_rejection=str(geometry.get("gate_rejection", "truncate")),
-            reject_negative=bool(geometry.get("reject_negative", False)),
-            min_gates_per_moment=geometry.get("min_gates_per_moment"),
-            ttem_loop_area=geometry.get("loop_area"),
-            ttem_gex_path=geometry.get("ttem_gex_path"),
-            ttem_tfi_path=geometry.get("ttem_tfi_path"),
-        ),
+        lambda path: load_sounding(str(path), method, sounding=sounding, moment=moment,
+                                   **sounding_options(geometry)),
     )
     if method == "FDEM":
-        result = em1d.fdem_invert(data, geometry, parameters, log=context.progress)
+        result = fdem_invert(data, geometry, parameters, log=context.progress)
     elif data.get("moments"):
-        result = em1d.tdem_joint_invert(
+        result = tdem_joint_invert(
             data, geometry, parameters, log=context.progress
         )
     else:
-        result = em1d.tdem_invert(data, geometry, parameters, log=context.progress)
+        result = tdem_invert(data, geometry, parameters, log=context.progress)
     if (result.get("robust") or {}).get("enabled"):
         # The persisted single-sounding path needs the same weight audit as lines.
-        result["data_paths"] = em1d.save_inversion(result, context.output_dir)
+        result["data_paths"] = save_inversion(result, context.output_dir)
         result["metrics"] = {"chi2_effective": result["chi2_effective"],
                              "downweighted_gates": result["robust"]["downweighted"]}
+    return _legacy_result(spec, context, result)
+
+
+def run_em_line_inversion(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
+    """A line of soundings inverted together (:func:`~PyHydroGeophysX.inversion.em1d_line.invert_line`).
+
+    ``inputs.data`` is the stored soundings; ``inputs.positions`` and
+    ``inputs.heights``, when the survey has them, the along-line distance and
+    the sensor height of each, as arrays in an ``.npz``. The parameters are the
+    method, ``geometry``, ``inversion`` and the rest of ``invert_line``'s
+    keywords.
+    """
+    from PyHydroGeophysX.inversion.em1d_line import invert_line
+
+    source = spec.inputs.get("data")
+    if not isinstance(source, ArtifactRef):
+        raise ValueError("em.line_inversion requires inputs.data as an ArtifactRef.")
+    parameters = dict(_materialize(spec.parameters, context))
+    method = str(parameters.pop("method", "TDEM")).upper()
+    geometry = dict(parameters.pop("geometry", {}))
+    inversion = dict(parameters.pop("inversion", {}))
+    for key in ("positions", "heights"):
+        if spec.inputs.get(key) is not None:
+            parameters[key] = _load_array(spec.inputs[key], context, name=key)
+    result = invert_line(
+        str(context.resolve_artifact(source)), method, geometry, inversion,
+        out_dir=context.output_dir, log=context.progress, **parameters,
+    )
     return _legacy_result(spec, context, result)
 
 
@@ -454,24 +626,148 @@ def run_joint(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
     )
 
 
+def run_gravmag_process(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
+    from PyHydroGeophysX.data_processing.gravmag import (
+        extract_profile,
+        qc_products,
+        save_grid,
+    )
+
+    x = _load_array(spec.inputs.get("x"), context, name="x").ravel()
+    y = _load_array(spec.inputs.get("y"), context, name="y").ravel()
+    values = _load_array(spec.inputs.get("values"), context, name="values").ravel()
+    if not (x.size == y.size == values.size):
+        raise ValueError("gravmag.process requires x, y, and values of equal length.")
+    parameters = dict(spec.parameters)
+    qc = qc_products(x, y, values, **_keywords_for(qc_products, parameters))
+    artifacts = []
+    for label, grid in qc["grids"].items():
+        slug = label.lower()
+        paths = save_grid(
+            grid,
+            context.output_dir,
+            name=slug,
+            log=context.progress,
+        )
+        artifacts.extend(
+            _artifact(
+                Path(path),
+                context=context,
+                artifact_id=f"gravmag:{slug}:{Path(path).suffix.lstrip('.')}",
+                kind="gravmag_grid",
+                metadata={"field": label},
+            )
+            for path in paths
+        )
+    profile = None
+    if parameters.get("profile"):
+        profile_config = parameters["profile"]
+        profile = extract_profile(
+            qc["grids"][str(profile_config.get("field", "Residual"))],
+            profile_config["p1"],
+            profile_config["p2"],
+            **_keywords_for(extract_profile, profile_config),
+        )
+        profile_path = context.output_dir / "profile.csv"
+        with profile_path.open("w", newline="", encoding="utf-8") as stream:
+            writer = csv.writer(stream)
+            writer.writerow(["distance", "x", "y", "value"])
+            writer.writerows(zip(
+                profile["distance"], profile["x"], profile["y"], profile["value"]
+            ))
+        artifacts.append(_artifact(
+            profile_path,
+            context=context,
+            artifact_id="gravmag:profile:csv",
+            kind="gravmag_profile",
+        ))
+    return WorkflowRunResult(
+        status="ok",
+        summary={
+            "workflow_id": spec.workflow_id,
+            "stations": int(x.size),
+            "detrend": int(qc["detrend"]),
+            "profile": bool(profile is not None),
+        },
+        metrics=qc["stats"],
+        artifacts=artifacts,
+        provenance={"workflow_id": spec.workflow_id, "schema_version": spec.schema_version},
+        objects={"qc": qc, "profile": profile},
+    )
+
+
+def run_gravmag_forward_bodies(
+    spec: WorkflowSpec,
+    context: RunContext,
+) -> WorkflowRunResult:
+    from PyHydroGeophysX.forward.gravmag import forward_bodies
+
+    x = _load_array(spec.inputs.get("x"), context, name="x").ravel()
+    y = _load_array(spec.inputs.get("y"), context, name="y").ravel()
+    kind = str(spec.parameters.get("kind", "gravity"))
+    bodies = list(spec.parameters.get("bodies") or [])
+    field = dict(spec.parameters.get("field") or {})
+    response = forward_bodies(
+        x, y, kind, bodies, field=field, log=context.progress
+    )
+    npy_path = context.output_dir / f"{kind}_forward.npy"
+    np.save(npy_path, response)
+    csv_path = context.output_dir / f"{kind}_forward.csv"
+    np.savetxt(
+        csv_path,
+        np.column_stack([x, y, response]),
+        delimiter=",",
+        header="x,y,response",
+        comments="",
+    )
+    return WorkflowRunResult(
+        status="ok",
+        summary={
+            "workflow_id": spec.workflow_id,
+            "kind": kind,
+            "stations": int(x.size),
+            "bodies": len(bodies),
+        },
+        metrics={
+            "min": float(np.min(response)),
+            "max": float(np.max(response)),
+            "mean": float(np.mean(response)),
+        },
+        artifacts=[
+            _artifact(
+                npy_path,
+                context=context,
+                artifact_id=f"gravmag:{kind}:forward:npy",
+                kind="gravmag_response",
+            ),
+            _artifact(
+                csv_path,
+                context=context,
+                artifact_id=f"gravmag:{kind}:forward:csv",
+                kind="gravmag_response",
+            ),
+        ],
+        provenance={"workflow_id": spec.workflow_id, "schema_version": spec.schema_version},
+        objects={"response": response},
+    )
+
+
 def run_gravmag_inversion(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
     from PyHydroGeophysX.inversion.gravmag import invert_gravmag
-    from .builtin import _load_array
 
     parameters = dict(spec.parameters)
     kind = str(parameters.pop("kind", "gravity"))
-    parameters.setdefault("solver", "simpeg")
-    parameters["out_dir"] = str(context.output_dir)
-    parameters["random_seed"] = int(spec.seed)
     z_value = spec.inputs.get("z")
     if z_value is not None:
         parameters["z"] = _load_array(z_value, context, name="z")
+    options = _keywords_for(invert_gravmag, parameters)
+    options.update(out_dir=str(context.output_dir), random_seed=int(spec.seed))
     result = invert_gravmag(
         _load_array(spec.inputs.get("x"), context, name="x"),
         _load_array(spec.inputs.get("y"), context, name="y"),
         _load_array(spec.inputs.get("values"), context, name="values"),
         kind,
-        **parameters,
+        **options,
         log=context.progress,
     )
     return _legacy_result(spec, context, result)
@@ -479,13 +775,17 @@ def run_gravmag_inversion(spec: WorkflowSpec, context: RunContext) -> WorkflowRu
 
 __all__ = [
     "run_em_inversion",
+    "run_em_line_inversion",
     "run_ert3d_forward",
     "run_ert_single",
     "run_ert_timelapse",
     "run_geo_hydrology",
+    "run_gravmag_forward_bodies",
     "run_gravmag_inversion",
+    "run_gravmag_process",
     "run_hydro_geophysics",
     "run_joint",
     "run_mesh3d",
     "run_seismic3d",
+    "run_srt_inversion",
 ]

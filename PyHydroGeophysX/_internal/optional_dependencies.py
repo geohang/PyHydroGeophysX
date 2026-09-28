@@ -19,9 +19,23 @@ INSTALL_HINTS: Mapping[str, str] = {
 }
 
 
+def _internal_module_name(exc: BaseException) -> str:
+    """The PyHydroGeophysX module an import error names, or "" for any other."""
+    name = str(getattr(exc, "name", None) or "")
+    return name if name.split(".")[0] == "PyHydroGeophysX" else ""
+
+
 def missing_dependency_name(exc: BaseException) -> str:
+    """Top-level package an import error names, "" for none or for this package.
+
+    A module of PyHydroGeophysX itself failing to import is a broken install,
+    not a missing dependency, and used to be answered with the advice to
+    ``pip install PyHydroGeophysX``.
+    """
     name = getattr(exc, "name", None)
-    return str(name).split(".")[0] if name else ""
+    if not name or _internal_module_name(exc):
+        return ""
+    return str(name).split(".")[0]
 
 
 def installation_hint(exc: BaseException) -> str:
@@ -32,6 +46,14 @@ def installation_hint(exc: BaseException) -> str:
 
 
 def optional_import_error(public_name: str, exc: ImportError) -> ImportError:
+    internal = _internal_module_name(exc)
+    if internal:
+        return ImportError(
+            f"{public_name} is unavailable because the PyHydroGeophysX module "
+            f"{internal!r} could not be imported ({exc}). The installation looks "
+            "incomplete: use a complete checkout of the repository, or reinstall "
+            "PyHydroGeophysX."
+        )
     package = missing_dependency_name(exc) or "an optional dependency"
     command = installation_hint(exc)
     detail = f" Install it with `{command}`." if command else ""

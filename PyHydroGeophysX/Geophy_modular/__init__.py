@@ -36,20 +36,18 @@ __all__ = list(_EXPORTS)
 #: Removed from ``structure_integration`` when it became the 3D-model pipeline.
 #: Still exported, they raised a bare AttributeError on first use - and the ERT
 #: inversion agent, catching it, ran a requested structure-constrained inversion
-#: on an unconstrained mesh. The replacement is named instead.
-_REMOVED = {
-    name: "PyHydroGeophysX.core.mesh_utils.add_velocity_interface"
-    for name in ("create_ert_mesh_with_structure", "integrate_velocity_interface",
-                 "create_joint_inversion_mesh")
-}
+#: on an unconstrained mesh. The replacement is named instead, by the error that
+#: module raises for them: an ImportError, which ``from ... import`` keeps.
+_REMOVED = ("create_ert_mesh_with_structure", "integrate_velocity_interface",
+            "create_joint_inversion_mesh")
 
 
 def __getattr__(name: str):
     target = _EXPORTS.get(name)
     if target is None:
         if name in _REMOVED:
-            raise AttributeError(f"{name} was removed; build the interface mesh "
-                                 f"with {_REMOVED[name]}")
+            # Raises the ImportError naming the replacement.
+            return getattr(importlib.import_module(f"{__name__}.structure_integration"), name)
         raise AttributeError(name)
     module_name, attribute = target
     try:

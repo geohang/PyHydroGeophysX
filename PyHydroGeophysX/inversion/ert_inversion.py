@@ -1,10 +1,11 @@
 """
 Single-time ERT inversion functionality.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
+from functools import lru_cache
 import os
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pygimli as pg
@@ -18,20 +19,41 @@ from ..solvers.linear_solvers import _SPD_METHODS, generalized_solver
 from .base import InversionBase, InversionResult
 from .lambda_search import LAMBDA_BOUNDS, search_lambda_for_chi2
 from .metrics import metrics_from_manager
+from .model_result import ModelResult  # noqa: F401 - written here first
+from .ert_mesh import (  # noqa: F401 - re-exported, see below
+    MAX_MESH_QUALITY,
+    MESH_SUFFIXES,
+    ZONE_INTERFACE_MARKER,
+    _ZONE_OUTLINE_MARKER,
+    _interface_regions,
+    _sensors_outside,
+    build_inversion_mesh,
+    load_inversion_mesh,
+    mark_zone_interfaces,
+    mesh_preview,
+)
 
 # ``LAMBDA_BOUNDS`` and ``search_lambda_for_chi2`` were defined here first and
 # are re-exported so existing imports keep working. They moved to
 # :mod:`PyHydroGeophysX.inversion.lambda_search` because the potential-field and
 # EM1D paths need them and must not import pygimli to get them.
+# The inversion mesh - built, imported, cut at zone outlines, previewed - is
+# in :mod:`PyHydroGeophysX.inversion.ert_mesh`; its names are re-exported
+# here, where they were defined first.
 
 
 #: How ``err`` is chosen. ``file`` trusts the ``err`` column the instrument wrote
 #: and only estimates where it is missing; ``estimate`` always recomputes from
 #: ``relative_error``/``absolute_error``; ``max`` takes the larger of the two per
 #: datum, which is the conservative reading when the file's errors look
-#: optimistic. ``file`` is the default because silently discarding measured
-#: errors makes chi2 report on an error model the data never had.
-ERROR_SOURCES = ("file", "estimate", "max")
+#: optimistic. ``stack`` adds each reading's stacking spread - the scatter of the
+#: potential's samples within the reading, as a fraction of it, which Subsurface
+#: Insights records and the ``stack`` token carries - to the estimate in
+#: quadrature. That spread is not a reading's uncertainty and usually overstates
+#: it, so it is only ever asked for. ``file`` is the default because silently
+#: discarding measured errors makes chi2 report on an error model the data never
+#: had.
+ERROR_SOURCES = ("file", "estimate", "max", "stack")
 
 
 def _estimate_errors(data, *, relative_error: float, absolute_error: float):
@@ -102,7 +124,18 @@ def _prepare_ert_data(
         if np.any(np.isfinite(candidate) & (candidate > 0)):
             from_file = candidate
 
-    if source == "estimate" or from_file is None:
+    if source == "stack":
+        # Independent errors add in quadrature: the reading's own scatter, and
+        # the estimate standing for everything the scatter cannot see.
+        if data.haveData("stack"):
+            spread = np.asarray(data["stack"], dtype=float)
+            spread = np.where(np.isfinite(spread) & (spread > 0), spread, 0.0)
+            errors = np.sqrt(estimated ** 2 + spread ** 2)
+            used = "stacking spread with the estimate, in quadrature"
+        else:
+            errors = estimated
+            used = "estimate (the data record no stacking spread)"
+    elif source == "estimate" or from_file is None:
         errors = estimated
         used = "estimate" if source != "file" or from_file is None else source
         if source == "file" and from_file is None:
@@ -418,31 +451,6 @@ def _weighted_residuals(response, data) -> np.ndarray:
     return np.nan_to_num(residual, nan=0.0, posinf=0.0, neginf=0.0)
 
 
-class ModelResult:
-    """Manager-shaped view of an inverted model, so both engines feed one viewer.
-
-    ``MeshResultView`` and the VTK export ask for ``paraDomain``, ``model`` and
-    an optional ``coverage()``; the in-house engine returns arrays rather than a
-    PyGIMLi manager, so this wraps them in the same shape.
-
-    ``velocity`` is set only by travel time, where a PyGIMLi manager exposes it
-    under that name. It stays ``None`` for ERT, because a ``velocity`` attribute
-    that quietly returned resistivity would be worse than a missing one.
-    """
-
-    def __init__(self, mesh, model, response=None, coverage=None, velocity=None):
-        self.paraDomain = mesh
-        self.model = np.asarray(model, dtype=float)
-        self.response = None if response is None else np.asarray(response, dtype=float)
-        self._coverage = None if coverage is None else np.asarray(coverage, dtype=float)
-        self.velocity = None if velocity is None else np.asarray(velocity, dtype=float)
-
-    def coverage(self):
-        if self._coverage is None:
-            raise AttributeError("no coverage available")
-        return self._coverage
-
-
 @dataclass
 class ERTRun:
     """One inversion at one lambda, described the same way by either engine."""
@@ -478,24 +486,28 @@ class _PyHydroEngine:
     name = "pyhydro"
 
     def __init__(self, container, mesh, *, model_constraints=(1e-2, 1e5),
-                 method="cgls", log=_noop_log):
+                 method="cgls", zones=None, log=_noop_log):
         self.container = container
         self._inv = ERTInversion(
             container, mesh=mesh, model_constraints=model_constraints,
-            method=method, verbose=False,
+            method=method, verbose=False, zones=zones or None,
         )
         self._inv.setup()
         self.mesh = self._inv.fwd_operator.paraDomain
+        self.zone_prior = self._inv.zone_prior()
 
     def reference_model(self):
-        """The homogeneous model a cold start regularizes against.
+        """The model a cold start regularizes against: homogeneous, or a priori.
 
         Warm-started stages must keep pulling toward this, not toward whichever
         model the previous stage ended on, or the penalty silently becomes
-        roughness of the change instead of roughness of the model.
+        roughness of the change instead of roughness of the model. With zones it
+        is the a-priori model, as it is for the cold start.
         """
-        return np.full(int(self._inv.fwd_operator.paraDomain.cellCount()),
-                       float(np.median(np.exp(self._inv.rhos1))))
+        background = float(np.median(np.exp(self._inv.rhos1)))
+        if self.zone_prior is not None:
+            return self.zone_prior.with_background(background)
+        return np.full(int(self._inv.fwd_operator.paraDomain.cellCount()), background)
 
     def fit(self, *, lam, max_iterations, plateau_tolerance, target_chi2,
             start_model=None, reference_model=None) -> ERTRun:
@@ -531,9 +543,22 @@ class _PygimliEngine:
     name = "pygimli"
 
     def __init__(self, container, mesh, *, model_constraints=None, method=None,
-                 log=_noop_log):
+                 zones=None, log=_noop_log):
         self.container = container
         self.mesh = mesh
+        # Zones reach PyGIMLi as its starting model; it has no per-cell fix.
+        self.zone_prior = None
+        self._start = None
+        if zones:
+            from .ert_zones import zone_prior
+
+            fop = ert.ERTModelling()
+            fop.setData(container)
+            fop.setMesh(mesh)
+            self.zone_prior = zone_prior(fop.paraDomain, zones, bounds=model_constraints)
+            rhoa = np.asarray(container["rhoa"], dtype=float)
+            background = float(np.median(rhoa[np.isfinite(rhoa) & (rhoa > 0)]))
+            self._start = self.zone_prior.with_background(background)
 
     def reference_model(self):
         """PyGIMLi's smoothness constraint acts on the model itself, so there is
@@ -544,6 +569,8 @@ class _PygimliEngine:
             start_model=None, reference_model=None) -> ERTRun:
         manager = ert.ERTManager(self.container)
         kwargs: Dict[str, Any] = {"dPhi": float(plateau_tolerance) * 100.0}
+        if start_model is None and self._start is not None:
+            start_model = self._start
         if start_model is not None:
             kwargs["startModel"] = start_model
         manager.invert(self.container, mesh=self.mesh, lam=float(lam),
@@ -781,13 +808,58 @@ def _build_adtlert_forward(container, mesh, *, log=_noop_log):
         topographic_geometric_factor_mode=geometric_mode,
         linear_solver_backend=forward_solver,
     )
+    # Zone outlines the smoothness must not cross reach ADTLERT the way it
+    # takes known structure: one unit label per parameter cell, with no
+    # constraint between cells of different units (see _adtlert_spatial_term).
+    units = _interface_regions(mesh, active_ids)
+    if units is not None:
+        forward.structural_prior_cell_ids = units
+        forward.structural_cross_weight = 0.0
     version = str(getattr(adtlert, "__version__", ""))
     log(
         f"  ADTLERT {version or '(unknown version)'}: "
         f"{mesh.cellCount()} forward cells, {active_ids.size} parameters, "
         f"{forward_solver} forward solver"
+        + ("" if units is None else
+           f"; smoothness cut along the zone outlines ({int(units.max()) + 1} parts)")
     )
     return forward, result_mesh, active_ids, version
+
+
+def _adtlert_spatial_term(name: str, forward):
+    """ADTLERT's spatial regularization ``name``, cut at the zone outlines if marked.
+
+    When :func:`_build_adtlert_forward` found zone edges the smoothness must
+    not cross, the first-order term becomes ADTLERT's structure-guided one with
+    no weight across units, and a robust (L1, Huber) term keeps its own IRLS
+    weighting on that same cut operator. Otherwise ``name`` is returned as is.
+    """
+    if getattr(forward, "structural_prior_cell_ids", None) is None:
+        return name
+    from adtlert.inversion.regularization import build_spatial_regularization
+
+    term = build_spatial_regularization(name)
+    if term.name == "first_order":
+        return "structural_prior"
+    if term.name in ("first_order_tv", "first_order_huber"):
+        return _cut_robust_term(type(term))(
+            **{item.name: getattr(term, item.name) for item in fields(term)})
+    raise ValueError(f"ADTLERT's {term.name!r} regularization cannot be cut at "
+                     "zone outlines; use first-order smoothness, L1 or Huber.")
+
+
+@lru_cache(maxsize=None)
+def _cut_robust_term(base):
+    """``base`` (ADTLERT's TV or Huber term) on the structure-guided operator."""
+    from adtlert.inversion.regularization import StructuralPriorSpatialRegularization
+
+    class _Cut(base):
+        def matrix(self, forward, n_cells: int, *, z_weight: float = 1.0):
+            return StructuralPriorSpatialRegularization().matrix(
+                forward, n_cells, z_weight=z_weight)
+
+    _Cut.__name__ = _Cut.__qualname__ = f"ZoneCut{base.__name__}"
+    return _Cut
 
 
 class _ADTLertEngine:
@@ -801,7 +873,7 @@ class _ADTLertEngine:
     name = "adtlert"
 
     def __init__(self, container, mesh, *, model_constraints=(1e-2, 1e5),
-                 method="cgls", log=_noop_log):
+                 method="cgls", zones=None, log=_noop_log):
         self._forward, self.mesh, active_ids, self._adtlert_version = (
             _build_adtlert_forward(container, mesh, log=log)
         )
@@ -811,6 +883,15 @@ class _ADTLertEngine:
         self._initial_model = np.full(
             active_ids.size, float(np.median(self._observed)), dtype=float
         )
+        # Zones become the starting and reference model; ADTLERT inverts every
+        # cell, so a fixed zone is not held (the run log says so).
+        self.zone_prior = None
+        if zones:
+            from .ert_zones import zone_prior
+
+            self.zone_prior = zone_prior(self.mesh, zones, bounds=model_constraints)
+            self._initial_model = self.zone_prior.with_background(
+                float(np.median(self._observed)))
         self._model_constraints = tuple(
             float(value) for value in model_constraints
         )
@@ -847,7 +928,7 @@ class _ADTLertEngine:
             max_iterations=int(max_iterations),
             data_std=self._errors,
             regularization=float(lam),
-            spatial_regularization="first_order",
+            spatial_regularization=_adtlert_spatial_term("first_order", self._forward),
             model_bounds=self._model_constraints,
             target_chi2=adtlert_target,
             # ``plateau_tolerance`` is a chi-squared improvement threshold in
@@ -1133,80 +1214,30 @@ def _export_model_bundle(manager, output_dir: str | Path, stem: str) -> Dict[str
     return {key: str(path) for key, path in paths.items()}
 
 
+def _zone_notes(engine: str, prior) -> List[str]:
+    """What a zone list will and will not do on ``engine``, for the run log.
 
-#: Mesh formats a user can hand the inversion. ``.bms`` is PyGIMLi's own,
-#: ``.msh`` is Gmsh (the usual route for a complex 3D domain), and the rest are
-#: what PyGIMLi's loader recognises.
-MESH_SUFFIXES = (".bms", ".msh", ".vtk", ".vtu", ".poly")
-
-
-def load_inversion_mesh(mesh_path: str | Path, data=None,
-                        log: Callable[[str], None] = _noop_log):
-    """Load a user-supplied inversion mesh and check it can hold this survey.
-
-    Building a mesh from the electrode line is fine for a 2D profile and
-    hopeless for a 3D domain with topography, boreholes or known structure, so
-    those are meshed externally (usually in Gmsh) and brought in here.
-
-    An imported mesh fails in ways a generated one cannot: electrodes outside
-    the domain, or every cell marked background so nothing is inverted. Both
-    surface deep inside the forward solver as errors that name nothing useful,
-    so they are checked here where the message can say what is wrong.
+    Only the in-house engine holds a fixed zone; the others start from the
+    a-priori values and invert every cell. A zone the user fixed that then moves
+    must be said up front, not discovered in the result.
     """
-    path = Path(mesh_path)
-    if not path.is_file():
-        raise FileNotFoundError(f"No mesh file at {path}.")
-    if path.suffix.lower() == ".msh":
-        from pygimli.meshtools import readGmsh
-        mesh = readGmsh(str(path), verbose=False)
-    else:
-        mesh = pg.load(str(path))
-    if mesh is None or int(mesh.cellCount()) == 0:
-        raise ValueError(f"{path.name} loaded no cells; is it a mesh file?")
+    notes = []
+    if prior is None:
+        return notes
+    if prior.report:
+        notes.append("  a-priori zones: " + prior.summary())
+    from .ert_zones import polygons_cover_nothing
 
-    markers = np.asarray([c.marker() for c in mesh.cells()], dtype=int)
-    invertible = int((markers > 1).sum())
-    if invertible == 0:
-        counts = {int(m): int((markers == m).sum()) for m in np.unique(markers)}
-        raise ValueError(
-            f"{path.name} has no cells marked as the parameter domain "
-            f"(marker > 1); markers present: {counts}. PyGIMLi inverts marker 2 "
-            "and above and treats 0 and 1 as background, so nothing here would "
-            "be inverted. Re-tag the region to invert with marker 2.")
-
-    if data is not None:
-        sensors = np.atleast_2d(np.asarray(data.sensorPositions(), dtype=float))
-        if sensors.size:
-            outside = _sensors_outside(mesh, sensors)
-            if outside:
-                raise ValueError(
-                    f"{path.name} does not contain {len(outside)} of "
-                    f"{len(sensors)} electrodes (first at "
-                    f"{np.round(sensors[outside[0]], 2).tolist()}). A mesh that "
-                    "does not cover the array cannot be used for this survey; "
-                    "check the coordinate origin and units.")
-    log(f"  mesh: {path.name}, {mesh.cellCount()} cells "
-        f"({invertible} inverted), {mesh.nodeCount()} nodes, {mesh.dim()}D")
-    return mesh
-
-
-def _sensors_outside(mesh, sensors: np.ndarray) -> List[int]:
-    """Indices of electrodes no cell of ``mesh`` contains."""
-    missing: List[int] = []
-    for index, position in enumerate(sensors):
-        coords = list(position[:3]) + [0.0] * (3 - len(position[:3]))
-        try:
-            cell = mesh.findCell(pg.Pos(*coords[:3]))
-        except Exception:  # noqa: BLE001 - fall back to the bounding box
-            cell = None
-            lower, upper = mesh.boundingBox().min(), mesh.boundingBox().max()
-            inside = all(lower[k] - 1e-6 <= coords[k] <= upper[k] + 1e-6
-                         for k in range(mesh.dim()))
-            if inside:
-                continue
-        if cell is None:
-            missing.append(index)
-    return missing
+    empty = polygons_cover_nothing(prior)
+    if empty:
+        notes.append(f"  (zone(s) {', '.join(empty)} cover no cell of the "
+                     "parameter domain and have no effect)")
+    if prior.any_fixed and engine != "pyhydro":
+        notes.append(f"  Note: the {engine} engine cannot hold a zone fixed, so the "
+                     "fixed zones are used as starting values and inverted like "
+                     "any other cell. Use the in-house Gauss-Newton engine to keep "
+                     "them fixed.")
+    return notes
 
 
 def run_ert_manager_inversion(
@@ -1220,7 +1251,14 @@ def run_ert_manager_inversion(
     mesh_quality: float = 34.0,
     para_depth: float = 0.0,
     para_max_cell_size: float = 0.0,
+    para_boundary: float = 2.0,
+    surface_nodes: int = 1,
+    outer_width: float = 0.0,
+    outer_max_cell_size: float = 0.0,
     mesh_file: str = "",
+    zones: Optional[Sequence[Dict[str, Any]]] = None,
+    conform_to_zones: bool = False,
+    decouple_zones: bool = False,
     lam: float = 50.0,
     max_iterations: int = 20,
     plateau_tolerance: float = 0.005,
@@ -1255,8 +1293,9 @@ def run_ert_manager_inversion(
        mesh and rebuilds ``rhoa`` from the measured transfer resistance.
     1. **Error model.** ``error_source`` decides whether the file's own ``err``
        column is trusted, recomputed from ``relative_error``/``absolute_error``,
-       or combined. Overwriting a measured error with an assumed one makes chi2
-       report on an error model the data never had.
+       combined with that estimate, or built from each reading's stacking spread
+       (see :data:`ERROR_SOURCES`). Overwriting a measured error with an assumed
+       one makes chi2 report on an error model the data never had.
     2. **Inversion at the requested lambda, iterated to a plateau.** A run that
        exhausts ``max_iterations`` is continued (up to ``max_total_iterations``)
        rather than being judged where it stopped. This run is always kept, under
@@ -1283,6 +1322,18 @@ def run_ert_manager_inversion(
     ADTLERT matches the published real-data branch: fast normal sensitivity,
     no Robin-boundary derivative, line search, a maximum log step of one, and
     GPU CGLS when CUDA is available.
+
+    ``zones`` carries a-priori resistivity zones (see
+    :mod:`~PyHydroGeophysX.inversion.ert_zones`): polygons whose value the
+    inversion starts from and regularizes toward, and which the in-house engine
+    can hold fixed. The other engines use the values as the starting model
+    only, and the log says so. With ``conform_to_zones`` a generated mesh
+    follows the zone outlines, so no cell straddles one; with
+    ``decouple_zones`` the smoothness constraint is dropped across them, so the
+    model may jump at a zone's edge (every engine honours it).
+
+    The mesh options (``mesh_quality`` to ``outer_max_cell_size``) are those of
+    :func:`build_inversion_mesh`.
     """
     requested_engine = str(engine).lower()
     engine = _resolve_ert_engine(requested_engine, log=log)
@@ -1302,27 +1353,23 @@ def run_ert_manager_inversion(
     out.mkdir(parents=True, exist_ok=True)
 
     log("Inverting ERT data…")
-    # PyGIMLi sizes the parameter domain from the array length when paraDepth is
-    # left at 0, which for a long line reaches far below anything the data can
-    # resolve. Capping it removes unknowns the inversion cannot constrain anyway.
-    if str(mesh_file):
-        # A mesh built elsewhere describes its own domain, so the sizing knobs
-        # below have nothing to act on. Saying so beats silently ignoring them.
-        inversion_mesh = load_inversion_mesh(mesh_file, data=data, log=log)
-        if float(para_depth) > 0 or float(para_max_cell_size) > 0:
-            log("  (mesh quality, depth and cell size ignored: the mesh is "
-                "imported)")
-    else:
-        mesh_kwargs: Dict[str, Any] = {"quality": float(mesh_quality)}
-        if float(para_depth) > 0:
-            mesh_kwargs["paraDepth"] = float(para_depth)
-        if float(para_max_cell_size) > 0:
-            mesh_kwargs["paraMaxCellSize"] = float(para_max_cell_size)
-        inversion_mesh = ert.ERTManager(data).createMesh(data=data, **mesh_kwargs)
-        para_cells = sum(1 for cell in inversion_mesh.cells() if cell.marker() > 1)
-        log(f"  mesh: {inversion_mesh.cellCount()} cells, {para_cells} of them inverted"
-            + (f" (parameter domain capped at {float(para_depth):g} m depth)"
-               if float(para_depth) > 0 else ""))
+    from .ert_zones import normalize_zones
+
+    zones = normalize_zones(zones)
+    mesh_report: Dict[str, Any] = {}
+    inversion_mesh = build_inversion_mesh(
+        data, mesh_quality=mesh_quality, para_depth=para_depth,
+        para_max_cell_size=para_max_cell_size, para_boundary=para_boundary,
+        surface_nodes=surface_nodes, outer_width=outer_width,
+        outer_max_cell_size=outer_max_cell_size,
+        conform_zones=zones if conform_to_zones else None,
+        mesh_file=mesh_file, log=log, report=mesh_report)
+    decoupled_edges = 0
+    if decouple_zones and zones:
+        inversion_mesh, decoupled_edges = mark_zone_interfaces(inversion_mesh, zones)
+        log(f"  smoothness dropped across {decoupled_edges} cell edges along the "
+            "zone outlines" if decoupled_edges else
+            "  (no cell edge lies on a zone outline, so the smoothness is unchanged)")
 
     # Before anything is fitted, confirm the geometric factors agree with the
     # geometry being modelled, and repair them if they do not. A uniform error
@@ -1336,9 +1383,12 @@ def run_ert_manager_inversion(
     def build_engine(container):
         return _make_engine(engine, container, inversion_mesh,
                             model_constraints=model_constraints, method=solver,
-                            log=log)
+                            zones=zones, log=log)
 
     active_engine = build_engine(data)
+    zone_prior_used = getattr(active_engine, "zone_prior", None)
+    for line in _zone_notes(engine, zone_prior_used):
+        log(line)
     requested_lam = float(lam)
     target = float(target_chi2)
     tol = abs(float(chi2_tolerance))
@@ -1370,6 +1420,15 @@ def run_ert_manager_inversion(
         "lambda_trials": [],
         "outliers": {"enabled": bool(reject_outliers)},
         "convergence_stop": fixed_run.stop,
+        # Which cells each a-priori zone covered, and whether the engine held
+        # the fixed ones: a zone that silently moved would look like a result.
+        "zones": [dict(entry) for entry in getattr(zone_prior_used, "report", [])],
+        "zones_fixed_held": bool(zone_prior_used is not None
+                                 and zone_prior_used.any_fixed and engine == "pyhydro"),
+        # The outline edges the mesh gained, and the cell edges the smoothness
+        # no longer crosses: 0 when the option was off or found nothing to do.
+        "mesh_zone_outline_edges": int(mesh_report.get("zone_outline_edges", 0)),
+        "zone_edges_decoupled": int(decoupled_edges),
     }
 
     run = fixed_run
@@ -1656,6 +1715,10 @@ class ERTInversion(InversionBase):
                 - use_gpu: Whether to use GPU acceleration (requires CuPy)
                 - parallel: Whether to use parallel CPU computation
                 - n_jobs: Number of parallel jobs (-1 for all cores)
+                - zones: a-priori resistivity zones, a list of dicts with a
+                  ``polygon`` in mesh coordinates, a ``resistivity`` and an
+                  optional ``fixed`` (see ``ert_zones``). The run starts from the
+                  a-priori model, regularizes toward it, and holds fixed zones.
         """
         # Load ERT data. An already-loaded container is accepted so that callers
         # who have applied their own error model or QC filter (the auto-lambda
@@ -1713,7 +1776,27 @@ class ERTInversion(InversionBase):
         self.Wdert = None  # Data weighting matrix
         self.Wm_r = None   # Model weighting matrix
         self.rhos1 = None  # Log-transformed apparent resistivities
-    
+        self._zone_prior = None  # the zones on the parameter mesh, once built
+
+    def zone_prior(self):
+        """The a-priori zones on this inversion's parameter mesh, or None.
+
+        Worked out once the forward operator has built the parameter mesh,
+        whose cell order is the model vector's. See ``ert_zones``.
+        """
+        zones = self.parameters.get('zones')
+        if not zones:
+            return None
+        if self._zone_prior is None:
+            if self.fwd_operator is None:
+                self.setup()
+            from .ert_zones import zone_prior
+
+            self._zone_prior = zone_prior(
+                self.fwd_operator.paraDomain, zones,
+                bounds=self.parameters['model_constraints'])
+        return self._zone_prior
+
     def setup(self):
         """Set up ERT inversion (create operators, matrices, etc.)"""
         # DEBUG: Print electrode positions from data before mesh creation
@@ -1850,10 +1933,26 @@ class ERTInversion(InversionBase):
                 mr = np.log(np.abs(initial_model) + 1.0)
             else:
                 mr = np.log(initial_model)
-        
-        # Reference model is the initial model unless the caller pinned one
+
+        # A-priori zones: the run starts from the a-priori model and regularizes
+        # toward it, and a fixed zone keeps its value whatever the run is
+        # continued from.
+        prior = self.zone_prior()
+        prior_mr = fixed = None
+        if prior is not None:
+            background = float(np.median(np.exp(self.rhos1)))
+            prior_mr = np.log(prior.with_background(background)).reshape(-1, 1)
+            if initial_model is None:
+                mr = prior_mr.copy()
+            else:
+                mr[prior.fixed] = prior_mr[prior.fixed]
+            fixed = prior.fixed if prior.any_fixed else None
+            result.meta['zones'] = [dict(entry) for entry in prior.report]
+
+        # Reference model is the initial model (the a-priori one with zones)
+        # unless the caller pinned one
         if reference_model is None:
-            mr_R = mr.copy()
+            mr_R = (prior_mr if prior_mr is not None else mr).copy()
         else:
             ref = np.asarray(reference_model, dtype=float)
             if ref.ndim == 1:
@@ -1870,7 +1969,7 @@ class ERTInversion(InversionBase):
 
         # Apply constraints to initial model immediately
         mr = np.clip(mr, min_mr, max_mr)
-        if reference_model is None:
+        if reference_model is None and prior_mr is None:
             mr_R = mr.copy()  # Update reference model after clipping
         else:
             mr_R = np.clip(mr_R, min_mr, max_mr)
@@ -1994,13 +2093,23 @@ class ERTInversion(InversionBase):
             gc_r1 = Jr.T.dot(wd ** 2 * data_residual) + L_mr * reg_gradient
             
             # Solve for the update: the stacked system for a least-squares
-            # method, its normal equations for an SPD one.
-            d_mr = _gauss_newton_step(
-                N11_R, -gc_r, self.parameters['method'],
+            # method, its normal equations for an SPD one. Fixed cells are left
+            # out of the system - their columns removed - so their update is
+            # zero, while the smoothness rows that tie them to their neighbours
+            # still pull on the free cells.
+            solver_options = dict(
                 use_gpu=self.parameters['use_gpu'],
                 parallel=self.parameters.get('parallel', False),
-                n_jobs=self.parameters.get('n_jobs', -1)
-            )
+                n_jobs=self.parameters.get('n_jobs', -1))
+            if fixed is None:
+                d_mr = _gauss_newton_step(
+                    N11_R, -gc_r, self.parameters['method'], **solver_options)
+            else:
+                free = ~fixed
+                d_mr = np.zeros_like(mr)
+                d_mr[free] = np.asarray(_gauss_newton_step(
+                    N11_R[:, free], -gc_r, self.parameters['method'],
+                    **solver_options), dtype=float).reshape(-1, 1)
             
             # Line search. Armijo sufficient decrease is
             # f(m + mu d) <= f(m) + c mu (d . g), with d . g < 0 for a descent

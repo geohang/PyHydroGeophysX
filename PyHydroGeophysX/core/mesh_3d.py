@@ -27,6 +27,166 @@ except ImportError:
     PYVISTA_AVAILABLE = False
 
 
+#: Marker a zone outline carries in a plan triangulation so Triangle keeps it;
+#: cleared once the triangulation is built, since PyGIMLi drops the smoothness
+#: across marked edges and faces, which is a choice of its own.
+_ZONE_EDGE = 11
+
+
+def _add_zone_outlines(plc: pg.Mesh, zones: Optional[List[Dict]]) -> None:
+    """Add every zone's outline in plan to the 2-D ``plc``, clipped to it.
+
+    A side lying on the rectangle's own boundary is left to the boundary.
+    """
+    if not zones:
+        return
+    xy = np.asarray(plc.positions(), dtype=float)[:, :2]
+    (x0, y0), (x1, y1) = xy.min(axis=0), xy.max(axis=0)
+    tol = 1.0e-6 * max(x1 - x0, y1 - y0, 1.0)
+    for zone in zones:
+        zx0, zx1 = max(zone["x"][0], x0), min(zone["x"][1], x1)
+        zy0, zy1 = max(zone["y"][0], y0), min(zone["y"][1], y1)
+        if zx1 - zx0 <= tol or zy1 - zy0 <= tol:
+            continue
+        corners = [(zx0, zy0), (zx1, zy0), (zx1, zy1), (zx0, zy1)]
+        nodes = [plc.createNodeWithCheck(pg.Pos(x, y), tol) for x, y in corners]
+        for (ax, ay), (bx, by), a, b in zip(corners, corners[1:] + corners[:1],
+                                             nodes, nodes[1:] + nodes[:1]):
+            on_side = ((abs(ax - bx) <= tol and min(abs(ax - x0), abs(ax - x1)) <= tol)
+                       or (abs(ay - by) <= tol and min(abs(ay - y0), abs(ay - y1)) <= tol))
+            if not on_side:
+                plc.createEdge(a, b, _ZONE_EDGE)
+
+
+def _zone_face_depths(zones: List[Dict], topography, z_max: float) -> List[List[float]]:
+    """Each zone's ``z`` range as depths below the ground at the zone's centre,
+    where the prism mesh gives its top and bottom a layer."""
+    depths = []
+    for zone in zones:
+        cx, cy = float(np.mean(zone["x"])), float(np.mean(zone["y"]))
+        try:
+            ground = float(topography(cx, cy))
+        except Exception:  # noqa: BLE001 - as the node shift does
+            ground = float("nan")
+        if not np.isfinite(ground):
+            ground = float(z_max)
+        depths.append([float(value) - ground for value in zone["z"]])
+    return depths
+
+
+def _with_zone_layers(z_vec: np.ndarray, zones: Optional[List[Dict]], topography,
+                      z_max: float, spacing: float) -> np.ndarray:
+    """The prism layers (depths below the ground, 0 first, downward) with a
+    layer at every zone's top and bottom, taken at the zone's centre.
+
+    A regular layer closer to one than a third of ``spacing`` gives way to it,
+    so a zone face does not leave a sliver layer beside it. Where the ground
+    slopes, :func:`_zone_conforming_depths` then bends these layers to the
+    zone's elevation across its outline.
+    """
+    if not zones:
+        return z_vec
+    faces = [depth for pair in _zone_face_depths(zones, topography, z_max) for depth in pair]
+    z = np.asarray(z_vec, dtype=float)
+    faces = np.asarray([f for f in faces if z.min() < f < 0.0], dtype=float)
+    if not faces.size:
+        return z_vec
+    keep = np.min(np.abs(z[:, None] - faces[None, :]), axis=1) > float(spacing) / 3.0
+    keep[[0, -1]] = True
+    return np.unique(np.round(np.concatenate([z[keep], faces]), 8))[::-1]
+
+
+def _bend_layers(z_rel: np.ndarray, held: Dict[int, float], gap: float) -> Optional[np.ndarray]:
+    """The layer depths ``z_rel`` (0 first, downward) with layer ``k`` moved to
+    depth ``held[k]``; the layers between two held ones keep their spacing in
+    proportion. The ground stays, and so does the first layer ``gap`` or more
+    below the deepest held one that the bend can end on without squeezing or
+    stretching the layers above it more than twofold.
+
+    None when that would fold a layer, squeeze or stretch one by more than a
+    factor of three, or leave no layer below to end the bend on.
+    """
+    held = {0: 0.0, **held}
+    deepest = max(held)
+    below = next((j for j in range(deepest + 1, len(z_rel))
+                  if z_rel[j] < held[deepest] - gap
+                  and 0.5 <= (held[deepest] - z_rel[j]) / (z_rel[deepest] - z_rel[j]) <= 2.0),
+                 None)
+    if below is None:
+        return None
+    held[below] = float(z_rel[below])
+    layers = np.asarray(sorted(held))
+    depths = np.asarray([held[k] for k in layers], dtype=float)
+    ratio = np.diff(depths) / np.diff(z_rel[layers])
+    if not np.all((ratio >= 1.0 / 3.0) & (ratio <= 3.0)):
+        return None
+    bent = np.array(z_rel, dtype=float)
+    upto = int(layers[-1]) + 1
+    bent[:upto] = -np.interp(-z_rel[:upto], -z_rel[layers], -depths)
+    return bent
+
+
+def _zone_conforming_depths(columns: np.ndarray, ground: np.ndarray, z_rel: np.ndarray,
+                            zones: List[Dict], topography, z_max: float,
+                            bounds: Tuple[float, float, float, float],
+                            spacing: float) -> Tuple[Dict[int, np.ndarray], List[int]]:
+    """The layer depths of the plan ``columns`` inside a zone's outline, bent so
+    that the zone's top and bottom lie at their elevation all across it.
+
+    Prism layers follow the ground, so the layers :func:`_with_zone_layers` put
+    at a zone's top and bottom meet them at the zone's centre only, and where
+    the ground slopes they would cut through the zone elsewhere - while the
+    zone takes the cells whose centre lies inside the box. Bending the layers
+    over its outline, which is in the plan triangulation, makes its faces cell
+    faces everywhere. Where a face comes within a third of ``spacing`` of the
+    ground or of the mesh's bottom, or passes it, the zone reaches that far.
+
+    ``ground`` is the ground's elevation over each column, ``bounds`` the plan
+    rectangle the outlines were clipped to. Returns ``({column: depths}, missed)``,
+    ``missed`` the indices of the zones whose faces the layers cannot reach
+    without folding a layer or squeezing one to a third (only ever on sloping
+    ground); those zones keep the layers as they are and take the cells by
+    their centres.
+    """
+    x0, x1, y0, y1 = bounds
+    tol = 1.0e-6 * max(x1 - x0, y1 - y0, 1.0)
+    gap = float(spacing) / 3.0
+    inner = np.arange(1, len(z_rel) - 1)       # the ground and the bottom stay
+    held: Dict[int, Dict[int, float]] = {}
+    missed: List[int] = []
+    for index, (zone, depths) in enumerate(zip(zones, _zone_face_depths(zones, topography,
+                                                                        z_max))):
+        faces = []
+        for elevation, depth in zip(zone["z"], depths):
+            match = inner[np.abs(z_rel[inner] - depth) <= 1.0e-6]
+            if match.size:
+                faces.append((int(match[0]), float(elevation)))
+        zx0, zx1 = max(zone["x"][0], x0), min(zone["x"][1], x1)
+        zy0, zy1 = max(zone["y"][0], y0), min(zone["y"][1], y1)
+        if not faces or zx1 - zx0 <= tol or zy1 - zy0 <= tol:
+            continue
+        inside = np.flatnonzero((columns[:, 0] >= zx0 - tol) & (columns[:, 0] <= zx1 + tol)
+                                & (columns[:, 1] >= zy0 - tol) & (columns[:, 1] <= zy1 + tol))
+        trial: Dict[int, Dict[int, float]] = {}
+        for column in inside:
+            anchors = dict(held.get(int(column), {}))
+            for layer, elevation in faces:
+                depth = elevation - float(ground[column])
+                if depth > -gap or depth < z_rel[-1] + gap:
+                    continue                    # the zone reaches the ground (or the bottom) here
+                if abs(anchors.setdefault(layer, depth) - depth) > 1.0e-9:
+                    anchors = None              # another zone holds the layer elsewhere
+                    break
+            if anchors is None or _bend_layers(z_rel, anchors, gap) is None:
+                missed.append(index)
+                break
+            trial[int(column)] = anchors
+        else:
+            held.update(trial)
+    return ({column: _bend_layers(z_rel, anchors, gap)
+             for column, anchors in held.items() if anchors}, missed)
+
+
 # ---------------------------------------------------------------------------
 # Mesh3 DCreator
 # ---------------------------------------------------------------------------
@@ -39,12 +199,15 @@ class Mesh3DCreator:
     
     Example
     -------
-    >>> creator = Mesh3DCreator()
-    >>> geometry = creator.create_box_geometry(
+    >>> creator = Mesh3DCreator(create_directory=False)
+    >>> electrode_positions = creator.create_surface_electrode_array(
+    ...     nx=5, ny=3, dx=2.0, dy=2.0)
+    >>> len(electrode_positions)
+    15
+    >>> # Meshing runs gmsh, which must be installed and on PATH.
+    >>> mesh = creator.create_box_mesh(  # doctest: +SKIP
     ...     length=10.0, width=5.0, height=3.0,
-    ...     electrode_positions=electrode_positions
-    ... )
-    >>> mesh = creator.generate_mesh(geometry, output_name='my_mesh')
+    ...     electrode_positions=electrode_positions, output_name='my_mesh')
     """
     
     def __init__(self, 
@@ -52,10 +215,11 @@ class Mesh3DCreator:
                  mesh_directory: str = './mesh_output',
                  elec_refinement: float = 0.05,
                  node_refinement: float = 0.1,
-                 attractor_distance: float = 0.3):
+                 attractor_distance: float = 0.3,
+                 create_directory: bool = True):
         """
         Initialize 3D mesh creator.
-        
+
         Parameters
         ----------
         gmsh_path : str
@@ -68,15 +232,22 @@ class Mesh3DCreator:
             Mesh refinement size at corner nodes (in meters)
         attractor_distance : float
             Maximum distance for attractor field effect (in meters)
+        create_directory : bool
+            Create ``mesh_directory`` now. False for a creator that only lays
+            out electrodes, which writes nothing.
         """
         self.gmsh_path = gmsh_path
         self.mesh_directory = mesh_directory
         self.elec_refinement = elec_refinement
         self.node_refinement = node_refinement
         self.attractor_distance = attractor_distance
-        
+        #: Zones (by index) the last prism mesh could not follow; see
+        #: ``create_3d_mesh_with_topography``.
+        self.unfollowed_zones: List[int] = []
+
         # Create output directory if it doesn't exist
-        os.makedirs(mesh_directory, exist_ok=True)
+        if create_directory:
+            os.makedirs(mesh_directory, exist_ok=True)
     
     def create_electrode_grid(self,
                               x_positions: np.ndarray,
@@ -393,6 +564,84 @@ class Mesh3DCreator:
         
         return geo_file
     
+    def write_gmsh_geo_with_zones(self,
+                                  geometry: Dict,
+                                  electrode_positions: pd.DataFrame,
+                                  output_name: str,
+                                  zones: List[Dict]) -> str:
+        """Write a Gmsh ``.geo`` of the box domain with ``zones`` cut into it.
+
+        The same domain, electrodes and refinement as :meth:`write_gmsh_geo_file`,
+        built with Gmsh's OpenCASCADE kernel, whose Boolean fragments split the
+        domain along every zone face - a zone touching the ground or another
+        zone included - and embed the electrodes wherever they lie. Entities are
+        renumbered by the fragments, so electrodes and the outer faces are found
+        again by position. Every volume is physical volume 2, the outer faces
+        physical surface 1, the electrodes physical point 99, as in the plain
+        domain.
+        """
+        geo_file = os.path.join(self.mesh_directory, f'{output_name}.geo')
+        length, width, height = geometry['length'], geometry['width'], geometry['height']
+        x0, y0, z0 = geometry.get('origin', (0, 0, 0))
+        x1, y1, z1 = x0 + length, y0 + width, z0 + height
+        eps = 1.0e-6 * max(length, width, height)
+        boxes = []
+        for zone in zones:
+            zx0, zx1 = max(zone['x'][0], x0), min(zone['x'][1], x1)
+            zy0, zy1 = max(zone['y'][0], y0), min(zone['y'][1], y1)
+            zz0, zz1 = max(zone['z'][0], z0), min(zone['z'][1], z1)
+            if min(zx1 - zx0, zy1 - zy0, zz1 - zz0) > 10 * eps:
+                boxes.append((zx0, zy0, zz0, zx1 - zx0, zy1 - zy0, zz1 - zz0))
+        lines = [
+            "// 3D Mesh generated by PyHydroGeophysX, with zones cut into the domain",
+            f"// Domain: {length} x {width} x {height} meters, {len(boxes)} zone(s)",
+            'SetFactory("OpenCASCADE");',
+            "Mesh.CharacteristicLengthExtendFromBoundary = 0;",
+            f"Mesh.CharacteristicLengthMax = {self.node_refinement};",
+            f"Box(1) = {{{x0}, {y0}, {z0}, {length}, {width}, {height}}};",
+        ]
+        for number, box in enumerate(boxes, start=2):
+            lines.append(f"Box({number}) = {{{', '.join(str(v) for v in box)}}};")
+        first = 1001
+        for number, (_, row) in enumerate(electrode_positions.iterrows(), start=first):
+            lines.append(f"Point({number}) = {{{row['x']}, {row['y']}, {row['z']}, "
+                         f"{self.elec_refinement}}};")
+        last = first + len(electrode_positions) - 1
+        tools = [f"Volume{{2:{len(boxes) + 1}}};"] if boxes else []
+        tools.append(f"Point{{{first}:{last}}};")
+        lines.append(f"BooleanFragments{{ Volume{{1}}; Delete; }}{{ {' '.join(tools)} Delete; }}")
+        lines.append("electrodes[] = {};")
+        for _, row in electrode_positions.iterrows():
+            x, y, z = float(row['x']), float(row['y']), float(row['z'])
+            lines.append(f"electrodes[] += Point In BoundingBox{{{x - eps}, {y - eps}, {z - eps}, "
+                         f"{x + eps}, {y + eps}, {z + eps}}};")
+        lines.append("outer[] = {};")
+        for lo, hi in (((x0, y0, z0), (x0, y1, z1)), ((x1, y0, z0), (x1, y1, z1)),
+                       ((x0, y0, z0), (x1, y0, z1)), ((x0, y1, z0), (x1, y1, z1)),
+                       ((x0, y0, z0), (x1, y1, z0)), ((x0, y0, z1), (x1, y1, z1))):
+            lines.append("outer[] += Surface In BoundingBox{"
+                         f"{lo[0] - eps}, {lo[1] - eps}, {lo[2] - eps}, "
+                         f"{hi[0] + eps}, {hi[1] + eps}, {hi[2] + eps}}};")
+        lines += [
+            "Field[1] = Attractor;",
+            "Field[1].NodesList = {electrodes[]};",
+            "Field[2] = Threshold;",
+            "Field[2].IField = 1;",
+            f"Field[2].LcMin = {self.elec_refinement};",
+            f"Field[2].LcMax = {self.node_refinement};",
+            f"Field[2].DistMin = {self.elec_refinement};",
+            f"Field[2].DistMax = {self.attractor_distance};",
+            "Field[3] = Min;",
+            "Field[3].FieldsList = {2};",
+            "Background Field = 3;",
+            "Physical Point(99) = {electrodes[]};",
+            "Physical Surface(1) = {outer[]};",
+            "Physical Volume(2) = Volume{:};",
+        ]
+        with open(geo_file, 'w', encoding='utf-8') as handle:
+            handle.write("\n".join(lines) + "\n")
+        return geo_file
+
     def generate_gmsh_mesh(self, geo_file: str, dimension: int = 3) -> str:
         """
         Call GMSH to generate mesh from .geo file.
@@ -461,9 +710,14 @@ class Mesh3DCreator:
                         electrode_positions: pd.DataFrame,
                         output_name: str = 'box_mesh',
                         origin: Tuple[float, float, float] = (0, 0, 0),
-                        neumann_nodes: pd.DataFrame = None) -> pg.Mesh:
+                        neumann_nodes: pd.DataFrame = None,
+                        zones: Optional[List[Dict]] = None) -> pg.Mesh:
         """
         Create a complete 3D box mesh with embedded electrodes.
+
+        With ``zones`` (boxes, see ``normalize_box_zones``) the zones are cut
+        into the domain, so their faces are cell faces
+        (:meth:`write_gmsh_geo_with_zones`).
         
         Parameters
         ----------
@@ -495,9 +749,13 @@ class Mesh3DCreator:
         }
         
         # Write geo file
-        geo_file = self.write_gmsh_geo_file(
-            geometry, electrode_positions, output_name, neumann_nodes
-        )
+        if zones:
+            geo_file = self.write_gmsh_geo_with_zones(
+                geometry, electrode_positions, output_name, zones)
+        else:
+            geo_file = self.write_gmsh_geo_file(
+                geometry, electrode_positions, output_name, neumann_nodes
+            )
         
         # Generate mesh
         msh_file = self.generate_gmsh_mesh(geo_file)
@@ -598,7 +856,8 @@ class Mesh3DCreator:
                                         dz_fine: float = 0.5,
                                         dz_coarse: float = 2.0,
                                         use_prism_mesh: bool = True,
-                                        markers: Dict = None) -> pg.Mesh:
+                                        markers: Dict = None,
+                                        zones: List[Dict] = None) -> pg.Mesh:
         """
         Create a 3D mesh that follows topography with electrode positions.
         
@@ -642,7 +901,16 @@ class Mesh3DCreator:
             Dictionary with depth ranges for different markers.
             Example: {'surface': (0, 5, 2), 'middle': (5, 15, 3), 'deep': (15, 30, 1)}
             Format: (min_depth, max_depth, marker_value)
-            
+        zones : list of dict, optional
+            Boxes (see ``normalize_box_zones``) the prism mesh follows: their
+            outlines go into its plan triangulation, and their tops and
+            bottoms become layers. The layers follow the ground; inside a
+            zone's outline they bend to meet its top and bottom at their
+            elevation, so on sloping ground too the zone's faces are cell
+            faces. A zone the layers cannot reach without squeezing one to a
+            third of its thickness takes the cells whose centre lies inside
+            it; ``unfollowed_zones`` lists those zones by index afterwards.
+
         Returns
         -------
         pg.Mesh
@@ -650,15 +918,17 @@ class Mesh3DCreator:
             
         Examples
         --------
-        >>> creator = Mesh3DCreator()
+        >>> creator = Mesh3DCreator(create_directory=False)
         >>> # Create electrodes on topographic surface
         >>> electrodes = creator.create_surface_electrode_array(
         ...     nx=10, ny=6, dx=5.0, dy=5.0
         ... )
+        >>> def my_topo_function(x, y):
+        ...     return 0.05 * x  # a plane rising 5 cm per metre along x
         >>> # Apply topography to electrodes
         >>> electrodes['z'] = my_topo_function(electrodes['x'], electrodes['y'])
         >>> # Create mesh
-        >>> mesh = creator.create_3d_mesh_with_topography(
+        >>> mesh = creator.create_3d_mesh_with_topography(  # doctest: +SKIP
         ...     electrode_positions=electrodes,
         ...     topography_func=my_topo_function,
         ...     para_depth=20.0
@@ -722,7 +992,8 @@ class Mesh3DCreator:
                 para_max_cell_size=para_max_cell_size,
                 dz_fine=dz_fine,
                 dz_coarse=dz_coarse,
-                markers=markers
+                markers=markers,
+                zones=zones,
             )
         else:
             return self._create_tetrahedral_mesh_with_topography(
@@ -746,25 +1017,35 @@ class Mesh3DCreator:
                                             para_max_cell_size: float,
                                             dz_fine: float,
                                             dz_coarse: float,
-                                            markers: Dict = None) -> pg.Mesh:
+                                            markers: Dict = None,
+                                            zones: List[Dict] = None) -> pg.Mesh:
         """Create prism mesh with topography (internal method)."""
-        
+        from ._mesh_3d_builder import normalize_box_zones
+
+        zones = normalize_box_zones(zones) if zones else None
+
         # Get unique x-y positions
         xy_positions = electrode_positions[['x', 'y']].drop_duplicates().values
-        
+
         # Create rectangle around electrodes
         rect = mt.createRectangle(
-            pnts=xy_positions, 
-            minBBOffset=1.4, 
+            pnts=xy_positions,
+            minBBOffset=1.4,
             marker=2
         )
-        
+
         # Add electrode positions as nodes
         for pos in xy_positions:
             rect.createNode(*pos, 0)
-        
+        # Zone outlines in plan: edges the triangulation must keep. A marked
+        # edge survives Triangle; the mark is cleared once the mesh is built.
+        _add_zone_outlines(rect, zones)
+
         # Create 2D mesh
         mesh2d = mt.createMesh(rect, quality=surface_quality, area=para_max_cell_size)
+        for boundary in mesh2d.boundaries():
+            if boundary.marker() == _ZONE_EDGE:
+                boundary.setMarker(0)
         
         # Add boundary region
         mesh2d_with_bnd = mt.appendTriangleBoundary(
@@ -780,11 +1061,13 @@ class Mesh3DCreator:
                                   para_depth + boundary_depth + 0.1, dz_coarse)
         
         z_vec_relative = -np.concatenate([
-            z_top_layers, 
+            z_top_layers,
             z_mid_layers[1:] if len(z_mid_layers) > 1 else [],
             z_bot_layers[1:] if len(z_bot_layers) > 1 else []
         ])
-        
+        z_vec_relative = _with_zone_layers(z_vec_relative, zones, topography_func, z_max,
+                                           dz_fine)
+
         # Create 3D prism mesh
         mesh3d = mt.createMesh3D(
             mesh2d_with_bnd, z_vec_relative,
@@ -792,23 +1075,42 @@ class Mesh3DCreator:
             pg.core.MARKER_BOUND_MIXED
         )
         
-        # Apply topography: shift z-coordinates based on surface elevation
-        # Get node positions and adjust z based on local surface elevation
+        # Apply topography: a node lies its layer's depth below the ground
+        # above it (z is that depth, negative), the ground taken once per plan
+        # column - except inside a zone's outline, where the layers bend so
+        # that the zone's top and bottom lie at their elevation all across it.
         nodes = mesh3d.nodes()
-        for node in nodes:
-            x, y, z = node.x(), node.y(), node.z()
-            # Get local surface elevation
+        xyz = np.asarray([[node.x(), node.y(), node.z()] for node in nodes], dtype=float)
+        columns, column = np.unique(xyz[:, :2], axis=0, return_inverse=True)
+        column = np.asarray(column).reshape(-1)
+        ground = np.full(len(columns), float(z_max))
+        for index, (x, y) in enumerate(columns):
             try:
                 surface_z = float(topography_func(x, y))
-                if np.isnan(surface_z):
-                    surface_z = z_max
             except Exception:
-                surface_z = z_max
-            
-            # Shift z-coordinate (z is negative depth relative to surface)
-            new_z = surface_z + z  # z is already negative
-            node.setPos(pg.Pos(x, y, new_z))
-        
+                continue
+            if not np.isnan(surface_z):
+                ground[index] = surface_z
+        depth = xyz[:, 2].copy()
+        self.unfollowed_zones = []
+        if zones:
+            z_rel = np.asarray(z_vec_relative, dtype=float)
+            plan = np.asarray(rect.positions(), dtype=float)[:, :2]
+            bounds = (plan[:, 0].min(), plan[:, 0].max(), plan[:, 1].min(), plan[:, 1].max())
+            bent, self.unfollowed_zones = _zone_conforming_depths(
+                columns, ground, z_rel, zones, topography_func, z_max, bounds, dz_fine)
+            if bent:
+                row = np.full(len(columns), -1, dtype=int)
+                row[list(bent)] = np.arange(len(bent))
+                table = np.vstack(list(bent.values()))
+                moved = np.flatnonzero(row[column] >= 0)
+                layer = np.argmin(np.abs(depth[moved, None] - z_rel[None, :]), axis=1)
+                hit = np.abs(z_rel[layer] - depth[moved]) <= 1.0e-6
+                moved, layer = moved[hit], layer[hit]
+                depth[moved] = table[row[column[moved]], layer]
+        for node, value in zip(nodes, ground[column] + depth):
+            node.setPos(pg.Pos(node.x(), node.y(), float(value)))
+
         # Set markers based on depth if provided
         if markers is not None:
             for c in mesh3d.cells():
@@ -852,7 +1154,11 @@ class Mesh3DCreator:
                     c.setMarker(1)
                 else:
                     c.setMarker(2)
-        
+
+        # The plan rectangle's edges come through as marked faces between
+        # inverted cells, where PyGIMLi would cut the smoothness.
+        from ._mesh_3d_builder import clear_inner_face_markers
+        clear_inner_face_markers(mesh3d)
         return mesh3d
     
     def _create_tetrahedral_mesh_with_topography(self,
@@ -1183,11 +1489,20 @@ def export_electrodes_to_csv(electrode_positions: pd.DataFrame,
 # Public studio-oriented builders promoted from qt_apps. The private sibling
 # keeps this already-large module navigable; this file is the canonical path.
 from ._mesh_3d_builder import (  # noqa: E402
+    E4D_DEFAULTS,
+    E4D_ENGINE,
+    ZONE_MARKER_START,
+    apply_zone_markers,
+    box_zone_owner,
     build_electrodes,
+    clear_inner_face_markers,
     create_structured_mesh,
+    e4d_configuration,
     find_gmsh_binary,
     generate_mesh,
     mesh_summary,
+    normalize_box_zones,
     save_outputs,
     topography_function,
+    zone_region,
 )

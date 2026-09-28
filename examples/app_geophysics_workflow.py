@@ -42,6 +42,15 @@ except ImportError as e:
     BaseAgent = None
     ContextInputAgent = None
 
+# How the runtime reads a request when no model is available: instrument names
+# as whole words, and a fuzzy, bilingual test for a water-content request. The
+# No-LLM quick modes use the same readers, so they decide as a run would.
+try:
+    from PyHydroGeophysX.agents._intent import infer_instrument, wants_water_content
+except ImportError:
+    infer_instrument = None
+    wants_water_content = None
+
 # Check for pygimli availability
 PYGIMLI_IMPORT_ERROR = ""
 try:
@@ -1320,7 +1329,8 @@ INTERACTIVE_TUTORIALS: List[Dict[str, Any]] = [
         ],
         "note": (
             "Climate fetching is not performed inside the Qt ERT module. Qt handles the temporal inversion and export; "
-            "the web/AQUAH stage adds DayMet or other climate context after the geophysical result has been inspected."
+            "the web/AQUAH stage adds climate context (daily Open-Meteo / ERA5 weather) after the geophysical result "
+            "has been inspected."
         ),
     },
     {
@@ -3614,14 +3624,21 @@ def load_demo_result(name: str) -> Dict[str, Any]:
         Demo result dictionary.
     """
     demo_file = DEMO_CACHE_DIR / DEMO_WORKFLOWS.get(name, "ert_demo.json")
+    rebuild = "python examples/demo_cache/make_demo_cache.py"
     try:
         with open(demo_file, "r", encoding="utf-8") as handle:
             demo = json.load(handle)
     except FileNotFoundError:
-        st.error(f"Demo file not found: {demo_file}. The bundled demo cache may be incomplete.")
+        st.error(
+            f"The cached results for **{name}** are not in this copy of the app: "
+            f"`{demo_file}` is missing, so there is nothing to show. The cache ships in "
+            "`examples/demo_cache/` of the source repository. Update your checkout, or "
+            f"rebuild it offline (a few minutes, no API key) with `{rebuild}`."
+        )
         return {}
     except json.JSONDecodeError as exc:
-        st.error(f"Demo file is corrupted ({demo_file}): {exc}")
+        st.error(f"The cached demo file `{demo_file}` cannot be read ({exc}). "
+                 f"Rebuild the cache with `{rebuild}`.")
         return {}
     for figure in demo.get("figures", []):
         figure["absolute_path"] = str((DEMO_CACHE_DIR / figure["path"]).resolve())
@@ -3662,9 +3679,10 @@ In **Demo mode** no upload is needed — bundled cached results are shown instea
 - **AI-generated interpretation** clearly labelled as model output, not ground truth
 """
         )
-        img = DEMO_CACHE_DIR / "ert_demo_resistivity.png"
+        img = DEMO_CACHE_DIR / "ert_demo_resistivity_model.png"
         if img.exists():
-            st.image(str(img), caption="Example: time-lapse ERT resistivity (4 survey epochs)", width="stretch")
+            st.image(str(img), caption="Example: inverted resistivity of the DAS-1 example survey (ERT demo)",
+                     width="stretch")
 
 
 def render_demo_mode_panel() -> None:
@@ -3681,16 +3699,20 @@ def render_demo_mode_panel() -> None:
     )
     st.session_state.selected_demo = selected
     demo = load_demo_result(selected)
-
-    st.subheader(demo.get("title", "Demo workflow"))
-    st.caption(demo.get("caveat", "Demo mode uses cached outputs."))
-    st.success(demo.get("summary", "Demo result loaded."))
+    # Nothing loaded is nothing to announce: this used to print "Demo result
+    # loaded." beneath the error saying the file was missing.
+    if demo:
+        st.subheader(demo.get("title", selected))
+        st.caption(demo.get("caveat", "Demo mode uses cached outputs."))
+        if demo.get("summary"):
+            st.success(demo["summary"])
 
     metrics = demo.get("metrics", {})
     if metrics:
         metric_cols = st.columns(min(3, len(metrics)))
         for idx, (key, value) in enumerate(metrics.items()):
-            label = key.replace("_", " ").title()
+            label = key.replace("_", " ")
+            label = label[:1].upper() + label[1:]
             if isinstance(value, list) and len(value) == 2:
                 display = f"{value[0]:.3g} to {value[1]:.3g}"
             else:
@@ -3703,6 +3725,17 @@ def render_demo_mode_panel() -> None:
             st.image(str(path), caption=figure.get("label", path.name), width="stretch")
         else:
             st.warning(f"Missing demo figure: {path}")
+
+    # What each step found, and what the run warned about: the cached run's own
+    # caveats belong with its figures.
+    if demo.get("steps"):
+        with st.expander("What each step found", expanded=False):
+            for step in demo["steps"]:
+                st.markdown(f"- {step}")
+    if demo.get("warnings"):
+        with st.expander(f"Warnings the run raised ({len(demo['warnings'])})", expanded=False):
+            for warning in demo["warnings"]:
+                st.markdown(f"- {warning}")
 
     st.markdown("---")
     if st.button("Exit demo mode", type="secondary"):
@@ -3718,15 +3751,29 @@ def render_config_confirm_form(config: Dict[str, Any]) -> Dict[str, Any]:
         workflow_guess = _detect_workflow_type(edited)
         st.caption(f"Detected workflow type: {workflow_guess}")
 
-        if "instrument" in edited or edited.get("ert_file") or edited.get("data_file"):
-            instruments = ["DAS-1", "E4D", "Syscal", "ABEM-Lund", "BERT", "Sting", "ARES", "Protocol DC",
-                           "Subsurface Insights", "Custom"]
-            current = edited.get("instrument", "DAS-1")
-            edited["instrument"] = st.selectbox(
+        has_ert = bool(edited.get("ert_file") or edited.get("data_file")
+                       or edited.get("time_lapse_files") or edited.get("timelapse_files"))
+        if "instrument" in edited or has_ert:
+            # "Auto-detect" leaves the instrument unset, so the loader reads it
+            # from each file's header; a preset instrument refuses or misreads a
+            # file recorded on another one.
+            auto_detect = "Auto-detect from file header"
+            instruments = [auto_detect, "DAS-1", "E4D", "Syscal", "ABEM-Lund", "BERT", "Sting", "ARES",
+                           "Protocol DC", "Subsurface Insights", "Custom"]
+            current = edited.get("instrument") or auto_detect
+            if current not in instruments:
+                instruments.append(current)
+            choice = st.selectbox(
                 "ERT instrument",
                 instruments,
-                index=instruments.index(current) if current in instruments else 0,
+                index=instruments.index(current),
+                help="Auto-detect reads the instrument from each data file's header and "
+                     "falls back to E4D when the header names none.",
             )
+            if choice == auto_detect:
+                edited.pop("instrument", None)
+            else:
+                edited["instrument"] = choice
 
         for key in ["data_file", "ert_file", "electrode_file", "seismic_file", "tdem_file"]:
             if key in edited or key in ["data_file", "ert_file"]:
@@ -3753,6 +3800,17 @@ def render_config_confirm_form(config: Dict[str, Any]) -> Dict[str, Any]:
                 )
             )
             edited["inversion_params"] = inversion_params
+
+        if has_ert:
+            # Ticked when the request asks for water content, in any wording the
+            # runtime recognises. Unticking it here is an explicit choice, and
+            # an explicit choice wins over the wording of the request.
+            edited["convert_to_water_content"] = st.checkbox(
+                "Convert resistivity to water content",
+                value=_requests_water_content(edited),
+                help="Runs the Monte Carlo petrophysics step after the inversion. "
+                     "If the step cannot produce water content, the run says so.",
+            )
 
         edited["max_attempts"] = int(
             st.number_input(
@@ -4224,57 +4282,13 @@ def _convert_modflow_to_npy(
 ) -> str:
     """Load MODFLOW outputs and write standard .npy/.txt files.
 
-    Returns the directory containing the converted files.
+    Returns the directory containing the converted files. The bundle also
+    holds ``top.npy``, so the desktop studio's hydro page opens it too.
     """
-    import numpy as np
+    from PyHydroGeophysX.model_output.hydro_bundle import modflow_to_hydro_bundle
 
-    from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent
-
-    modflow_path = Path(modflow_dir)
-    if out_dir is None:
-        out_dir = tempfile.mkdtemp(prefix="phgx_mf_")
-    out_path = Path(out_dir)
-    out_path.mkdir(parents=True, exist_ok=True)
-
-    # Load idomain
-    id_path = modflow_path / idomain_file
-    if id_path.suffix == ".npy":
-        idomain = np.load(str(id_path))
-    else:
-        idomain = np.loadtxt(str(id_path))
-
-    # Water content → 4D (nt, nlay, nrows, ncols)
-    wc_proc = MODFLOWWaterContent(model_directory=str(modflow_path), idomain=idomain)
-    water_content = wc_proc.load_time_range(start_idx=0, end_idx=None, nlay=nlay)
-
-    # Porosity → 3D (nlay, nrows, ncols)
-    # flopy may not be installed; handle gracefully
-    porosity = None
-    try:
-        from PyHydroGeophysX.model_output.modflow_output import MODFLOWPorosity
-        por_proc = MODFLOWPorosity(model_directory=str(modflow_path), model_name=model_name)
-        porosity = por_proc.load_porosity()
-    except ImportError:
-        pass  # flopy not available
-
-    if porosity is None:
-        # Fallback: use a uniform default porosity of 0.3
-        _, n_lay, n_rows, n_cols = water_content.shape
-        porosity = np.full((n_lay, n_rows, n_cols), 0.3)
-
-    # Generate simple top / bot from layer indices (metres from 0)
-    _, n_lay, n_rows, n_cols = water_content.shape
-    top = np.zeros((n_rows, n_cols))  # surface at 0
-    bot = np.zeros((n_lay, n_rows, n_cols))
-    for k in range(n_lay):
-        bot[k, :, :] = -(k + 1)  # each layer 1 m thick going downward
-
-    np.save(str(out_path / "Watercontent.npy"), water_content)
-    np.save(str(out_path / "Porosity.npy"), porosity)
-    np.savetxt(str(out_path / "top.txt"), top)
-    np.save(str(out_path / "bot.npy"), bot)
-
-    return str(out_path)
+    return modflow_to_hydro_bundle(modflow_dir, idomain_file, model_name,
+                                   nlay=nlay, out_dir=out_dir)
 
 
 def _convert_parflow_to_npy(
@@ -4284,51 +4298,12 @@ def _convert_parflow_to_npy(
 ) -> str:
     """Load ParFlow outputs and write standard .npy/.txt files.
 
-    Returns the directory containing the converted files.
+    Returns the directory containing the converted files. The bundle also
+    holds ``top.npy``, so the desktop studio's hydro page opens it too.
     """
-    import numpy as np
+    from PyHydroGeophysX.model_output.hydro_bundle import parflow_to_hydro_bundle
 
-    from PyHydroGeophysX.model_output.parflow_output import ParflowPorosity, ParflowSaturation
-
-    pf_path = Path(parflow_dir)
-    if out_dir is None:
-        out_dir = tempfile.mkdtemp(prefix="phgx_pf_")
-    out_path = Path(out_dir)
-    out_path.mkdir(parents=True, exist_ok=True)
-
-    # Saturation → 4D (nt, nz, ny, nx)  — treated as water content proxy
-    sat_proc = ParflowSaturation(model_directory=str(pf_path), run_name=run_name)
-    saturation = sat_proc.load_time_range(start_idx=0, end_idx=None)
-
-    # Porosity → 3D (nz, ny, nx)
-    por_proc = ParflowPorosity(model_directory=str(pf_path), run_name=run_name)
-    porosity = por_proc.load_porosity()
-
-    # Mask for inactive cells
-    try:
-        mask = por_proc.load_mask()
-        porosity[mask == 0] = np.nan
-        for t in range(saturation.shape[0]):
-            saturation[t][mask == 0] = np.nan
-    except FileNotFoundError:
-        pass  # no mask file, proceed without
-
-    # Water content = saturation × porosity
-    water_content = saturation * porosity[np.newaxis, :, :, :]
-
-    # Top/bot: uniform layers based on grid shape
-    _, n_lay, n_rows, n_cols = water_content.shape
-    top = np.zeros((n_rows, n_cols))
-    bot = np.zeros((n_lay, n_rows, n_cols))
-    for k in range(n_lay):
-        bot[k, :, :] = -(k + 1)
-
-    np.save(str(out_path / "Watercontent.npy"), water_content)
-    np.save(str(out_path / "Porosity.npy"), porosity)
-    np.savetxt(str(out_path / "top.txt"), top)
-    np.save(str(out_path / "bot.npy"), bot)
-
-    return str(out_path)
+    return parflow_to_hydro_bundle(parflow_dir, run_name, out_dir=out_dir)
 
 
 def _discover_hydro_data_dirs(current_value: str) -> List[Path]:
@@ -4746,110 +4721,6 @@ def _render_surface_picker(data_dir: Path) -> None:
                 st.session_state.pop(key, None)
             st.rerun()
 
-def _fill_profile_nans(values):
-    import numpy as np
-
-    arr = np.asarray(values, dtype=float).copy()
-    if arr.ndim != 2:
-        raise ValueError(f"Expected 2D array, got shape {arr.shape}.")
-
-    x = np.arange(arr.shape[1], dtype=float)
-    valid_row_idx = []
-
-    for i in range(arr.shape[0]):
-        row = arr[i, :]
-        valid = np.isfinite(row)
-        if np.any(valid):
-            if np.count_nonzero(valid) == 1:
-                row[~valid] = row[valid][0]
-            else:
-                row[~valid] = np.interp(x[~valid], x[valid], row[valid])
-            valid_row_idx.append(i)
-        else:
-            # Defer fully empty rows and fill them after we process valid rows.
-            continue
-        arr[i, :] = row
-
-    if not valid_row_idx:
-        raise RuntimeError("Profile interpolation failed: all layers are NaN along this profile.")
-
-    valid_row_idx = np.asarray(valid_row_idx, dtype=int)
-    for i in range(arr.shape[0]):
-        if np.any(np.isfinite(arr[i, :])):
-            continue
-
-        lower = valid_row_idx[valid_row_idx < i]
-        upper = valid_row_idx[valid_row_idx > i]
-
-        if lower.size and upper.size:
-            lo = int(lower[-1])
-            hi = int(upper[0])
-            weight = (i - lo) / float(hi - lo)
-            arr[i, :] = (1.0 - weight) * arr[lo, :] + weight * arr[hi, :]
-        elif lower.size:
-            arr[i, :] = arr[int(lower[-1]), :]
-        else:
-            arr[i, :] = arr[int(upper[0]), :]
-
-    return arr
-
-
-def _get_mesh_xy(mesh):
-    import numpy as np
-
-    centers = np.asarray(mesh.cellCenters(), dtype=float)
-    if centers.ndim == 2 and centers.shape[1] >= 2:
-        return centers[:, 0], centers[:, 1]
-
-    x = np.array([float(c[0]) for c in mesh.cellCenters()], dtype=float)
-    y = np.array([float(c[1]) for c in mesh.cellCenters()], dtype=float)
-    return x, y
-
-
-def _assign_three_layer_markers(mesh, line1, line2, top_marker=0, mid_marker=3, bot_marker=2):
-    import numpy as np
-
-    x_cell, y_cell = _get_mesh_xy(mesh)
-    y_line1 = np.interp(x_cell, line1[:, 0], line1[:, 1])
-    y_line2 = np.interp(x_cell, line2[:, 0], line2[:, 1])
-
-    markers = np.full(mesh.cellCount(), bot_marker, dtype=int)
-    markers[y_cell >= y_line2] = mid_marker
-    markers[y_cell >= y_line1] = top_marker
-    mesh.setCellMarkers(markers)
-    return markers
-
-
-def _interpolate_profile_to_mesh(profile_values, layer_boundaries, x_profile, mesh):
-    import numpy as np
-    from scipy.interpolate import griddata
-
-    values = np.asarray(profile_values, dtype=float)
-    bounds = np.asarray(layer_boundaries, dtype=float)
-
-    n_layers, n_profile = values.shape
-    if bounds.shape != (n_layers + 1, n_profile):
-        raise ValueError(
-            f"layer_boundaries shape must be {(n_layers + 1, n_profile)}, got {bounds.shape}."
-        )
-
-    layer_centers = 0.5 * (bounds[:-1, :] + bounds[1:, :])
-    x2d = np.repeat(np.asarray(x_profile, dtype=float)[np.newaxis, :], n_layers, axis=0)
-
-    points = np.column_stack((x2d.ravel(), layer_centers.ravel()))
-    vals = values.ravel()
-
-    x_cell, y_cell = _get_mesh_xy(mesh)
-    query = np.column_stack((x_cell, y_cell))
-
-    interp_linear = griddata(points, vals, query, method="linear")
-    interp_nearest = griddata(points, vals, query, method="nearest")
-    out = np.asarray(interp_linear, dtype=float)
-    nan_mask = ~np.isfinite(out)
-    out[nan_mask] = interp_nearest[nan_mask]
-    return out
-
-
 def _relative_l2(noisy, clean) -> float:
     import numpy as np
 
@@ -4880,30 +4751,51 @@ def _quick_mode_description(mode: str) -> str:
 
 
 def _infer_instrument_from_request(user_request: str) -> Optional[str]:
-    """
-    Infer likely instrument from free-text user request for No-LLM quick mode.
-    """
-    text = (user_request or "").strip().lower()
-    if not text:
-        return None
+    """The ERT instrument a quick-mode request names, or None when it names none.
 
-    if "abem" in text or "terameter" in text:
-        return "ABEM-Lund"
-    if "syscal" in text:
-        return "Syscal"
-    if re.search(r"\be4d\b", text):
-        return "E4D"
-    if re.search(r"\bdas\b", text) or "das-1" in text or "das 1" in text:
-        return "DAS-1"
-    if "bert" in text:
-        return "BERT"
-    if "sting" in text:
-        return "Sting"
-    if "ares" in text:
-        return "ARES"
-    if "protocol dc" in text:
-        return "Protocol DC"
-    return None
+    A thin wrapper over :func:`PyHydroGeophysX.agents._intent.infer_instrument`,
+    which matches instrument names as whole words. The substring test this
+    replaced read "existing" as Sting and "Albert" as BERT.
+    """
+    if infer_instrument is None:
+        return None
+    return infer_instrument(user_request or "")
+
+
+def _requests_water_content(config: Dict[str, Any]) -> bool:
+    """Whether ``config`` asks for resistivity to be converted to water content.
+
+    An explicit ``convert_to_water_content`` decides; otherwise the request is
+    read by the runtime's own matcher, which survives a typo ("water conent")
+    and reads Chinese as well as English.
+    """
+    if wants_water_content is not None:
+        return bool(wants_water_content(config))
+    explicit = config.get("convert_to_water_content")
+    if explicit is not None:
+        return bool(explicit)
+    request = str(config.get("user_request") or "").lower()
+    return any(term in request for term in ("water content", "petrophysic", "moisture"))
+
+
+def _apply_quick_ert_intent(cfg: Dict[str, Any]) -> None:
+    """Settle the instrument and the water-content product for a quick ERT run.
+
+    A quick mode has no model to read the request, so it is read with the rules
+    the runtime falls back on, and a choice already in ``cfg`` wins over the
+    wording. The water-content decision is written into the configuration, so
+    the preview shows it and the run cannot drop a product the request named.
+    An instrument that nobody named stays unset, and the loader then reads it
+    from each file's header: a default here refused, or misread, every file
+    recorded on another instrument.
+    """
+    instrument = cfg.get("instrument") or _infer_instrument_from_request(cfg.get("user_request", ""))
+    if instrument:
+        cfg["instrument"] = instrument
+    else:
+        cfg.pop("instrument", None)
+    if cfg.get("convert_to_water_content") is None:
+        cfg["convert_to_water_content"] = _requests_water_content(cfg)
 
 
 def _build_no_llm_workflow_config(
@@ -4914,8 +4806,9 @@ def _build_no_llm_workflow_config(
     cfg: Dict[str, Any] = dict(upload_overrides)
     cfg["user_request"] = user_request.strip() or f"Quick run mode: {quick_mode}"
     cfg["project_dir"] = str(Path.cwd())
-    inferred_instrument = _infer_instrument_from_request(user_request)
 
+    # No linear solver is named in the inversion parameters: that choice belongs
+    # to the inversion code, not to a quick-mode preset.
     if quick_mode == "ERT Only":
         ert_file = cfg.get("ert_file") or cfg.get("data_file")
         if not ert_file:
@@ -4924,11 +4817,10 @@ def _build_no_llm_workflow_config(
             {
                 "ert_file": ert_file,
                 "data_file": ert_file,
-                "instrument": cfg.get("instrument") or inferred_instrument or "DAS-1",
-                "convert_to_water_content": False,
-                "inversion_params": {"lambda": 20.0, "max_iterations": 12, "method": "cgls"},
+                "inversion_params": {"lambda": 20.0, "max_iterations": 12},
             }
         )
+        _apply_quick_ert_intent(cfg)
 
     elif quick_mode == "Time-Lapse ERT":
         tl_files = cfg.get("time_lapse_files") or cfg.get("timelapse_files")
@@ -4938,13 +4830,13 @@ def _build_no_llm_workflow_config(
             {
                 "time_lapse_files": list(tl_files),
                 "timelapse_files": list(tl_files),
-                "instrument": cfg.get("instrument") or inferred_instrument or "E4D",
                 "inversion_mode": "time-lapse",
                 "time_lapse_method": "difference",
                 "temporal_regularization": 10.0,
-                "inversion_params": {"lambda": 15.0, "max_iterations": 10, "method": "cgls"},
+                "inversion_params": {"lambda": 15.0, "max_iterations": 10},
             }
         )
+        _apply_quick_ert_intent(cfg)
 
     elif quick_mode == "Seismic SRT":
         raw_seismic_file = cfg.get("raw_seismic_file")
@@ -5308,7 +5200,7 @@ def _build_hydro_profile(
 ) -> Dict[str, Any]:
     import numpy as np
 
-    from PyHydroGeophysX.core.interpolation import ProfileInterpolator
+    from PyHydroGeophysX.core.hydro_profile import sample_profile
 
     water_content_4d = np.load(data_dir / "Watercontent.npy")
     porosity_3d = np.load(data_dir / "Porosity.npy")
@@ -5317,23 +5209,6 @@ def _build_hydro_profile(
 
     if top.ndim != 2:
         raise ValueError(f"top.txt must be 2D. Got shape {top.shape}.")
-
-    n_rows, n_cols = top.shape
-    p1_col = int(np.clip(round(float(point1[0])), 0, n_cols - 1))
-    p1_row = int(np.clip(round(float(point1[1])), 0, n_rows - 1))
-    p2_col = int(np.clip(round(float(point2[0])), 0, n_cols - 1))
-    p2_row = int(np.clip(round(float(point2[1])), 0, n_rows - 1))
-
-    # Avoid degenerate zero-length profile.
-    if p1_col == p2_col and p1_row == p2_row:
-        if p2_col < n_cols - 1:
-            p2_col += 1
-        elif p2_row < n_rows - 1:
-            p2_row += 1
-        elif p1_col > 0:
-            p1_col -= 1
-        else:
-            p1_row = max(0, p1_row - 1)
 
     if water_content_4d.ndim < 4:
         raise ValueError(f"Watercontent.npy must be 4D. Got shape {water_content_4d.shape}.")
@@ -5344,72 +5219,24 @@ def _build_hydro_profile(
 
     water_content_3d = np.asarray(water_content_4d[snapshot_index], dtype=float)
 
-    def _sample_profile(p1c: int, p1r: int, p2c: int, p2r: int):
-        interp = ProfileInterpolator(
-            point1=[p1c, p1r],
-            point2=[p2c, p2r],
-            surface_data=top,
-            origin_x=0.0,
-            origin_y=0.0,
-            pixel_width=1.0,
-            pixel_height=-1.0,
-            num_points=int(num_points),
-        )
-        sampled_structure = interp.interpolate_layer_data([top] + [bot[i] for i in range(bot.shape[0])])
-        sampled_wc = interp.interpolate_3d_data(water_content_3d)
-        sampled_por = interp.interpolate_3d_data(porosity_3d)
-        return interp, sampled_structure, sampled_wc, sampled_por
-
-    interpolator, structure, water_content_profile, porosity_profile = _sample_profile(
-        p1_col, p1_row, p2_col, p2_row
-    )
-
-    if not np.isfinite(water_content_profile).any() or not np.isfinite(porosity_profile).any():
-        # Auto-fallback for datasets where default endpoints miss the active domain.
-        active_mask = np.any(np.isfinite(water_content_3d) & np.isfinite(porosity_3d), axis=0)
-        if np.any(active_mask):
-            rows, cols = np.where(active_mask)
-            min_col, max_col = int(np.min(cols)), int(np.max(cols))
-            min_row, max_row = int(np.min(rows)), int(np.max(rows))
-            med_col, med_row = int(np.median(cols)), int(np.median(rows))
-
-            fallback_lines = [
-                (min_col, med_row, max_col, med_row),
-                (med_col, min_row, med_col, max_row),
-                (min_col, min_row, max_col, max_row),
-                (min_col, max_row, max_col, min_row),
-            ]
-            for fp1_col, fp1_row, fp2_col, fp2_row in fallback_lines:
-                interp_try, struct_try, wc_try, por_try = _sample_profile(
-                    fp1_col, fp1_row, fp2_col, fp2_row
-                )
-                if np.isfinite(wc_try).any() and np.isfinite(por_try).any():
-                    interpolator = interp_try
-                    structure = struct_try
-                    water_content_profile = wc_try
-                    porosity_profile = por_try
-                    p1_col, p1_row, p2_col, p2_row = fp1_col, fp1_row, fp2_col, fp2_row
-                    break
-
-    structure = _fill_profile_nans(structure)
-    water_content_profile = np.clip(_fill_profile_nans(water_content_profile), 0.0, 0.8)
-    porosity_profile = np.clip(_fill_profile_nans(porosity_profile), 0.01, 0.6)
-
-    n_layers, n_profile = water_content_profile.shape
-    L_profile = np.asarray(interpolator.L_profile, dtype=float)
+    # End points clipped into the grid, and lines through the active domain
+    # tried when the clicked one misses it (the studio's page does neither).
+    profile = sample_profile(water_content_3d, porosity_3d, top, bot, point1, point2,
+                             num_points, clip_to_grid=True, fallback_to_active=True)
+    n_layers, n_profile = profile["water_content_profile"].shape
 
     return {
-        "interpolator": interpolator,
-        "structure": structure,
-        "water_content_profile": water_content_profile,
-        "porosity_profile": porosity_profile,
-        "L_profile": L_profile,
+        "interpolator": profile["interpolator"],
+        "structure": profile["structure"],
+        "water_content_profile": profile["water_content_profile"],
+        "porosity_profile": profile["porosity_profile"],
+        "L_profile": profile["L_profile"],
         "n_layers": int(n_layers),
         "n_profile": int(n_profile),
         "snapshot_index": int(snapshot_index),
         "water_shape": tuple(int(v) for v in water_content_3d.shape),
         "porosity_shape": tuple(int(v) for v in porosity_3d.shape),
-        "profile_points_used": [(int(p1_col), int(p1_row)), (int(p2_col), int(p2_row))],
+        "profile_points_used": profile["points"],
     }
 
 
@@ -5475,41 +5302,21 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
                 import pygimli.physics.traveltime as tt
                 from pygimli.physics import ert as pg_ert
 
-                from PyHydroGeophysX.core.interpolation import create_surface_lines
-                from PyHydroGeophysX.core.mesh_utils import MeshCreator
+                from PyHydroGeophysX.core.hydro_profile import build_profile_mesh
                 from PyHydroGeophysX.Hydro_modular import hydro_to_ert, hydro_to_srt
 
-                n_bounds = profile["structure"].shape[0]
-                mid_idx = max(1, min(4, n_bounds // 3))
-                bot_idx = max(mid_idx + 1, min(12, n_bounds - 2))
-                surface, line1, line2 = create_surface_lines(
-                    L_profile=profile["L_profile"],
-                    structure=profile["structure"],
-                    top_idx=0,
-                    mid_idx=mid_idx,
-                    bot_idx=bot_idx,
-                )
-
-                mesh_creator = MeshCreator(quality=32, area=1.0)
-                mesh, _ = mesh_creator.create_from_layers(
-                    surface=surface,
-                    layers=[line1, line2],
-                    bottom_depth=float(np.min(line2[:, 1]) - 10.0),
-                )
-                mesh_markers = _assign_three_layer_markers(mesh, line1, line2, top_marker=0, mid_marker=3, bot_marker=2)
-
-                wc_mesh = _interpolate_profile_to_mesh(
+                # The mesh the studio's forward run builds, at its default quality.
+                built = build_profile_mesh(
+                    profile["L_profile"],
+                    profile["structure"],
                     profile["water_content_profile"],
-                    profile["structure"],
-                    profile["L_profile"],
-                    mesh,
-                )
-                porosity_mesh = _interpolate_profile_to_mesh(
                     profile["porosity_profile"],
-                    profile["structure"],
-                    profile["L_profile"],
-                    mesh,
+                    quality=32,
+                    area=1.0,
                 )
+                mesh, mesh_markers = built["mesh"], built["mesh_markers"]
+                wc_mesh, porosity_mesh = built["water_content"], built["porosity"]
+                mid_idx, bot_idx = built["layer_idx"][1], built["layer_idx"][2]
 
                 rho_parameters = {
                     "rho_sat": [
@@ -7420,6 +7227,35 @@ def handle_uploads(
     return saved_paths
 
 
+def _run_status(results: Any) -> Tuple[str, List[str]]:
+    """A finished run's status and warnings, as its results state them."""
+    if not isinstance(results, dict):
+        return "", []
+    warnings = [str(w) for w in (results.get("warnings") or []) if str(w).strip()]
+    return str(results.get("status") or ""), warnings
+
+
+def _finite_range(values: Any) -> Optional[List[float]]:
+    """The finite minimum and maximum of an array-like, or None."""
+    if values is None:
+        return None
+    import numpy as np
+
+    try:
+        array = np.asarray(values, dtype=float).ravel()
+    except (TypeError, ValueError):
+        return None
+    array = array[np.isfinite(array)]
+    return [float(array.min()), float(array.max())] if array.size else None
+
+
+def _failure_detail(results: Any, status: str, warnings: List[str]) -> str:
+    """One sentence for a run that returned without reporting success."""
+    error = results.get("error") if isinstance(results, dict) else None
+    detail = str(error or "; ".join(warnings) or "see the execution plan")
+    return f"The workflow did not report success (status: {status or 'unknown'}): {detail}"
+
+
 def run_workflow(
     user_request: str,
     upload_overrides: Dict[str, Any],
@@ -7439,6 +7275,10 @@ def run_workflow(
     Returns:
         None.
     """
+    # A new run replaces the previous result, and is cleared before anything
+    # can fail: a failed re-run used to leave the last run's "Workflow
+    # complete.", plan and downloads on the page beneath its own error.
+    st.session_state.workflow_result = None
     if not (st.session_state.get("api_key") or "").strip():
         st.warning(
             "No API key is set (sidebar: enter a key, then click Initialize). Steps that "
@@ -7534,8 +7374,22 @@ def run_workflow(
                 for i, step in enumerate(execution_plan, 1):
                     st.markdown(f"{i}. **{step.get('step', '')}** - {step.get('agent', '')}")
         
-        update_progress("Workflow complete!", 1.0, "All steps completed successfully")
-        
+        # The closing message follows the run's own status, not the fact that
+        # the call returned.
+        status, warnings = _run_status(results)
+        if status == "success":
+            update_progress("Workflow complete!", 1.0)
+            if warnings:
+                status_text.warning("Completed with warnings: " + "; ".join(warnings))
+            else:
+                status_text.success("All steps completed successfully")
+        elif status == "incomplete":
+            update_progress("Workflow did not complete", 1.0)
+            status_text.warning("; ".join(warnings) or "The run stopped before it finished.")
+        else:
+            update_progress("Workflow did not report success", 1.0)
+            status_text.error(_failure_detail(results, status, warnings))
+
         st.session_state.workflow_result = {
             "results": results,
             "execution_plan": execution_plan,
@@ -7547,6 +7401,7 @@ def run_workflow(
             "total_llm_cost_estimate_usd": st.session_state.llm_cost_estimate_usd,
         }
     except Exception as exc:  # noqa: BLE001
+        st.session_state.workflow_result = None
         update_progress("Workflow failed", 1.0)
         st.error(f"Workflow failed: {exc}")
         # Try LLM to suggest root cause if context agent available
@@ -7606,8 +7461,9 @@ def _detect_workflow_type(config: Dict) -> str:
     elif config.get('velocity_threshold') or (config.get('ert_file') and config.get('seismic_file')):
         return "Data Fusion (Seismic + ERT)"
     elif config.get('ert_file') or config.get('data_file'):
-        # Check if water content is requested
-        if 'water content' in user_request or 'petrophysic' in user_request or 'moisture' in user_request:
+        # The flag, or the request read as the runtime reads it: a substring
+        # test here labelled "estimate the water conent" a plain inversion.
+        if _requests_water_content(config):
             return "ERT Inversion + Petrophysics"
         return "Direct ERT Inversion"
     return "Unknown"
@@ -7623,7 +7479,22 @@ def render_results() -> None:
     if not data:
         return
 
-    st.success("Workflow complete.")
+    results = data.get("results") or {}
+    # The headline follows this run's own status: an incomplete run was
+    # announced as complete, with the warning that contradicted it further down,
+    # and a run that reported an error was announced as complete above it.
+    status, warnings = _run_status(results)
+    if status == "success":
+        st.success("Workflow complete.")
+        if warnings:
+            with st.expander(f"Warnings raised ({len(warnings)})", expanded=False):
+                for warning in warnings:
+                    st.markdown(f"- {warning}")
+    elif status == "incomplete":
+        st.warning("The workflow did not complete: "
+                   + "; ".join(warnings or ["see the execution plan."]))
+    else:
+        st.error(_failure_detail(results, status, warnings))
     if data.get("total_llm_cost_estimate_usd") is not None:
         st.metric("Estimated LLM cost", f"${float(data['total_llm_cost_estimate_usd']):.4f}")
 
@@ -7633,10 +7504,22 @@ def render_results() -> None:
         for idx, step in enumerate(execution_plan, 1):
             st.markdown(f"{idx}. **{step.get('step','')}** - {step.get('agent','')}")
 
-    results = data.get("results") or {}
-    if results.get("status") == "success":
+    if status in ("success", "incomplete"):
         st.markdown("### Results summary")
-        stats = results.get("statistics", {})
+        stats = dict(results.get("statistics") or {})
+        # The workflow runtime returns the models, not a statistics block, so
+        # without this the summary was empty even when water content was made.
+        for stat_key, result_key in (("resistivity_range", "resistivity_model"),
+                                     ("wc_range", "water_content_mean")):
+            if not stats.get(stat_key):
+                value_range = _finite_range(results.get(result_key))
+                if value_range:
+                    stats[stat_key] = value_range
+        if not stats.get("num_cells") and results.get("resistivity_model") is not None:
+            try:
+                stats["num_cells"] = int(len(results["resistivity_model"]))
+            except TypeError:
+                pass
         col1, col2, col3 = st.columns(3)
         with col1:
             if stats.get("resistivity_range"):
@@ -7651,8 +7534,6 @@ def render_results() -> None:
                 st.metric("Mesh cells", stats["num_cells"])
             elif stats.get("n_timesteps"):
                 st.metric("Time steps", stats["n_timesteps"])
-    elif results:
-        st.error(f"Workflow reported an error: {results.get('error','Unknown error')}")
 
     interpretation = data.get("interpretation")
     if interpretation:
@@ -7710,11 +7591,9 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
             apply_agc,
             bandpass_filter,
             export_first_breaks,
-            fit_velocity_traveltime_model,
             first_breaks_to_traveltime,
             normalize_traces,
             pick_first_breaks,
-            predict_velocity_traveltimes,
             read_geometrics_dat,
             read_segy,
         )
@@ -8194,6 +8073,8 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
         max_time_s: float,
         learning_method: str = "1D velocity model",
     ) -> Tuple[Any, int, int, str]:
+        from PyHydroGeophysX.data_processing.first_break_propagation import propagate_first_breaks
+
         if picks_df is None or picks_df.empty:
             return picks_df, 0, 0, "No picks are available yet."
         picks_work = picks_df.copy(deep=True)
@@ -8208,388 +8089,32 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
         pick_times = pd.to_numeric(picks_work["time_s"], errors="coerce").to_numpy(dtype=float)
         baseline_values = pd.to_numeric(picks_work.get("auto_time_s", picks_work["time_s"]), errors="coerce").to_numpy(dtype=float)
         sources = picks_work["pick_source"].fillna("").astype(str).str.lower()
-        manual_mask = (
-            (sources == "manual").to_numpy()
-            & np.isfinite(local_positions)
-            & np.isfinite(pick_times)
-            & (pick_times > 0)
-        )
-        manual_count = int(manual_mask.sum())
-        if manual_count < 1:
-            return picks_work, manual_count, 0, "Save at least one anchor pick before updating the remaining traces."
 
         trace_data = np.asarray(processed_data.get("raw_traces", selected_gather.traces), dtype=float)
         if trace_data.shape != selected_gather.traces.shape:
             trace_data = np.asarray(selected_gather.traces, dtype=float)
-        n_samples, n_traces = trace_data.shape
+
+        # The propagation is library code (first_break_propagation); this page
+        # supplies the picks and applies the ones that come back.
+        propagation = propagate_first_breaks(
+            trace_data,
+            selected_gather.time,
+            local_positions,
+            pick_times,
+            baseline_values,
+            (sources == "manual").to_numpy(),
+            search_window_s=search_window_s,
+            max_time_s=max_time_s,
+            learning_method=learning_method,
+            geometry=lambda: _gather_geometry_arrays(selected_gather),
+        )
+        if propagation.model_decided:
+            st.session_state.seismic_velocity_model = propagation.velocity_model
+        if propagation.message:
+            return picks_work, propagation.manual_count, 0, propagation.message
+
         time_values = np.asarray(selected_gather.time, dtype=float)
-        if time_values.size != n_samples:
-            return picks_work, manual_count, 0, "Trace and time arrays do not have matching sample counts."
-
-        dt = float(np.nanmedian(np.diff(time_values))) if time_values.size > 1 else 0.001
-        if not np.isfinite(dt) or dt <= 0:
-            dt = 0.001
-        half_window = max(1, int(round(float(search_window_s) / dt)))
-        max_sample = int(np.clip(np.searchsorted(time_values, float(max_time_s), side="right") - 1, 0, n_samples - 1))
-
-        baseline_by_trace = np.full(n_traces, np.nan, dtype=float)
-        for position, baseline in zip(local_positions, baseline_values):
-            if np.isfinite(position) and np.isfinite(baseline) and baseline > 0:
-                trace_pos = int(np.clip(round(float(position)), 0, n_traces - 1))
-                baseline_by_trace[trace_pos] = float(baseline)
-        fallback_by_trace = np.full(n_traces, np.nan, dtype=float)
-        for position, pick_time in zip(local_positions, pick_times):
-            if np.isfinite(position) and np.isfinite(pick_time) and pick_time > 0:
-                trace_pos = int(np.clip(round(float(position)), 0, n_traces - 1))
-                fallback_by_trace[trace_pos] = float(pick_time)
-        missing_baseline = ~np.isfinite(baseline_by_trace)
-        baseline_by_trace[missing_baseline] = fallback_by_trace[missing_baseline]
-        known = np.where(np.isfinite(baseline_by_trace))[0]
-        if known.size == 0:
-            return picks_work, manual_count, 0, "No baseline auto-pick times are available for correction."
-        if known.size < n_traces:
-            baseline_by_trace = np.interp(np.arange(n_traces, dtype=float), known.astype(float), baseline_by_trace[known])
-
-        manual_x = local_positions[manual_mask].astype(float)
-        manual_t = pick_times[manual_mask].astype(float)
-        manual_trace_map: Dict[int, float] = {}
-        for trace_pos_f, pick_time in zip(manual_x, manual_t):
-            if np.isfinite(trace_pos_f) and np.isfinite(pick_time) and pick_time > 0:
-                manual_trace_map[int(np.clip(round(float(trace_pos_f)), 0, n_traces - 1))] = float(pick_time)
-        if not manual_trace_map:
-            return picks_work, manual_count, 0, "No valid anchor pick times are available for correction."
-
-        manual_trace_positions = np.asarray(sorted(manual_trace_map.keys()), dtype=float)
-        manual_pick_times = np.asarray([manual_trace_map[int(pos)] for pos in manual_trace_positions], dtype=float)
-        x_all = np.arange(n_traces, dtype=float)
-        lower_time_bounds = np.full(n_traces, float(time_values[0]), dtype=float)
-        upper_time_bounds = np.full(n_traces, float(time_values[max_sample]), dtype=float)
-
-        predicted_times: Optional[np.ndarray] = None
-        model_prediction_used = False
-        use_velocity_model = str(learning_method or "").strip().lower().startswith("1d")
-        if use_velocity_model:
-            try:
-                source_x_all, receiver_x_all = _gather_geometry_arrays(selected_gather)
-                source_names = sources.to_numpy()
-                hint_weight = 0.15 if manual_count < 2 else 0.04
-                fit_source_x: List[float] = []
-                fit_receiver_x: List[float] = []
-                fit_times: List[float] = []
-                fit_weights: List[float] = []
-                fit_anchor_mask: List[bool] = []
-                for trace_pos_f, pick_time, source_name in zip(local_positions, pick_times, source_names):
-                    if not (np.isfinite(trace_pos_f) and np.isfinite(pick_time) and pick_time > 0):
-                        continue
-                    trace_pos = int(np.clip(round(float(trace_pos_f)), 0, n_traces - 1))
-                    is_manual_pick = str(source_name).lower() == "manual"
-                    weight = 1.0 if is_manual_pick else hint_weight
-                    if weight <= 0:
-                        continue
-                    fit_source_x.append(float(source_x_all[trace_pos]))
-                    fit_receiver_x.append(float(receiver_x_all[trace_pos]))
-                    fit_times.append(float(pick_time))
-                    fit_weights.append(float(weight))
-                    fit_anchor_mask.append(bool(is_manual_pick))
-                if len(fit_times) < 2:
-                    raise ValueError("At least two travel-time points are needed for the velocity model.")
-                velocity_model = fit_velocity_traveltime_model(
-                    fit_source_x,
-                    fit_receiver_x,
-                    fit_times,
-                    weights=fit_weights,
-                    anchor_mask=fit_anchor_mask,
-                    max_segments=3,
-                    velocity_bounds=(100.0, 8000.0),
-                )
-                predicted_times = predict_velocity_traveltimes(velocity_model, source_x_all, receiver_x_all)
-                predicted_times = np.asarray(predicted_times, dtype=float)
-                if predicted_times.size != n_traces or int(np.isfinite(predicted_times).sum()) < 2:
-                    raise ValueError("Velocity model did not produce enough valid predictions.")
-                missing_pred = ~np.isfinite(predicted_times)
-                predicted_times[missing_pred] = baseline_by_trace[missing_pred]
-                model_margin = max(float(search_window_s), dt * 4.0)
-                lower_time_bounds = np.maximum(float(time_values[0]), predicted_times - model_margin)
-                upper_time_bounds = np.minimum(float(time_values[max_sample]), predicted_times + model_margin)
-                st.session_state.seismic_velocity_model = velocity_model
-                model_prediction_used = True
-            except Exception:  # noqa: BLE001
-                predicted_times = None
-                st.session_state.seismic_velocity_model = None
-        else:
-            st.session_state.seismic_velocity_model = None
-
-        if predicted_times is None:
-            if len(manual_trace_positions) == 1:
-                manual_trace = int(manual_trace_positions[0])
-                baseline_shift = float(manual_pick_times[0] - baseline_by_trace[manual_trace])
-                if not np.isfinite(baseline_shift):
-                    baseline_shift = 0.0
-                predicted_times = baseline_by_trace + baseline_shift
-            else:
-                predicted_times = np.interp(x_all, manual_trace_positions, manual_pick_times)
-                first_x, second_x = float(manual_trace_positions[0]), float(manual_trace_positions[1])
-                last_x, penultimate_x = float(manual_trace_positions[-1]), float(manual_trace_positions[-2])
-                first_t, second_t = float(manual_pick_times[0]), float(manual_pick_times[1])
-                last_t, penultimate_t = float(manual_pick_times[-1]), float(manual_pick_times[-2])
-                left_dx = max(abs(second_x - first_x), 1.0)
-                right_dx = max(abs(last_x - penultimate_x), 1.0)
-                left_of_anchors = x_all < first_x
-                right_of_anchors = x_all > last_x
-                predicted_times[left_of_anchors] = first_t + ((second_t - first_t) / left_dx) * (x_all[left_of_anchors] - first_x)
-                predicted_times[right_of_anchors] = last_t + ((last_t - penultimate_t) / right_dx) * (x_all[right_of_anchors] - last_x)
-
-                if len(manual_trace_positions) >= 3:
-                    inside_anchors = (x_all >= first_x) & (x_all <= last_x)
-                    try:
-                        from scipy.interpolate import PchipInterpolator
-
-                        pchip = PchipInterpolator(manual_trace_positions, manual_pick_times, extrapolate=False)
-                        curved_times = np.asarray(pchip(x_all[inside_anchors]), dtype=float)
-                        valid_curved = np.isfinite(curved_times)
-                        predicted_times[inside_anchors] = np.where(valid_curved, curved_times, predicted_times[inside_anchors])
-                    except Exception:  # noqa: BLE001
-                        pass
-
-                anchor_margin = max(float(search_window_s), dt * 4.0)
-                for trace_pos in range(n_traces):
-                    right_anchor = int(np.searchsorted(manual_trace_positions, float(trace_pos), side="left"))
-                    if 0 < right_anchor < len(manual_trace_positions):
-                        left_time = float(manual_pick_times[right_anchor - 1])
-                        right_time = float(manual_pick_times[right_anchor])
-                        lower = min(left_time, right_time) - anchor_margin
-                        upper = max(left_time, right_time) + anchor_margin
-                        lower_time_bounds[trace_pos] = max(float(time_values[0]), lower)
-                        upper_time_bounds[trace_pos] = min(float(time_values[max_sample]), upper)
-                        predicted_times[trace_pos] = float(np.clip(predicted_times[trace_pos], lower, upper))
-                    elif right_anchor == 0 and len(manual_pick_times) > 1:
-                        lower = min(first_t, second_t) - 2.0 * anchor_margin
-                        upper = max(first_t, second_t) + 2.0 * anchor_margin
-                        lower_time_bounds[trace_pos] = max(float(time_values[0]), lower)
-                        upper_time_bounds[trace_pos] = min(float(time_values[max_sample]), upper)
-                        predicted_times[trace_pos] = float(np.clip(predicted_times[trace_pos], lower, upper))
-                    elif len(manual_pick_times) > 1:
-                        lower = min(penultimate_t, last_t) - 2.0 * anchor_margin
-                        upper = max(penultimate_t, last_t) + 2.0 * anchor_margin
-                        lower_time_bounds[trace_pos] = max(float(time_values[0]), lower)
-                        upper_time_bounds[trace_pos] = min(float(time_values[max_sample]), upper)
-                        predicted_times[trace_pos] = float(np.clip(predicted_times[trace_pos], lower, upper))
-
-        for trace_pos, pick_time in manual_trace_map.items():
-            predicted_times[int(trace_pos)] = float(pick_time)
-        predicted_times = np.clip(predicted_times, float(time_values[0]), float(time_values[max_sample]))
-        if model_prediction_used and st.session_state.get("seismic_velocity_model") is not None:
-            st.session_state.seismic_velocity_model.predicted_times = predicted_times.copy()
-        manual_traces = set(manual_trace_map.keys())
-
-        def _nearest_first_break_sample(trace: np.ndarray, center: int, lo: int, hi: int) -> int:
-            window = np.asarray(trace[lo:hi], dtype=float)
-            finite = np.isfinite(window)
-            if not finite.any():
-                return int(center)
-            window_abs = np.abs(window)
-            gradient = np.abs(np.gradient(window)) if window.size > 1 else window_abs
-            amp_scale = float(np.nanpercentile(window_abs[finite], 90))
-            grad_scale = float(np.nanpercentile(gradient[finite], 90))
-            amp_scale = max(amp_scale, float(np.nanmedian(window_abs[finite])) * 2.0, 1e-12)
-            grad_scale = max(grad_scale, float(np.nanmedian(gradient[finite])) * 2.0, 1e-12)
-            onset = (0.75 * window_abs / amp_scale) + (0.25 * gradient / grad_scale)
-            sample_numbers = np.arange(lo, hi, dtype=float)
-            distance = np.abs(sample_numbers - float(center)) / max(float(half_window), 1.0)
-            scores = np.where(finite, onset - (0.65 * distance), -np.inf)
-            if window.size > 2:
-                scores[0] -= 0.75
-                scores[-1] -= 0.75
-            if not np.isfinite(scores).any():
-                return int(center)
-            local_idx = int(np.nanargmax(scores))
-            if window.size > 4 and local_idx in {0, window.size - 1}:
-                inner_scores = scores[1:-1]
-                if np.isfinite(inner_scores).any():
-                    local_idx = 1 + int(np.nanargmax(inner_scores))
-            return int(np.clip(lo + local_idx, 0, max_sample))
-
-        def _forward_mean(values: np.ndarray, window: int) -> np.ndarray:
-            window = max(1, int(window))
-            padded = np.pad(np.asarray(values, dtype=float), ((0, window - 1), (0, 0)), mode="edge")
-            cumulative = np.cumsum(np.vstack([np.zeros((1, padded.shape[1])), padded]), axis=0)
-            return (cumulative[window:] - cumulative[:-window]) / float(window)
-
-        def _backward_mean(values: np.ndarray, window: int) -> np.ndarray:
-            return np.flipud(_forward_mean(np.flipud(values), window))
-
-        def _normalize_columns(values: np.ndarray) -> np.ndarray:
-            values = np.asarray(values, dtype=float)
-            normalized = np.zeros_like(values, dtype=float)
-            for col in range(values.shape[1]):
-                column = values[:, col]
-                finite = np.isfinite(column)
-                if not finite.any():
-                    continue
-                low, high = np.nanpercentile(column[finite], [10, 95])
-                if not np.isfinite(high - low) or high <= low:
-                    low = float(np.nanmin(column[finite]))
-                    high = float(np.nanmax(column[finite]))
-                scale = max(high - low, 1e-12)
-                normalized[:, col] = np.clip((np.nan_to_num(column, nan=low) - low) / scale, 0.0, 1.0)
-            return normalized
-
-        def _first_break_reward_map() -> np.ndarray:
-            clean_traces = np.nan_to_num(trace_data[: max_sample + 1, :], nan=0.0, posinf=0.0, neginf=0.0)
-            abs_traces = np.abs(clean_traces)
-            energy = clean_traces**2
-            short_window = max(2, int(round(0.002 / dt)))
-            long_window = max(short_window * 3, int(round(0.010 / dt)))
-            future_energy = _forward_mean(energy, short_window)
-            past_energy = _backward_mean(energy, long_window)
-            energy_ratio = future_energy / (past_energy + np.nanmedian(past_energy) * 0.05 + 1e-12)
-            mer = energy_ratio * (abs_traces + np.nanmedian(abs_traces, axis=0, keepdims=True))
-            gradient = np.abs(np.gradient(clean_traces, axis=0))
-
-            aic_reward = np.zeros_like(clean_traces, dtype=float)
-            sample_axis = np.arange(clean_traces.shape[0], dtype=float)
-            aic_width = max(2.0, float(half_window) * 0.35)
-            for trace_pos in range(clean_traces.shape[1]):
-                trace = clean_traces[:, trace_pos]
-                if trace.size < 8 or not np.isfinite(trace).any():
-                    continue
-                trace = trace - float(np.nanmedian(trace))
-                csum = np.cumsum(trace)
-                csum2 = np.cumsum(trace**2)
-                n = trace.size
-                candidates = np.arange(2, n - 2, dtype=int)
-                if candidates.size == 0:
-                    continue
-                left_count = candidates.astype(float)
-                right_count = (n - candidates).astype(float)
-                left_mean = csum[candidates - 1] / left_count
-                right_sum = csum[-1] - csum[candidates - 1]
-                right_mean = right_sum / right_count
-                left_var = (csum2[candidates - 1] / left_count) - left_mean**2
-                right_var = ((csum2[-1] - csum2[candidates - 1]) / right_count) - right_mean**2
-                left_var = np.maximum(left_var, 1e-12)
-                right_var = np.maximum(right_var, 1e-12)
-                aic = left_count * np.log(left_var) + right_count * np.log(right_var)
-                if not np.isfinite(aic).any():
-                    continue
-                aic_sample = float(candidates[int(np.nanargmin(aic))])
-                aic_reward[:, trace_pos] = np.exp(-0.5 * ((sample_axis - aic_sample) / aic_width) ** 2)
-
-            reward = (
-                0.45 * _normalize_columns(mer)
-                + 0.25 * _normalize_columns(energy_ratio)
-                + 0.20 * _normalize_columns(gradient)
-                + 0.10 * aic_reward
-            )
-            return np.nan_to_num(reward, nan=0.0, posinf=0.0, neginf=0.0)
-
-        def _continuity_constrained_path_samples() -> Optional[np.ndarray]:
-            if manual_count < 2:
-                return None
-            reward = _first_break_reward_map()
-            n_states = max_sample + 1
-            center_samples = np.asarray(
-                np.clip(np.searchsorted(time_values, predicted_times), 0, max_sample),
-                dtype=int,
-            )
-            center_diffs = np.abs(np.diff(center_samples)).astype(float)
-            max_center_jump = float(np.nanpercentile(center_diffs, 95)) if center_diffs.size else 1.0
-            max_jump = int(np.clip(max(max_center_jump + 3.0, half_window * 0.75, 3.0), 3, max_sample))
-            center_sigma = max(float(half_window), float(max_jump), 2.0)
-            smoothness = 0.85
-            center_weight = 0.22
-            dp = np.full((n_traces, n_states), -np.inf, dtype=float)
-            back = np.full((n_traces, n_states), -1, dtype=int)
-
-            for trace_pos in range(n_traces):
-                lower_bound_idx = int(
-                    np.clip(np.searchsorted(time_values, float(lower_time_bounds[trace_pos]), side="left"), 0, max_sample)
-                )
-                upper_bound_idx = int(
-                    np.clip(np.searchsorted(time_values, float(upper_time_bounds[trace_pos]), side="right"), 1, max_sample + 1)
-                )
-                score = np.full(n_states, -np.inf, dtype=float)
-                samples = np.arange(lower_bound_idx, upper_bound_idx, dtype=int)
-                if samples.size:
-                    distance = (samples.astype(float) - float(center_samples[trace_pos])) / center_sigma
-                    score[samples] = reward[samples, trace_pos] - center_weight * distance**2
-                if trace_pos in manual_trace_map:
-                    anchor_sample = int(
-                        np.clip(np.searchsorted(time_values, float(manual_trace_map[trace_pos])), lower_bound_idx, upper_bound_idx - 1)
-                    )
-                    score[:] = -np.inf
-                    score[anchor_sample] = 5.0
-                if trace_pos == 0:
-                    dp[trace_pos, :] = score
-                    continue
-                previous = dp[trace_pos - 1, :]
-                for sample in np.where(np.isfinite(score))[0]:
-                    lo_prev = max(0, int(sample) - max_jump)
-                    hi_prev = min(n_states, int(sample) + max_jump + 1)
-                    previous_window = previous[lo_prev:hi_prev]
-                    if not np.isfinite(previous_window).any():
-                        finite_previous = np.where(np.isfinite(previous))[0]
-                        if not finite_previous.size:
-                            continue
-                        jumps = finite_previous.astype(float) - float(sample)
-                        transition = previous[finite_previous] - smoothness * (jumps / max(float(max_jump), 1.0)) ** 2
-                        best_local = int(np.nanargmax(transition))
-                        best_prev = int(finite_previous[best_local])
-                        best_value = float(transition[best_local])
-                    else:
-                        prev_samples = np.arange(lo_prev, hi_prev, dtype=float)
-                        jumps = prev_samples - float(sample)
-                        transition = previous_window - smoothness * (jumps / max(float(max_jump), 1.0)) ** 2
-                        best_local = int(np.nanargmax(transition))
-                        best_prev = int(lo_prev + best_local)
-                        best_value = float(transition[best_local])
-                    dp[trace_pos, sample] = score[sample] + best_value
-                    back[trace_pos, sample] = best_prev
-
-            if not np.isfinite(dp[-1, :]).any():
-                return None
-            path = np.full(n_traces, -1, dtype=int)
-            path[-1] = int(np.nanargmax(dp[-1, :]))
-            for trace_pos in range(n_traces - 1, 0, -1):
-                previous = int(back[trace_pos, path[trace_pos]])
-                if previous < 0:
-                    previous = int(center_samples[trace_pos - 1])
-                path[trace_pos - 1] = int(previous)
-            path = np.asarray(np.clip(path, 0, max_sample), dtype=int)
-            for trace_pos, pick_time in manual_trace_map.items():
-                path[int(trace_pos)] = int(np.clip(np.searchsorted(time_values, float(pick_time)), 0, max_sample))
-            return path
-
-        path_samples = None if model_prediction_used else _continuity_constrained_path_samples()
-
-        updated_count = 0
-        for trace_pos in range(n_traces):
-            if trace_pos in manual_traces:
-                continue
-            predicted = float(predicted_times[trace_pos])
-            if not np.isfinite(predicted):
-                continue
-            predicted = float(np.clip(predicted, float(time_values[0]), float(time_values[max_sample])))
-            if path_samples is not None:
-                sample_idx = int(path_samples[trace_pos])
-            else:
-                center = int(np.clip(np.searchsorted(time_values, predicted), 0, max_sample))
-                lo = int(max(0, center - half_window))
-                hi = int(min(max_sample + 1, center + half_window + 1))
-                lower_bound_idx = int(
-                    np.clip(np.searchsorted(time_values, float(lower_time_bounds[trace_pos]), side="left"), 0, max_sample)
-                )
-                upper_bound_idx = int(
-                    np.clip(np.searchsorted(time_values, float(upper_time_bounds[trace_pos]), side="right"), 1, max_sample + 1)
-                )
-                lo = max(lo, lower_bound_idx)
-                hi = min(hi, upper_bound_idx)
-                if hi <= lo:
-                    lo = int(np.clip(center, lower_bound_idx, max(upper_bound_idx - 1, lower_bound_idx)))
-                    hi = min(max_sample + 1, lo + 1)
-                sample_idx = _nearest_first_break_sample(trace_data[:, trace_pos], center, lo, hi)
-                if max_sample > 2:
-                    sample_idx = int(np.clip(sample_idx, 1, max_sample - 1))
+        for trace_pos, sample_idx in propagation.updates:
             picks_work = _update_pick_from_click(
                 picks_work,
                 selected_gather,
@@ -8598,9 +8123,8 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                 "Update clicked trace",
                 pick_source="learned",
             )
-            updated_count += 1
 
-        return picks_work, manual_count, updated_count, ""
+        return picks_work, propagation.manual_count, len(propagation.updates), ""
 
     def _line_pick_points(
         selected_gather: Any,
@@ -11099,253 +10623,31 @@ def render_ert_processing_tab(sidebar_state: Dict[str, Any]) -> None:
             st.dataframe(display_obs.head(500), width="stretch", hide_index=True)
 
 
+# The page's mesh steps are the studio's 3D mesh builder, core.mesh_3d, which
+# takes the same config keys; this page carried copies of them. Imported when
+# used, as before, because the builder needs PyGIMLi.
 def _mesh3d_topography_function(config: Dict[str, Any]):
     """Build a topography function from Mesh 3D GUI settings."""
 
-    import numpy as np
+    from PyHydroGeophysX.core.mesh_3d import topography_function
 
-    topo_type = config.get("topography_type", "Flat")
-    if topo_type == "Flat":
-        z_flat = float(config.get("z_flat", 0.0))
-        return lambda x, y: float(z_flat)
-
-    if topo_type == "Linear tilt":
-        z_base = float(config.get("z_base", 0.0))
-        tilt_x = float(config.get("tilt_x", 0.0))
-        tilt_y = float(config.get("tilt_y", 0.0))
-        return lambda x, y: z_base + tilt_x * float(x) + tilt_y * float(y)
-
-    if topo_type == "Gaussian hill":
-        z_base = float(config.get("hill_base", 0.0))
-        amp = float(config.get("hill_amp", 5.0))
-        sigma = max(float(config.get("hill_sigma", 10.0)), 1.0e-9)
-        cx = float(config.get("hill_cx", 0.0))
-        cy = float(config.get("hill_cy", 0.0))
-        return lambda x, y: z_base + amp * np.exp(
-            -((float(x) - cx) ** 2 + (float(y) - cy) ** 2) / (2.0 * sigma**2)
-        )
-
-    expr = str(config.get("topography_expr", "0.0"))
-    allowed = {
-        "np": np,
-        "sin": np.sin,
-        "cos": np.cos,
-        "exp": np.exp,
-        "sqrt": np.sqrt,
-        "abs": abs,
-        "pi": np.pi,
-    }
-
-    def _custom_topography(x, y):
-        try:
-            return float(eval(expr, {"__builtins__": {}}, {**allowed, "x": x, "y": y}))  # noqa: S307
-        except Exception:
-            return 0.0
-
-    return _custom_topography
+    return topography_function(config)
 
 
 def _mesh3d_build_electrodes(config: Dict[str, Any]):
     """Create a Mesh3DCreator and electrode table from Mesh 3D GUI settings."""
 
-    import numpy as np
-    import pandas as pd
+    from PyHydroGeophysX.core.mesh_3d import build_electrodes
 
-    from PyHydroGeophysX.core.mesh_3d import Mesh3DCreator
-
-    creator = Mesh3DCreator(
-        mesh_directory=str(config["output_dir"]),
-        elec_refinement=float(config["electrode_refinement"]),
-        node_refinement=float(config["boundary_refinement"]),
-        attractor_distance=float(config["attractor_distance"]),
-    )
-    array_type = config["array_type"]
-    mesh_type = config["mesh_type"]
-
-    if array_type == "Surface grid":
-        electrodes = creator.create_surface_electrode_array(
-            nx=int(config["nx"]),
-            ny=int(config["ny"]),
-            dx=float(config["dx"]),
-            dy=float(config["dy"]),
-            x_offset=float(config["x_offset"]),
-            y_offset=float(config["y_offset"]),
-            z=0.0,
-        )
-        if mesh_type == "Surface with topography":
-            topo_func = _mesh3d_topography_function(config)
-            electrodes["z"] = [
-                topo_func(x_val, y_val) for x_val, y_val in zip(electrodes["x"], electrodes["y"])
-            ]
-    elif array_type == "Single borehole":
-        z_values = np.linspace(float(config["z_start"]), float(config["z_end"]), int(config["n_bh_elec"]))
-        electrodes = creator.create_borehole_electrode_array(
-            float(config["bh_x"]),
-            float(config["bh_y"]),
-            z_values,
-        )
-    elif array_type == "Crosshole":
-        z_values = np.linspace(float(config["z_start"]), float(config["z_end"]), int(config["n_bh_elec"]))
-        electrodes = creator.create_crosshole_electrode_array(
-            list(config["boreholes"]),
-            z_values,
-        )
-    else:
-        surface = creator.create_surface_electrode_array(
-            nx=int(config["n_surface_elec"]),
-            ny=1,
-            dx=float(config["surface_dx"]),
-            dy=1.0,
-            x_offset=float(config["surface_x0"]),
-            y_offset=float(config["surface_y"]),
-            z=float(config["surface_z"]),
-        )
-        z_values = np.linspace(float(config["z_start"]), float(config["z_end"]), int(config["n_bh_elec"]))
-        borehole = creator.create_borehole_electrode_array(
-            float(config["bh_x"]),
-            float(config["bh_y"]),
-            z_values,
-            electrode_start_number=len(surface) + 1,
-        )
-        electrodes = pd.concat([surface, borehole], ignore_index=True)
-        electrodes["n"] = np.arange(1, len(electrodes) + 1, dtype=int)
-
-    return creator, electrodes
-
-
-def _mesh3d_axis_with_points(
-    lower: float,
-    upper: float,
-    spacing: float,
-    required_points: Any,
-) -> "np.ndarray":
-    """Create a float axis that includes domain limits and electrode coordinates."""
-
-    import numpy as np
-
-    lower = float(lower)
-    upper = float(upper)
-    if upper < lower:
-        lower, upper = upper, lower
-    if np.isclose(lower, upper):
-        pad = max(abs(lower) * 0.05, float(spacing), 1.0)
-        lower -= pad
-        upper += pad
-
-    spacing = max(float(spacing), 1.0e-6)
-    intervals = max(1, int(np.ceil((upper - lower) / spacing)))
-    base = np.linspace(lower, upper, intervals + 1, dtype=float)
-    points = np.asarray(required_points, dtype=float).ravel()
-    points = points[np.isfinite(points)]
-    points = points[(points >= lower - 1.0e-9) & (points <= upper + 1.0e-9)]
-    axis = np.unique(np.round(np.concatenate([base, points, [lower, upper]]), 8)).astype(float)
-    axis.sort()
-    if axis.size < 2:
-        axis = np.asarray([lower, upper], dtype=float)
-    return axis
-
-
-def _mesh3d_structured_bounds(electrodes_df: Any, config: Dict[str, Any]) -> Dict[str, float]:
-    """Estimate a structured 3D mesh domain for box and borehole-style surveys."""
-
-    import numpy as np
-
-    xs = np.asarray(electrodes_df["x"], dtype=float)
-    ys = np.asarray(electrodes_df["y"], dtype=float)
-    zs = np.asarray(electrodes_df["z"], dtype=float)
-    array_type = config.get("array_type", "Surface grid")
-    mesh_type = config.get("mesh_type", "Surface with topography")
-
-    if mesh_type == "Box mesh":
-        x_min = min(0.0, float(np.nanmin(xs)))
-        x_max = max(float(config.get("box_length", 50.0)), float(np.nanmax(xs)))
-        y_min = min(0.0, float(np.nanmin(ys)))
-        y_max = max(float(config.get("box_width", 30.0)), float(np.nanmax(ys)))
-        z_top = max(0.0, float(np.nanmax(zs)))
-        z_bottom = min(-float(config.get("box_height", 25.0)), float(np.nanmin(zs)))
-    elif array_type != "Surface grid":
-        lateral_padding = float(config.get("borehole_lateral_padding", 10.0))
-        top_padding = float(config.get("borehole_top_padding", 2.0))
-        bottom_padding = float(config.get("borehole_bottom_padding", 5.0))
-        x_min = float(np.nanmin(xs)) - lateral_padding
-        x_max = float(np.nanmax(xs)) + lateral_padding
-        y_min = float(np.nanmin(ys)) - lateral_padding
-        y_max = float(np.nanmax(ys)) + lateral_padding
-        z_top = max(0.0, float(np.nanmax(zs)) + top_padding)
-        z_bottom = float(np.nanmin(zs)) - bottom_padding
-    else:
-        spacing = max(float(config.get("dx", 5.0)), float(config.get("dy", 5.0)), 1.0)
-        extension = max(float(config.get("boundary_extension", 1.4)) - 1.0, 0.1)
-        x_pad = max(spacing, (float(np.nanmax(xs)) - float(np.nanmin(xs))) * extension * 0.5)
-        y_pad = max(spacing, (float(np.nanmax(ys)) - float(np.nanmin(ys))) * extension * 0.5)
-        x_min = float(np.nanmin(xs)) - x_pad
-        x_max = float(np.nanmax(xs)) + x_pad
-        y_min = float(np.nanmin(ys)) - y_pad
-        y_max = float(np.nanmax(ys)) + y_pad
-        z_top = float(np.nanmax(zs))
-        z_bottom = float(np.nanmin(zs)) - float(config.get("para_depth", 20.0))
-
-    min_span = max(float(config.get("borehole_horizontal_cell", config.get("boundary_refinement", 2.0))), 1.0)
-    if (x_max - x_min) < min_span:
-        center = 0.5 * (x_min + x_max)
-        x_min = center - 0.5 * min_span
-        x_max = center + 0.5 * min_span
-    if (y_max - y_min) < min_span:
-        center = 0.5 * (y_min + y_max)
-        y_min = center - 0.5 * min_span
-        y_max = center + 0.5 * min_span
-    if not z_bottom < z_top:
-        z_bottom = z_top - float(config.get("para_depth", 20.0))
-
-    return {
-        "x_min": float(x_min),
-        "x_max": float(x_max),
-        "y_min": float(y_min),
-        "y_max": float(y_max),
-        "z_bottom": float(z_bottom),
-        "z_top": float(z_top),
-    }
+    return build_electrodes(config)
 
 
 def _mesh3d_create_structured_mesh(electrodes_df: Any, config: Dict[str, Any]) -> Any:
     """Create a Gmsh-free PyGIMLi structured 3D mesh for box/borehole layouts."""
 
-    import numpy as np
-    import pygimli as pg
+    from PyHydroGeophysX.core.mesh_3d import create_structured_mesh
 
-    bounds = _mesh3d_structured_bounds(electrodes_df, config)
-    if config.get("array_type") == "Surface grid":
-        xy_spacing = float(config.get("boundary_refinement", 2.0))
-        z_spacing = float(config.get("dz_fine", 0.5))
-    else:
-        xy_spacing = float(config.get("borehole_horizontal_cell", 2.0))
-        z_spacing = float(config.get("borehole_vertical_cell", 1.0))
-
-    x_axis = _mesh3d_axis_with_points(
-        bounds["x_min"],
-        bounds["x_max"],
-        xy_spacing,
-        electrodes_df["x"],
-    )
-    y_axis = _mesh3d_axis_with_points(
-        bounds["y_min"],
-        bounds["y_max"],
-        xy_spacing,
-        electrodes_df["y"],
-    )
-    z_axis = _mesh3d_axis_with_points(
-        bounds["z_bottom"],
-        bounds["z_top"],
-        z_spacing,
-        electrodes_df["z"],
-    )
-
-    mesh = pg.createGrid(x=x_axis.astype(float), y=y_axis.astype(float), z=z_axis.astype(float), marker=2)
-    para_depth = float(config.get("para_depth", abs(bounds["z_top"] - bounds["z_bottom"])))
-    for cell in mesh.cells():
-        depth = bounds["z_top"] - float(cell.center().z())
-        cell.setMarker(1 if depth > para_depth else 2)
-    return mesh
+    return create_structured_mesh(electrodes_df, config)
 
 
 def _mesh3d_electrode_figure(config: Dict[str, Any], electrodes_df: Any):
@@ -11409,18 +10711,9 @@ def _mesh3d_electrode_figure(config: Dict[str, Any], electrodes_df: Any):
 def _mesh3d_mesh_summary(mesh: Any) -> Dict[str, Any]:
     """Extract robust mesh summary metrics for display."""
 
-    summary: Dict[str, Any] = {}
-    for label, method_name in [
-        ("Cells", "cellCount"),
-        ("Nodes", "nodeCount"),
-        ("Boundaries", "boundaryCount"),
-        ("Dimension", "dim"),
-    ]:
-        try:
-            summary[label] = getattr(mesh, method_name)()
-        except Exception:
-            continue
-    return summary
+    from PyHydroGeophysX.core.mesh_3d import mesh_summary
+
+    return mesh_summary(mesh)
 
 
 def _mesh3d_save_outputs(

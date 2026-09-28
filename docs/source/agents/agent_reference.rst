@@ -73,6 +73,10 @@ This is not a processing agent but an orchestration layer that:
     # Run the complete workflow.
     # dry_run=True: validate, plan, and estimate cost without running agents.
     # resume=True: skip steps for which a checkpoint already exists.
+    # config['user_request'] fills in the ERT files, instrument, petrophysical
+    # parameters and seismic file it names where config leaves them out;
+    # anything it asks for that the run does not do is listed in
+    # result['warnings'] (and in the preview's validation_warnings).
 
     preview_workflow(config)
     # Equivalent to execute_workflow(..., dry_run=True).
@@ -382,7 +386,8 @@ SeismicAgent
 
 **Inputs**:
 
-* ``seismic_data`` (object): Seismic travel time data
+* ``seismic_data`` (object or str): Seismic travel time data, loaded or as a
+  file path (the same as ``seismic_file``)
 * ``velocity_threshold`` (float): Threshold for interface detection
 * ``inversion_params`` (dict): Seismic inversion parameters
 * ``output_dir`` (str): Results directory
@@ -416,7 +421,10 @@ TDEMAgent
 ClimateDataAgent
 ----------------
 
-**Purpose**: Fetches and processes climate data for temporal analysis.
+**Purpose**: Retrieves the daily weather at the survey site - precipitation,
+minimum and maximum air temperature and reference evapotranspiration - from the
+Open-Meteo historical-weather API (the ERA5 reanalysis; one HTTPS request, no API
+key, global coverage), with the antecedent-moisture features ERT is read against.
 
 **System Prompt**:
     You are an expert in climate data analysis for hydrogeophysical studies. You
@@ -425,19 +433,27 @@ ClimateDataAgent
 
 **Inputs**:
 
-* ``geometry`` (dict): Site coordinates (lat, lon)
-* ``start_date`` (str): Start date (YYYY-MM-DD)
-* ``end_date`` (str): End date (YYYY-MM-DD)
-* ``variables`` (list): Climate variables
-* ``source`` (str): Data source (default: 'daymet')
+* ``coords`` (tuple): Site longitude and latitude, in ``crs``; a list of points
+  is averaged, since an ERT line spans far less than one reanalysis cell
+* ``dates`` (tuple): ``(start_date, end_date)`` as YYYY-MM-DD, or a list of years
+* ``crs`` (int or str): Coordinate reference system of ``coords`` (default 4326)
+* ``ert_timestamps`` (list, optional): Survey times to align the series to
+* ``antecedent_days`` (list, optional): Windows for antecedent precipitation
+  totals (default 1, 3 and 7 days)
+* ``output_dir`` (str, optional): Folder to save ``climate_data.csv`` and its
+  metadata in
+* ``csv_file`` (str, optional): A series saved earlier, read instead of fetching
 
 **Outputs**:
 
-* ``climate_data`` (DataFrame): Time-series climate data
-* ``precipitation`` (Series): Daily precipitation (mm)
-* ``temperature`` (Series): Daily temperature (C)
-* ``pet`` (Series): Potential evapotranspiration (mm)
-* ``statistics`` (dict): Summary statistics
+* ``climate_data`` (DataFrame): Daily ``prcp`` (mm), ``tmin`` and ``tmax``
+  (degC) and ``pet`` (FAO-56 reference evapotranspiration, mm)
+* ``derived_features`` (dict): Antecedent precipitation totals and P - PET
+* ``ert_alignment`` (dict): The rows of the survey days, when
+  ``ert_timestamps`` were given
+* ``metadata`` (dict): The period, the source and its attribution, the site
+  and the grid cell the values come from
+* ``notes`` (list): Anything asked for that the source does not provide
 
 ReportAgent
 -----------
@@ -472,84 +488,109 @@ ReportAgent
 * ``figures`` (list): Generated figure paths
 * ``summary_stats`` (dict): Key statistics
 
-WorkflowOrchestratorAgent
---------------------------
+Workflow Controller
+-------------------
 
-**Purpose**: Detects workflow type and generates the agent execution plan.
+**Purpose**: Chooses each step of a ``BaseAgent.run_unified_agent_workflow()``
+run.
 
-``_detect_workflow_type(config)`` is the **single authoritative** workflow
-classifier.  ``AgentCoordinator`` and the ``run_unified_agent_workflow()``
-convenience function both delegate to this method.
+The entry point hands the parsed configuration to the controller in
+``PyHydroGeophysX.agents.runtime``. Before each step the controller lists the
+tools whose inputs the run already holds (``load_ert_surveys``,
+``fetch_climate``, ``invert_ert``, ``invert_time_lapse``,
+``evaluate_inversion``, ``convert_water_content``, ``invert_seismic``,
+``derive_structure``, ``fuse_methods``, ``invert_tdem``,
+``load_model_output``, ``write_report``), asks the model which one to run and
+reads the result before choosing again. Without an API key it takes the first
+runnable tool in registration order, which is dependency order.
 
-**Detection priority order**:
+**Inputs**: ``workflow_config`` dict, as ``ContextInputAgent.parse_request``
+produces it.
 
-1. ``tdem``: config contains TDEM data/survey keys
-2. ``seismic``: standalone seismic refraction (no ERT keys)
-3. ``model_output``: hydrological model (MODFLOW/ParFlow) export
-4. ``time_lapse``: multiple ERT datasets over time
-5. ``data_fusion``: both ERT and seismic keys present
-6. ``ert_data_process``: raw ERT file present but no inversion requested
-7. ``direct_ert``: ERT data with inversion
-8. ``custom``: fallback when no pattern matches
+**Outputs**: ``(results, execution_plan, interpretation, report_files)``. The
+execution plan lists the steps that ran, each with the reason it was chosen.
 
-**Inputs**: ``workflow_config`` dict (the same dict passed to
-``AgentCoordinator.execute_workflow``).
+Set ``PHGX_LEGACY_WORKFLOW=1`` to run the previous pipeline instead. It sorts
+the request into one of eight workflow types (``tdem``, ``seismic``,
+``model_output``, ``time_lapse``, ``data_fusion``, ``ert_data_process``,
+``direct_ert``, ``custom``) and runs that type's fixed sequence. Its
+classifier, once ``WorkflowOrchestratorAgent._detect_workflow_type``, lives in
+``PyHydroGeophysX.agents._legacy_workflow``.
 
-**Outputs**:
+Removed agents
+--------------
 
-* ``workflow_type`` (str): One of the eight values above
-* ``execution_plan`` (list): Ordered list of agent names to run
-* ``workflow_config`` (dict): Possibly-enriched configuration
+Three agents were removed in 0.5.0. Importing one still works, with a
+``DeprecationWarning`` that names its replacement; creating one raises the
+same message.
 
-Mesh3DBuilderAgent
-------------------
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
 
-**Purpose**: Builds and exports 3D tetrahedral meshes for ERT forward modeling
-and inversion using ``PyHydroGeophysX.core.mesh_3d.Mesh3DCreator``.
+   * - Removed
+     - Use instead
+   * - ``WorkflowOrchestratorAgent``
+     - ``BaseAgent.run_unified_agent_workflow``, whose controller chooses each
+       step of a run, or ``AgentCoordinator`` for the fixed ERT pipeline
+   * - ``CodeGenerationAgent``
+     - ``PyHydroGeophysX.workflows.export_workflow_bundle`` to export a
+       workflow's code
+   * - ``GeophysicalInversionAgent``
+     - ``ERTInversionAgent``, ``SeismicAgent`` or ``TDEMAgent``, or the
+       ``SRTInversion``, ``TimeLapseSRTInversion``, ``FDEMInversion`` and
+       ``JointERTSRTInversion`` classes directly
 
-This agent is primarily invoked through the **3D Mesh Builder Streamlit app**
-(``python -m PyHydroGeophysX.gui_mesh3d``) but can also be used programmatically:
+3D Mesh Builder
+---------------
+
+**Purpose**: Builds and exports 3D meshes for ERT forward modeling and
+inversion. It is not an agent: the **3D Mesh Builder Streamlit app**
+(``python -m PyHydroGeophysX.gui_mesh3d``) and the desktop studio's 3D mesh page
+call ``generate_mesh`` and ``save_outputs`` from
+``PyHydroGeophysX.core.mesh_3d``, which build on ``Mesh3DCreator``. The same
+functions can be called directly:
 
 .. code-block:: python
 
-    from PyHydroGeophysX.agents import Mesh3DBuilderAgent
-    import os
+    from pathlib import Path
 
-    agent = Mesh3DBuilderAgent(api_key=os.environ.get('OPENAI_API_KEY'))
-    result = agent.execute({
-        'array_type': 'surface_grid',
-        'grid_nx': 10,
-        'grid_ny': 6,
-        'spacing': 5.0,
-        'topography': 'linear_tilt',
-        'max_cell_size': 5.0,
-        'depth': 30.0,
-        'output_filename': 'ert_mesh',
-    })
-    # result['mesh']: PyGIMLi Mesh object
-    # result['mesh_path']: path to saved .bms file
+    from PyHydroGeophysX.core.mesh_3d import generate_mesh, mesh_summary, save_outputs
 
-**Supported array types**: ``surface_grid``, ``borehole``, ``crosshole``.
+    config = {
+        "output_dir": "ert_mesh",
+        "array_type": "Surface grid",
+        "mesh_type": "Surface with topography",
+        "nx": 10, "ny": 6, "dx": 5.0, "dy": 5.0, "x_offset": 0.0, "y_offset": 0.0,
+        "topography_type": "Linear tilt", "z_base": 100.0, "tilt_x": 0.05, "tilt_y": 0.0,
+        "electrode_refinement": 0.5,    # cell size at the electrodes (m)
+        "boundary_refinement": 2.0,     # cell size at the domain boundary (m)
+        "attractor_distance": 5.0,      # distance over which the refinement fades (m)
+        "mesh_engine": "PyGIMLi prism",
+        "para_depth": 30.0, "dz_fine": 0.5, "dz_coarse": 2.0, "boundary_extension": 1.4,
+    }
+    result = generate_mesh(config, log=print)
+    files = save_outputs(result["mesh"], result["electrodes"], Path("ert_mesh"), "ert_mesh",
+                         ["BMS mesh (.bms)", "VTK mesh (.vtk)", "Sensor positions (.csv)"])
+    print(mesh_summary(result["mesh"]))   # cells, nodes, boundaries, dimension
 
-**Supported topography types**: ``flat``, ``linear_tilt``, ``gaussian_hill``,
-``custom`` (provide a ``topography_expression`` Python/NumPy string using ``x``
-and ``y``).
+**Array types** (``array_type``): ``"Surface grid"`` (``nx``, ``ny``, ``dx``,
+``dy``, ``x_offset``, ``y_offset``), ``"Single borehole"`` and ``"Crosshole"``.
 
-**Inputs**:
+**Mesh types** (``mesh_type``): ``"Surface with topography"`` or ``"Box mesh"``.
 
-* ``array_type`` (str): Electrode array configuration
-* ``grid_nx`` / ``grid_ny`` (int): Grid dimensions for surface array
-* ``spacing`` (float): Electrode spacing in metres
-* ``topography`` (str): Topography type
-* ``topography_expression`` (str, optional): Custom NumPy expression
-* ``max_cell_size`` (float): Maximum tetrahedral cell size
-* ``depth`` (float): Mesh depth below surface
-* ``output_filename`` (str): Base name for exported files
+**Topography types** (``topography_type``): ``"Flat"`` (``z_flat``),
+``"Linear tilt"`` (``z_base``, ``tilt_x``, ``tilt_y``), ``"Gaussian hill"``
+(``hill_base``, ``hill_amp``, ``hill_sigma``, ``hill_cx``, ``hill_cy``) and
+``"Custom expression"`` (``topography_expr``, a NumPy expression in ``x`` and
+``y``).
 
-**Outputs**:
+**Mesh engines** (``mesh_engine``): ``"Auto"``, ``"Gmsh (tetrahedral)"``,
+``"PyGIMLi prism"``, ``"Structured grid"`` and ``"E4D (Triangle + TetGen)"``. Gmsh falls
+back to the structured grid when it fails.
 
-* ``mesh`` (object): Generated PyGIMLi 3D mesh
-* ``mesh_path`` (str): Path to saved ``.bms`` file
-* ``vtk_path`` (str): Path to saved ``.vtk`` file
-* ``statistics`` (dict): Cell count, node count, quality metrics
-
+**Returns**: ``generate_mesh`` returns a dictionary with ``mesh`` (the PyGIMLi
+mesh), ``electrodes`` (a DataFrame with columns ``n``, ``x``, ``y``, ``z``),
+``generator`` (the mesh engine that ran) and ``zones``. ``save_outputs`` returns
+the written paths under ``bms``, ``mesh_structure``, ``vtk`` and
+``sensors_csv``.

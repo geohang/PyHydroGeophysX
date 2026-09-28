@@ -147,7 +147,9 @@ def resistivity_to_water_content(
     # water content came back too high (0.10 returned as 0.18).
     saturation = _waxman_smits_saturation(resistivity, rhos, n, sigma_sur)
     if saturation.size == 1:
-        saturation = float(saturation[0])
+        # The solver keeps the input's shape now, so a single value may sit in
+        # a (1, 1) array; it still comes back as a float, as it always did.
+        saturation = float(saturation.reshape(-1)[0])
 
     # Convert saturation to water content
     water_content = saturation * porosity
@@ -188,15 +190,17 @@ def resistivity_to_saturation(
         a (float): Tortuosity factor. Default is 1.0
         
     Returns:
-        array: Saturation values (fraction, 0-1)
+        array: Saturation values (fraction, 0-1), shaped like the inputs
+        broadcast together (NumPy rules, so a (cells, times) resistivity takes
+        a scalar, (cells, 1) or (cells, times) porosity); a float for one value.
+
+    Raises:
+        ValueError: sigma_sur is negative.
     """
-    # Convert inputs to arrays and broadcast
-    resistivity = np.atleast_1d(resistivity).astype(float)
-    porosity    = np.atleast_1d(porosity).astype(float)
-    m_arr       = np.atleast_1d(m).astype(float)
-    L = max(map(len, (resistivity, porosity, m_arr)))
-    def _b(x): return np.full(L, x[0]) if len(x)==1 else x
-    resistivity, porosity, m_arr = map(_b, (resistivity, porosity, m_arr))
+    # Convert inputs to arrays and broadcast them with NumPy's rules. Matching
+    # lengths only by the first axis rejected any 2-D input.
+    resistivity, porosity, m_arr = np.broadcast_arrays(
+        *(np.atleast_1d(value).astype(float) for value in (resistivity, porosity, m)))
 
     # Clip porosity to avoid extremes, and the cementation exponent with it: a
     # wide prior sampled per cell otherwise reaches m < 1.
@@ -209,36 +213,42 @@ def resistivity_to_saturation(
 
     # Return scalar if inputs were scalar
     if sat.size == 1:
-        return float(sat[0])
+        return float(sat.reshape(-1)[0])
     return sat
 
 
 def _waxman_smits_saturation(resistivity: Any, rhos: Any, n: Any,
-                             sigma_sur: Any = 0) -> np.ndarray:
+                             sigma_sur: Any = 0, *, clip_exponent=True) -> np.ndarray:
     """Solve ``1/rho = S**n / rhos + sigma_sur * S**(n-1)`` for S, per value.
 
     ``resistivity_to_saturation`` derives ``rhos`` from Archie's law first;
     ``resistivity_to_water_content`` is given it. Always returns an array.
+    A negative ``sigma_sur`` raises ValueError; it used to be answered with
+    the Archie saturation as if it were zero.
     """
-    resistivity = np.atleast_1d(resistivity).astype(float)
-    rhos        = np.atleast_1d(rhos).astype(float)
-    sigma_sur   = np.atleast_1d(sigma_sur).astype(float)
-    n_arr       = np.atleast_1d(n).astype(float)
-    L = max(map(len, (resistivity, rhos, sigma_sur, n_arr)))
-    def _b(x): return np.full(L, x[0]) if len(x)==1 else x
-    resistivity, rhos, sigma_sur, n_arr = map(_b, (resistivity, rhos, sigma_sur, n_arr))
+    resistivity, rhos, sigma_sur, n_arr = np.broadcast_arrays(*[
+        np.atleast_1d(value).astype(float)
+        for value in (resistivity, rhos, sigma_sur, n)
+    ])
+    shape = resistivity.shape
+    resistivity, rhos, sigma_sur, n_arr = (
+        value.ravel() for value in (resistivity, rhos, sigma_sur, n_arr))
+    if np.any(sigma_sur < 0):
+        raise ValueError("sigma_sur (surface conductivity, S/m) must not be negative.")
 
-    # Below n = 1 the residual below evaluates 0**(n-1) at the bracket's lower
-    # end (a divide-by-zero) and the initial guess raises a ratio to the power
-    # 1/n (an overflow as n -> 0). Callers that sample n from a wide prior
-    # otherwise hit both per cell.
-    n_arr = np.clip(n_arr, 1.0, 4.0)
+    # Preserve the newer APIs' exponent bounds for broad sampled priors;
+    # the legacy rhos API continues to use the exponent supplied by its caller.
+    if clip_exponent:
+        n_arr = np.clip(n_arr, 1.0, 4.0)
 
     sigma_sat = 1.0 / rhos
     sigma_obs = 1.0 / resistivity
 
     # Initial guess via Archie's law
-    S0 = np.clip((rhos / resistivity)**(1.0 / n_arr), 1e-3, 1.0)
+    # No artificial dry-end floor: a small positive saturation can be the
+    # exact Archie solution, rather than a failed numerical solve.
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        S0 = np.exp(np.minimum((np.log(rhos) - np.log(resistivity)) / n_arr, 0.0))
 
     # Compute saturation for each point. The zero-surface-conductivity branch
     # is already solved analytically.
@@ -247,44 +257,96 @@ def _waxman_smits_saturation(resistivity: Any, rhos: Any, n: Any,
     if cells.size:
         sat[cells] = _surface_conduction_roots(
             sigma_sat[cells], sigma_sur[cells], n_arr[cells], sigma_obs[cells], S0[cells])
-    return np.clip(sat, 0.0, 1.0)
+    return np.clip(sat, 0.0, 1.0).reshape(shape)
 
 
 def _surface_conduction_roots(A, B, n, C, fallback):
-    """Roots of ``A S**n + B S**(n-1) = C`` on ``[0, 1]``, for all cells at once.
+    """Bounded roots, with a relative conductivity residual as stopping rule.
 
-    The residual rises monotonically in S for ``n >= 1``, so each root is
-    bracketed by [0, 1] whenever one exists there. Newton steps are taken
-    inside the shrinking bracket, and a step that would leave it is replaced by
-    bisection, until every root is known to 1e-14. This replaced a scalar
-    brentq per cell (xtol 1e-6), about 13 us of interpreter work a cell - most
-    of a Monte Carlo water-content estimate - with a handful of array passes;
-    the roots are now tighter than before, not looser. As before, a cell with
-    no root in [0, 1] (the residual has one sign there, or is not finite) keeps
-    the Archie guess ``fallback``.
+    Solve in t=-log(S), where small saturations are resolved without negative
+    Newton iterates or underflow in the powers. For n>1 the residual decreases
+    monotonically; the upper bracket makes each conduction term at most C/2.
+    n=1 is linear. Outside the attainable range use the physical endpoint,
+    retaining the public APIs' saturation clipping convention. Without bulk
+    conduction (A=0, rhos=inf) and n>1 the root is closed-form.
     """
+    result = np.array(fallback, dtype=float, copy=True)
+    valid = (np.isfinite(A) & np.isfinite(B) & np.isfinite(n) & np.isfinite(C)
+             & (A > 0) & (B > 0) & (C > 0) & (n > 0))
     with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
-        f_lo = A * 0.0 ** n + B * 0.0 ** (n - 1) - C
-        f_hi = A + B - C
-        bracketed = f_lo * f_hi <= 0
-        root = np.where(f_lo == 0, 0.0, np.where(f_hi == 0, 1.0, fallback))
-        active = bracketed & (f_lo != 0) & (f_hi != 0)
-        lo, hi = np.zeros_like(A), np.ones_like(A)
-        x = np.clip(fallback, 1e-12, 1.0)
-        for _ in range(200):
+        # C = B S**(n-1) gives S = (C/B)**(1/(n-1)), and S = 1 once C reaches
+        # A + B = B, the conductivity at full saturation. These cells used to
+        # keep the Archie guess, which is S = 1 whatever the resistivity.
+        surface_only = (np.isfinite(B) & np.isfinite(n) & np.isfinite(C)
+                        & (A == 0) & (B > 0) & (C > 0) & (n > 1))
+        ratio = C[surface_only] / B[surface_only]
+        result[surface_only] = np.where(
+            ratio >= 1, 1.0, ratio ** (1.0 / (n[surface_only] - 1.0)))
+        linear = valid & (n == 1)
+        result[linear] = np.clip((C[linear] - B[linear]) / A[linear], 0, 1)
+        ids = np.flatnonzero(valid & (n > 1))
+        a, b = np.log(A[ids]) - np.log(C[ids]), np.log(B[ids]) - np.log(C[ids])
+        exponent = n[ids]
+        lo = np.zeros(ids.size)
+        hi = np.maximum.reduce([lo, (a + np.log(2)) / exponent,
+                                (b + np.log(2)) / (exponent - 1)])
+        t = hi / 2
+        active = np.logaddexp(a, b) > 0
+        t[~active] = 0  # observed conductivity at/above full saturation
+        for _ in range(100):
             if not active.any():
                 break
-            fx = A * x ** n + B * x ** (n - 1) - C
-            below = fx < 0
-            lo = np.where(active & below, x, lo)
-            hi = np.where(active & ~below, x, hi)
-            step = x - fx / (A * n * x ** (n - 1) + B * (n - 1) * x ** (n - 2))
+            log_a, log_b = a - exponent * t, b - (exponent - 1) * t
+            residual = np.logaddexp(log_a, log_b)
+            active &= np.abs(residual) > 1e-12
+            lo = np.where(active & (residual > 0), t, lo)
+            hi = np.where(active & (residual < 0), t, hi)
+            slope = exponent * np.exp(log_a - residual) + (exponent - 1) * np.exp(log_b - residual)
+            step = t + residual / slope
             inside = np.isfinite(step) & (step > lo) & (step < hi)
-            nxt = np.where(inside, step, 0.5 * (lo + hi))
-            settled = (np.abs(nxt - x) <= 1e-14) | (hi - lo <= 1e-14)
-            x = np.where(active, nxt, x)
-            active &= ~settled
-    return np.where(bracketed & (f_lo != 0) & (f_hi != 0), x, root)
+            t = np.where(active, np.where(inside, step, (lo + hi) / 2), t)
+        result[ids] = np.exp(-t)
+        # Do not silently return an unconverged guess if numerical conditions
+        # defeat the safeguarded iteration. Scalar bracketing is exceptional.
+        retry = list(ids[active]) + list(np.flatnonzero(valid & (n < 1)))
+        for index in retry:
+            result[index] = _bracketed_surface_root(A[index], B[index], n[index], C[index])
+    return result
+
+
+def _bracketed_surface_root(A, B, n, C):
+    """Rare scalar fallback, also preserving the legacy API's 0<n<1 inputs.
+
+    Below n=1 the conductivity is nonmonotonic. Split at its minimum and
+    prefer the larger saturation when both roots are physical (the branch
+    connected to the Archie starting guess). Do not return a failed iterate.
+    """
+    from scipy.optimize import brentq
+    import warnings
+
+    a, b = np.log(A) - np.log(C), np.log(B) - np.log(C)
+    residual = lambda t: np.logaddexp(a - n * t, b - (n - 1) * t)
+    if n > 1:
+        upper = max(0., (a + np.log(2)) / n, (b + np.log(2)) / (n - 1))
+        points = [0., upper]
+    else:
+        turn = max(0., np.log(A) + np.log(n) - np.log(B) - np.log1p(-n))
+        upper = max(turn, -b / (1 - n), 0.) + 1.
+        points = [0., turn, upper]
+    for lower, upper in zip(points[:-1], points[1:]):
+        f_lower, f_upper = residual(lower), residual(upper)
+        # At a conductivity minimum the root only touches zero. Allow for
+        # rounding in the logs instead of requiring a floating-point sign flip.
+        if abs(f_lower) <= 1e-12:
+            return float(np.exp(-lower))
+        if abs(f_upper) <= 1e-12:
+            return float(np.exp(-upper))
+        if f_lower * f_upper < 0:
+            t = brentq(residual, lower, upper, xtol=1e-13, rtol=1e-14)
+            return float(np.exp(-t))
+    warnings.warn("Waxman-Smits parameters have no saturation root in [0, 1]; returning NaN.",
+                  RuntimeWarning, stacklevel=3)
+    return np.nan
 
 
 # ---------------------------------------------------------------------------
@@ -422,6 +484,12 @@ def resistivity_to_saturation2(
 ) -> Any:
     """
     Convert resistivity to saturation using Waxman-Smits model.
+
+    Surface conduction is solved with a safeguarded root finder. The
+    zero-surface case uses Archie's analytic solution without a dry-end floor.
+    Saturations outside the attainable range for n >= 1 are clipped to [0, 1].
+    For 0 < n < 1, the larger physical root is preferred; if no physical root
+    exists, the result is NaN with a RuntimeWarning.
     
     Args:
         resistivity (array): Resistivity values
@@ -432,45 +500,10 @@ def resistivity_to_saturation2(
     Returns:
         array: Saturation values
     """
-    # Convert inputs to arrays
-    resistivity_array = np.atleast_1d(resistivity).astype(float)
-    sigma_sur_array = np.atleast_1d(sigma_sur)
-    n_array = np.atleast_1d(n)
-    
-    # Ensure all arrays have compatible shapes
-    if len(sigma_sur_array) == 1 and len(resistivity_array) > 1:
-        sigma_sur_array = np.full_like(resistivity_array, sigma_sur_array[0])
-    if len(n_array) == 1 and len(resistivity_array) > 1:
-        n_array = np.full_like(resistivity_array, n_array[0])
-    
-    # Calculate sigma_sat
-    sigma_sat = 1.0 / rhos
-    
-    # First calculate saturation without surface conductivity (Archie's law)
-    # This provides an initial guess for numerical solution
-    S_initial = (rhos / resistivity_array) ** (1.0/n_array)
-    S_initial = np.clip(S_initial, 0.01, 1.0)
-    
-    # Initialize saturation array
-    saturation = S_initial.copy()
-    
-    # Solve for each resistivity value
-    for i in np.flatnonzero(sigma_sur_array != 0):
-        if sigma_sur_array[i] == 0:
-            # If no surface conductivity, use Archie's law
-            saturation[i] = S_initial[i]
-        else:
-            # With surface conductivity, solve numerically
-            n_val = n_array[i]
-            
-            def func(S):
-                return sigma_sat * S**n_val + sigma_sur_array[i] * S**(n_val-1) - 1.0/resistivity_array[i]
-            
-            solution = fsolve(func, S_initial[i])
-            saturation[i] = solution[0]
-    
-    # Ensure saturation is physically meaningful
-    saturation = np.clip(saturation, 0.0, 1.0)
+    # Keep the legacy entry point and its return-type convention. Unlike the
+    # newer Archie-parameter API, this function never clipped the caller's n.
+    saturation = _waxman_smits_saturation(
+        resistivity, rhos, n, sigma_sur, clip_exponent=False)
     
     # Return scalar if input was scalar
     if np.isscalar(resistivity):

@@ -15,6 +15,8 @@ from .velocity_models import (
     satK,
     vel_porous,
     velDEM,
+    velocity_to_water_content,
+    water_content_to_velocity,
 )
 
 __all__ = [
@@ -30,6 +32,8 @@ __all__ = [
     "satK",
     "velDEM",
     "vel_porous",
+    "velocity_to_water_content",
+    "water_content_to_velocity",
 ]
 from .monte_carlo import run_petrophysics_monte_carlo
 

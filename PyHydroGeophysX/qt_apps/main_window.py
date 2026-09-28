@@ -35,6 +35,7 @@ from PyHydroGeophysX.qt_apps.layout_fit import elide_label, relax_minimum_width
 from PyHydroGeophysX.qt_apps.modules import build_module
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule
 from PyHydroGeophysX.qt_apps.state import StudioState
+from PyHydroGeophysX.qt_apps.workers import prepare_workflow_process
 from PyHydroGeophysX.qt_apps.widgets.array_viewer import ArrayViewer
 from PyHydroGeophysX.qt_apps.widgets.log_panel import LogPanel
 from PyHydroGeophysX.qt_apps.widgets.project_tree import ProjectTree
@@ -129,6 +130,9 @@ class PyHydroGeophysXStudio(QMainWindow):
         if self.state.context_path and not self.state.context:
             self.log("Context file missing or unreadable; running with defaults.", "warn")
         self.show_module(self.state.selected_module or "home")
+        # The first run's workflow process, started once the window is up (see
+        # workers._Standby) so that run does not wait for one either.
+        QTimer.singleShot(2000, prepare_workflow_process)
 
     # -- layout helpers ------------------------------------------------------
     def _restore_window_settings(self) -> bool:
@@ -235,9 +239,11 @@ class PyHydroGeophysXStudio(QMainWindow):
         layout.setSpacing(12)
 
         logo_path = theme._logo_path()
-        if logo_path is not None:
+        pixmap = QPixmap(str(logo_path)) if logo_path is not None else QPixmap()
+        # No logo, or one Qt cannot decode: the header simply goes without.
+        if not pixmap.isNull():
             logo = QLabel()
-            logo.setPixmap(QPixmap(str(logo_path)).scaledToHeight(42, Qt.SmoothTransformation))
+            logo.setPixmap(pixmap.scaledToHeight(42, Qt.SmoothTransformation))
             layout.addWidget(logo)
 
         text_box = QVBoxLayout()

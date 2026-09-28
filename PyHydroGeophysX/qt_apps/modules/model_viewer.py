@@ -57,6 +57,7 @@ _STATUS_DISPLAY = {
     "failed": ("✕", "#c62828", "Failed"),
     "cancelled": ("⊘", "#ef6c00", "Cancelled"),
     "interrupted": ("⚠", "#ef6c00", "Interrupted"),
+    "incomplete": ("◐", "#ef6c00", "Incomplete"),
     "running": ("●", "#1565c0", "Running"),
     "unknown": ("?", "#616161", "Unknown"),
 }
@@ -145,7 +146,7 @@ def _artifact_label(artifact: Dict[str, Any], *, missing: bool = False) -> str:
     path_value = str(artifact.get("path") or "")
     kind = _pretty_kind(artifact.get("kind", ""))
     if not path_value:
-        return f"{kind} (in record)"
+        return f"{artifact.get('label') or kind} (in record)"
     label = f"{Path(path_value).name} — {kind}"
     return f"{label} (missing)" if missing else label
 
@@ -283,7 +284,8 @@ class ModelViewerModule(BaseModule):
         self._search.textChanged.connect(self._apply_filter)
         self._status = QComboBox()
         self._status.addItems([
-            "All statuses", "success", "failed", "cancelled", "interrupted", "running", "unknown"
+            "All statuses", "success", "incomplete", "failed", "cancelled", "interrupted",
+            "running", "unknown"
         ])
         self._status.currentTextChanged.connect(self._apply_filter)
         filters.addWidget(self._search, stretch=1)
@@ -797,7 +799,16 @@ class ModelViewerModule(BaseModule):
             self.log(f"Could not draw the convergence chart: {exc}", "warn")
 
     def _virtual_artifacts(self, record: RunRecord) -> List[Dict[str, Any]]:
-        artifacts = [dict(item) for item in record.artifacts]
+        # One entry per file: a workflow may register the same file under two
+        # kinds (the ERT run's model VTK is both "vtk" and "fixed_vtk_path").
+        artifacts: List[Dict[str, Any]] = []
+        seen_paths: set = set()
+        for item in record.artifacts:
+            key = str(item.get("path") or "").replace("\\", "/").lower()
+            if key and key in seen_paths:
+                continue
+            seen_paths.add(key)
+            artifacts.append(dict(item))
         registered = {str(item.get("path") or "") for item in artifacts}
         for path_value, kind in (
             ("run.json", "run_metadata"),
@@ -813,17 +824,25 @@ class ModelViewerModule(BaseModule):
                     "metadata": {"record_file": True},
                 })
                 registered.add(path_value)
-        for key in ("model_bundle", "fixed_model_bundle"):
+        # The run's model first, then the fixed-λ one - only when it is another
+        # model: with a single λ both keys name the same files.
+        bundles: List[Dict[str, Any]] = []
+        for key, label in (("model_bundle", "Resistivity model"),
+                           ("fixed_model_bundle", "Fixed-λ resistivity model")):
             bundle = record.summary.get(key)
-            if isinstance(bundle, dict) and bundle:
-                artifacts.insert(0, {
-                    "artifact_id": f"{record.run_id}:{key}",
-                    "kind": "ert_model_bundle",
-                    "format": "bundle",
-                    "path": "",
-                    "metadata": {"bundle": bundle},
-                })
-        return artifacts
+            if not isinstance(bundle, dict) or not bundle:
+                continue
+            if any(existing["metadata"]["bundle"] == bundle for existing in bundles):
+                continue
+            bundles.append({
+                "artifact_id": f"{record.run_id}:{key}",
+                "kind": "ert_model_bundle",
+                "format": "bundle",
+                "path": "",
+                "label": label + ("s" if "models" in bundle else ""),
+                "metadata": {"bundle": bundle},
+            })
+        return bundles + artifacts
 
     def _populate_artifacts(self, record: RunRecord) -> None:
         assert self._store is not None
@@ -1074,10 +1093,13 @@ class ModelViewerModule(BaseModule):
         layout are exactly what someone reviewing a mesh-building run wants to
         check, and it is the main output of that module.
         """
-        import pygimli as pg
+        from PyHydroGeophysX.core.mesh_serialization import read_bms
         from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
 
-        mesh = pg.load(str(path))
+        # Through read_bms, not pg.load: PyGIMLi cannot open a path the Windows
+        # ANSI codepage cannot spell (a Project under a Chinese folder name), and
+        # pg.load then hands back a matrix instead of failing.
+        mesh = read_bms(path)
         markers = np.asarray(mesh.cellMarkers(), dtype=float)
         view = MeshResultView(colormaps=self._colormaps())
         view.show_field(
@@ -1099,6 +1121,10 @@ class ModelViewerModule(BaseModule):
             titles = summary.get(key)
             if isinstance(titles, list) and titles:
                 return [str(t) for t in titles]
+        # A single inversion is headed as the ERT page heads it, not as step 1
+        # of a series it is not part of.
+        if np.ndim(model) == 1 or (np.ndim(model) == 2 and 1 in np.shape(model)):
+            return ["Resistivity"]
         return []
 
     def _with_map_export(self, view: QWidget) -> QWidget:
@@ -1241,6 +1267,13 @@ class ModelViewerModule(BaseModule):
         values = series.current_values()
         if mesh is None or values is None:
             raise ValueError("The selected result has no model to add.")
+        if series.step_count() == 1:
+            # Named as the ERT page names a single inversion on the map: "ERT",
+            # plus the temperature it was corrected to, if it was.
+            correction = (getattr(self, "_series_source", None) or {}).get("correction")
+            return mesh_snapshot(mesh, values, "ERT",
+                                 "ERT" + temperature_panel.title_suffix(correction),
+                                 coverage=series.current_coverage())
         title = series.current_title() or "ERT"
         if series.current_mode() == "change":
             return mesh_snapshot(mesh, values, "ERT", f"ERT change {title}",
@@ -1253,8 +1286,13 @@ class ModelViewerModule(BaseModule):
             return
         bundle = dict((artifact.get("metadata") or {}).get("bundle") or {})
         try:
-            import pygimli as pg
-            mesh = pg.load(str(self._store.locate_run_artifact(self._current, bundle["mesh"])))
+            from PyHydroGeophysX.core.mesh_serialization import read_bms
+
+            # Read as the ERT page reads the same bundle (_load_model_bundle):
+            # staged through an ASCII path when the Project's own path is one
+            # PyGIMLi cannot open, and without the cell-neighbour table.
+            mesh = read_bms(self._store.locate_run_artifact(self._current, bundle["mesh"]),
+                            neighbours=False)
             model_key = "models" if "models" in bundle else "model"
             model = np.load(
                 self._store.locate_run_artifact(self._current, bundle[model_key]),

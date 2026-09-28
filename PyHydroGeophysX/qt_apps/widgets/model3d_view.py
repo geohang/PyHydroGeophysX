@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets.coalesce import Coalesced
 from PyHydroGeophysX.visualization.pyvista_compat import try_import_pyvista
 
 
@@ -81,7 +82,10 @@ class VTKVolumeView(QWidget):
         self._clip_cb = QCheckBox("Clip plane (drag to inspect the interior)")
         if ok:
             try:
-                self._plotter = qt_interactor(self)
+                # Rendered when something changes, not on a timer: pyvistaqt
+                # re-renders five times a second by default, on the UI thread
+                # and whether the view is on screen or not.
+                self._plotter = qt_interactor(self, auto_update=False)
                 self._plotter.set_background("white")
                 self._plotter.add_axes()
                 controls = QHBoxLayout()
@@ -218,6 +222,12 @@ class VTKVolumeView(QWidget):
         except Exception:  # noqa: BLE001 - refresh is best-effort
             pass
 
+    def showEvent(self, event) -> None:  # noqa: N802 - Qt override
+        """Render once the view is on screen, which the timer used to see to."""
+        super().showEvent(event)
+        if self._plotter is not None:
+            QTimer.singleShot(0, self._refresh)
+
     @property
     def colormap_chooser(self) -> "cmaps.ColormapChooser":
         return self._colormap
@@ -260,7 +270,8 @@ class Model3DView(QWidget):
         self._mode = "mpl"
         if ok:
             try:
-                self._plotter = qt_interactor(self)
+                # Rendered on change, not on pyvistaqt's timer (as VTKVolumeView).
+                self._plotter = qt_interactor(self, auto_update=False)
                 self._plotter.set_background("white")
                 self._plotter.add_axes()
                 bar = QHBoxLayout()
@@ -280,6 +291,18 @@ class Model3DView(QWidget):
         else:
             self._build_mpl(layout)
 
+    def showEvent(self, event) -> None:  # noqa: N802 - Qt override
+        """Render once the view is on screen, which the timer used to see to."""
+        super().showEvent(event)
+        if self._plotter is not None:
+            QTimer.singleShot(0, self._render)
+
+    def _render(self) -> None:
+        try:
+            self._plotter.render()
+        except Exception:  # noqa: BLE001 - a repaint is best-effort
+            pass
+
     # -- matplotlib fallback -------------------------------------------------
     def _build_mpl(self, layout: QVBoxLayout) -> None:
         from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -289,12 +312,18 @@ class Model3DView(QWidget):
         layout.addWidget(self._canvas, stretch=1)
         row = QHBoxLayout()
         row.addWidget(QLabel("Depth"))
+        # A slider moved puts the new slice into the images already drawn, once
+        # per turn of the event loop: redrawing both panels, their colour bars
+        # and the model's percentiles per mouse move is what made a drag stutter.
+        self._slice_moved = Coalesced(lambda: self._show_slices(), self)
+        self._mpl_drawn = None
+        self._mpl_scale = None
         self._z_slider = QSlider(Qt.Horizontal)
-        self._z_slider.valueChanged.connect(self._redraw_mpl)
+        self._z_slider.valueChanged.connect(self._slice_moved.request)
         row.addWidget(self._z_slider, stretch=1)
         row.addWidget(QLabel("Y position"))
         self._y_slider = QSlider(Qt.Horizontal)
-        self._y_slider.valueChanged.connect(self._redraw_mpl)
+        self._y_slider.valueChanged.connect(self._slice_moved.request)
         row.addWidget(self._y_slider, stretch=1)
         row.addWidget(self._colormap)
         layout.addLayout(row)
@@ -328,6 +357,8 @@ class Model3DView(QWidget):
         if self._mode == "pyvista":
             self._redraw_pv()
         else:
+            self._mpl_drawn = None
+            self._mpl_scale = None
             _, ny, nz = self._model.shape
             for slider, n, default in ((self._z_slider, nz, nz - 1), (self._y_slider, ny, ny // 2)):
                 slider.blockSignals(True)
@@ -376,23 +407,82 @@ class Model3DView(QWidget):
         self._plotter.add_axes()
         self._plotter.reset_camera()
 
-    def _redraw_mpl(self, *_) -> None:
-        import numpy as np
+    def _mpl_norm(self):
+        """A colour norm over the whole model, or None when it has nothing to show.
+
+        The limits are computed once per model; the norm is new each call,
+        because the images drawn with one listen to it and would outlive the
+        figure they were cleared from if it were shared.
+        """
         from matplotlib.colors import LogNorm, Normalize
+
+        if self._mpl_scale is None:
+            m = self._model
+            finite_mask = np.isfinite(m)
+            if self._log:
+                finite_mask &= m > 0
+            finite = m[finite_mask]
+            if finite.size == 0:
+                self._mpl_scale = ()
+            else:
+                vmin = float(np.nanpercentile(finite, 2))
+                vmax = float(np.nanpercentile(finite, 98))
+                if self._log:
+                    vmin = max(vmin, 1e-12)
+                    vmax = max(vmax, vmin * 1.01)
+                elif not vmax > vmin:
+                    vmax = vmin + 1.0
+                self._mpl_scale = (vmin, vmax)
+        if not self._mpl_scale:
+            return None
+        return (LogNorm if self._log else Normalize)(*self._mpl_scale)
+
+    def _slice_indices(self):
+        import numpy as np
+
+        _, ny, nz = self._model.shape
+        return (int(np.clip(self._z_slider.value(), 0, nz - 1)),
+                int(np.clip(self._y_slider.value(), 0, ny - 1)))
+
+    def _show_slices(self) -> None:
+        """Put the slices the sliders select into the panels already drawn."""
+        drawn = self._mpl_drawn
+        if self._model is None:
+            return
+        if drawn is None or drawn.get("depth") is None:
+            self._redraw_mpl()
+            return
+        zi, yj = self._slice_indices()
+        drawn["depth"].set_array(self._model[:, :, zi].T)
+        drawn["depth"].axes.set_title(f"Depth slice  z = {drawn['zc'][zi]:.0f}")
+        drawn["section"].set_array(self._model[:, yj, :].T)
+        drawn["section"].axes.set_title(f"Cross-section  y = {drawn['yc'][yj]:.0f}")
+        self._canvas.draw_idle()
+
+    def _recolour_mpl(self) -> bool:
+        """Give the panels on screen the colour map now chosen; False if none are."""
+        drawn = self._mpl_drawn
+        if drawn is None or not drawn.get("images"):
+            return False
+        cmap = cmaps.to_matplotlib(self._cmap)
+        for image, bar in drawn["images"]:
+            image.set_cmap(cmap)
+            bar.update_normal(image)
+        self._canvas.draw_idle()
+        return True
+
+    def _redraw_mpl(self, *_) -> None:
         if self._model is None:
             return
         ex, ey, ez = self._edges
         m = self._model
         cmap = cmaps.to_matplotlib(self._cmap)
         _, ny, nz = m.shape
-        zi = int(np.clip(self._z_slider.value(), 0, nz - 1))
-        yj = int(np.clip(self._y_slider.value(), 0, ny - 1))
-        finite_mask = np.isfinite(m)
-        if self._log:
-            finite_mask &= m > 0
-        finite = m[finite_mask]
+        zi, yj = self._slice_indices()
+        norm = self._mpl_norm()
+        self._mpl_drawn = None
         self._fig.clear()
-        if finite.size == 0:
+        if norm is None:
             ax = self._fig.add_subplot(111)
             ax.text(
                 0.5, 0.5,
@@ -403,14 +493,6 @@ class Model3DView(QWidget):
             ax.axis("off")
             self._canvas.draw_idle()
             return
-        vmin = float(np.nanpercentile(finite, 2)) if finite.size else 0.0
-        vmax = float(np.nanpercentile(finite, 98)) if finite.size else 1.0
-        if self._log:
-            vmin = max(vmin, 1e-12)
-            vmax = max(vmax, vmin * 1.01)
-            norm = LogNorm(vmin, vmax)
-        else:
-            norm = Normalize(vmin, vmax if vmax > vmin else vmin + 1.0)
         zc = 0.5 * (ez[:-1] + ez[1:])
         yc = 0.5 * (ey[:-1] + ey[1:])
         if ny == 1:
@@ -423,7 +505,8 @@ class Model3DView(QWidget):
                 if "resist" in field_name.lower() else f"{field_name} section"
             )
             ax.set_xlabel("position along line (m)"); ax.set_ylabel("elevation (m)")
-            self._fig.colorbar(im, ax=ax, shrink=0.85, label=self._label)
+            bar = self._fig.colorbar(im, ax=ax, shrink=0.85, label=self._label)
+            self._mpl_drawn = {"images": [(im, bar)]}
             self._canvas.draw_idle()
             return
         ax1 = self._fig.add_subplot(121)
@@ -431,11 +514,13 @@ class Model3DView(QWidget):
         im1 = ax1.pcolormesh(ex, ey, m[:, :, zi].T, cmap=cmap, norm=norm, shading="auto")
         ax1.set_title(f"Depth slice  z = {zc[zi]:.0f}")
         ax1.set_xlabel("x (m)"); ax1.set_ylabel("y (m)"); ax1.set_aspect("equal", "box")
-        self._fig.colorbar(im1, ax=ax1, shrink=0.85, label=self._label)
+        bar1 = self._fig.colorbar(im1, ax=ax1, shrink=0.85, label=self._label)
         im2 = ax2.pcolormesh(ex, ez, m[:, yj, :].T, cmap=cmap, norm=norm, shading="auto")
         ax2.set_title(f"Cross-section  y = {yc[yj]:.0f}")
         ax2.set_xlabel("x (m)"); ax2.set_ylabel("elevation (m)")
-        self._fig.colorbar(im2, ax=ax2, shrink=0.85, label=self._label)
+        bar2 = self._fig.colorbar(im2, ax=ax2, shrink=0.85, label=self._label)
+        self._mpl_drawn = {"images": [(im1, bar1), (im2, bar2)], "depth": im1,
+                           "section": im2, "zc": zc, "yc": yc}
         self._canvas.draw_idle()
 
     # -- colour map ------------------------------------------------------------
@@ -447,8 +532,8 @@ class Model3DView(QWidget):
         """Recolour the model on screen from the grid already held.
 
         The PyVista volume swaps its lookup table in place, keeping the camera
-        and the clip plane; the matplotlib slices are redrawn at the same depth
-        and position.
+        and the clip plane; the matplotlib slices take the new map in place too,
+        at the same depth and position.
         """
         self._cmap = name
         if self._model is None:
@@ -459,5 +544,5 @@ class Model3DView(QWidget):
                     self._plotter.render()
                 except Exception:  # noqa: BLE001 - a repaint is best-effort
                     pass
-        else:
+        elif not self._recolour_mpl():
             self._redraw_mpl()

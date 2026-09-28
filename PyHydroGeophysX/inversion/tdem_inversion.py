@@ -66,22 +66,16 @@ class TDEMInversion:
     This class provides functionality for inverting TDEM sounding data
     to recover 1D layered Earth conductivity models.
     
-    Example:
-        >>> # Load or create data
+    Example (``dobs`` and ``uncertainties`` are your sounding's data, one
+    value per time gate):
         >>> times = np.logspace(-5, -2, 31)
-        >>> dobs = ...  # observed data
-        >>> uncertainties = ...  # data uncertainties
-        >>> 
-        >>> # Create inversion
-        >>> inv = TDEMInversion(
+        >>> inv = TDEMInversion(  # doctest: +SKIP
         ...     times=times,
         ...     dobs=dobs,
         ...     uncertainties=uncertainties,
         ...     source_radius=10.0
         ... )
-        >>> 
-        >>> # Run inversion
-        >>> result = inv.run()
+        >>> result = inv.run()  # doctest: +SKIP
     """
     
     def __init__(

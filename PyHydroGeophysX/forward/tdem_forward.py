@@ -42,9 +42,16 @@ class TDEMSurveyConfig:
         times: Time channels for measurement (s)
         waveform_type: Type of waveform ('step_off', 'ramp_off', 'custom')
     """
+    # The seven fields 0.3.0 had come first, in its order, so a configuration
+    # written for it positionally still means what it did. Every field added
+    # since goes after them; pass those by keyword.
     source_location: np.ndarray = None
     source_radius: float = 10.0
     source_current: float = 1.0
+    receiver_location: np.ndarray = None
+    receiver_orientation: str = "z"
+    times: np.ndarray = None
+    waveform_type: str = "step_off"
     source_turns: int = 1
     #: Transmitter moment in A m^2, overriding ``current * turns * area``. Set it
     #: to 1.0 for data already normalized by the transmitter moment, which is how
@@ -93,11 +100,8 @@ class TDEMSurveyConfig:
     #: Gauss points per smooth panel of the gate window. Eight integrates it to
     #: a few parts per million, negligible beside one SimPEG call.
     gate_quadrature_order: int = 8
-    receiver_location: np.ndarray = None
-    receiver_orientation: str = "z"
+    #: The recorded field: "b", or "dbdt" for its time derivative.
     receiver_type: str = "b"
-    times: np.ndarray = None
-    waveform_type: str = "step_off"
 
     def __post_init__(self):
         if self.source_location is None:
@@ -1065,7 +1069,7 @@ def hydro_to_tdem(*args, **kwargs):
         "forward.tdem_forward.hydro_to_tdem is deprecated; use "
         "simulate_tdem_sounding_from_hydro for a single column or "
         "Hydro_modular.hydro_to_tdem for a profile. This compatibility shim is "
-        "deprecated in 0.4.0 and will be removed in 0.5.0.",
+        "deprecated in 0.5.0 and will be removed in 0.6.0.",
         DeprecationWarning,
         stacklevel=2,
     )

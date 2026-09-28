@@ -47,6 +47,20 @@ def _install_excepthook(show_dialog: bool) -> None:
     sys.excepthook = _hook
 
 
+def _close_pyplot_figures() -> None:
+    """Let the process end once the window has closed.
+
+    PyGIMLi draws its colour bars through pyplot, which leaves a hidden figure
+    behind even when the plot itself goes into one of the studio's canvases.
+    At exit PyGIMLi shows every figure pyplot still holds and waits for each
+    to be closed, so the studio would linger behind an empty window. With the
+    window gone none of them is on screen, so close them all.
+    """
+    pyplot = sys.modules.get("matplotlib.pyplot")
+    if pyplot is not None:
+        pyplot.close("all")
+
+
 def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="PyHydroGeophysX Professional Studio")
     parser.add_argument("--context", default=None, help="Path to the bridge context JSON.")
@@ -123,7 +137,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
         QTimer.singleShot(300, app.quit)
 
-    return int(app.exec())
+    code = int(app.exec())
+    _close_pyplot_figures()
+    return code
 
 
 if __name__ == "__main__":

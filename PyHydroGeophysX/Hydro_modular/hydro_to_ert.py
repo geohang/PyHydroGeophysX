@@ -1,7 +1,6 @@
 """
 Module for converting hydrologic model output to ERT apparent resistivity.
 """
-import os
 import numpy as np
 import pygimli as pg
 from pygimli.physics import ert
@@ -9,7 +8,6 @@ from typing import Tuple, Optional, Dict, Any, Union, List
 
 from PyHydroGeophysX.core.interpolation import ProfileInterpolator
 from PyHydroGeophysX.petrophysics.resistivity_models import water_content_to_resistivity
-from PyHydroGeophysX.forward.ert_forward import ERTForwardModeling
 
 
 def hydro_to_ert(
@@ -37,11 +35,10 @@ def hydro_to_ert(
     Convert hydrologic model output to ERT apparent resistivity.
     
     This function performs the complete workflow from water content to synthetic ERT data:
-    1. Interpolates water content to mesh
-    2. Calculates saturation
-    3. Converts saturation to resistivity using petrophysical models
-    4. Creates electrode array along surface profile
-    5. Performs forward modeling to generate synthetic ERT data
+    1. Interpolates water content and porosity to mesh
+    2. Converts them to resistivity per layer using petrophysical models
+    3. Creates electrode array along surface profile
+    4. Performs forward modeling to generate synthetic ERT data
     
     Args:
         water_content: Water content array (nlay, ny, nx) or mesh values
@@ -63,7 +60,8 @@ def hydro_to_ert(
         noise_level: Relative noise level for synthetic data
         abs_error: Absolute error for data estimation
         rel_error: Relative error for data estimation
-        save_path: Path to save synthetic data (None = don't save)
+        save_path: Path to save synthetic data as a PyGIMLi data file, as
+            hydro_to_srt does (None = don't save)
         mesh_markers: Mesh cell markers (None = get from mesh)
         verbose: Whether to display verbose information
         seed: Random seed for noise generation
@@ -97,7 +95,9 @@ def hydro_to_ert(
         ID_layers[:layer_idx[1]] = marker_labels[0]  # Top layer
         ID_layers[layer_idx[1]:layer_idx[2]] = marker_labels[1]  # Middle layer
         ID_layers[layer_idx[2]:] = marker_labels[2]  # Bottom layer
-        print(ID_layers)
+        # The whole array used to be printed on every call.
+        if verbose:
+            print(f"Layer markers along the profile: {np.unique(ID_layers).tolist()}")
 
         # Interpolate water content to mesh
         wc_mesh = profile_interpolator.interpolate_to_mesh(
@@ -125,12 +125,7 @@ def hydro_to_ert(
         wc_mesh = water_content
         porosity_mesh = porosity
     
-    # 2. Calculate saturation
-    # Ensure porosity is not zero to avoid division by zero
-    porosity_safe = np.maximum(porosity_mesh, 0.01)
-    saturation = np.clip(wc_mesh / porosity_safe, 0.0, 1.0)
-    
-    # 3. Convert to resistivity using petrophysical model
+    # 2. Convert to resistivity using petrophysical model
     rho_sat = rho_parameters.get('rho_sat', [100, 500, 2400])
     n_values = rho_parameters.get('n', [2.2, 1.8, 2.5])
     sigma_s = rho_parameters.get('sigma_s', [1/500, 0, 0])
@@ -152,7 +147,7 @@ def hydro_to_ert(
     if verbose:
         print(f"Resistivity range: {np.min(res_model)} - {np.max(res_model)} Ohm-m")
     
-    # 4. Create electrode positions along profile
+    # 3. Create electrode positions along profile
     xpos = np.linspace(electrode_start, 
                       electrode_start + (num_electrodes - 1) * electrode_spacing, 
                       num_electrodes)
@@ -172,10 +167,8 @@ def hydro_to_ert(
     
     pos = np.hstack((xpos.reshape(-1,1),ypos.reshape(-1,1)))
     schemeert = ert.createData(elecs=pos,schemeName=scheme_name)
-    fwd_operator = ERTForwardModeling(mesh=grid, data=schemeert)
 
-
-    # 5. Perform forward modeling to create synthetic ERT data
+    # 4. Perform forward modeling to create synthetic ERT data
     synth_data = schemeert.copy()
     fob = ert.ERTModelling()
     fob.setData(schemeert)
@@ -192,5 +185,9 @@ def hydro_to_ert(
         absoluteUError=float(abs_error),
         relativeError=float(rel_error),
     )
-    
+
+    # save_path used to be accepted and ignored, so nothing was written.
+    if save_path is not None:
+        synth_data.save(str(save_path))
+
     return synth_data, res_model

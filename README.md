@@ -24,7 +24,9 @@ A Python package for integrating hydrological model outputs (MODFLOW, ParFlow) w
 - **Hydrological model integration** — load MODFLOW and ParFlow outputs
 - **ERT data processing** — field data QC, export, and RESIPY integration
 - **Forward modeling** — 2D/3D ERT, SRT, TDEM, FDEM synthetic data generation
+- **E4D-style 3D meshes** — borehole and surface ERT meshes built the way [E4D](https://e4d-userguide.pnnl.gov) builds them (control points, a fine zone inside a far-reaching outer zone, Triangle surface + TetGen volume); E4D `.cfg` configurations read and written, E4D meshes imported for inversion
 - **Inversion** — single-time, time-lapse, windowed, structure-constrained, joint ERT+SRT, TDEM, FDEM
+- **Prior knowledge in ERT** — a-priori resistivity zones drawn on the inversion mesh (starting and reference values, optionally held fixed), a mesh rebuilt so its cell edges follow the zone outlines, and the smoothness dropped across those outlines so the model may jump there, with every engine; in 3D, zones as boxes (layers, tanks, plumes) that every 3D mesh engine — structured grid, prism, Gmsh, E4D — can mesh along and make regions of their own, and that the 3D forward model takes
 - **Monitoring** — acquisition times read from the survey files, temperature correction to a reference temperature, sections clipped to what the data resolve
 - **Petrophysics** — water content ↔ resistivity (Waxman-Smits/Archie), seismic velocity (Hertz-Mindlin, DEM)
 - **Uncertainty quantification** — Monte Carlo for petrophysical parameter uncertainty
@@ -62,7 +64,20 @@ pip install "pyhydrogeophysx[geophysics,webapp]"
 
 # Everything
 pip install "pyhydrogeophysx[all]"
+
+# Optional: TetGen, for E4D-style 3D meshes (TetGen is AGPL-licensed, so it is
+# not installed with the package; without it, Gmsh stands in)
+pip install tetgen
 ```
+
+> **What the pip package includes:** the library and the Qt desktop studio
+> (`pyhydrogeophysx-studio`, with the `desktop` extra). The example scripts and
+> notebooks, their data in `examples/data/`, and the Streamlit web apps in
+> `examples/` come with the source repository, not the pip package. Clone the
+> repository ([From Source](#from-source)) to run them, or use the
+> [hosted web app](https://pyhydrogeophysx.streamlit.app/). The launchers
+> `pyhydrogeophysx-gui` and `python -m PyHydroGeophysX.gui_mesh3d` take an app's
+> path as their first argument; after a pip install they print where the apps are.
 
 > **Note on PyGIMLi:** PyGIMLi links against C++ libraries. If `pip install` fails, install it first via conda:
 > ```bash
@@ -336,7 +351,8 @@ streamlit run examples/app_geophysics_workflow.py
 ```
 
 On Windows, users who downloaded the source package can instead double-click
-`examples\start_webapp.bat`. The launcher finds a compatible Python or conda
+`PyHydroGeophysX\start_webapp.bat` (`PyHydroGeophysX/start_webapp.sh` on macOS
+and Linux). The launcher finds a compatible Python or conda
 environment, opens the browser automatically, and installs the web-app
 dependencies into a local `.venv-webapp` environment when needed.
 
@@ -436,7 +452,6 @@ All examples have paired `.ipynb` notebooks and `.py` scripts under `examples/`.
 
 | Example | Description |
 |---|---|
-| `Ex_ERT_data_process` | Field ERT loading, QC, RESIPY export |
 | `Ex_model_output` | MODFLOW/ParFlow output loading |
 | `Ex_ERT_workflow` | End-to-end ERT forward + inversion |
 | `Ex_Time_lapse_measurement` | Synthetic time-lapse ERT schedules |
@@ -446,14 +461,21 @@ All examples have paired `.ipynb` notebooks and `.py` scripts under `examples/`.
 | `Ex_structure_TLresinv` | Structure-constrained time-lapse inversion |
 | `EX_SRT_forward` | SRT forward modeling |
 | `Ex_SRT_inv` | SRT inversion (PyGIMLi + packaged `SRTInversion`) |
-| `Ex_joint_inversion` | Joint ERT+SRT inversion |
-| `Ex_cross_constraints` | Cross-gradient / structural constraints |
+| `Ex_joint_inversion` | Joint ERT+SRT inversion (direct and geostatistical cross-gradient coupling) |
 | `Ex_3D_ERT_forward` | 3D ERT forward with MODFLOW integration |
 | `Ex_TDEM_workflow` | TDEM forward + inversion (SimPEG) |
 | `Ex_FDEM_workflow` | FDEM forward + inversion (SimPEG) |
 | `Ex_hydro_to_multigeophys` | Hydro → petrophysics → multi-method forward |
 | `Ex_MC_Hydro` | Monte Carlo uncertainty quantification |
+| `Ex_sensitivity_analysis` | Sensitivity, model resolution and reference-model dependence (DOI) |
+| `Ex_ensemble_assimilation` | EnKF and ES-MDA updates of a water-content forecast |
+| `Ex_posterior_uncertainty` | Posterior resistivity covariance propagated to water content |
 | `Ex_multi_agent_workflow` | Automated multi-agent ERT+seismic workflow |
+
+Three examples read another example's output: run `EX_SRT_forward` before
+`Ex_SRT_inv`, `Ex_Structure_resinv` before `Ex_structure_TLresinv`, and both of
+those before `Ex_MC_Hydro`. Run times and memory for the heavy examples are
+listed in the [examples gallery](https://geohang.github.io/PyHydroGeophysX/auto_examples/index.html).
 
 ---
 
@@ -523,6 +545,58 @@ Please also cite the underlying libraries you use:
   pages   = {104423},
   year    = {2020},
   doi     = {10.1016/j.cageo.2020.104423}
+}
+```
+
+**E4D-style 3D meshes (E4D, TetGen):**
+```bibtex
+@article{johnson2010e4d,
+  author  = {Johnson, Timothy C. and Versteeg, Roelof J. and Ward, Andy and
+             Day-Lewis, Frederick D. and Revil, Andr{\'e}},
+  title   = {Improved hydrogeophysical characterization and monitoring through
+             parallel modeling and inversion of time-domain resistivity and
+             induced-polarization data},
+  journal = {Geophysics},
+  volume  = {75},
+  number  = {4},
+  pages   = {WA27--WA41},
+  year    = {2010},
+  doi     = {10.1190/1.3475513}
+}
+
+@manual{johnson2020e4duserguide,
+  author       = {Johnson, T. C. and Robinson, J. R. and White, S. K. and
+                  Zue, Y. and Jaysaval, P.},
+  title        = {{E4D} User Guide},
+  organization = {Pacific Northwest National Laboratory},
+  year         = {2020},
+  url          = {https://e4d-userguide.pnnl.gov}
+}
+
+@article{si2015tetgen,
+  author  = {Si, Hang},
+  title   = {{TetGen}, a {Delaunay}-Based Quality Tetrahedral Mesh Generator},
+  journal = {ACM Transactions on Mathematical Software},
+  volume  = {41},
+  number  = {2},
+  pages   = {1--36},
+  year    = {2015},
+  doi     = {10.1145/2629697}
+}
+```
+
+**3D meshes built with Gmsh (the Gmsh engine and its zones, or Gmsh standing in for TetGen):**
+```bibtex
+@article{geuzaine2009gmsh,
+  author  = {Geuzaine, Christophe and Remacle, Jean-Fran{\c{c}}ois},
+  title   = {{Gmsh}: A 3-{D} finite element mesh generator with built-in
+             pre- and post-processing facilities},
+  journal = {International Journal for Numerical Methods in Engineering},
+  volume  = {79},
+  number  = {11},
+  pages   = {1309--1331},
+  year    = {2009},
+  doi     = {10.1002/nme.2579}
 }
 ```
 

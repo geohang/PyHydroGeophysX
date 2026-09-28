@@ -10,6 +10,8 @@ window.
 
 from __future__ import annotations
 
+import hashlib
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -25,10 +27,61 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX._internal.utils import velocity_of
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets.coalesce import Coalesced
+from PyHydroGeophysX.qt_apps.widgets.readout import navigation_toolbar
 from PyHydroGeophysX.visualization.ert_style import (
     ERT_RESISTIVITY_LABEL,
     ert_model_plot_kwargs,
 )
+
+
+def _array_key(array):
+    """A cheap identity for an array's contents, to key what was derived from it."""
+    if array is None:
+        return None
+    import numpy as np
+
+    data = np.ascontiguousarray(array)
+    return (data.dtype.str, data.shape,
+            hashlib.blake2b(data.tobytes(), digest_size=16).digest())
+
+
+def _same_array(a, b) -> bool:
+    if a is None or b is None:
+        return a is None and b is None
+    import numpy as np
+
+    a, b = np.asarray(a), np.asarray(b)
+    if a.shape != b.shape or a.dtype != b.dtype:
+        return False
+    try:
+        return bool(np.array_equal(a, b, equal_nan=True))
+    except TypeError:            # equal_nan means nothing for a boolean mask
+        return bool(np.array_equal(a, b))
+
+
+def _refine(mesh):
+    """``mesh`` with every triangle split into four, and its cell centres."""
+    fine = mesh.createH2()
+    return fine, [cell.center() for cell in fine.cells()]
+
+
+def _interpolate(mesh, values, centres, fine_count: int):
+    """``values`` on ``mesh`` interpolated to ``centres``; None if that fails.
+
+    For display only: ``pg.interpolate`` fills the new cell centres from the
+    old ones, which stops the coarse inversion cells reading as blocky
+    structure without adding any resolution.
+    """
+    import numpy as np
+    import pygimli as pg
+
+    try:
+        fine = np.asarray(pg.interpolate(mesh, np.asarray(values, dtype=float), centres),
+                          dtype=float)
+    except Exception:  # noqa: BLE001 - smoothing is cosmetic, never fatal
+        return None
+    return fine if fine.size == fine_count else None
 
 
 class MeshResultView(QWidget):
@@ -41,28 +94,41 @@ class MeshResultView(QWidget):
 
     def __init__(self, parent=None, *, colormaps=None) -> None:
         super().__init__(parent)
-        from matplotlib.backends.backend_qtagg import (
-            FigureCanvasQTAgg,
-            NavigationToolbar2QT,
-        )
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
         from matplotlib.figure import Figure
 
         self._fig = Figure(figsize=(7.5, 4.2))
+        # Every drawing starts from the same layout state (see _redraw_now): the
+        # subplot parameters as they were before pyGIMLi's tight_layout moved them.
+        self._subplot_defaults = {
+            name: getattr(self._fig.subplotpars, name)
+            for name in ("left", "right", "bottom", "top", "wspace", "hspace")}
         self._canvas = FigureCanvasQTAgg(self._fig)
         # Below this a section is not readable anyway, and matplotlib gives up on
         # fitting the title and the colorbar around an equal-aspect axes - which
         # is how the title ends up cut off by the top of the panel.
         self._canvas.setMinimumHeight(280)
-        self._toolbar = NavigationToolbar2QT(self._canvas, self)
+        # The cursor position goes to a readout of its own: the toolbar's label
+        # would re-lay out the page on every mouse move (see widgets.readout).
+        self._toolbar, self._coords = navigation_toolbar(self._canvas, self)
         self._mgr = None
         self._mesh = None         # field mode: a pyGIMLi mesh ...
         self._values = None       # ... and a per-cell value array
         self._coverage = None     # optional coverage mask/array for the field
         self._kind = "ert"
         self._title = ""
+        # Redraw requests of one turn of the event loop become one drawing (see
+        # _redraw), and what a drawing derives from the result - its coverage,
+        # the subdivided mesh, the contour grid - is kept until the result
+        # changes, under a version that every new result bumps.
+        self._pending_draw = Coalesced(lambda: self._redraw_now(), self)
+        self._version = 0
+        self._derived: dict = {}
+        self._drawn = None        # what the figure on screen was drawn from
 
         bar = QHBoxLayout()
-        bar.addWidget(self._toolbar, stretch=1)
+        bar.addWidget(self._toolbar)
+        bar.addWidget(self._coords, stretch=1)
         self._show_mesh = QCheckBox("Show mesh")
         self._show_mesh.setChecked(True)
         self._show_mesh.setToolTip("Overlay the inversion mesh cell boundaries.")
@@ -256,6 +322,7 @@ class MeshResultView(QWidget):
         self._coverage = None
         self._kind = kind
         self._title = ""
+        self._new_result()
         # A standalone model is a new quantity on a new mesh, so limits carried
         # over from whatever was shown before would be meaningless.
         self._lock_range.setChecked(False)
@@ -273,9 +340,10 @@ class MeshResultView(QWidget):
         if not (hi > lo):
             return
         self._set_limit_boxes(lo, hi)
-        self._lock_range.setChecked(bool(lock))
-        if self._lock_range.isChecked():
-            self._redraw()  # setChecked is a no-op when it was already ticked
+        if self._lock_range.isChecked() != bool(lock):
+            self._lock_range.setChecked(bool(lock))   # its handler asks for the redraw
+        elif lock:
+            self._redraw()
 
     def show_field(self, mesh, values, kind: str = "ert", coverage=None, title: str = "") -> None:
         """Display a raw ``(mesh, per-cell values)`` pair — e.g. one time step of a
@@ -285,14 +353,35 @@ class MeshResultView(QWidget):
         a diverging map on a linear scale, centred on zero.
         """
         import numpy as np
+        values = np.asarray(values, dtype=float)
+        coverage = None if coverage is None else np.asarray(coverage)
+        # The same field handed in again - a caller refreshing, or switching the
+        # colour mode - keeps what was derived from it.
+        same = (self._mgr is None and mesh is self._mesh
+                and _same_array(values, self._values)
+                and _same_array(coverage, self._coverage))
         self._mgr = None
         self._mesh = mesh
-        self._values = np.asarray(values, dtype=float)
-        self._coverage = None if coverage is None else np.asarray(coverage)
+        self._values = values
+        self._coverage = coverage
         self._kind = kind
         self._title = title or ""
+        if not same:
+            self._new_result()
         self._sync_controls()
         self._redraw()
+
+    def _new_result(self) -> None:
+        """Forget everything derived from the previous result."""
+        self._version += 1
+        self._derived = {}
+
+    def _cached(self, key, compute):
+        """``compute()``, once per result: kept until the result changes."""
+        full = (self._version, key)
+        if full not in self._derived:
+            self._derived[full] = compute()
+        return self._derived[full]
 
     def _resolve_source(self):
         """Return ``(mesh, values, coverage, field)``.
@@ -350,36 +439,63 @@ class MeshResultView(QWidget):
             return self._mesh, self._values, self._coverage, field
         return None, None, None, None
 
-    @staticmethod
-    def _subdivide(mesh, values, coverage):
-        """Resample onto a once-subdivided mesh, for display only.
+    def _smoothed(self, mesh, values, mask, level: int, role: str):
+        """Resample onto a ``level`` times subdivided mesh, for display only.
 
-        ``createH2`` splits every triangle into four and ``pg.interpolate`` fills
-        the new cell centres from the old ones. No resolution is added; it only
-        stops the coarse inversion cells reading as blocky structure.
+        ``createH2`` splits every triangle into four and the values are
+        interpolated onto the new cells: no resolution is added, it only stops
+        the coarse inversion cells reading as blocky structure. The finer meshes
+        and the values on them do not change with the coverage cut or the
+        colours, so they are kept; a moved cut interpolates only its mask.
         """
         import numpy as np
-        import pygimli as pg
 
-        fine = mesh.createH2()
-        centres = [c.center() for c in fine.cells()]
-        fine_values = np.asarray(pg.interpolate(mesh, values, centres), dtype=float)
-        if fine_values.size != fine.cellCount() or not np.isfinite(fine_values).all():
-            return mesh, values, coverage  # fall back rather than draw holes
-        fine_coverage = None
-        if coverage is not None and np.asarray(coverage).size == np.asarray(values).size:
-            fine_coverage = np.asarray(
-                pg.interpolate(mesh, np.asarray(coverage, dtype=float), centres),
-                dtype=float)
-            if fine_coverage.size != fine.cellCount():
-                fine_coverage = None
-        return fine, fine_values, fine_coverage
+        mask_key = _array_key(mask)
+        for step in range(level):
+            try:
+                fine, centres = self._cached(("fine mesh", step), lambda m=mesh: _refine(m))
+            except Exception:  # noqa: BLE001 - smoothing is cosmetic, never fatal
+                break
+            count = fine.cellCount()
+            fine_values = self._cached(
+                ("fine values", step, role),
+                lambda m=mesh, v=values, c=centres, n=count: _interpolate(m, v, c, n))
+            if fine_values is None or not np.isfinite(fine_values).all():
+                break  # fall back rather than draw holes
+            fine_mask = None
+            if mask is not None and np.asarray(mask).size == np.asarray(values).size:
+                fine_mask = self._cached(
+                    ("fine mask", step, mask_key),
+                    lambda m=mesh, k=mask, c=centres, n=count: _interpolate(m, k, c, n))
+            mesh, values, mask = fine, fine_values, fine_mask
+        return mesh, values, mask
 
     def _redraw(self) -> None:
+        """Ask for the section to be drawn again, once the current event is handled.
+
+        Every change to the picture lands here - a result arriving, a tick box,
+        the colour limits, a caller setting several of them in a row - and the
+        requests of one turn of the event loop become one drawing. ``draw_idle``
+        merges only the final paint: the subdivision, the coverage statistics
+        and pyGIMLi rebuilding every cell all ran once per request before it,
+        so locking the colour range drew the section twice and a step of a
+        series three times.
+        """
+        self._pending_draw.request()
+
+    def flush_redraw(self) -> None:
+        """Draw now what a pending redraw would draw.
+
+        For code that reads the figure straight after changing it - a capture of
+        the view - rather than waiting for the event loop to get there.
+        """
+        self._pending_draw.flush()
+
+    def _redraw_now(self) -> None:
         import numpy as np
         import pygimli as pg
 
-        mesh, values, coverage, scalar_cov = self._resolve_source()
+        mesh, values, coverage, scalar_cov = self._cached("source", self._resolve_source)
         if mesh is None or values is None:
             return
 
@@ -410,84 +526,84 @@ class MeshResultView(QWidget):
         # A clean cut replaces the per-cell mask rather than adding to it: keeping
         # both would draw the saw-tooth edge inside the smooth outline.
         clip_polygon = None
+        clip_key = None
         if (mask is not None and not show_coverage
                 and self._clean_cut.isChecked() and self._clean_cut.isEnabled()):
-            clip_polygon = self._clip_polygon(mesh, mask)
+            clip_key = (_array_key(mask), float(self._cov_threshold.value()))
+            clip_polygon = self._cached(("clip",) + clip_key,
+                                        lambda m=mesh, k=mask: self._clip_polygon(m, k))
             if clip_polygon is not None:
                 mask = None
+            else:
+                clip_key = None
 
         smooth_level = int(self._smooth.currentData() or 0)
         contour = smooth_level < 0
         source_mesh = mesh          # the contour grid interpolates from this one
-        for _ in range(max(0, smooth_level)):
-            try:
-                mesh, plot_values, mask = self._subdivide(mesh, plot_values, mask)
-            except Exception:  # noqa: BLE001 - smoothing is cosmetic, never fatal
-                break
+        role = "coverage" if show_coverage else "model"
+        mask_key = _array_key(mask)
+        if smooth_level > 0:
+            mesh, plot_values, mask = self._smoothed(mesh, plot_values, mask,
+                                                     smooth_level, role)
         values, coverage = plot_values, mask
 
-        self._fig.clear()
-        # Draw with no layout engine: pyGIMLi calls tight_layout itself, and
-        # matplotlib warns every time that is done to a constrained figure. The
-        # layout is put back once the drawing is finished, in _relayout.
-        self._fig.set_layout_engine("none")
-        ax = self._fig.add_subplot(111)
-        if show_coverage:
-            label = ("Ray coverage (log10)" if self._kind == "srt"
-                     else "Coverage (log10 cumulative sensitivity)")
-            show_kw = dict(ax=ax, colorBar=False, cMap="viridis", logScale=False,
-                           showMesh=self._show_mesh.isChecked())
-        elif self._kind == "srt":
-            cmap, log_scale, label = "turbo", False, "Velocity (m/s)"
-            show_kw = dict(ax=ax, colorBar=False, cMap=cmap, logScale=log_scale,
-                           showMesh=self._show_mesh.isChecked())
-        elif self._kind == "change":
-            # A signed change reads off a diverging map centred on zero; on an
-            # off-centre scale the sign is decided by the colours rather than by
-            # the numbers.
-            label = "Change from baseline (%)"
-            show_kw = dict(ax=ax, colorBar=False, cMap="RdBu_r", logScale=False,
-                           showMesh=self._show_mesh.isChecked())
-            span = self._symmetric_span(values)
-            if span is not None:
-                show_kw["cMin"], show_kw["cMax"] = -span, span
-        else:
-            label = ERT_RESISTIVITY_LABEL
-            show_kw = ert_model_plot_kwargs(show_mesh=self._show_mesh.isChecked())
-            show_kw.update(ax=ax, colorBar=False)
-        # The map chosen for this quantity, or the one above when none has been:
-        # a name PyGIMLi and matplotlib both take, so the default draws exactly
-        # as it always did.
-        key = (cmaps.COVERAGE if show_coverage
-               else cmaps.VELOCITY if self._kind == "srt"
-               else cmaps.RESISTIVITY_CHANGE if self._kind == "change"
-               else cmaps.RESISTIVITY)
-        show_kw["cMap"] = cmaps.to_matplotlib(
-            self._colormap.set_target(key, show_kw["cMap"]))
-        self._colormap.setEnabled(True)
-
+        show_kw, label = self._style(show_coverage, values)
         # The sensitivity view is a different quantity in different units, so a
-        # lock set on the model must not follow it there.
-        self._apply_color_limits(show_kw, values, lockable=not show_coverage)
+        # lock set on the model does not follow it there.
+        locked = self._lock_range.isChecked() and not show_coverage
+        rays = self._rays.isChecked() and not self._rays.isHidden()
+        # Everything the drawing depends on but its colours and its coverage
+        # mask. While it holds, a new colour map or colour range re-colours the
+        # cells already drawn, and a moved coverage cut re-masks them, rather
+        # than having pyGIMLi rebuild every one. Contour bands are cut at the
+        # colour limits, so there the limits belong to the drawing.
+        shape = (self._version, self._kind, self._title, role, clip_key, smooth_level,
+                 self._show_mesh.isChecked(), rays,
+                 (int(self._levels.value()), show_kw.get("cMin"), show_kw.get("cMax"))
+                 if contour else None)
+        drawn = self._drawn
+        # Unlocking hands the limits back to pyGIMLi's autoscale, which only a
+        # drawing from scratch computes.
+        if drawn is not None and drawn["shape"] == shape and (locked or not drawn["locked"]):
+            if drawn["mask"] == mask_key or self._remask(coverage, drawn):
+                if self._recolour(show_kw, drawn):
+                    drawn.update(locked=locked, mask=mask_key)
+                    return
+
+        self._drawn = None
+        self._fig.clear()
+        # The subplot parameters and the layout engine both outlive clear(), and
+        # pyGIMLi's tight_layout moves the first and swaps the second: each
+        # drawing then started from where the last one's layout ended, and the
+        # section shifted and changed size from one redraw to the next. Start
+        # every drawing from the same place - with no layout engine, since
+        # pyGIMLi calls tight_layout itself and matplotlib warns every time that
+        # is done to a constrained figure. The layout is put back once the
+        # drawing is finished, in _relayout.
+        self._fig.subplotpars.update(**self._subplot_defaults)
+        self._fig.set_layout_engine(None)
+        ax = self._fig.add_subplot(111)
+        draw_kw = dict(show_kw, ax=ax)
 
         try:
             # Draw the model on the mesh via pyGIMLi but build the colorbar with
             # matplotlib: pyGIMLi's own colorbar hits a divide-by-zero on some
             # velocity models. colorBar=False avoids that.
-            mappable = None
+            mappable, cbar = None, None
             if contour:
-                mappable = self._draw_contour(ax, source_mesh, values, coverage, show_kw)
+                mappable = self._draw_contour(ax, source_mesh, values, coverage, show_kw, role)
+            drew_contour = mappable is not None
             if mappable is None:
                 if contour:
                     ax.clear()   # the contour attempt left partial artists behind
                 if coverage is not None and np.asarray(coverage).size == np.asarray(values).size:
-                    show_kw["coverage"] = coverage
+                    draw_kw["coverage"] = coverage
                 try:
-                    pg.show(mesh, values, **show_kw)
+                    pg.show(mesh, values, **draw_kw)
                 except Exception:  # noqa: BLE001 - coverage masking can still fail; retry plain
-                    show_kw.pop("coverage", None)
+                    draw_kw.pop("coverage", None)
                     ax.clear()
-                    pg.show(mesh, values, **show_kw)
+                    pg.show(mesh, values, **draw_kw)
                 mappable = next(
                     (c for c in ax.collections
                      if getattr(c, "get_array", lambda: None)() is not None),
@@ -501,7 +617,7 @@ class MeshResultView(QWidget):
             if mappable is not None:
                 cbar = self._fig.colorbar(mappable, ax=ax, shrink=0.85, pad=0.02)
                 cbar.set_label(label)
-                if contour:
+                if drew_contour:
                     # A contour colorbar ticks on its own level boundaries, which
                     # with forty bands are arbitrary numbers like 1.48038e2. Put
                     # readable values on it instead.
@@ -509,12 +625,17 @@ class MeshResultView(QWidget):
             # isHidden(), not isVisible(): the latter is False whenever an
             # ancestor has not been shown, which would skip the overlay in any
             # embedded or offscreen use.
-            if self._rays.isChecked() and not self._rays.isHidden():
+            if rays:
                 self._draw_rays(ax)
             ax.set_xlabel("Distance (m)")
             ax.set_ylabel("Elevation (m)")
             if self._title:
                 ax.set_title(self._title)
+            self._drawn = {"shape": shape, "mask": mask_key, "locked": locked,
+                           "mappable": mappable, "colorbar": cbar, "contour": drew_contour,
+                           "masked_in_place": (not drew_contour and smooth_level == 0
+                                               and clip_polygon is None),
+                           "log": bool(show_kw.get("logScale"))}
         except Exception as exc:  # noqa: BLE001 - never crash the UI on a draw error
             self._fig.clear()
             ax = self._fig.add_subplot(111)
@@ -523,6 +644,91 @@ class MeshResultView(QWidget):
             ax.axis("off")
         self._relayout()
         self._canvas.draw_idle()
+
+    def _style(self, show_coverage: bool, values):
+        """``pg.show`` keywords and colorbar label for what is about to be drawn.
+
+        Colours included: the map chosen for the quantity and the colour limits,
+        locked or tracking the result.
+        """
+        show_mesh = self._show_mesh.isChecked()
+        if show_coverage:
+            label = ("Ray coverage (log10)" if self._kind == "srt"
+                     else "Coverage (log10 cumulative sensitivity)")
+            show_kw = dict(colorBar=False, cMap="viridis", logScale=False, showMesh=show_mesh)
+        elif self._kind == "srt":
+            label = "Velocity (m/s)"
+            show_kw = dict(colorBar=False, cMap="turbo", logScale=False, showMesh=show_mesh)
+        elif self._kind == "change":
+            # A signed change reads off a diverging map centred on zero; on an
+            # off-centre scale the sign is decided by the colours rather than by
+            # the numbers.
+            label = "Change from baseline (%)"
+            show_kw = dict(colorBar=False, cMap="RdBu_r", logScale=False, showMesh=show_mesh)
+            span = self._symmetric_span(values)
+            if span is not None:
+                show_kw["cMin"], show_kw["cMax"] = -span, span
+        else:
+            label = ERT_RESISTIVITY_LABEL
+            show_kw = ert_model_plot_kwargs(show_mesh=show_mesh)
+            show_kw.update(colorBar=False)
+        # The map chosen for this quantity, or the one above when none has been:
+        # a name PyGIMLi and matplotlib both take, so the default draws exactly
+        # as it always did.
+        key = (cmaps.COVERAGE if show_coverage
+               else cmaps.VELOCITY if self._kind == "srt"
+               else cmaps.RESISTIVITY_CHANGE if self._kind == "change"
+               else cmaps.RESISTIVITY)
+        show_kw["cMap"] = cmaps.to_matplotlib(
+            self._colormap.set_target(key, show_kw["cMap"]))
+        self._colormap.setEnabled(True)
+        self._apply_color_limits(show_kw, values, lockable=not show_coverage)
+        return show_kw, label
+
+    @staticmethod
+    def _remask(mask, drawn: dict) -> bool:
+        """Put a new coverage mask on the cells already drawn; False if it cannot.
+
+        Only for cells drawn one per model cell - not subdivided, not contoured,
+        not clipped - where the mask maps onto them one to one. pyGIMLi's own
+        ``addCoverageAlpha`` sets it, exactly as ``pg.show`` would have.
+        """
+        import numpy as np
+        import pygimli as pg
+
+        mappable = drawn.get("mappable")
+        add_alpha = getattr(pg.viewer.mpl, "addCoverageAlpha", None)
+        if (mask is None or mappable is None or add_alpha is None
+                or not drawn.get("masked_in_place")
+                or np.asarray(mask).size != len(mappable.get_paths())):
+            return False
+        try:
+            add_alpha(mappable, mask)
+        except Exception:  # noqa: BLE001 - draw from scratch instead
+            return False
+        return True
+
+    def _recolour(self, show_kw: dict, drawn: dict) -> bool:
+        """Give what is drawn new colours in place; False when only a redraw can.
+
+        pyGIMLi keeps each cell's value on the collection it draws and puts the
+        coverage fade in its alpha, so a new map or new limits are the
+        collection's own to apply - the fade, the mesh lines and the layout stay.
+        """
+        mappable, cbar = drawn.get("mappable"), drawn.get("colorbar")
+        if mappable is None or cbar is None:
+            return False
+        try:
+            mappable.set_cmap(show_kw["cMap"])
+            if show_kw.get("cMin") is not None and show_kw.get("cMax") is not None:
+                mappable.set_clim(show_kw["cMin"], show_kw["cMax"])
+            cbar.update_normal(mappable)
+            if drawn.get("contour"):
+                self._set_contour_ticks(cbar, bool(drawn.get("log")))
+        except Exception:  # noqa: BLE001 - draw from scratch instead
+            return False
+        self._canvas.draw_idle()
+        return True
 
     def _relayout(self) -> None:
         """Re-run the figure layout once pyGIMLi has finished drawing.
@@ -543,7 +749,7 @@ class MeshResultView(QWidget):
             except Exception:  # noqa: BLE001 - layout is cosmetic, never fatal
                 pass
 
-    def _draw_contour(self, ax, mesh, values, coverage, show_kw):
+    def _draw_contour(self, ax, mesh, values, coverage, show_kw, role: str = "model"):
         """Draw the model as filled contours on a regular grid.
 
         The mesh view is honest about where the model's degrees of freedom are,
@@ -555,7 +761,9 @@ class MeshResultView(QWidget):
 
         Returns the mappable for the colorbar, or None if the section could not be
         gridded - in which case the caller falls back to the mesh drawing rather
-        than showing nothing.
+        than showing nothing. The gridding is the costly part and depends only on
+        the result, so it is kept for the next redraw; ``role`` says which of the
+        result's fields ``values`` is.
         """
         import numpy as np
         from matplotlib.colors import LogNorm, Normalize
@@ -563,35 +771,43 @@ class MeshResultView(QWidget):
 
         from PyHydroGeophysX.core import section_geometry
 
-        try:
+        def layout():
             centers = section_geometry.cell_centers(mesh)
             surface = section_geometry.surface_line(mesh)
+            x, z = centers[:, 0], centers[:, 1]
+            # A fixed grid count rather than a cell size: the point is a smooth
+            # picture, and the resolution of the model is set by the mesh either way.
+            xi = np.linspace(float(x.min()), float(x.max()), 500)
+            zi = np.linspace(float(z.min()), float(z.max()), 250)
+            grid_x, grid_z = np.meshgrid(xi, zi)
+            # Blank the air: the convex hull of the cell centres reaches above a
+            # concave hillside, and a contour drawn there is interpolation into
+            # the sky.
+            top = section_geometry.surface_elevation_at(xi, surface)
+            return x, z, xi, zi, grid_x, grid_z, top
+
+        try:
+            x, z, xi, zi, grid_x, grid_z, top = self._cached(("contour grid",), layout)
         except Exception:  # noqa: BLE001 - no geometry, no grid
             return None
         field = np.asarray(values, dtype=float).ravel()
-        if centers.shape[0] != field.size:
+        if x.size != field.size:
             return None
 
-        x, z = centers[:, 0], centers[:, 1]
-        # A fixed grid count rather than a cell size: the point is a smooth
-        # picture, and the resolution of the model is set by the mesh either way.
-        xi = np.linspace(float(x.min()), float(x.max()), 500)
-        zi = np.linspace(float(z.min()), float(z.max()), 250)
-        grid_x, grid_z = np.meshgrid(xi, zi)
-        grid = griddata((x, z), field, (grid_x, grid_z), method="linear")
+        def gridded():
+            grid = griddata((x, z), field, (grid_x, grid_z), method="linear")
+            return np.where(grid_z <= top[None, :], grid, np.nan)
+
+        grid = self._cached(("contour values", role), gridded)
         if not np.isfinite(grid).any():
             return None
 
-        # Blank the air: the convex hull of the cell centres reaches above a
-        # concave hillside, and a contour drawn there is interpolation into the sky.
-        top = section_geometry.surface_elevation_at(xi, surface)
-        grid = np.where(grid_z <= top[None, :], grid, np.nan)
-
         if coverage is not None and np.asarray(coverage).size == field.size:
-            weight = np.asarray(coverage, dtype=float).ravel()
             if np.asarray(coverage).dtype == bool:
-                weight = weight.astype(float)
-                blanked = griddata((x, z), weight, (grid_x, grid_z), method="linear")
+                weight = np.asarray(coverage, dtype=float).ravel()
+                blanked = self._cached(
+                    ("contour mask", _array_key(coverage)),
+                    lambda: griddata((x, z), weight, (grid_x, grid_z), method="linear"))
                 grid = np.where(np.nan_to_num(blanked) >= 0.5, grid, np.nan)
 
         lo = show_kw.get("cMin")

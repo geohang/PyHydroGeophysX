@@ -39,6 +39,9 @@ from PyHydroGeophysX.workflows.em1d import (
 
 warn_legacy_path("qt_apps.em_pipeline", "workflows.em1d")
 
+# 0.3.0's module imported this helper module, so scripts could reach it here.
+from PyHydroGeophysX.qt_apps import io_utils  # noqa: E402,F401
+
 __all__ = [
     "BackendUnavailable",
     "METHODS",

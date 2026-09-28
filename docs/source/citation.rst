@@ -51,6 +51,26 @@ Cite the engines you used
    * - ERT data processing and quality control
      - Blanchy, G., Saneiyan, S., Boyd, J., McLachlan, P., and Binley, A.
        (2020). ResIPy. *Computers and Geosciences*, 137, 104423.
+   * - E4D-style 3-D meshes (the 3D Mesh Builder's E4D engine), E4D mesh
+       configurations, or E4D meshes imported for inversion
+     - Johnson, T. C., Versteeg, R. J., Ward, A., Day-Lewis, F. D., and Revil,
+       A. (2010). Improved hydrogeophysical characterization and monitoring
+       through parallel modeling and inversion of time-domain resistivity and
+       induced-polarization data. *Geophysics*, 75(4), WA27-WA41.
+       https://doi.org/10.1190/1.3475513; Johnson, T. C., Robinson, J. R.,
+       White, S. K., Zue, Y., and Jaysaval, P. (2020). *E4D User Guide*.
+       Pacific Northwest National Laboratory.
+       https://e4d-userguide.pnnl.gov
+   * - A mesh built with TetGen (the E4D engine's mesher)
+     - Si, H. (2015). TetGen, a Delaunay-based quality tetrahedral mesh
+       generator. *ACM Transactions on Mathematical Software*, 41(2), 1-36.
+       https://doi.org/10.1145/2629697
+   * - A mesh built with Gmsh (the 3D Mesh Builder's Gmsh engine, with zones
+       cut in by its OpenCASCADE kernel, or Gmsh standing in for TetGen)
+     - Geuzaine, C. and Remacle, J.-F. (2009). Gmsh: a 3-D finite element mesh
+       generator with built-in pre- and post-processing facilities.
+       *International Journal for Numerical Methods in Engineering*, 79(11),
+       1309-1331. https://doi.org/10.1002/nme.2579
    * - TDEM or FDEM forward modelling and inversion
      - Cockett, R., Kang, S., Heagy, L. J., Pidlisecky, A., and Oldenburg,
        D. W. (2015). SimPEG. *Computers and Geosciences*, 85, 142-154.

@@ -33,6 +33,19 @@ Install with geophysics engines (recommended)
 
    pip install "pyhydrogeophysx[geophysics]"
 
+What the pip package includes
+-----------------------------
+
+The pip package contains the library and the Qt desktop studio (see
+`Desktop App (Qt Studio)`_). The example scripts and notebooks, their data in
+``examples/data``, and the Streamlit web apps in ``examples/`` come with the
+source repository, not the pip package. To run them, clone the repository as
+shown in `Install from Source`_, or use the hosted web app at
+`https://pyhydrogeophysx.streamlit.app/ <https://pyhydrogeophysx.streamlit.app/>`_.
+The launchers ``pyhydrogeophysx-gui`` and ``python -m PyHydroGeophysX.gui_mesh3d``
+take an app's path as their first argument; after a pip install they print
+where the apps are.
+
 .. _adert-speed-comparison:
 
 ADERT speed comparison
@@ -111,6 +124,8 @@ Install from Source
    git clone https://github.com/geohang/PyHydroGeophysX.git
    cd PyHydroGeophysX
    pip install -e .
+
+The checkout also holds the examples, their data and the Streamlit apps.
 
 Core Dependencies
 -----------------

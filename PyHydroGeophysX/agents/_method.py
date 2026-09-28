@@ -54,6 +54,13 @@ SCHEME_DESCRIPTION = (
     "data."
 )
 
+#: How a report names the single-survey inversion, ``ERTInversion``: data misfit
+#: plus a smoothness constraint on log resistivity, minimised by Gauss-Newton
+#: iterations over pyGIMLi's finite-element forward model. A report that named
+#: no method left the reader to guess what produced the section.
+SINGLE_SURVEY_LABEL = ("Smoothness-constrained Gauss-Newton inversion of log "
+                       "resistivity, with finite-element forward modelling (pyGIMLi)")
+
 #: Schemes a configuration may name that this package does not implement. The
 #: text of each says what it would have done, so a report can state plainly
 #: what was asked for and what ran instead.

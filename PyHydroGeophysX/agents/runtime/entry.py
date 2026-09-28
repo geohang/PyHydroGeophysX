@@ -18,16 +18,101 @@ against the code it replaced instead of argued about. Set
 
 import os
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import catalog  # noqa: F401 - importing registers every tool
 from .catalog import summarise_run
 from .context import RunContext
-from .controller import PROCEED, SKIP, STOP, run_controller
+from .controller import PROCEED, SKIP, STEP_LIMIT, STOP, STOPPED, run_controller
 from .modes import announcement, auto, completion
 
 #: Set to 1 to run the pre-controller implementation instead.
 LEGACY_ENV = "PHGX_LEGACY_WORKFLOW"
+
+#: The keys that name a run's ERT data.
+_ERT_KEYS = ("time_lapse_files", "timelapse_files", "data_file", "ert_file")
+
+#: What else a request can state that a run takes, when the caller did not.
+_STATED_KEYS = ("electrode_file", "seismic_file", "raw_seismic_file", "tdem_file",
+                "instrument", "petrophysical_params")
+
+
+def adopt_request_inputs(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+    """The configuration with what its request states and it leaves out, and a note on each.
+
+    A configuration of a request alone - ``{"user_request": "invert a.ohm and
+    estimate water content"}`` - used to end with "No step could run with the
+    inputs given": nothing read the files the request names unless the model
+    parser had run first. The rules are those of
+    ``AgentCoordinator._resolve_config``: only what the request itself states
+    is taken (:meth:`ContextInputAgent.request_inputs`, never the parser's
+    defaults), the ERT files only when the configuration names no ERT data,
+    and nothing the caller set is replaced.
+
+    Parameters
+    ----------
+    config : dict
+        The workflow configuration, with ``user_request``.
+
+    Returns
+    -------
+    tuple
+        ``(config, notes)`` - a new dictionary, and one sentence per value taken
+        from the request or named there and not used.
+
+    Raises
+    ------
+    None
+
+    Examples
+    --------
+    >>> config, notes = adopt_request_inputs({'user_request': 'invert a.ohm with a Syscal'})
+    >>> config['data_file'], config['instrument']
+    ('a.ohm', 'Syscal')
+    >>> print(notes[0])
+    The configuration names no ERT data, so the run uses the file the request names: a.ohm.
+    >>> adopt_request_inputs({'data_file': 'b.ohm', 'user_request': 'invert b.ohm'})[1]
+    []
+    """
+    request = str(config.get("user_request") or config.get("request") or "")
+    resolved = dict(config)
+    if not request.strip():
+        return resolved, []
+    from ..context_input_agent import ContextInputAgent, _same_file
+
+    listed = config.get("time_lapse_files") or config.get("timelapse_files") or []
+    given = [str(f) for f in (config.get("data_file"), config.get("ert_file"), *listed) if f]
+    stated = ContextInputAgent(api_key=None).request_inputs(request, known_files=given)
+    notes: List[str] = []
+    named = stated.get("time_lapse_files") or (
+        [stated["data_file"]] if stated.get("data_file") else [])
+    if not any(config.get(key) for key in _ERT_KEYS):
+        if named:
+            for key in ("time_lapse_files", "data_file", "ert_file"):
+                if stated.get(key):
+                    resolved[key] = stated[key]
+            if stated.get("time_lapse_files") and config.get("inversion_mode") is None:
+                resolved["inversion_mode"] = "time-lapse"
+            notes.append("The configuration names no ERT data, so the run uses the "
+                         f"file{'s' if len(named) > 1 else ''} the request names: "
+                         f"{', '.join(map(str, named))}.")
+    else:
+        unused = [f for f in named if not any(_same_file(f, g) for g in given)]
+        if unused:
+            notes.append(f"The request names {', '.join(map(str, unused))}, but the run uses "
+                         f"the configuration's ERT data ({', '.join(given)}).")
+    for key in _STATED_KEYS:
+        if not stated.get(key):
+            continue
+        if not resolved.get(key):
+            resolved[key] = stated[key]
+            if key.endswith("_file"):
+                notes.append(f"The run uses the {key.replace('_', ' ')} the request "
+                             f"names: {stated[key]}.")
+        elif resolved[key] != stated[key]:
+            notes.append(f"The request gives {key} {stated[key]!r}, but the run uses "
+                         f"the configuration's {resolved[key]!r}.")
+    return resolved, notes
 
 
 def _make_ask(api_key: Optional[str], model: Optional[str], provider: str
@@ -152,37 +237,42 @@ def run_workflow(workflow_config: Dict[str, Any], api_key: Optional[str],
         ``(results, execution_plan, interpretation, report_files)`` - the same
         four values the pipeline returned. ``execution_plan`` is now derived
         from the steps that ran, so it can no longer describe a step that did
-        not happen.
+        not happen. ``results["status"]`` is ``"incomplete"`` when the run
+        cannot be called complete (:func:`_incomplete_because`), with the
+        reasons among ``results["warnings"]`` and heading the interpretation.
 
     Raises
     ------
     ValueError
-        Only when the run produced nothing at all - no artifacts and no
-        successful step. Individual tool failures are recorded and reported
-        rather than raised, so a run that got most of the way still delivers
-        what it has.
+        Only when steps ran and none of them succeeded. Individual tool
+        failures are recorded and reported rather than raised, so a run that
+        got most of the way still delivers what it has.
 
     Examples
     --------
     >>> results, plan, text, files = run_workflow(
     ...     {'user_request': 'nothing to do'}, None, None, 'openai', '.')
-    >>> plan
-    []
-    >>> 'Workflow completed' in text
-    True
+    >>> plan, results['status']
+    ([], 'incomplete')
+    >>> text.splitlines()[1]
+    '- No step could run with the inputs given, so the run produced nothing.'
     """
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
 
+    # The files a request names are run even when no parser read it first.
+    config, adopted = adopt_request_inputs(workflow_config)
     ctx = RunContext(
-        goal=str(workflow_config.get("user_request") or ""),
-        config=workflow_config,
+        goal=str(config.get("user_request") or ""),
+        config=config,
         output_dir=str(output),
         settings={"api_key": api_key, "model": llm_model,
                   "llm_provider": llm_provider,
                   "progress_callback": progress_callback,
                   "ask_user": ask_user},
     )
+    for note in adopted:
+        ctx.note(note)
 
     def announce(event):
         """Tell the caller where the run is working, before it starts working.
@@ -270,9 +360,96 @@ def run_workflow(workflow_config: Dict[str, Any], api_key: Optional[str],
     inversion = ctx.get("inversion_results")
     if isinstance(inversion, dict):
         results = {**inversion, **results}
-    results["status"] = "success" if ctx.steps and not failed else results.get(
-        "status", "success")
-    return results, ctx.plan(), summarise_run(ctx), ctx.get("report_files") or {}
+    # The status was "success" whatever the run did, so a run the model ended
+    # before its first step came back a success with no report and a text
+    # saying it had completed. A caller acts on this field, and a person reads
+    # the text's first line: both have to say when the run fell short.
+    unfinished = _incomplete_because(ctx, results)
+    for reason in unfinished:
+        ctx.note(reason)
+    results["warnings"] = list(ctx.warnings)
+    if unfinished:
+        results["status"] = "incomplete"
+    else:
+        results["status"] = "success" if ctx.steps and not failed else results.get(
+            "status", "success")
+    return (results, ctx.plan(), summarise_run(ctx, unfinished),
+            ctx.get("report_files") or {})
+
+
+def _incomplete_because(ctx: RunContext, results: Dict[str, Any]) -> List[str]:
+    """Why the run cannot be called complete; empty when it can.
+
+    Complete means the run did what it could and was asked to do. It is not
+    when nothing ran; when the user or the step limit cut it off before its
+    report; when a step failed and was not recovered, whether or not a report
+    was written after it (the report lists it under "Not delivered"); or when
+    the request named a product the results do not hold, which is said with
+    the reason it is missing. A run with a broken TDEM file beside good ERT
+    data used to come back a success, the failure only among its warnings. A
+    run that ends without a report because none of its tools writes one - a
+    seismic line on its own - is complete: it ran out of work, not of steps.
+
+    Parameters
+    ----------
+    ctx : RunContext
+        The run, after the controller has finished with it.
+    results : dict
+        What the run returns, for the check of the requested products.
+
+    Returns
+    -------
+    list of str
+        One sentence per shortfall, to record as a warning.
+
+    Raises
+    ------
+    None
+
+    Examples
+    --------
+    >>> _incomplete_because(RunContext('invert the line'), {})
+    ['No step could run with the inputs given, so the run produced nothing.']
+    >>> ctx = RunContext('invert the line')
+    >>> _ = ctx.begin('invert_seismic'); ctx.finish('Inverted.')
+    >>> ctx.ended = 'exhausted'
+    >>> _incomplete_because(ctx, {})
+    []
+    >>> ctx = RunContext('invert a.ohm and the sounding')
+    >>> _ = ctx.begin('invert_tdem', description='Run TDEM inversion')
+    >>> ctx.finish(status='failed', error='ValueError: no time column')
+    >>> ctx.put('report_files', {'report_markdown': 'workflow_report.md'})
+    >>> _incomplete_because(ctx, {})
+    ['Run TDEM inversion did not complete: ValueError: no time column']
+    """
+    from .._intent import unmet_requests
+    from .catalog import shortfall_reasons
+
+    reasons: List[str] = []
+    reported = ctx.has("report_files")
+    if not ctx.steps:
+        reasons.append("No step could run with the inputs given, so the run "
+                       "produced nothing.")
+    elif not reported and ctx.ended == STOPPED:
+        reasons.append("The run was stopped at the user's request before its "
+                       "report was written.")
+    elif not reported and ctx.ended == STEP_LIMIT:
+        reasons.append("The run used all of its steps before its report was written.")
+    # The latest failure of each tool no later attempt recovered.
+    broken: Dict[str, Any] = {}
+    for step in ctx.steps:
+        if step.status == "failed" and not ctx.ran(step.tool):
+            broken[step.tool] = step
+    names = [step.description or step.tool for step in broken.values()]
+    if broken and not reported:
+        reasons.append("The run ended without a report, and "
+                       f"{', '.join(dict.fromkeys(names))} did not complete.")
+    else:
+        # Worded as the run's own note on the failure, so the two are one warning.
+        reasons += [f"{step.description or step.tool} did not complete: {step.error}"
+                    for step in broken.values()]
+    reasons.extend(unmet_requests(ctx.config, results, shortfall_reasons(ctx, results)))
+    return reasons
 
 
 def use_legacy() -> bool:

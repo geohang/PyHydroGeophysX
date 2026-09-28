@@ -45,8 +45,8 @@ coverage.xml
 .pytest_cache/
 # Scratch directories some tests create next to the repo root
 .pytest_tmp_*/
-# Local GUI reproductions created while validating real field datasets.
-tmp/*_native/
+# Local scratch: GUI reproductions of field datasets, review scripts and logs.
+tmp/
 
 # Local release plans that must never be committed or uploaded.
 local_plans/v0.5.0_ert_ui_rendering_plan.md
@@ -132,6 +132,7 @@ local_plans/
 # Markdown is local by default; explicitly publish only user-facing documents.
 *.md
 !/README.md
+!/CHANGELOG.md
 !/CONTRIBUTING.md
 !/THIRD_PARTY_NOTICES.md
 !/PyHydroGeophysX/agents/README.md

@@ -1,10 +1,17 @@
-"""Gravity/magnetics preprocessing, QC, gridding, and profiles."""
+"""Gravity/magnetics preprocessing, QC, gridding, profiles, and writing the grids."""
 
 from __future__ import annotations
 
-from typing import Any, Dict, Sequence, Tuple
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
+
+from PyHydroGeophysX._internal.utils import noop as _noop, utc_now as _utc_now
+from PyHydroGeophysX.data_processing import table_io
+
+LogFn = Callable[[str], None]
+
 
 def regional_residual(x: np.ndarray, y: np.ndarray, value: np.ndarray,
                        degree: int = 1) -> Tuple[np.ndarray, np.ndarray]:
@@ -121,10 +128,46 @@ def extract_profile(grid: Dict[str, np.ndarray], p1: Sequence[float], p2: Sequen
     dist = np.hypot(px - p1[0], py - p1[1])
     return {"distance": dist, "x": px, "y": py, "value": vals}
 
+
+def save_grid(grid: Dict[str, np.ndarray], out_dir: Path, name: str = "anomaly",
+              log: LogFn = _noop) -> List[str]:
+    """Save a grid to npy + CSV + VTK (best-effort). Return written paths."""
+    out = table_io.ensure_dir(out_dir)
+    paths: List[str] = []
+    xx, yy, zz = grid["xx"], grid["yy"], grid["zz"]
+    np.save(out / f"{name}_grid.npy", np.asarray(zz, float)); paths.append(str(out / f"{name}_grid.npy"))
+    rows = list(zip(xx.ravel().tolist(), yy.ravel().tolist(), np.asarray(zz, float).ravel().tolist()))
+    table_io.write_csv(out / f"{name}_grid.csv", rows, header=["x", "y", name])
+    paths.append(str(out / f"{name}_grid.csv"))
+    try:
+        import pyvista as pv
+        sg = pv.StructuredGrid(np.asarray(xx, float), np.asarray(yy, float),
+                               np.zeros_like(np.asarray(xx, float)))
+        sg[name] = np.asarray(zz, float).ravel(order="F")
+        sg.save(str(out / f"{name}_grid.vtk"))
+        paths.append(str(out / f"{name}_grid.vtk"))
+    except Exception as exc:  # noqa: BLE001 - VTK is best-effort
+        log(f"VTK export skipped: {exc}")
+    return paths
+
+
+def build_gravmag_config(kind: str, settings: Dict[str, Any], bodies: List[Dict[str, Any]],
+                         field: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    return {
+        "created_time": _utc_now(),
+        "kind": kind,
+        "settings": dict(settings),
+        "bodies": [dict(b) for b in bodies],
+        "field": dict(field) if field else {},
+    }
+
+
 __all__ = [
     "regional_residual",
     "spatially_balanced_indices",
     "qc_products",
     "grid_data",
     "extract_profile",
+    "save_grid",
+    "build_gravmag_config",
 ]
