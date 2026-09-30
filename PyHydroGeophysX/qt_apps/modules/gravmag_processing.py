@@ -51,6 +51,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     set_rows_enabled,
 )
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import Model3DView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
@@ -92,7 +93,6 @@ class GravMagProcessingModule(BaseModule):
         self._tabs = QTabWidget()
         self._plot_widget = pg.PlotWidget(); self._plot_widget.setBackground("w")
         self._plot_widget.showGrid(x=True, y=True, alpha=0.3)
-        self._plot_widget.setLabel("bottom", "x"); self._plot_widget.setLabel("left", "y")
         self._scatter = pg.ScatterPlotItem(size=13)
         self._plot_widget.getPlotItem().addItem(self._scatter)
         self._qc_tab = self._build_qc_tab()
@@ -114,6 +114,21 @@ class GravMagProcessingModule(BaseModule):
         root.addWidget(center, stretch=1)
         root.addWidget(self._build_controls())
         self._on_kind_changed()
+        self._label_length_axes()
+        # View > Length Units: the station coordinates stay in metres; only the
+        # axes of the maps and the profile retick.
+        length_units.notifier().changed.connect(self._on_length_unit_changed)
+
+    def _label_length_axes(self) -> None:
+        """Label the station map, QC map and profile in the studio's length unit."""
+        for plot in (self._plot_widget, self._qc_plot):
+            length_units.pyqtgraph_axis(plot, "bottom", "x")
+            length_units.pyqtgraph_axis(plot, "left", "y")
+        length_units.pyqtgraph_axis(self._profile_plot, "bottom", "Distance")
+
+    def _on_length_unit_changed(self, _unit: str) -> None:
+        """Relabel the length axes in the studio's new unit."""
+        self._label_length_axes()
 
     @staticmethod
     def _dspin(value, lo, hi, step, dec) -> QDoubleSpinBox:
@@ -409,8 +424,6 @@ class GravMagProcessingModule(BaseModule):
 
         self._qc_graphics = pg.GraphicsLayoutWidget()
         self._qc_plot = self._qc_graphics.addPlot(row=0, col=0)
-        self._qc_plot.setLabel("bottom", "x (m)")
-        self._qc_plot.setLabel("left", "y (m)")
         self._qc_plot.showGrid(x=True, y=True, alpha=0.25)
         self._qc_image = pg.ImageItem()
         self._qc_image.setColorMap(self._cmap)
@@ -438,7 +451,6 @@ class GravMagProcessingModule(BaseModule):
         layout.addLayout(stats_row)
         self._profile_plot = pg.PlotWidget(); self._profile_plot.setBackground("w")
         self._profile_plot.showGrid(x=True, y=True, alpha=0.3)
-        self._profile_plot.setLabel("bottom", "Distance (m)")
         self._profile_plot.setLabel("left", "Anomaly")
         self._profile_plot.setMinimumHeight(180)
         layout.addWidget(self._profile_plot, stretch=1)

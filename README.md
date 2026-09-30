@@ -1,6 +1,6 @@
 ﻿[![tests](https://github.com/geohang/PyHydroGeophysX/actions/workflows/tests.yml/badge.svg)](https://github.com/geohang/PyHydroGeophysX/actions/workflows/tests.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17025139.svg)](https://doi.org/10.5281/zenodo.17025139)
 
 <div align="center">
@@ -467,9 +467,9 @@ All examples have paired `.ipynb` notebooks and `.py` scripts under `examples/`.
 | `Ex_FDEM_workflow` | FDEM forward + inversion (SimPEG) |
 | `Ex_hydro_to_multigeophys` | Hydro → petrophysics → multi-method forward |
 | `Ex_MC_Hydro` | Monte Carlo uncertainty quantification |
-| `Ex_sensitivity_analysis` | Sensitivity, model resolution and reference-model dependence (DOI) |
-| `Ex_ensemble_assimilation` | EnKF and ES-MDA updates of a water-content forecast |
-| `Ex_posterior_uncertainty` | Posterior resistivity covariance propagated to water content |
+| `Ex_sensitivity_analysis` | Sensitivity, resolution and depth of investigation of an ERT survey over the MODFLOW model |
+| `Ex_ensemble_assimilation` | EnKF and ES-MDA updates of MODFLOW water content with an ERT survey |
+| `Ex_posterior_uncertainty` | Posterior ERT uncertainty propagated to water content, checked against MODFLOW |
 | `Ex_multi_agent_workflow` | Automated multi-agent ERT+seismic workflow |
 
 Three examples read another example's output: run `EX_SRT_forward` before
@@ -637,6 +637,78 @@ Please also cite the underlying libraries you use:
   pages   = {733--739},
   year    = {2016},
   doi     = {10.1111/gwat.12413}
+}
+
+@misc{langevin2017modflow6,
+  author       = {Langevin, Christian D. and Hughes, Joseph D. and Banta, Edward R. and
+                  Provost, Alden M. and Niswonger, Richard G. and Panday, Sorab},
+  title        = {{MODFLOW} 6 Modular Hydrologic Model},
+  howpublished = {U.S. Geological Survey Software},
+  year         = {2017},
+  doi          = {10.5066/F76Q1VQV}
+}
+
+@techreport{langevin2017modflow6gwf,
+  author      = {Langevin, Christian D. and Hughes, Joseph D. and Banta, Edward R. and
+                 Niswonger, Richard G. and Panday, Sorab and Provost, Alden M.},
+  title       = {Documentation for the {MODFLOW} 6 Groundwater Flow Model},
+  institution = {U.S. Geological Survey},
+  type        = {Techniques and Methods},
+  number      = {6-A55},
+  year        = {2017},
+  doi         = {10.3133/tm6A55}
+}
+```
+
+**Hydrological modeling (ParFlow):** the four papers ParFlow asks users to cite.
+Cite the release you ran as well; https://doi.org/10.5281/zenodo.4816884 resolves
+to the latest one.
+```bibtex
+@article{ashby1996parflow,
+  author  = {Ashby, Steven F. and Falgout, Robert D.},
+  title   = {A Parallel Multigrid Preconditioned Conjugate Gradient Algorithm for
+             Groundwater Flow Simulations},
+  journal = {Nuclear Science and Engineering},
+  volume  = {124},
+  number  = {1},
+  pages   = {145--159},
+  year    = {1996},
+  doi     = {10.13182/NSE96-A24230}
+}
+
+@article{jones2001parflow,
+  author  = {Jones, Jim E. and Woodward, Carol S.},
+  title   = {Newton--{Krylov}-multigrid solvers for large-scale, highly
+             heterogeneous, variably saturated flow problems},
+  journal = {Advances in Water Resources},
+  volume  = {24},
+  number  = {7},
+  pages   = {763--774},
+  year    = {2001},
+  doi     = {10.1016/S0309-1708(00)00075-0}
+}
+
+@article{kollet2006parflow,
+  author  = {Kollet, Stefan J. and Maxwell, Reed M.},
+  title   = {Integrated surface--groundwater flow modeling: A free-surface overland
+             flow boundary condition in a parallel groundwater flow model},
+  journal = {Advances in Water Resources},
+  volume  = {29},
+  number  = {7},
+  pages   = {945--958},
+  year    = {2006},
+  doi     = {10.1016/j.advwatres.2005.08.006}
+}
+
+@article{maxwell2013parflow,
+  author  = {Maxwell, Reed M.},
+  title   = {A terrain-following grid transform and preconditioner for parallel,
+             large-scale, integrated hydrologic modeling},
+  journal = {Advances in Water Resources},
+  volume  = {53},
+  pages   = {109--117},
+  year    = {2013},
+  doi     = {10.1016/j.advwatres.2012.10.001}
 }
 ```
 

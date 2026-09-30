@@ -25,6 +25,8 @@ from simpeg import (
 )
 from simpeg.utils import mkvc
 
+from ..visualization.axis_units import set_length_axis
+
 
 # ---------------------------------------------------------------------------
 # TDEMInversion Result
@@ -372,7 +374,7 @@ class TDEMInversion:
         
         ax1.set_xscale('log')
         ax1.set_xlabel('Conductivity (S/m)')
-        ax1.set_ylabel('Depth (m)')
+        set_length_axis(ax1, "y", "Depth")
         ax1.set_title('Recovered Conductivity Model')
         
         legend_labels = []

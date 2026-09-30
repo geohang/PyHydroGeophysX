@@ -471,6 +471,38 @@ def test_smoothness_stops_at_zone_outlines_and_only_there(synthetic_series):
     np.testing.assert_allclose(responses[0], responses[1], rtol=1e-10)
 
 
+@pytest.mark.parametrize("reference_weight", [0.0, 1.0])
+def test_depth_of_investigation_sees_the_reference_only_through_smallness(
+        synthetic_series, reference_weight):
+    from pygimli.physics import ert
+
+    from PyHydroGeophysX.analysis import compute_depth_of_investigation
+    from PyHydroGeophysX.inversion.ert_inversion import ERTInversion
+
+    files, mesh = synthetic_series
+    data = ert.load(files[0])
+    # Both runs go to convergence, so they differ by their reference and not
+    # by where each stopped: a run halted at the target misfit keeps its start
+    # model wherever the data are weak.
+    inversion = ERTInversion(data, mesh=mesh, lambda_val=10.0, max_iterations=8, verbose=False,
+                             target_chi_squared=0.0, reference_weight=reference_weight)
+    inversion.setup()
+    cells = inversion.fwd_operator.paraDomain
+    doi, _ = compute_depth_of_investigation(inversion, data, cells, reference_resistivity=100.0)
+    # A fully reference-controlled cell scores (1.2 - 0.8) / (1.2 + 0.8).
+    index = doi / 0.2
+    x, z = np.asarray(cells.cellCenters())[:, :2].T
+    under_array = (x > 2) & (x < 21)
+    if reference_weight == 0.0:
+        # First-order smoothness cancels a homogeneous reference: both runs
+        # converge to one model.
+        assert index.max() < 0.05
+    else:
+        assert index.max() > 0.5
+        assert (index[under_array & (z < -6)].mean()
+                > index[under_array & (z > -1)].mean() + 0.1)
+
+
 @pytest.mark.parametrize("start,end", [([0, 0], [4, 0]), ([4, 0], [0, 0]), ([0, 0], [4, 2])])
 @pytest.mark.parametrize("count", [2, 5, 17])
 def test_profile_runs_from_point2_toward_point1(start, end, count):
@@ -1200,3 +1232,57 @@ def test_a_030_call_still_runs_as_it_did(case, tmp_path, monkeypatch, request):
             and "PyHydroGeophysX 0.5.0" in str(w.message)]
     assert len(ours) == (0 if says is None else 1) and all(says in message for message in ours), ours
     assert check(value)
+
+
+# --------------------------------------------------------------------------
+# Plot length units: feet, and depth for a survey without elevations
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize("unit, first, second", [("m", "10", "20"), ("ft", "20", "40")])
+def test_feet_put_round_feet_on_metre_data_and_leave_the_data_alone(unit, first, second):
+    pytest.importorskip("matplotlib")
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    from matplotlib.figure import Figure
+
+    from PyHydroGeophysX.visualization.axis_units import set_length_axis
+
+    fig = Figure()
+    FigureCanvasAgg(fig)
+    ax = fig.add_subplot(111)
+    line, = ax.plot([0.0, 40.0], [0.0, 1.0])
+    assert set_length_axis(ax, "x", "Distance", unit=unit) == f"Distance ({unit})"
+    fig.canvas.draw()
+    shown = [t.get_text() for t in ax.get_xticklabels()]
+    assert first in shown and second in shown, shown
+    assert line.get_xdata().tolist() == [0.0, 40.0]        # still metres
+    if unit == "ft":
+        assert ax.format_coord(10.0, 0.5).startswith("(x, y) = (32.81")
+
+
+@pytest.mark.parametrize("top, label, lowest_tick", [
+    (0.0, "Depth (ft)", "0"),            # read without elevations: depth, positive down
+    (300.0, "Elevation (ft)", None),     # real topography keeps its elevations
+])
+def test_a_section_without_elevation_reads_depth(top, label, lowest_tick):
+    pg = pytest.importorskip("pygimli")
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    from matplotlib.figure import Figure
+
+    from PyHydroGeophysX.visualization import plot_model_section
+
+    grid = pg.createGrid(x=np.linspace(0, 40, 21), y=np.linspace(-10, 0, 6) + top)
+    fig = Figure()
+    FigureCanvasAgg(fig)
+    ax = fig.add_subplot(111)
+    plot_model_section(grid, np.linspace(10, 100, grid.cellCount()), ax=ax, length_unit="ft")
+    # pyGIMLi's colorbar opens an empty pyplot figure, which its exit handler
+    # would otherwise try to show once the session ends.
+    import matplotlib.pyplot as plt
+    plt.close("all")
+    fig.canvas.draw()
+    shown = [float(t.get_text().replace("−", "-")) for t in ax.get_yticklabels()]
+    assert (ax.get_xlabel(), ax.get_ylabel()) == ("Distance (ft)", label)
+    if lowest_tick is None:
+        assert min(shown) > 900.0        # 300 m is 984 ft
+    else:
+        assert min(shown) == 0.0 and max(shown) >= 30.0    # 10 m of depth is 32.8 ft

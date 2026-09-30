@@ -65,6 +65,10 @@ class FigureStyle:
     change_cmap: str = COLORMAPS["change"][0]
     water_content_cmap: str = COLORMAPS["water_content"][0]
     colorbar_orientation: str = "vertical"
+    #: ``'m'`` or ``'ft'``: the unit section axes are shown in; None is the
+    #: package default (``visualization.axis_units.get_length_unit``). The
+    #: models stay in metres - only the tick labels change.
+    length_unit: Optional[str] = None
 
     def figure_size(self, n_panels: int, rows: int = 1) -> Tuple[float, float]:
         """Width and height in inches for a row of ``n_panels``, capped.
@@ -104,8 +108,8 @@ def style_from_config(config: Optional[Dict[str, Any]] = None) -> FigureStyle:
     ----------
     config : dict, optional
         Workflow configuration. ``figure_style`` may carry ``size`` (a key of
-        :data:`SIZES`, or a number of inches per panel), ``dpi``, ``font``, and
-        a colormap per quantity.
+        :data:`SIZES`, or a number of inches per panel), ``dpi``, ``font``, a
+        colormap per quantity and ``length_unit`` (``'m'`` or ``'ft'``).
 
     Returns
     -------
@@ -129,6 +133,10 @@ def style_from_config(config: Optional[Dict[str, Any]] = None) -> FigureStyle:
     >>> style_from_config({'figure_style': {'resistivity_cmap': 'jet'}}).resistivity_cmap
     'viridis'
     >>> style_from_config(None) == FigureStyle()
+    True
+    >>> style_from_config({'figure_style': {'length_unit': 'feet'}}).length_unit
+    'ft'
+    >>> style_from_config({'figure_style': {'length_unit': 'cubits'}}).length_unit is None
     True
     """
     requested = ((config or {}).get("figure_style") or {})
@@ -162,6 +170,15 @@ def style_from_config(config: Optional[Dict[str, Any]] = None) -> FigureStyle:
     orientation = requested.get("colorbar")
     if orientation in ("vertical", "horizontal"):
         changes["colorbar_orientation"] = orientation
+
+    unit = requested.get("length_unit") or requested.get("units")
+    if isinstance(unit, str):
+        from PyHydroGeophysX.visualization.axis_units import normalize_length_unit
+
+        try:
+            changes["length_unit"] = normalize_length_unit(unit)
+        except ValueError:
+            pass
 
     return replace(style, **changes) if changes else style
 
@@ -218,28 +235,45 @@ def change_title(index: int, dates: Optional[Sequence[str]] = None) -> str:
     return label
 
 
-def apply(ax, style: FigureStyle, title: str = "", xlabel: str = "Distance (m)",
-          ylabel: str = "Elevation (m)") -> None:
-    """Give one panel the report's axis labels, title and type sizes.
+def apply(ax, style: FigureStyle, title: str = "", xlabel: Optional[str] = None,
+          ylabel: Optional[str] = None, *, mesh: Any = None,
+          vertical: str = "auto") -> None:
+    """Give one section panel the report's axes, title and type sizes.
 
     Parameters
     ----------
     ax : matplotlib axes
         The panel.
     style : FigureStyle
-        The style in force.
+        The style in force; its ``length_unit`` is what the axes are shown in.
     title : str, optional
         Panel title; omitted when blank.
-    xlabel, ylabel : str
-        Axis labels. Pass ``''`` to leave an axis unlabelled - worth doing for
-        every panel but the first in a row, where repeating "Elevation (m)"
-        five times costs the width that made the labels collide.
+    xlabel, ylabel : str, optional
+        Axis labels. None gives ``Distance`` and ``Elevation`` in the style's
+        unit - or ``Depth``, positive down, when the section has no elevation
+        (see ``mesh``). Pass ``''`` to leave an axis unlabelled - worth doing
+        for every panel but the first in a row, where repeating the label five
+        times costs the width that made the labels collide. Any other text is
+        used as it is.
+    mesh : pygimli.Mesh, optional
+        The mesh the panel is drawn on, which says whether the survey had
+        elevations. Without it the vertical axis stays ``Elevation``.
+    vertical : ``'auto'`` | ``'elevation'`` | ``'depth'``
+        Overrides that decision.
     """
+    from PyHydroGeophysX.visualization.axis_units import set_section_axes
+
     if title:
         ax.set_title(title, fontsize=style.title_size, fontweight="bold")
-    if xlabel:
+    if mesh is None and vertical == "auto":
+        vertical = "elevation"
+    set_section_axes(ax, mesh=mesh, vertical=vertical, unit=style.length_unit,
+                     label_x=xlabel is None, label_y=ylabel is None,
+                     fontsize=style.label_size)
+    # '' clears the label rather than leaving pyGIMLi's own "$x$ in m" there.
+    if xlabel is not None:
         ax.set_xlabel(xlabel, fontsize=style.label_size)
-    if ylabel:
+    if ylabel is not None:
         ax.set_ylabel(ylabel, fontsize=style.label_size)
     ax.tick_params(labelsize=style.tick_size)
 

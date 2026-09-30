@@ -12,6 +12,14 @@ PyHydroGeophysX.visualization.animation module
    :show-inheritance:
    :undoc-members:
 
+PyHydroGeophysX.visualization.axis\_units module
+------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.visualization.axis_units
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.visualization.basemap module
 --------------------------------------------
 

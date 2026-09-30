@@ -537,7 +537,9 @@ Provide a brief explanation (3-4 sentences) suitable for a user about:
                 'seismic_data': ttData,
                 'velocity_threshold': velocity_threshold,  # Must pass this!
                 'inversion_params': workflow_config.get('seismic_params', {}),
-                'output_dir': f"{output_dir}/seismic"
+                'output_dir': f"{output_dir}/seismic",
+                # The velocity figure's axes follow the report's length unit.
+                'figure_style': workflow_config.get('figure_style') or {},
             }
             
             return seismic_agent.execute(seismic_input)

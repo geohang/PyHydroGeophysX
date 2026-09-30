@@ -8,7 +8,7 @@ from typing import Callable, Dict, Optional
 
 import pyqtgraph as pg
 from PySide6.QtCore import QSettings, QTimer, Qt
-from PySide6.QtGui import QAction, QPixmap
+from PySide6.QtGui import QAction, QActionGroup, QPixmap
 from PySide6.QtWidgets import (
     QDockWidget,
     QFileDialog,
@@ -36,6 +36,7 @@ from PyHydroGeophysX.qt_apps.modules import build_module
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule
 from PyHydroGeophysX.qt_apps.state import StudioState
 from PyHydroGeophysX.qt_apps.workers import prepare_workflow_process
+from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.array_viewer import ArrayViewer
 from PyHydroGeophysX.qt_apps.widgets.log_panel import LogPanel
 from PyHydroGeophysX.qt_apps.widgets.project_tree import ProjectTree
@@ -106,6 +107,8 @@ class PyHydroGeophysXStudio(QMainWindow):
         if self._stall_watch is not None:
             self._stall_watch.stalled.connect(lambda msg: self.log(msg, "warn"))
 
+        # Before any page draws: every plot reads the unit when it draws.
+        length_units.restore()
         self._build_menus()
         self._build_toolbar()
         self._geometry_restored = self._restore_window_settings()
@@ -302,6 +305,21 @@ class PyHydroGeophysXStudio(QMainWindow):
         view_menu = menubar.addMenu("&View")
         self._add_action(view_menu, "Reset Layout", self._reset_layout)
         view_menu.addSeparator()
+        # One unit for every plot in the studio. Only the axes change: models,
+        # meshes and exports stay in metres.
+        units_menu = view_menu.addMenu("Length Units")
+        self._unit_group = QActionGroup(self)
+        self._unit_group.setExclusive(True)
+        for unit, text in (("m", "Metres (m)"), ("ft", "Feet (ft)")):
+            action = self._add_action(
+                units_menu, text, lambda _checked=False, u=unit: self._set_length_unit(u),
+                checkable=True)
+            action.setData(unit)
+            action.setChecked(unit == length_units.current())
+            action.setStatusTip("Show distances, elevations and depths on every plot in "
+                                f"{text.lower()}. The data themselves stay in metres.")
+            self._unit_group.addAction(action)
+        view_menu.addSeparator()
         view_menu.addAction(self._tree_dock.toggleViewAction())
         view_menu.addAction(self._properties_dock.toggleViewAction())
         view_menu.addAction(self._log_dock.toggleViewAction())
@@ -342,6 +360,12 @@ class PyHydroGeophysXStudio(QMainWindow):
         self._add_action(toolbar, "Zoom", lambda: self._set_mouse_mode(rect=True), icon_name="fa5s.search-plus")
         self._pick_action = self._add_action(toolbar, "Pick", self._toggle_pick, checkable=True, icon_name="fa5s.crosshairs")
         self._add_action(toolbar, "Delete", self._delete_last_marker, icon_name="fa5s.eraser")
+
+    def _set_length_unit(self, unit: str) -> None:
+        """Redraw every plot with its axes in ``unit`` (``'m'`` or ``'ft'``)."""
+        unit = length_units.set_unit(unit)
+        self.log(f"Plots now show lengths in {'feet' if unit == 'ft' else 'metres'}; "
+                 "the data stay in metres.", "info")
 
     def _add_action(self, target, text: str, slot, checkable: bool = False, icon_name: str = "") -> QAction:
         action = QAction(text, self)

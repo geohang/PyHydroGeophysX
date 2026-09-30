@@ -58,6 +58,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     select_directory,
 )
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets import temperature_panel
 from PyHydroGeophysX.qt_apps.widgets.mesh_preview import MeshPreviewView
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
@@ -69,6 +70,7 @@ from PyHydroGeophysX.qt_apps.workers import (
     TaskWorker,
 )
 from PyHydroGeophysX.data_processing.ert_io import save_edited_ert_container
+from PyHydroGeophysX.visualization.axis_units import set_length_axis
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
     WorkflowRunResult,
@@ -222,9 +224,12 @@ class ERTProcessingModule(BaseModule):
         self._plot_widget = pg.PlotWidget()
         self._plot_widget.setBackground("w")
         self._plot_widget.showGrid(x=True, y=True, alpha=0.3)
-        self._plot_widget.setLabel("bottom", "x (m)")
-        self._plot_widget.setLabel("left", "z / elevation (m)")
         self._plot = self._plot_widget.getPlotItem()
+        self._electrode_axes: Optional[Tuple[str, str]] = None
+        self._label_electrode_axes()
+        # View > Length Units: both plots here relabel and retick; the data stay
+        # in metres.
+        length_units.notifier().changed.connect(self._on_length_unit_changed)
         self._scatter = pg.ScatterPlotItem(size=12, pen=pg.mkPen("#1565ff", width=1), brush=pg.mkBrush(30, 120, 255, 180))
         self._sel_scatter = pg.ScatterPlotItem(size=18, pen=pg.mkPen("#ff8c00", width=2), brush=pg.mkBrush(255, 140, 0, 120))
         self._plot.addItem(self._scatter)
@@ -3975,6 +3980,28 @@ class ERTProcessingModule(BaseModule):
         if self._pseudo:
             self._draw_pseudosection()
 
+    def _label_electrode_axes(self) -> None:
+        """Label the electrode plot's axes in the studio's length unit.
+
+        A line read without elevations puts every electrode at z = 0, and
+        calling that axis an elevation would present a made-up datum as a
+        measured one.
+        """
+        z = np.asarray(self._z, dtype=float)
+        name = "Elevation" if z.size and np.any(np.abs(z) > 1.0e-6) else "z"
+        key = (length_units.current(), name)
+        if key == self._electrode_axes:
+            return
+        length_units.pyqtgraph_axis(self._plot, "bottom", "x")
+        length_units.pyqtgraph_axis(self._plot, "left", name)
+        self._electrode_axes = key
+
+    def _on_length_unit_changed(self, _unit: str) -> None:
+        """Relabel the electrode plot and redraw the pseudosection in the new unit."""
+        self._label_electrode_axes()
+        if self._pseudo:
+            self._draw_pseudosection()
+
     def _show_pseudosection_message(self, message: str) -> None:
         """Show a stable empty-state message on the static section canvas."""
         self._pseudo_ax.clear()
@@ -4046,8 +4073,10 @@ class ERTProcessingModule(BaseModule):
         )
         self._pseudo_ax.set_xlim(x_min, x_max)
         self._pseudo_ax.set_ylim(depth_max, 0.0)
-        self._pseudo_ax.set_xlabel("x (m)")
-        self._pseudo_ax.set_ylabel("pseudo-depth (m, positive down)")
+        # The y values are already depths below the surface, so only the unit
+        # changes; the inverted axis keeps them positive down.
+        set_length_axis(self._pseudo_ax, "x", "x")
+        set_length_axis(self._pseudo_ax, "y", "Pseudo-depth")
         self._pseudo_ax.grid(True, which="major", alpha=0.28)
         self._pseudo_ax.minorticks_on()
         self._pseudo_ax.grid(True, which="minor", alpha=0.10)
@@ -4096,6 +4125,7 @@ class ERTProcessingModule(BaseModule):
     # -- rendering / publish -------------------------------------------------
     def _refresh(self) -> None:
         self._scatter.setData(self._x, self._z)
+        self._label_electrode_axes()
         if self._selected is not None and 0 <= self._selected < len(self._x):
             self._sel_scatter.setData([self._x[self._selected]], [self._z[self._selected]])
         else:

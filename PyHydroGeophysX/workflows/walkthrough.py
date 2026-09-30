@@ -1156,7 +1156,10 @@ WALKTHROUGHS["em.inversion"] = Walkthrough(
         "1D electromagnetic inversion: a frequency- or time-domain sounding to a "
         "layered resistivity model."
     ),
-    imports=_NUMPY_IMPORTS + ("from PyHydroGeophysX.workflows import em1d",),
+    imports=_NUMPY_IMPORTS + (
+        "from PyHydroGeophysX.visualization.axis_units import set_length_axis, set_section_axes",
+        "from PyHydroGeophysX.workflows import em1d",
+    ),
     parameters=_em_parameters,
     steps=(
         Step(
@@ -1210,7 +1213,8 @@ WALKTHROUGHS["em.inversion"] = Walkthrough(
                 "    fig, ax = plt.subplots(figsize=(4, 6), constrained_layout=True)\n"
                 "    ax.step(rho, depth, where=\"post\")\n"
                 '    ax.set_xscale("log"); ax.invert_yaxis()\n'
-                '    ax.set_xlabel("resistivity (ohm-m)"); ax.set_ylabel("depth (m)")\n'
+                '    ax.set_xlabel("resistivity (ohm-m)")\n'
+                '    set_length_axis(ax, "y", "depth")    # unit="ft" for feet\n'
                 '    fig.savefig(OUT_DIR / "em_profile.png", dpi=150)'
             ),
         ),
@@ -1228,7 +1232,10 @@ WALKTHROUGHS["em.line_inversion"] = Walkthrough(
         "Laterally constrained 1D electromagnetic inversion of a line of "
         "soundings, laid side by side as a resistivity section."
     ),
-    imports=_NUMPY_IMPORTS + ("from PyHydroGeophysX.workflows import em1d",),
+    imports=_NUMPY_IMPORTS + (
+        "from PyHydroGeophysX.visualization.axis_units import set_length_axis, set_section_axes",
+        "from PyHydroGeophysX.workflows import em1d",
+    ),
     parameters=_em_line_parameters,
     steps=(
         Step(
@@ -1256,8 +1263,8 @@ WALKTHROUGHS["em.line_inversion"] = Walkthrough(
         Step(
             title="Plot the section",
             note=(
-                "The models are drawn against elevation, the cells between the edges "
-                "the inversion returned. The deep part of each column lies below what "
+                "The models are drawn against elevation - or depth, when the soundings "
+                "carry none - the cells between the edges the inversion returned. The deep part of each column lies below what "
                 "its sounding resolves; 'doi' in the result is that depth per sounding, "
                 "and a section is read above it."
             ),
@@ -1268,7 +1275,10 @@ WALKTHROUGHS["em.line_inversion"] = Walkthrough(
                 "image = ax.pcolormesh(ex, ez, np.ma.masked_invalid(np.log10(section)).T,\n"
                 '                      cmap="turbo")\n'
                 'fig.colorbar(image, ax=ax, label="log10 resistivity (ohm-m)")\n'
-                'ax.set_xlabel("distance along the line (m)"); ax.set_ylabel("elevation (m)")\n'
+                "# Depth, positive down, when the soundings carry no elevation;\n"
+                '# unit="ft" shows the axes in feet.\n'
+                'set_section_axes(ax, z=ez, xlabel="distance along the line",\n'
+                '                 elevation_name="elevation", depth_name="depth")\n'
                 'fig.savefig(OUT_DIR / "em_line_section.png", dpi=150)'
             ),
         ),

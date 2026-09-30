@@ -116,6 +116,30 @@ def _is_streamlit_cloud() -> bool:
     return any(cloud_indicators)
 
 
+def _length_unit() -> str:
+    """The unit this session's plot axes show lengths in: ``'m'`` or ``'ft'``.
+
+    Chosen in the sidebar and passed to every plot explicitly. The package's
+    ``set_length_unit()`` is a process-wide default, and the hosted app serves
+    all its sessions from one process, so it would carry one user's choice to
+    everyone else's plots.
+    """
+    return st.session_state.get("length_unit", "m")
+
+
+def _apply_length_unit(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Carry the sidebar's length unit into a run's ``figure_style``.
+
+    Only feet is written. Metres is the package default anyway, and an explicit
+    ``figure_style`` outranks the request text, so writing ``'m'`` would
+    silently overrule a request that asks for its figures in feet.
+    """
+    if _length_unit() == "ft":
+        style = config.get("figure_style")
+        config["figure_style"] = {**(style if isinstance(style, dict) else {}), "length_unit": "ft"}
+    return config
+
+
 # ---------------------------------------------------------------------------
 # Streamlit <-> Qt desktop studio bridge (Streamlit side)
 # ---------------------------------------------------------------------------
@@ -3137,6 +3161,8 @@ then return here to run PyHydroGeophysX workflows or ask the AI assistant for cl
 </body>
 </html>
 """
+        # The refraction inset's distance label; the sketch has no numbered ticks.
+        html_sim = html_sim.replace('"x (m)"', f'"x ({_length_unit()})"')
         if hasattr(st, "iframe"):
             from urllib.parse import quote
 
@@ -5244,6 +5270,10 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
     import matplotlib.pyplot as plt
     import numpy as np
 
+    from PyHydroGeophysX.visualization.axis_units import set_length_axis, set_section_axes
+
+    # Axis unit of the figures only; the profile and meshes stay in metres.
+    unit = config.get("length_unit") or "m"
     methods = _ordered_unique_methods(config.get("hydro_methods", HYDRO_RESPONSE_METHODS))
     output_dir = _resolve_user_path(config.get("hydro_output_dir", "results/hydro_to_multigeophys"))
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -5278,8 +5308,10 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
         cf = ax.contourf(x2d, layer_centers, profile["water_content_profile"], levels=25, cmap="YlGnBu")
         ax.plot(profile["L_profile"], profile["structure"][0, :], "k-", lw=1.2)
         ax.set_title("Hydrologic 2D profile (water content)")
-        ax.set_xlabel("Distance along profile (m)")
-        ax.set_ylabel("Elevation (m)")
+        # The model top is the section's ground surface: Elevation when it is
+        # a real elevation, Depth when the model sits flat at zero.
+        set_section_axes(ax, surface=profile["structure"][0, :], unit=unit,
+                         xlabel="Distance along profile")
         cbar = plt.colorbar(cf, ax=ax)
         cbar.set_label("Water content (-)")
         plt.tight_layout()
@@ -5425,40 +5457,52 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
                     result["stats"]["ert_data_count"] = int(ert_data.size())
                     result["methods_completed"].append("ERT")
 
+                # pyGIMLi labels a model section "$y$ in m" or "Depth in m";
+                # set_section_axes relabels it in the chosen unit, as Elevation
+                # or Depth from the mesh surface. The x axes of the pseudosection
+                # and of the first-pick plot are positions along the line.
                 if needs_ert and needs_srt:
                     fig = plt.figure(figsize=(14, 8))
                     ax1 = fig.add_subplot(2, 2, 1)
                     pg.show(mesh, resistivity_model, ax=ax1, cMap="Spectral_r", label="Resistivity (ohm m)")
+                    set_section_axes(ax1, mesh=mesh, unit=unit)
                     ax1.set_title("2D resistivity model")
 
                     ax2 = fig.add_subplot(2, 2, 2)
                     pg.show(mesh, velocity_model, ax=ax2, cMap="turbo", label="Velocity (m/s)")
+                    set_section_axes(ax2, mesh=mesh, unit=unit)
                     ax2.set_title("2D velocity model")
 
                     ax3 = fig.add_subplot(2, 2, 3)
                     pg_ert.show(ert_data, ax=ax3)
+                    set_length_axis(ax3, "x", "x", unit=unit)
                     ax3.set_title("Synthetic ERT response")
 
                     ax4 = fig.add_subplot(2, 2, 4)
                     tt.drawFirstPicks(ax4, srt_data)
+                    set_length_axis(ax4, "x", "x", unit=unit)
                     ax4.set_title("Synthetic SRT first arrivals")
                 elif needs_ert:
                     fig = plt.figure(figsize=(12, 5))
                     ax1 = fig.add_subplot(1, 2, 1)
                     pg.show(mesh, resistivity_model, ax=ax1, cMap="Spectral_r", label="Resistivity (ohm m)")
+                    set_section_axes(ax1, mesh=mesh, unit=unit)
                     ax1.set_title("2D resistivity model")
 
                     ax2 = fig.add_subplot(1, 2, 2)
                     pg_ert.show(ert_data, ax=ax2)
+                    set_length_axis(ax2, "x", "x", unit=unit)
                     ax2.set_title("Synthetic ERT response")
                 else:
                     fig = plt.figure(figsize=(12, 5))
                     ax1 = fig.add_subplot(1, 2, 1)
                     pg.show(mesh, velocity_model, ax=ax1, cMap="turbo", label="Velocity (m/s)")
+                    set_section_axes(ax1, mesh=mesh, unit=unit)
                     ax1.set_title("2D velocity model")
 
                     ax2 = fig.add_subplot(1, 2, 2)
                     tt.drawFirstPicks(ax2, srt_data)
+                    set_length_axis(ax2, "x", "x", unit=unit)
                     ax2.set_title("Synthetic SRT first arrivals")
 
                 plt.tight_layout()
@@ -5594,7 +5638,7 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
                 if method == "TDEM":
                     im = ax.pcolormesh(payload["x"], payload["y"], payload["z"], shading="auto", cmap="magma")
                     ax.set_yscale("log")
-                    ax.set_xlabel("Distance along profile (m)")
+                    set_length_axis(ax, "x", "Distance along profile", unit=unit)
                     ax.set_ylabel("Time (s)")
                     ax.set_title("Pseudo-2D TDEM |response|")
                     cbar = plt.colorbar(im, ax=ax)
@@ -5602,14 +5646,14 @@ def _run_hydro_multigeophys_methods(config: Dict[str, Any]) -> Dict[str, Any]:
                 elif method == "FDEM":
                     im = ax.pcolormesh(payload["x"], payload["y"], payload["z"], shading="auto", cmap="viridis")
                     ax.set_yscale("log")
-                    ax.set_xlabel("Distance along profile (m)")
+                    set_length_axis(ax, "x", "Distance along profile", unit=unit)
                     ax.set_ylabel("Frequency (Hz)")
                     ax.set_title("Pseudo-2D FDEM |imag|")
                     cbar = plt.colorbar(im, ax=ax)
                     cbar.set_label("|H_imag| (arb.)")
                 elif method == "Gravity":
                     ax.plot(payload["x"], payload["clean"], "k-", lw=1.8, label="Gravity")
-                    ax.set_xlabel("Distance along profile (m)")
+                    set_length_axis(ax, "x", "Distance along profile", unit=unit)
                     ax.set_ylabel("Gravity anomaly (mGal)")
                     ax.set_title("Pseudo-2D gravity profile")
                     ax.grid(True, alpha=0.25)
@@ -6724,6 +6768,7 @@ def _render_run_step() -> None:
             "hydro_tdem_noise_level": st.session_state.hydro_tdem_noise_level,
             "hydro_fdem_noise_level": st.session_state.hydro_fdem_noise_level,
             "hydro_gravity_noise_level": st.session_state.hydro_gravity_noise_level,
+            "length_unit": _length_unit(),
         }
 
         with st.spinner("Generating geophysical responses..."):
@@ -6955,6 +7000,16 @@ def render_sidebar() -> Dict[str, Any]:
     st.session_state.demo_mode = demo_mode
     if demo_mode:
         st.sidebar.caption(":material/science: Uses bundled results and makes no LLM calls.")
+
+    st.sidebar.radio(
+        "Length units",
+        ["m", "ft"],
+        horizontal=True,
+        key="length_unit",
+        help="Units of the distance, depth and elevation axes on the plots, here and in the "
+             "figures of the reports runs write. Only the plot axes change; the data, the "
+             "input fields and every exported file stay in metres.",
+    )
 
     setup_panel = st.sidebar.expander(
         "AI connection",
@@ -7350,7 +7405,8 @@ def run_workflow(
             st.markdown("**Execution Plan:**")
         
         update_progress("Starting workflow execution...", 0.15, "Loading data and preparing inversion")
-        
+
+        _apply_length_unit(workflow_config)
         # Run workflow with progress callback
         results, execution_plan, interpretation, report_files = BaseAgent.run_unified_agent_workflow(
             workflow_config,
@@ -9693,6 +9749,7 @@ def render_seismic_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                                         "paraDepth": _srt_depth,
                                         "limits": [300.0, _srt_vbot],
                                     },
+                                    "figure_style": {"length_unit": _length_unit()},
                                 }
                             )
                         st.session_state.seismic_srt_result = result
@@ -10417,14 +10474,20 @@ def render_ert_processing_tab(sidebar_state: Dict[str, Any]) -> None:
     with preview_col:
         st.markdown("##### Preview")
         view_tab, reciprocal_tab, table_tab = st.tabs(["Plots", "Reciprocal QC", "Tables"])
+        from PyHydroGeophysX.visualization.axis_units import length_factor, length_label
+
+        # Plotly has no tick transform, so lengths are scaled for display
+        # here; the tables and exports below keep metres.
+        unit = _length_unit()
+        factor = length_factor(unit)
         with view_tab:
             axis_col = _ert_profile_axis(electrodes_df)
             fig_elec = go.Figure()
             if not electrodes_df.empty:
                 fig_elec.add_trace(
                     go.Scatter(
-                        x=electrodes_df["x"],
-                        y=electrodes_df[axis_col],
+                        x=electrodes_df["x"] * factor,
+                        y=electrodes_df[axis_col] * factor,
                         mode="lines+markers",
                         marker={"size": 7, "color": "#1f77b4"},
                         line={"color": "#3a3a3a", "width": 1},
@@ -10437,8 +10500,8 @@ def render_ert_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                 title="Electrode geometry",
                 height=230,
                 margin={"l": 45, "r": 15, "t": 40, "b": 35},
-                xaxis_title="Profile x (m)",
-                yaxis_title=f"{axis_col} coordinate",
+                xaxis_title=length_label("Profile x", unit),
+                yaxis_title=length_label(f"{axis_col} coordinate", unit),
             )
             st.plotly_chart(fig_elec, width="stretch", key="ert_processing_electrode_plot")
 
@@ -10454,8 +10517,8 @@ def render_ert_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                     colorbar_title = value_label
                 fig_pseudo.add_trace(
                     go.Scattergl(
-                        x=pseudo_df["mid_x"],
-                        y=pseudo_df["pseudo_depth"],
+                        x=pseudo_df["mid_x"] * factor,
+                        y=pseudo_df["pseudo_depth"] * factor,
                         mode="markers",
                         marker={
                             "size": 7,
@@ -10482,8 +10545,8 @@ def render_ert_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                 title="QC pseudosection",
                 height=360,
                 margin={"l": 55, "r": 15, "t": 40, "b": 45},
-                xaxis_title="Profile midpoint x (m)",
-                yaxis_title="Pseudo-depth (m)",
+                xaxis_title=length_label("Profile midpoint x", unit),
+                yaxis_title=length_label("Pseudo-depth", unit),
             )
             fig_pseudo.update_yaxes(autorange="reversed")
             st.plotly_chart(fig_pseudo, width="stretch", key="ert_processing_pseudosection_plot")
@@ -10556,8 +10619,8 @@ def render_ert_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                     if not recip_pseudo_df.empty:
                         fig_recip_pseudo.add_trace(
                             go.Scattergl(
-                                x=recip_pseudo_df["mid_x"],
-                                y=recip_pseudo_df["pseudo_depth"],
+                                x=recip_pseudo_df["mid_x"] * factor,
+                                y=recip_pseudo_df["pseudo_depth"] * factor,
                                 mode="markers",
                                 marker={
                                     "size": 7,
@@ -10584,8 +10647,8 @@ def render_ert_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                         title="Reciprocal-error pseudosection",
                         height=340,
                         margin={"l": 55, "r": 15, "t": 40, "b": 45},
-                        xaxis_title="Profile midpoint x (m)",
-                        yaxis_title="Pseudo-depth (m)",
+                        xaxis_title=length_label("Profile midpoint x", unit),
+                        yaxis_title=length_label("Pseudo-depth", unit),
                     )
                     fig_recip_pseudo.update_yaxes(autorange="reversed")
                     st.plotly_chart(fig_recip_pseudo, width="stretch", key="ert_processing_recip_pseudosection")
@@ -10650,24 +10713,29 @@ def _mesh3d_create_structured_mesh(electrodes_df: Any, config: Dict[str, Any]) -
     return create_structured_mesh(electrodes_df, config)
 
 
-def _mesh3d_electrode_figure(config: Dict[str, Any], electrodes_df: Any):
-    """Create an interactive 3D electrode/topography preview."""
+def _mesh3d_electrode_figure(config: Dict[str, Any], electrodes_df: Any, unit: str = "m"):
+    """Create an interactive 3D electrode/topography preview, its axes in ``unit``."""
 
     import numpy as np
     import plotly.graph_objects as go
 
+    from PyHydroGeophysX.visualization.axis_units import length_factor, length_label
+
+    # Coordinates scaled for display only; the electrode table stays in metres.
+    factor = length_factor(unit)
     fig = go.Figure()
     fig.add_trace(
         go.Scatter3d(
-            x=electrodes_df["x"],
-            y=electrodes_df["y"],
-            z=electrodes_df["z"],
+            x=electrodes_df["x"] * factor,
+            y=electrodes_df["y"] * factor,
+            z=electrodes_df["z"] * factor,
             mode="markers+text",
             marker={"size": 5, "color": "#d7191c", "symbol": "circle"},
             text=electrodes_df["n"].astype(str),
             textposition="top center",
             hovertemplate=(
-                "Electrode %{text}<br>x=%{x:.2f} m<br>y=%{y:.2f} m<br>z=%{z:.2f} m<extra></extra>"
+                f"Electrode %{{text}}<br>x=%{{x:.2f}} {unit}<br>y=%{{y:.2f}} {unit}"
+                f"<br>z=%{{z:.2f}} {unit}<extra></extra>"
             ),
             name="Electrodes",
         )
@@ -10683,9 +10751,9 @@ def _mesh3d_electrode_figure(config: Dict[str, Any], electrodes_df: Any):
         z_mesh = np.vectorize(topo_func)(x_mesh, y_mesh)
         fig.add_trace(
             go.Surface(
-                x=x_mesh,
-                y=y_mesh,
-                z=z_mesh,
+                x=x_mesh * factor,
+                y=y_mesh * factor,
+                z=z_mesh * factor,
                 colorscale="earth",
                 opacity=0.35,
                 showscale=False,
@@ -10698,9 +10766,9 @@ def _mesh3d_electrode_figure(config: Dict[str, Any], electrodes_df: Any):
         height=520,
         margin={"l": 0, "r": 0, "t": 45, "b": 0},
         scene={
-            "xaxis_title": "X (m)",
-            "yaxis_title": "Y (m)",
-            "zaxis_title": "Z (m)",
+            "xaxis_title": length_label("X", unit),
+            "yaxis_title": length_label("Y", unit),
+            "zaxis_title": length_label("Z", unit),
             "aspectmode": "data",
         },
         legend={"x": 0.01, "y": 0.99},
@@ -10995,7 +11063,7 @@ def render_mesh3d_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                 metric_cols[3].metric("Z range", f"{electrodes_df['z'].min():.2f} to {electrodes_df['z'].max():.2f} m")
                 if plotly_available:
                     st.plotly_chart(
-                        _mesh3d_electrode_figure(config, electrodes_df),
+                        _mesh3d_electrode_figure(config, electrodes_df, unit=_length_unit()),
                         width="stretch",
                         key="mesh3d_electrode_preview",
                     )
@@ -11097,9 +11165,13 @@ def render_mesh3d_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                     try:
                         import plotly.graph_objects as go
 
+                        from PyHydroGeophysX.visualization.axis_units import length_factor, length_label
+
+                        unit = _length_unit()
                         positions = np.asarray([[node.x(), node.y(), node.z()] for node in mesh.nodes()], dtype=float)
                         step = max(1, int(len(positions) / 3500))
-                        display_nodes = positions[::step]
+                        # Scaled for display only; the saved mesh stays in metres.
+                        display_nodes = positions[::step] * length_factor(unit)
                         fig_nodes = go.Figure(
                             go.Scatter3d(
                                 x=display_nodes[:, 0],
@@ -11115,9 +11187,9 @@ def render_mesh3d_processing_tab(sidebar_state: Dict[str, Any]) -> None:
                             height=480,
                             margin={"l": 0, "r": 0, "t": 45, "b": 0},
                             scene={
-                                "xaxis_title": "X (m)",
-                                "yaxis_title": "Y (m)",
-                                "zaxis_title": "Z (m)",
+                                "xaxis_title": length_label("X", unit),
+                                "yaxis_title": length_label("Y", unit),
+                                "zaxis_title": length_label("Z", unit),
                                 "aspectmode": "data",
                             },
                         )

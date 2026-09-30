@@ -4,6 +4,14 @@ visualization package
 Submodules
 ----------
 
+PyHydroGeophysX.visualization.axis\_units module
+-------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.visualization.axis_units
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 PyHydroGeophysX.visualization.plotting module
 ----------------------------------------------
 

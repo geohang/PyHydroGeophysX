@@ -28,7 +28,10 @@ from PySide6.QtWidgets import (
 )
 
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.coalesce import Coalesced
+from PyHydroGeophysX.visualization.axis_units import (
+    set_length_axis, set_section_axes, to_display_length)
 from PyHydroGeophysX.visualization.pyvista_compat import try_import_pyvista
 
 
@@ -290,6 +293,14 @@ class Model3DView(QWidget):
                 self._build_mpl(layout)
         else:
             self._build_mpl(layout)
+        # View > Length Units. Only the matplotlib panels have length axes; the
+        # PyVista volume carries an orientation marker and no scale.
+        length_units.notifier().changed.connect(self._on_length_unit_changed)
+
+    def _on_length_unit_changed(self, _unit: str) -> None:
+        """Redraw the slices in the studio's new length unit."""
+        if self._mode == "mpl" and self._model is not None:
+            self._redraw_mpl()
 
     def showEvent(self, event) -> None:  # noqa: N802 - Qt override
         """Render once the view is on screen, which the timer used to see to."""
@@ -454,10 +465,15 @@ class Model3DView(QWidget):
             return
         zi, yj = self._slice_indices()
         drawn["depth"].set_array(self._model[:, :, zi].T)
-        drawn["depth"].axes.set_title(f"Depth slice  z = {drawn['zc'][zi]:.0f}")
+        drawn["depth"].axes.set_title(self._slice_title("Depth slice", "z", drawn["zc"][zi]))
         drawn["section"].set_array(self._model[:, yj, :].T)
-        drawn["section"].axes.set_title(f"Cross-section  y = {drawn['yc'][yj]:.0f}")
+        drawn["section"].axes.set_title(self._slice_title("Cross-section", "y", drawn["yc"][yj]))
         self._canvas.draw_idle()
+
+    @staticmethod
+    def _slice_title(kind: str, axis: str, position: float) -> str:
+        """``'Depth slice  z = -12 m'``: where a slice is, in the studio's unit."""
+        return f"{kind}  {axis} = {to_display_length(position):.0f} {length_units.current()}"
 
     def _recolour_mpl(self) -> bool:
         """Give the panels on screen the colour map now chosen; False if none are."""
@@ -504,7 +520,10 @@ class Model3DView(QWidget):
                 "Resistivity section"
                 if "resist" in field_name.lower() else f"{field_name} section"
             )
-            ax.set_xlabel("position along line (m)"); ax.set_ylabel("elevation (m)")
+            # A line whose soundings carry no elevations hangs from z = 0 and
+            # reads as depth.
+            set_section_axes(ax, z=ez, xlabel="position along line",
+                             elevation_name="elevation", depth_name="depth")
             bar = self._fig.colorbar(im, ax=ax, shrink=0.85, label=self._label)
             self._mpl_drawn = {"images": [(im, bar)]}
             self._canvas.draw_idle()
@@ -512,12 +531,14 @@ class Model3DView(QWidget):
         ax1 = self._fig.add_subplot(121)
         ax2 = self._fig.add_subplot(122)
         im1 = ax1.pcolormesh(ex, ey, m[:, :, zi].T, cmap=cmap, norm=norm, shading="auto")
-        ax1.set_title(f"Depth slice  z = {zc[zi]:.0f}")
-        ax1.set_xlabel("x (m)"); ax1.set_ylabel("y (m)"); ax1.set_aspect("equal", "box")
+        ax1.set_title(self._slice_title("Depth slice", "z", zc[zi]))
+        set_length_axis(ax1, "x", "x"); set_length_axis(ax1, "y", "y")
+        ax1.set_aspect("equal", "box")
         bar1 = self._fig.colorbar(im1, ax=ax1, shrink=0.85, label=self._label)
         im2 = ax2.pcolormesh(ex, ez, m[:, yj, :].T, cmap=cmap, norm=norm, shading="auto")
-        ax2.set_title(f"Cross-section  y = {yc[yj]:.0f}")
-        ax2.set_xlabel("x (m)"); ax2.set_ylabel("elevation (m)")
+        ax2.set_title(self._slice_title("Cross-section", "y", yc[yj]))
+        set_section_axes(ax2, z=ez, xlabel="x",
+                         elevation_name="elevation", depth_name="depth")
         bar2 = self._fig.colorbar(im2, ax=ax2, shrink=0.85, label=self._label)
         self._mpl_drawn = {"images": [(im1, bar1), (im2, bar2)], "depth": im1,
                            "section": im2, "zc": zc, "yc": yc}

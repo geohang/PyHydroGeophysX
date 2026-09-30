@@ -48,7 +48,9 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX.inversion.ert_zones import normalize_zones, zone_colors, zone_prior
 from PyHydroGeophysX.qt_apps import theme
+from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.readout import navigation_toolbar
+from PyHydroGeophysX.visualization.axis_units import set_section_axes, to_display_length
 
 __all__ = ["MeshPreviewView", "engine_zone_note"]
 
@@ -185,6 +187,13 @@ class MeshPreviewView(QWidget):
         layout.addWidget(splitter, stretch=1)
         layout.addWidget(self._info)
         self._sync_zone_controls()
+        self._redraw()
+        # View > Length Units: the axes and the sizes quoted under them change;
+        # the mesh and the zone outlines stay in metres.
+        length_units.notifier().changed.connect(self._on_length_unit_changed)
+
+    def _on_length_unit_changed(self, _unit: str) -> None:
+        """Redraw the mesh in the studio's new length unit."""
         self._redraw()
 
     # -- side column ---------------------------------------------------------
@@ -394,14 +403,20 @@ class MeshPreviewView(QWidget):
         if preview.get("para_extent") is not None:
             # The size of what is inverted and of the whole domain, so the effect
             # of a setting is read here rather than guessed from the picture.
+            unit = length_units.current()
             xmin, xmax, zmin, zmax = preview["para_extent"]
-            inverted = f"inverted region {xmax - xmin:.3g} × {zmax - zmin:.3g} m"
+            inverted = (f"inverted region {to_display_length(xmax - xmin):.3g} × "
+                        f"{to_display_length(zmax - zmin):.3g} {unit}")
             areas = self._para_areas()
             if areas.size:
-                inverted += f", cells {areas.min():.2g}–{areas.max():.2g} m²"
+                # An area takes the length factor twice.
+                scale = to_display_length(1.0) ** 2
+                inverted += (f", cells {areas.min() * scale:.2g}–"
+                             f"{areas.max() * scale:.2g} {unit}²")
             parts.append(inverted)
             fxmin, fxmax, fzmin, fzmax = preview["full_extent"]
-            parts.append(f"whole mesh {fxmax - fxmin:.0f} × {fzmax - fzmin:.0f} m")
+            parts.append(f"whole mesh {to_display_length(fxmax - fxmin):.0f} × "
+                         f"{to_display_length(fzmax - fzmin):.0f} {unit}")
         edges = int((preview.get("build") or {}).get("zone_outline_edges", 0))
         if edges:
             parts.append(f"follows the zones ({edges} outline segments)")
@@ -495,8 +510,12 @@ class MeshPreviewView(QWidget):
         ax.set_xlim(xmin - pad_x, xmax + pad_x)
         ax.set_ylim(zmin - pad_z, zmax + pad_z)
         ax.set_aspect("equal", adjustable="box")
-        ax.set_xlabel("x (m)")
-        ax.set_ylabel("Elevation (m)")
+        # The electrodes are the ground surface; a survey read without
+        # elevations has them all at z = 0, and the mesh then reads as depth.
+        if len(sensors):
+            set_section_axes(ax, surface=sensors[:, 1], xlabel="x")
+        else:
+            set_section_axes(ax, z=[preview["para_extent"][3]], xlabel="x")
         title = "Inversion mesh"
         if not outer_on:
             title += " (parameter domain)"

@@ -56,7 +56,9 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     select_directory,
 )
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
+from PyHydroGeophysX.visualization.axis_units import set_length_axis, set_section_axes
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
     WorkflowRunResult,
@@ -110,6 +112,15 @@ class JointInversionModule(BaseModule):
         )
         self._pair_changed()
         self._go_to(0)
+        # View > Length Units: the plots change, the models and offsets do not.
+        length_units.notifier().changed.connect(self._on_length_unit_changed)
+
+    def _on_length_unit_changed(self, _unit: str) -> None:
+        """Redraw the sensor alignment and the models in the new length unit."""
+        if self._current == 2:
+            self._draw_alignment()
+        if self._result is not None:
+            self._plot_models(self._result)
 
     @staticmethod
     def _dspin(value: float, lo: float, hi: float, step: float, decimals: int = 3) -> QDoubleSpinBox:
@@ -558,6 +569,7 @@ class JointInversionModule(BaseModule):
         self._pairing_group.setVisible(pair == ("FDEM", "TDEM"))
         self._alignment_figure.clear(); axis = self._alignment_figure.add_subplot(111)
         if pair == ("ERT", "SRT") and all(method in self._data for method in pair):
+            heights = []
             for method, color in (("ERT", "#d95f02"), ("SRT", "#1b9e77")):
                 positions = self._data[method].sensorPositions()
                 x = np.asarray([float(position.x()) for position in positions])
@@ -565,7 +577,10 @@ class JointInversionModule(BaseModule):
                 x += self._ert_x.value() if method == "ERT" else self._srt_x.value()
                 z += self._ert_z.value() if method == "ERT" else self._srt_z.value()
                 axis.scatter(x, z, s=22, label=method, color=color)
-            axis.set_xlabel("Profile distance (m)"); axis.set_ylabel("Elevation / z (m)")
+                heights.append(z)
+            # Two arrays read without elevations sit at z = 0 and read as depth.
+            set_section_axes(axis, z=np.concatenate(heights), xlabel="Profile distance",
+                             elevation_name="Elevation / z")
             axis.legend(); axis.grid(alpha=0.25)
             self._alignment_note.setText(
                 "Offsets are never inferred or applied automatically. Confirm that both sensor arrays "
@@ -589,7 +604,8 @@ class JointInversionModule(BaseModule):
                     np.asarray(value["y"], dtype=float),
                     s=16, alpha=0.65, label=method, color=color, marker=marker,
                 )
-            axis.set_xlabel("Easting / x (m)"); axis.set_ylabel("Northing / y (m)")
+            set_length_axis(axis, "x", "Easting / x")
+            set_length_axis(axis, "y", "Northing / y")
             axis.legend(); axis.grid(alpha=0.25); axis.set_aspect("equal", adjustable="datalim")
             self._alignment_note.setText(
                 "Both surveys must use the same projected coordinate system and overlap in x and y. "
@@ -1213,7 +1229,8 @@ class JointInversionModule(BaseModule):
                 if method == "SRT" and values.size == 0 and result.meta.get("interface_coords") is not None:
                     interface_x, interface_z = result.meta["interface_coords"]
                     axis.plot(interface_x, interface_z, "k-", lw=2, label="SRT-derived interface")
-                    axis.set_xlabel("Profile distance (m)"); axis.set_ylabel("Elevation / z (m)")
+                    set_section_axes(axis, mesh=mesh, xlabel="Profile distance",
+                                     elevation_name="Elevation / z")
                     axis.legend(); axis.set_title("Sequential structural constraint")
                     continue
                 try:
@@ -1221,6 +1238,9 @@ class JointInversionModule(BaseModule):
                     pg.show(mesh, values, ax=axis,
                             label="Resistivity (Ω m)" if method == "ERT" else "Velocity (m/s)",
                             cMap=self._panel_colormap(index - 1, method, coloured))
+                    # pyGIMLi's own labels are always in metres.
+                    set_section_axes(axis, mesh=mesh, xlabel="Profile distance",
+                                     elevation_name="Elevation / z")
                 except Exception:
                     axis.plot(values); axis.set_xlabel("Cell index")
                 axis.set_title(f"{method} joint model")
@@ -1242,7 +1262,8 @@ class JointInversionModule(BaseModule):
                         label="Density contrast (g/cc)" if method == "Gravity"
                         else "Susceptibility (SI)",
                     )
-                    axis.set_xlabel("x (m)"); axis.set_ylabel("Elevation / z (m)")
+                    set_section_axes(axis, z=edges[2], xlabel="x",
+                                     elevation_name="Elevation / z")
                     axis.set_title(f"{method} · middle-y slice")
                 else:
                     axis.plot(values.ravel()); axis.set_xlabel("Cell index")
@@ -1254,7 +1275,8 @@ class JointInversionModule(BaseModule):
             if model.ndim == 1:
                 depths = np.r_[0.0, np.cumsum(thickness)]
                 axis.step(model, depths, where="post"); axis.invert_yaxis()
-                axis.set_xscale("log"); axis.set_xlabel("Resistivity (Ω m)"); axis.set_ylabel("Depth (m)")
+                axis.set_xscale("log"); axis.set_xlabel("Resistivity (Ω m)")
+                set_length_axis(axis, "y", "Depth")
             else:
                 image = axis.imshow(model.T, aspect="auto", origin="upper",
                                     cmap=self._panel_colormap(0, "FDEM–TDEM", coloured))

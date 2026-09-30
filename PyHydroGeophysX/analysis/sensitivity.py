@@ -71,6 +71,16 @@ def compute_depth_of_investigation(
     scale_high``; when ``reference_resistivity`` is None it is taken as the
     median apparent resistivity of ``data`` so the perturbation brackets the
     survey's actual background instead of an arbitrary absolute value.
+
+    The index is only as meaningful as the inversion's use of its reference.
+    ``ERTInversion`` regularizes with first-order smoothness, which ignores a
+    homogeneous reference, so give it a ``reference_weight`` for this (a
+    smallness term, as Oldenburg and Li (1999) use). Let both runs converge as
+    well: a run stopped at its target misfit keeps its starting model wherever
+    the data are weak, and the index then reflects where each run stopped.
+    A cell that follows its reference completely scores
+    ``(scale_high - scale_low) / (scale_high + scale_low)``; dividing by it
+    gives Oldenburg and Li's index, from 0 to 1.
     """
     if hasattr(mesh, "cellCount"):
         n_cells = int(mesh.cellCount())

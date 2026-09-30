@@ -69,11 +69,11 @@ Use recovered geophysical properties to estimate hydrological quantities under e
    * - :doc:`Monte Carlo hydrological interpretation </auto_examples/Ex_MC_Hydro>`
      - Water-content and porosity estimates with uncertainty from petrophysical parameters
    * - :doc:`Sensitivity and resolution </auto_examples/Ex_sensitivity_analysis>`
-     - Synthetic survey sensitivity, regularized resolution and reference-model dependence
+     - Where an ERT survey over the MODFLOW model is sensitive, resolved and data-controlled
    * - :doc:`Ensemble data assimilation </auto_examples/Ex_ensemble_assimilation>`
-     - Update a synthetic water-content forecast with EnKF and ES-MDA
+     - Update MODFLOW water content with an ERT survey by EnKF and ES-MDA
    * - :doc:`Posterior uncertainty propagation </auto_examples/Ex_posterior_uncertainty>`
-     - Propagate correlated resistivity uncertainty into water-content intervals
+     - Water-content intervals from an ERT inversion's posterior, checked against MODFLOW
 
 Survey processing and single-method inversion
 ---------------------------------------------

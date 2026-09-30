@@ -378,6 +378,12 @@ def _make_run_fn(output_dir: str) -> Callable[[Dict[str, Any]], Dict[str, Any]]:
             return {"status": "failed", "error": f"Agents engine unavailable: {exc}"}
         cfg = dict(config)
         cfg.setdefault("output_dir", output_dir)
+        # The sidebar's "Length units" reaches the report figures. Only feet is
+        # written: an explicit figure_style outranks the request text, so a
+        # written "m" would overrule a chat that asked for feet.
+        if st.session_state.get("length_unit", "m") == "ft":
+            style = cfg.get("figure_style")
+            cfg["figure_style"] = {**(style if isinstance(style, dict) else {}), "length_unit": "ft"}
         try:
             results, plan, interp, files = BaseAgent.run_unified_agent_workflow(
                 cfg,

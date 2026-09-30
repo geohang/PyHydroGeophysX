@@ -68,6 +68,8 @@ try:
 except ImportError:
     PLOTLY_AVAILABLE = False
 
+from PyHydroGeophysX.visualization.axis_units import length_factor, length_label
+
 #: The engines of the desktop studio's 3D mesh page, in its order.
 MESH_ENGINES = ["Auto", "Gmsh (tetrahedral)", "PyGIMLi prism", "Structured grid", E4D_ENGINE]
 
@@ -431,6 +433,18 @@ with st.sidebar:
     export_vtk = st.checkbox("Export .vtk (ParaView)", value=True)
     export_csv = st.checkbox("Export sensor positions (.csv)", value=True)
 
+    st.divider()
+
+    # ------------------------------------------------------------------ display
+    st.subheader("Display")
+    # Per session: the package's set_length_unit() is process-wide and would
+    # reach every other session this server runs.
+    display_unit = st.radio(
+        "Length units", ["m", "ft"], horizontal=True, key="length_unit",
+        help="Units of the X, Y and Z axes of the 3-D views. Only the plot axes change; "
+             "the inputs above, the tables and every exported file stay in metres.",
+    )
+
 
 # ===========================================================================
 # Helper functions
@@ -512,11 +526,12 @@ def _build_electrodes() -> pd.DataFrame:
     return build_electrodes(_builder_config(), create_directory=False)[1]
 
 
-def _zone_box_traces(zone_list: list[dict]) -> list:
-    """The twelve edges of each zone box, for the electrode view."""
+def _zone_box_traces(zone_list: list[dict], factor: float = 1.0) -> list:
+    """The twelve edges of each zone box, for the electrode view, scaled by ``factor``."""
     traces = []
     for zone in zone_list:
-        (x0, x1), (y0, y1), (z0, z1) = zone["x"], zone["y"], zone["z"]
+        (x0, x1), (y0, y1), (z0, z1) = ([float(v) * factor for v in zone[axis]]
+                                        for axis in ("x", "y", "z"))
         corners = [(x0, y0), (x1, y0), (x1, y1), (x0, y1), (x0, y0)]
         xs, ys, zs = [], [], []
         for z in (z0, z1):                              # bottom and top rings
@@ -534,11 +549,13 @@ def _zone_box_traces(zone_list: list[dict]) -> list:
 
 
 def _electrode_plotly(elec: pd.DataFrame) -> go.Figure:
-    """Build an interactive 3-D scatter of electrode positions."""
+    """Build an interactive 3-D scatter of electrode positions, in the chosen length unit."""
+    # Plotly has no tick transform, so coordinates are scaled for display only.
+    factor = length_factor(display_unit)
     fig = go.Figure()
 
     fig.add_trace(go.Scatter3d(
-        x=elec["x"], y=elec["y"], z=elec["z"],
+        x=elec["x"] * factor, y=elec["y"] * factor, z=elec["z"] * factor,
         mode="markers+text",
         marker=dict(size=5, color="red", symbol="circle"),
         text=[str(n) for n in elec["n"]],
@@ -556,17 +573,19 @@ def _electrode_plotly(elec: pd.DataFrame) -> go.Figure:
             XG, YG = np.meshgrid(xg, yg)
             ZG = np.vectorize(tf)(XG, YG)
             fig.add_trace(go.Surface(
-                x=XG, y=YG, z=ZG,
+                x=XG * factor, y=YG * factor, z=ZG * factor,
                 colorscale="earth", opacity=0.35,
                 showscale=False, name="Topography",
             ))
 
-    for trace in _zone_box_traces(zones):
+    for trace in _zone_box_traces(zones, factor):
         fig.add_trace(trace)
 
     fig.update_layout(
         scene=dict(
-            xaxis_title="X (m)", yaxis_title="Y (m)", zaxis_title="Z (m)",
+            xaxis_title=length_label("X", display_unit),
+            yaxis_title=length_label("Y", display_unit),
+            zaxis_title=length_label("Z", display_unit),
             aspectmode="data",
         ),
         title=f"{len(elec)} electrode(s)",
@@ -763,7 +782,8 @@ with tab_gen:
                 try:
                     nodes = np.array(mesh.positions())
                     step = max(1, len(nodes) // 3000)
-                    sub = nodes[::step]
+                    # Scaled for display only; the saved mesh stays in metres.
+                    sub = nodes[::step] * length_factor(display_unit)
                     fig_m = go.Figure(go.Scatter3d(
                         x=sub[:, 0], y=sub[:, 1], z=sub[:, 2],
                         mode="markers",
@@ -772,7 +792,9 @@ with tab_gen:
                     ))
                     fig_m.update_layout(
                         scene=dict(
-                            xaxis_title="X (m)", yaxis_title="Y (m)", zaxis_title="Z (m)",
+                            xaxis_title=length_label("X", display_unit),
+                            yaxis_title=length_label("Y", display_unit),
+                            zaxis_title=length_label("Z", display_unit),
                             aspectmode="data",
                         ),
                         title="Mesh nodes (subsampled for display)",

@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from .base_agent import AgentResult, BaseAgent
+from PyHydroGeophysX.visualization.axis_units import set_length_axis
 
 
 # ---------------------------------------------------------------------------
@@ -387,7 +388,7 @@ and can interpret conductivity structures in terms of geological and hydrologica
         
         ax1.set_xscale('log')
         ax1.set_xlabel('Conductivity (S/m)')
-        ax1.set_ylabel('Depth (m)')
+        set_length_axis(ax1, "y", "Depth")
         ax1.set_title('Recovered Conductivity')
         ax1.legend()
         ax1.grid(True, alpha=0.3)
@@ -472,7 +473,7 @@ and can interpret conductivity structures in terms of geological and hydrologica
             ax1.fill_betweenx([depths[i], depths[i+1]], 0, water_content[i], 
                              alpha=0.7, color='dodgerblue')
         ax1.set_xlabel('Water Content (-)')
-        ax1.set_ylabel('Depth (m)')
+        set_length_axis(ax1, "y", "Depth")
         ax1.set_title('Water Content')
         ax1.set_xlim(0, 0.5)
         ax1.invert_yaxis()
@@ -484,7 +485,7 @@ and can interpret conductivity structures in terms of geological and hydrologica
             ax2.fill_betweenx([depths[i], depths[i+1]], 0, porosity[i],
                              alpha=0.7, color='steelblue')
         ax2.set_xlabel('Porosity (-)')
-        ax2.set_ylabel('Depth (m)')
+        set_length_axis(ax2, "y", "Depth")
         ax2.set_title('Porosity')
         ax2.set_xlim(0, 0.5)
         ax2.invert_yaxis()
@@ -496,7 +497,7 @@ and can interpret conductivity structures in terms of geological and hydrologica
             ax3.fill_betweenx([depths[i], depths[i+1]], 1e-5, conductivity[i],
                              alpha=0.7, color='red')
         ax3.set_xlabel('Conductivity (S/m)')
-        ax3.set_ylabel('Depth (m)')
+        set_length_axis(ax3, "y", "Depth")
         ax3.set_title('Conductivity')
         ax3.set_xscale('log')
         ax3.invert_yaxis()

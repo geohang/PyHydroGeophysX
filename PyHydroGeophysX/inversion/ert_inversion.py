@@ -1719,6 +1719,11 @@ class ERTInversion(InversionBase):
                   ``polygon`` in mesh coordinates, a ``resistivity`` and an
                   optional ``fixed`` (see ``ert_zones``). The run starts from the
                   a-priori model, regularizes toward it, and holds fixed zones.
+                - reference_weight: weight of a smallness term that pulls the
+                  model toward the reference model, relative to the smoothness
+                  term (default 0.0, smoothness alone). First-order smoothness
+                  does not see a constant shift of the model, so without this
+                  term a homogeneous reference model has no effect on the result.
         """
         # Load ERT data. An already-loaded container is accepted so that callers
         # who have applied their own error model or QC filter (the auto-lambda
@@ -1760,6 +1765,7 @@ class ERTInversion(InversionBase):
             'target_chi_squared': 1.0,
             'convergence_tolerance': 0.005,
             'min_iterations': 5,
+            'reference_weight': 0.0,
             'verbose': True,
             'use_gpu': False,      # Add GPU acceleration option
             'parallel': False,     # Add parallel computation option
@@ -1962,6 +1968,18 @@ class ERTInversion(InversionBase):
         # Regularization parameter
         L_mr = np.sqrt(self.parameters['lambda_val'])
 
+        # Smallness, relative to the smoothness. The first-order smoothness rows
+        # cancel any constant, so without it a homogeneous reference drops out
+        # of the objective and two runs from different homogeneous references
+        # converge to the same model. The depth-of-investigation index compares
+        # exactly such runs; without this term it measured only how far each
+        # had got when it stopped, and on the Ex_sensitivity_analysis survey it
+        # was near zero in every cell. Oldenburg and Li (1999) keep the weight
+        # small.
+        alpha_s = float(self.parameters.get('reference_weight', 0.0))
+        if not np.isfinite(alpha_s) or alpha_s < 0:
+            raise ValueError(f"reference_weight must be finite and non-negative, got {alpha_s}.")
+
         # Model constraints
         min_mr, max_mr = self.parameters['model_constraints']
         min_mr = np.log(min_mr)
@@ -2034,10 +2052,11 @@ class ERTInversion(InversionBase):
             fdert = weighted_err.T.dot(weighted_err)
 
             # Model regularization term. The stacked system below solves the normal
-            # equations of ||Wd (d - f(m))||^2 + lambda ||Wm (m - m_ref)||^2, so the
-            # objective evaluated here must use lambda, not sqrt(lambda).
+            # equations of ||Wd (d - f(m))||^2 + lambda (||Wm (m - m_ref)||^2 +
+            # reference_weight ||m - m_ref||^2), so the objective evaluated here
+            # must use lambda, not sqrt(lambda).
             wm_r = self.Wm_r * (mr - mr_R)
-            fmert = lam_val * wm_r.T.dot(wm_r)
+            fmert = lam_val * (wm_r.T.dot(wm_r) + alpha_s * delta_mr.T.dot(delta_mr))
 
             # Total objective function
             fc_r = fdert + fmert
@@ -2079,6 +2098,9 @@ class ERTInversion(InversionBase):
             # The stacked system is dense because Jr is, so densify the sparse
             # regularization block here rather than storing a dense copy of it.
             N11_R = np.vstack((wd * Jr, L_mr * self.Wm_r.toarray()))
+            if alpha_s > 0:
+                gc_r = np.vstack((gc_r, L_mr * np.sqrt(alpha_s) * delta_mr))
+                N11_R = np.vstack((N11_R, L_mr * np.sqrt(alpha_s) * np.eye(N11_R.shape[1])))
             
             gc_r = np.array(gc_r)
             gc_r = gc_r.reshape(-1, 1)
@@ -2089,7 +2111,7 @@ class ERTInversion(InversionBase):
             # which step lengths are accepted.
             reg_gradient = np.asarray(
                 self.Wm_r.T.dot(self.Wm_r.dot(delta_mr)), dtype=float
-            ).reshape(-1, 1)
+            ).reshape(-1, 1) + alpha_s * delta_mr
             gc_r1 = Jr.T.dot(wd ** 2 * data_residual) + L_mr * reg_gradient
             
             # Solve for the update: the stacked system for a least-squares
@@ -2146,7 +2168,8 @@ class ERTInversion(InversionBase):
                     dataerror_ert, dtype=float).reshape(-1, 1)
                 fdert = weighted_err.T.dot(weighted_err)
                 wm_trial = self.Wm_r * (mr1 - mr_R)
-                fmert = lam_val * wm_trial.T.dot(wm_trial)
+                fmert = lam_val * (wm_trial.T.dot(wm_trial)
+                                   + alpha_s * (mr1 - mr_R).T.dot(mr1 - mr_R))
 
                 ft_r = float(np.asarray(fdert + fmert).item())
                 if ft_r < best_f:

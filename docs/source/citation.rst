@@ -77,12 +77,43 @@ Cite the engines you used
    * - MODFLOW, read or written through FloPy
      - Bakker, M., Post, V., Langevin, C. D., Hughes, J. D., White, J. T.,
        Starn, J. J., and Fienen, M. N. (2016). *Groundwater*, 54(5), 733-739.
+       https://doi.org/10.1111/gwat.12413; Langevin, C. D., Hughes, J. D.,
+       Banta, E. R., Provost, A. M., Niswonger, R. G., and Panday, S. (2017).
+       *MODFLOW 6 Modular Hydrologic Model*. U.S. Geological Survey Software.
+       https://doi.org/10.5066/F76Q1VQV; Langevin, C. D., Hughes, J. D.,
+       Banta, E. R., Niswonger, R. G., Panday, S., and Provost, A. M. (2017).
+       *Documentation for the MODFLOW 6 Groundwater Flow Model*. U.S.
+       Geological Survey Techniques and Methods 6-A55.
+       https://doi.org/10.3133/tm6A55
    * - ParFlow outputs or written ParFlow inputs
-     - Kollet, S. J. and Maxwell, R. M. (2006). *Advances in Water Resources*,
-       29(7), 945-958; Maxwell, R. M. (2013). *Advances in Water Resources*,
-       53, 109-117.
+     - The four papers ParFlow asks users to cite: Ashby, S. F. and Falgout,
+       R. D. (1996). A parallel multigrid preconditioned conjugate gradient
+       algorithm for groundwater flow simulations. *Nuclear Science and
+       Engineering*, 124(1), 145-159. https://doi.org/10.13182/NSE96-A24230;
+       Jones, J. E. and Woodward, C. S. (2001). Newton-Krylov-multigrid solvers
+       for large-scale, highly heterogeneous, variably saturated flow problems.
+       *Advances in Water Resources*, 24(7), 763-774.
+       https://doi.org/10.1016/S0309-1708(00)00075-0; Kollet, S. J. and
+       Maxwell, R. M. (2006). Integrated surface-groundwater flow modeling: A
+       free-surface overland flow boundary condition in a parallel groundwater
+       flow model. *Advances in Water Resources*, 29(7), 945-958.
+       https://doi.org/10.1016/j.advwatres.2005.08.006; Maxwell, R. M.
+       (2013). A terrain-following grid transform and preconditioner for
+       parallel, large-scale, integrated hydrologic modeling. *Advances in
+       Water Resources*, 53, 109-117.
+       https://doi.org/10.1016/j.advwatres.2012.10.001. Cite the ParFlow
+       release you ran as well: https://doi.org/10.5281/zenodo.4816884
+       resolves to the latest one.
    * - A petrophysical relationship
      - The reference for the model you used, listed with it in
        :doc:`the petrophysics API <api/petrophysics>`.
-   * - Ensemble Kalman updating
+   * - The depth-of-investigation index (``compute_depth_of_investigation``)
+     - Oldenburg, D. W. and Li, Y. (1999). Estimating depth of investigation
+       in DC resistivity and IP surveys. *Geophysics*, 64(2), 403-416.
+       https://doi.org/10.1190/1.1444545
+   * - Ensemble Kalman updating, or ES-MDA
      - Evensen, G. (2003). *Ocean Dynamics*, 53(4), 343-367.
+       https://doi.org/10.1007/s10236-003-0036-9; for ES-MDA, Emerick, A. A.
+       and Reynolds, A. C. (2013). Ensemble smoother with multiple data
+       assimilation. *Computers and Geosciences*, 55, 3-15.
+       https://doi.org/10.1016/j.cageo.2012.03.011

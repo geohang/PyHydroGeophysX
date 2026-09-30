@@ -504,6 +504,38 @@ def test_a_request_is_parsed_without_a_model_and_the_solver_is_left_to_the_libra
     assert "method" not in config["inversion_params"]
 
 
+@pytest.mark.parametrize("request_text, model_reply, unit", [
+    ("process the line and show depths in feet", None, "ft"),      # no model: the words
+    ("深度用英尺表示", None, "ft"),
+    ("a soft clay layer", None, None),
+    ("plot it the way our US client reads it",                      # the model reads it
+     '{"topics": ["resistivity"], "style": {"length_unit": "ft"}}', "ft"),
+])
+def test_a_request_for_feet_reaches_the_report_figures(request_text, model_reply, unit):
+    pg = pytest.importorskip("pygimli")
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    from matplotlib.figure import Figure
+
+    from PyHydroGeophysX.agents import _figstyle as figstyle
+    from PyHydroGeophysX.agents.report_agent import ReportAgent
+
+    agent = ReportAgent(api_key="sk-test" if model_reply else None)
+    agent.query_llm = lambda prompt, **kwargs: model_reply
+    config = {"user_request": request_text}
+    agent._read_figure_request(config)
+    style = figstyle.style_from_config(config)
+    assert style.length_unit == unit
+
+    # A line read without elevations sits at z = 0: its axis is depth, not elevation.
+    fig = Figure()
+    FigureCanvasAgg(fig)
+    ax = fig.add_subplot(111)
+    flat = pg.createGrid(x=np.linspace(0, 20, 11), y=np.linspace(-5, 0, 6))
+    figstyle.apply(ax, style, mesh=flat)
+    shown = unit or "m"
+    assert (ax.get_xlabel(), ax.get_ylabel()) == (f"Distance ({shown})", f"Depth ({shown})")
+
+
 # --------------------------------------------------------------------------
 # Names removed or moved in 0.5.0
 # --------------------------------------------------------------------------

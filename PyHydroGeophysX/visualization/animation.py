@@ -7,7 +7,8 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .plotting import _coverage_mask
+from .axis_units import vertical_axis
+from .plotting import _coverage_mask, _label_section
 
 
 def create_timelapse_gif(
@@ -21,14 +22,16 @@ def create_timelapse_gif(
     cmax: Optional[float] = None,
     log_scale: bool = False,
     label: str = "",
-    xlabel: str = "Distance (m)",
-    ylabel: str = "Elevation (m)",
+    xlabel: Optional[str] = None,
+    ylabel: Optional[str] = None,
     coverage: Optional[Union[np.ndarray, Sequence[np.ndarray]]] = None,
     figsize: Tuple[float, float] = (8, 2.5),
     dpi: int = 150,
     duration: int = 100,
     first_frame_duration: int = 500,
     loop: int = 0,
+    length_unit: Optional[str] = None,
+    vertical: str = "auto",
 ) -> str:
     """Create a GIF animation of time-lapse model snapshots.
 
@@ -53,6 +56,9 @@ def create_timelapse_gif(
         Logarithmic color scale.
     label : str
         Colorbar label.
+    xlabel, ylabel : str, optional
+        Axis labels, used as given. By default ``Distance`` and ``Elevation``
+        in ``length_unit`` - or ``Depth``, when the section has no elevation.
     coverage : array or list of arrays, optional
         Coverage mask(s).
     figsize : tuple
@@ -65,6 +71,11 @@ def create_timelapse_gif(
         Duration of the first frame in ms (longer for visual pause).
     loop : int
         Number of loops (0 = infinite).
+    length_unit : ``'m'`` | ``'ft'``, optional
+        Unit the axes are shown in; the mesh stays in metres.
+    vertical : ``'auto'`` | ``'elevation'`` | ``'depth'``
+        What the vertical axis shows; ``'auto'`` gives depth when the ground
+        surface is flat at zero.
 
     Returns
     -------
@@ -86,6 +97,8 @@ def create_timelapse_gif(
         cov_arr = None
         single_cov = False
 
+    # Every frame shares the mesh, so the ground surface is read once.
+    vertical, depth_reference = vertical_axis(vertical, mesh=mesh)
     frames = []
     for i, model in enumerate(models):
         fig, ax = plt.subplots(figsize=figsize)
@@ -93,7 +106,6 @@ def create_timelapse_gif(
 
         kw = dict(
             cMap=cmap, logScale=log_scale, label=label,
-            xlabel=xlabel, ylabel=ylabel,
             orientation="vertical", pad=0.3,
         )
         if cmin is not None:
@@ -105,6 +117,8 @@ def create_timelapse_gif(
             kw["coverage"] = _coverage_mask(c)
 
         pg.show(mesh, arr, ax=ax, **kw)
+        _label_section(ax, length_unit=length_unit, vertical=vertical,
+                       depth_reference=depth_reference, xlabel=xlabel, ylabel=ylabel)
         if titles is not None and i < len(titles):
             ax.set_title(titles[i])
 
@@ -138,12 +152,14 @@ def create_timelapse_mp4(
     cmax: Optional[float] = None,
     log_scale: bool = False,
     label: str = "",
-    xlabel: str = "Distance (m)",
-    ylabel: str = "Elevation (m)",
+    xlabel: Optional[str] = None,
+    ylabel: Optional[str] = None,
     coverage: Optional[Union[np.ndarray, Sequence[np.ndarray]]] = None,
     figsize: Tuple[float, float] = (8, 2.5),
     dpi: int = 150,
     fps: int = 10,
+    length_unit: Optional[str] = None,
+    vertical: str = "auto",
 ) -> str:
     """Create an MP4 video of time-lapse model snapshots using matplotlib.
 
@@ -179,13 +195,13 @@ def create_timelapse_mp4(
         single_cov = False
 
     fig, ax = plt.subplots(figsize=figsize)
+    vertical, depth_reference = vertical_axis(vertical, mesh=mesh)
 
     def _draw(i):
         ax.clear()
         arr = np.asarray(models[i], dtype=float).ravel()
         kw = dict(
             cMap=cmap, logScale=log_scale, label=label,
-            xlabel=xlabel, ylabel=ylabel,
             orientation="vertical", pad=0.3,
         )
         if cmin is not None:
@@ -196,6 +212,8 @@ def create_timelapse_mp4(
             c = cov_arr if single_cov else cov_arr[i]
             kw["coverage"] = _coverage_mask(c)
         pg.show(mesh, arr, ax=ax, **kw)
+        _label_section(ax, length_unit=length_unit, vertical=vertical,
+                       depth_reference=depth_reference, xlabel=xlabel, ylabel=ylabel)
         if titles is not None and i < len(titles):
             ax.set_title(titles[i])
 
@@ -221,6 +239,8 @@ def create_difference_gif(
     dpi: int = 150,
     duration: int = 100,
     coverage: Optional[Union[np.ndarray, Sequence[np.ndarray]]] = None,
+    length_unit: Optional[str] = None,
+    vertical: str = "auto",
 ) -> str:
     """Create a GIF animation showing model changes relative to a reference.
 
@@ -281,7 +301,7 @@ def create_difference_gif(
         cmin=cmin_val, cmax=cmax_val, log_scale=log_scale,
         label=label or mode.replace("_", " ").title(),
         figsize=figsize, dpi=dpi, duration=duration,
-        coverage=coverage,
+        coverage=coverage, length_unit=length_unit, vertical=vertical,
     )
 
 
@@ -312,6 +332,8 @@ def create_combined_timelapse_gif(
     first_frame_duration: int = 500,
     loop: int = 0,
     day_labels: Optional[Sequence[str]] = None,
+    length_unit: Optional[str] = None,
+    vertical: str = "auto",
 ) -> str:
     """Create a combined GIF with water content, resistivity, apparent
     resistivity pseudosection, and precipitation panels.
@@ -361,6 +383,11 @@ def create_combined_timelapse_gif(
         0 = infinite loop.
     day_labels : sequence of str, optional
         Label for each frame (e.g. ``'Day 0'``, ``'Day 1'``, …).
+    length_unit : ``'m'`` | ``'ft'``, optional
+        Unit of the section axes; ``mesh_ylim`` stays in metres, like the mesh.
+    vertical : ``'auto'`` | ``'elevation'`` | ``'depth'``
+        What the vertical axes show; ``'auto'`` gives depth when the ground
+        surface is flat at zero.
 
     Returns
     -------
@@ -456,6 +483,7 @@ def create_combined_timelapse_gif(
     if not rows:
         raise ValueError("No data panels provided.")
 
+    mesh_vertical, depth_reference = vertical_axis(vertical, mesh=mesh)
     frames = []
     for i in range(n_frames):
         if i % 10 == 0:
@@ -494,8 +522,9 @@ def create_combined_timelapse_gif(
                 arr = np.asarray(wc_models[i], dtype=float).ravel()
                 pg.show(mesh, arr, ax=ax_wc, cMap=wc_cmap, logScale=False,
                         cMin=wc_cmin, cMax=wc_cmax, label="Water Content (-)",
-                        xlabel="Distance (m)", ylabel="Elevation (m)",
                         orientation="vertical", pad=0.3)
+                _label_section(ax_wc, length_unit=length_unit, vertical=mesh_vertical,
+                               depth_reference=depth_reference)
                 ax_wc.set_title("Water Content Model", fontsize=10)
                 if mesh_ylim is not None:
                     ax_wc.set_ylim(mesh_ylim)
@@ -507,8 +536,9 @@ def create_combined_timelapse_gif(
                 pg.show(mesh, arr, ax=ax_res, cMap=res_cmap, logScale=True,
                         cMin=res_cmin, cMax=res_cmax,
                         label="Resistivity (Ω·m)",
-                        xlabel="Distance (m)", ylabel="Elevation (m)",
                         orientation="vertical", pad=0.3)
+                _label_section(ax_res, length_unit=length_unit, vertical=mesh_vertical,
+                               depth_reference=depth_reference)
                 ax_res.set_title("Resistivity Model", fontsize=10)
                 if mesh_ylim is not None:
                     ax_res.set_ylim(mesh_ylim)
@@ -538,6 +568,12 @@ def create_combined_timelapse_gif(
                     cbar_opts={"location": "right", "shrink": 0.8, "aspect": 30},
                     clim=[app_res_cmin, app_res_cmax],
                 )
+                from .plotting import _electrode_elevations
+
+                _label_section(ax_app,
+                               surface=_electrode_elevations(simpeg_data_list[i], None),
+                               length_unit=length_unit, vertical=vertical,
+                               xname="x", depth_name="Pseudo-depth")
                 ax_app.set_title("Apparent Resistivity Pseudosection", fontsize=10)
             except Exception as e:
                 ax_app.text(0.5, 0.5, f"Error: {e}", transform=ax_app.transAxes,

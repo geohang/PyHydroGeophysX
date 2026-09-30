@@ -39,6 +39,8 @@ from PySide6.QtWidgets import (
 )
 
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets import length_units
+from PyHydroGeophysX.visualization.axis_units import length_factor, to_display_length
 
 #: Columns of the station table, as (heading, row key, format).
 _COLUMNS = (
@@ -66,6 +68,10 @@ _COLOUR_FIELDS = (
     ("LM gates kept", "LM_gates_kept"),
     ("HM gates kept", "HM_gates_kept"),
 )
+
+#: The colour fields that are lengths in metres, whose range the map's title
+#: gives in the studio's length unit.
+_LENGTH_FIELDS = frozenset({"elevation", "rx_tx_distance"})
 
 
 #: Rows whose bare value invites the wrong reading. The tree shows a field name
@@ -164,8 +170,7 @@ class EMSurveyView(QWidget):
         row.addStretch(1)
 
         self._plot = pg.PlotWidget()
-        self._plot.setLabel("bottom", "Easting", units="m")
-        self._plot.setLabel("left", "Northing", units="m")
+        self._label_axes()
         self._plot.showGrid(x=True, y=True, alpha=0.25)
         self._plot.setAspectLocked(True)
         self._scatter = pg.ScatterPlotItem(size=8, pen=pg.mkPen("#333333", width=0.4))
@@ -193,10 +198,25 @@ class EMSurveyView(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(controls)
         layout.addWidget(split, stretch=1)
+        # View > Length Units: the axes retick and the title's range follows.
+        length_units.notifier().changed.connect(self._on_length_unit_changed)
 
     @property
     def colormap_chooser(self) -> "cmaps.ColormapChooser":
         return self._colormap
+
+    def _label_axes(self) -> None:
+        """Label the map in the studio's length unit, with no SI prefix.
+
+        Given units, pyqtgraph would prefix feet into "kft".
+        """
+        length_units.pyqtgraph_axis(self._plot, "bottom", "Easting")
+        length_units.pyqtgraph_axis(self._plot, "left", "Northing")
+
+    def _on_length_unit_changed(self, _unit: str) -> None:
+        """Retick the map in the studio's new length unit."""
+        self._label_axes()
+        self._draw_map()
 
     # -- population ----------------------------------------------------------
     def set_summary(self, summary: Optional[Dict[str, Any]]) -> None:
@@ -270,8 +290,12 @@ class EMSurveyView(QWidget):
                 "data": int(index), "size": 8,
             })
         self._scatter.setData(spots)
-        self._plot.setTitle("%s: %g to %g" % (
-            self._colour_by.currentText(), low, high))
+        unit = ""
+        if key in _LENGTH_FIELDS and finite.size:
+            low, high = to_display_length(low), to_display_length(high)
+            unit = " " + length_units.current()
+        self._plot.setTitle("%s: %g to %g%s" % (
+            self._colour_by.currentText(), low, high, unit))
 
     # -- picking -------------------------------------------------------------
     def _sounding_index(self, row_index: int) -> Optional[int]:
@@ -440,13 +464,26 @@ class EMSignalNoiseView(QWidget):
             plot.addLegend(offset=(-10, 10), labelTextSize="8pt")
             self._plots[name] = plot
             stack.addWidget(plot)
-        self._plots["HM"].setLabel("bottom", "Distance along line (m)")
+        self._label_distance_axis()
         self._plots["LM"].setXLink(self._plots["HM"])
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(controls)
         layout.addWidget(stack, stretch=1)
+        # View > Length Units: only the distance axis changes, not the curves.
+        length_units.notifier().changed.connect(self._on_length_unit_changed)
+
+    def _label_distance_axis(self) -> None:
+        """Tick both panels' distance axes in the studio's unit; label the lower one."""
+        length_units.pyqtgraph_axis(self._plots["HM"], "bottom", "Distance along line")
+        # The upper panel shares the lower one's x range but keeps its own
+        # ticks, which have to be in the same unit.
+        self._plots["LM"].getAxis("bottom").setScale(length_factor())
+
+    def _on_length_unit_changed(self, _unit: str) -> None:
+        """Retick the distance axes in the studio's new length unit."""
+        self._label_distance_axis()
 
     def set_summary(self, summary: Optional[Dict[str, Any]]) -> None:
         """Show one survey, keeping the chosen line where the new one has it."""

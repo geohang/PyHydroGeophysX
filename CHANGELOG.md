@@ -5,7 +5,39 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the projec
 uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html); before 1.0, a
 minor release can change the API.
 
-## [0.5.0] - Unreleased
+## [Unreleased]
+
+### Added
+
+- Figures can show lengths in feet. `visualization.axis_units` holds the
+  choice: `set_length_unit("ft")` sets it for every figure, `length_unit("ft")`
+  sets it for one block, and the section, map and profile functions in
+  `visualization` take `length_unit="m"` or `"ft"` for one call. Models, meshes
+  and exported files stay in metres; only the axis ticks and labels change, so
+  switching units cannot round anything off. The studio offers the same choice
+  under View > Length Units, remembered between sessions and applied to every
+  page. Agent reports read it from `config["figure_style"]["length_unit"]`, which
+  the request parser fills in when a request asks for feet; without a language
+  model, a request that says "feet", "ft" or "英尺" is still honoured.
+- `visualization.plot_model_section`, `plot_timelapse_snapshots`,
+  `plot_difference_map`, `plot_coverage`, the pseudosection plots and the
+  animations take `vertical="auto"`, `"elevation"` or `"depth"`.
+
+### Changed
+
+- A section without elevations is labelled Depth, not Elevation. A survey read
+  without elevations puts every electrode at z = 0, and its vertical axis now
+  reads "Depth (m)", positive downward, in the library plots, the studio and the
+  agent reports; a section with topography keeps "Elevation (m)". The reports
+  used to label such a section "Elevation (m)" and print negative numbers, and
+  the studio sections labelled "Elevation (m)" over pyGIMLi's positive depth
+  ticks. The pseudosection plots read "Pseudo-depth" in the same case.
+- The `xlabel` and `ylabel` defaults of `plot_model_section`,
+  `plot_apparent_resistivity_pseudosection` and `create_timelapse_gif`/`_mp4`
+  are now None, meaning the labels above; a label passed explicitly is used as
+  it is.
+
+## [0.5.0] - 2026-09-28
 
 0.5.0 is the first release since 0.3.0. Version 0.4.0 was never published, so
 these notes cover everything since the `v0.3.0` tag (2026-07-09) and are written
@@ -41,6 +73,9 @@ for users upgrading from 0.3.0. Module paths below are relative to
 These no longer work in 0.5.0. Where Python can report it, the error names
 what to use instead.
 
+- Python 3.10 or later is required. 0.3.0 declared 3.8, but the package no
+  longer imports on 3.8 or 3.9, both past end of life; pip keeps those
+  interpreters on 0.3.0.
 - The desktop application is now the Studio, and nothing under the Workbench
   name remains. The launcher `pyhydrogeophysx-workbench` is now
   `pyhydrogeophysx-studio`, and upgrading removes the old command, so update
@@ -323,10 +358,17 @@ Results computed with 0.3.0 defaults differ in these cases.
 #### Sensitivity, resolution, assimilation and uncertainty
 
 - Worked examples for sensitivity and resolution analysis, ensemble
-  assimilation (EnKF and ES-MDA) and linearized posterior uncertainty. The
+  assimilation (EnKF and ES-MDA) and linearized posterior uncertainty, run on
+  the Treeline catchment MODFLOW model shipped with the examples. The
   functions shipped in 0.3.0; how their results change is listed under
   Upgrading.
 - `analysis.compute_depth_of_investigation(reference_resistivity=...)`.
+- `ERTInversion(reference_weight=...)`: a smallness term pulling the model
+  toward the reference model, weighted relative to the smoothness (default 0,
+  smoothness alone). `compute_depth_of_investigation` needs it with
+  `ERTInversion`: first-order smoothness ignores a homogeneous reference, so
+  without it the two runs converge to one model and the index says nothing
+  about the reference.
 - `petrophysics.run_petrophysics_monte_carlo`: a seeded Monte Carlo conversion
   of ERT models to water content.
 
@@ -384,8 +426,8 @@ Results computed with 0.3.0 defaults differ in these cases.
   scripts no longer import the desktop package; see the table under What warns.
 - Default language models: Anthropic `claude-haiku-4-5` (0.3.0:
   `claude-sonnet-5`) and OpenAI `gpt-5.6-luna` (0.3.0: `gpt-4.1`), as Level 1 of
-  the routing. Gemini uses the `google-genai` SDK, with `google-generativeai`
-  kept for Python 3.8.
+  the routing. Gemini uses the `google-genai` SDK; the older
+  `google-generativeai` is still used where it is the only one installed.
 - Climate data come from Open-Meteo (ERA5, 0.1 to 0.25 degrees) instead of
   Daymet (1 km, North America only), so climate values in reports differ.
 - The DAS-1 reader was rewritten, and readers for Lippmann `.tx0`, Res2DInv,

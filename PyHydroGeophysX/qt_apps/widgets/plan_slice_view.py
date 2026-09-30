@@ -16,7 +16,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
 
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.coalesce import Coalesced
+from PyHydroGeophysX.visualization.axis_units import set_length_axis, to_display_length
 
 
 class PlanSliceView(QWidget):
@@ -62,8 +64,9 @@ class PlanSliceView(QWidget):
         self._depths = None   # (n_depth,) depth centres (m, positive down)
         self._label = "value"
         self._log = True
-        self._x_label = "Easting (m)"
-        self._y_label = "Northing (m)"
+        # Axis names; the unit is appended, in the studio's length unit.
+        self._x_label = "Easting"
+        self._y_label = "Northing"
         self._pending_draw = Coalesced(lambda: self._flush(), self)
         self._full_due = False
         # Kept per data set: the colour scale spans every depth, and a
@@ -71,10 +74,19 @@ class PlanSliceView(QWidget):
         self._scale = None
         self._triangulations: dict = {}
         self._drawn = None    # the artists of the last full drawing
+        # View > Length Units: the axes and the depth quoted change, the data
+        # and the triangulations kept for them do not.
+        length_units.notifier().changed.connect(self._on_length_unit_changed)
 
     # -- public --------------------------------------------------------------
     def show_slices(self, xy, res, depths, *, label: str = "value", log_scale: bool = True,
-                    x_label: str = "Easting (m)", y_label: str = "Northing (m)") -> None:
+                    x_label: str = "Easting", y_label: str = "Northing") -> None:
+        """Show ``res`` at the soundings ``xy``, one slice per depth in ``depths``.
+
+        Coordinates and depths are in metres. ``x_label`` and ``y_label`` name
+        the map axes; the studio's length unit is appended to them, and an empty
+        ``y_label`` leaves that axis unlabelled.
+        """
         import numpy as np
         self._xy = np.asarray(xy, dtype=float)
         self._res = np.asarray(res, dtype=float)
@@ -110,10 +122,24 @@ class PlanSliceView(QWidget):
         self._pending_draw.flush()
 
     # -- rendering -----------------------------------------------------------
+    def _on_length_unit_changed(self, _unit: str) -> None:
+        """Redraw the map in the studio's new length unit."""
+        if self._res is not None:
+            self._request_full()
+
+    def _depth_text(self, j: int) -> str:
+        """``'12 m'``: the depth of slice ``j`` in the studio's length unit."""
+        return f"{to_display_length(float(self._depths[j])):.0f} {length_units.current()}"
+
+    def _label_axes(self, ax) -> None:
+        """Name the map axes and tick them in the studio's length unit."""
+        set_length_axis(ax, "x", self._x_label)
+        set_length_axis(ax, "y", self._y_label or "Northing", labelled=bool(self._y_label))
+
     def _on_depth_changed(self, _value: int = 0) -> None:
         if self._depths is not None and self._depths.size:
             j = min(max(self._z.value(), 0), self._depths.size - 1)
-            self._z_label.setText(f"{self._depths[j]:.0f} m")
+            self._z_label.setText(self._depth_text(j))
         if self._z.isSliderDown():
             self._pending_draw.request()
         else:
@@ -199,7 +225,7 @@ class PlanSliceView(QWidget):
         # with the depth. The full drawing puts both back.
         drawn["scatter"].set_edgecolor("none")
         self._fig.set_layout_engine(None)
-        drawn["axes"].set_title(f"Resistivity at depth {self._depths[j]:.0f} m")
+        drawn["axes"].set_title(f"Resistivity at depth {self._depth_text(j)}")
         self._canvas.draw_idle()
         return True
 
@@ -230,11 +256,9 @@ class PlanSliceView(QWidget):
                 if self._log else "No finite values at this depth.",
                 ha="center", va="center", transform=ax.transAxes,
             )
-            ax.set_xlabel(self._x_label)
-            if self._y_label:
-                ax.set_ylabel(self._y_label)
-            ax.set_title(f"Depth {self._depths[j]:.0f} m")
-            self._z_label.setText(f"{self._depths[j]:.0f} m")
+            self._label_axes(ax)
+            ax.set_title(f"Depth {self._depth_text(j)}")
+            self._z_label.setText(self._depth_text(j))
             self._canvas.draw_idle()
             return
         cmap = cmaps.to_matplotlib(self._colormap.colormap())
@@ -251,10 +275,8 @@ class PlanSliceView(QWidget):
                         s=90, edgecolor="#333333", linewidth=0.5, zorder=3)
         if mappable is None:
             mappable = sc
-        ax.set_xlabel(self._x_label)
-        if self._y_label:
-            ax.set_ylabel(self._y_label)
-        ax.set_title(f"Resistivity at depth {self._depths[j]:.0f} m")
+        self._label_axes(ax)
+        ax.set_title(f"Resistivity at depth {self._depth_text(j)}")
         if not collinear:
             ax.set_aspect("equal", "box")
         ax.grid(True, alpha=0.3)
@@ -267,7 +289,7 @@ class PlanSliceView(QWidget):
             bar.ax.yaxis.set_major_locator(LogLocator(base=10.0, subs=(1.0, 2.0, 5.0)))
             bar.ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
             bar.ax.yaxis.set_minor_formatter(FuncFormatter(lambda _v, _p: ""))
-        self._z_label.setText(f"{self._depths[j]:.0f} m")
+        self._z_label.setText(self._depth_text(j))
         self._drawn = {"axes": ax, "scatter": sc, "surface": surface}
         self._canvas.draw_idle()
 

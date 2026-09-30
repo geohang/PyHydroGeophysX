@@ -277,7 +277,10 @@ def run_hydro_forward(
         )
     except Exception as exc:  # ImportError or pygimli init failure
         raise BackendUnavailable(str(exc))
+    from PyHydroGeophysX.visualization.axis_units import set_length_axis, set_section_axes
 
+    # Unit the figures' length axes are shown in; the models stay in metres.
+    unit = params.get("length_unit")
     methods = [m for m in methods if m in ALL_METHODS]
     # Without SimPEG the EM and gravity converters are placeholders (see
     # Hydro_modular). A run that needs one is refused here, as a missing backend
@@ -390,6 +393,7 @@ def run_hydro_forward(
         if resistivity_model is not None:
             def render_ert_model(ax) -> None:
                 pg.show(mesh, resistivity_model, ax=ax, cMap="Spectral_r", label="Resistivity (ohm m)")
+                set_section_axes(ax, mesh=mesh, unit=unit)
                 ax.set_title("ERT resistivity model")
 
             def render_ert_measurement(ax) -> None:
@@ -401,6 +405,7 @@ def run_hydro_forward(
         if velocity_model is not None:
             def render_srt_model(ax) -> None:
                 pg.show(mesh, velocity_model, ax=ax, cMap="turbo", label="Velocity (m/s)")
+                set_section_axes(ax, mesh=mesh, unit=unit)
                 ax.set_title("Seismic velocity model")
 
             def render_srt_measurement(ax) -> None:
@@ -413,6 +418,7 @@ def run_hydro_forward(
         if resistivity_model is not None:
             ax1 = fig.add_subplot(2, 2, 1)
             pg.show(mesh, resistivity_model, ax=ax1, cMap="Spectral_r", label="Resistivity (ohm m)")
+            set_section_axes(ax1, mesh=mesh, unit=unit)
             ax1.set_title("2D resistivity model")
             ax3 = fig.add_subplot(2, 2, 3)
             pg_ert.show(ert_data, ax=ax3)
@@ -420,6 +426,7 @@ def run_hydro_forward(
         if velocity_model is not None:
             ax2 = fig.add_subplot(2, 2, 2)
             pg.show(mesh, velocity_model, ax=ax2, cMap="turbo", label="Velocity (m/s)")
+            set_section_axes(ax2, mesh=mesh, unit=unit)
             ax2.set_title("2D velocity model")
             ax4 = fig.add_subplot(2, 2, 4)
             tt.drawFirstPicks(ax4, srt_data)
@@ -446,7 +453,7 @@ def run_hydro_forward(
         im_model = ax_model.imshow(np.asarray(wc_profile, dtype=float), aspect="auto", origin="upper",
                                    extent=[float(L_profile[0]), float(L_profile[-1]), n_layers, 0],
                                    cmap="Blues")
-        ax_model.set_xlabel("Distance along profile (m)")
+        set_length_axis(ax_model, "x", "Distance along profile", unit=unit)
         ax_model.set_ylabel("Layer index (surface \u2192 depth)")
         ax_model.set_title("Hydrologic profile input")
         fig_model.colorbar(im_model, ax=ax_model, label="Water content")
@@ -480,11 +487,11 @@ def run_hydro_forward(
             )
             ax = axes[0][col]; col += 1
             im = ax.pcolormesh(x_station, times, np.abs(tdem_clean).T, shading="auto", cmap="magma")
-            ax.set_yscale("log"); ax.set_xlabel("Distance (m)"); ax.set_ylabel("Time (s)")
+            ax.set_yscale("log"); set_length_axis(ax, "x", "Distance", unit=unit); ax.set_ylabel("Time (s)")
             ax.set_title("Pseudo-2D TDEM |response|"); fig.colorbar(im, ax=ax)
             def render_tdem_measurement(ax) -> None:
                 image = ax.pcolormesh(x_station, times, np.abs(tdem_clean).T, shading="auto", cmap="magma")
-                ax.set_yscale("log"); ax.set_xlabel("Distance (m)"); ax.set_ylabel("Time (s)")
+                ax.set_yscale("log"); set_length_axis(ax, "x", "Distance", unit=unit); ax.set_ylabel("Time (s)")
                 ax.set_title("Synthetic TDEM measurements")
                 ax.figure.colorbar(image, ax=ax, label="|response|")
 
@@ -519,12 +526,12 @@ def run_hydro_forward(
             )
             ax = axes[0][col]; col += 1
             im = ax.pcolormesh(x_station, freqs, np.abs(np.imag(fdem_clean)).T, shading="auto", cmap="viridis")
-            ax.set_yscale("log"); ax.set_xlabel("Distance (m)"); ax.set_ylabel("Frequency (Hz)")
+            ax.set_yscale("log"); set_length_axis(ax, "x", "Distance", unit=unit); ax.set_ylabel("Frequency (Hz)")
             ax.set_title("Pseudo-2D FDEM |imag|"); fig.colorbar(im, ax=ax)
             def render_fdem_measurement(ax) -> None:
                 image = ax.pcolormesh(x_station, freqs, np.abs(np.imag(fdem_clean)).T,
                                       shading="auto", cmap="viridis")
-                ax.set_yscale("log"); ax.set_xlabel("Distance (m)"); ax.set_ylabel("Frequency (Hz)")
+                ax.set_yscale("log"); set_length_axis(ax, "x", "Distance", unit=unit); ax.set_ylabel("Frequency (Hz)")
                 ax.set_title("Synthetic FDEM measurements")
                 ax.figure.colorbar(image, ax=ax, label="|imaginary response|")
 
@@ -551,12 +558,12 @@ def run_hydro_forward(
             ax = axes[0][col]; col += 1
             ax.plot(x_station, grav_clean, "k-", lw=1.6, label="clean")
             ax.plot(x_station, grav_noisy, "o", ms=3.5, alpha=0.7, label="noisy")
-            ax.set_xlabel("Distance (m)"); ax.set_ylabel("Gravity anomaly (mGal)")
+            set_length_axis(ax, "x", "Distance", unit=unit); ax.set_ylabel("Gravity anomaly (mGal)")
             ax.set_title("Pseudo-2D gravity"); ax.grid(True, alpha=0.25); ax.legend(loc="best")
             def render_gravity_measurement(ax) -> None:
                 ax.plot(x_station, grav_clean, "k-", lw=1.6, label="clean")
                 ax.plot(x_station, grav_noisy, "o", ms=3.5, alpha=0.7, label="noisy")
-                ax.set_xlabel("Distance (m)"); ax.set_ylabel("Gravity anomaly (mGal)")
+                set_length_axis(ax, "x", "Distance", unit=unit); ax.set_ylabel("Gravity anomaly (mGal)")
                 ax.set_title("Synthetic gravity measurements")
                 ax.grid(True, alpha=0.25); ax.legend(loc="best")
 

@@ -12,7 +12,8 @@ from typing import Any, Dict, Optional
 from ._chi2 import chi2_history
 from ._document import bullets, control_block, facts, numbered, renumber, table
 from . import _figstyle as figstyle
-from ._figures import (FIGURE_CATALOG, llm_figure_topics,
+from ..visualization.axis_units import set_section_axes
+from ._figures import (FIGURE_CATALOG, length_unit_from_text, llm_figure_topics,
                        missing_figure_warnings, plan_figures)
 from ._intent import PRODUCTS, climate_blocker, wants_climate
 from ._method import SCHEME_DESCRIPTION, SCHEME_LABEL, SINGLE_SURVEY_LABEL, resolve_scheme
@@ -211,7 +212,10 @@ reports suitable for scientists and engineers. You should integrate climate insi
             # 6. Climate-Resistivity Cross-Modal Analysis (if climate data available)
             climate_ert_analysis = self._generate_climate_ert_analysis(workflow_data)
             
-            # 7. Visualizations (create plots)
+            # 7. Visualizations (create plots). The request's figure
+            # preferences - feet instead of metres, bigger panels - are read
+            # first, while there are still figures to apply them to.
+            self._read_figure_request(config)
             visualization_files = self._generate_visualizations(workflow_data, output_dir, config)
             
             # 8. Generate LLM-enhanced narrative report
@@ -1014,11 +1018,11 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                             coverage=coverage_mask
                         )
                         
-                        ax.set_xlabel('Distance (m)', fontsize=14, fontfamily='Arial')
-                        ax.set_ylabel('Elevation (m)', fontsize=14, fontfamily='Arial')
-                        # pg.show may format negative elevations as positive
-                        # depths. Keep signed coordinates for an elevation axis.
-                        ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
+                        # Elevation when the survey had elevations; depth,
+                        # positive down, when it sits at z = 0 - pg.show's own
+                        # depth ticks under an "Elevation" label disagreed.
+                        set_section_axes(ax, mesh=inv.get('mesh'), unit=style.length_unit,
+                                         fontsize=14, fontfamily='Arial')
                         ax.set_title('ERT Inversion Results', fontsize=16, fontfamily='Arial')
 
                         applied, shown_span, min_span = _apply_vertical_limits(
@@ -1079,8 +1083,8 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                             coverage=coverage_mask
                         )
                         
-                        ax.set_xlabel('Distance (m)', fontsize=14, fontfamily='Arial')
-                        ax.set_ylabel('Elevation (m)', fontsize=14, fontfamily='Arial')
+                        set_section_axes(ax, mesh=wc.get('mesh'), unit=style.length_unit,
+                                         fontsize=14, fontfamily='Arial')
                         ax.set_title('Water Content Distribution', fontsize=16, fontfamily='Arial')
 
                         _apply_vertical_limits(ax, wc.get('mesh'), coverage_mask)
@@ -1130,8 +1134,8 @@ including detection of post-rainfall infiltration and high-PET drying periods.
                                 coverage=coverage_mask
                             )
                             
-                            ax.set_xlabel('Distance (m)', fontsize=14, fontfamily='Arial')
-                            ax.set_ylabel('Elevation (m)', fontsize=14, fontfamily='Arial')
+                            set_section_axes(ax, mesh=wc.get('mesh'), unit=style.length_unit,
+                                             fontsize=14, fontfamily='Arial')
                             ax.set_title('Water Content Uncertainty', fontsize=16, fontfamily='Arial')
 
                             _apply_vertical_limits(ax, wc.get('mesh'), coverage_mask)
@@ -2116,7 +2120,7 @@ Correlation between mean resistivity changes and climate variables:
                         coverage=coverage_masked
                     )
                     figstyle.apply(ax_baseline, style,
-                                   figstyle.survey_title(0, survey_dates))
+                                   figstyle.survey_title(0, survey_dates), mesh=mesh)
                     fig_baseline.tight_layout()
                     baseline_file = os.path.join(output_dir, 'baseline_resistivity.png')
                     figstyle.save(fig_baseline, baseline_file, style)
@@ -2199,7 +2203,7 @@ Correlation between mean resistivity changes and climate variables:
                         
                         figstyle.apply(ax, style,
                                        figstyle.survey_title(i, survey_dates),
-                                       ylabel='Elevation (m)' if i == 0 else '')
+                                       ylabel=None if i == 0 else '', mesh=mesh)
                     
                     fig.tight_layout()
                     all_timesteps_file = os.path.join(output_dir, 'timelapse_all_resistivity.png')
@@ -2271,7 +2275,7 @@ Correlation between mean resistivity changes and climate variables:
                         coverage=coverage_masked
                     )
                     figstyle.apply(ax, style,
-                                   figstyle.survey_title(0, survey_dates))
+                                   figstyle.survey_title(0, survey_dates), mesh=mesh)
                     
                     # Plots 2-4: Percentage changes
                     time_labels = self._generate_time_labels(n_timesteps)
@@ -2305,7 +2309,7 @@ Correlation between mean resistivity changes and climate variables:
                         
                         figstyle.apply(ax, style,
                                        figstyle.change_title(i, survey_dates),
-                                       ylabel='')
+                                       ylabel='', mesh=mesh)
                     
                     fig.tight_layout()
                     tl_changes_file = os.path.join(output_dir, 'timelapse_resistivity_changes_percent.png')
@@ -2376,7 +2380,7 @@ Correlation between mean resistivity changes and climate variables:
                         coverage=coverage_masked
                     )
                     figstyle.apply(ax, style,
-                                   figstyle.survey_title(0, survey_dates))
+                                   figstyle.survey_title(0, survey_dates), mesh=mesh)
                     
                     # Plots 2-4: Absolute changes
                     time_labels = self._generate_time_labels(n_timesteps)
@@ -2404,7 +2408,7 @@ Correlation between mean resistivity changes and climate variables:
                         
                         figstyle.apply(ax, style,
                                        figstyle.change_title(i, survey_dates),
-                                       ylabel='')
+                                       ylabel='', mesh=mesh)
                     
                     fig.tight_layout()
                     tl_changes_abs_file = os.path.join(output_dir, 'timelapse_resistivity_changes_absolute.png')
@@ -2629,7 +2633,7 @@ Correlation between mean resistivity changes and climate variables:
                         orientation=style.colorbar_orientation)
                 figstyle.apply(axes[i], style,
                                figstyle.survey_title(i, dates),
-                               ylabel='Elevation (m)' if i == 0 else '')
+                               ylabel=None if i == 0 else '', mesh=mesh)
             fig.tight_layout()
             wc_file = os.path.join(output_dir, 'timelapse_water_content.png')
             figstyle.save(fig, wc_file, style)
@@ -2786,7 +2790,10 @@ that effectively combines temporal ERT analysis with meteorological context."""
         """
         config = config if config is not None else {}
         request = str(config.get('user_request') or '').strip()
-        if not request or not getattr(self, 'api_key', None):
+        if not request:
+            return None
+        if not getattr(self, 'api_key', None):
+            self._length_unit_from_words(config, request)
             return None
 
         def query(prompt):  # noqa: D401 - a one-shot question, no tools
@@ -2797,12 +2804,30 @@ that effectively combines temporal ERT analysis with meteorological context."""
         except Exception as e:  # noqa: BLE001 - a preference must not fail a run
             self._log_execution(f"Could not read figure preferences: {e}",
                                 level='WARNING')
+            asked = None
+        if asked is None:
+            # The model gave no usable answer; a request that says "feet" in
+            # so many words is still honoured.
+            self._length_unit_from_words(config, request)
             return None
         if asked and asked.get('style'):
             config['figure_style'] = {**asked['style'],
                                       **(config.get('figure_style') or {})}
             self._log_execution(f"Figure style from the request: {asked['style']}")
         return asked
+
+    def _length_unit_from_words(self, config: Dict, request: str) -> None:
+        """Offline fallback for the length unit: feet asked for in plain words.
+
+        Only for runs where no model read the request; when one did, its
+        answer is the one used.
+        """
+        unit = length_unit_from_text(request)
+        style = dict(config.get('figure_style') or {})
+        if unit and not style.get('length_unit'):
+            style['length_unit'] = unit
+            config['figure_style'] = style
+            self._log_execution("Figures will show lengths in feet, as the request asks.")
 
     def _figure_plan(self, vis_files: Dict[str, str],
                      config: Optional[Dict] = None,
@@ -3023,8 +3048,9 @@ that effectively combines temporal ERT analysis with meteorological context."""
             
             os.makedirs(output_dir, exist_ok=True)
             
-            # Generate visualizations
+            # Generate visualizations, with the request's figure preferences
             self._log_execution("Generating multi-method visualizations")
+            self._read_figure_request(workflow_config)
             fusion_vis_files = self._generate_fusion_visualizations(
                 structure_results, petro_results, workflow_config, output_dir
             )
@@ -3085,6 +3111,8 @@ that effectively combines temporal ERT analysis with meteorological context."""
         
         matplotlib.rcParams['font.family'] = 'Arial'
         matplotlib.rcParams['font.size'] = 12
+        # Length unit of the section axes (config['figure_style']['length_unit']).
+        unit = figstyle.style_from_config(workflow_config).length_unit
         
         vis_files = {}
         
@@ -3116,8 +3144,7 @@ that effectively combines temporal ERT analysis with meteorological context."""
                        coverage=seismic_coverage, cMin=500, cMax=3600)
                 ax1.set_title('Seismic Velocity Model ',
                             fontsize=13, fontweight='bold')
-                ax1.set_xlabel('Distance (m)')
-                ax1.set_ylabel('Depth (m)' )                 
+                set_section_axes(ax1, mesh=velocity_mesh, unit=unit)
                 # Middle: Velocity with interface
                 figstyle.pg_show(velocity_mesh, velocity_model, ax=ax2, cMap='jet',
                        colorBar=True, label='Velocity (m/s)', cMin=500, cMax=3600,
@@ -3127,8 +3154,7 @@ that effectively combines temporal ERT analysis with meteorological context."""
                 ax2.legend()
                 ax2.set_title(f'Extracted Interface at {velocity_threshold} m/s',
                             fontsize=13, fontweight='bold')
-                ax2.set_xlabel('Distance (m)')
-                ax2.set_ylabel('Depth (m)' )               
+                set_section_axes(ax2, mesh=velocity_mesh, unit=unit)
                 # Bottom: Structure-constrained resistivity
                 figstyle.pg_show(para_mesh, resistivity_model, ax=ax3, cMap='jet',
                        colorBar=True, label='Resistivity (Ωm)',
@@ -3136,8 +3162,7 @@ that effectively combines temporal ERT analysis with meteorological context."""
                        logScale=True, cMin=10, cMax=2000)
                 ax3.set_title(f'Structure-Constrained Resistivity ',
                             fontsize=13, fontweight='bold')
-                ax3.set_xlabel('Distance (m)')
-                ax3.set_ylabel('Depth (m)')
+                set_section_axes(ax3, mesh=para_mesh, unit=unit)
                 
                 fig.tight_layout()
                 workflow_file = os.path.join(output_dir, 'complete_workflow.png')
@@ -3185,8 +3210,7 @@ that effectively combines temporal ERT analysis with meteorological context."""
                        cMin=0, cMax=0.5, logScale=False)
                 ax1.set_title(f'Mean Water Content ',
                             fontsize=13, fontweight='bold')
-                ax1.set_xlabel('Distance (m)')
-                ax1.set_ylabel('Depth (m)')
+                set_section_axes(ax1, mesh=para_mesh, unit=unit)
                 
                 # Right: Uncertainty
                 figstyle.pg_show(para_mesh, wc_std_flat, ax=ax2,
@@ -3195,8 +3219,7 @@ that effectively combines temporal ERT analysis with meteorological context."""
                        cMin=0, cMax=0.1, logScale=False)
                 ax2.set_title(f'Water Content Uncertainty',
                             fontsize=13, fontweight='bold')
-                ax2.set_xlabel('Distance (m)')
-                ax2.set_ylabel('Depth (m)')
+                set_section_axes(ax2, mesh=para_mesh, unit=unit)
                 
                 fig.tight_layout()
                 wc_file = os.path.join(output_dir, 'water_content_uncertainty.png')

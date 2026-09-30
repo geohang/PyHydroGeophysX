@@ -11,8 +11,10 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 
+from . import _figstyle as figstyle
 from .base_agent import AgentResult, BaseAgent
 from PyHydroGeophysX.data_processing.survey_geometry import OriginMismatch
+from PyHydroGeophysX.visualization.axis_units import set_section_axes
 
 
 # ---------------------------------------------------------------------------
@@ -214,7 +216,8 @@ and fresh bedrock (>3000 m/s)."""
             # Generate visualization
             vis_file = self._generate_velocity_plot(
                 TT, mesh_inv, velocity_model, coverage, seismic_data, 
-                interfaces, velocity_thresholds, output_dir
+                interfaces, velocity_thresholds, output_dir,
+                length_unit=figstyle.style_from_config(input_data).length_unit,
             )
             
             # Get LLM interpretation
@@ -426,7 +429,8 @@ Return as: lam=XX, zWeight=XX, vTop=XX, vBottom=XX"""
             return {'lam': 50, 'zWeight': 0.2, 'vTop': 500, 'vBottom': 5000}
     
     def _generate_velocity_plot(self, TT, mesh_inv, velocity_model, coverage, seismic_data,
-                                  interfaces: Dict, thresholds: list, output_dir: str) -> str:
+                                  interfaces: Dict, thresholds: list, output_dir: str,
+                                  length_unit: Optional[str] = None) -> str:
         """
         Generate publication-quality velocity tomogram visualization.
         
@@ -472,8 +476,6 @@ Return as: lam=XX, zWeight=XX, vTop=XX, vBottom=XX"""
         except Exception:
             filled_cov = coverage
         
-        from . import _figstyle as figstyle
-
         # Detached from pyplot: this is often the run's first pg.show, and
         # pyGIMLi's first pg.plt use calls plt.show(), which blocks on an open
         # pyplot figure under an interactive backend - the seismic path hung a
@@ -483,8 +485,8 @@ Return as: lam=XX, zWeight=XX, vTop=XX, vBottom=XX"""
 
         # Plot velocity model
         figstyle.pg_show(mesh_inv, velocity_model, cMap=cmap, coverage=filled_cov, ax=ax,
-                label='Velocity (m/s)', xlabel='Distance (m)', ylabel='Elevation (m)',
-                pad=0.3, cMin=cMin, cMax=cMax, orientation='vertical')
+                label='Velocity (m/s)', pad=0.3, cMin=cMin, cMax=cMax,
+                orientation='vertical')
         
         # Add contour lines for velocity thresholds
         try:
@@ -514,8 +516,8 @@ Return as: lam=XX, zWeight=XX, vTop=XX, vBottom=XX"""
         except Exception:
             pass
         
-        ax.set_xlabel('Distance (m)', fontsize=14)
-        ax.set_ylabel('Elevation (m)', fontsize=14)
+        # Depth, positive down, for a line surveyed without elevations.
+        set_section_axes(ax, mesh=mesh_inv, unit=length_unit, fontsize=14)
         ax.set_title('Seismic Refraction Tomography - Velocity Model', fontsize=16)
         
         if interfaces:

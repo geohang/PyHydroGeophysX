@@ -53,6 +53,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     make_double_spinbox,
     select_directory,
 )
+from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
 from PyHydroGeophysX.workflows import (
@@ -1076,6 +1077,9 @@ class GeoHydrologyModule(BaseModule):
                     base_dir=run.run_dir,
                     metadata={"files": sorted(present)},
                 )
+        # The run's figures are drawn in another process, which cannot see the
+        # studio's View > Length Units choice.
+        params["length_unit"] = length_units.current()
         spec = WorkflowSpec(
             workflow_id="geo_hydrology.ert_to_wc",
             inputs=inputs,

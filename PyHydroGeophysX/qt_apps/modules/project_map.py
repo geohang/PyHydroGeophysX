@@ -12,7 +12,10 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QF
 from .base import BaseModule
 from PyHydroGeophysX.qt_apps.project_map import ProjectMapStore, em_result
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.workers import TaskWorker
+from PyHydroGeophysX.visualization.axis_units import (
+    set_length_axis, set_section_axes, to_display_length)
 from PyHydroGeophysX.visualization.basemap import TILE_SOURCES, basemap_image
 
 
@@ -341,6 +344,14 @@ class ProjectMapModule(BaseModule):
         self._method.currentIndexChanged.connect(self._filter_changed)
         self._list.currentItemChanged.connect(self._choose)
         self._list.itemChanged.connect(self._visibility)
+        # View > Length Units: the map and the section are redrawn; the EM
+        # section view listens for itself.
+        length_units.notifier().changed.connect(self._on_length_unit_changed)
+
+    def _on_length_unit_changed(self, _unit):
+        """Redraw the map and the selected survey's section in the new unit."""
+        self._draw_map()
+        self._redraw_section()
 
     def refresh(self):
         # The window calls this every time the page is shown, not only when the
@@ -796,9 +807,14 @@ class ProjectMapModule(BaseModule):
             low, high = low - 1, high + 1
         cmap = self._section_cmap(entry, 'coolwarm')
         image = plan.pcolormesh(x, y, model[:, :, index].T, cmap=cmap, vmin=low, vmax=high)
-        plan.set(xlabel='Source X (m)', ylabel='Source Y (m)', title=f"{entry['name']} · Z={(z[index]+z[index+1])/2:g} m")
+        set_length_axis(plan, 'x', 'Source X')
+        set_length_axis(plan, 'y', 'Source Y')
+        level = to_display_length((z[index] + z[index + 1]) / 2)
+        plan.set_title(f"{entry['name']} · Z={level:.4g} {length_units.current()}")
         section.pcolormesh(x, z, model[:, model.shape[1]//2, :].T, cmap=cmap, vmin=low, vmax=high)
-        section.set(xlabel='Source X (m)', ylabel='Model Z (m)', title='Central Y section')
+        set_length_axis(section, 'x', 'Source X')
+        set_length_axis(section, 'y', 'Model Z')
+        section.set_title('Central Y section')
         self._section_fig.colorbar(image, ax=[plan, section], label=entry['units'])
         self._section_canvas.draw_idle()
 
@@ -833,7 +849,11 @@ class ProjectMapModule(BaseModule):
                                     norm=norm, edgecolors='none')
         ax.add_collection(collection)
         ax.autoscale_view()
-        ax.set(xlabel='Profile distance (m)', ylabel='Section elevation (m)', title=entry['name'])
+        # A section saved from a survey read without elevations has its top at
+        # z = 0, and reads as depth.
+        set_section_axes(ax, z=vertices[:, 1], xlabel='Profile distance',
+                         elevation_name='Section elevation')
+        ax.set_title(entry['name'])
         self._section_fig.colorbar(collection, ax=ax, label=entry['units'])
         self._section_canvas.draw_idle()
 
@@ -929,9 +949,17 @@ class ProjectMapModule(BaseModule):
         # Keep map distances isotropic while filling wide and resized windows.
         self._ax.set_aspect('equal', adjustable='datalim')
         self._ax.set_facecolor('#f8fbfd')
-        self._ax.set(xlabel='Web Mercator X (display metres)' if geographic else 'Project X (m)',
-                     ylabel='Web Mercator Y (display metres)' if geographic else 'Project Y (m)')
+        # Before the length axes: the unit's own formatter has no offset to turn
+        # off, and ticklabel_format refuses any formatter but matplotlib's own.
         self._ax.ticklabel_format(useOffset=False, style='plain')
+        if geographic:
+            # Web Mercator metres stretch with latitude and are no ground
+            # distance, so they are not converted to another unit.
+            self._ax.set(xlabel='Web Mercator X (display metres)',
+                         ylabel='Web Mercator Y (display metres)')
+        else:
+            set_length_axis(self._ax, 'x', 'Project X')
+            set_length_axis(self._ax, 'y', 'Project Y')
         self._ax.grid(alpha=.2, linestyle=':', color='#7890a2')
         for spine in self._ax.spines.values():
             spine.set_color('#bacbd7')

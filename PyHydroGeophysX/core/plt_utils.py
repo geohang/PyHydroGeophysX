@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pygimli as pg
 
+from PyHydroGeophysX.visualization.axis_units import set_length_axis
+
 
 def drawFirstPicks(
     ax: Any,
@@ -85,7 +87,7 @@ def _draw_first_picks(ax: Any, data: Any, tt: Any, plotva: Any, time_label: str,
     else:
         ax.set_ylabel(time_label)
     
-    ax.set_xlabel("Distance (m)")
+    set_length_axis(ax, "x", "Distance")
     
 
     

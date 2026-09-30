@@ -52,6 +52,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     select_directory,
 )
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.array_viewer import ArrayViewer
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker, TaskWorker
@@ -1220,6 +1221,9 @@ class HydroGeophysicsModule(BaseModule):
                 "methods": methods,
                 "point1": list(self._point1 or []),
                 "point2": list(self._point2 or []),
+                # The run's figures are drawn in another process, which cannot
+                # see the studio's View > Length Units choice.
+                "length_unit": length_units.current(),
             },
             seed=seed,
             metadata={"profile_source": "qt_map_picker"},

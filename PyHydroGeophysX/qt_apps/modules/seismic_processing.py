@@ -49,10 +49,12 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     set_rows_enabled,
 )
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
 from PyHydroGeophysX.qt_apps.widgets.seismic_viewer import SeismicViewer, first_arrival_onsets
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker, TaskWorker
+from PyHydroGeophysX.visualization.axis_units import to_display_length
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
     WorkflowRunResult,
@@ -132,10 +134,14 @@ class SeismicProcessingModule(BaseModule):
         self._tt_widget = pg.PlotWidget()
         self._tt_widget.setBackground("w")
         self._tt_widget.showGrid(x=True, y=True, alpha=0.3)
-        self._tt_widget.setLabel("bottom", "geophone position x (m)")
         self._tt_widget.setLabel("left", "travel time (ms)")
         self._tt_plot = self._tt_widget.getPlotItem()
+        length_units.pyqtgraph_axis(self._tt_plot, "bottom", "geophone position x")
         self._tt_plot.addLegend()
+        # Which of the two travel-time plots is up, so a change of length unit
+        # redraws that one: an uploaded container, or the picks.
+        self._tt_shows_container = False
+        length_units.notifier().changed.connect(self._on_length_unit_changed)
         self._center_tabs.addTab(self._tt_widget, "Travel-time")
         self._vel_view = MeshResultView(colormaps=cmaps.colormap_settings(self.state))
         self._center_tabs.addTab(self._vel_view, "Velocity model")
@@ -1066,6 +1072,7 @@ class SeismicProcessingModule(BaseModule):
             return
         self._geometry_debounced.flush()     # a spacing just typed moves the picks first
         self._tt_plot.clear()
+        self._tt_shows_container = False
         # The geophones, on the t = 0 line, so the plot shows the line the picks
         # are placed on before there are any. Empty, it kept the range of what it
         # last drew, which read as the spacing not having taken.
@@ -1097,7 +1104,8 @@ class SeismicProcessingModule(BaseModule):
             ys = [b for _, b in pts]
             color = colors[i % len(colors)]
             self._tt_plot.plot(xs, ys, pen=pg.mkPen(color, width=1.5), symbol="o", symbolSize=5,
-                               symbolBrush=color, symbolPen=None, name=f"shot @ {shot_x.get(shot, 0.0):.0f} m")
+                               symbolBrush=color, symbolPen=None,
+                               name=self._shot_legend(shot_x.get(shot, 0.0)))
             # shot location on the t = 0 baseline (like pygimli drawFirstPicks)
             self._tt_plot.plot([shot_x.get(shot, 0.0)], [0.0], pen=None, symbol="star",
                                symbolSize=15, symbolBrush=color, symbolPen=pg.mkPen("#222", width=0.8))
@@ -1270,6 +1278,7 @@ class SeismicProcessingModule(BaseModule):
         if not hasattr(self, "_tt_plot"):
             return
         self._tt_plot.clear()
+        self._tt_shows_container = True
         pos = np.asarray(data.sensors(), dtype=float)
         s = np.asarray(data["s"], dtype=int)
         g = np.asarray(data["g"], dtype=int)
@@ -1289,9 +1298,23 @@ class SeismicProcessingModule(BaseModule):
             xs = [a for a, _ in pts]; ys = [b for _, b in pts]
             color = colors[i % len(colors)]
             self._tt_plot.plot(xs, ys, pen=pg.mkPen(color, width=1.5), symbol="o", symbolSize=5,
-                               symbolBrush=color, symbolPen=None, name=f"shot @ {shot_x.get(shot, 0.0):.0f} m")
+                               symbolBrush=color, symbolPen=None,
+                               name=self._shot_legend(shot_x.get(shot, 0.0)))
             self._tt_plot.plot([shot_x.get(shot, 0.0)], [0.0], pen=None, symbol="star",
                                symbolSize=15, symbolBrush=color, symbolPen=pg.mkPen("#222", width=0.8))
+
+    @staticmethod
+    def _shot_legend(shot_x: float) -> str:
+        """A shot's legend entry, in the unit the position axis is ticked in."""
+        return f"shot @ {to_display_length(shot_x):.0f} {length_units.current()}"
+
+    def _on_length_unit_changed(self, _unit: str) -> None:
+        """Retick the travel-time plot and redraw it, so the legend follows."""
+        length_units.pyqtgraph_axis(self._tt_plot, "bottom", "geophone position x")
+        if self._tt_shows_container and self._tt_data is not None:
+            self._plot_tt_container(self._tt_data)
+        else:
+            self._update_tt_qc()
 
     def _run_srt(self) -> None:
         picks = None

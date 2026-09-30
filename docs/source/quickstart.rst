@@ -15,7 +15,7 @@ optional geophysics engines.
 Requirements
 ------------
 
-Python 3.8 or newer and the core install below. NumPy, SciPy and Matplotlib
+Python 3.10 or newer and the core install below. NumPy, SciPy and Matplotlib
 come with it.
 
 1. Install

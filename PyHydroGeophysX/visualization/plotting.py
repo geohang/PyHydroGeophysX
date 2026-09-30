@@ -6,9 +6,40 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 import matplotlib.pyplot as plt
 import numpy as np
 
+from .axis_units import (
+    length_factor,
+    length_label,
+    normalize_length_unit,
+    set_length_axis,
+    set_section_axes,
+    vertical_axis,
+)
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+def _label_section(ax, *, mesh=None, surface=None, z=None, length_unit=None,
+                   vertical="auto", xlabel=None, ylabel=None, xname="Distance",
+                   label_x=True, label_y=True, **name_kw):
+    """Put section axes in ``length_unit``, as elevation or depth; explicit labels win.
+
+    ``xlabel``/``ylabel`` given by the caller are used as they are. Left at
+    None they come from the unit and from whether the section has an
+    elevation at all: a survey read without elevations sits at z = 0 and its
+    vertical axis is depth, not elevation.
+    """
+    mode = set_section_axes(ax, mesh=mesh, surface=surface, z=z, vertical=vertical,
+                            unit=length_unit, xlabel=xname,
+                            label_x=label_x and xlabel is None,
+                            label_y=label_y and ylabel is None, **name_kw)
+    # An unlabelled axis is cleared, not left with pyGIMLi's own "$x$ in m".
+    if not label_x or xlabel is not None:
+        ax.set_xlabel(xlabel if label_x else "")
+    if not label_y or ylabel is not None:
+        ax.set_ylabel(ylabel if label_y else "")
+    return mode
+
 
 def _try_pg_show(ax, mesh, values, **kwargs):
     """Attempt to plot with pygimli; return True on success."""
@@ -81,11 +112,13 @@ def plot_model_section(
     cmax: Optional[float] = None,
     log_scale: bool = False,
     label: str = "",
-    xlabel: str = "Distance (m)",
-    ylabel: str = "Elevation (m)",
+    xlabel: Optional[str] = None,
+    ylabel: Optional[str] = None,
     title: str = "",
     coverage: Optional[np.ndarray] = None,
     orientation: str = "vertical",
+    length_unit: Optional[str] = None,
+    vertical: str = "auto",
 ) -> Tuple:
     """Plot a 2D model cross-section on a PyGIMLi mesh.
 
@@ -105,10 +138,20 @@ def plot_model_section(
         Use logarithmic color scaling.
     label : str
         Colorbar label.
+    xlabel, ylabel : str, optional
+        Axis labels, used as given. By default ``Distance`` and ``Elevation``
+        in ``length_unit`` - or ``Depth``, when the section has no elevation.
     coverage : array-like, optional
         Coverage array for masking low-sensitivity cells.
     orientation : str
         Colorbar orientation (``'vertical'`` or ``'horizontal'``).
+    length_unit : ``'m'`` | ``'ft'``, optional
+        Unit the axes are shown in; the mesh stays in metres. Defaults to
+        :func:`~PyHydroGeophysX.visualization.axis_units.get_length_unit`.
+    vertical : ``'auto'`` | ``'elevation'`` | ``'depth'``
+        What the vertical axis shows. ``'auto'`` gives depth (positive
+        downward) when the ground surface is flat at zero - a survey read
+        without elevations - and elevation otherwise.
 
     Returns
     -------
@@ -124,7 +167,7 @@ def plot_model_section(
     cmap = _get_cmap(cmap)
     kw = dict(
         cMap=cmap, logScale=log_scale, label=label,
-        xlabel=xlabel, ylabel=ylabel, orientation=orientation, pad=0.3,
+        orientation=orientation, pad=0.3,
     )
     if cmin is not None:
         kw["cMin"] = cmin
@@ -135,6 +178,8 @@ def plot_model_section(
 
     arr = np.asarray(values, dtype=float).ravel()
     ax, cbar = pg.show(mesh, arr, ax=ax, **kw)
+    _label_section(ax, mesh=mesh, length_unit=length_unit, vertical=vertical,
+                   xlabel=xlabel, ylabel=ylabel)
     if title:
         ax.set_title(title)
     return fig, ax, cbar
@@ -157,6 +202,8 @@ def plot_timelapse_snapshots(
     label: str = "",
     coverage: Optional[Union[np.ndarray, Sequence[np.ndarray]]] = None,
     figsize_per_panel: Tuple[float, float] = (4.0, 2.5),
+    length_unit: Optional[str] = None,
+    vertical: str = "auto",
 ) -> Tuple:
     """Plot a grid of time-lapse model snapshots.
 
@@ -177,6 +224,8 @@ def plot_timelapse_snapshots(
         If 2-D, ``coverage[i]`` is used for panel *i*.
     figsize_per_panel : tuple
         (width, height) per subplot panel.
+    length_unit, vertical :
+        Axis unit and elevation/depth choice, as in :func:`plot_model_section`.
 
     Returns
     -------
@@ -200,6 +249,8 @@ def plot_timelapse_snapshots(
         cov_arr = None
         single_cov = False
 
+    # Every panel shares the mesh, so the ground surface is read once.
+    vertical, depth_reference = vertical_axis(vertical, mesh=mesh)
     last_cbar = None
     for idx in range(nrows * ncols):
         row, col = divmod(idx, ncols)
@@ -223,17 +274,15 @@ def plot_timelapse_snapshots(
             c = cov_arr if single_cov else cov_arr[idx]
             kw["coverage"] = _coverage_mask(c)
 
-        # Axis labels only on edges
-        if col == 0:
-            kw["ylabel"] = "Elevation (m)"
-        else:
-            ax.set_yticks([])
-        if row == nrows - 1:
-            kw["xlabel"] = "Distance (m)"
-        else:
-            ax.set_xticks([])
-
         ax_out, cbar = pg.show(mesh, arr, ax=ax, **kw)
+        # Axis labels and ticks only on the edges of the grid.
+        _label_section(ax, length_unit=length_unit, vertical=vertical,
+                       depth_reference=depth_reference,
+                       label_x=row == nrows - 1, label_y=col == 0)
+        if col != 0:
+            ax.set_yticks([])
+        if row != nrows - 1:
+            ax.set_xticks([])
         ax.set_title(t, fontsize=10)
         # Remove individual colorbars except for one reference
         if last_cbar is not None:
@@ -263,6 +312,8 @@ def plot_difference_map(
     label: str = "",
     title: str = "",
     coverage: Optional[np.ndarray] = None,
+    length_unit: Optional[str] = None,
+    vertical: str = "auto",
 ) -> Tuple:
     """Plot the difference or ratio between two models.
 
@@ -277,6 +328,8 @@ def plot_difference_map(
         If *True*, center the colorbar at zero (difference) or one (ratio).
     coverage : array-like, optional
         Coverage mask.
+    length_unit, vertical :
+        Axis unit and elevation/depth choice, as in :func:`plot_model_section`.
 
     Returns
     -------
@@ -323,6 +376,7 @@ def plot_difference_map(
         kw["coverage"] = _coverage_mask(coverage)
 
     ax, cbar = pg.show(mesh, vals, ax=ax, **kw)
+    _label_section(ax, mesh=mesh, length_unit=length_unit, vertical=vertical)
     if title:
         ax.set_title(title)
     return fig, ax, cbar
@@ -425,6 +479,7 @@ def plot_electrode_layout(
     color_by: str = "z",
     cmap: str = "terrain",
     title: str = "Electrode Layout",
+    length_unit: Optional[str] = None,
 ) -> Tuple:
     """Scatter-plot electrode positions colored by elevation.
 
@@ -432,6 +487,8 @@ def plot_electrode_layout(
     ----------
     positions : dict
         Must contain ``'x'`` and ``'y'`` keys; optionally ``'z'``.
+    length_unit : ``'m'`` | ``'ft'``, optional
+        Unit of the axes and of a coordinate colorbar; positions are in metres.
 
     Returns
     -------
@@ -442,14 +499,19 @@ def plot_electrode_layout(
     else:
         fig = ax.figure
 
+    unit = normalize_length_unit(length_unit)
     x = np.asarray(positions["x"])
     y = np.asarray(positions["y"])
     c = np.asarray(positions.get(color_by, np.zeros_like(x)))
+    # A coordinate is a length and is shown in the axes' unit; anything else a
+    # caller colours by keeps its own values.
+    if color_by in ("x", "y", "z"):
+        c = np.asarray(c, dtype=float) * length_factor(unit)
 
     sc = ax.scatter(x, y, c=c, cmap=cmap, s=80, edgecolors="black", linewidths=0.5)
-    fig.colorbar(sc, ax=ax, label=f"{color_by.upper()} (m)")
-    ax.set_xlabel("X (m)")
-    ax.set_ylabel("Y (m)")
+    fig.colorbar(sc, ax=ax, label=length_label(color_by.upper(), unit))
+    set_length_axis(ax, "x", "X", unit=unit)
+    set_length_axis(ax, "y", "Y", unit=unit)
     ax.set_title(title)
     ax.set_aspect("equal")
     fig.tight_layout()
@@ -467,6 +529,7 @@ def plot_topography(
     ax: Any = None,
     cmap: str = "terrain",
     title: str = "Surface Topography",
+    length_unit: Optional[str] = None,
 ) -> Tuple:
     """Plot a 2-D topography grid with optional profile line overlay.
 
@@ -476,6 +539,8 @@ def plot_topography(
         Elevation raster.
     profile_endpoints : list of (row, col) tuples, optional
         If two points are given, draw the profile line.
+    length_unit : ``'m'`` | ``'ft'``, optional
+        Unit of the elevation colorbar; ``topo_grid`` is in metres.
 
     Returns
     -------
@@ -486,8 +551,10 @@ def plot_topography(
     else:
         fig = ax.figure
 
-    im = ax.imshow(topo_grid, cmap=cmap, origin="lower")
-    fig.colorbar(im, ax=ax, label="Elevation (m)")
+    unit = normalize_length_unit(length_unit)
+    im = ax.imshow(np.asarray(topo_grid, dtype=float) * length_factor(unit),
+                   cmap=cmap, origin="lower")
+    fig.colorbar(im, ax=ax, label=length_label("Elevation", unit))
     if profile_endpoints is not None and len(profile_endpoints) >= 2:
         p1, p2 = profile_endpoints[0], profile_endpoints[1]
         ax.plot(p1[1], p1[0], "ro", markersize=8, label="Start")
@@ -662,6 +729,17 @@ def _convert_pygimli_to_simpeg(data_obj):
     return dc_data_out, topo_xyz
 
 
+def _electrode_elevations(dc_data, topo_xyz):
+    """Electrode elevations of a pseudosection, or None when they cannot be read."""
+    if topo_xyz is not None:
+        return np.asarray(topo_xyz, dtype=float)[:, -1]
+    try:
+        locations = np.asarray(dc_data.survey.unique_electrode_locations, dtype=float)
+        return locations[:, -1]
+    except Exception:  # noqa: BLE001 - unknown elevation keeps "Elevation"
+        return None
+
+
 def plot_apparent_resistivity_pseudosection(
     data_obj: Any,
     *,
@@ -681,8 +759,10 @@ def plot_apparent_resistivity_pseudosection(
     figsize: Tuple[float, float] = (12, 5),
     data_locations: bool = False,
     clean_axes: bool = False,
-    xlabel: str = "x (m)",
-    ylabel: str = "Elevation (m)",
+    xlabel: Optional[str] = None,
+    ylabel: Optional[str] = None,
+    length_unit: Optional[str] = None,
+    vertical: str = "auto",
 ) -> Tuple:
     """Plot apparent resistivity pseudosection with topography using SimPEG.
 
@@ -726,8 +806,15 @@ def plot_apparent_resistivity_pseudosection(
         Show electrode locations on the plot.
     clean_axes : bool
         If *True*, remove spines and ticks for a clean look.
-    xlabel, ylabel : str
-        Axis labels.
+    xlabel, ylabel : str, optional
+        Axis labels, used as given. By default ``x`` and ``Elevation`` in
+        ``length_unit`` - or ``Pseudo-depth`` when the electrodes have no
+        elevation.
+    length_unit : ``'m'`` | ``'ft'``, optional
+        Unit the axes are shown in; the data stay in metres.
+    vertical : ``'auto'`` | ``'elevation'`` | ``'depth'``
+        What the vertical axis shows; ``'auto'`` gives pseudo-depth when every
+        electrode is at zero elevation.
 
     Returns
     -------
@@ -789,8 +876,9 @@ def plot_apparent_resistivity_pseudosection(
         clim=clim,
     )
 
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
+    _label_section(ax, surface=_electrode_elevations(dc_data, topo_xyz),
+                   length_unit=length_unit, vertical=vertical,
+                   xlabel=xlabel, ylabel=ylabel, xname="x", depth_name="Pseudo-depth")
 
     if title:
         ax.set_title(title)
@@ -823,6 +911,8 @@ def plot_apparent_resistivity_timelapse(
     clean_axes: bool = True,
     save_path: Optional[str] = None,
     dpi: int = 100,
+    length_unit: Optional[str] = None,
+    vertical: str = "auto",
 ) -> Tuple:
     """Plot a multi-panel time-lapse apparent resistivity pseudosection.
 
@@ -846,6 +936,10 @@ def plot_apparent_resistivity_timelapse(
         If given, save the figure to this path.
     dpi : int
         Resolution for saving.
+    length_unit, vertical :
+        Tick unit and elevation/depth choice, as in
+        :func:`plot_apparent_resistivity_pseudosection`; they matter only
+        with ``clean_axes=False``, since clean axes have no ticks.
 
     Returns
     -------
@@ -884,11 +978,11 @@ def plot_apparent_resistivity_timelapse(
         try:
             from simpeg import data as simpeg_data
             if isinstance(data_objs[idx], simpeg_data.Data):
-                dc_data = data_objs[idx]
+                dc_data, topo_xyz = data_objs[idx], None
             else:
-                dc_data, _ = _convert_pygimli_to_simpeg(data_objs[idx])
+                dc_data, topo_xyz = _convert_pygimli_to_simpeg(data_objs[idx])
         except Exception:
-            dc_data, _ = _convert_pygimli_to_simpeg(data_objs[idx])
+            dc_data, topo_xyz = _convert_pygimli_to_simpeg(data_objs[idx])
 
         scatter_opts = {"cmap": cmap, "marker": scatter_marker, "s": scatter_size}
         pcolor_opts = {"cmap": cmap}
@@ -911,8 +1005,9 @@ def plot_apparent_resistivity_timelapse(
 
         t = titles[idx] if titles and idx < len(titles) else f"Timestep {idx + 1}"
         ax.set_title(t, fontsize=10)
-        ax.set_xlabel(" ")
-        ax.set_ylabel(" ")
+        _label_section(ax, surface=_electrode_elevations(dc_data, topo_xyz),
+                       length_unit=length_unit, vertical=vertical,
+                       xlabel=" ", ylabel=" ")
 
         if clean_axes:
             for spine in ax.spines.values():
@@ -948,6 +1043,8 @@ def plot_coverage(
     cmap: str = "YlGn",
     threshold: Optional[float] = None,
     title: str = "Data Coverage",
+    length_unit: Optional[str] = None,
+    vertical: str = "auto",
 ) -> Tuple:
     """Plot a coverage / sensitivity map.
 
@@ -958,6 +1055,8 @@ def plot_coverage(
         Coverage values per cell.
     threshold : float, optional
         If given, overlay a contour at this level.
+    length_unit, vertical :
+        Axis unit and elevation/depth choice, as in :func:`plot_model_section`.
 
     Returns
     -------
@@ -973,6 +1072,7 @@ def plot_coverage(
     arr = np.asarray(coverage, dtype=float).ravel()
     ax, cbar = pg.show(mesh, arr, ax=ax, cMap=cmap, label="Coverage",
                        orientation="vertical", pad=0.3)
+    _label_section(ax, mesh=mesh, length_unit=length_unit, vertical=vertical)
     if title:
         ax.set_title(title)
     fig.tight_layout()

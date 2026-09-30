@@ -27,6 +27,7 @@ is the failure this exists to prevent. So when the model cannot be reached, or
 answers unusably, every available figure is drawn.
 """
 
+import re
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from PyHydroGeophysX._internal.utils import parse_json_object as _parse_json_object
@@ -90,7 +91,7 @@ FIGURES_PROMPT = """You decide which figures a geophysics report should show.
 
 Read the request and answer with JSON only - no prose, no code fence:
 {"topics": ["resistivity", "water_content"], "only_these": false,
- "style": {"size": null, "colormap": null}}
+ "style": {"size": null, "colormap": null, "length_unit": null}}
 
 topics: the subjects the user wants to SEE plotted. Choose from:
 - resistivity: the recovered resistivity model or section
@@ -110,13 +111,16 @@ example "just the resistivity section" or "no uncertainty plots". false in every
 other case, including when you are unsure. Setting it true suppresses figures,
 so set it true only on explicit instruction.
 
-style: how the figures should look, when the request says. Both fields are null
+style: how the figures should look, when the request says. Every field is null
 unless the request actually asks.
 - size: "compact", "normal" or "large". Use it for "make the figures bigger",
   "smaller plots", "these are huge".
 - colormap: a matplotlib colormap name the request asks for by name, such as
   "viridis" or "cividis". Do not invent one and do not choose on the user's
   behalf; an unrecognised name is ignored.
+- length_unit: "ft" when the request wants distances and depths in feet
+  ("in feet", "use ft", "imperial units", "英尺"); "m" when it asks for metres
+  explicitly. Null otherwise.
 
 The request may be in any language and may contain misspellings; judge what the
 user means, not how they spelled it.
@@ -192,6 +196,8 @@ def _style_request(style: Any) -> Dict[str, Any]:
     {'size': 'large', 'resistivity_cmap': 'cividis', 'water_content_cmap': 'cividis'}
     >>> _style_request({'size': None, 'colormap': None})
     {}
+    >>> _style_request({'length_unit': 'ft'})
+    {'length_unit': 'ft'}
     >>> _style_request('not a dict')
     {}
     """
@@ -205,7 +211,32 @@ def _style_request(style: Any) -> Dict[str, Any]:
     if isinstance(colormap, str) and colormap.strip():
         out["resistivity_cmap"] = colormap.strip()
         out["water_content_cmap"] = colormap.strip()
+    unit = style.get("length_unit")
+    if isinstance(unit, str) and unit.strip():
+        out["length_unit"] = unit.strip().lower()
     return out
+
+
+#: Offline fallback for :func:`length_unit_from_text`: ways a request says
+#: feet. The model reads the request when there is one; this only covers runs
+#: without an API key.
+_FEET_PATTERN = re.compile(
+    r"(?<![a-z])(?:ft|feet|foot|imperial)(?![a-z])|英尺|英制", re.IGNORECASE)
+
+
+def length_unit_from_text(user_request: str) -> Optional[str]:
+    """``'ft'`` when a request asks for feet, else None - the offline fallback.
+
+    Examples
+    --------
+    >>> length_unit_from_text("plot the ERT section in feet")
+    'ft'
+    >>> length_unit_from_text("深度用英尺表示")
+    'ft'
+    >>> length_unit_from_text("a soft clay layer") is None
+    True
+    """
+    return "ft" if _FEET_PATTERN.search(str(user_request or "")) else None
 
 
 def plan_figures(available: Sequence[str], user_request: str = "",

@@ -56,6 +56,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     select_directory,
 )
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.curve_viewer import CurveViewer
 from PyHydroGeophysX.qt_apps.widgets.em_overview_view import EMOverviewView
 from PyHydroGeophysX.qt_apps.widgets.em_gate_view import EMGateView
@@ -68,6 +69,7 @@ from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import Model3DView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
+from PyHydroGeophysX.visualization.axis_units import set_length_axis, to_display_length
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
     WorkflowRunResult,
@@ -247,10 +249,23 @@ class EMProcessingModule(BaseModule):
         # the opening preset has to be written into the controls explicitly.
         self._apply_preset(str(self._preset.currentData()))
         self._on_method_changed()
+        # View > Length Units: the sounding profile is a picture, and the
+        # quality panel's DOI is text, so both are redrawn from the result.
+        length_units.notifier().changed.connect(self._on_length_unit_changed)
 
     def _on_view_mode(self, idx: int) -> None:
         pages = {0: self._overview_view, 1: self._section_view}
         self._model_stack.setCurrentWidget(pages.get(idx, self._section_view))
+
+    def _on_length_unit_changed(self, _unit: str) -> None:
+        """Redraw the last result's depth axis and DOI in the new unit."""
+        # One of the two is kept at a time: whichever ran last is on screen.
+        if self._last_result is not None:
+            png = self._render_inversion(self._last_result, redraw=True)
+            if png:
+                self._inv_view.set_image_file(png)
+        elif self._last_section is not None:
+            self._show_line_quality(self._last_section)
 
     # -- helpers -------------------------------------------------------------
     @staticmethod
@@ -2331,7 +2346,6 @@ class EMProcessingModule(BaseModule):
         self._tabs.setCurrentWidget(self._model_tab)
         rng = result.get("model_range", [float("nan"), float("nan")])
         chi2 = result.get("chi2_global", result.get("chi2"))
-        sounding_mean = result.get("chi2_sounding_mean")
         sounding_median = result.get("chi2_sounding_median")
         report = result.get("lci_report") or {}
         coupled = report.get("mode") == "simultaneous"
@@ -2354,6 +2368,23 @@ class EMProcessingModule(BaseModule):
                          f"(as set: χ²={float(search.get('fixed_chi2', float('nan'))):.2f}).",
                          "warning")
 
+        self._show_line_quality(result)
+        saved = result.get("saved") or []
+        for path in saved:
+            self.log(f"Saved {Path(path).name} to {path}", "info")
+        self.report_result({"method": result["method"], "n_soundings": result.get("n_soundings"),
+                            "global_chi2": chi2,
+                            "sounding_median_chi2": result.get("chi2_sounding_median"),
+                            "section_npz": saved[0] if saved else None})
+        self.offer_map_export()
+
+    def _show_line_quality(self, result: dict) -> None:
+        """Show a line inversion's misfit, per sounding along the survey."""
+        chi2 = result.get("chi2_global", result.get("chi2"))
+        sounding_mean = result.get("chi2_sounding_mean")
+        sounding_median = result.get("chi2_sounding_median")
+        report = result.get("lci_report") or {}
+        coupled = report.get("mode") == "simultaneous"
         method_txt = f"{result['method']} line ("
         method_txt += ("simultaneous LCI" if coupled
                        else "block-coordinate LCI" if report
@@ -2402,7 +2433,8 @@ class EMProcessingModule(BaseModule):
                 extra["data"] += " (floor reached)"
         doi = np.asarray(result.get("doi", []), dtype=float)
         if doi.size and np.isfinite(doi).any():
-            extra["DOI"] = (f"median {np.nanmedian(doi):.0f} m "
+            extra["DOI"] = (f"median {to_display_length(np.nanmedian(doi)):.0f} "
+                            f"{length_units.current()} "
                             f"(S ≥ {float(result.get('doi_threshold', DOI_SENSITIVITY_THRESHOLD)):g})")
         self._quality_view.show_quality(
             {"chi2": float(quality_chi2) if quality_chi2 is not None else float("nan"),
@@ -2437,17 +2469,11 @@ class EMProcessingModule(BaseModule):
                 "x": result.get("positions"),
                 "groups": result.get("line_numbers"),
                 "counts": result.get("data_count_list"),
-                "x_label": "Distance along survey (m)",
+                # Positions in metres; the quality view ticks them in the
+                # studio's length unit and redraws them when it changes.
+                "x_length": "Distance along survey",
                 "item_label": "sounding",
             })
-        saved = result.get("saved") or []
-        for path in saved:
-            self.log(f"Saved {Path(path).name} to {path}", "info")
-        self.report_result({"method": result["method"], "n_soundings": result.get("n_soundings"),
-                            "global_chi2": chi2,
-                            "sounding_median_chi2": result.get("chi2_sounding_median"),
-                            "section_npz": saved[0] if saved else None})
-        self.offer_map_export()
 
     def _finish_line_run(self, result: dict) -> None:
         record = {
@@ -2497,7 +2523,7 @@ class EMProcessingModule(BaseModule):
         else:
             self.log(f"Line inversion failed: {message}", "error")
 
-    def _render_inversion(self, result: dict) -> Optional[str]:
+    def _render_inversion(self, result: dict, *, redraw: bool = False) -> Optional[str]:
         try:
             import matplotlib
             matplotlib.use("Agg", force=True)
@@ -2505,7 +2531,7 @@ class EMProcessingModule(BaseModule):
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.5, 4.4))
             ax1.plot(result["resistivity_step"], result["depth"], "-", color="tab:red")
             ax1.invert_yaxis(); ax1.set_xscale("log")
-            ax1.set_xlabel("Resistivity (Ω·m)"); ax1.set_ylabel("Depth (m)")
+            ax1.set_xlabel("Resistivity (Ω·m)"); set_length_axis(ax1, "y", "Depth")
             ax1.set_title("Recovered model"); ax1.grid(True, which="both", alpha=0.3)
             if result["method"] == "FDEM":
                 f = result["frequencies"]
@@ -2535,7 +2561,9 @@ class EMProcessingModule(BaseModule):
             ax2.set_xscale("log"); ax2.set_title(f"Data fit (chi2={result['chi2']:.2f})")
             ax2.grid(True, which="both", alpha=0.3); ax2.legend(fontsize=8, frameon=False)
             fig.tight_layout()
-            active = self.state.active_run(self.module_key, "em.inversion")
+            # A redraw in another length unit replaces the figure on screen, not
+            # the one a run recorded.
+            active = None if redraw else self.state.active_run(self.module_key, "em.inversion")
             out = active.outputs_dir if active is not None else self.state.ensure_results_store().scratch_dir(self.module_key)
             p = out / f"{result['method'].lower()}_inversion.png"
             fig.savefig(p, dpi=160, bbox_inches="tight"); plt.close(fig)

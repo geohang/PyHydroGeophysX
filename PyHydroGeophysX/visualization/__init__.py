@@ -1,5 +1,12 @@
 """Visualization utilities for PyHydroGeophysX."""
 
+# --- Length units and elevation/depth axes ---
+from .axis_units import (
+    get_length_unit,
+    length_unit,
+    set_length_unit,
+)
+
 # --- Multi-method panels (existing) ---
 from .multi_method import (
     plot_cross_section_with_wells,
@@ -49,6 +56,10 @@ from .vtk_export import (
 )
 
 __all__ = [
+    # Length units
+    "get_length_unit",
+    "set_length_unit",
+    "length_unit",
     # Multi-method (existing)
     "plot_multi_method_panel",
     "plot_hydro_vs_geophys",

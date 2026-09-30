@@ -52,6 +52,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     select_directory,
 )
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import VTKVolumeView
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
@@ -101,6 +102,7 @@ class Seismic3DModule(BaseModule):
         self._run_busy: Optional[BusyStateController] = None
         self._workflow_recipe_path = ""
         self._current = 0
+        self._interface_previewed = False
 
         root = QVBoxLayout(self)
         root.addWidget(self._build_strip())
@@ -122,6 +124,14 @@ class Seismic3DModule(BaseModule):
             parent=self,
         )
         self._go_to(0)
+        # View > Length Units: the interface preview is an image, so it is drawn
+        # again; the figures of a finished build keep the unit they were run in.
+        length_units.notifier().changed.connect(self._on_length_unit_changed)
+
+    def _on_length_unit_changed(self, _unit: str) -> None:
+        """Draw the interface preview again in the new length unit."""
+        if self._interface_previewed:
+            self._preview_interface()
 
     # -- helpers -------------------------------------------------------------
     @staticmethod
@@ -400,18 +410,28 @@ class Seismic3DModule(BaseModule):
             import matplotlib
             matplotlib.use("Agg", force=True)
             import matplotlib.pyplot as plt
+            from PyHydroGeophysX.core.mesh_serialization import read_bms
+            from PyHydroGeophysX.visualization.axis_units import set_section_axes
             res = seismic3d_pipeline.extract_line_structure(
                 line, self._threshold.value(), self._interval.value(), log=lambda m: None)
             raw = res["raw_interface"]
             fig, ax = plt.subplots(figsize=(7.0, 3.4))
             ax.plot(raw[:, 0], raw[:, 1], "-", color="saddlebrown", lw=2)
-            ax.set_xlabel("Distance (m)"); ax.set_ylabel("Elevation (m)")
+            # The mesh's ground surface decides it: a line inverted without
+            # elevations has its surface at z = 0, and the interface reads as depth.
+            # A mesh that cannot be read only costs that choice, not the preview.
+            try:
+                surface_mesh = read_bms(line["mesh"])
+            except Exception:  # noqa: BLE001 - keeps "Elevation"
+                surface_mesh = None
+            set_section_axes(ax, mesh=surface_mesh)
             ax.set_title(f"{line['name']}: bedrock interface @ {self._threshold.value():.0f} m/s")
             ax.grid(True, alpha=0.3); fig.tight_layout()
             out = self.state.ensure_results_store().scratch_dir(self.module_key)
             p = out / "interface_preview.png"
             fig.savefig(p, dpi=160, bbox_inches="tight"); plt.close(fig)
             self._interface_view.set_image_file(str(p))
+            self._interface_previewed = True
             self.log(f"Interface preview saved to {p}", "success")
         except Exception as exc:  # noqa: BLE001
             self.log(f"Interface preview failed: {exc}", "error")
@@ -700,6 +720,9 @@ class Seismic3DModule(BaseModule):
             self.log(f"Could not persist the seismic3d line inputs: {exc}", "error")
             return
         params.pop("output_dir", None)
+        # The run's figures are drawn in another process, which cannot see the
+        # studio's View > Length Units choice.
+        params["length_unit"] = length_units.current()
         spec = WorkflowSpec(
             workflow_id="seismic3d.build",
             inputs={

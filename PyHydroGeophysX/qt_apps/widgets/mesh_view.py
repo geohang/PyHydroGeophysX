@@ -27,8 +27,10 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX._internal.utils import velocity_of
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.coalesce import Coalesced
 from PyHydroGeophysX.qt_apps.widgets.readout import navigation_toolbar
+from PyHydroGeophysX.visualization.axis_units import set_section_axes, vertical_axis
 from PyHydroGeophysX.visualization.ert_style import (
     ERT_RESISTIVITY_LABEL,
     ert_model_plot_kwargs,
@@ -291,6 +293,8 @@ class MeshResultView(QWidget):
         layout.addWidget(self._canvas, stretch=1)
         layout.addWidget(self._cov_note)
         self._side = None          # splitter holding the canvas and a side panel
+        # View > Length Units: the axes change, the model on the mesh does not.
+        length_units.notifier().changed.connect(self._on_length_unit_changed)
 
     def add_side_panel(self, widget: QWidget) -> None:
         """Put ``widget`` to the right of the section, under the toolbar.
@@ -558,7 +562,7 @@ class MeshResultView(QWidget):
         # than having pyGIMLi rebuild every one. Contour bands are cut at the
         # colour limits, so there the limits belong to the drawing.
         shape = (self._version, self._kind, self._title, role, clip_key, smooth_level,
-                 self._show_mesh.isChecked(), rays,
+                 self._show_mesh.isChecked(), rays, length_units.current(),
                  (int(self._levels.value()), show_kw.get("cMin"), show_kw.get("cMax"))
                  if contour else None)
         drawn = self._drawn
@@ -627,8 +631,11 @@ class MeshResultView(QWidget):
             # embedded or offscreen use.
             if rays:
                 self._draw_rays(ax)
-            ax.set_xlabel("Distance (m)")
-            ax.set_ylabel("Elevation (m)")
+            # Elevation when the survey had elevations; depth, positive down,
+            # when every electrode sits at z = 0 - a line read without them.
+            mode, reference = self._cached(
+                "vertical axis", lambda m=source_mesh: vertical_axis(mesh=m))
+            set_section_axes(ax, vertical=mode, depth_reference=reference)
             if self._title:
                 ax.set_title(self._title)
             self._drawn = {"shape": shape, "mask": mask_key, "locked": locked,
@@ -860,6 +867,10 @@ class MeshResultView(QWidget):
                 cbar.ax.yaxis.set_major_formatter(formatter)
         except Exception:  # noqa: BLE001 - ticks are cosmetic, never fatal
             pass
+
+    def _on_length_unit_changed(self, _unit: str) -> None:
+        """Redraw the axes in the studio's new length unit."""
+        self._redraw()
 
     def _on_smooth_changed(self, _index: int = 0) -> None:
         """Show the contour-band count only while contours are being drawn."""

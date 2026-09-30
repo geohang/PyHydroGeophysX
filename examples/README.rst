@@ -54,22 +54,36 @@ Example                        Run time      Memory peak
 ``Ex_hydro_to_multigeophys``                 about 8 GB
 =============================  ============  =============
 
-Self-contained numerical examples
----------------------------------
+Survey diagnostics and data assimilation on the MODFLOW model
+-------------------------------------------------------------
 
-These examples need only the core NumPy/SciPy/Matplotlib dependencies, use
-fixed random seeds, and save arrays and figures under ``examples/results/``.
-Each has a companion notebook and can run without survey files or optional
-geophysical engines. Their synthetic kernels are teaching surrogates.
+These three examples start from the Treeline catchment MODFLOW model under
+``examples/data`` and follow the hillslope transect of ``Ex_ERT_workflow``.
+They run the package's own profile interpolation, petrophysics, ERT forward
+model and inversion, so they need PyHydroGeophysX with pyGIMLi. Each takes
+two to three minutes on the maintainer's machine, uses fixed random seeds,
+writes its arrays and figure under ``examples/results/`` and has a companion
+notebook.
 
-* ``Ex_sensitivity_analysis.py``: cumulative sensitivity, model resolution,
-  and reference-model dependence (DOI).
-* ``Ex_ensemble_assimilation.py``: water-content forecasts updated with EnKF
-  and ES-MDA through a hydro-geophysical observation operator.
-* ``Ex_posterior_uncertainty.py``: correlated posterior resistivity covariance
-  propagated into water-content intervals with fixed petrophysical parameters.
+* ``Ex_sensitivity_analysis.py``: predicts the ERT survey of a MODFLOW state
+  with ``hydro_to_ert``, inverts it, and maps cumulative sensitivity, model
+  resolution and the Oldenburg-Li depth of investigation over the MODFLOW
+  units.
+* ``Ex_posterior_uncertainty.py``: inverts the same survey, reads the inversion
+  as a Gaussian posterior and propagates its covariance into water-content
+  intervals, which it checks against the MODFLOW water content, at two
+  strengths of the prior.
+* ``Ex_ensemble_assimilation.py``: updates an ensemble of MODFLOW states with
+  the day-210 survey in ``data/TL_measurements``, by EnKF and ES-MDA.
+
+To use a ParFlow run instead, read saturation and porosity with
+``ParflowSaturation`` and ``ParflowPorosity``; their product is the water
+content. ParFlow numbers its layers from the bottom up, so reverse the layer
+axis, and give the layer elevations of the ParFlow grid in place of ``top.txt``
+and ``bot.npy``.
 
 From the repository root, for example::
 
+    python -m pip install -e ".[geophysics]"
     python examples/Ex_ensemble_assimilation.py
-    python -m pytest -q tests/test_core.py -k "posterior or sensitivity or resolution"
+    python -m pytest -q tests/test_core.py -k "posterior or sensitivity or resolution or depth_of_investigation"

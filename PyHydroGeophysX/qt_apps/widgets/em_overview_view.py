@@ -34,6 +34,8 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX.inversion.em1d_lci import DOI_SENSITIVITY_THRESHOLD
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets import length_units
+from PyHydroGeophysX.visualization.axis_units import set_length_axis, to_display_length
 from PyHydroGeophysX.visualization.basemap import (
     TILE_SOURCES,
     basemap_image,
@@ -214,6 +216,13 @@ class EMOverviewView(QWidget):
         self._map_ax = None
         self._map_limits = None     # map view the reader set, in axes metres
         self._drag = None           # (axes, x, y) held under the cursor
+        # View > Length Units: the axes and the lengths quoted change; the
+        # models, the map view and the imagery fetched for it do not.
+        length_units.notifier().changed.connect(self._on_length_unit_changed)
+
+    def _on_length_unit_changed(self, _unit: str) -> None:
+        """Redraw the map and the section in the studio's new length unit."""
+        self._redraw()
 
     # -- public --------------------------------------------------------------
     def show_result(self, result: Dict[str, Any], *, x=None, y=None,
@@ -557,14 +566,15 @@ class EMOverviewView(QWidget):
         if here is not None and mode != "hide":
             self._draw_doi_line(ax, distance, here, surface)
         if surface is None:
+            # The data are already depths here, drawn downward.
             ax.set_ylim(bottom, 0.0)
-            ax.set_ylabel("Depth (m)")
+            set_length_axis(ax, "y", "Depth")
         else:
             ax.plot(distance, surface, "-", color="#444444", lw=1.0, zorder=6)
             ax.set_ylim(float(np.nanmin(surface)) - bottom,
                         float(np.nanmax(surface)) + 0.06 * bottom)
-            ax.set_ylabel("Elevation (m)")
-        ax.set_xlabel("Distance along line (m)")
+            set_length_axis(ax, "y", "Elevation")
+        set_length_axis(ax, "x", "Distance along line")
         ax.set_title(self._section_title(selected, lines, distance), fontsize=11)
         for boundary in np.flatnonzero(np.diff(lines)) + 1:
             ax.axvline(0.5 * (distance[boundary - 1] + distance[boundary]),
@@ -872,7 +882,8 @@ class EMOverviewView(QWidget):
         chosen = self._line.currentData()
         which = ("all lines" if chosen is None or int(chosen) < 0
                  else f"Line {int(chosen)}")
-        return f"Resistivity section — {which}   ({float(distance[-1]):.0f} m)"
+        return (f"Resistivity section — {which}   "
+                f"({to_display_length(float(distance[-1])):.0f} {length_units.current()})")
 
     def _map_spans(self) -> tuple:
         """Extent the map will cover in metres, east-west and north-south."""
@@ -935,13 +946,14 @@ class EMOverviewView(QWidget):
                 mec="white" if attribution else "none",
                 mew=float(np.clip(0.7 / dense, 0.0, 0.7)) if attribution else 0.0,
                 label="Soundings", zorder=3, ls="none")
+        unit = length_units.current()
         ax.plot(x[selected][0] - x0, y[selected][0] - y0, "s", color=_START_COLOR,
-                ms=9, mec="white", mew=0.8, label="Start (0 m)", zorder=4)
+                ms=9, mec="white", mew=0.8, label=f"Start (0 {unit})", zorder=4)
         from matplotlib.ticker import MaxNLocator
 
         floor = _MAP_SPAN_FLOOR * max(float(np.ptp(x)), float(np.ptp(y)), 1.0)
-        for index, (axis, setter, values) in enumerate(
-                ((ax.xaxis, ax.set_xlim, x - x0), (ax.yaxis, ax.set_ylim, y - y0))):
+        for index, (which, axis, setter, values) in enumerate(
+                (("x", ax.xaxis, ax.set_xlim, x - x0), ("y", ax.yaxis, ax.set_ylim, y - y0))):
             span = float(np.ptp(values))
             if self._map_limits is not None:
                 setter(*self._map_limits[index])
@@ -954,17 +966,24 @@ class EMOverviewView(QWidget):
                 setter(middle - 0.55 * want, middle + 0.55 * want)
             # Equal scales make the box for that axis a sliver, with no room for
             # ticks, and a single coordinate is what the axis label already says.
-            axis.set_ticks([]) if span < floor else axis.set_major_locator(
-                MaxNLocator(nbins=4))
+            # In feet the ticks come from the unit's own locator, which places
+            # round numbers of feet; the offset label below is set by hand.
+            if span < floor:
+                axis.set_ticks([])
+            elif unit == "m":
+                axis.set_major_locator(MaxNLocator(nbins=4))
+            else:
+                set_length_axis(ax, which, labelled=False)
         # A survey much wider than it is tall leaves a box too short to hold a
         # rotated axis label, which would then run off the top of the figure.
         # The origin it carries still has to be readable, so it moves alongside
         # the easting instead of being dropped.
         upright = ax.get_position().height < 0.14
-        ax.set_xlabel(f"Easting − {x0:,.0f} m"
-                      + (f",   Northing − {y0:,.0f} m" if upright else ""),
+        east, north = to_display_length(x0), to_display_length(y0)
+        ax.set_xlabel(f"Easting − {east:,.0f} {unit}"
+                      + (f",   Northing − {north:,.0f} {unit}" if upright else ""),
                       fontsize=9)
-        ax.set_ylabel("" if upright else f"Northing − {y0:,.0f} m", fontsize=9)
+        ax.set_ylabel("" if upright else f"Northing − {north:,.0f} {unit}", fontsize=9)
         ax.set_title("Survey map", fontsize=11)
         ax.tick_params(labelsize=8)
         # Grid lines help on a plain background and only clutter imagery.
@@ -1002,8 +1021,8 @@ class EMOverviewView(QWidget):
             here = doi[:selected.size][selected]
             resolved = here[here > 0]
             if resolved.size:
-                rows.append(f"DOI {np.median(resolved):.0f} m "
-                            f"(S ≥ {self._doi_threshold.value():g})")
+                rows.append(f"DOI {to_display_length(float(np.median(resolved))):.0f} "
+                            f"{length_units.current()} (S ≥ {self._doi_threshold.value():g})")
             blank = int((here <= 0).sum())
             if blank:
                 rows.append(f"⚠ {blank} column(s) unresolved at S ≥ "

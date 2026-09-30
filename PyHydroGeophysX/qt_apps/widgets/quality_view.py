@@ -17,6 +17,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from PyHydroGeophysX.inversion.metrics import metrics_from_manager
+from PyHydroGeophysX.qt_apps.widgets import length_units
+from PyHydroGeophysX.visualization.axis_units import set_length_axis
 
 
 class InversionQualityView(QWidget):
@@ -38,7 +40,15 @@ class InversionQualityView(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._metrics)
         layout.addWidget(self._canvas, stretch=1)
+        self._drawn: Optional[Tuple] = None   # the arguments of the plots on screen
         self.clear()
+        # View > Length Units: a per-item panel along a survey has a distance axis.
+        length_units.notifier().changed.connect(self._on_length_unit_changed)
+
+    def _on_length_unit_changed(self, _unit: str) -> None:
+        """Redraw the plots in the studio's new length unit, if one has a length axis."""
+        if self._drawn is not None and self._drawn[3]:
+            self._draw_convergence(*self._drawn)
 
     @staticmethod
     def _verdict(chi2: Optional[float]) -> Tuple[str, str]:
@@ -61,7 +71,10 @@ class InversionQualityView(QWidget):
         soundings, a set of stations) whose misfit varies along the survey.
         Supply ``values`` and, optionally, ``x`` with ``x_label``, ``groups``
         (drawing a break wherever the group changes), ``counts`` (marking the
-        items left with no data of their own), and ``item_label``.
+        items left with no data of their own), and ``item_label``. When ``x``
+        is a distance in metres, give its name as ``x_length`` (e.g.
+        ``"Distance along survey"``) instead of ``x_label``: the axis is then
+        drawn in the studio's length unit.
         """
         m = dict(metrics or {})
         chi2 = m.get("chi2")
@@ -95,9 +108,8 @@ class InversionQualityView(QWidget):
             f"{title_html}<span style='font-size:13px'>{head}</span><br>"
             f"<span style='color:{color}'><b>{verdict}</b></span>{note}")
 
-        self._draw_convergence(convergence, final_chi2=chi2,
-                               track=m.get("convergence_track"),
-                               per_item=per_item, robust=robust)
+        self._drawn = (convergence, chi2, m.get("convergence_track"), per_item, robust)
+        self._draw_convergence(*self._drawn)
 
     def _draw_robust_convergence(self, ax, robust) -> None:
         """Effective histories in solid lines; raw values at recorded endpoints.
@@ -248,8 +260,8 @@ class InversionQualityView(QWidget):
         if not values.size or not np.isfinite(values).any():
             return False
         x = per_item.get("x")
-        x = (np.asarray(x, dtype=float).ravel()
-             if x is not None and np.size(x) == values.size
+        positioned = x is not None and np.size(x) == values.size
+        x = (np.asarray(x, dtype=float).ravel() if positioned
              else np.arange(values.size, dtype=float))
         ax.plot(x, values, "o-", color="#1565ff", lw=1.3, ms=3.5, zorder=3,
                 label=per_item.get("value_label"))
@@ -277,7 +289,12 @@ class InversionQualityView(QWidget):
         plotted_values = np.r_[values, reference] if reference.size == values.size else values
         if np.nanmax(plotted_values) / max(np.nanmin(plotted_values[plotted_values > 0], initial=1.0), 1e-9) > 20:
             ax.set_yscale("log")
-        ax.set_xlabel(str(per_item.get("x_label", "Item")))
+        if per_item.get("x_length") and positioned:
+            # Positions along the survey, in metres: ticked and labelled in
+            # the studio's length unit.
+            set_length_axis(ax, "x", str(per_item["x_length"]))
+        else:
+            ax.set_xlabel(str(per_item.get("x_label", "Item")))
         ax.set_ylabel("χ²")
         ax.set_title(f"Misfit per {per_item.get('item_label', 'item')}")
         ax.grid(True, which="both", ls=":", alpha=0.4)
@@ -348,6 +365,7 @@ class InversionQualityView(QWidget):
         self._canvas.draw()
 
     def clear(self) -> None:
+        self._drawn = None
         self._metrics.setText("<span style='color:#888888'>Run an inversion to see its "
                               "quality (χ², RMS, convergence) here.</span>")
         self._fig.clear()

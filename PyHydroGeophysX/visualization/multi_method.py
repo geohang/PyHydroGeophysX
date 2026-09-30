@@ -5,6 +5,8 @@ from typing import Any, Dict, Optional, Sequence
 import matplotlib.pyplot as plt
 import numpy as np
 
+from .axis_units import normalize_length_unit, set_length_axis, to_display_length
+
 
 # ---------------------------------------------------------------------------
 # result field
@@ -31,13 +33,17 @@ def _as_1d(values, name):
 # ---------------------------------------------------------------------------
 # plot on mesh
 # ---------------------------------------------------------------------------
-def _plot_on_mesh(ax, mesh, values, title, cmap="viridis"):
+def _plot_on_mesh(ax, mesh, values, title, cmap="viridis", length_unit=None,
+                  vertical="auto"):
     try:
         import pygimli as pg
+
+        from .plotting import _label_section
 
         arr = np.asarray(values, dtype=float).ravel()
         if mesh is not None and hasattr(mesh, "cellCount") and mesh.cellCount() == arr.size:
             pg.show(mesh, data=arr, ax=ax, cMap=cmap)
+            _label_section(ax, mesh=mesh, length_unit=length_unit, vertical=vertical)
             ax.set_title(title)
             return True
     except Exception:
@@ -53,8 +59,16 @@ def plot_multi_method_panel(
     srt_result: Any,
     em_result: Any,
     mesh: Any = None,
+    *,
+    length_unit: Optional[str] = None,
+    vertical: str = "auto",
 ) -> Any:
-    """Plot side-by-side ERT/SRT/EM model panels."""
+    """Plot side-by-side ERT/SRT/EM model panels.
+
+    ``length_unit`` (``'m'`` or ``'ft'``) and ``vertical`` (``'auto'``,
+    ``'elevation'`` or ``'depth'``) set the section axes, as in
+    :func:`~PyHydroGeophysX.visualization.plotting.plot_model_section`.
+    """
     fig, axes = plt.subplots(1, 3, figsize=(16, 5))
 
     panels = [
@@ -71,7 +85,8 @@ def plot_multi_method_panel(
             continue
 
         flat = np.asarray(values, dtype=float).ravel()
-        if not _plot_on_mesh(ax, mesh, flat, f"{name} Model", cmap=cmap):
+        if not _plot_on_mesh(ax, mesh, flat, f"{name} Model", cmap=cmap,
+                             length_unit=length_unit, vertical=vertical):
             ax.plot(flat, lw=1.8)
             ax.set_title(f"{name} Model")
             ax.set_xlabel("Cell Index")
@@ -89,8 +104,15 @@ def plot_hydro_vs_geophys(
     hydro_wc: Any,
     inverted_wc: Any,
     mesh: Any = None,
+    *,
+    length_unit: Optional[str] = None,
+    vertical: str = "auto",
 ) -> Any:
-    """Compare hydrological water content to geophysics-derived water content."""
+    """Compare hydrological water content to geophysics-derived water content.
+
+    ``length_unit`` and ``vertical`` set the section axes, as in
+    :func:`plot_multi_method_panel`.
+    """
     hydro_wc = _as_1d(hydro_wc, "hydro_wc")
     inverted_wc = _as_1d(inverted_wc, "inverted_wc")
 
@@ -101,14 +123,16 @@ def plot_hydro_vs_geophys(
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
-    if not _plot_on_mesh(axes[0], mesh, hydro_wc, "Hydrological Water Content", cmap="Blues"):
+    if not _plot_on_mesh(axes[0], mesh, hydro_wc, "Hydrological Water Content", cmap="Blues",
+                         length_unit=length_unit, vertical=vertical):
         axes[0].plot(hydro_wc, color="tab:blue", lw=1.8)
         axes[0].set_title("Hydrological Water Content")
         axes[0].set_xlabel("Cell Index")
         axes[0].set_ylabel("Water Content")
         axes[0].grid(True, alpha=0.3)
 
-    if not _plot_on_mesh(axes[1], mesh, inverted_wc, "Geophysical-Derived Water Content", cmap="Oranges"):
+    if not _plot_on_mesh(axes[1], mesh, inverted_wc, "Geophysical-Derived Water Content",
+                         cmap="Oranges", length_unit=length_unit, vertical=vertical):
         axes[1].plot(inverted_wc, color="tab:orange", lw=1.8)
         axes[1].set_title("Geophysical-Derived Water Content")
         axes[1].set_xlabel("Cell Index")
@@ -126,8 +150,16 @@ def plot_cross_section_with_wells(
     result: Any,
     mesh: Any,
     well_data: Optional[Dict[str, np.ndarray]] = None,
+    *,
+    length_unit: Optional[str] = None,
+    vertical: str = "auto",
 ) -> Any:
-    """Plot a model cross-section and overlay optional well picks."""
+    """Plot a model cross-section and overlay optional well picks.
+
+    Well ``x``/``z`` are in metres, like the mesh; ``length_unit`` and
+    ``vertical`` only change how the axes read, as in
+    :func:`plot_multi_method_panel`.
+    """
     values = _result_field(result, ["final_model", "recovered_conductivity", "recovered_model"])
     if values is None:
         raise ValueError("result has no plottable model field.")
@@ -135,7 +167,8 @@ def plot_cross_section_with_wells(
     flat = np.asarray(values, dtype=float).ravel()
     fig, ax = plt.subplots(figsize=(9, 5))
 
-    plotted = _plot_on_mesh(ax, mesh, flat, "Cross-Section with Wells", cmap="viridis")
+    plotted = _plot_on_mesh(ax, mesh, flat, "Cross-Section with Wells", cmap="viridis",
+                            length_unit=length_unit, vertical=vertical)
     if not plotted:
         ax.plot(flat, lw=1.8, label="Model")
         ax.set_xlabel("Cell Index")
@@ -229,6 +262,7 @@ def plot_signal_and_noise(
     moments: Any = ("LM", "HM"),
     smooth: int = 21,
     axes: Any = None,
+    length_unit: Optional[str] = None,
 ) -> Any:
     """Draw the measured signal and the absolute noise along a survey line.
 
@@ -250,7 +284,8 @@ def plot_signal_and_noise(
     Set it to 1 to plot the values themselves.
 
     ``line`` selects one survey line, and defaults to the first the summary
-    holds. Distance runs from that line's own first station.
+    holds. Distance runs from that line's own first station, shown in
+    ``length_unit`` (``'m'`` or ``'ft'``).
     """
     rows = list((summary or {}).get("rows", []))
     if not rows:
@@ -293,7 +328,7 @@ def plot_signal_and_noise(
             name, "" if not np.isfinite(at) else " at %.1f us" % (at * 1e6)))
         ax.grid(alpha=0.3, which="both")
         ax.legend(fontsize=9)
-    axes[-1].set_xlabel("Distance along line %d (m)" % chosen)
+    set_length_axis(axes[-1], "x", "Distance along line %d" % chosen, unit=length_unit)
     fig.tight_layout()
     return fig, axes
 
@@ -348,6 +383,7 @@ def plot_depth_slices(
     ncols: int = 2,
     cmap: str = "turbo",
     show_stations: bool = False,
+    length_unit: Optional[str] = None,
 ) -> Any:
     """Map the recovered resistivity at fixed depths, over a basemap.
 
@@ -385,6 +421,10 @@ def plot_depth_slices(
     ``show_stations`` marks each sounding. It is off because a shallow slice is
     a ribbon a few metres wide and a marker per station hides the colour it is
     there to mark; the ribbon already traces the survey.
+
+    ``length_unit`` (``'m'`` or ``'ft'``) is how the axes, the panel depths and
+    the distance note read. ``depths``, ``extent`` and ``max_distance`` stay in
+    metres, like the cell table.
     """
     from scipy.interpolate import griddata
     from scipy.spatial import cKDTree
@@ -424,6 +464,7 @@ def plot_depth_slices(
 
     reach = (float(max_distance) if max_distance is not None
              else max(3.0 * spacing, 0.5 * max(chosen)))
+    unit = normalize_length_unit(length_unit)
     panels = []
     for at in chosen:
         on_layer = (depth == at) & resolved
@@ -472,13 +513,14 @@ def plot_depth_slices(
         ax.set_xlim(west, east)
         ax.set_ylim(south, north)
         ax.set_aspect("equal", "box")
+        shown_at = "%.1f %s" % (to_display_length(at, unit), unit)
         ax.set_title(
-            "%.1f m depth   (%d stations)" % (at, count) if count else
-            "%.1f m depth   (nothing resolved at this depth)" % at,
+            "%s depth   (%d stations)" % (shown_at, count) if count else
+            "%s depth   (nothing resolved at this depth)" % shown_at,
             fontsize=10)
-        ax.set_xlabel("Easting (m)")
-        ax.set_ylabel("Northing (m)")
         ax.ticklabel_format(style="plain", useOffset=False)
+        set_length_axis(ax, "x", "Easting", unit=unit)
+        set_length_axis(ax, "y", "Northing", unit=unit)
     for ax in flat[len(panels):]:
         ax.axis("off")
     if mesh is not None:
@@ -501,8 +543,8 @@ def plot_depth_slices(
         floor = min(fig.transFigure.inverted().transform(b.p0)[1]
                     for b in boxes)
     fig.text(0.5, max(0.004, floor - 0.02),
-             "Coloured within %.0f m of a sounding; further ground was not "
-             "measured." % reach,
+             "Coloured within %.0f %s of a sounding; further ground was not "
+             "measured." % (to_display_length(reach, unit), unit),
              ha="center", va="top", fontsize=8, color="0.35")
     return fig, axes
 
@@ -661,8 +703,15 @@ def plot_time_lapse_panel(
     titles: Optional[Sequence[str]] = None,
     ncols: int = 4,
     cmap: str = "viridis",
+    *,
+    length_unit: Optional[str] = None,
+    vertical: str = "auto",
 ) -> Any:
-    """Plot a grid of time-lapse model snapshots."""
+    """Plot a grid of time-lapse model snapshots.
+
+    ``length_unit`` and ``vertical`` set the axes of the panels drawn on
+    ``mesh``, as in :func:`plot_multi_method_panel`.
+    """
     if not models:
         raise ValueError("models must contain at least one model.")
     if ncols <= 0:
@@ -700,7 +749,8 @@ def plot_time_lapse_panel(
             continue
 
         flat = arr.ravel()
-        if not _plot_on_mesh(ax, mesh, flat, title, cmap=cmap):
+        if not _plot_on_mesh(ax, mesh, flat, title, cmap=cmap,
+                             length_unit=length_unit, vertical=vertical):
             ax.plot(flat, lw=1.5)
             ax.set_xlabel("Cell Index")
             ax.set_ylabel("Value")
@@ -774,8 +824,13 @@ def plot_layered_profiles(
     profiles: Dict[str, Sequence[float]],
     colors: Optional[Sequence[str]] = None,
     xscale: str = "linear",
+    length_unit: Optional[str] = None,
 ) -> Any:
-    """Plot one or more layered profiles as step-like vertical columns."""
+    """Plot one or more layered profiles as step-like vertical columns.
+
+    ``depth_edges`` are in metres; ``length_unit`` (``'m'`` or ``'ft'``) is the
+    unit the depth axis is shown in.
+    """
     z = _as_1d(depth_edges, "depth_edges")
     if z.size < 2:
         raise ValueError("depth_edges must contain at least two values.")
@@ -799,7 +854,7 @@ def plot_layered_profiles(
             ax.plot([v, v], [z[j], z[j + 1]], color=color if color else "k", lw=1.6)
 
         ax.set_xlabel(label)
-        ax.set_ylabel("Depth (m)")
+        set_length_axis(ax, "y", "Depth", unit=length_unit)
         ax.set_xscale(xscale)
         ax.invert_yaxis()
         ax.grid(True, alpha=0.25)

@@ -404,6 +404,7 @@ def run_ert_to_wc(
         import pygimli as pg
     except Exception as exc:  # ImportError or pygimli init failure
         raise BackendUnavailable(str(exc))
+    from PyHydroGeophysX.visualization.axis_units import set_section_axes
 
     data_dir = _resolve_model_dir(context, params)
     files = find_model_files(data_dir)
@@ -486,8 +487,8 @@ def run_ert_to_wc(
             ax.clear()
             pg.show(mesh, values, **show_kw)
         ax.set_title(title)
-        ax.set_xlabel("Distance (m)")
-        ax.set_ylabel("Elevation (m)")
+        # Depth, positive down, when the survey was read without elevations.
+        set_section_axes(ax, mesh=mesh, unit=params.get("length_unit"))
         fig.tight_layout()
         path = out_dir / fname
         fig.savefig(path, dpi=180, bbox_inches="tight")

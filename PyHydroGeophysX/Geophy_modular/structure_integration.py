@@ -393,6 +393,11 @@ def build_3d_model(
         import pygimli  # noqa: F401 - required to load the section meshes
     except Exception as exc:  # ImportError or init failure
         raise BackendUnavailable(str(exc))
+    from PyHydroGeophysX.visualization.axis_units import (
+        length_label,
+        set_length_axis,
+        to_display_length,
+    )
 
     lines = params.get("lines", [])
     if not lines:
@@ -449,14 +454,18 @@ def build_3d_model(
     figure_paths: List[str] = []
     data_paths: List[str] = []
 
+    # Figures only: the grids and the exported data stay in metres.
+    unit = params.get("length_unit")
+
     # 1. Bedrock depth map (always works).
     fig, ax = plt.subplots(figsize=(7.5, 5.6))
-    pcm = ax.contourf(xx, yy, bedrock_depth, levels=20, cmap="viridis")
-    fig.colorbar(pcm, ax=ax, label="Depth to bedrock (m)")
+    pcm = ax.contourf(xx, yy, to_display_length(bedrock_depth, unit), levels=20,
+                      cmap="viridis")
+    fig.colorbar(pcm, ax=ax, label=length_label("Depth to bedrock", unit))
     for (lx0, ly0, lx1, ly1) in line_traces:
         ax.plot([lx0, lx1], [ly0, ly1], "w-", lw=1.5)
         ax.plot([lx0, lx1], [ly0, ly1], "k--", lw=0.8)
-    ax.set_xlabel("X (m)"); ax.set_ylabel("Y (m)")
+    set_length_axis(ax, "x", "X", unit=unit); set_length_axis(ax, "y", "Y", unit=unit)
     ax.set_title("Depth to bedrock interface")
     ax.set_aspect("equal", adjustable="box")
     fig.tight_layout()
@@ -470,7 +479,8 @@ def build_3d_model(
         ax = fig.add_subplot(111, projection="3d")
         ax.plot_surface(xx, yy, top_surface, cmap="gist_earth", alpha=0.6, linewidth=0)
         ax.plot_surface(xx, yy, iface_surface, cmap="copper", alpha=0.9, linewidth=0)
-        ax.set_xlabel("X (m)"); ax.set_ylabel("Y (m)"); ax.set_zlabel("Elevation (m)")
+        for which, name in (("x", "X"), ("y", "Y"), ("z", "Elevation")):
+            set_length_axis(ax, which, name, unit=unit)
         ax.set_title("Top surface and bedrock interface")
         fig.tight_layout()
         p = out_dir / "structure_3d.png"
