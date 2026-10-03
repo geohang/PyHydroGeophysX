@@ -1,0 +1,279 @@
+/* Styles for the "Usage and Downloads" dashboard.
+ *
+ * Colours are taken from pydata-sphinx-theme custom properties where they
+ * exist, with literal fallbacks so the page still renders under alabaster or
+ * any other theme. Everything reacts to html[data-theme="dark"].
+ */
+
+#phgx-stats {
+  --phgx-surface: var(--pst-color-surface, #f6f7f9);
+  --phgx-border: var(--pst-color-border, #d7dbe0);
+  --phgx-text: var(--pst-color-text-base, #1a1c1e);
+  --phgx-muted: var(--pst-color-text-muted, #6a7076);
+  --phgx-accent: var(--pst-color-primary, #1f6feb);
+  --phgx-nodata: #e4e7eb;
+  --phgx-outline: #ffffff;
+
+  margin: 1.25rem 0 2rem;
+}
+
+html[data-theme="dark"] #phgx-stats {
+  --phgx-nodata: #2b3138;
+  --phgx-outline: #171a1d;
+}
+
+/* ---------------------------------------------------------------- tiles -- */
+
+.phgx-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.phgx-tile {
+  background: var(--phgx-surface);
+  border: 1px solid var(--phgx-border);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+}
+
+.phgx-tile-value {
+  font-size: 1.85rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--phgx-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.phgx-tile-label {
+  font-size: 0.78rem;
+  color: var(--phgx-muted);
+  margin-top: 0.3rem;
+  line-height: 1.35;
+}
+
+/* ------------------------------------------------------------------ map -- */
+
+.phgx-panel {
+  background: var(--phgx-surface);
+  border: 1px solid var(--phgx-border);
+  border-radius: 10px;
+  padding: 1rem 1.1rem 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.phgx-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.phgx-panel-title {
+  font-weight: 600;
+  font-size: 1.02rem;
+}
+
+.phgx-panel-note {
+  font-size: 0.78rem;
+  color: var(--phgx-muted);
+}
+
+.phgx-toggle {
+  display: inline-flex;
+  border: 1px solid var(--phgx-border);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.phgx-toggle button {
+  border: 0;
+  background: transparent;
+  color: var(--phgx-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.28rem 0.75rem;
+  cursor: pointer;
+}
+
+.phgx-toggle button[aria-pressed="true"] {
+  background: var(--phgx-accent);
+  color: #fff;
+}
+
+.phgx-map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2.15fr) minmax(0, 1fr);
+  gap: 1.1rem;
+  align-items: start;
+}
+
+@media (max-width: 800px) {
+  .phgx-map-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.phgx-map {
+  position: relative;
+}
+
+.phgx-map svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.phgx-map path {
+  stroke: var(--phgx-outline);
+  stroke-width: 0.5;
+  stroke-linejoin: round;
+  transition: fill 0.18s ease;
+}
+
+.phgx-map path[data-value]:hover {
+  stroke: var(--phgx-text);
+  stroke-width: 1.1;
+  cursor: default;
+}
+
+.phgx-tooltip {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -125%);
+  background: var(--phgx-text);
+  color: var(--phgx-surface);
+  border-radius: 6px;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.76rem;
+  white-space: nowrap;
+  transition: opacity 0.12s ease;
+  z-index: 5;
+}
+
+.phgx-tooltip.is-visible {
+  opacity: 0.95;
+}
+
+.phgx-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--phgx-muted);
+}
+
+.phgx-legend-bar {
+  flex: 1 1 auto;
+  height: 9px;
+  border-radius: 5px;
+  max-width: 220px;
+}
+
+/* ------------------------------------------------------------ rankings -- */
+
+.phgx-rank {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.82rem;
+}
+
+.phgx-rank li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.22rem 0;
+  position: relative;
+}
+
+.phgx-rank-fill {
+  position: absolute;
+  left: 0;
+  top: 0.1rem;
+  bottom: 0.1rem;
+  background: var(--phgx-accent);
+  opacity: 0.13;
+  border-radius: 3px;
+  z-index: 0;
+}
+
+.phgx-rank-name,
+.phgx-rank-value {
+  position: relative;
+  z-index: 1;
+}
+
+.phgx-rank-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--phgx-muted);
+}
+
+/* --------------------------------------------------------------- charts -- */
+
+.phgx-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 120px;
+  margin-top: 0.4rem;
+}
+
+.phgx-bar {
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--phgx-accent);
+  border-radius: 3px 3px 0 0;
+  opacity: 0.8;
+  position: relative;
+}
+
+.phgx-bar:hover {
+  opacity: 1;
+}
+
+.phgx-bar-axis {
+  display: flex;
+  gap: 3px;
+  margin-top: 0.3rem;
+  font-size: 0.66rem;
+  color: var(--phgx-muted);
+}
+
+.phgx-bar-axis span {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.phgx-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1.1rem;
+}
+
+.phgx-foot {
+  font-size: 0.75rem;
+  color: var(--phgx-muted);
+  line-height: 1.5;
+}
+
+.phgx-setup {
+  border: 1px dashed var(--phgx-border);
+  border-radius: 8px;
+  padding: 0.8rem 0.95rem;
+  font-size: 0.82rem;
+  color: var(--phgx-muted);
+}
+
+.phgx-setup code {
+  font-size: 0.95em;
+}

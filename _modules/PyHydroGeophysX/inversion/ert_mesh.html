@@ -1,0 +1,1205 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.inversion.ert_mesh &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../_static/documentation_options.js?v=1dd76d02"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/inversion/ert_mesh';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../../../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/inversion/ert_mesh.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../changelog.html">
+    Changelog
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../changelog.html">
+    Changelog
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.inversion.ert_mesh</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.inversion.ert_mesh</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""The mesh an ERT inversion runs on: built, imported, cut at zones, previewed.</span>
+
+<span class="sd">One module for every place that needs the inversion mesh - the single-survey</span>
+<span class="sd">and the time-lapse inversions, and the ERT page's mesh preview - so what the</span>
+<span class="sd">page shows before a run is the mesh the run then inverts on, cell for cell:</span>
+
+<span class="sd">* :func:`build_inversion_mesh` builds PyGIMLi's parameter mesh of a survey,</span>
+<span class="sd">  along the outlines of a-priori zones (``ert_zones``) when asked, or imports</span>
+<span class="sd">  one built elsewhere;</span>
+<span class="sd">* :func:`load_inversion_mesh` reads such a mesh - PyGIMLi, Gmsh, VTK, E4D -</span>
+<span class="sd">  and checks that it can hold the survey;</span>
+<span class="sd">* :func:`mark_zone_interfaces` stops the smoothness at the zone outlines;</span>
+<span class="sd">* :func:`mesh_preview` splits the mesh the way the inversion does, for the</span>
+<span class="sd">  page to draw.</span>
+
+<span class="sd">These were written in ``ert_inversion``, which still exports them.</span>
+<span class="sd">"""</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pygimli.physics</span><span class="w"> </span><span class="kn">import</span> <span class="n">ert</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX._internal.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">noop</span> <span class="k">as</span> <span class="n">_noop_log</span>
+
+
+<span class="c1">#: Mesh formats a user can hand the inversion. ``.bms`` is PyGIMLi's own,</span>
+<span class="c1">#: ``.msh`` is Gmsh (the usual route for a complex 3D domain), ``.node`` and</span>
+<span class="c1">#: ``.ele`` an E4D (TetGen) mesh, ``.cfg`` an E4D mesh configuration, which is</span>
+<span class="c1">#: built the way E4D builds it; the rest are what PyGIMLi's loader recognises.</span>
+<span class="n">MESH_SUFFIXES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">".bms"</span><span class="p">,</span> <span class="s2">".msh"</span><span class="p">,</span> <span class="s2">".vtk"</span><span class="p">,</span> <span class="s2">".vtu"</span><span class="p">,</span> <span class="s2">".poly"</span><span class="p">,</span> <span class="s2">".node"</span><span class="p">,</span> <span class="s2">".ele"</span><span class="p">,</span> <span class="s2">".cfg"</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="load_inversion_mesh">
+<a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.inversion.ert_mesh.load_inversion_mesh">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_inversion_mesh</span><span class="p">(</span><span class="n">mesh_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">log</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="n">_noop_log</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Load a user-supplied inversion mesh and check it can hold this survey.</span>
+
+<span class="sd">    Building a mesh from the electrode line is fine for a 2D profile and</span>
+<span class="sd">    hopeless for a 3D domain with topography, boreholes or known structure, so</span>
+<span class="sd">    those are meshed externally (usually in Gmsh or E4D) and brought in here.</span>
+<span class="sd">    An E4D mesh is read with its ``.trn`` translation undone and its zones as</span>
+<span class="sd">    cell markers, smoothed across its internal boundaries within a zone as E4D</span>
+<span class="sd">    does; an E4D ``.cfg`` is meshed first (see ``core.e4d_mesh``).</span>
+
+<span class="sd">    An imported mesh fails in ways a generated one cannot: electrodes outside</span>
+<span class="sd">    the domain, or every cell marked background so nothing is inverted. Both</span>
+<span class="sd">    surface deep inside the forward solver as errors that name nothing useful,</span>
+<span class="sd">    so they are checked here where the message can say what is wrong.</span>
+<span class="sd">    """</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">mesh_path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No mesh file at </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+    <span class="n">suffix</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">suffix</span> <span class="o">==</span> <span class="s2">".msh"</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pygimli.meshtools</span><span class="w"> </span><span class="kn">import</span> <span class="n">readGmsh</span>
+        <span class="n">mesh</span> <span class="o">=</span> <span class="n">readGmsh</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">suffix</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">".node"</span><span class="p">,</span> <span class="s2">".ele"</span><span class="p">):</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.e4d_mesh</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_e4d_mesh</span>
+        <span class="n">mesh</span> <span class="o">=</span> <span class="n">read_e4d_mesh</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">suffix</span> <span class="o">==</span> <span class="s2">".cfg"</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.e4d_mesh</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_e4d_mesh</span><span class="p">,</span> <span class="n">read_e4d_config</span>
+        <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  building the mesh </span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> describes, as E4D would"</span><span class="p">)</span>
+        <span class="n">built</span> <span class="o">=</span> <span class="n">build_e4d_mesh</span><span class="p">(</span><span class="n">read_e4d_config</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">"e4d_"</span><span class="p">),</span>
+                               <span class="n">name</span><span class="o">=</span><span class="n">path</span><span class="o">.</span><span class="n">stem</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">log</span><span class="p">)</span>
+        <span class="n">mesh</span> <span class="o">=</span> <span class="n">built</span><span class="p">[</span><span class="s2">"mesh"</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mesh</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">mesh</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">int</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">())</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> loaded no cells; is it a mesh file?"</span><span class="p">)</span>
+
+    <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">c</span><span class="o">.</span><span class="n">marker</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cells</span><span class="p">()],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">invertible</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">markers</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">invertible</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">counts</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="p">):</span> <span class="nb">int</span><span class="p">((</span><span class="n">markers</span> <span class="o">==</span> <span class="n">m</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">markers</span><span class="p">)}</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has no cells marked as the parameter domain "</span>
+            <span class="sa">f</span><span class="s2">"(marker &gt; 1); markers present: </span><span class="si">{</span><span class="n">counts</span><span class="si">}</span><span class="s2">. PyGIMLi inverts marker 2 "</span>
+            <span class="s2">"and above and treats 0 and 1 as background, so nothing here would "</span>
+            <span class="s2">"be inverted. Re-tag the region to invert with marker 2."</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">sensors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">sensorPositions</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">sensors</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+            <span class="n">outside</span> <span class="o">=</span> <span class="n">_sensors_outside</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">sensors</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">outside</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> does not contain </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">outside</span><span class="p">)</span><span class="si">}</span><span class="s2"> of "</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">sensors</span><span class="p">)</span><span class="si">}</span><span class="s2"> electrodes (first at "</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">sensors</span><span class="p">[</span><span class="n">outside</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}</span><span class="s2">). A mesh that "</span>
+                    <span class="s2">"does not cover the array cannot be used for this survey; "</span>
+                    <span class="s2">"check the coordinate origin and units."</span><span class="p">)</span>
+    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  mesh: </span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span><span class="si">}</span><span class="s2"> cells "</span>
+        <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">invertible</span><span class="si">}</span><span class="s2"> inverted), </span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">nodeCount</span><span class="p">()</span><span class="si">}</span><span class="s2"> nodes, </span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span><span class="si">}</span><span class="s2">D"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">mesh</span></div>
+
+
+
+<span class="c1">#: Triangle stops terminating a little above a 34-degree smallest angle (36</span>
+<span class="c1">#: already never finishes on a plain profile), so a higher mesh quality is</span>
+<span class="c1">#: refused up front instead of hanging the run.</span>
+<span class="n">MAX_MESH_QUALITY</span> <span class="o">=</span> <span class="mf">34.0</span>
+
+<span class="c1">#: Marker a zone outline carries while it is meshed, so Triangle keeps it as</span>
+<span class="c1">#: cell edges. It is cleared once the mesh is built: pyGIMLi drops the</span>
+<span class="c1">#: smoothness constraint across every marked edge inside the parameter domain,</span>
+<span class="c1">#: and whether to do that is a separate choice (:func:`mark_zone_interfaces`).</span>
+<span class="n">_ZONE_OUTLINE_MARKER</span> <span class="o">=</span> <span class="mi">11</span>
+
+<span class="c1">#: Marker of an edge the smoothness constraint does not cross: one between cells</span>
+<span class="c1">#: of two different zones, or of a zone and the ground around it.</span>
+<span class="n">ZONE_INTERFACE_MARKER</span> <span class="o">=</span> <span class="mi">12</span>
+
+
+<div class="viewcode-block" id="build_inversion_mesh">
+<a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.inversion.ert_mesh.build_inversion_mesh">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_inversion_mesh</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mesh_quality</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">34.0</span><span class="p">,</span> <span class="n">para_depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+                         <span class="n">para_max_cell_size</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">para_boundary</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span>
+                         <span class="n">surface_nodes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">outer_width</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+                         <span class="n">outer_max_cell_size</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+                         <span class="n">conform_zones</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                         <span class="n">mesh_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span> <span class="n">log</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="n">_noop_log</span><span class="p">,</span>
+                         <span class="n">report</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The mesh an ERT inversion of ``data`` runs on: imported, or built.</span>
+
+<span class="sd">    One function for every place that needs it - the single-survey and the</span>
+<span class="sd">    time-lapse inversions, and the ERT page's mesh preview - so what the page</span>
+<span class="sd">    shows before a run is the mesh the run then inverts on, cell for cell.</span>
+
+<span class="sd">    A generated mesh is PyGIMLi's parameter mesh: an inverted region under the</span>
+<span class="sd">    electrodes and a coarse outer region around it that carries the boundary</span>
+<span class="sd">    condition far away. Every sizing option maps onto one of PyGIMLi's, and a</span>
+<span class="sd">    value left at its default is not passed, so the mesh is the one PyGIMLi</span>
+<span class="sd">    builds by itself. They are the controls an E4D mesh configuration sets</span>
+<span class="sd">    too: the inverted region is its fine zone, the outer region its outer</span>
+<span class="sd">    boundary.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : pygimli.DataContainerERT</span>
+<span class="sd">        The survey; its sensor positions define the generated mesh.</span>
+<span class="sd">    mesh_quality : float</span>
+<span class="sd">        Smallest angle, in degrees, a triangle of a generated mesh may have:</span>
+<span class="sd">        higher gives better-shaped and more cells. At most</span>
+<span class="sd">        :data:`MAX_MESH_QUALITY`.</span>
+<span class="sd">    para_depth, para_max_cell_size : float</span>
+<span class="sd">        Depth of the inverted region and its largest cell area (m²); 0 lets</span>
+<span class="sd">        PyGIMLi choose from the array.</span>
+<span class="sd">    para_boundary : float</span>
+<span class="sd">        How far the inverted region reaches past the first and the last</span>
+<span class="sd">        electrode, in electrode spacings (``paraBoundary``).</span>
+<span class="sd">    surface_nodes : int</span>
+<span class="sd">        Nodes placed on the surface between two neighbouring electrodes</span>
+<span class="sd">        (``addNodes``); more makes the cells near the surface smaller.</span>
+<span class="sd">    outer_width : float</span>
+<span class="sd">        How far the outer region reaches beyond the inverted region, sideways</span>
+<span class="sd">        and down, in lengths of the electrode spread (``boundary``); 0 keeps</span>
+<span class="sd">        PyGIMLi's four.</span>
+<span class="sd">    outer_max_cell_size : float</span>
+<span class="sd">        Largest cell area in the outer region (m², ``boundaryMaxCellSize``); 0</span>
+<span class="sd">        leaves it unlimited.</span>
+<span class="sd">    conform_zones : list of dict, optional</span>
+<span class="sd">        A-priori zones (see ``ert_zones``) whose outlines a generated mesh</span>
+<span class="sd">        follows: they become cell edges, so no cell straddles a zone's edge.</span>
+<span class="sd">    mesh_file : str</span>
+<span class="sd">        A mesh built elsewhere (.bms, .msh, .vtk, .vtu, .poly, E4D). Its own</span>
+<span class="sd">        domain applies, and the options above are ignored.</span>
+<span class="sd">    report : dict, optional</span>
+<span class="sd">        Filled with what was built: ``source`` ("generated" or "imported") and</span>
+<span class="sd">        ``zone_outline_edges``, the edges the zone outlines added (0 when the</span>
+<span class="sd">        mesh does not follow them).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pygimli.Mesh</span>
+<span class="sd">        The full forward mesh: parameter domain (marker 2 and above) and the</span>
+<span class="sd">        outer region that carries the boundary far from the array (marker 1).</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.ert_zones</span><span class="w"> </span><span class="kn">import</span> <span class="n">normalize_zones</span>
+
+    <span class="n">report</span> <span class="o">=</span> <span class="n">report</span> <span class="k">if</span> <span class="n">report</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">{}</span>
+    <span class="n">report</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="s2">"imported"</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">mesh_file</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span> <span class="k">else</span> <span class="s2">"generated"</span><span class="p">,</span>
+                  <span class="n">zone_outline_edges</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">zones</span> <span class="o">=</span> <span class="n">normalize_zones</span><span class="p">(</span><span class="n">conform_zones</span><span class="p">)</span> <span class="k">if</span> <span class="n">conform_zones</span> <span class="k">else</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">mesh_file</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">):</span>
+        <span class="c1"># A mesh built elsewhere describes its own domain, so the sizing knobs</span>
+        <span class="c1"># below have nothing to act on. Saying so beats silently ignoring them.</span>
+        <span class="n">mesh</span> <span class="o">=</span> <span class="n">load_inversion_mesh</span><span class="p">(</span><span class="n">mesh_file</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">log</span><span class="p">)</span>
+        <span class="n">ignored</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">changed</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="p">(</span><span class="s2">"depth"</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">para_depth</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">"cell size"</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">para_max_cell_size</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">"side margin"</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">para_boundary</span><span class="p">)</span> <span class="o">!=</span> <span class="mf">2.0</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">"surface nodes"</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">surface_nodes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">"outer region"</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">outer_width</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="nb">float</span><span class="p">(</span><span class="n">outer_max_cell_size</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">"zone outlines"</span><span class="p">,</span> <span class="nb">bool</span><span class="p">(</span><span class="n">zones</span><span class="p">)))</span> <span class="k">if</span> <span class="n">changed</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">ignored</span><span class="p">:</span>
+            <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  (</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ignored</span><span class="p">)</span><span class="si">}</span><span class="s2"> ignored: the mesh is imported and "</span>
+                <span class="s2">"describes its own domain)"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">mesh</span>
+    <span class="n">quality</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">mesh_quality</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">quality</span> <span class="o">&gt;</span> <span class="n">MAX_MESH_QUALITY</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"A mesh quality of </span><span class="si">{</span><span class="n">quality</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> degrees is more than Triangle can "</span>
+            <span class="sa">f</span><span class="s2">"reach; it would never finish. Use </span><span class="si">{</span><span class="n">MAX_MESH_QUALITY</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> or less."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">para_boundary</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The side margin (para_boundary) must be positive: the "</span>
+                         <span class="s2">"inverted region has to reach past the outer electrodes."</span><span class="p">)</span>
+    <span class="c1"># PyGIMLi sizes the parameter domain from the array length when paraDepth is</span>
+    <span class="c1"># left at 0, which for a long line reaches far below anything the data can</span>
+    <span class="c1"># resolve. Capping it removes unknowns the inversion cannot constrain anyway.</span>
+    <span class="n">mesh_kwargs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"quality"</span><span class="p">:</span> <span class="n">quality</span><span class="p">}</span>
+    <span class="n">details</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">para_depth</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">mesh_kwargs</span><span class="p">[</span><span class="s2">"paraDepth"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">para_depth</span><span class="p">)</span>
+        <span class="n">details</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"parameter domain capped at </span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">para_depth</span><span class="p">)</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> m depth"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">para_max_cell_size</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">mesh_kwargs</span><span class="p">[</span><span class="s2">"paraMaxCellSize"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">para_max_cell_size</span><span class="p">)</span>
+        <span class="n">details</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"inverted cells at most </span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">para_max_cell_size</span><span class="p">)</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> m²"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">para_boundary</span><span class="p">)</span> <span class="o">!=</span> <span class="mf">2.0</span><span class="p">:</span>
+        <span class="n">mesh_kwargs</span><span class="p">[</span><span class="s2">"paraBoundary"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">para_boundary</span><span class="p">)</span>
+        <span class="n">details</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">para_boundary</span><span class="p">)</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> electrode spacings past the ends"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">surface_nodes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">mesh_kwargs</span><span class="p">[</span><span class="s2">"addNodes"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">surface_nodes</span><span class="p">)</span>
+        <span class="n">details</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">surface_nodes</span><span class="p">)</span><span class="si">}</span><span class="s2"> surface nodes between electrodes"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">outer_width</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">mesh_kwargs</span><span class="p">[</span><span class="s2">"boundary"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">outer_width</span><span class="p">)</span>
+        <span class="n">details</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"outer region </span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">outer_width</span><span class="p">)</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> spreads wide"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">outer_max_cell_size</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">mesh_kwargs</span><span class="p">[</span><span class="s2">"boundaryMaxCellSize"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">outer_max_cell_size</span><span class="p">)</span>
+        <span class="n">details</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"outer cells at most </span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">outer_max_cell_size</span><span class="p">)</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> m²"</span><span class="p">)</span>
+    <span class="n">mesh</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">zones</span><span class="p">:</span>
+        <span class="n">mesh</span><span class="p">,</span> <span class="n">edges</span> <span class="o">=</span> <span class="n">_zone_conforming_mesh</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">mesh_kwargs</span><span class="p">,</span> <span class="n">zones</span><span class="p">)</span>
+        <span class="n">report</span><span class="p">[</span><span class="s2">"zone_outline_edges"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mesh</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">log</span><span class="p">(</span><span class="s2">"  (no zone outline reaches the parameter domain, so the mesh "</span>
+                <span class="s2">"is built without them)"</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">details</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"follows the outlines of </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">zones</span><span class="p">)</span><span class="si">}</span><span class="s2"> zone(s)"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">mesh</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">mesh</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTManager</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">mesh_kwargs</span><span class="p">)</span>
+    <span class="n">para_cells</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cells</span><span class="p">()</span> <span class="k">if</span> <span class="n">cell</span><span class="o">.</span><span class="n">marker</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  mesh: </span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()</span><span class="si">}</span><span class="s2"> cells, </span><span class="si">{</span><span class="n">para_cells</span><span class="si">}</span><span class="s2"> of them inverted"</span>
+        <span class="o">+</span> <span class="p">(</span><span class="sa">f</span><span class="s2">" (</span><span class="si">{</span><span class="s1">'; '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">details</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span> <span class="k">if</span> <span class="n">details</span> <span class="k">else</span> <span class="s2">""</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">mesh</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_electrode_spacing</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The typical distance between neighbouring electrodes, 1 m without any."""</span>
+    <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">sensorPositions</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">1.0</span>
+    <span class="n">positions</span> <span class="o">=</span> <span class="n">positions</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">positions</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"stable"</span><span class="p">)]</span>
+    <span class="n">gaps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">gaps</span> <span class="o">=</span> <span class="n">gaps</span><span class="p">[</span><span class="n">gaps</span> <span class="o">&gt;</span> <span class="mf">1e-9</span><span class="p">]</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">gaps</span><span class="p">))</span> <span class="k">if</span> <span class="n">gaps</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="mf">1.0</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_zone_conforming_mesh</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">mesh_kwargs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">zones</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""PyGIMLi's parameter mesh of ``data``, with the zone outlines as cell edges.</span>
+
+<span class="sd">    The same steps as ``ERTManager.createMesh`` - the parameter-mesh geometry,</span>
+<span class="sd">    then Triangle with its smoothing - with the outlines added to the geometry</span>
+<span class="sd">    in between. Returns ``(mesh, edges)``; the mesh is None when no outline</span>
+<span class="sd">    reaches the parameter domain.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">pygimli.meshtools</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mt</span>
+
+    <span class="n">plc_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">mesh_kwargs</span><span class="p">)</span>
+    <span class="n">quality</span> <span class="o">=</span> <span class="n">plc_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"quality"</span><span class="p">)</span>
+    <span class="n">plc</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createParaMeshPLC</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">sensors</span><span class="p">(),</span> <span class="o">**</span><span class="n">plc_kwargs</span><span class="p">)</span>
+    <span class="n">plc</span><span class="p">,</span> <span class="n">edges</span><span class="p">,</span> <span class="n">para_marker</span> <span class="o">=</span> <span class="n">_embed_zone_outlines</span><span class="p">(</span>
+        <span class="n">plc</span><span class="p">,</span> <span class="n">zones</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="n">_electrode_spacing</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">edges</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">plc</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="n">quality</span><span class="p">,</span> <span class="n">smooth</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">boundary</span> <span class="ow">in</span> <span class="n">mesh</span><span class="o">.</span><span class="n">boundaries</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">boundary</span><span class="o">.</span><span class="n">marker</span><span class="p">()</span> <span class="o">==</span> <span class="n">_ZONE_OUTLINE_MARKER</span><span class="p">:</span>
+            <span class="n">boundary</span><span class="o">.</span><span class="n">setMarker</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="c1"># Every face the outlines cut off was given a seed, so no cell should be</span>
+    <span class="c1"># left unassigned; one that is belongs to the inverted region it lies in.</span>
+    <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cells</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">cell</span><span class="o">.</span><span class="n">marker</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">cell</span><span class="o">.</span><span class="n">setMarker</span><span class="p">(</span><span class="n">para_marker</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">edges</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_embed_zone_outlines</span><span class="p">(</span><span class="n">plc</span><span class="p">,</span> <span class="n">zones</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">spacing</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Add the zone outlines to the parameter-mesh geometry ``plc`` as edges.</span>
+
+<span class="sd">    Only what lies inside the parameter domain is added: an outline drawn</span>
+<span class="sd">    across the ground surface, or past the bottom or the sides of the inverted</span>
+<span class="sd">    region, ends there, on the domain's boundary. Where it meets the surface it</span>
+<span class="sd">    ends on the nearest surface node, and on a long boundary edge at a node</span>
+<span class="sd">    inserted there, unless an end of the edge is within half an electrode</span>
+<span class="sd">    ``spacing``: a new node beside an existing one would force cells as small</span>
+<span class="sd">    as the gap between them. A vertex within a fifth of the spacing of a node</span>
+<span class="sd">    or of the boundary is moved onto it, so a vertex placed a little under the</span>
+<span class="sd">    surface does not leave a sliver of tiny cells between the two, and a</span>
+<span class="sd">    stretch of outline that runs along the boundary is left to the boundary.</span>
+<span class="sd">    Every such move is well under what the inversion resolves. Outlines that</span>
+<span class="sd">    cross each other are noded by Triangle.</span>
+
+<span class="sd">    Each face the outlines cut off gets a seed with the inverted region's</span>
+<span class="sd">    marker and cell size, so every cell stays in the one region the inversion</span>
+<span class="sd">    inverts, and the regularization sees one domain, as it does without zones.</span>
+
+<span class="sd">    Returns ``(plc, edges, marker)``: the new geometry, how many outline edges</span>
+<span class="sd">    it gained (0 when no outline reaches the parameter domain, and ``plc`` is</span>
+<span class="sd">    then returned unchanged), and the inverted region's marker.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">pygimli.meshtools</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mt</span>
+
+    <span class="n">nodes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">n</span><span class="o">.</span><span class="n">pos</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="n">n</span><span class="o">.</span><span class="n">pos</span><span class="p">()[</span><span class="mi">1</span><span class="p">]]</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">plc</span><span class="o">.</span><span class="n">nodes</span><span class="p">()],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">ends</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">b</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">id</span><span class="p">(),</span> <span class="n">b</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">id</span><span class="p">()]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">plc</span><span class="o">.</span><span class="n">boundaries</span><span class="p">()],</span>
+                    <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">regions</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">plc</span><span class="o">.</span><span class="n">regionMarkers</span><span class="p">())</span>
+    <span class="n">para</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">regions</span> <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">marker</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">r</span><span class="o">.</span><span class="n">isHole</span><span class="p">()]</span>
+    <span class="n">para_marker</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">para</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">marker</span><span class="p">())</span> <span class="k">if</span> <span class="n">para</span> <span class="k">else</span> <span class="mi">2</span>
+    <span class="n">para_area</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">para</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">area</span><span class="p">())</span> <span class="k">if</span> <span class="n">para</span> <span class="k">else</span> <span class="mf">0.0</span>
+    <span class="c1"># The geometry meshed without refinement: a few dozen cells, enough to</span>
+    <span class="c1"># tell the inverted region from the outer region and from the air above.</span>
+    <span class="n">locator</span> <span class="o">=</span> <span class="n">mt</span><span class="o">.</span><span class="n">createMesh</span><span class="p">(</span><span class="n">plc</span><span class="p">,</span> <span class="n">quality</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">in_para</span><span class="p">(</span><span class="n">point</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="n">cell</span> <span class="o">=</span> <span class="n">locator</span><span class="o">.</span><span class="n">findCell</span><span class="p">(</span><span class="n">pg</span><span class="o">.</span><span class="n">Pos</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">])))</span>
+        <span class="k">return</span> <span class="n">cell</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">int</span><span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">marker</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">1</span>
+
+    <span class="n">start</span><span class="p">,</span> <span class="n">direction</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">ends</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]],</span> <span class="n">nodes</span><span class="p">[</span><span class="n">ends</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">-</span> <span class="n">nodes</span><span class="p">[</span><span class="n">ends</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]]</span>
+    <span class="n">length2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">((</span><span class="n">direction</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="mf">1e-300</span><span class="p">)</span>
+    <span class="n">lengths</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">length2</span><span class="p">)</span>
+    <span class="n">tiny</span> <span class="o">=</span> <span class="mf">1e-9</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()))</span>
+    <span class="n">snap</span> <span class="o">=</span> <span class="mf">0.2</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">spacing</span><span class="p">)</span>
+    <span class="c1"># How close to an end of each boundary edge a point is taken to be at that</span>
+    <span class="c1"># end: the whole of a surface edge, half its length either way, and half an</span>
+    <span class="c1"># electrode spacing of the long edges that close the domain.</span>
+    <span class="n">end_snap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">snap</span><span class="p">,</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">lengths</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">spacing</span><span class="p">)))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">nearest_edge</span><span class="p">(</span><span class="n">point</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Distance to the closest boundary edge, that edge, and where along it."""</span>
+        <span class="n">along</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(((</span><span class="n">point</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span> <span class="o">*</span> <span class="n">direction</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">length2</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">gaps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">along</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">direction</span> <span class="o">-</span> <span class="n">point</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">gaps</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">gaps</span><span class="p">[</span><span class="n">k</span><span class="p">]),</span> <span class="n">k</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">along</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+
+    <span class="c1"># A point of the new geometry is an existing node ("node", i), a point on a</span>
+    <span class="c1"># boundary edge that splits it ("edge", k, s), or a free vertex ("free", x, z).</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_edge</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="o">*</span> <span class="n">lengths</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">end_snap</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="ow">and</span> <span class="n">s</span> <span class="o">&lt;=</span> <span class="mf">0.5</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="s2">"node"</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">ends</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">s</span><span class="p">)</span> <span class="o">*</span> <span class="n">lengths</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">end_snap</span><span class="p">[</span><span class="n">k</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="s2">"node"</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">ends</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="p">(</span><span class="s2">"edge"</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">snapped</span><span class="p">(</span><span class="n">vertex</span><span class="p">):</span>
+        <span class="n">gaps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">nodes</span> <span class="o">-</span> <span class="n">vertex</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">gaps</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="n">snap</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="s2">"node"</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">gaps</span><span class="p">)))</span>
+        <span class="n">gap</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">s</span> <span class="o">=</span> <span class="n">nearest_edge</span><span class="p">(</span><span class="n">vertex</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">gap</span> <span class="o">&lt;=</span> <span class="n">snap</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">on_edge</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="s2">"free"</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">vertex</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">vertex</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">coords</span><span class="p">(</span><span class="n">point</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"node"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">nodes</span><span class="p">[</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="k">if</span> <span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"edge"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">start</span><span class="p">[</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">+</span> <span class="n">point</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">direction</span><span class="p">[</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="n">pieces</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">zone</span> <span class="ow">in</span> <span class="n">zones</span><span class="p">:</span>
+        <span class="n">ring</span> <span class="o">=</span> <span class="p">[</span><span class="n">snapped</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">vertex</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span> <span class="k">for</span> <span class="n">vertex</span> <span class="ow">in</span> <span class="n">zone</span><span class="p">[</span><span class="s2">"polygon"</span><span class="p">]]</span>
+        <span class="k">for</span> <span class="n">first</span><span class="p">,</span> <span class="n">second</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">ring</span><span class="p">,</span> <span class="n">ring</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="n">ring</span><span class="p">[:</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="n">p</span><span class="p">,</span> <span class="n">q</span> <span class="o">=</span> <span class="n">coords</span><span class="p">(</span><span class="n">first</span><span class="p">),</span> <span class="n">coords</span><span class="p">(</span><span class="n">second</span><span class="p">)</span>
+            <span class="n">span</span> <span class="o">=</span> <span class="n">q</span> <span class="o">-</span> <span class="n">p</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">span</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">tiny</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="c1"># Where this side of the polygon crosses the geometry's edges.</span>
+            <span class="n">denom</span> <span class="o">=</span> <span class="n">span</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">direction</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">span</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">direction</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="n">start</span> <span class="o">-</span> <span class="n">p</span>
+            <span class="n">valid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">denom</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1e-12</span> <span class="o">*</span> <span class="n">lengths</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">span</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">):</span>
+                <span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="n">offset</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">direction</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">offset</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">direction</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="n">denom</span>
+                <span class="n">u</span> <span class="o">=</span> <span class="p">(</span><span class="n">offset</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">span</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">offset</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">span</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="n">denom</span>
+            <span class="n">hits</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">valid</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">t</span> <span class="o">&gt;</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">t</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">-</span> <span class="mf">1e-9</span><span class="p">)</span>
+                                  <span class="o">&amp;</span> <span class="p">(</span><span class="n">u</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mf">1e-9</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">u</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="o">+</span> <span class="mf">1e-9</span><span class="p">))</span>
+            <span class="n">cuts</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">first</span><span class="p">),</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">second</span><span class="p">)]</span>
+                          <span class="o">+</span> <span class="p">[(</span><span class="nb">float</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">k</span><span class="p">]),</span> <span class="n">on_edge</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">k</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">u</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))))</span>
+                             <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">hits</span><span class="p">],</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">cut</span><span class="p">:</span> <span class="n">cut</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">a</span><span class="p">),</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">cuts</span><span class="p">,</span> <span class="n">cuts</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+                <span class="n">pa</span><span class="p">,</span> <span class="n">pb</span> <span class="o">=</span> <span class="n">coords</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="n">coords</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">pb</span> <span class="o">-</span> <span class="n">pa</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">tiny</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">middle</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">pa</span> <span class="o">+</span> <span class="n">pb</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">in_para</span><span class="p">(</span><span class="n">middle</span><span class="p">):</span>
+                    <span class="k">continue</span>  <span class="c1"># in the outer region or above the ground</span>
+                <span class="k">if</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">"free"</span> <span class="ow">and</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">"free"</span> <span class="ow">and</span> <span class="n">nearest_edge</span><span class="p">(</span><span class="n">middle</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">snap</span><span class="p">:</span>
+                    <span class="k">continue</span>  <span class="c1"># runs along the boundary, which is already an edge</span>
+                <span class="n">pieces</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pieces</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">plc</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">para_marker</span>
+
+    <span class="n">geometry</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">isGeometry</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z</span><span class="p">),</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">plc</span><span class="o">.</span><span class="n">nodes</span><span class="p">()):</span>
+        <span class="n">geometry</span><span class="o">.</span><span class="n">createNode</span><span class="p">(</span><span class="n">pg</span><span class="o">.</span><span class="n">Pos</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">z</span><span class="p">)),</span> <span class="nb">int</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">marker</span><span class="p">()))</span>
+    <span class="n">splits</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">free</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">node_of</span><span class="p">(</span><span class="n">point</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"node"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"edge"</span><span class="p">:</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">s</span> <span class="o">=</span> <span class="n">point</span>
+            <span class="k">for</span> <span class="n">known</span><span class="p">,</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">splits</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="p">[]):</span>
+                <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">known</span> <span class="o">-</span> <span class="n">s</span><span class="p">)</span> <span class="o">*</span> <span class="n">lengths</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">end_snap</span><span class="p">[</span><span class="n">k</span><span class="p">]:</span>
+                    <span class="k">return</span> <span class="n">index</span>  <span class="c1"># outlines meeting the boundary together share a node</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">createNode</span><span class="p">(</span><span class="n">pg</span><span class="o">.</span><span class="n">Pos</span><span class="p">(</span><span class="o">*</span><span class="n">coords</span><span class="p">(</span><span class="n">point</span><span class="p">)))</span><span class="o">.</span><span class="n">id</span><span class="p">())</span>
+            <span class="n">splits</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">index</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">index</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">tiny</span><span class="p">)),</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">tiny</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">free</span><span class="p">:</span>
+            <span class="n">free</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">createNode</span><span class="p">(</span><span class="n">pg</span><span class="o">.</span><span class="n">Pos</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">point</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span><span class="o">.</span><span class="n">id</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">free</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="n">outline</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">pieces</span><span class="p">:</span>
+        <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">node_of</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="n">node_of</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">j</span> <span class="ow">and</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">outline</span> <span class="ow">and</span> <span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">outline</span><span class="p">:</span>
+            <span class="n">outline</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">boundary</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">plc</span><span class="o">.</span><span class="n">boundaries</span><span class="p">()):</span>
+        <span class="n">chain</span> <span class="o">=</span> <span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">ends</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">])]</span> <span class="o">+</span> <span class="p">[</span><span class="n">index</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">splits</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="p">[]))]</span>
+                 <span class="o">+</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">ends</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">1</span><span class="p">])])</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">chain</span><span class="p">,</span> <span class="n">chain</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+            <span class="n">geometry</span><span class="o">.</span><span class="n">createEdge</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">geometry</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="n">j</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">boundary</span><span class="o">.</span><span class="n">marker</span><span class="p">()))</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">outline</span><span class="p">:</span>
+        <span class="n">geometry</span><span class="o">.</span><span class="n">createEdge</span><span class="p">(</span><span class="n">geometry</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">geometry</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="n">j</span><span class="p">),</span> <span class="n">_ZONE_OUTLINE_MARKER</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">region</span> <span class="ow">in</span> <span class="n">regions</span><span class="p">:</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Pos</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">region</span><span class="o">.</span><span class="n">x</span><span class="p">()),</span> <span class="nb">float</span><span class="p">(</span><span class="n">region</span><span class="o">.</span><span class="n">y</span><span class="p">()))</span>
+        <span class="k">if</span> <span class="n">region</span><span class="o">.</span><span class="n">isHole</span><span class="p">():</span>
+            <span class="n">geometry</span><span class="o">.</span><span class="n">addHoleMarker</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">geometry</span><span class="o">.</span><span class="n">addRegionMarker</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">region</span><span class="o">.</span><span class="n">marker</span><span class="p">()),</span> <span class="nb">float</span><span class="p">(</span><span class="n">region</span><span class="o">.</span><span class="n">area</span><span class="p">()))</span>
+    <span class="c1"># A seed a hair to either side of every outline edge: each face the</span>
+    <span class="c1"># outlines cut off touches at least one of them.</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">outline</span><span class="p">:</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">geometry</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">pos</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="n">geometry</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">pos</span><span class="p">()[</span><span class="mi">1</span><span class="p">]])</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">geometry</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">pos</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="n">geometry</span><span class="o">.</span><span class="n">node</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">pos</span><span class="p">()[</span><span class="mi">1</span><span class="p">]])</span>
+        <span class="n">tangent</span> <span class="o">=</span> <span class="n">b</span> <span class="o">-</span> <span class="n">a</span>
+        <span class="n">normal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="n">tangent</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">tangent</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">tangent</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">side</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">):</span>
+            <span class="n">seed</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">)</span> <span class="o">+</span> <span class="n">side</span> <span class="o">*</span> <span class="mf">1e-4</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">tangent</span><span class="p">)</span> <span class="o">*</span> <span class="n">normal</span>
+            <span class="k">if</span> <span class="n">in_para</span><span class="p">(</span><span class="n">seed</span><span class="p">):</span>
+                <span class="n">geometry</span><span class="o">.</span><span class="n">addRegionMarker</span><span class="p">(</span><span class="n">pg</span><span class="o">.</span><span class="n">Pos</span><span class="p">(</span><span class="o">*</span><span class="n">seed</span><span class="p">),</span> <span class="n">para_marker</span><span class="p">,</span> <span class="n">para_area</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">geometry</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">outline</span><span class="p">),</span> <span class="n">para_marker</span>
+
+
+<div class="viewcode-block" id="mark_zone_interfaces">
+<a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.inversion.ert_mesh.mark_zone_interfaces">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">mark_zone_interfaces</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">zones</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">marker</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">ZONE_INTERFACE_MARKER</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A copy of ``mesh`` on which the smoothness stops at the zone outlines.</span>
+
+<span class="sd">    Every edge between two cells of the parameter domain that belong to</span>
+<span class="sd">    different zones - or to a zone and the ground around it - is given</span>
+<span class="sd">    ``marker``. PyGIMLi's region manager drops the smoothness constraint</span>
+<span class="sd">    across a marked edge, so the in-house engines and PyGIMLi's own manager</span>
+<span class="sd">    let the model jump there; the ADTLERT engine reads the same marks</span>
+<span class="sd">    (:func:`_interface_regions`). A cell belongs to the zone its centre lies</span>
+<span class="sd">    in, as it does everywhere else, so on a mesh that follows the outlines</span>
+<span class="sd">    the cut runs along them exactly, and on any other mesh along the cell</span>
+<span class="sd">    edges closest to them.</span>
+
+<span class="sd">    Returns ``(mesh, edges)``: the marked copy and how many edges were cut; the</span>
+<span class="sd">    mesh itself, and 0, for no zones or a 3-D mesh, on which zones do not apply.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.ert_zones</span><span class="w"> </span><span class="kn">import</span> <span class="n">normalize_zones</span><span class="p">,</span> <span class="n">zone_prior</span>
+
+    <span class="n">zones</span> <span class="o">=</span> <span class="n">normalize_zones</span><span class="p">(</span><span class="n">zones</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">zones</span> <span class="ow">or</span> <span class="nb">int</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">dim</span><span class="p">())</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">mesh</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="n">marked</span> <span class="o">=</span> <span class="n">pg</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+    <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">marked</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">inverted</span> <span class="o">=</span> <span class="n">markers</span> <span class="o">&gt;</span> <span class="mi">1</span>
+    <span class="n">owner</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">marked</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()),</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>  <span class="c1"># -2: not inverted</span>
+    <span class="n">centres</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">marked</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">owner</span><span class="p">[</span><span class="n">inverted</span><span class="p">]</span> <span class="o">=</span> <span class="n">zone_prior</span><span class="p">(</span><span class="n">centres</span><span class="p">[</span><span class="n">inverted</span><span class="p">],</span> <span class="n">zones</span><span class="p">)</span><span class="o">.</span><span class="n">owner</span>
+    <span class="n">edges</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">boundary</span> <span class="ow">in</span> <span class="n">marked</span><span class="o">.</span><span class="n">boundaries</span><span class="p">():</span>
+        <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="n">boundary</span><span class="o">.</span><span class="n">leftCell</span><span class="p">(),</span> <span class="n">boundary</span><span class="o">.</span><span class="n">rightCell</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">left</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">right</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">owner</span><span class="p">[</span><span class="n">left</span><span class="o">.</span><span class="n">id</span><span class="p">()],</span> <span class="n">owner</span><span class="p">[</span><span class="n">right</span><span class="o">.</span><span class="n">id</span><span class="p">()]</span>
+        <span class="k">if</span> <span class="n">a</span> <span class="o">==</span> <span class="o">-</span><span class="mi">2</span> <span class="ow">or</span> <span class="n">b</span> <span class="o">==</span> <span class="o">-</span><span class="mi">2</span> <span class="ow">or</span> <span class="n">a</span> <span class="o">==</span> <span class="n">b</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">boundary</span><span class="o">.</span><span class="n">setMarker</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">marker</span><span class="p">))</span>
+        <span class="n">edges</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">marked</span><span class="p">,</span> <span class="n">edges</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_interface_regions</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">cell_ids</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">marker</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">ZONE_INTERFACE_MARKER</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The parts the marked zone edges cut the parameter domain into, per cell.</span>
+
+<span class="sd">    ``cell_ids`` are the parameter cells of ``mesh`` in model order. Cells that</span>
+<span class="sd">    connect without crossing a marked edge share a label, which is what ADTLERT's</span>
+<span class="sd">    structure-guided smoothness takes: it drops the constraint between cells of</span>
+<span class="sd">    different labels, as pyGIMLi does across the marked edge. None when no edge</span>
+<span class="sd">    is marked.</span>
+<span class="sd">    """</span>
+    <span class="n">position</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">cell_id</span><span class="p">):</span> <span class="n">index</span> <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">cell_id</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cell_ids</span><span class="p">)}</span>
+    <span class="n">parent</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">position</span><span class="p">)))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">root</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">while</span> <span class="n">parent</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">!=</span> <span class="n">index</span><span class="p">:</span>
+            <span class="n">parent</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">parent</span><span class="p">[</span><span class="n">parent</span><span class="p">[</span><span class="n">index</span><span class="p">]]</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">parent</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">index</span>
+
+    <span class="n">cut</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">for</span> <span class="n">boundary</span> <span class="ow">in</span> <span class="n">mesh</span><span class="o">.</span><span class="n">boundaries</span><span class="p">():</span>
+        <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="n">boundary</span><span class="o">.</span><span class="n">leftCell</span><span class="p">(),</span> <span class="n">boundary</span><span class="o">.</span><span class="n">rightCell</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">left</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">right</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">position</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">left</span><span class="o">.</span><span class="n">id</span><span class="p">())),</span> <span class="n">position</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">right</span><span class="o">.</span><span class="n">id</span><span class="p">()))</span>
+        <span class="k">if</span> <span class="n">a</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">boundary</span><span class="o">.</span><span class="n">marker</span><span class="p">())</span> <span class="o">==</span> <span class="nb">int</span><span class="p">(</span><span class="n">marker</span><span class="p">):</span>
+            <span class="n">cut</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">continue</span>
+        <span class="n">parent</span><span class="p">[</span><span class="n">root</span><span class="p">(</span><span class="n">a</span><span class="p">)]</span> <span class="o">=</span> <span class="n">root</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">cut</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">([</span><span class="n">root</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">parent</span><span class="p">))],</span>
+                          <span class="n">return_inverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">labels</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="mesh_preview">
+<a class="viewcode-back" href="../../../api/inversion.html#PyHydroGeophysX.inversion.ert_mesh.mesh_preview">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">mesh_preview</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The inversion mesh as the ERT page's mesh tab draws it.</span>
+
+<span class="sd">    The mesh is split the way the inversion splits it - through the forward</span>
+<span class="sd">    operator's region manager - into the parameter domain, the cells that are</span>
+<span class="sd">    inverted, in the order of the model vector, and the outer region, which is</span>
+<span class="sd">    never inverted and only carries the boundary condition far from the array:</span>
+<span class="sd">    pyGIMLi's background region, the "infinite" part of the mesh.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mesh : pygimli.Mesh</span>
+<span class="sd">        From :func:`build_inversion_mesh`.</span>
+<span class="sd">    data : pygimli.DataContainerERT, optional</span>
+<span class="sd">        The survey, for the electrode positions.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        ``dim`` and the cell counts always. For a 2-D mesh also the cell</span>
+<span class="sd">        polygons of both parts as ``(cells, corners, 2)`` arrays,</span>
+<span class="sd">        ``para_centers`` (what :func:`~.ert_zones.zone_prior` takes), both</span>
+<span class="sd">        extents as ``(xmin, xmax, zmin, zmax)``, and the electrode positions.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.ert_zones</span><span class="w"> </span><span class="kn">import</span> <span class="n">cell_centers_2d</span>
+
+    <span class="n">dim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">dim</span><span class="p">())</span>
+    <span class="n">sensors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">int</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">sensorCount</span><span class="p">()):</span>
+        <span class="n">sensors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">sensorPositions</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">preview</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"dim"</span><span class="p">:</span> <span class="n">dim</span><span class="p">,</span> <span class="s2">"cells"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()),</span> <span class="s2">"nodes"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">nodeCount</span><span class="p">()),</span>
+        <span class="s2">"sensors"</span><span class="p">:</span> <span class="n">sensors</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">dim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="c1"># Nothing is drawn for a volume, and setting one up for the forward</span>
+        <span class="c1"># operator refines it, which can take minutes: count by marker instead,</span>
+        <span class="c1"># by the rule load_inversion_mesh states.</span>
+        <span class="n">markers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">preview</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">para_cells</span><span class="o">=</span><span class="nb">int</span><span class="p">((</span><span class="n">markers</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
+                       <span class="n">outer_cells</span><span class="o">=</span><span class="nb">int</span><span class="p">((</span><span class="n">markers</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()))</span>
+        <span class="k">return</span> <span class="n">preview</span>
+    <span class="n">fop</span> <span class="o">=</span> <span class="n">ert</span><span class="o">.</span><span class="n">ERTModelling</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">fop</span><span class="o">.</span><span class="n">setData</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">fop</span><span class="o">.</span><span class="n">setMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+    <span class="n">para</span> <span class="o">=</span> <span class="n">fop</span><span class="o">.</span><span class="n">paraDomain</span>
+    <span class="n">manager</span> <span class="o">=</span> <span class="n">fop</span><span class="o">.</span><span class="n">regionManager</span><span class="p">()</span>
+    <span class="n">background</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">manager</span><span class="o">.</span><span class="n">regionIdxs</span><span class="p">()</span> <span class="k">if</span> <span class="n">manager</span><span class="o">.</span><span class="n">region</span><span class="p">(</span><span class="n">m</span><span class="p">)</span><span class="o">.</span><span class="n">isBackground</span><span class="p">()]</span>
+    <span class="n">outer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">cellMarkers</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">),</span> <span class="n">background</span><span class="p">)</span>
+    <span class="n">preview</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">para_cells</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">para</span><span class="o">.</span><span class="n">cellCount</span><span class="p">()),</span> <span class="n">outer_cells</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">outer</span><span class="o">.</span><span class="n">sum</span><span class="p">()))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">polygons</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">keep</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Corner coordinates of every cell, one array per corner count."""</span>
+        <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">positions</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">cells</span> <span class="o">=</span> <span class="p">[</span><span class="n">cell</span><span class="o">.</span><span class="n">ids</span><span class="p">()</span> <span class="k">for</span> <span class="n">cell</span><span class="p">,</span> <span class="n">wanted</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+            <span class="n">source</span><span class="o">.</span><span class="n">cells</span><span class="p">(),</span> <span class="n">keep</span> <span class="k">if</span> <span class="n">keep</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">cellCount</span><span class="p">(),</span> <span class="nb">bool</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">wanted</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">cells</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">({</span><span class="nb">len</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span> <span class="k">for</span> <span class="n">ids</span> <span class="ow">in</span> <span class="n">cells</span><span class="p">})</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">positions</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">cells</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">positions</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ids</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)]</span> <span class="k">for</span> <span class="n">ids</span> <span class="ow">in</span> <span class="n">cells</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">extent</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+        <span class="n">xy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">positions</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">xy</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()),</span> <span class="nb">float</span><span class="p">(</span><span class="n">xy</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()),</span>
+                <span class="nb">float</span><span class="p">(</span><span class="n">xy</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()),</span> <span class="nb">float</span><span class="p">(</span><span class="n">xy</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()))</span>
+
+    <span class="n">preview</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+        <span class="n">para_polygons</span><span class="o">=</span><span class="n">polygons</span><span class="p">(</span><span class="n">para</span><span class="p">),</span> <span class="n">outer_polygons</span><span class="o">=</span><span class="n">polygons</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">outer</span><span class="p">),</span>
+        <span class="n">para_centers</span><span class="o">=</span><span class="n">cell_centers_2d</span><span class="p">(</span><span class="n">para</span><span class="p">),</span>
+        <span class="n">para_extent</span><span class="o">=</span><span class="n">extent</span><span class="p">(</span><span class="n">para</span><span class="p">),</span> <span class="n">full_extent</span><span class="o">=</span><span class="n">extent</span><span class="p">(</span><span class="n">mesh</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">preview</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_sensors_outside</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">sensors</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Indices of electrodes no cell of ``mesh`` contains."""</span>
+    <span class="n">missing</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">position</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sensors</span><span class="p">):</span>
+        <span class="n">coords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">position</span><span class="p">[:</span><span class="mi">3</span><span class="p">])</span> <span class="o">+</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">3</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">position</span><span class="p">[:</span><span class="mi">3</span><span class="p">]))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cell</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">findCell</span><span class="p">(</span><span class="n">pg</span><span class="o">.</span><span class="n">Pos</span><span class="p">(</span><span class="o">*</span><span class="n">coords</span><span class="p">[:</span><span class="mi">3</span><span class="p">]))</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - fall back to the bounding box</span>
+            <span class="n">cell</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">boundingBox</span><span class="p">()</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">mesh</span><span class="o">.</span><span class="n">boundingBox</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+            <span class="n">inside</span> <span class="o">=</span> <span class="nb">all</span><span class="p">(</span><span class="n">lower</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">-</span> <span class="mf">1e-6</span> <span class="o">&lt;=</span> <span class="n">coords</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">upper</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">+</span> <span class="mf">1e-6</span>
+                         <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">dim</span><span class="p">()))</span>
+            <span class="k">if</span> <span class="n">inside</span><span class="p">:</span>
+                <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">cell</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">missing</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

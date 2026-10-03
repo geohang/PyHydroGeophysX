@@ -1,0 +1,937 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Ex. Posterior Uncertainty of Water Content Recovered from ERT &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=1dd76d02"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'auto_examples/Ex_posterior_uncertainty';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/auto_examples/Ex_posterior_uncertainty.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Ex. Single ERT File Inversion (No Time-Lapse)" href="Ex_ERT_single_inversion.html" />
+    <link rel="prev" title="Ex. Geophysical structure → MODFLOW → hydrological response" href="Ex_MODFLOW_geophysics_feedback.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../changelog.html">
+    Changelog
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../changelog.html">
+    Changelog
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Complete gallery</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="Ex_TEM_LMHM_LCI.html">Ex. Synthetic LM+HM Line Inversion with Lateral Constraints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_FDEM_workflow.html">Ex. FDEM Forward + Inversion Workflow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_model_output.html">Ex. Loading and Processing Hydrological Model Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_Structure_resinv.html">Ex. Structure-Constrained Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_gravity_magnetics_inversion.html">Ex. Gravity and Magnetics Processing and Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_TL_inversion_memory.html">Ex. Memory-Optimized Time-Lapse ERT Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_ensemble_assimilation.html">Ex. Assimilating an ERT Survey into a MODFLOW Water-Content Forecast</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_sensitivity_analysis.html">Ex. Where an ERT Survey Sees MODFLOW Water Content</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_EM_line_section.html">Ex. Airborne EM Line Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_MODFLOW_geophysics_feedback.html">Ex. Geophysical structure → MODFLOW → hydrological response</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Ex. Posterior Uncertainty of Water Content Recovered from ERT</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_ERT_single_inversion.html">Ex. Single ERT File Inversion (No Time-Lapse)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_structure_TLresinv.html">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_TL_inversion.html">Ex. Time-Lapse ERT Inversion Techniques</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_SRT_inv.html">Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_MT_workflow.html">Ex. MT Workflow: From a Hydrological Model to Magnetotelluric Soundings and Back</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_joint_inversion.html">Ex. Joint ERT-SRT Inversion: Cross-Gradient and Geostatistical Coupling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_TDEM_workflow.html">Ex. TDEM Workflow: From Hydrological Models to EM Responses and Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_hydro_to_multigeophys.html">Ex. Hydrology to Multi-Geophysics Responses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="EX_SRT_forward.html">Ex. Seismic Refraction Tomography (SRT) Forward Modeling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_Time_lapse_measurement.html">Ex. Creating Synthetic Time-Lapse ERT Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_ERT_workflow.html">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_MC_Hydro.html">Ex. Monte Carlo Uncertainty Quantification for Hydrologic Properties Estimation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Ex_3D_ERT_forward.html">Ex. 3D ERT Forward Modeling with MODFLOW Integration</a></li>
+</ul>
+</details></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../examples/index.html" class="nav-link">Examples by task</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Examples Gallery</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Ex. Posterior Uncertainty of Water Content Recovered from ERT</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-ex-posterior-uncertainty-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="ex-posterior-uncertainty-of-water-content-recovered-from-ert">
+<span id="sphx-glr-auto-examples-ex-posterior-uncertainty-py"></span><h1>Ex. Posterior Uncertainty of Water Content Recovered from ERT<a class="headerlink" href="#ex-posterior-uncertainty-of-water-content-recovered-from-ert" title="Link to this heading">#</a></h1>
+<p>Estimate how uncertain the water content read from an ERT inversion is, then
+check that estimate against the MODFLOW state that produced the survey. As in
+Ex_sensitivity_analysis, the water content of the Treeline catchment MODFLOW
+model on the Ex_ERT_workflow transect becomes a 72-electrode Wenner survey
+through <code class="docutils literal notranslate"><span class="pre">hydro_to_ert</span></code>, and <code class="docutils literal notranslate"><span class="pre">ERTInversion</span></code> inverts it. The inversion’s
+objective is then read as a Gaussian posterior of log resistivity: its data
+weights give the data covariance, and its regularization, smoothness with a weak
+pull toward the reference model, gives the prior covariance.
+<code class="docutils literal notranslate"><span class="pre">linearized_posterior</span></code> returns the posterior covariance at the recovered
+model, and <code class="docutils literal notranslate"><span class="pre">propagate_petro_uncertainty</span></code> samples it through the Waxman-Smits
+model of each unit into water-content intervals. The inversion runs at two
+strengths of that prior, to show how much the intervals depend on it. Unlike
+Ex_MC_Hydro, the petrophysical parameters stay at the values that produced the
+survey, so the intervals carry the survey’s uncertainty alone.</p>
+<p>Requires PyHydroGeophysX with pyGIMLi. Run time: about 2 minutes.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span class="w">
+</span></pre></div></div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span class="kn">import</span><span class="w"> </span><span class="nn">os</span><span class="w">
+</span><span class="w">
+</span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span><span class="w">
+</span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib</span><span class="nn">.</span><span class="nn">pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span><span class="w">
+</span><span class="kn">import</span><span class="w"> </span><span class="nn">pygimli</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pg</span><span class="w">
+</span><span class="w">
+</span><span class="k">try</span><span class="p">:</span><span class="w">
+</span>    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="p">)</span><span class="w">
+</span><span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span><span class="w">
+</span>    <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(</span><span class="p">)</span><span class="w">
+</span>    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">examples</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">)</span><span class="p">:</span><span class="w">
+</span>        <span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">examples</span><span class="s2">&quot;</span><span class="p">)</span><span class="w">
+</span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX</span><span class="nn">.</span><span class="nn">core</span><span class="nn">.</span><span class="nn">interpolation</span><span class="w"> </span><span class="kn">import</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-core-interpolation sphx-glr-backref-type-py-class sphx-glr-backref-instance reference internal" href="../api/core.html#PyHydroGeophysX.core.interpolation.ProfileInterpolator" title="PyHydroGeophysX.core.interpolation.ProfileInterpolator"><span class="n">ProfileInterpolator</span></a><span class="p">,</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-core-interpolation sphx-glr-backref-type-py-function reference internal" href="../api/core.html#PyHydroGeophysX.core.interpolation.create_surface_lines" title="PyHydroGeophysX.core.interpolation.create_surface_lines"><span class="n">create_surface_lines</span></a><span class="w">
+</span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX</span><span class="nn">.</span><span class="nn">core</span><span class="nn">.</span><span class="nn">mesh_utils</span><span class="w"> </span><span class="kn">import</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-core-mesh_utils sphx-glr-backref-type-py-class sphx-glr-backref-instance reference internal" href="../api/core.html#PyHydroGeophysX.core.mesh_utils.MeshCreator" title="PyHydroGeophysX.core.mesh_utils.MeshCreator"><span class="n">MeshCreator</span></a><span class="w">
+</span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX</span><span class="nn">.</span><span class="nn">forward</span><span class="nn">.</span><span class="nn">ert_forward</span><span class="w"> </span><span class="kn">import</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-forward-ert_forward sphx-glr-backref-type-py-function reference internal" href="../api/forward.html#PyHydroGeophysX.forward.ert_forward.ertforandjac2" title="PyHydroGeophysX.forward.ert_forward.ertforandjac2"><span class="n">ertforandjac2</span></a><span class="w">
+</span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX</span><span class="nn">.</span><span class="nn">Hydro_modular</span><span class="w"> </span><span class="kn">import</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-Hydro_modular sphx-glr-backref-type-py-function reference internal" href="../api/Hydro_modular.html#PyHydroGeophysX.Hydro_modular.hydro_to_ert" title="PyHydroGeophysX.Hydro_modular.hydro_to_ert"><span class="n">hydro_to_ert</span></a><span class="w">
+</span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX</span><span class="nn">.</span><span class="nn">inversion</span><span class="nn">.</span><span class="nn">ert_inversion</span><span class="w"> </span><span class="kn">import</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-inversion-ert_inversion sphx-glr-backref-type-py-class sphx-glr-backref-instance reference internal" href="../api/inversion.html#PyHydroGeophysX.inversion.ert_inversion.ERTInversion" title="PyHydroGeophysX.inversion.ert_inversion.ERTInversion"><span class="n">ERTInversion</span></a><span class="w">
+</span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX</span><span class="nn">.</span><span class="nn">inversion</span><span class="nn">.</span><span class="nn">ert_mesh</span><span class="w"> </span><span class="kn">import</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-inversion-ert_mesh sphx-glr-backref-type-py-function reference internal" href="../api/inversion.html#PyHydroGeophysX.inversion.ert_mesh.build_inversion_mesh" title="PyHydroGeophysX.inversion.ert_mesh.build_inversion_mesh"><span class="n">build_inversion_mesh</span></a><span class="w">
+</span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX</span><span class="nn">.</span><span class="nn">petrophysics</span><span class="w"> </span><span class="kn">import</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-petrophysics sphx-glr-backref-type-py-function reference internal" href="../api/petrophysics.html#PyHydroGeophysX.petrophysics.resistivity_to_water_content" title="PyHydroGeophysX.petrophysics.resistivity_to_water_content"><span class="n">resistivity_to_water_content</span></a><span class="w">
+</span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX</span><span class="nn">.</span><span class="nn">uncertainty</span><span class="w"> </span><span class="kn">import</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-uncertainty sphx-glr-backref-type-py-function reference internal" href="../api/uncertainty.html#PyHydroGeophysX.uncertainty.linearized_posterior" title="PyHydroGeophysX.uncertainty.linearized_posterior"><span class="n">linearized_posterior</span></a><span class="p">,</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-uncertainty sphx-glr-backref-type-py-function reference internal" href="../api/uncertainty.html#PyHydroGeophysX.uncertainty.propagate_petro_uncertainty" title="PyHydroGeophysX.uncertainty.propagate_petro_uncertainty"><span class="n">propagate_petro_uncertainty</span></a><span class="w">
+</span></pre></div></div>
+<section id="modflow-state-transect-and-predicted-survey">
+<h2>MODFLOW state, transect and predicted survey<a class="headerlink" href="#modflow-state-transect-and-predicted-survey" title="Link to this heading">#</a></h2>
+<p>The same steps as Ex_sensitivity_analysis: water content, porosity and layer
+bottoms from the MODFLOW arrays, the transect of Ex_ERT_workflow, and the
+survey this state predicts, with 5% noise. Layers 1-4 are regolith, 5-12
+fractured bedrock and 13-14 fresh bedrock.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">data</span><span class="s2">&quot;</span><span class="p">)</span><span class="w">
+</span><span class="n">top</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">top.txt</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">)</span><span class="w">
+</span><span class="n">bottoms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">bot.npy</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">)</span><span class="w">
+</span><span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">Porosity.npy</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">)</span><span class="w">
+</span><span class="n">water_content</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">Watercontent.npy</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">,</span> <span class="n">mmap_mode</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">r</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="p">)</span><span class="w">
+</span><span class="n">interpolator</span> <span class="o">=</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-core-interpolation sphx-glr-backref-type-py-class sphx-glr-backref-instance reference internal" href="../api/core.html#PyHydroGeophysX.core.interpolation.ProfileInterpolator" title="PyHydroGeophysX.core.interpolation.ProfileInterpolator"><span class="n">ProfileInterpolator</span></a><span class="p">(</span><span class="n">point1</span><span class="o">=</span><span class="p">[</span><span class="mi">115</span><span class="p">,</span> <span class="mi">70</span><span class="p">]</span><span class="p">,</span> <span class="n">point2</span><span class="o">=</span><span class="p">[</span><span class="mi">95</span><span class="p">,</span> <span class="mi">180</span><span class="p">]</span><span class="p">,</span> <span class="n">surface_data</span><span class="o">=</span><span class="n">top</span><span class="p">,</span><span class="w">
+</span>                                   <span class="n">origin_x</span><span class="o">=</span><span class="mf">569156.0</span><span class="p">,</span> <span class="n">origin_y</span><span class="o">=</span><span class="mf">4842444.0</span><span class="p">)</span><span class="w">
+</span><span class="n">structure</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_layer_data</span><span class="p">(</span><span class="p">[</span><span class="n">top</span><span class="p">]</span> <span class="o">+</span> <span class="n">bottoms</span><span class="o">.</span><span class="n">tolist</span><span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="w">
+</span><span class="n">layer_idx</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">12</span><span class="p">]</span><span class="w">
+</span><span class="n">surface</span><span class="p">,</span> <span class="n">regolith_base</span><span class="p">,</span> <span class="n">fractured_base</span> <span class="o">=</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-core-interpolation sphx-glr-backref-type-py-function reference internal" href="../api/core.html#PyHydroGeophysX.core.interpolation.create_surface_lines" title="PyHydroGeophysX.core.interpolation.create_surface_lines"><span class="n">create_surface_lines</span></a><span class="p">(</span><span class="w">
+</span>    <span class="n">interpolator</span><span class="o">.</span><span class="n">L_profile</span><span class="p">,</span> <span class="n">structure</span><span class="p">,</span> <span class="o">*</span><span class="n">layer_idx</span><span class="p">)</span><span class="w">
+</span><span class="n">mesh</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-core-mesh_utils sphx-glr-backref-type-py-class sphx-glr-backref-instance reference internal" href="../api/core.html#PyHydroGeophysX.core.mesh_utils.MeshCreator" title="PyHydroGeophysX.core.mesh_utils.MeshCreator"><span class="n">MeshCreator</span></a><span class="p">(</span><span class="n">quality</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span><span class="o">.</span><span class="n">create_from_layers</span><span class="p">(</span><span class="w">
+</span>    <span class="n">surface</span><span class="o">=</span><span class="n">surface</span><span class="p">,</span> <span class="n">layers</span><span class="o">=</span><span class="p">[</span><span class="n">regolith_base</span><span class="p">,</span> <span class="n">fractured_base</span><span class="p">]</span><span class="p">,</span><span class="w">
+</span>    <span class="n">bottom_elevation</span><span class="o">=</span><span class="n">fractured_base</span><span class="p">[</span><span class="p">:</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="p">)</span> <span class="o">-</span> <span class="mf">10.</span><span class="p">)</span><span class="w">
+</span><span class="n">units</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>  <span class="c1"># mesh markers of regolith, fractured bedrock and fresh bedrock</span><span class="w">
+</span><span class="n">unit_names</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s2">&quot;</span><span class="s2">Regolith</span><span class="s2">&quot;</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span> <span class="s2">&quot;</span><span class="s2">Fractured bedrock</span><span class="s2">&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s2">&quot;</span><span class="s2">Fresh bedrock</span><span class="s2">&quot;</span><span class="p">}</span><span class="w">
+</span><span class="n">petrophysics</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;</span><span class="s2">rho_sat</span><span class="s2">&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">100.</span><span class="p">,</span> <span class="mf">500.</span><span class="p">,</span> <span class="mf">2400.</span><span class="p">]</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">n</span><span class="s2">&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">2.2</span><span class="p">,</span> <span class="mf">1.8</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">]</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">sigma_s</span><span class="s2">&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">500</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">]</span><span class="p">}</span><span class="w">
+</span><span class="n">survey</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-Hydro_modular sphx-glr-backref-type-py-function reference internal" href="../api/Hydro_modular.html#PyHydroGeophysX.Hydro_modular.hydro_to_ert" title="PyHydroGeophysX.Hydro_modular.hydro_to_ert"><span class="n">hydro_to_ert</span></a><span class="p">(</span><span class="w">
+</span>    <span class="n">water_content</span><span class="o">=</span><span class="n">water_content</span><span class="p">,</span> <span class="n">porosity</span><span class="o">=</span><span class="n">porosity</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span><span class="w">
+</span>    <span class="n">profile_interpolator</span><span class="o">=</span><span class="n">interpolator</span><span class="p">,</span> <span class="n">layer_idx</span><span class="o">=</span><span class="n">layer_idx</span><span class="p">,</span> <span class="n">structure</span><span class="o">=</span><span class="n">structure</span><span class="p">,</span><span class="w">
+</span>    <span class="n">marker_labels</span><span class="o">=</span><span class="n">units</span><span class="p">,</span> <span class="n">rho_parameters</span><span class="o">=</span><span class="n">petrophysics</span><span class="p">,</span> <span class="n">electrode_spacing</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span><span class="w">
+</span>    <span class="n">electrode_start</span><span class="o">=</span><span class="mf">15.</span><span class="p">,</span> <span class="n">num_electrodes</span><span class="o">=</span><span class="mi">72</span><span class="p">,</span> <span class="n">scheme_name</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">wa</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">noise_level</span><span class="o">=</span><span class="mf">.05</span><span class="p">,</span><span class="w">
+</span>    <span class="n">rel_error</span><span class="o">=</span><span class="mf">.05</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">2026</span><span class="p">)</span><span class="w">
+</span></pre></div></div>
+</section>
+<section id="invert-then-read-each-inversion-as-a-posterior">
+<h2>Invert, then read each inversion as a posterior<a class="headerlink" href="#invert-then-read-each-inversion-as-a-posterior" title="Link to this heading">#</a></h2>
+<p>With a smallness weight alpha the regularization is a proper Gaussian prior
+on log resistivity, with precision lambda (Wm^T Wm + alpha I) for the
+smoothness matrix Wm, so lambda sets how strong the prior is. The inversion’s
+data weights 1/log(1+e), for relative error e, are inverse standard deviations
+of log apparent resistivity; the data covariance holds the squares of their
+reciprocals. lambda=3 fits the survey to its noise; lambda=10 smooths more.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span class="n">inversion_mesh</span> <span class="o">=</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-inversion-ert_mesh sphx-glr-backref-type-py-function reference internal" href="../api/inversion.html#PyHydroGeophysX.inversion.ert_mesh.build_inversion_mesh" title="PyHydroGeophysX.inversion.ert_mesh.build_inversion_mesh"><span class="n">build_inversion_mesh</span></a><span class="p">(</span><span class="n">survey</span><span class="p">,</span> <span class="n">mesh_quality</span><span class="o">=</span><span class="mi">34</span><span class="p">)</span><span class="w">
+</span><span class="w">
+</span><span class="w">
+</span><span class="k">def</span><span class="w"> </span><span class="nf">posterior_for</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">.01</span><span class="p">)</span><span class="p">:</span><span class="w">
+</span>    <span class="n">inversion</span> <span class="o">=</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-inversion-ert_inversion sphx-glr-backref-type-py-class sphx-glr-backref-instance reference internal" href="../api/inversion.html#PyHydroGeophysX.inversion.ert_inversion.ERTInversion" title="PyHydroGeophysX.inversion.ert_inversion.ERTInversion"><span class="n">ERTInversion</span></a><span class="p">(</span><span class="n">survey</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">inversion_mesh</span><span class="p">,</span> <span class="n">lambda_val</span><span class="o">=</span><span class="n">lam</span><span class="p">,</span><span class="w">
+</span>                             <span class="n">reference_weight</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="w">
+</span>    <span class="n">result</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="p">)</span><span class="w">
+</span>    <span class="n">log_resistivity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">final_model</span><span class="p">)</span><span class="w">
+</span>    <span class="n">_</span><span class="p">,</span> <span class="n">J</span> <span class="o">=</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-forward-ert_forward sphx-glr-backref-type-py-function reference internal" href="../api/forward.html#PyHydroGeophysX.forward.ert_forward.ertforandjac2" title="PyHydroGeophysX.forward.ert_forward.ertforandjac2"><span class="n">ertforandjac2</span></a><span class="p">(</span><span class="n">inversion</span><span class="o">.</span><span class="n">fwd_operator</span><span class="p">,</span> <span class="n">log_resistivity</span><span class="p">,</span> <span class="n">inversion</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span><span class="w">
+</span>    <span class="n">Wm</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">Wm_r</span><span class="o">.</span><span class="n">toarray</span><span class="p">(</span><span class="p">)</span><span class="w">
+</span>    <span class="n">prior_cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">lam</span> <span class="o">*</span> <span class="p">(</span><span class="n">Wm</span><span class="o">.</span><span class="n">T</span> <span class="o">&#64;</span> <span class="n">Wm</span> <span class="o">+</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">Wm</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="p">)</span><span class="p">)</span><span class="p">)</span><span class="w">
+</span>    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;</span><span class="s2">cells</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">inversion</span><span class="o">.</span><span class="n">fwd_operator</span><span class="o">.</span><span class="n">paraDomain</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">chi2</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">chi2</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">,</span><span class="w">
+</span>            <span class="s2">&quot;</span><span class="s2">log_resistivity</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">log_resistivity</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">prior_std</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">prior_cov</span><span class="p">)</span><span class="p">)</span><span class="p">,</span><span class="w">
+</span>            <span class="s2">&quot;</span><span class="s2">posterior_cov</span><span class="s2">&quot;</span><span class="p">:</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-uncertainty sphx-glr-backref-type-py-function reference internal" href="../api/uncertainty.html#PyHydroGeophysX.uncertainty.linearized_posterior" title="PyHydroGeophysX.uncertainty.linearized_posterior"><span class="n">linearized_posterior</span></a><span class="p">(</span><span class="n">J</span><span class="p">,</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">inversion</span><span class="o">.</span><span class="n">Wdert_diag</span> <span class="o">*</span><span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">prior_cov</span><span class="p">)</span><span class="p">}</span><span class="w">
+</span><span class="w">
+</span><span class="w">
+</span><span class="n">posteriors</span> <span class="o">=</span> <span class="p">{</span><span class="n">lam</span><span class="p">:</span> <span class="n">posterior_for</span><span class="p">(</span><span class="n">lam</span><span class="p">)</span> <span class="k">for</span> <span class="n">lam</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">3.</span><span class="p">,</span> <span class="mf">10.</span><span class="p">)</span><span class="p">}</span><span class="w">
+</span><span class="n">cells</span> <span class="o">=</span> <span class="n">posteriors</span><span class="p">[</span><span class="mf">3.</span><span class="p">]</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">cells</span><span class="s2">&quot;</span><span class="p">]</span><span class="w">
+</span></pre></div></div>
+</section>
+<section id="modflow-water-content-and-porosity-on-the-inversion-cells">
+<h2>MODFLOW water content and porosity on the inversion cells<a class="headerlink" href="#modflow-water-content-and-porosity-on-the-inversion-cells" title="Link to this heading">#</a></h2>
+<p>Each inversion cell belongs to the MODFLOW unit its centre lies in, and takes
+the profile’s water content and porosity interpolated within that unit.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span class="n">x</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">cells</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">[</span><span class="p">:</span><span class="p">,</span> <span class="p">:</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="w">
+</span><span class="n">unit</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">z</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="n">regolith_base</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span><span class="w">
+</span>                <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">z</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="n">fractured_base</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="p">)</span><span class="w">
+</span><span class="n">profile_water_content</span> <span class="o">=</span> <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_3d_data</span><span class="p">(</span><span class="n">water_content</span><span class="p">)</span><span class="w">
+</span><span class="n">layer_unit</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">profile_water_content</span><span class="p">)</span><span class="w">
+</span><span class="n">layer_unit</span><span class="p">[</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="p">:</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="p">]</span><span class="p">,</span> <span class="n">layer_unit</span><span class="p">[</span><span class="n">layer_idx</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="p">:</span><span class="p">]</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="w">
+</span><span class="n">modflow_theta</span><span class="p">,</span> <span class="n">cell_porosity</span> <span class="o">=</span> <span class="p">(</span><span class="w">
+</span>    <span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_to_mesh</span><span class="p">(</span><span class="n">interpolator</span><span class="o">.</span><span class="n">interpolate_3d_data</span><span class="p">(</span><span class="n">values</span><span class="p">)</span><span class="p">,</span> <span class="n">structure</span><span class="p">,</span><span class="w">
+</span>                                     <span class="n">x</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">unit</span><span class="p">,</span> <span class="n">layer_unit</span><span class="p">,</span> <span class="n">units</span><span class="p">)</span><span class="w">
+</span>    <span class="k">for</span> <span class="n">values</span> <span class="ow">in</span> <span class="p">(</span><span class="n">water_content</span><span class="p">,</span> <span class="n">porosity</span><span class="p">)</span><span class="p">)</span><span class="w">
+</span></pre></div></div>
+</section>
+<section id="propagate-each-posterior-into-water-content">
+<h2>Propagate each posterior into water content<a class="headerlink" href="#propagate-each-posterior-into-water-content" title="Link to this heading">#</a></h2>
+<p>Each sample of log resistivity is converted with the Waxman-Smits parameters
+of its cell’s unit. Saturation is clipped to [0, 1], so a sample beyond full
+saturation returns the porosity.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span class="k">def</span><span class="w"> </span><span class="nf">to_water_content</span><span class="p">(</span><span class="n">log_rho</span><span class="p">)</span><span class="p">:</span><span class="w">
+</span>    <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">log_rho</span><span class="p">)</span><span class="w">
+</span>    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">marker</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">units</span><span class="p">)</span><span class="p">:</span><span class="w">
+</span>        <span class="n">sel</span> <span class="o">=</span> <span class="n">unit</span> <span class="o">==</span> <span class="n">marker</span><span class="w">
+</span>        <span class="n">theta</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span> <span class="o">=</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-petrophysics sphx-glr-backref-type-py-function reference internal" href="../api/petrophysics.html#PyHydroGeophysX.petrophysics.resistivity_to_water_content" title="PyHydroGeophysX.petrophysics.resistivity_to_water_content"><span class="n">resistivity_to_water_content</span></a><span class="p">(</span><span class="w">
+</span>            <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">log_rho</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span><span class="p">)</span><span class="p">,</span> <span class="n">petrophysics</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">rho_sat</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="p">,</span> <span class="n">petrophysics</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">n</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="p">,</span><span class="w">
+</span>            <span class="n">cell_porosity</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span><span class="p">,</span> <span class="n">petrophysics</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">sigma_s</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="p">)</span><span class="w">
+</span>    <span class="k">return</span> <span class="n">theta</span><span class="w">
+</span><span class="w">
+</span><span class="w">
+</span><span class="k">for</span> <span class="n">posterior</span> <span class="ow">in</span> <span class="n">posteriors</span><span class="o">.</span><span class="n">values</span><span class="p">(</span><span class="p">)</span><span class="p">:</span><span class="w">
+</span>    <span class="n">estimate</span> <span class="o">=</span> <a class="sphx-glr-backref-module-PyHydroGeophysX-uncertainty sphx-glr-backref-type-py-function reference internal" href="../api/uncertainty.html#PyHydroGeophysX.uncertainty.propagate_petro_uncertainty" title="PyHydroGeophysX.uncertainty.propagate_petro_uncertainty"><span class="n">propagate_petro_uncertainty</span></a><span class="p">(</span><span class="n">posterior</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">log_resistivity</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">,</span><span class="w">
+</span>                                           <span class="n">posterior</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">posterior_cov</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">,</span> <span class="n">to_water_content</span><span class="p">,</span><span class="w">
+</span>                                           <span class="n">n_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">2026</span><span class="p">)</span><span class="w">
+</span>    <span class="n">posterior</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">mean</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">,</span> <span class="n">posterior</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">std</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">estimate</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">mean</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">,</span> <span class="n">estimate</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">std</span><span class="s2">&quot;</span><span class="p">]</span><span class="w">
+</span>    <span class="n">posterior</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">low</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">,</span> <span class="n">posterior</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">high</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">estimate</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">samples</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">,</span> <span class="p">[</span><span class="mf">.025</span><span class="p">,</span> <span class="mf">.975</span><span class="p">]</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="w">
+</span></pre></div></div>
+</section>
+<section id="check-the-intervals-against-modflow">
+<h2>Check the intervals against MODFLOW<a class="headerlink" href="#check-the-intervals-against-modflow" title="Link to this heading">#</a></h2>
+<p>Only a synthetic test can do this. Coverage is the share of each unit, by
+area, where the MODFLOW water content lies inside the 95% interval; the
+standard-deviation ratio is posterior over prior, in log resistivity.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span class="n">area</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="p">[</span><span class="n">cell</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="p">)</span> <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">cells</span><span class="o">.</span><span class="n">cells</span><span class="p">(</span><span class="p">)</span><span class="p">]</span><span class="p">)</span><span class="w">
+</span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">'</span><span class="s1">lambda</span><span class="s1">'</span><span class="si">:</span><span class="s2">&gt;6s</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="s1">'</span><span class="s1">Unit</span><span class="s1">'</span><span class="si">:</span><span class="s2">18s</span><span class="si">}</span><span class="si">{</span><span class="s1">'</span><span class="s1">chi2</span><span class="s1">'</span><span class="si">:</span><span class="s2">&gt;6s</span><span class="si">}</span><span class="si">{</span><span class="s1">'</span><span class="s1">Std ratio</span><span class="s1">'</span><span class="si">:</span><span class="s2">&gt;11s</span><span class="si">}</span><span class="si">{</span><span class="s1">'</span><span class="s1">RMSE</span><span class="s1">'</span><span class="si">:</span><span class="s2">&gt;8s</span><span class="si">}</span><span class="s2">&quot;</span><span class="w">
+</span>      <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">'</span><span class="s1">95</span><span class="s1">%</span><span class="s1"> width</span><span class="s1">'</span><span class="si">:</span><span class="s2">&gt;11s</span><span class="si">}</span><span class="si">{</span><span class="s1">'</span><span class="s1">Coverage</span><span class="s1">'</span><span class="si">:</span><span class="s2">&gt;10s</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span><span class="w">
+</span><span class="k">for</span> <span class="n">lam</span><span class="p">,</span> <span class="n">posterior</span> <span class="ow">in</span> <span class="n">posteriors</span><span class="o">.</span><span class="n">items</span><span class="p">(</span><span class="p">)</span><span class="p">:</span><span class="w">
+</span>    <span class="n">posterior_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">posterior</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">posterior_cov</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">)</span><span class="p">)</span><span class="w">
+</span>    <span class="n">inside</span> <span class="o">=</span> <span class="p">(</span><span class="n">modflow_theta</span> <span class="o">&gt;</span><span class="o">=</span> <span class="n">posterior</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">low</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">modflow_theta</span> <span class="o">&lt;</span><span class="o">=</span> <span class="n">posterior</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">high</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">)</span><span class="w">
+</span>    <span class="k">for</span> <span class="n">marker</span> <span class="ow">in</span> <span class="n">units</span><span class="p">:</span><span class="w">
+</span>        <span class="n">sel</span> <span class="o">=</span> <span class="n">unit</span> <span class="o">==</span> <span class="n">marker</span><span class="w">
+</span>        <span class="k">if</span> <span class="n">sel</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="p">)</span><span class="p">:</span><span class="w">
+</span>            <span class="n">weights</span> <span class="o">=</span> <span class="n">area</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span> <span class="o">/</span> <span class="n">area</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="p">)</span><span class="w">
+</span>            <span class="n">rmse</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">weights</span> <span class="o">&#64;</span> <span class="p">(</span><span class="n">posterior</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">mean</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span> <span class="o">-</span> <span class="n">modflow_theta</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span><span class="p">)</span> <span class="o">*</span><span class="o">*</span> <span class="mi">2</span><span class="p">)</span><span class="w">
+</span>            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">lam</span><span class="si">:</span><span class="s2">6.0f</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">unit_names</span><span class="p">[</span><span class="n">marker</span><span class="p">]</span><span class="si">:</span><span class="s2">18s</span><span class="si">}</span><span class="si">{</span><span class="n">posterior</span><span class="p">[</span><span class="s1">'</span><span class="s1">chi2</span><span class="s1">'</span><span class="p">]</span><span class="si">:</span><span class="s2">6.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="w">
+</span>                  <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">posterior_std</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">posterior</span><span class="p">[</span><span class="s1">'</span><span class="s1">prior_std</span><span class="s1">'</span><span class="p">]</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span><span class="p">)</span><span class="si">:</span><span class="s2">11.2f</span><span class="si">}</span><span class="si">{</span><span class="n">rmse</span><span class="si">:</span><span class="s2">8.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="w">
+</span>                  <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="p">(</span><span class="n">posterior</span><span class="p">[</span><span class="s1">'</span><span class="s1">high</span><span class="s1">'</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">posterior</span><span class="p">[</span><span class="s1">'</span><span class="s1">low</span><span class="s1">'</span><span class="p">]</span><span class="p">)</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span><span class="p">)</span><span class="si">:</span><span class="s2">11.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="w">
+</span>                  <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">weights</span><span class="w"> </span><span class="o">&#64;</span><span class="w"> </span><span class="n">inside</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span><span class="si">:</span><span class="s2">10.0%</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span><span class="w">
+</span></pre></div></div>
+</section>
+<section id="save-the-posterior-and-plot-the-interpretation">
+<h2>Save the posterior and plot the interpretation<a class="headerlink" href="#save-the-posterior-and-plot-the-interpretation" title="Link to this heading">#</a></h2>
+<p>The maps are for lambda=3. The column on the right follows the dotted line at
+50 m: the MODFLOW layers, and the 95% intervals at both prior strengths.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span class="n">output_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">results</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">posterior_uncertainty</span><span class="s2">&quot;</span><span class="p">)</span><span class="w">
+</span><span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="w">
+</span><span class="n">chosen</span> <span class="o">=</span> <span class="n">posteriors</span><span class="p">[</span><span class="mf">3.</span><span class="p">]</span><span class="w">
+</span><span class="n">np</span><span class="o">.</span><span class="n">savez_compressed</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">posterior.npz</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">,</span><span class="w">
+</span>                    <span class="n">cell_centers</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">cells</span><span class="o">.</span><span class="n">cellCenters</span><span class="p">(</span><span class="p">)</span><span class="p">)</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">unit</span><span class="p">,</span><span class="w">
+</span>                    <span class="n">modflow_water_content</span><span class="o">=</span><span class="n">modflow_theta</span><span class="p">,</span> <span class="n">posterior_cov</span><span class="o">=</span><span class="n">chosen</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">posterior_cov</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">,</span><span class="w">
+</span>                    <span class="o">*</span><span class="o">*</span><span class="p">{</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">_lambda</span><span class="si">{</span><span class="n">lam</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">lam</span><span class="p">,</span> <span class="n">posterior</span> <span class="ow">in</span> <span class="n">posteriors</span><span class="o">.</span><span class="n">items</span><span class="p">(</span><span class="p">)</span><span class="w">
+</span>                       <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">posterior</span><span class="o">.</span><span class="n">items</span><span class="p">(</span><span class="p">)</span> <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;</span><span class="s2">cells</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">posterior_cov</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">}</span><span class="p">)</span><span class="w">
+</span><span class="n">chosen_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">chosen</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">posterior_cov</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">)</span><span class="p">)</span><span class="w">
+</span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">9</span><span class="p">)</span><span class="p">)</span><span class="w">
+</span><span class="n">grid</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_gridspec</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">width_ratios</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">.55</span><span class="p">]</span><span class="p">,</span> <span class="n">left</span><span class="o">=</span><span class="mf">.05</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="mf">.98</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="mf">.96</span><span class="p">,</span><span class="w">
+</span>                        <span class="n">bottom</span><span class="o">=</span><span class="mf">.04</span><span class="p">,</span> <span class="n">wspace</span><span class="o">=</span><span class="mf">.3</span><span class="p">,</span> <span class="n">hspace</span><span class="o">=</span><span class="mf">.3</span><span class="p">)</span><span class="w">
+</span><span class="n">maps</span> <span class="o">=</span> <span class="p">[</span><span class="w">
+</span>    <span class="p">(</span><span class="n">grid</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="p">,</span> <span class="n">modflow_theta</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">cMap</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">Blues</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="mf">.05</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mf">.35</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">m³/m³</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">,</span><span class="w">
+</span>     <span class="s2">&quot;</span><span class="s2">MODFLOW water content</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">,</span><span class="w">
+</span>    <span class="p">(</span><span class="n">grid</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span><span class="p">,</span> <span class="n">chosen</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">mean</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">cMap</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">Blues</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="mf">.05</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mf">.35</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">m³/m³</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">,</span><span class="w">
+</span>     <span class="s2">&quot;</span><span class="s2">Posterior mean water content</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">,</span><span class="w">
+</span>    <span class="p">(</span><span class="n">grid</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="p">,</span> <span class="n">chosen_std</span> <span class="o">/</span> <span class="n">chosen</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">prior_std</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">cMap</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">viridis</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="mf">.3</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span><span class="w">
+</span>                                                       <span class="n">label</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">Posterior / prior</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">,</span><span class="w">
+</span>     <span class="s2">&quot;</span><span class="s2">Standard deviation of log resistivity</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">,</span><span class="w">
+</span>    <span class="p">(</span><span class="n">grid</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span><span class="p">,</span> <span class="p">(</span><span class="n">chosen</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">mean</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">modflow_theta</span><span class="p">)</span> <span class="o">/</span> <span class="n">chosen</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">std</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">,</span><span class="w">
+</span>     <span class="nb">dict</span><span class="p">(</span><span class="n">cMap</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">RdBu</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">cMin</span><span class="o">=</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="n">cMax</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">(mean - MODFLOW) / std</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">,</span><span class="w">
+</span>     <span class="s2">&quot;</span><span class="s2">Error in posterior standard deviations</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">,</span><span class="w">
+</span><span class="p">]</span><span class="w">
+</span><span class="k">for</span> <span class="n">position</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">style</span><span class="p">,</span> <span class="n">title</span> <span class="ow">in</span> <span class="n">maps</span><span class="p">:</span><span class="w">
+</span>    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">position</span><span class="p">)</span><span class="w">
+</span>    <span class="n">pg</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">cells</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">horizontal</span><span class="s2">&quot;</span><span class="p">,</span> <span class="o">*</span><span class="o">*</span><span class="n">style</span><span class="p">)</span><span class="w">
+</span>    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="p">(</span><span class="n">regolith_base</span><span class="p">,</span> <span class="n">fractured_base</span><span class="p">)</span><span class="p">:</span><span class="w">
+</span>        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">*</span><span class="n">line</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">k--</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">.8</span><span class="p">)</span><span class="w">
+</span>    <span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="mf">50.</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">k</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">.6</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">:</span><span class="s2">&quot;</span><span class="p">)</span><span class="w">
+</span>    <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">92</span><span class="p">)</span><span class="p">,</span> <span class="n">ylim</span><span class="o">=</span><span class="p">(</span><span class="mi">1585</span><span class="p">,</span> <span class="mi">1626</span><span class="p">)</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">Distance (m)</span><span class="s2">&quot;</span><span class="p">,</span><span class="w">
+</span>           <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">Elevation (m)</span><span class="s2">&quot;</span><span class="p">)</span><span class="w">
+</span><span class="n">column</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">interpolator</span><span class="o">.</span><span class="n">L_profile</span> <span class="o">-</span> <span class="mf">50.</span><span class="p">)</span><span class="p">)</span><span class="w">
+</span><span class="n">elevation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">structure</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">column</span><span class="p">]</span> <span class="o">-</span> <span class="mf">.05</span><span class="p">,</span> <span class="n">z</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="mi">300</span><span class="p">)</span><span class="w">
+</span><span class="n">hits</span> <span class="o">=</span> <span class="p">[</span><span class="n">cells</span><span class="o">.</span><span class="n">findCell</span><span class="p">(</span><span class="n">pg</span><span class="o">.</span><span class="n">Pos</span><span class="p">(</span><span class="mf">50.</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">elevation</span><span class="p">]</span><span class="w">
+</span><span class="n">keep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="p">[</span><span class="n">cell</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">hits</span><span class="p">]</span><span class="p">)</span><span class="w">
+</span><span class="n">ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="p">[</span><span class="n">cell</span><span class="o">.</span><span class="n">id</span><span class="p">(</span><span class="p">)</span> <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">hits</span> <span class="k">if</span> <span class="n">cell</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span><span class="p">)</span><span class="w">
+</span><span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">grid</span><span class="p">[</span><span class="p">:</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span><span class="p">)</span><span class="w">
+</span><span class="n">ax</span><span class="o">.</span><span class="n">stairs</span><span class="p">(</span><span class="n">profile_water_content</span><span class="p">[</span><span class="p">:</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">column</span><span class="p">]</span><span class="p">,</span> <span class="n">structure</span><span class="p">[</span><span class="p">:</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">column</span><span class="p">]</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">horizontal</span><span class="s2">&quot;</span><span class="p">,</span><span class="w">
+</span>          <span class="n">baseline</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">k</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">MODFLOW layers</span><span class="s2">&quot;</span><span class="p">)</span><span class="w">
+</span><span class="k">for</span> <span class="n">lam</span><span class="p">,</span> <span class="n">color</span> <span class="ow">in</span> <span class="p">[</span><span class="p">(</span><span class="mf">3.</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">C0</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">,</span> <span class="p">(</span><span class="mf">10.</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">C3</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">]</span><span class="p">:</span><span class="w">
+</span>    <span class="n">posterior</span> <span class="o">=</span> <span class="n">posteriors</span><span class="p">[</span><span class="n">lam</span><span class="p">]</span><span class="w">
+</span>    <span class="n">ax</span><span class="o">.</span><span class="n">fill_betweenx</span><span class="p">(</span><span class="n">elevation</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span><span class="p">,</span> <span class="n">posterior</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">low</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">[</span><span class="n">ids</span><span class="p">]</span><span class="p">,</span> <span class="n">posterior</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">high</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">[</span><span class="n">ids</span><span class="p">]</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span><span class="w">
+</span>                     <span class="n">alpha</span><span class="o">=</span><span class="mf">.25</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="s2">95% interval, λ = </span><span class="si">{</span><span class="n">lam</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span><span class="w">
+</span>    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">posterior</span><span class="p">[</span><span class="s2">&quot;</span><span class="s2">mean</span><span class="s2">&quot;</span><span class="p">]</span><span class="p">[</span><span class="n">ids</span><span class="p">]</span><span class="p">,</span> <span class="n">elevation</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="w">
+</span><span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">ylim</span><span class="o">=</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="p">)</span><span class="p">,</span> <span class="n">structure</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">column</span><span class="p">]</span> <span class="o">+</span> <span class="mf">.5</span><span class="p">)</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">Water content (m³/m³)</span><span class="s2">&quot;</span><span class="p">,</span><span class="w">
+</span>       <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">Elevation (m)</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">Column at 50 m</span><span class="s2">&quot;</span><span class="p">)</span><span class="w">
+</span><span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">lower right</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">9</span><span class="p">)</span><span class="w">
+</span><span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="s2">posterior_uncertainty.png</span><span class="s2">&quot;</span><span class="p">)</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s2">&quot;</span><span class="s2">tight</span><span class="s2">&quot;</span><span class="p">)</span><span class="w">
+</span><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="p">)</span><span class="w">
+</span></pre></div></div>
+<p>The survey reduces the standard deviation of log resistivity most near the
+surface (bottom left): to a median of 0.55 of its prior value in the regolith,
+against 0.74 in the fractured bedrock. Through the fixed petrophysics, the
+lambda=3 posterior gives 95% intervals about 0.09 m³/m³ wide in the regolith
+and 0.14 in the fractured bedrock, and they contain the MODFLOW water content
+in 99% of both units. The errors are not random, though (bottom centre): the
+smooth section underestimates the water content of the saturated bedrock below
+the water table and errs both ways along the base of the regolith, where it
+blurs the MODFLOW interfaces. The stronger prior (lambda=10) fits the survey a
+little worse (chi-squared 1.09 against 0.93) and returns intervals about 40%
+narrower, which contain the MODFLOW state in only 80-84% of the section
+(right). Linearized intervals are only as reliable as the regularization they
+inherit, so choose lambda by the data misfit, and read the intervals as
+conditional on the petrophysics and the unit boundaries.</p>
+<a class="reference internal image-reference" href="../_images/Ex_posterior_uncertainty_fig_01.png"><img alt="../_images/Ex_posterior_uncertainty_fig_01.png" class="align-center" src="../_images/Ex_posterior_uncertainty_fig_01.png" style="width: 900px;" />
+</a>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-ex-posterior-uncertainty-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/4d0319a882b75763b01b1397b87ee07c/Ex_posterior_uncertainty.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">Ex_posterior_uncertainty.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/0dead7f4199f8fc5d224b94f6a702241/Ex_posterior_uncertainty.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">Ex_posterior_uncertainty.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/77e02003969112a2dee925e0f26e8d12/Ex_posterior_uncertainty.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">Ex_posterior_uncertainty.zip</span></code></a></p>
+</div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="Ex_MODFLOW_geophysics_feedback.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Ex. Geophysical structure → MODFLOW → hydrological response</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="Ex_ERT_single_inversion.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Ex. Single ERT File Inversion (No Time-Lapse)</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#modflow-state-transect-and-predicted-survey">MODFLOW state, transect and predicted survey</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#invert-then-read-each-inversion-as-a-posterior">Invert, then read each inversion as a posterior</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#modflow-water-content-and-porosity-on-the-inversion-cells">MODFLOW water content and porosity on the inversion cells</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#propagate-each-posterior-into-water-content">Propagate each posterior into water content</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#check-the-intervals-against-modflow">Check the intervals against MODFLOW</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#save-the-posterior-and-plot-the-interpretation">Save the posterior and plot the interpretation</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/auto_examples/Ex_posterior_uncertainty.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/auto_examples/Ex_posterior_uncertainty.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

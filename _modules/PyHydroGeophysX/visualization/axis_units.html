@@ -1,0 +1,1064 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.visualization.axis_units &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../_static/documentation_options.js?v=1dd76d02"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/visualization/axis_units';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../../../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/visualization/axis_units.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../changelog.html">
+    Changelog
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../changelog.html">
+    Changelog
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.visualization.axis_units</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.visualization.axis_units</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Length units and the vertical axis of a section: metres or feet, elevation or depth.</span>
+
+<span class="sd">Every model in the package is computed in metres, and it stays in metres: the</span>
+<span class="sd">meshes, the contour grids, the clip polygons and every exported file. What this</span>
+<span class="sd">module changes is only what an axis *shows*. A figure drawn "in feet" keeps its</span>
+<span class="sd">data in metres and gets a tick locator and formatter that place round numbers</span>
+<span class="sd">of feet along the axis, so a pyGIMLi mesh drawing, a filled contour and a clip</span>
+<span class="sd">path all line up exactly as before - nothing is re-projected.</span>
+
+<span class="sd">The same mechanism turns the vertical axis of a section into depth. A survey</span>
+<span class="sd">read without elevations puts every electrode at z = 0 and the model below it at</span>
+<span class="sd">negative z, and labelling that axis "Elevation" presents a made-up datum as a</span>
+<span class="sd">measured one. When the ground surface is flat at zero, :func:`set_section_axes`</span>
+<span class="sd">labels the axis "Depth" and shows the values positive downward, which is what</span>
+<span class="sd">pyGIMLi itself does for such a mesh. A section with real topography keeps</span>
+<span class="sd">"Elevation".</span>
+
+<span class="sd">The unit is a package-wide preference, like a matplotlib rcParam, so one choice</span>
+<span class="sd">reaches every figure: :func:`set_length_unit` sets it, :func:`length_unit`</span>
+<span class="sd">changes it for a block, and every plotting function also takes ``length_unit``</span>
+<span class="sd">to override it for one call.</span>
+
+<span class="sd">Examples</span>
+<span class="sd">--------</span>
+<span class="sd">&gt;&gt;&gt; from PyHydroGeophysX.visualization.axis_units import length_label, length_unit</span>
+<span class="sd">&gt;&gt;&gt; length_label("Distance")</span>
+<span class="sd">'Distance (m)'</span>
+<span class="sd">&gt;&gt;&gt; with length_unit("feet"):</span>
+<span class="sd">...     length_label("Distance")</span>
+<span class="sd">'Distance (ft)'</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"FEET_PER_METRE"</span><span class="p">,</span>
+    <span class="s2">"LENGTH_UNITS"</span><span class="p">,</span>
+    <span class="s2">"normalize_length_unit"</span><span class="p">,</span>
+    <span class="s2">"get_length_unit"</span><span class="p">,</span>
+    <span class="s2">"set_length_unit"</span><span class="p">,</span>
+    <span class="s2">"length_unit"</span><span class="p">,</span>
+    <span class="s2">"length_factor"</span><span class="p">,</span>
+    <span class="s2">"to_display_length"</span><span class="p">,</span>
+    <span class="s2">"length_label"</span><span class="p">,</span>
+    <span class="s2">"section_has_elevation"</span><span class="p">,</span>
+    <span class="s2">"resolve_vertical"</span><span class="p">,</span>
+    <span class="s2">"vertical_axis"</span><span class="p">,</span>
+    <span class="s2">"set_length_axis"</span><span class="p">,</span>
+    <span class="s2">"set_section_axes"</span><span class="p">,</span>
+    <span class="s2">"section_label_pair"</span><span class="p">,</span>
+    <span class="s2">"pyqtgraph_length_axis"</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="c1">#: International foot: exactly 0.3048 m.</span>
+<span class="n">FEET_PER_METRE</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="mf">0.3048</span>
+
+<span class="c1">#: The units an axis can be shown in.</span>
+<span class="n">LENGTH_UNITS</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"m"</span><span class="p">,</span> <span class="s2">"ft"</span><span class="p">)</span>
+
+<span class="n">_ALIASES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"m"</span><span class="p">:</span> <span class="s2">"m"</span><span class="p">,</span> <span class="s2">"meter"</span><span class="p">:</span> <span class="s2">"m"</span><span class="p">,</span> <span class="s2">"meters"</span><span class="p">:</span> <span class="s2">"m"</span><span class="p">,</span> <span class="s2">"metre"</span><span class="p">:</span> <span class="s2">"m"</span><span class="p">,</span> <span class="s2">"metres"</span><span class="p">:</span> <span class="s2">"m"</span><span class="p">,</span>
+    <span class="s2">"ft"</span><span class="p">:</span> <span class="s2">"ft"</span><span class="p">,</span> <span class="s2">"feet"</span><span class="p">:</span> <span class="s2">"ft"</span><span class="p">,</span> <span class="s2">"foot"</span><span class="p">:</span> <span class="s2">"ft"</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">_FACTORS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"m"</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span> <span class="s2">"ft"</span><span class="p">:</span> <span class="n">FEET_PER_METRE</span><span class="p">}</span>
+
+<span class="n">_VERTICAL</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"auto"</span><span class="p">,</span> <span class="s2">"elevation"</span><span class="p">,</span> <span class="s2">"depth"</span><span class="p">)</span>
+
+<span class="n">_default_unit</span> <span class="o">=</span> <span class="s2">"m"</span>
+
+
+<div class="viewcode-block" id="normalize_length_unit">
+<a class="viewcode-back" href="../../../api/visualization.html#PyHydroGeophysX.visualization.axis_units.normalize_length_unit">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">normalize_length_unit</span><span class="p">(</span><span class="n">unit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""``'m'`` or ``'ft'`` for any spelling of either; None is the current default.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; normalize_length_unit("Feet")</span>
+<span class="sd">    'ft'</span>
+<span class="sd">    &gt;&gt;&gt; normalize_length_unit(" metres ")</span>
+<span class="sd">    'm'</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">unit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_default_unit</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">unit</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_ALIASES</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Unknown length unit </span><span class="si">{</span><span class="n">unit</span><span class="si">!r}</span><span class="s2">; use one of </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">LENGTH_UNITS</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_ALIASES</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="get_length_unit">
+<a class="viewcode-back" href="../../../api/visualization.html#PyHydroGeophysX.visualization.axis_units.get_length_unit">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_length_unit</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The unit figures are drawn in when a call does not name one."""</span>
+    <span class="k">return</span> <span class="n">_default_unit</span></div>
+
+
+
+<div class="viewcode-block" id="set_length_unit">
+<a class="viewcode-back" href="../../../api/visualization.html#PyHydroGeophysX.visualization.axis_units.set_length_unit">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">set_length_unit</span><span class="p">(</span><span class="n">unit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Draw every figure in ``unit`` from now on; returns the previous unit."""</span>
+    <span class="k">global</span> <span class="n">_default_unit</span>
+    <span class="n">previous</span> <span class="o">=</span> <span class="n">_default_unit</span>
+    <span class="n">_default_unit</span> <span class="o">=</span> <span class="n">normalize_length_unit</span><span class="p">(</span><span class="n">unit</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">previous</span></div>
+
+
+
+<div class="viewcode-block" id="length_unit">
+<a class="viewcode-back" href="../../../api/visualization.html#PyHydroGeophysX.visualization.axis_units.length_unit">[docs]</a>
+<span class="nd">@contextmanager</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">length_unit</span><span class="p">(</span><span class="n">unit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Draw in ``unit`` inside the block, then go back. None leaves it as it is."""</span>
+    <span class="k">if</span> <span class="n">unit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">_default_unit</span>
+        <span class="k">return</span>
+    <span class="n">previous</span> <span class="o">=</span> <span class="n">set_length_unit</span><span class="p">(</span><span class="n">unit</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">_default_unit</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">set_length_unit</span><span class="p">(</span><span class="n">previous</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="length_factor">
+<a class="viewcode-back" href="../../../api/visualization.html#PyHydroGeophysX.visualization.axis_units.length_factor">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">length_factor</span><span class="p">(</span><span class="n">unit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Displayed units per metre: 1 for metres, 3.28084 for feet."""</span>
+    <span class="k">return</span> <span class="n">_FACTORS</span><span class="p">[</span><span class="n">normalize_length_unit</span><span class="p">(</span><span class="n">unit</span><span class="p">)]</span></div>
+
+
+
+<div class="viewcode-block" id="to_display_length">
+<a class="viewcode-back" href="../../../api/visualization.html#PyHydroGeophysX.visualization.axis_units.to_display_length">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">to_display_length</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">unit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A length in metres - scalar or array - converted to ``unit``.</span>
+
+<span class="sd">    For numbers written into titles and annotations, which no axis formatter</span>
+<span class="sd">    reaches.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; round(to_display_length(10.0, "ft"), 3)</span>
+<span class="sd">    32.808</span>
+<span class="sd">    """</span>
+    <span class="n">factor</span> <span class="o">=</span> <span class="n">length_factor</span><span class="p">(</span><span class="n">unit</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">values</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">*</span> <span class="n">factor</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">*</span> <span class="n">factor</span></div>
+
+
+
+<div class="viewcode-block" id="length_label">
+<a class="viewcode-back" href="../../../api/visualization.html#PyHydroGeophysX.visualization.axis_units.length_label">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">length_label</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">unit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""``'Distance (ft)'``: an axis name with the unit it is shown in."""</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">normalize_length_unit</span><span class="p">(</span><span class="n">unit</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Elevation or depth</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_surface_z</span><span class="p">(</span><span class="n">mesh</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">surface</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Ground-surface elevations from whichever of the three the caller has."""</span>
+    <span class="k">if</span> <span class="n">surface</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">surface</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">surface</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="k">else</span> <span class="n">surface</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">arr</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">mesh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.core.section_geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">surface_line</span>
+
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">surface_line</span><span class="p">(</span><span class="n">mesh</span><span class="p">)[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - an unreadable mesh keeps "Elevation"</span>
+            <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">z</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Only the section's coordinates: the top of them is all that says where</span>
+        <span class="c1"># the ground is.</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">arr</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">arr</span><span class="p">[[</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">arr</span><span class="p">))]]</span> <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="section_has_elevation">
+<a class="viewcode-back" href="../../../api/visualization.html#PyHydroGeophysX.visualization.axis_units.section_has_elevation">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">section_has_elevation</span><span class="p">(</span><span class="n">mesh</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">surface</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether a section's vertical coordinate is a real elevation.</span>
+
+<span class="sd">    False when the ground surface is flat at zero - the geometry a survey gets</span>
+<span class="sd">    when it was read without elevations. Give the ``mesh``, the ``surface``</span>
+<span class="sd">    (``(x, z)`` tuple, ``(n, 2)`` array or the surface z values) or just the</span>
+<span class="sd">    section's ``z`` coordinates, whose top is then taken as the surface. When</span>
+<span class="sd">    none of them can be read the answer is True, which keeps the label a</span>
+<span class="sd">    section has always had.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; section_has_elevation(surface=[0.0, 0.0, 0.0])</span>
+<span class="sd">    False</span>
+<span class="sd">    &gt;&gt;&gt; section_has_elevation(surface=[312.4, 310.9, 309.0])</span>
+<span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; section_has_elevation(z=[0.0, -5.0, -20.0])</span>
+<span class="sd">    False</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">_has_elevation</span><span class="p">(</span><span class="n">_surface_z</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">surface</span><span class="p">,</span> <span class="n">z</span><span class="p">))</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_has_elevation</span><span class="p">(</span><span class="n">top</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">top</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="n">top</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">top</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">top</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">top</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mf">1.0e-6</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_vertical</span><span class="p">(</span><span class="n">vertical</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">vertical</span> <span class="ow">or</span> <span class="s2">"auto"</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_VERTICAL</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"vertical must be one of </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_VERTICAL</span><span class="p">)</span><span class="si">}</span><span class="s2">, not </span><span class="si">{</span><span class="n">vertical</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">mode</span>
+
+
+<div class="viewcode-block" id="resolve_vertical">
+<a class="viewcode-back" href="../../../api/visualization.html#PyHydroGeophysX.visualization.axis_units.resolve_vertical">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_vertical</span><span class="p">(</span><span class="n">vertical</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"auto"</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">surface</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">z</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""``'elevation'`` or ``'depth'``: what the vertical axis of a section shows.</span>
+
+<span class="sd">    ``'auto'`` gives depth when :func:`section_has_elevation` says the section</span>
+<span class="sd">    has no elevation, and elevation otherwise.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">vertical_axis</span><span class="p">(</span><span class="n">vertical</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">surface</span><span class="o">=</span><span class="n">surface</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="vertical_axis">
+<a class="viewcode-back" href="../../../api/visualization.html#PyHydroGeophysX.visualization.axis_units.vertical_axis">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">vertical_axis</span><span class="p">(</span><span class="n">vertical</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"auto"</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">surface</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="n">z</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""``(mode, depth_reference)`` for a section's vertical axis.</span>
+
+<span class="sd">    ``mode`` is as :func:`resolve_vertical` decides it. For depth,</span>
+<span class="sd">    ``depth_reference`` is the level depth is measured down from - the top of</span>
+<span class="sd">    the ground surface, 0 when it cannot be read; for elevation it is None.</span>
+<span class="sd">    The surface is read once, so a view can keep the pair and pass it back to</span>
+<span class="sd">    :func:`set_section_axes` on every redraw.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; vertical_axis(z=[0.0, -4.0, -12.0])</span>
+<span class="sd">    ('depth', 0.0)</span>
+<span class="sd">    &gt;&gt;&gt; vertical_axis(surface=[102.0, 101.5])</span>
+<span class="sd">    ('elevation', None)</span>
+<span class="sd">    """</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">_check_vertical</span><span class="p">(</span><span class="n">vertical</span><span class="p">)</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">!=</span> <span class="s2">"elevation"</span><span class="p">:</span>
+        <span class="n">top</span> <span class="o">=</span> <span class="n">_surface_z</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">surface</span><span class="p">,</span> <span class="n">z</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">"auto"</span><span class="p">:</span>
+        <span class="n">mode</span> <span class="o">=</span> <span class="s2">"elevation"</span> <span class="k">if</span> <span class="n">_has_elevation</span><span class="p">(</span><span class="n">top</span><span class="p">)</span> <span class="k">else</span> <span class="s2">"depth"</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">"elevation"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">mode</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="n">finite</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">top</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">top</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">top</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">mode</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">finite</span><span class="p">))</span> <span class="k">if</span> <span class="n">finite</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">finite</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="mf">0.0</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Axis ticks shown in another unit or as depth</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_transforms</span><span class="p">(</span><span class="n">factor</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">depth_reference</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">"""``(to_display, from_display)`` between data metres and what the axis shows."""</span>
+    <span class="k">if</span> <span class="n">depth_reference</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">*</span> <span class="n">factor</span><span class="p">,</span>
+                <span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">/</span> <span class="n">factor</span><span class="p">)</span>
+    <span class="n">ref</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">depth_reference</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="p">(</span><span class="n">ref</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span> <span class="o">*</span> <span class="n">factor</span><span class="p">,</span>
+            <span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">ref</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">/</span> <span class="n">factor</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_display_ticker</span><span class="p">(</span><span class="n">to_display</span><span class="p">,</span> <span class="n">from_display</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A matplotlib locator and formatter that tick in displayed units.</span>
+
+<span class="sd">    Built on first use so that importing this module never imports matplotlib.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.ticker</span><span class="w"> </span><span class="kn">import</span> <span class="n">Formatter</span><span class="p">,</span> <span class="n">Locator</span><span class="p">,</span> <span class="n">MaxNLocator</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">DisplayLocator</span><span class="p">(</span><span class="n">Locator</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Round numbers of the displayed unit, placed at their data positions."""</span>
+
+        <span class="n">phgx_display</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_base</span> <span class="o">=</span> <span class="n">MaxNLocator</span><span class="p">(</span><span class="n">nbins</span><span class="o">=</span><span class="s2">"auto"</span><span class="p">,</span> <span class="n">steps</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">set_axis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axis</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">set_axis</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_base</span><span class="o">.</span><span class="n">set_axis</span><span class="p">(</span><span class="n">axis</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis</span><span class="o">.</span><span class="n">get_view_interval</span><span class="p">()</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tick_values</span><span class="p">(</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">tick_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="p">):</span>
+            <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">to_display</span><span class="p">([</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="p">]))</span>
+            <span class="n">ticks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_base</span><span class="o">.</span><span class="n">tick_values</span><span class="p">(</span><span class="n">lo</span><span class="p">,</span> <span class="n">hi</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">from_display</span><span class="p">(</span><span class="n">ticks</span><span class="p">))</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">DisplayFormatter</span><span class="p">(</span><span class="n">Formatter</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Tick labels in the displayed unit, with as many decimals as they need."""</span>
+
+        <span class="n">phgx_display</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_decimals</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">set_locs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">locs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">set_locs</span><span class="p">(</span><span class="n">locs</span><span class="p">)</span>
+            <span class="n">shown</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">to_display</span><span class="p">(</span><span class="n">locs</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="n">shown</span> <span class="o">=</span> <span class="n">shown</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">shown</span><span class="p">)]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_decimals</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="n">shown</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+                <span class="n">scale</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">shown</span><span class="p">))),</span> <span class="mf">1.0</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">decimals</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">7</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">shown</span><span class="p">,</span> <span class="n">decimals</span><span class="p">),</span> <span class="n">shown</span><span class="p">,</span>
+                                   <span class="n">rtol</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="n">scale</span> <span class="o">*</span> <span class="mf">1.0e-9</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_decimals</span> <span class="o">=</span> <span class="n">decimals</span>
+                        <span class="k">break</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_decimals</span> <span class="o">=</span> <span class="mi">6</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">decimals</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">shown</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">to_display</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">shown</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="mf">10.0</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="n">decimals</span><span class="p">):</span>
+                <span class="n">shown</span> <span class="o">=</span> <span class="mf">0.0</span>          <span class="c1"># no "-0" on the surface line</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fix_minus</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">shown</span><span class="si">:</span><span class="s2">.</span><span class="si">{</span><span class="n">decimals</span><span class="si">}</span><span class="s2">f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">pos</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_text</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decimals</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">format_data_short</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="c1"># The cursor readout: finer than the ticks, in the same unit.</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_text</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_decimals</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">format_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_text</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_decimals</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">DisplayLocator</span><span class="p">(),</span> <span class="n">DisplayFormatter</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_axis</span><span class="p">(</span><span class="n">ax</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">which</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="n">which</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">which</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">which</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">,</span> <span class="s2">"z"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">which</span> <span class="o">==</span> <span class="s2">"z"</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="s2">"zaxis"</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"axis must be 'x', 'y' or, on 3-D axes, 'z'; not </span><span class="si">{</span><span class="n">which</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">which</span><span class="si">}</span><span class="s2">axis"</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="set_length_axis">
+<a class="viewcode-back" href="../../../api/visualization.html#PyHydroGeophysX.visualization.axis_units.set_length_axis">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">set_length_axis</span><span class="p">(</span><span class="n">ax</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">which</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"x"</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"Distance"</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+                    <span class="n">unit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="n">depth_reference</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="n">labelled</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">label_kw</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Label one axis of ``ax`` as a length and tick it in ``unit``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ax : matplotlib.axes.Axes</span>
+<span class="sd">    which : ``'x'``, ``'y'`` or, on 3-D axes, ``'z'``</span>
+<span class="sd">    name : str</span>
+<span class="sd">        The quantity, e.g. ``'Distance'`` or ``'Depth'``; the unit is appended.</span>
+<span class="sd">    unit : str, optional</span>
+<span class="sd">        ``'m'`` or ``'ft'`` (any spelling). Defaults to :func:`get_length_unit`.</span>
+<span class="sd">    depth_reference : float, optional</span>
+<span class="sd">        Show ``depth_reference - value`` instead of the value, positive</span>
+<span class="sd">        downward: the data are elevations and the axis reads depth below this</span>
+<span class="sd">        level.</span>
+<span class="sd">    labelled : bool</span>
+<span class="sd">        Set the label. False leaves it alone - an inner panel of a grid, whose</span>
+<span class="sd">        ticks still have to be in the right unit.</span>
+<span class="sd">    **label_kw</span>
+<span class="sd">        Passed to ``set_xlabel``/``set_ylabel`` (font size, family).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        The label text.</span>
+<span class="sd">    """</span>
+    <span class="n">resolved</span> <span class="o">=</span> <span class="n">normalize_length_unit</span><span class="p">(</span><span class="n">unit</span><span class="p">)</span>
+    <span class="n">axis</span> <span class="o">=</span> <span class="n">_axis</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">which</span><span class="p">)</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="n">length_label</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">resolved</span><span class="p">)</span>
+    <span class="n">factor</span> <span class="o">=</span> <span class="n">_FACTORS</span><span class="p">[</span><span class="n">resolved</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">factor</span> <span class="o">!=</span> <span class="mf">1.0</span> <span class="ow">or</span> <span class="n">depth_reference</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">locator</span><span class="p">,</span> <span class="n">formatter</span> <span class="o">=</span> <span class="n">_display_ticker</span><span class="p">(</span><span class="o">*</span><span class="n">_transforms</span><span class="p">(</span><span class="n">factor</span><span class="p">,</span> <span class="n">depth_reference</span><span class="p">))</span>
+        <span class="n">axis</span><span class="o">.</span><span class="n">set_major_locator</span><span class="p">(</span><span class="n">locator</span><span class="p">)</span>
+        <span class="n">axis</span><span class="o">.</span><span class="n">set_major_formatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Plain metres. An axis drawn in feet or as depth before - a view that</span>
+        <span class="c1"># reuses its axes - gets matplotlib's own ticks back, and so does one</span>
+        <span class="c1"># pyGIMLi relabelled for what it took to be a depth section, so the</span>
+        <span class="c1"># numbers agree with the label.</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.ticker</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoLocator</span><span class="p">,</span> <span class="n">FuncFormatter</span><span class="p">,</span> <span class="n">ScalarFormatter</span>
+
+        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">axis</span><span class="o">.</span><span class="n">get_major_locator</span><span class="p">(),</span> <span class="s2">"phgx_display"</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="n">axis</span><span class="o">.</span><span class="n">set_major_locator</span><span class="p">(</span><span class="n">AutoLocator</span><span class="p">())</span>
+        <span class="n">formatter</span> <span class="o">=</span> <span class="n">axis</span><span class="o">.</span><span class="n">get_major_formatter</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">formatter</span><span class="p">,</span> <span class="s2">"phgx_display"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">formatter</span><span class="p">,</span> <span class="n">FuncFormatter</span><span class="p">):</span>
+            <span class="n">axis</span><span class="o">.</span><span class="n">set_major_formatter</span><span class="p">(</span><span class="n">ScalarFormatter</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">labelled</span><span class="p">:</span>
+        <span class="nb">getattr</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"set_</span><span class="si">{</span><span class="n">which</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}</span><span class="s2">label"</span><span class="p">)(</span><span class="n">label</span><span class="p">,</span> <span class="o">**</span><span class="n">label_kw</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">label</span></div>
+
+
+
+<div class="viewcode-block" id="set_section_axes">
+<a class="viewcode-back" href="../../../api/visualization.html#PyHydroGeophysX.visualization.axis_units.set_section_axes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">set_section_axes</span><span class="p">(</span><span class="n">ax</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">surface</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">vertical</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"auto"</span><span class="p">,</span> <span class="n">unit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">xlabel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"Distance"</span><span class="p">,</span>
+                     <span class="n">depth_reference</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">label_x</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">label_y</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                     <span class="n">elevation_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"Elevation"</span><span class="p">,</span> <span class="n">depth_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"Depth"</span><span class="p">,</span>
+                     <span class="o">**</span><span class="n">label_kw</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Label and tick both axes of a 2-D section; returns ``'elevation'`` or ``'depth'``.</span>
+
+<span class="sd">    The horizontal axis becomes ``xlabel`` in ``unit``. The vertical one is</span>
+<span class="sd">    ``elevation_name`` or, when the section has no elevation (see</span>
+<span class="sd">    :func:`resolve_vertical`), ``depth_name`` shown positive downward from</span>
+<span class="sd">    ``depth_reference`` - the top of the ground surface unless given.</span>
+
+<span class="sd">    ``label_x``/``label_y`` False keep the ticks in the right unit but leave</span>
+<span class="sd">    that label off, for the inner panels of a grid.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">_check_vertical</span><span class="p">(</span><span class="n">vertical</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"depth"</span> <span class="ow">and</span> <span class="n">depth_reference</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">mode</span> <span class="o">=</span> <span class="s2">"depth"</span>               <span class="c1"># nothing left to read off the geometry</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mode</span><span class="p">,</span> <span class="n">reference</span> <span class="o">=</span> <span class="n">vertical_axis</span><span class="p">(</span><span class="n">vertical</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">surface</span><span class="o">=</span><span class="n">surface</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">depth_reference</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">depth_reference</span> <span class="o">=</span> <span class="n">reference</span>
+    <span class="n">set_length_axis</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="s2">"x"</span><span class="p">,</span> <span class="n">xlabel</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">unit</span><span class="p">,</span> <span class="n">labelled</span><span class="o">=</span><span class="n">label_x</span><span class="p">,</span> <span class="o">**</span><span class="n">label_kw</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">"depth"</span><span class="p">:</span>
+        <span class="n">set_length_axis</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">,</span> <span class="n">depth_name</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">unit</span><span class="p">,</span> <span class="n">depth_reference</span><span class="o">=</span><span class="n">depth_reference</span><span class="p">,</span>
+                        <span class="n">labelled</span><span class="o">=</span><span class="n">label_y</span><span class="p">,</span> <span class="o">**</span><span class="n">label_kw</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">set_length_axis</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">,</span> <span class="n">elevation_name</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">unit</span><span class="p">,</span> <span class="n">labelled</span><span class="o">=</span><span class="n">label_y</span><span class="p">,</span> <span class="o">**</span><span class="n">label_kw</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">mode</span></div>
+
+
+
+<div class="viewcode-block" id="pyqtgraph_length_axis">
+<a class="viewcode-back" href="../../../api/visualization.html#PyHydroGeophysX.visualization.axis_units.pyqtgraph_length_axis">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">pyqtgraph_length_axis</span><span class="p">(</span><span class="n">plot</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">side</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+                          <span class="n">unit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Label a pyqtgraph ``PlotItem``/``PlotWidget`` axis as a length in ``unit``.</span>
+
+<span class="sd">    pyqtgraph scales an axis's tick values itself (``AxisItem.setScale``) and</span>
+<span class="sd">    picks round numbers in the scaled unit, so the data stay in metres here as</span>
+<span class="sd">    well. Returns the label text.</span>
+<span class="sd">    """</span>
+    <span class="n">resolved</span> <span class="o">=</span> <span class="n">normalize_length_unit</span><span class="p">(</span><span class="n">unit</span><span class="p">)</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="n">length_label</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">resolved</span><span class="p">)</span>
+    <span class="n">axis</span> <span class="o">=</span> <span class="n">plot</span><span class="o">.</span><span class="n">getAxis</span><span class="p">(</span><span class="n">side</span><span class="p">)</span>
+    <span class="n">axis</span><span class="o">.</span><span class="n">setScale</span><span class="p">(</span><span class="n">_FACTORS</span><span class="p">[</span><span class="n">resolved</span><span class="p">])</span>
+    <span class="n">plot</span><span class="o">.</span><span class="n">setLabel</span><span class="p">(</span><span class="n">side</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">label</span></div>
+
+
+
+<div class="viewcode-block" id="section_label_pair">
+<a class="viewcode-back" href="../../../api/visualization.html#PyHydroGeophysX.visualization.axis_units.section_label_pair">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">section_label_pair</span><span class="p">(</span><span class="n">vertical</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"auto"</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">unit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                       <span class="n">xlabel</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"Distance"</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">surface</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                       <span class="n">z</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""``(xlabel, ylabel)`` text for a section, for code that only sets labels."""</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">resolve_vertical</span><span class="p">(</span><span class="n">vertical</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">surface</span><span class="o">=</span><span class="n">surface</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">length_label</span><span class="p">(</span><span class="n">xlabel</span><span class="p">,</span> <span class="n">unit</span><span class="p">),</span>
+            <span class="n">length_label</span><span class="p">(</span><span class="s2">"Depth"</span> <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">"depth"</span> <span class="k">else</span> <span class="s2">"Elevation"</span><span class="p">,</span> <span class="n">unit</span><span class="p">))</span></div>
+
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

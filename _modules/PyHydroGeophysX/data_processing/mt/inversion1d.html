@@ -1,0 +1,931 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.data_processing.mt.inversion1d &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../../_static/documentation_options.js?v=1dd76d02"></script>
+    <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/data_processing/mt/inversion1d';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../../../../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/data_processing/mt/inversion1d.html" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../../_static/searchtools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <script src="../../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../changelog.html">
+    Changelog
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../changelog.html">
+    Changelog
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.data_processing.mt.inversion1d</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.data_processing.mt.inversion1d</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Occam's 1D inversion of MT soundings, alone or jointly with a TEM sounding.</span>
+
+<span class="sd">The model is ``log10`` resistivity in many thin layers - thicknesses growing</span>
+<span class="sd">geometrically from a twentieth of the shortest period's skin depth to beyond</span>
+<span class="sd">the longest's - and Occam's inversion (Constable et al. 1987) looks for the</span>
+<span class="sd">smoothest such model (least first-difference roughness) that fits the data</span>
+<span class="sd">to a target RMS misfit. Each iteration linearizes the forward problem</span>
+<span class="sd">(:func:`.forward1d.sensitivity_1d` gives the exact derivatives), solves the</span>
+<span class="sd">regularized normal equations for a sweep of trade-off parameters ``mu``, and</span>
+<span class="sd">takes the ``mu`` with the least misfit while the target is out of reach, then</span>
+<span class="sd">the largest ``mu`` that still reaches it.</span>
+
+<span class="sd">The data are ``log10 rho_a`` and phase (degrees) of the determinant, of Zxy,</span>
+<span class="sd">of Zyx, or of both modes against one model. A **static shift** per mode can</span>
+<span class="sd">be estimated with the model: a free offset of that mode's ``log10 rho_a``,</span>
+<span class="sd">held to zero by a Gaussian prior of ``static_shift_prior`` (log10 units); the</span>
+<span class="sd">phases fix the model, the TEM (or the prior) the offset.</span>
+
+<span class="sd">Joined with a **TEM sounding** (``tem=``), the transient's response is fitted</span>
+<span class="sd">by the same model through PyHydroGeophysX's TDEM forward operator - the TEM</span>
+<span class="sd">resolves the near surface that sets the static shift, the MT the depths</span>
+<span class="sd">below (Meju 1996). That needs SimPEG, as TEM inversion does; MT alone needs</span>
+<span class="sd">only NumPy.</span>
+
+<span class="sd">Constable, S. C., Parker, R. L. &amp; Constable, C. G. (1987). Occam's inversion:</span>
+<span class="sd">a practical algorithm for generating smooth models from electromagnetic</span>
+<span class="sd">sounding data. Geophysics, 52(3), 289-300. https://doi.org/10.1190/1.1442303</span>
+
+<span class="sd">Meju, M. A. (1996). Joint inversion of TEM and distorted MT soundings: some</span>
+<span class="sd">effective practical considerations. Geophysics, 61(1), 56-65.</span>
+<span class="sd">https://doi.org/10.1190/1.1443956</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.forward1d</span><span class="w"> </span><span class="kn">import</span> <span class="n">sensitivity_1d</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.transfer_function</span><span class="w"> </span><span class="kn">import</span> <span class="n">MU0</span><span class="p">,</span> <span class="n">TransferFunction</span>
+
+<span class="n">_LN10</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">10.0</span><span class="p">)</span>
+<span class="n">_MODES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"det"</span><span class="p">,</span> <span class="s2">"xy"</span><span class="p">,</span> <span class="s2">"yx"</span><span class="p">,</span> <span class="s2">"both"</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Sounding1D">
+<a class="viewcode-back" href="../../../../api/data_processing.html#PyHydroGeophysX.data_processing.mt.inversion1d.Sounding1D">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Sounding1D</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What a 1D inversion fits: per mode, ``log10 rho_a`` and phase with errors."""</span>
+
+    <span class="n">frequency</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">modes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">log_rho</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>          <span class="c1"># (n_modes, n_freq)</span>
+    <span class="n">phase</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>            <span class="c1"># degrees, first quadrant</span>
+    <span class="n">log_rho_err</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">phase_err</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">station</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_rho</span><span class="p">))</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phase</span><span class="p">)))</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_mode_impedance</span><span class="p">(</span><span class="n">tf</span><span class="p">:</span> <span class="n">TransferFunction</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">"det"</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">determinant</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">tf</span><span class="o">.</span><span class="n">z_err</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">z_err</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">tf</span><span class="o">.</span><span class="n">z_err</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">z</span><span class="p">,</span> <span class="n">err</span>
+    <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">"xy"</span> <span class="k">else</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">z</span><span class="p">[:,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">"xy"</span> <span class="k">else</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">z_err</span><span class="p">[:,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="k">if</span> <span class="n">tf</span><span class="o">.</span><span class="n">z_err</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">z</span><span class="p">,</span> <span class="n">err</span>
+
+
+<div class="viewcode-block" id="sounding_from_tf">
+<a class="viewcode-back" href="../../../../api/data_processing.html#PyHydroGeophysX.data_processing.mt.inversion1d.sounding_from_tf">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sounding_from_tf</span><span class="p">(</span><span class="n">tf</span><span class="p">:</span> <span class="n">TransferFunction</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"det"</span><span class="p">,</span> <span class="n">error_floor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>
+                     <span class="n">period_range</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sounding1D</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The 1D data of a site: apparent resistivity and phase of a mode, with errors.</span>
+
+<span class="sd">    ``error_floor`` is the least relative error of the impedance (5%: about</span>
+<span class="sd">    0.043 in ``log10 rho_a`` and 1.4 degrees of phase). Phases are folded into</span>
+<span class="sd">    the first quadrant; values outside it are dropped.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_MODES</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"mode must be one of </span><span class="si">{</span><span class="n">_MODES</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">modes</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"xy"</span><span class="p">,</span> <span class="s2">"yx"</span><span class="p">]</span> <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">"both"</span> <span class="k">else</span> <span class="p">[</span><span class="n">mode</span><span class="p">]</span>
+    <span class="n">keep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">n_frequencies</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">period_range</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">keep</span> <span class="o">&amp;=</span> <span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">period</span> <span class="o">&gt;=</span> <span class="nb">min</span><span class="p">(</span><span class="n">period_range</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">period</span> <span class="o">&lt;=</span> <span class="nb">max</span><span class="p">(</span><span class="n">period_range</span><span class="p">))</span>
+    <span class="n">omega</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">angular_frequency</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"log_rho"</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">"phase"</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">"log_rho_err"</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">"phase_err"</span><span class="p">:</span> <span class="p">[]}</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">modes</span><span class="p">:</span>
+        <span class="n">z</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="n">_mode_impedance</span><span class="p">(</span><span class="n">tf</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="n">z</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="n">z</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span> <span class="n">err</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span>
+        <span class="n">relative</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">err</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">z</span><span class="p">),</span> <span class="n">nan</span><span class="o">=</span><span class="n">error_floor</span><span class="p">),</span> <span class="n">error_floor</span><span class="p">)</span>
+        <span class="n">phase</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">angle</span><span class="p">(</span><span class="n">z</span><span class="p">))</span>
+        <span class="n">good</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">z</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">phase</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">phase</span> <span class="o">&lt;</span> <span class="mi">90</span><span class="p">)</span>
+        <span class="n">rows</span><span class="p">[</span><span class="s2">"log_rho"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">good</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">z</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">omega</span> <span class="o">*</span> <span class="n">MU0</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">))</span>
+        <span class="n">rows</span><span class="p">[</span><span class="s2">"phase"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">good</span><span class="p">,</span> <span class="n">phase</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">))</span>
+        <span class="n">rows</span><span class="p">[</span><span class="s2">"log_rho_err"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">relative</span> <span class="o">/</span> <span class="n">_LN10</span><span class="p">)</span>
+        <span class="n">rows</span><span class="p">[</span><span class="s2">"phase_err"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">relative</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">Sounding1D</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">frequency</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span> <span class="n">modes</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span>
+                                                  <span class="p">(</span><span class="s2">"log_rho"</span><span class="p">,</span> <span class="s2">"phase"</span><span class="p">,</span> <span class="s2">"log_rho_err"</span><span class="p">,</span> <span class="s2">"phase_err"</span><span class="p">)),</span>
+                      <span class="n">station</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">station</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="layer_thicknesses">
+<a class="viewcode-back" href="../../../../api/data_processing.html#PyHydroGeophysX.data_processing.mt.inversion1d.layer_thicknesses">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">layer_thicknesses</span><span class="p">(</span><span class="n">frequency</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">n_layers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">resistivity_guess</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="mf">100.0</span><span class="p">,</span>
+                      <span class="n">depth_range</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Geometric thicknesses from a twentieth of the least skin depth to twice the greatest.</span>
+
+<span class="sd">    ``resistivity_guess`` is one resistivity or a pair: the apparent</span>
+<span class="sd">    resistivity at the highest and at the lowest frequency, which set the</span>
+<span class="sd">    shallowest and the deepest skin depth. One value for both made the top</span>
+<span class="sd">    layer of a resistive site with a conductive cover tens of metres thick.</span>
+<span class="sd">    """</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">shallow</span><span class="p">,</span> <span class="n">deep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">resistivity_guess</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+    <span class="n">skin</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">rho</span><span class="p">,</span> <span class="n">freq</span><span class="p">:</span> <span class="mf">503.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">rho</span> <span class="o">/</span> <span class="n">freq</span><span class="p">)</span>
+    <span class="n">top</span><span class="p">,</span> <span class="n">bottom</span> <span class="o">=</span> <span class="n">depth_range</span> <span class="ow">or</span> <span class="p">(</span><span class="n">skin</span><span class="p">(</span><span class="n">shallow</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">max</span><span class="p">())</span> <span class="o">/</span> <span class="mf">20.0</span><span class="p">,</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">skin</span><span class="p">(</span><span class="n">deep</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">min</span><span class="p">()))</span>
+    <span class="n">depths</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">geomspace</span><span class="p">(</span><span class="n">top</span><span class="p">,</span> <span class="n">bottom</span><span class="p">,</span> <span class="n">n_layers</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">depths</span><span class="p">])</span></div>
+
+
+
+<div class="viewcode-block" id="Occam1DResult">
+<a class="viewcode-back" href="../../../../api/data_processing.html#PyHydroGeophysX.data_processing.mt.inversion1d.Occam1DResult">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Occam1DResult</span><span class="p">:</span>
+    <span class="n">resistivity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">thickness</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">rms</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">roughness</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">mu</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">static_shift</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
+    <span class="n">predicted</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
+    <span class="n">sounding</span><span class="p">:</span> <span class="n">Sounding1D</span>
+    <span class="n">iterations</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">history</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">tem</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">converged</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">depth</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Each layer's top, m (the half-space last)."""</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="p">)]</span>
+
+<div class="viewcode-block" id="Occam1DResult.depth_profile">
+<a class="viewcode-back" href="../../../../api/data_processing.html#PyHydroGeophysX.data_processing.mt.inversion1d.Occam1DResult.depth_profile">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">depth_profile</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Step-plot arrays (depth, resistivity), the half-space drawn one layer deep."""</span>
+        <span class="n">tops</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">depth</span>
+        <span class="n">bottoms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">tops</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">tops</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">thickness</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">tops</span><span class="p">,</span> <span class="n">bottoms</span><span class="p">])</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">resistivity</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span></div>
+</div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_mt_rows</span><span class="p">(</span><span class="n">sounding</span><span class="p">:</span> <span class="n">Sounding1D</span><span class="p">,</span> <span class="n">log_rho_model</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">thickness</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+             <span class="n">shifts</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Residual-ready predictions and derivatives of the MT data (log10 rho_a, phase deg)."""</span>
+    <span class="n">Z</span><span class="p">,</span> <span class="n">d_log_rho</span><span class="p">,</span> <span class="n">d_phase</span> <span class="o">=</span> <span class="n">sensitivity_1d</span><span class="p">(</span><span class="mf">10.0</span> <span class="o">**</span> <span class="n">log_rho_model</span><span class="p">,</span> <span class="n">thickness</span><span class="p">,</span> <span class="n">sounding</span><span class="o">.</span><span class="n">frequency</span><span class="p">)</span>
+    <span class="n">omega</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">sounding</span><span class="o">.</span><span class="n">frequency</span>
+    <span class="n">log_rho_a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Z</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">omega</span> <span class="o">*</span> <span class="n">MU0</span><span class="p">))</span>
+    <span class="n">phase</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">angle</span><span class="p">(</span><span class="n">Z</span><span class="p">))</span>
+    <span class="n">preds</span><span class="p">,</span> <span class="n">jac_rows</span><span class="p">,</span> <span class="n">shift_rows</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">errors</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="n">n_modes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sounding</span><span class="o">.</span><span class="n">modes</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_modes</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">observed</span><span class="p">,</span> <span class="n">err</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">derivative</span><span class="p">,</span> <span class="n">shifted</span> <span class="ow">in</span> <span class="p">(</span>
+                <span class="p">(</span><span class="n">sounding</span><span class="o">.</span><span class="n">log_rho</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">sounding</span><span class="o">.</span><span class="n">log_rho_err</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">log_rho_a</span> <span class="o">+</span> <span class="n">shifts</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">d_log_rho</span> <span class="o">*</span> <span class="n">_LN10</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span>
+                <span class="p">(</span><span class="n">sounding</span><span class="o">.</span><span class="n">phase</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">sounding</span><span class="o">.</span><span class="n">phase_err</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">phase</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">d_phase</span><span class="p">)</span> <span class="o">*</span> <span class="n">_LN10</span><span class="p">,</span> <span class="kc">False</span><span class="p">)):</span>
+            <span class="n">good</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">observed</span><span class="p">)</span>
+            <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">observed</span><span class="p">[</span><span class="n">good</span><span class="p">])</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">err</span><span class="p">[</span><span class="n">good</span><span class="p">])</span>
+            <span class="n">preds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">model</span><span class="p">[</span><span class="n">good</span><span class="p">])</span>
+            <span class="n">jac_rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">derivative</span><span class="p">[</span><span class="n">good</span><span class="p">])</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">good</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="n">n_modes</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">shifted</span><span class="p">:</span>
+                <span class="n">row</span><span class="p">[:,</span> <span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+            <span class="n">shift_rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">values</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">errors</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">preds</span><span class="p">),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">jac_rows</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">shift_rows</span><span class="p">),</span> <span class="n">log_rho_a</span><span class="p">,</span> <span class="n">phase</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_occam_choice</span><span class="p">(</span><span class="n">trials</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span> <span class="n">target</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Occam's pick among ``(mu, rms)``: the largest mu reaching the target, else the least rms."""</span>
+    <span class="n">reaching</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">rms</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">trials</span><span class="p">)</span> <span class="k">if</span> <span class="n">rms</span> <span class="o">&lt;=</span> <span class="n">target</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">reaching</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">reaching</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">trials</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">trials</span><span class="p">)),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">trials</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_tem_block</span><span class="p">(</span><span class="n">tem</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">thickness</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion.em1d</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_INVERSION</span><span class="p">,</span> <span class="n">build_sounding_block</span>
+
+    <span class="n">settings</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">DEFAULT_INVERSION</span><span class="p">,</span> <span class="o">**</span><span class="nb">dict</span><span class="p">(</span><span class="n">tem</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"inversion"</span><span class="p">,</span> <span class="p">{}))}</span>
+    <span class="n">settings</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">n_layers</span><span class="o">=</span><span class="n">thickness</span><span class="o">.</span><span class="n">size</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">layer_thicknesses</span><span class="o">=</span><span class="n">thickness</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">build_sounding_block</span><span class="p">(</span><span class="n">tem</span><span class="p">[</span><span class="s2">"data"</span><span class="p">],</span> <span class="n">tem</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"geometry"</span><span class="p">,</span> <span class="p">{}),</span> <span class="n">settings</span><span class="p">,</span> <span class="s2">"TDEM"</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="occam1d">
+<a class="viewcode-back" href="../../../../api/data_processing.html#PyHydroGeophysX.data_processing.mt.inversion1d.occam1d">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">occam1d</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"det"</span><span class="p">,</span> <span class="n">n_layers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+            <span class="n">thickness</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">target_rms</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+            <span class="n">max_iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">30</span><span class="p">,</span> <span class="n">starting_resistivity</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">static_shift</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">static_shift_prior</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span>
+            <span class="n">error_floor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span> <span class="n">period_range</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">tem</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">tem_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+            <span class="n">log</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">resistivity_bounds</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">1e5</span><span class="p">))</span> <span class="o">-&gt;</span> <span class="n">Occam1DResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Occam's smoothest model fitting a site's 1D data (and a TEM sounding).</span>
+
+<span class="sd">    ``data`` is a :class:`TransferFunction` (its ``mode`` is taken, see</span>
+<span class="sd">    :func:`sounding_from_tf`) or a :class:`Sounding1D`. ``thickness`` fixes the</span>
+<span class="sd">    layers; otherwise ``n_layers`` are spread over the skin-depth range.</span>
+<span class="sd">    ``static_shift`` adds one offset of ``log10 rho_a`` per mode.</span>
+<span class="sd">    ``tem={"data": ..., "geometry": ..., "inversion": ...}`` is a TDEM sounding</span>
+<span class="sd">    as :func:`PyHydroGeophysX.inversion.em1d.tdem_invert` takes it, fitted with</span>
+<span class="sd">    weight ``tem_weight``; the RMS target then applies to all data together.</span>
+<span class="sd">    """</span>
+    <span class="n">sounding</span> <span class="o">=</span> <span class="n">data</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">Sounding1D</span><span class="p">)</span> <span class="k">else</span> <span class="n">sounding_from_tf</span><span class="p">(</span>
+        <span class="n">data</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">error_floor</span><span class="o">=</span><span class="n">error_floor</span><span class="p">,</span> <span class="n">period_range</span><span class="o">=</span><span class="n">period_range</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">sounding</span><span class="o">.</span><span class="n">n_data</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"too few data in the period range"</span><span class="p">)</span>
+    <span class="n">log_rho</span> <span class="o">=</span> <span class="n">sounding</span><span class="o">.</span><span class="n">log_rho</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">sounding</span><span class="o">.</span><span class="n">log_rho</span><span class="p">)]</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">starting_resistivity</span> <span class="ow">or</span> <span class="mi">10</span> <span class="o">**</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">log_rho</span><span class="p">))</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">sounding</span><span class="o">.</span><span class="n">frequency</span><span class="p">)</span>
+    <span class="n">ends</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">columns</span> <span class="ow">in</span> <span class="p">(</span><span class="n">order</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:],</span> <span class="n">order</span><span class="p">[:</span><span class="mi">3</span><span class="p">]):</span>            <span class="c1"># the highest, then the lowest frequencies</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">sounding</span><span class="o">.</span><span class="n">log_rho</span><span class="p">[:,</span> <span class="n">columns</span><span class="p">]</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">values</span><span class="p">)]</span>
+        <span class="n">ends</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">10</span> <span class="o">**</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">values</span><span class="p">))</span> <span class="k">if</span> <span class="n">values</span><span class="o">.</span><span class="n">size</span> <span class="k">else</span> <span class="n">start</span><span class="p">)</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">thickness</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="k">if</span> <span class="n">thickness</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">layer_thicknesses</span><span class="p">(</span>
+        <span class="n">sounding</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span> <span class="n">n_layers</span><span class="p">,</span> <span class="n">resistivity_guess</span><span class="o">=</span><span class="n">ends</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">size</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">n_modes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sounding</span><span class="o">.</span><span class="n">modes</span><span class="p">)</span>
+    <span class="n">n_shift</span> <span class="o">=</span> <span class="n">n_modes</span> <span class="k">if</span> <span class="n">static_shift</span> <span class="k">else</span> <span class="mi">0</span>
+    <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">resistivity_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">resistivity_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">block</span> <span class="o">=</span> <span class="n">_tem_block</span><span class="p">(</span><span class="n">tem</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span> <span class="k">if</span> <span class="n">tem</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="n">roughness_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n</span> <span class="o">+</span> <span class="n">n_shift</span><span class="p">))</span>
+    <span class="n">D</span><span class="p">[:,</span> <span class="p">:</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">roughness_matrix</span>
+    <span class="n">prior</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_shift</span><span class="p">,</span> <span class="n">n</span> <span class="o">+</span> <span class="n">n_shift</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">n_shift</span><span class="p">:</span>
+        <span class="n">prior</span><span class="p">[:,</span> <span class="n">n</span><span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n_shift</span><span class="p">)</span> <span class="o">/</span> <span class="n">static_shift_prior</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="n">model</span><span class="p">,</span> <span class="n">shifts</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:</span><span class="n">n</span><span class="p">],</span> <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">n</span><span class="p">:]</span> <span class="k">if</span> <span class="n">n_shift</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_modes</span><span class="p">))</span>
+        <span class="n">values</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">preds</span><span class="p">,</span> <span class="n">J</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">log_rho_a</span><span class="p">,</span> <span class="n">phase</span> <span class="o">=</span> <span class="n">_mt_rows</span><span class="p">(</span><span class="n">sounding</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">shifts</span><span class="p">)</span>
+        <span class="n">residual</span> <span class="o">=</span> <span class="p">(</span><span class="n">values</span> <span class="o">-</span> <span class="n">preds</span><span class="p">)</span> <span class="o">/</span> <span class="n">errors</span>
+        <span class="n">jac</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">J</span><span class="p">,</span> <span class="n">S</span><span class="p">[:,</span> <span class="p">:</span><span class="n">n_shift</span><span class="p">]])</span> <span class="o">/</span> <span class="n">errors</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">block</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sigma</span> <span class="o">=</span> <span class="mf">10.0</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="n">model</span><span class="p">)</span>
+            <span class="n">tem_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">sigma</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="n">tem_res</span> <span class="o">=</span> <span class="n">tem_weight</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">dobs</span><span class="p">)</span> <span class="o">-</span> <span class="n">tem_pred</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">uncertainty</span><span class="p">)</span>
+            <span class="n">tem_jac</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">sigma</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="n">_LN10</span> <span class="o">*</span> <span class="n">sigma</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+                       <span class="o">*</span> <span class="n">tem_weight</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">uncertainty</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">])</span>
+            <span class="n">residual</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">residual</span><span class="p">,</span> <span class="n">tem_res</span><span class="p">]</span>
+            <span class="n">jac</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">jac</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">tem_jac</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">tem_jac</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">n_shift</span><span class="p">))])])</span>
+            <span class="n">extra</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"tem_predicted"</span><span class="p">:</span> <span class="n">tem_pred</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">extra</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">rms</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">residual</span><span class="o">**</span><span class="mi">2</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">rms</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">jac</span><span class="p">,</span> <span class="p">{</span><span class="s2">"log_rho_a"</span><span class="p">:</span> <span class="n">log_rho_a</span><span class="p">,</span> <span class="s2">"phase"</span><span class="p">:</span> <span class="n">phase</span><span class="p">,</span> <span class="o">**</span><span class="n">extra</span><span class="p">}</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">start</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_shift</span><span class="p">)]</span>
+    <span class="n">rms</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">jac</span><span class="p">,</span> <span class="n">predicted</span> <span class="o">=</span> <span class="n">evaluate</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">history</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">"iteration"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"rms"</span><span class="p">:</span> <span class="n">rms</span><span class="p">,</span> <span class="s2">"mu"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">),</span> <span class="s2">"roughness"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">}]</span>
+    <span class="n">mus</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">41</span><span class="p">)</span>
+    <span class="n">mu_used</span><span class="p">,</span> <span class="n">converged</span><span class="p">,</span> <span class="n">iterations</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">),</span> <span class="kc">False</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">iterations</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_iterations</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">rhs_data</span> <span class="o">=</span> <span class="n">residual</span> <span class="o">+</span> <span class="n">jac</span> <span class="o">@</span> <span class="n">x</span>
+        <span class="n">JtJ</span><span class="p">,</span> <span class="n">Jtd</span> <span class="o">=</span> <span class="n">jac</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">jac</span><span class="p">,</span> <span class="n">jac</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">rhs_data</span>
+        <span class="n">candidates</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">mu</span> <span class="ow">in</span> <span class="n">mus</span><span class="p">:</span>
+            <span class="n">A</span> <span class="o">=</span> <span class="n">JtJ</span> <span class="o">+</span> <span class="n">mu</span> <span class="o">*</span> <span class="n">D</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">D</span> <span class="o">+</span> <span class="n">prior</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">prior</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">candidate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">Jtd</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">candidate</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">candidate</span><span class="p">[:</span><span class="n">n</span><span class="p">],</span> <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span><span class="p">)</span>
+            <span class="n">linear</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">rhs_data</span> <span class="o">-</span> <span class="n">jac</span> <span class="o">@</span> <span class="n">candidate</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)))</span>
+            <span class="n">candidates</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">mu</span><span class="p">,</span> <span class="n">linear</span><span class="p">,</span> <span class="n">candidate</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">candidates</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="c1"># The true forward decides among the candidates - all of them when it is</span>
+        <span class="c1"># cheap; with a TEM forward, a coarse sweep of mu plus the neighbours of</span>
+        <span class="c1"># the linearized choice.</span>
+        <span class="k">if</span> <span class="n">block</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">chosen</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">candidates</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">guess</span> <span class="o">=</span> <span class="n">_occam_choice</span><span class="p">([(</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">],</span> <span class="n">target_rms</span><span class="p">)</span>
+            <span class="n">chosen</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">candidates</span><span class="p">),</span> <span class="mi">5</span><span class="p">))</span> <span class="o">|</span> <span class="p">{</span>
+                <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">guess</span> <span class="o">+</span> <span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">candidates</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)})</span>
+        <span class="n">trials</span> <span class="o">=</span> <span class="p">[(</span><span class="n">candidates</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">evaluate</span><span class="p">(</span><span class="n">candidates</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">])[</span><span class="mi">0</span><span class="p">],</span> <span class="n">candidates</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">chosen</span><span class="p">]</span>
+        <span class="n">best</span> <span class="o">=</span> <span class="n">_occam_choice</span><span class="p">([(</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">trials</span><span class="p">],</span> <span class="n">target_rms</span><span class="p">)</span>
+        <span class="n">mu_used</span><span class="p">,</span> <span class="n">new_rms</span><span class="p">,</span> <span class="n">x_new</span> <span class="o">=</span> <span class="n">trials</span><span class="p">[</span><span class="n">best</span><span class="p">]</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">while</span> <span class="n">new_rms</span> <span class="o">&gt;</span> <span class="n">rms</span> <span class="ow">and</span> <span class="n">step</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">16</span><span class="p">:</span>
+            <span class="c1"># Occam's safeguard: a step that makes things worse is shortened.</span>
+            <span class="n">step</span> <span class="o">/=</span> <span class="mi">2</span>
+            <span class="n">x_try</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">step</span> <span class="o">*</span> <span class="p">(</span><span class="n">trials</span><span class="p">[</span><span class="n">best</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span>
+            <span class="n">try_rms</span> <span class="o">=</span> <span class="n">evaluate</span><span class="p">(</span><span class="n">x_try</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">try_rms</span> <span class="o">&lt;</span> <span class="n">new_rms</span><span class="p">:</span>
+                <span class="n">new_rms</span><span class="p">,</span> <span class="n">x_new</span> <span class="o">=</span> <span class="n">try_rms</span><span class="p">,</span> <span class="n">x_try</span>
+        <span class="n">rough_new</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">x_new</span><span class="p">[:</span><span class="n">n</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="n">rough_old</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">x</span><span class="p">[:</span><span class="n">n</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x_new</span>
+        <span class="n">rms</span><span class="p">,</span> <span class="n">residual</span><span class="p">,</span> <span class="n">jac</span><span class="p">,</span> <span class="n">predicted</span> <span class="o">=</span> <span class="n">evaluate</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">history</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"iteration"</span><span class="p">:</span> <span class="n">iterations</span><span class="p">,</span> <span class="s2">"rms"</span><span class="p">:</span> <span class="n">rms</span><span class="p">,</span> <span class="s2">"mu"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">mu_used</span><span class="p">),</span> <span class="s2">"roughness"</span><span class="p">:</span> <span class="n">rough_new</span><span class="p">})</span>
+        <span class="k">if</span> <span class="n">log</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Occam iteration </span><span class="si">{</span><span class="n">iterations</span><span class="si">}</span><span class="s2">: RMS </span><span class="si">{</span><span class="n">rms</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, mu </span><span class="si">{</span><span class="n">mu_used</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">rms</span> <span class="o">&lt;=</span> <span class="n">target_rms</span> <span class="o">*</span> <span class="mf">1.01</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">rough_new</span> <span class="o">-</span> <span class="n">rough_old</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mf">1e-3</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="n">rough_old</span><span class="p">,</span> <span class="mf">1e-6</span><span class="p">):</span>
+            <span class="n">converged</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">break</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">history</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">rms</span> <span class="o">&gt;</span> <span class="n">target_rms</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">history</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s2">"rms"</span><span class="p">]</span> <span class="o">-</span> <span class="n">rms</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-3</span> <span class="o">*</span> <span class="n">rms</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="n">shifts</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="mi">10</span> <span class="o">**</span> <span class="n">x</span><span class="p">[</span><span class="n">n</span> <span class="o">+</span> <span class="n">k</span><span class="p">])</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sounding</span><span class="o">.</span><span class="n">modes</span><span class="p">)}</span> <span class="k">if</span> <span class="n">n_shift</span> <span class="k">else</span> <span class="p">{}</span>
+    <span class="n">tem_out</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">block</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">tem_out</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"observed"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">dobs</span><span class="p">),</span> <span class="s2">"uncertainty"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">uncertainty</span><span class="p">),</span>
+                   <span class="s2">"predicted"</span><span class="p">:</span> <span class="n">predicted</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"tem_predicted"</span><span class="p">)}</span>
+    <span class="k">return</span> <span class="n">Occam1DResult</span><span class="p">(</span>
+        <span class="n">resistivity</span><span class="o">=</span><span class="mf">10.0</span> <span class="o">**</span> <span class="n">x</span><span class="p">[:</span><span class="n">n</span><span class="p">],</span> <span class="n">thickness</span><span class="o">=</span><span class="n">h</span><span class="p">,</span> <span class="n">rms</span><span class="o">=</span><span class="n">rms</span><span class="p">,</span>
+        <span class="n">roughness</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">x</span><span class="p">[:</span><span class="n">n</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)),</span> <span class="n">mu</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">mu_used</span><span class="p">),</span> <span class="n">static_shift</span><span class="o">=</span><span class="n">shifts</span><span class="p">,</span>
+        <span class="n">predicted</span><span class="o">=</span><span class="p">{</span><span class="s2">"log_rho_a"</span><span class="p">:</span> <span class="n">predicted</span><span class="p">[</span><span class="s2">"log_rho_a"</span><span class="p">],</span> <span class="s2">"phase"</span><span class="p">:</span> <span class="n">predicted</span><span class="p">[</span><span class="s2">"phase"</span><span class="p">]},</span>
+        <span class="n">sounding</span><span class="o">=</span><span class="n">sounding</span><span class="p">,</span> <span class="n">iterations</span><span class="o">=</span><span class="n">iterations</span><span class="p">,</span> <span class="n">history</span><span class="o">=</span><span class="n">history</span><span class="p">,</span> <span class="n">tem</span><span class="o">=</span><span class="n">tem_out</span><span class="p">,</span>
+        <span class="n">converged</span><span class="o">=</span><span class="n">converged</span> <span class="ow">or</span> <span class="n">rms</span> <span class="o">&lt;=</span> <span class="n">target_rms</span> <span class="o">*</span> <span class="mf">1.01</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="water_content_profile">
+<a class="viewcode-back" href="../../../../api/data_processing.html#PyHydroGeophysX.data_processing.mt.inversion1d.water_content_profile">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">water_content_profile</span><span class="p">(</span><span class="n">result</span><span class="p">:</span> <span class="n">Occam1DResult</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">rhos</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">porosity</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                          <span class="n">sigma_sur</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Volumetric water content of each layer from its resistivity (Waxman-Smits).</span>
+
+<span class="sd">    The petrophysical link the rest of PyHydroGeophysX uses</span>
+<span class="sd">    (:func:`PyHydroGeophysX.petrophysics.resistivity_models.resistivity_to_water_content`):</span>
+<span class="sd">    ``rhos`` the saturated resistivity, ``n`` the saturation exponent,</span>
+<span class="sd">    ``porosity`` and ``sigma_sur`` the surface conductivity - each one value</span>
+<span class="sd">    or one per layer.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics.resistivity_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">resistivity_to_water_content</span>
+
+    <span class="n">shape</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">resistivity</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">per_layer</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">shape</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">rhos</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">porosity</span><span class="p">,</span> <span class="n">sigma_sur</span><span class="p">)]</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">resistivity_to_water_content</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">p</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
+                      <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">resistivity</span><span class="p">,</span> <span class="o">*</span><span class="n">per_layer</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"top"</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">depth</span><span class="p">,</span> <span class="s2">"water_content"</span><span class="p">:</span> <span class="n">theta</span><span class="p">,</span> <span class="s2">"resistivity"</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">resistivity</span><span class="p">}</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

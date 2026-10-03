@@ -1,0 +1,893 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.data_processing.mt.inversion2d &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../../_static/documentation_options.js?v=1dd76d02"></script>
+    <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/data_processing/mt/inversion2d';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../../../../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/data_processing/mt/inversion2d.html" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../../_static/searchtools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <script src="../../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../changelog.html">
+    Changelog
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../changelog.html">
+    Changelog
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.data_processing.mt.inversion2d</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.data_processing.mt.inversion2d</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""2D MT forward modelling and inversion of a profile, on SimPEG's NSEM simulations.</span>
+
+<span class="sd">A profile of sites across a 2D structure is modelled on a tensor mesh in the</span>
+<span class="sd">vertical plane through it: the profile horizontal, the strike out of the</span>
+<span class="sd">plane, air above the surface. SimPEG (Cockett et al. 2015) solves Maxwell's</span>
+<span class="sd">equations there for the two polarizations - **TE**, the electric field along</span>
+<span class="sd">strike, which is ``Zxy`` in the strike frame, and **TM**, the electric field</span>
+<span class="sd">across strike, ``Zyx`` - with 1D fields as the side boundary conditions.</span>
+
+<span class="sd">:func:`invert_profile` rotates each site's impedance to the strike, fits the</span>
+<span class="sd">real and imaginary parts of the chosen modes (errors: the impedance's own,</span>
+<span class="sd">with a relative floor) for the logarithm of conductivity below the surface,</span>
+<span class="sd">with a smoothness regularization whose weight is cooled until the misfit</span>
+<span class="sd">reaches its target (Gauss-Newton, conjugate gradients). The mesh is laid out</span>
+<span class="sd">from the frequencies: cells a tenth of the least skin depth at the top,</span>
+<span class="sd">growing to three times the greatest below and beside the profile.</span>
+
+<span class="sd">SimPEG works in east, north, up; here the strike is SimPEG's y. Its</span>
+<span class="sd">e^{+i omega t} impedances agree with this package's, and on a layered earth</span>
+<span class="sd">both modes reproduce :func:`.forward1d.impedance_1d` to within the mesh's</span>
+<span class="sd">discretization: about 1-2% over most of the band, rising to a few per cent at</span>
+<span class="sd">the highest frequency (9% for TE at 1 kHz over 30 ohm m on the default mesh;</span>
+<span class="sd">a finer ``top_cell`` halves that but not the TM error, which depends on how</span>
+<span class="sd">the surface fields are interpolated). On a synthetic block the inversion</span>
+<span class="sd">recovers 12 ohm m for 10 inside it and 96 for 100 beside it.</span>
+
+<span class="sd">Cockett, R., Kang, S., Heagy, L. J., Pidlisecky, A. &amp; Oldenburg, D. W.</span>
+<span class="sd">(2015). SimPEG: an open source framework for simulation and gradient based</span>
+<span class="sd">parameter estimation in geophysical applications. Computers &amp; Geosciences,</span>
+<span class="sd">85, 142-154. https://doi.org/10.1016/j.cageo.2015.09.015</span>
+
+<span class="sd">deGroot-Hedlin, C. &amp; Constable, S. (1990). Occam's inversion to generate</span>
+<span class="sd">smooth, two-dimensional models from magnetotelluric data. Geophysics, 55(12),</span>
+<span class="sd">1613-1624. https://doi.org/10.1190/1.1442813</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.transfer_function</span><span class="w"> </span><span class="kn">import</span> <span class="n">TransferFunction</span>
+
+<span class="n">_AIR_CONDUCTIVITY</span> <span class="o">=</span> <span class="mf">1e-8</span>
+<span class="n">_MODES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"te"</span><span class="p">,</span> <span class="s2">"tm"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_skin_depth</span><span class="p">(</span><span class="n">resistivity</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="k">return</span> <span class="mf">503.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">resistivity</span> <span class="o">/</span> <span class="n">frequency</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ProfileMesh">
+<a class="viewcode-back" href="../../../../api/data_processing.html#PyHydroGeophysX.data_processing.mt.inversion2d.ProfileMesh">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ProfileMesh</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A 2D tensor mesh for a profile: ``mesh`` (discretize) and its ground cells."""</span>
+
+    <span class="n">mesh</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="n">active</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">station_x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">ground_centers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="o">.</span><span class="n">cell_centers</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">active</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="build_profile_mesh">
+<a class="viewcode-back" href="../../../../api/data_processing.html#PyHydroGeophysX.data_processing.mt.inversion2d.build_profile_mesh">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_profile_mesh</span><span class="p">(</span><span class="n">station_x</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">frequencies</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span>
+                       <span class="n">resistivity</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">100.0</span><span class="p">,</span> <span class="n">core_cell</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                       <span class="n">top_cell</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">vertical_growth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.12</span><span class="p">,</span>
+                       <span class="n">padding_growth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.4</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProfileMesh</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A mesh fitted to the profile and the band.</span>
+
+<span class="sd">    ``core_cell`` (default: half the least station spacing, at most a fifth of</span>
+<span class="sd">    the least skin depth) spans the stations; ``top_cell`` (default: a tenth</span>
+<span class="sd">    of the least skin depth) starts the ground, which grows by</span>
+<span class="sd">    ``vertical_growth`` to three greatest skin depths; padding grows by</span>
+<span class="sd">    ``padding_growth`` beyond the profile as far, and the air above as high.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">discretize</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">station_x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">frequencies</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">least</span><span class="p">,</span> <span class="n">greatest</span> <span class="o">=</span> <span class="n">_skin_depth</span><span class="p">(</span><span class="n">resistivity</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">max</span><span class="p">()),</span> <span class="n">_skin_depth</span><span class="p">(</span><span class="n">resistivity</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
+    <span class="n">spacing</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">x</span><span class="p">))</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">least</span>
+    <span class="n">dx</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">core_cell</span> <span class="ow">or</span> <span class="nb">max</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">spacing</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">,</span> <span class="n">least</span> <span class="o">/</span> <span class="mf">5.0</span><span class="p">),</span> <span class="mf">1.0</span><span class="p">))</span>
+    <span class="n">dz</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">top_cell</span> <span class="ow">or</span> <span class="nb">max</span><span class="p">(</span><span class="n">least</span> <span class="o">/</span> <span class="mf">10.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">))</span>
+    <span class="n">reach</span> <span class="o">=</span> <span class="mf">3.0</span> <span class="o">*</span> <span class="n">greatest</span>
+    <span class="n">n_core</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">((</span><span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">dx</span><span class="p">)</span> <span class="o">/</span> <span class="n">dx</span><span class="p">))</span>
+    <span class="n">pad</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">while</span> <span class="nb">sum</span><span class="p">(</span><span class="n">pad</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">reach</span><span class="p">:</span>
+        <span class="n">pad</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dx</span> <span class="o">*</span> <span class="n">padding_growth</span> <span class="o">**</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pad</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">hx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">pad</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">n_core</span><span class="p">,</span> <span class="n">dx</span><span class="p">),</span> <span class="n">pad</span><span class="p">]</span>
+    <span class="n">ground</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">while</span> <span class="nb">sum</span><span class="p">(</span><span class="n">ground</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">reach</span><span class="p">:</span>
+        <span class="n">ground</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dz</span> <span class="o">*</span> <span class="n">vertical_growth</span> <span class="o">**</span> <span class="nb">len</span><span class="p">(</span><span class="n">ground</span><span class="p">))</span>
+    <span class="n">air</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">while</span> <span class="nb">sum</span><span class="p">(</span><span class="n">air</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">reach</span><span class="p">:</span>
+        <span class="n">air</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dz</span> <span class="o">*</span> <span class="mf">1.5</span> <span class="o">**</span> <span class="nb">len</span><span class="p">(</span><span class="n">air</span><span class="p">))</span>
+    <span class="n">hz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">ground</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">air</span><span class="p">]</span>
+    <span class="n">centre</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">+</span> <span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+    <span class="n">origin</span> <span class="o">=</span> <span class="p">[</span><span class="n">centre</span> <span class="o">-</span> <span class="n">n_core</span> <span class="o">*</span> <span class="n">dx</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">-</span> <span class="nb">sum</span><span class="p">(</span><span class="n">pad</span><span class="p">),</span> <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">ground</span><span class="p">))]</span>
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">discretize</span><span class="o">.</span><span class="n">TensorMesh</span><span class="p">([</span><span class="n">hx</span><span class="p">,</span> <span class="n">hz</span><span class="p">],</span> <span class="n">origin</span><span class="o">=</span><span class="n">origin</span><span class="p">)</span>
+    <span class="n">active</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cell_centers</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.0</span>
+    <span class="k">return</span> <span class="n">ProfileMesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">active</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_solver</span><span class="p">():</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">simpeg.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_default_solver</span>
+
+        <span class="k">return</span> <span class="n">get_default_solver</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pragma: no cover - older SimPEG</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_simulations</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="n">ProfileMesh</span><span class="p">,</span> <span class="n">station_x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">frequencies</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                 <span class="n">modes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">mapping</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">simpeg.electromagnetics</span><span class="w"> </span><span class="kn">import</span> <span class="n">natural_source</span> <span class="k">as</span> <span class="n">nsem</span>
+
+    <span class="n">locations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">station_x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">station_x</span><span class="o">.</span><span class="n">size</span><span class="p">)]</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">solver</span> <span class="o">=</span> <span class="n">_solver</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">mode</span> <span class="ow">in</span> <span class="n">modes</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_MODES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"modes must be among </span><span class="si">{</span><span class="n">_MODES</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">orientation</span> <span class="o">=</span> <span class="s2">"yx"</span> <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">"te"</span> <span class="k">else</span> <span class="s2">"xy"</span>
+        <span class="n">receivers</span> <span class="o">=</span> <span class="p">[</span><span class="n">nsem</span><span class="o">.</span><span class="n">receivers</span><span class="o">.</span><span class="n">Impedance</span><span class="p">(</span><span class="n">locations</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="n">orientation</span><span class="p">,</span> <span class="n">component</span><span class="o">=</span><span class="n">c</span><span class="p">)</span>
+                     <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"real"</span><span class="p">,</span> <span class="s2">"imag"</span><span class="p">)]</span>
+        <span class="n">sources</span> <span class="o">=</span> <span class="p">[</span><span class="n">nsem</span><span class="o">.</span><span class="n">sources</span><span class="o">.</span><span class="n">Planewave</span><span class="p">(</span><span class="n">receivers</span><span class="p">,</span> <span class="n">frequency</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">fr</span><span class="p">))</span> <span class="k">for</span> <span class="n">fr</span> <span class="ow">in</span> <span class="n">frequencies</span><span class="p">]</span>
+        <span class="bp">cls</span> <span class="o">=</span> <span class="n">nsem</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">Simulation2DMagneticField</span> <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">"te"</span> <span class="k">else</span> <span class="n">nsem</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">Simulation2DElectricField</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"survey"</span><span class="p">:</span> <span class="n">nsem</span><span class="o">.</span><span class="n">Survey</span><span class="p">(</span><span class="n">sources</span><span class="p">),</span> <span class="s2">"sigmaMap"</span><span class="p">:</span> <span class="n">mapping</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">solver</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s2">"solver"</span><span class="p">]</span> <span class="o">=</span> <span class="n">solver</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">mode</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">profile</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_unpack</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">n_freq</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_sta</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n_freq</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">n_sta</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">d</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">d</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_ground_map</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="n">ProfileMesh</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""log conductivity of the ground cells -&gt; conductivity of every cell (air fixed)."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">simpeg</span><span class="w"> </span><span class="kn">import</span> <span class="n">maps</span>
+
+    <span class="n">inject</span> <span class="o">=</span> <span class="n">maps</span><span class="o">.</span><span class="n">InjectActiveCells</span><span class="p">(</span><span class="n">profile</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="n">profile</span><span class="o">.</span><span class="n">active</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">_AIR_CONDUCTIVITY</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">maps</span><span class="o">.</span><span class="n">ExpMap</span><span class="p">(</span><span class="n">profile</span><span class="o">.</span><span class="n">mesh</span><span class="p">)</span> <span class="o">*</span> <span class="n">inject</span>
+
+
+<div class="viewcode-block" id="forward_profile">
+<a class="viewcode-back" href="../../../../api/data_processing.html#PyHydroGeophysX.data_processing.mt.inversion2d.forward_profile">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">forward_profile</span><span class="p">(</span><span class="n">profile</span><span class="p">:</span> <span class="n">ProfileMesh</span><span class="p">,</span> <span class="n">resistivity</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">frequencies</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span>
+                    <span class="n">station_x</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="n">modes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">_MODES</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""TE and TM impedances (ohm, strike frame) at the stations: ``{mode: (n_freq, n_sta)}``.</span>
+
+<span class="sd">    ``resistivity`` is one value per ground cell (``profile.active``), or a</span>
+<span class="sd">    callable of the ground cells' centres ``(x, z)``.</span>
+<span class="sd">    """</span>
+    <span class="n">centers</span> <span class="o">=</span> <span class="n">profile</span><span class="o">.</span><span class="n">ground_centers</span>
+    <span class="n">rho</span> <span class="o">=</span> <span class="n">resistivity</span><span class="p">(</span><span class="n">centers</span><span class="p">)</span> <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">resistivity</span><span class="p">)</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">resistivity</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="p">(</span><span class="n">centers</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],))</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">profile</span><span class="o">.</span><span class="n">station_x</span> <span class="k">if</span> <span class="n">station_x</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">station_x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">frequencies</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">sims</span> <span class="o">=</span> <span class="n">_simulations</span><span class="p">(</span><span class="n">profile</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">modes</span><span class="p">,</span> <span class="n">_ground_map</span><span class="p">(</span><span class="n">profile</span><span class="p">))</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rho</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">mode</span><span class="p">:</span> <span class="n">_unpack</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">dpred</span><span class="p">(</span><span class="n">model</span><span class="p">),</span> <span class="n">f</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">)</span> <span class="k">for</span> <span class="n">mode</span><span class="p">,</span> <span class="n">sim</span> <span class="ow">in</span> <span class="n">sims</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span></div>
+
+
+
+<div class="viewcode-block" id="ProfileInversionResult">
+<a class="viewcode-back" href="../../../../api/data_processing.html#PyHydroGeophysX.data_processing.mt.inversion2d.ProfileInversionResult">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ProfileInversionResult</span><span class="p">:</span>
+    <span class="n">profile</span><span class="p">:</span> <span class="n">ProfileMesh</span>
+    <span class="n">resistivity</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">frequencies</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">modes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">observed</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
+    <span class="n">predicted</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
+    <span class="n">uncertainty</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
+    <span class="n">rms</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">history</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ProfileInversionResult.section">
+<a class="viewcode-back" href="../../../../api/data_processing.html#PyHydroGeophysX.data_processing.mt.inversion2d.ProfileInversionResult.section">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">section</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""``(x_nodes, z_nodes, resistivity grid)`` of the ground, for ``pcolormesh``."""</span>
+        <span class="n">mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">profile</span><span class="o">.</span><span class="n">mesh</span>
+        <span class="n">full</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">n_cells</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        <span class="n">full</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">profile</span><span class="o">.</span><span class="n">active</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resistivity</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">full</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">shape_cells</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s2">"F"</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">ground_rows</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">cell_centers_y</span> <span class="o">&lt;</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="n">mesh</span><span class="o">.</span><span class="n">nodes_x</span><span class="p">,</span> <span class="n">mesh</span><span class="o">.</span><span class="n">nodes_y</span><span class="p">[:</span> <span class="n">ground_rows</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">grid</span><span class="p">[</span><span class="n">ground_rows</span><span class="p">]</span></div>
+</div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_profile_data</span><span class="p">(</span><span class="n">tfs</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">TransferFunction</span><span class="p">],</span> <span class="n">frequencies</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">strike</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                  <span class="n">modes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">error_floor</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="n">observed</span><span class="p">,</span> <span class="n">uncertainty</span> <span class="o">=</span> <span class="p">{},</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">mode</span> <span class="ow">in</span> <span class="n">modes</span><span class="p">:</span>
+        <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">"te"</span> <span class="k">else</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">frequencies</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">tfs</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span> <span class="o">+</span> <span class="mi">0</span><span class="n">j</span><span class="p">)</span>
+        <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">tf</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tfs</span><span class="p">):</span>
+            <span class="n">rotated</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">rotated</span><span class="p">(</span><span class="n">strike</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">fr</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">frequencies</span><span class="p">):</span>
+                <span class="n">m</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">rotated</span><span class="o">.</span><span class="n">frequency</span> <span class="o">/</span> <span class="n">fr</span><span class="p">))))</span>
+                <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">rotated</span><span class="o">.</span><span class="n">frequency</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">/</span> <span class="n">fr</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">:</span>
+                    <span class="n">z</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">rotated</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="n">m</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
+                    <span class="n">e</span> <span class="o">=</span> <span class="n">rotated</span><span class="o">.</span><span class="n">z_err</span><span class="p">[</span><span class="n">m</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="k">if</span> <span class="n">rotated</span><span class="o">.</span><span class="n">z_err</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+                    <span class="n">err</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">([</span><span class="n">e</span><span class="p">,</span> <span class="n">error_floor</span> <span class="o">*</span> <span class="nb">abs</span><span class="p">(</span><span class="n">z</span><span class="p">[</span><span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">])])</span>
+        <span class="n">observed</span><span class="p">[</span><span class="n">mode</span><span class="p">],</span> <span class="n">uncertainty</span><span class="p">[</span><span class="n">mode</span><span class="p">]</span> <span class="o">=</span> <span class="n">z</span><span class="p">,</span> <span class="n">err</span>
+    <span class="k">return</span> <span class="n">observed</span><span class="p">,</span> <span class="n">uncertainty</span>
+
+
+<div class="viewcode-block" id="invert_profile">
+<a class="viewcode-back" href="../../../../api/data_processing.html#PyHydroGeophysX.data_processing.mt.inversion2d.invert_profile">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">invert_profile</span><span class="p">(</span><span class="n">tfs</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">TransferFunction</span><span class="p">],</span> <span class="n">station_x</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="o">*</span><span class="p">,</span>
+                   <span class="n">strike</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">modes</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">_MODES</span><span class="p">,</span>
+                   <span class="n">frequencies</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">error_floor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>
+                   <span class="n">starting_resistivity</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">profile</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ProfileMesh</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">max_iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span> <span class="n">alpha_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="p">,</span> <span class="n">beta0_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
+                   <span class="n">cooling_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span> <span class="n">target_chifact</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+                   <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">log</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProfileInversionResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Smooth 2D resistivity section that fits a profile's TE and/or TM impedances.</span>
+
+<span class="sd">    ``tfs`` are the sites' transfer functions and ``station_x`` their</span>
+<span class="sd">    distances along the profile (m); ``strike`` (degrees clockwise from</span>
+<span class="sd">    north) is the strike the impedances are rotated to. ``frequencies``</span>
+<span class="sd">    defaults to those of the first site, which every site should share.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">simpeg</span><span class="w"> </span><span class="kn">import</span> <span class="n">data</span> <span class="k">as</span> <span class="n">sdata</span><span class="p">,</span> <span class="n">data_misfit</span><span class="p">,</span> <span class="n">directives</span><span class="p">,</span> <span class="n">inverse_problem</span><span class="p">,</span> <span class="n">inversion</span><span class="p">,</span> \
+        <span class="n">optimization</span><span class="p">,</span> <span class="n">regularization</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">station_x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">frequencies</span> <span class="k">if</span> <span class="n">frequencies</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">tfs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">observed</span><span class="p">,</span> <span class="n">uncertainty</span> <span class="o">=</span> <span class="n">_profile_data</span><span class="p">(</span><span class="n">tfs</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">strike</span><span class="p">,</span> <span class="n">modes</span><span class="p">,</span> <span class="n">error_floor</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">starting_resistivity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">rho_a</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">observed</span><span class="p">[</span><span class="n">m</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">f</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="mf">4e-7</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">modes</span><span class="p">]</span>
+        <span class="n">starting_resistivity</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="mi">10</span> <span class="o">**</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmedian</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">r</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rho_a</span><span class="p">]))))</span>
+    <span class="n">profile</span> <span class="o">=</span> <span class="n">profile</span> <span class="ow">or</span> <span class="n">build_profile_mesh</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">resistivity</span><span class="o">=</span><span class="n">starting_resistivity</span><span class="p">)</span>
+    <span class="n">mapping</span> <span class="o">=</span> <span class="n">_ground_map</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+    <span class="n">sims</span> <span class="o">=</span> <span class="n">_simulations</span><span class="p">(</span><span class="n">profile</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">modes</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span>
+    <span class="n">misfits</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">mode</span> <span class="ow">in</span> <span class="n">modes</span><span class="p">:</span>
+        <span class="n">obs</span><span class="p">,</span> <span class="n">unc</span> <span class="o">=</span> <span class="n">observed</span><span class="p">[</span><span class="n">mode</span><span class="p">],</span> <span class="n">uncertainty</span><span class="p">[</span><span class="n">mode</span><span class="p">]</span>
+        <span class="n">dobs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">obs</span><span class="o">.</span><span class="n">real</span><span class="p">,</span> <span class="n">obs</span><span class="o">.</span><span class="n">imag</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">unc</span><span class="p">,</span> <span class="n">unc</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">keep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">dobs</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">std</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">std</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">dobs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">keep</span><span class="p">,</span> <span class="n">dobs</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">keep</span><span class="p">,</span> <span class="n">std</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span>
+        <span class="n">data_object</span> <span class="o">=</span> <span class="n">sdata</span><span class="o">.</span><span class="n">Data</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="n">mode</span><span class="p">]</span><span class="o">.</span><span class="n">survey</span><span class="p">,</span> <span class="n">dobs</span><span class="o">=</span><span class="n">dobs</span><span class="p">,</span> <span class="n">standard_deviation</span><span class="o">=</span><span class="n">std</span><span class="p">)</span>
+        <span class="n">misfits</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_misfit</span><span class="o">.</span><span class="n">L2DataMisfit</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data_object</span><span class="p">,</span> <span class="n">simulation</span><span class="o">=</span><span class="n">sims</span><span class="p">[</span><span class="n">mode</span><span class="p">]))</span>
+    <span class="n">dmis</span> <span class="o">=</span> <span class="n">misfits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">extra</span> <span class="ow">in</span> <span class="n">misfits</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="n">dmis</span> <span class="o">=</span> <span class="n">dmis</span> <span class="o">+</span> <span class="n">extra</span>
+    <span class="n">n_active</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">profile</span><span class="o">.</span><span class="n">active</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+    <span class="n">reg</span> <span class="o">=</span> <span class="n">regularization</span><span class="o">.</span><span class="n">WeightedLeastSquares</span><span class="p">(</span>
+        <span class="n">profile</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="n">active_cells</span><span class="o">=</span><span class="n">profile</span><span class="o">.</span><span class="n">active</span><span class="p">,</span> <span class="n">alpha_s</span><span class="o">=</span><span class="n">alpha_s</span><span class="p">,</span>
+        <span class="n">reference_model</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">n_active</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">starting_resistivity</span><span class="p">)))</span>
+    <span class="n">opt</span> <span class="o">=</span> <span class="n">optimization</span><span class="o">.</span><span class="n">InexactGaussNewton</span><span class="p">(</span><span class="n">maxIter</span><span class="o">=</span><span class="n">max_iterations</span><span class="p">,</span> <span class="n">maxIterCG</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">tolCG</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span>
+    <span class="n">problem</span> <span class="o">=</span> <span class="n">inverse_problem</span><span class="o">.</span><span class="n">BaseInvProblem</span><span class="p">(</span><span class="n">dmis</span><span class="p">,</span> <span class="n">reg</span><span class="p">,</span> <span class="n">opt</span><span class="p">)</span>
+    <span class="n">history</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">_Record</span><span class="p">(</span><span class="n">directives</span><span class="o">.</span><span class="n">InversionDirective</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">endIter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="n">history</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"iteration"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">opt</span><span class="o">.</span><span class="n">iter</span><span class="p">),</span> <span class="s2">"phi_d"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invProb</span><span class="o">.</span><span class="n">phi_d</span><span class="p">),</span>
+                            <span class="s2">"phi_m"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invProb</span><span class="o">.</span><span class="n">phi_m</span><span class="p">),</span> <span class="s2">"beta"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invProb</span><span class="o">.</span><span class="n">beta</span><span class="p">)})</span>
+            <span class="k">if</span> <span class="n">log</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  2D iteration </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">opt</span><span class="o">.</span><span class="n">iter</span><span class="p">)</span><span class="si">}</span><span class="s2">: phi_d </span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invProb</span><span class="o">.</span><span class="n">phi_d</span><span class="p">)</span><span class="si">:</span><span class="s2">.4g</span><span class="si">}</span><span class="s2">, "</span>
+                    <span class="sa">f</span><span class="s2">"beta </span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invProb</span><span class="o">.</span><span class="n">beta</span><span class="p">)</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="n">target</span> <span class="o">=</span> <span class="n">directives</span><span class="o">.</span><span class="n">TargetMisfit</span><span class="p">(</span><span class="n">chifact</span><span class="o">=</span><span class="n">target_chifact</span><span class="p">)</span>
+    <span class="n">steps</span> <span class="o">=</span> <span class="p">[</span><span class="n">directives</span><span class="o">.</span><span class="n">BetaEstimate_ByEig</span><span class="p">(</span><span class="n">beta0_ratio</span><span class="o">=</span><span class="n">beta0_ratio</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="n">seed</span><span class="p">),</span>
+             <span class="n">directives</span><span class="o">.</span><span class="n">BetaSchedule</span><span class="p">(</span><span class="n">coolingFactor</span><span class="o">=</span><span class="n">cooling_factor</span><span class="p">,</span> <span class="n">coolingRate</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+             <span class="n">target</span><span class="p">,</span> <span class="n">_Record</span><span class="p">()]</span>
+    <span class="n">inv</span> <span class="o">=</span> <span class="n">inversion</span><span class="o">.</span><span class="n">BaseInversion</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">directiveList</span><span class="o">=</span><span class="n">steps</span><span class="p">)</span>
+    <span class="n">m0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">n_active</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">starting_resistivity</span><span class="p">))</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">inv</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">m0</span><span class="p">)</span>
+    <span class="n">predicted</span> <span class="o">=</span> <span class="p">{</span><span class="n">mode</span><span class="p">:</span> <span class="n">_unpack</span><span class="p">(</span><span class="n">sims</span><span class="p">[</span><span class="n">mode</span><span class="p">]</span><span class="o">.</span><span class="n">dpred</span><span class="p">(</span><span class="n">model</span><span class="p">),</span> <span class="n">f</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">)</span> <span class="k">for</span> <span class="n">mode</span> <span class="ow">in</span> <span class="n">modes</span><span class="p">}</span>
+    <span class="n">n_data</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">observed</span><span class="p">[</span><span class="n">m</span><span class="p">])</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span> <span class="o">*</span> <span class="mi">2</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">modes</span><span class="p">)</span>
+    <span class="n">phi_d</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(((</span><span class="n">predicted</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">-</span> <span class="n">observed</span><span class="p">[</span><span class="n">m</span><span class="p">])</span><span class="o">.</span><span class="n">real</span> <span class="o">/</span> <span class="n">uncertainty</span><span class="p">[</span><span class="n">m</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
+                                <span class="o">+</span> <span class="p">((</span><span class="n">predicted</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">-</span> <span class="n">observed</span><span class="p">[</span><span class="n">m</span><span class="p">])</span><span class="o">.</span><span class="n">imag</span> <span class="o">/</span> <span class="n">uncertainty</span><span class="p">[</span><span class="n">m</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">modes</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ProfileInversionResult</span><span class="p">(</span><span class="n">profile</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">model</span><span class="p">),</span> <span class="n">f</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">modes</span><span class="p">),</span> <span class="n">observed</span><span class="p">,</span> <span class="n">predicted</span><span class="p">,</span>
+                                  <span class="n">uncertainty</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">phi_d</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">n_data</span><span class="p">,</span> <span class="mi">1</span><span class="p">))),</span> <span class="n">history</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="station_distances">
+<a class="viewcode-back" href="../../../../api/data_processing.html#PyHydroGeophysX.data_processing.mt.inversion2d.station_distances">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">station_distances</span><span class="p">(</span><span class="n">tfs</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">TransferFunction</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Each site's distance along its profile (m) and the profile's azimuth (deg).</span>
+
+<span class="sd">    The sites' latitudes and longitudes are projected on a local plane</span>
+<span class="sd">    (equirectangular, about their mean); the profile is their principal</span>
+<span class="sd">    direction, and distances count from the site at its start.</span>
+<span class="sd">    """</span>
+    <span class="n">lat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">tf</span><span class="o">.</span><span class="n">latitude</span> <span class="k">for</span> <span class="n">tf</span> <span class="ow">in</span> <span class="n">tfs</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">tf</span><span class="o">.</span><span class="n">longitude</span> <span class="k">for</span> <span class="n">tf</span> <span class="ow">in</span> <span class="n">tfs</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">lat</span><span class="p">))</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">lon</span><span class="p">))):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"every site needs a latitude and longitude, or give the positions"</span><span class="p">)</span>
+    <span class="n">radius</span> <span class="o">=</span> <span class="mf">6371000.0</span>
+    <span class="n">north</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">lat</span> <span class="o">-</span> <span class="n">lat</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">*</span> <span class="n">radius</span>
+    <span class="n">east</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">lon</span> <span class="o">-</span> <span class="n">lon</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">*</span> <span class="n">radius</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">lat</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">north</span><span class="p">,</span> <span class="n">east</span><span class="p">])</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tfs</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tfs</span><span class="p">)),</span> <span class="mf">0.0</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">vt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">points</span> <span class="o">-</span> <span class="n">points</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">direction</span> <span class="o">=</span> <span class="n">vt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">along</span> <span class="o">=</span> <span class="n">points</span> <span class="o">@</span> <span class="n">direction</span>
+    <span class="k">if</span> <span class="n">along</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">along</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="n">direction</span><span class="p">,</span> <span class="n">along</span> <span class="o">=</span> <span class="o">-</span><span class="n">direction</span><span class="p">,</span> <span class="o">-</span><span class="n">along</span>
+    <span class="n">azimuth</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">direction</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">direction</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="o">%</span> <span class="mf">360.0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">along</span> <span class="o">-</span> <span class="n">along</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">azimuth</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

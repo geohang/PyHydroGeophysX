@@ -1,0 +1,887 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Adding an assistant &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=1dd76d02"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'agents/adding_an_assistant';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/agents/adding_an_assistant.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Troubleshooting" href="troubleshooting.html" />
+    <link rel="prev" title="Agent Reference" href="agent_reference.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../changelog.html">
+    Changelog
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../changelog.html">
+    Changelog
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="webapp.html">Agent Web App</a></li>
+<li class="toctree-l1"><a class="reference internal" href="agent_workbench.html">Agent Workflow: folders, references and MCP</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quick_start.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="workflows.html">Common Workflow Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="agent_reference.html">Agent Reference</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Adding an assistant</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">System Overview</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Agents, Web App and Desktop</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Adding an assistant</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="adding-an-assistant">
+<h1>Adding an assistant<a class="headerlink" href="#adding-an-assistant" title="Link to this heading">#</a></h1>
+<p>PyHydroGeophysX can host several domain AI assistants side by side. AQUAH works
+on hydrogeophysics; GeoSAGE, being ported now, works on geological modelling
+from gravity and magnetic data. Each is a plug-in: a small package that
+describes itself, and the studio builds its chat, its Workflow page and its
+runs from that description. The user picks one at the top of the assistant
+panel.</p>
+<p>This page is for whoever adds one. It uses GeoSAGE as the running example; its
+scaffold is in <code class="docutils literal notranslate"><span class="pre">PyHydroGeophysX/agents/assistants/geosage/</span></code>.</p>
+<section id="what-an-assistant-is-made-of">
+<h2>What an assistant is made of<a class="headerlink" href="#what-an-assistant-is-made-of" title="Link to this heading">#</a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>PyHydroGeophysX/agents/assistants/
+    __init__.py          the registry, the Assistant description, the contract
+    aquah/               AQUAH
+        __init__.py      ASSISTANT = Assistant(...)
+        workflow.py      run(payload, progress, ...)  and  tools()
+    geosage/             GeoSAGE (scaffold)
+        __init__.py      ASSISTANT = Assistant(..., status="in development")
+        tools.py         TOOLS: one Tool per stage
+        workflow.py      configure(payload), CONTROLLER_PROMPT, run(...)
+</pre></div>
+</div>
+<p>Three things are the assistant’s own:</p>
+<ol class="arabic simple">
+<li><p><strong>A description</strong>, <a class="reference internal" href="../api/PyHydroGeophysX.agents.assistants.html#PyHydroGeophysX.agents.assistants.Assistant" title="PyHydroGeophysX.agents.assistants.Assistant"><code class="xref py py-class docutils literal notranslate"><span class="pre">PyHydroGeophysX.agents.assistants.Assistant</span></code></a>:
+its name and domain, the chat persona, example requests, the kinds of input
+file the Workflow page offers, its glow colours, and where its workflow and
+tools are. Importing it must be cheap, so the workflow and tools are given
+as <code class="docutils literal notranslate"><span class="pre">&quot;module:attribute&quot;</span></code> strings and loaded when a run starts.</p></li>
+<li><p><strong>Tools</strong>: a dictionary of
+<a class="reference internal" href="../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.tools.Tool" title="PyHydroGeophysX.agents.runtime.tools.Tool"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tool</span></code></a>, one per capability.</p></li>
+<li><p><strong>A workflow</strong>: the function “Auto to report” runs, in a process of its own.</p></li>
+</ol>
+<p>Everything else is shared: the controller loop that picks each step, the live
+timeline, step-by-step approval, questions to the user, the chat, the report
+view and the Light and Dark appearances.</p>
+</section>
+<section id="the-description">
+<h2>The description<a class="headerlink" href="#the-description" title="Link to this heading">#</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.agents.assistants</span><span class="w"> </span><span class="kn">import</span> <span class="n">Assistant</span>
+
+<span class="n">ASSISTANT</span> <span class="o">=</span> <span class="n">Assistant</span><span class="p">(</span>
+    <span class="n">key</span><span class="o">=</span><span class="s2">"geosage"</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">"GeoSAGE"</span><span class="p">,</span>
+    <span class="n">domain</span><span class="o">=</span><span class="s2">"Geological modeling"</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">"Geological Semantic Analysis for Geophysical Exploration"</span><span class="p">,</span>
+    <span class="n">summary</span><span class="o">=</span><span class="s2">"Turns joint gravity–magnetic inversion models into ..."</span><span class="p">,</span>
+    <span class="n">workflow</span><span class="o">=</span><span class="s2">"PyHydroGeophysX.agents.assistants.geosage.workflow:run"</span><span class="p">,</span>
+    <span class="n">tools</span><span class="o">=</span><span class="s2">"PyHydroGeophysX.agents.assistants.geosage.tools:TOOLS"</span><span class="p">,</span>
+    <span class="n">persona</span><span class="o">=</span><span class="n">PERSONA</span><span class="p">,</span>                <span class="c1"># chat rules that are GeoSAGE's own</span>
+    <span class="n">examples</span><span class="o">=</span><span class="p">(</span><span class="s2">"find serpentinite targets for natural hydrogen ..."</span><span class="p">,),</span>
+    <span class="n">input_roles</span><span class="o">=</span><span class="p">((</span><span class="s2">"Gravity data"</span><span class="p">,</span> <span class="s2">"gravity_file"</span><span class="p">),</span>
+                 <span class="p">(</span><span class="s2">"Magnetic data (TMI)"</span><span class="p">,</span> <span class="s2">"magnetic_file"</span><span class="p">),</span> <span class="o">...</span><span class="p">),</span>
+    <span class="n">studio_modules</span><span class="o">=</span><span class="p">(</span><span class="s2">"one_click"</span><span class="p">,</span> <span class="s2">"gravmag"</span><span class="p">,</span> <span class="s2">"joint_inversion"</span><span class="p">,</span> <span class="s2">"mesh3d"</span><span class="p">),</span>
+    <span class="n">colors</span><span class="o">=</span><span class="p">(</span><span class="s2">"#ff9500"</span><span class="p">,</span> <span class="s2">"#ffcc00"</span><span class="p">,</span> <span class="s2">"#34c759"</span><span class="p">,</span> <span class="s2">"#30b0c7"</span><span class="p">),</span>
+    <span class="n">requires_packages</span><span class="o">=</span><span class="p">(</span><span class="s2">"simpeg"</span><span class="p">,),</span>
+    <span class="n">status</span><span class="o">=</span><span class="s2">"in development"</span><span class="p">,</span>        <span class="c1"># "ready" once the tools run</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">input_roles</span></code> are what the Workflow page offers under <em>Or add files
+yourself</em>; a run receives them as <code class="docutils literal notranslate"><span class="pre">payload[&quot;inputs&quot;][key]</span></code>. A key ending in
+<code class="docutils literal notranslate"><span class="pre">_dir</span></code> takes a folder, and a key listed in <code class="docutils literal notranslate"><span class="pre">ordered_roles</span></code> takes several
+files in order. <code class="docutils literal notranslate"><span class="pre">folder_classifier=True</span></code> means the workflow can sort a chosen
+folder’s files into these roles (<code class="docutils literal notranslate"><span class="pre">mode='classify'</span></code>); AQUAH does, GeoSAGE does
+not yet. <code class="docutils literal notranslate"><span class="pre">studio_modules</span></code> limits which studio modules the chat may drive.
+While <code class="docutils literal notranslate"><span class="pre">status</span></code> is not <code class="docutils literal notranslate"><span class="pre">&quot;ready&quot;</span></code>, or a package in <code class="docutils literal notranslate"><span class="pre">requires_packages</span></code> is
+missing, the assistant is listed in the panel but greyed out with the reason.</p>
+</section>
+<section id="tools">
+<h2>Tools<a class="headerlink" href="#tools" title="Link to this heading">#</a></h2>
+<p>A tool is what the controller chooses between. It declares what it needs and
+what it makes, and is offered only once its needs exist, so the order of a run
+follows from the data:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">Tool</span><span class="p">(</span><span class="s2">"run_joint_inversion"</span><span class="p">,</span>
+     <span class="s2">"Jointly invert gravity and magnetic data for density and magnetic "</span>
+     <span class="s2">"susceptibility on a common mesh (deterministic, SimPEG, cross-gradient "</span>
+     <span class="s2">"coupling), and report the data fit."</span><span class="p">,</span>
+     <span class="n">handler</span><span class="p">,</span> <span class="n">requires</span><span class="o">=</span><span class="p">(</span><span class="s2">"field_data"</span><span class="p">,),</span> <span class="n">produces</span><span class="o">=</span><span class="p">(</span><span class="s2">"property_models"</span><span class="p">,),</span>
+     <span class="n">agent</span><span class="o">=</span><span class="s2">"InversionAgent"</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"Run joint gravity-magnetic inversion"</span><span class="p">,</span>
+     <span class="n">module</span><span class="o">=</span><span class="s2">"joint_inversion"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The description is read by the model when it chooses, so write it for someone
+who does not know the code. <code class="docutils literal notranslate"><span class="pre">label</span></code> is what the timeline shows, and
+<code class="docutils literal notranslate"><span class="pre">module</span></code> is the studio page that shows this kind of work.</p>
+<p>A handler takes the run’s <a class="reference internal" href="../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.context.RunContext" title="PyHydroGeophysX.agents.runtime.context.RunContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">RunContext</span></code></a>
+and returns <code class="docutils literal notranslate"><span class="pre">(summary,</span> <span class="pre">outputs)</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">run_joint_inversion</span><span class="p">(</span><span class="n">ctx</span><span class="p">):</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"field_data"</span><span class="p">)</span>            <span class="c1"># an earlier tool's product</span>
+    <span class="n">settings</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"inversion"</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="c1"># ... SimPEG joint inversion, files written under ctx.output_dir ...</span>
+    <span class="k">return</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"Converged in </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> iterations; gravity R² </span><span class="si">{</span><span class="n">r2g</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, "</span>
+            <span class="sa">f</span><span class="s2">"magnetic R² </span><span class="si">{</span><span class="n">r2m</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span>
+            <span class="p">{</span><span class="s2">"property_models"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"density"</span><span class="p">:</span> <span class="n">rho</span><span class="p">,</span> <span class="s2">"susceptibility"</span><span class="p">:</span> <span class="n">kappa</span><span class="p">,</span>
+                                 <span class="s2">"mesh"</span><span class="p">:</span> <span class="n">mesh</span><span class="p">,</span> <span class="s2">"fit"</span><span class="p">:</span> <span class="n">fit</span><span class="p">}})</span>
+</pre></div>
+</div>
+<p>The summary is shown to the user the moment the step ends and is what the
+controller reads before choosing again, so make it the step’s conclusion with
+its key numbers. A handler may raise: the failure is recorded, shown, and the
+run carries on deciding. An LLM-based stage reaches the model through
+<code class="docutils literal notranslate"><span class="pre">ctx.settings</span></code> (<code class="docutils literal notranslate"><span class="pre">api_key</span></code>, <code class="docutils literal notranslate"><span class="pre">model</span></code>, <code class="docutils literal notranslate"><span class="pre">llm_provider</span></code>). A tool that needs
+the user to choose calls <code class="docutils literal notranslate"><span class="pre">ctx.ask(question,</span> <span class="pre">options)</span></code>: the question appears in
+the Live tab, and with nobody to answer the first option is taken and noted.</p>
+</section>
+<section id="the-workflow">
+<h2>The workflow<a class="headerlink" href="#the-workflow" title="Link to this heading">#</a></h2>
+<p>The contract a workflow function honours is
+<a class="reference internal" href="../api/PyHydroGeophysX.agents.assistants.html#PyHydroGeophysX.agents.assistants.WORKFLOW_CONTRACT" title="PyHydroGeophysX.agents.assistants.WORKFLOW_CONTRACT"><code class="xref py py-data docutils literal notranslate"><span class="pre">PyHydroGeophysX.agents.assistants.WORKFLOW_CONTRACT</span></code></a>. In short: it
+receives the run’s payload (<code class="docutils literal notranslate"><span class="pre">request</span></code>, <code class="docutils literal notranslate"><span class="pre">inputs</span></code>, model access,
+<code class="docutils literal notranslate"><span class="pre">output_dir</span></code>, <code class="docutils literal notranslate"><span class="pre">step_mode</span></code>) and returns a result with <code class="docutils literal notranslate"><span class="pre">status</span></code>,
+<code class="docutils literal notranslate"><span class="pre">interpretation</span></code>, <code class="docutils literal notranslate"><span class="pre">warnings</span></code> and <code class="docutils literal notranslate"><span class="pre">report_files</span></code>. Build it on
+<a class="reference internal" href="../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.entry.drive" title="PyHydroGeophysX.agents.runtime.entry.drive"><code class="xref py py-func docutils literal notranslate"><span class="pre">PyHydroGeophysX.agents.runtime.entry.drive()</span></code></a>, which runs the controller
+over your tools and produces the step events the studio needs:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">progress</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">approve</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">on_event</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">events</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">_</span><span class="p">):</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">configure</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>                       <span class="c1"># the ContextAgent</span>
+    <span class="n">ctx</span> <span class="o">=</span> <span class="n">RunContext</span><span class="p">(</span><span class="n">goal</span><span class="o">=</span><span class="n">payload</span><span class="p">[</span><span class="s2">"request"</span><span class="p">],</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+                     <span class="n">output_dir</span><span class="o">=</span><span class="n">payload</span><span class="p">[</span><span class="s2">"output_dir"</span><span class="p">],</span> <span class="n">settings</span><span class="o">=</span><span class="p">{</span><span class="o">...</span><span class="p">})</span>
+    <span class="n">on_step</span> <span class="o">=</span> <span class="n">step_by_step</span><span class="p">(</span><span class="n">approve</span><span class="p">)</span> <span class="k">if</span> <span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"step_mode"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">approve</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">drive</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tools</span><span class="o">=</span><span class="n">TOOLS</span><span class="p">,</span> <span class="n">ask</span><span class="o">=</span><span class="n">make_ask</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">provider</span><span class="p">),</span>
+          <span class="n">progress_callback</span><span class="o">=</span><span class="n">progress</span><span class="p">,</span> <span class="n">on_step</span><span class="o">=</span><span class="n">on_step</span><span class="p">,</span> <span class="n">on_event</span><span class="o">=</span><span class="n">on_event</span><span class="p">,</span>
+          <span class="n">prompt</span><span class="o">=</span><span class="n">CONTROLLER_PROMPT</span><span class="p">,</span> <span class="n">finish</span><span class="o">=</span><span class="s2">"report_files"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"status"</span><span class="p">:</span> <span class="o">...</span><span class="p">,</span> <span class="s2">"interpretation"</span><span class="p">:</span> <span class="o">...</span><span class="p">,</span> <span class="s2">"report_files"</span><span class="p">:</span> <span class="n">ctx</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"report_files"</span><span class="p">)}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">prompt</span></code> frames the controller’s decision for your domain (it must keep the
+<code class="docutils literal notranslate"><span class="pre">{transcript}</span></code> and <code class="docutils literal notranslate"><span class="pre">{menu}</span></code> fields), and <code class="docutils literal notranslate"><span class="pre">finish</span></code> names the product that
+has to exist before the run may end. GeoSAGE’s is the reviewed report, so it
+cannot stop at the draft.</p>
+</section>
+<section id="registering-it">
+<h2>Registering it<a class="headerlink" href="#registering-it" title="Link to this heading">#</a></h2>
+<p>Inside this repository, add the package beside <code class="docutils literal notranslate"><span class="pre">aquah</span></code> and <code class="docutils literal notranslate"><span class="pre">geosage</span></code> and
+list it in <code class="docutils literal notranslate"><span class="pre">BUILTIN</span></code> in <code class="docutils literal notranslate"><span class="pre">PyHydroGeophysX/agents/assistants/__init__.py</span></code>.</p>
+<p>From a separate package, such as the GeoSAGE repository, declare an entry
+point; nothing in PyHydroGeophysX needs editing:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project.entry-points.</span><span class="s2">"pyhydrogeophysx.assistants"</span><span class="k">]</span>
+<span class="n">geosage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"geosage.pyhydrogeophysx:ASSISTANT"</span>
+</pre></div>
+</div>
+<p>A plug-in that fails to import is left out and reported by
+<a class="reference internal" href="../api/PyHydroGeophysX.agents.assistants.html#PyHydroGeophysX.agents.assistants.load_errors" title="PyHydroGeophysX.agents.assistants.load_errors"><code class="xref py py-func docutils literal notranslate"><span class="pre">PyHydroGeophysX.agents.assistants.load_errors()</span></code></a>; it never takes the
+others down.</p>
+</section>
+<section id="what-the-studio-does-with-it">
+<h2>What the studio does with it<a class="headerlink" href="#what-the-studio-does-with-it" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>The assistant panel lists every registered assistant. Choosing one starts a
+new conversation with its persona and examples, and is remembered.</p></li>
+<li><p>The Workflow page offers its input roles and names it in everything it says;
+the Live tab shows its steps, each with the controller’s reason, the module,
+the time taken, what it found and the figures it wrote.</p></li>
+<li><p>The glow round the central area and the orb take its colours.</p></li>
+<li><p>With <em>Approve each step before it runs</em>, every step waits for the user in the
+Live tab; a tool’s own question appears there too.</p></li>
+<li><p>While the controller decides, its reasoning streams into the Live tab:
+<a class="reference internal" href="../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.entry.make_ask" title="PyHydroGeophysX.agents.runtime.entry.make_ask"><code class="xref py py-func docutils literal notranslate"><span class="pre">make_ask()</span></code></a> streams the reply, and
+<code class="docutils literal notranslate"><span class="pre">drive</span></code> sends the <code class="docutils literal notranslate"><span class="pre">&quot;why&quot;</span></code> field on as <code class="docutils literal notranslate"><span class="pre">phase=&quot;thought&quot;</span></code> events. Keep the
+reasoning first in your controller prompt’s JSON, as GeoSAGE’s does.</p></li>
+<li><p>Pause and notes from the user reach your run through <code class="docutils literal notranslate"><span class="pre">drive</span></code> too
+(<a class="reference internal" href="../api/PyHydroGeophysX.agents.runtime.html#module-PyHydroGeophysX.agents.runtime.steering" title="PyHydroGeophysX.agents.runtime.steering"><code class="xref py py-mod docutils literal notranslate"><span class="pre">PyHydroGeophysX.agents.runtime.steering</span></code></a>): a note is added to
+<code class="docutils literal notranslate"><span class="pre">ctx.guidance</span></code> and the transcript, and the next decision may change the
+settings in <a class="reference internal" href="../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.recovery.ADJUSTABLE" title="PyHydroGeophysX.agents.runtime.recovery.ADJUSTABLE"><code class="xref py py-data docutils literal notranslate"><span class="pre">ADJUSTABLE</span></code></a>.</p></li>
+<li><p>The route across the top of the Live tab comes from your tools’
+<code class="docutils literal notranslate"><span class="pre">requires</span></code> and <code class="docutils literal notranslate"><span class="pre">produces</span></code>: <a class="reference internal" href="../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.controller.route_ahead" title="PyHydroGeophysX.agents.runtime.controller.route_ahead"><code class="xref py py-func docutils literal notranslate"><span class="pre">route_ahead()</span></code></a>
+works out, from what the run has, which tools still stand between it and
+<code class="docutils literal notranslate"><span class="pre">finish</span></code>. A <code class="docutils literal notranslate"><span class="pre">when</span></code> gate that looks inside an artifact should check
+<code class="docutils literal notranslate"><span class="pre">ctx.projected(key)</span></code> first and answer from the configuration, since a
+projected artifact has nothing inside it yet.</p></li>
+</ul>
+</section>
+<section id="porting-geosage">
+<h2>Porting GeoSAGE<a class="headerlink" href="#porting-geosage" title="Link to this heading">#</a></h2>
+<p>The paper’s seven agents map onto the scaffold like this:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<tbody>
+<tr class="row-odd"><td><p>ContextAgent</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">workflow.configure</span></code>: request to configuration</p></td>
+</tr>
+<tr class="row-even"><td><p>DataAgent</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">prepare_data</span></code>: bounds, fields, gridding, uncertainties</p></td>
+</tr>
+<tr class="row-odd"><td><p>PetrologyAgent</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">compile_priors</span></code>, and unit/group naming in <code class="docutils literal notranslate"><span class="pre">build_quasi_geology</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>InversionAgent</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">run_joint_inversion</span></code>: settings and the SimPEG backend</p></td>
+</tr>
+<tr class="row-odd"><td><p>GeoAgent</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">build_quasi_geology</span></code>: prior-guided or GMM/BIC grouping</p></td>
+</tr>
+<tr class="row-even"><td><p>ReportAgent</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">write_report</span></code>: interpretation, target ranking, uncertainty</p></td>
+</tr>
+<tr class="row-odd"><td><p>ReviewAgent</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">review_report</span></code>: checks, revision, the final report</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>A workable order is to fill in the deterministic stages first
+(<code class="docutils literal notranslate"><span class="pre">prepare_data</span></code>, <code class="docutils literal notranslate"><span class="pre">run_joint_inversion</span></code>, <code class="docutils literal notranslate"><span class="pre">build_quasi_geology</span></code>) so a run
+produces models and figures without a model key, then the LLM stages, and
+then:</p>
+<ol class="arabic simple">
+<li><p>set <code class="docutils literal notranslate"><span class="pre">status=&quot;ready&quot;</span></code> in <code class="docutils literal notranslate"><span class="pre">geosage/__init__.py</span></code>;</p></li>
+<li><p>replace the stand-in handlers in
+<code class="docutils literal notranslate"><span class="pre">test_an_assistant_runs_its_own_tools_to_its_own_final_product</span></code>
+(<code class="docutils literal notranslate"><span class="pre">tests/test_agents.py</span></code>) with a small real case, or add one such test;</p></li>
+<li><p>run it in the studio with <em>Approve each step before it runs</em> switched on,
+in Light and Dark.</p></li>
+</ol>
+<p>To try the chain before the stages exist, replace the handlers with stand-ins
+that return the declared products, as that test does; the studio’s timeline
+then shows the whole run.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="agent_reference.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Agent Reference</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="troubleshooting.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Troubleshooting</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-an-assistant-is-made-of">What an assistant is made of</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-description">The description</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tools">Tools</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-workflow">The workflow</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#registering-it">Registering it</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-studio-does-with-it">What the studio does with it</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#porting-geosage">Porting GeoSAGE</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/agents/adding_an_assistant.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/agents/adding_an_assistant.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

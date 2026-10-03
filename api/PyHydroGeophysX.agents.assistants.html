@@ -1,0 +1,961 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>PyHydroGeophysX.agents.assistants package &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=1dd76d02"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/PyHydroGeophysX.agents.assistants';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/api/PyHydroGeophysX.agents.assistants.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../changelog.html">
+    Changelog
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../changelog.html">
+    Changelog
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.agents.assistants package</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="pyhydrogeophysx-agents-assistants-package">
+<h1>PyHydroGeophysX.agents.assistants package<a class="headerlink" href="#pyhydrogeophysx-agents-assistants-package" title="Link to this heading">#</a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Link to this heading">#</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.agents.assistants.aquah.html">PyHydroGeophysX.agents.assistants.aquah package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="PyHydroGeophysX.agents.assistants.aquah.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="PyHydroGeophysX.agents.assistants.aquah.html#module-PyHydroGeophysX.agents.assistants.aquah.workflow">PyHydroGeophysX.agents.assistants.aquah.workflow module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.agents.assistants.aquah.html#PyHydroGeophysX.agents.assistants.aquah.workflow.run"><code class="docutils literal notranslate"><span class="pre">run()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.agents.assistants.aquah.html#PyHydroGeophysX.agents.assistants.aquah.workflow.tools"><code class="docutils literal notranslate"><span class="pre">tools()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="PyHydroGeophysX.agents.assistants.aquah.html#module-PyHydroGeophysX.agents.assistants.aquah">Module contents</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.agents.assistants.aquah.html#PyHydroGeophysX.agents.assistants.aquah.PERSONA"><code class="docutils literal notranslate"><span class="pre">PERSONA</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="PyHydroGeophysX.agents.assistants.geosage.html">PyHydroGeophysX.agents.assistants.geosage package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="PyHydroGeophysX.agents.assistants.geosage.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="PyHydroGeophysX.agents.assistants.geosage.html#module-PyHydroGeophysX.agents.assistants.geosage.tools">PyHydroGeophysX.agents.assistants.geosage.tools module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="PyHydroGeophysX.agents.assistants.geosage.html#module-PyHydroGeophysX.agents.assistants.geosage.workflow">PyHydroGeophysX.agents.assistants.geosage.workflow module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.agents.assistants.geosage.html#PyHydroGeophysX.agents.assistants.geosage.workflow.CONTROLLER_PROMPT"><code class="docutils literal notranslate"><span class="pre">CONTROLLER_PROMPT</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.agents.assistants.geosage.html#PyHydroGeophysX.agents.assistants.geosage.workflow.configure"><code class="docutils literal notranslate"><span class="pre">configure()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="PyHydroGeophysX.agents.assistants.geosage.html#PyHydroGeophysX.agents.assistants.geosage.workflow.run"><code class="docutils literal notranslate"><span class="pre">run()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="PyHydroGeophysX.agents.assistants.geosage.html#module-PyHydroGeophysX.agents.assistants.geosage">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="module-PyHydroGeophysX.agents.assistants">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-PyHydroGeophysX.agents.assistants" title="Link to this heading">#</a></h2>
+<p>Domain AI assistants: AQUAH for hydrogeophysics, GeoSAGE for geological modelling, and more.</p>
+<p>An <em>assistant</em> is one complete AI agent for a domain - what the user talks to
+in the studio’s chat and what “Auto to report” runs. PyHydroGeophysX used to
+have exactly one, AQUAH, written into the desktop app, the workflow runner and
+the chat’s system prompt. This package makes an assistant a plug-in: each is a
+small package that describes itself with an <a class="reference internal" href="#PyHydroGeophysX.agents.assistants.Assistant" title="PyHydroGeophysX.agents.assistants.Assistant"><code class="xref py py-class docutils literal notranslate"><span class="pre">Assistant</span></code></a>, and the studio
+builds its chat, its Workflow page and its run from that description.</p>
+<section id="what-an-assistant-supplies">
+<h3>What an assistant supplies<a class="headerlink" href="#what-an-assistant-supplies" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>A workflow</strong> (<code class="docutils literal notranslate"><span class="pre">workflow=&quot;pkg.module:function&quot;</span></code>): what “Auto to report”
+runs, in the run’s own process. It takes the run’s payload and returns its
+result; see <a class="reference internal" href="#PyHydroGeophysX.agents.assistants.WORKFLOW_CONTRACT" title="PyHydroGeophysX.agents.assistants.WORKFLOW_CONTRACT"><code class="xref py py-data docutils literal notranslate"><span class="pre">WORKFLOW_CONTRACT</span></code></a>. Most assistants build it on
+<a class="reference internal" href="PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.entry.drive" title="PyHydroGeophysX.agents.runtime.entry.drive"><code class="xref py py-func docutils literal notranslate"><span class="pre">PyHydroGeophysX.agents.runtime.entry.drive()</span></code></a>, the controller loop over
+a tool registry, which gives the studio’s live timeline, step approval and
+chat narration without any further work.</p></li>
+<li><p><strong>Tools</strong> (<code class="docutils literal notranslate"><span class="pre">tools=&quot;pkg.module:attr&quot;</span></code>): the assistant’s own registry of
+<a class="reference internal" href="PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.tools.Tool" title="PyHydroGeophysX.agents.runtime.tools.Tool"><code class="xref py py-class docutils literal notranslate"><span class="pre">Tool</span></code></a>, each with what it
+requires, what it produces and the studio module that shows its work.</p></li>
+<li><p><strong>What it says and accepts</strong>: a chat persona, example requests, the kinds of
+input file the Workflow page offers, and the colours of its glow.</p></li>
+</ul>
+</section>
+<section id="adding-one">
+<h3>Adding one<a class="headerlink" href="#adding-one" title="Link to this heading">#</a></h3>
+<p>In this repository: add a subpackage beside <a class="reference internal" href="PyHydroGeophysX.agents.assistants.aquah.html#module-PyHydroGeophysX.agents.assistants.aquah" title="PyHydroGeophysX.agents.assistants.aquah"><code class="xref py py-mod docutils literal notranslate"><span class="pre">aquah</span></code></a> and <a class="reference internal" href="PyHydroGeophysX.agents.assistants.geosage.html#module-PyHydroGeophysX.agents.assistants.geosage" title="PyHydroGeophysX.agents.assistants.geosage"><code class="xref py py-mod docutils literal notranslate"><span class="pre">geosage</span></code></a>
+exposing <code class="docutils literal notranslate"><span class="pre">ASSISTANT</span></code> and list it in <a class="reference internal" href="#PyHydroGeophysX.agents.assistants.BUILTIN" title="PyHydroGeophysX.agents.assistants.BUILTIN"><code class="xref py py-data docutils literal notranslate"><span class="pre">BUILTIN</span></code></a>. From a separate package:
+declare an entry point, and nothing here needs editing:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">project</span><span class="o">.</span><span class="n">entry</span><span class="o">-</span><span class="n">points</span><span class="o">.</span><span class="s2">"pyhydrogeophysx.assistants"</span><span class="p">]</span>
+<span class="n">geosage</span> <span class="o">=</span> <span class="s2">"geosage.pyhydrogeophysx:ASSISTANT"</span>
+</pre></div>
+</div>
+<p>The developer guide (<code class="docutils literal notranslate"><span class="pre">docs/source/agents/adding_an_assistant.rst</span></code>) walks
+through both, with GeoSAGE as the example.</p>
+</section>
+<dl class="py class">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.agents.assistants.</span></span><span class="sig-name descname"><span class="pre">Assistant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">key:</span> <span class="pre">str,</span> <span class="pre">name:</span> <span class="pre">str,</span> <span class="pre">domain:</span> <span class="pre">str,</span> <span class="pre">title:</span> <span class="pre">str,</span> <span class="pre">summary:</span> <span class="pre">str,</span> <span class="pre">workflow:</span> <span class="pre">str,</span> <span class="pre">tools:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'',</span> <span class="pre">persona:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'',</span> <span class="pre">examples:</span> <span class="pre">~typing.Tuple[str,</span> <span class="pre">...]</span> <span class="pre">=</span> <span class="pre">(),</span> <span class="pre">input_roles:</span> <span class="pre">~typing.Tuple[~typing.Tuple[str,</span> <span class="pre">str],</span> <span class="pre">...]</span> <span class="pre">=</span> <span class="pre">(),</span> <span class="pre">ordered_roles:</span> <span class="pre">~typing.Tuple[str,</span> <span class="pre">...]</span> <span class="pre">=</span> <span class="pre">(),</span> <span class="pre">folder_classifier:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False,</span> <span class="pre">studio_modules:</span> <span class="pre">~typing.Tuple[str,</span> <span class="pre">...]</span> <span class="pre">=</span> <span class="pre">(),</span> <span class="pre">colors:</span> <span class="pre">~typing.Tuple[str,</span> <span class="pre">...]</span> <span class="pre">=</span> <span class="pre">(),</span> <span class="pre">requires_packages:</span> <span class="pre">~typing.Tuple[str,</span> <span class="pre">...]</span> <span class="pre">=</span> <span class="pre">(),</span> <span class="pre">status:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'ready',</span> <span class="pre">status_note:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'',</span> <span class="pre">providers:</span> <span class="pre">~typing.Tuple[str,</span> <span class="pre">...]</span> <span class="pre">=</span> <span class="pre">('openai',</span> <span class="pre">'anthropic'),</span> <span class="pre">_cache:</span> <span class="pre">~typing.Dict[str,</span> <span class="pre">~typing.Any]</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/PyHydroGeophysX/agents/assistants.html#Assistant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>One domain AI assistant, described for the studio.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> (<em>str</em>) – Identifier, lower case: <code class="docutils literal notranslate"><span class="pre">'aquah'</span></code>, <code class="docutils literal notranslate"><span class="pre">'geosage'</span></code>.</p></li>
+<li><p><strong>name</strong> (<em>str</em>) – What the user sees: <code class="docutils literal notranslate"><span class="pre">'AQUAH'</span></code>.</p></li>
+<li><p><strong>domain</strong> (<em>str</em>) – Its field in a few words: <code class="docutils literal notranslate"><span class="pre">'Hydrogeophysics'</span></code>.</p></li>
+<li><p><strong>title</strong> (<em>str</em>) – The name spelt out.</p></li>
+<li><p><strong>summary</strong> (<em>str</em>) – One or two sentences: what it does and what it needs.</p></li>
+<li><p><strong>workflow</strong> (<em>str</em>) – <code class="docutils literal notranslate"><span class="pre">'module:function'</span></code> of the run, per <a class="reference internal" href="#PyHydroGeophysX.agents.assistants.WORKFLOW_CONTRACT" title="PyHydroGeophysX.agents.assistants.WORKFLOW_CONTRACT"><code class="xref py py-data docutils literal notranslate"><span class="pre">WORKFLOW_CONTRACT</span></code></a>.</p></li>
+<li><p><strong>tools</strong> (<em>str</em>) – <code class="docutils literal notranslate"><span class="pre">'module:attribute'</span></code> of its tool registry (a dict of name to Tool, or
+a function returning one). Optional; the studio uses it to put a name
+to the step running.</p></li>
+<li><p><strong>persona</strong> (<em>str</em>) – The part of the chat’s system prompt that is this assistant’s: who it
+is, and rules for the studio modules it works with.</p></li>
+<li><p><strong>examples</strong> (<em>tuple</em><em> of </em><em>str</em>) – Requests shown when a chat starts.</p></li>
+<li><p><strong>input_roles</strong> (<em>tuple</em><em> of </em><em>(</em><a class="reference internal" href="PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.tools.Tool.label" title="PyHydroGeophysX.agents.runtime.tools.Tool.label"><em>label</em></a><em>, </em><a class="reference internal" href="#PyHydroGeophysX.agents.assistants.Assistant.key" title="PyHydroGeophysX.agents.assistants.Assistant.key"><em>key</em></a><em>)</em>) – The kinds of input the Workflow page offers to add by hand. A key
+ending in <code class="docutils literal notranslate"><span class="pre">_dir</span></code> takes a folder.</p></li>
+<li><p><strong>ordered_roles</strong> (<em>tuple</em><em> of </em><em>str</em>) – Roles that take several files, kept in the order given (time-lapse
+surveys, say).</p></li>
+<li><p><strong>folder_classifier</strong> (<em>bool</em>) – Whether the workflow accepts <code class="docutils literal notranslate"><span class="pre">mode='classify'</span></code> to sort a chosen
+folder’s files into roles with the model.</p></li>
+<li><p><strong>studio_modules</strong> (<em>tuple</em><em> of </em><em>str</em>) – The studio modules its chat may drive (keys of
+<code class="docutils literal notranslate"><span class="pre">qt_apps.modules.MODULE_SPECS</span></code>); empty for all of them.</p></li>
+<li><p><strong>colors</strong> (<em>tuple</em><em> of </em><em>str</em>) – Four colours for its glow and orb; empty for the studio’s own.</p></li>
+<li><p><strong>requires_packages</strong> (<em>tuple</em><em> of </em><em>str</em>) – Importable packages it needs, checked by <a class="reference internal" href="#PyHydroGeophysX.agents.assistants.Assistant.availability" title="PyHydroGeophysX.agents.assistants.Assistant.availability"><code class="xref py py-meth docutils literal notranslate"><span class="pre">availability()</span></code></a>.</p></li>
+<li><p><strong>status</strong> (<em>str</em>) – <code class="docutils literal notranslate"><span class="pre">'ready'</span></code>, or <code class="docutils literal notranslate"><span class="pre">'in</span> <span class="pre">development'</span></code> while it cannot run yet.</p></li>
+<li><p><strong>status_note</strong> (<em>str</em>) – Shown when it is not available.</p></li>
+<li><p><strong>providers</strong> (<em>tuple</em><em> of </em><em>str</em>) – Model providers its workflow supports.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.availability">
+<span class="sig-name descname"><span class="pre">availability</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/agents/assistants.html#Assistant.availability"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.availability" title="Link to this definition">#</a></dt>
+<dd><p>Whether it can run here, and why not when it cannot.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.colors">
+<span class="sig-name descname"><span class="pre">colors</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.colors" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.domain">
+<span class="sig-name descname"><span class="pre">domain</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.domain" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.examples">
+<span class="sig-name descname"><span class="pre">examples</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.examples" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.folder_classifier">
+<span class="sig-name descname"><span class="pre">folder_classifier</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.folder_classifier" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.input_roles">
+<span class="sig-name descname"><span class="pre">input_roles</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.input_roles" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.key">
+<span class="sig-name descname"><span class="pre">key</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.key" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.load_tools">
+<span class="sig-name descname"><span class="pre">load_tools</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/agents/assistants.html#Assistant.load_tools"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.load_tools" title="Link to this definition">#</a></dt>
+<dd><p>Its tool registry, name to Tool; empty when it declares none.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.load_workflow">
+<span class="sig-name descname"><span class="pre">load_workflow</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/agents/assistants.html#Assistant.load_workflow"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.load_workflow" title="Link to this definition">#</a></dt>
+<dd><p>The workflow function, imported on first use.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.name" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.ordered_roles">
+<span class="sig-name descname"><span class="pre">ordered_roles</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.ordered_roles" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.persona">
+<span class="sig-name descname"><span class="pre">persona</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.persona" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.providers">
+<span class="sig-name descname"><span class="pre">providers</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('openai',</span> <span class="pre">'anthropic')</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.providers" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.requires_packages">
+<span class="sig-name descname"><span class="pre">requires_packages</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.requires_packages" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.status">
+<span class="sig-name descname"><span class="pre">status</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'ready'</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.status" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.status_note">
+<span class="sig-name descname"><span class="pre">status_note</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.status_note" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.studio_modules">
+<span class="sig-name descname"><span class="pre">studio_modules</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.studio_modules" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.summary">
+<span class="sig-name descname"><span class="pre">summary</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.summary" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.title">
+<span class="sig-name descname"><span class="pre">title</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.title" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.tool_for_label">
+<span class="sig-name descname"><span class="pre">tool_for_label</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/agents/assistants.html#Assistant.tool_for_label"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.tool_for_label" title="Link to this definition">#</a></dt>
+<dd><p>The name of the tool whose label (or name) is <code class="docutils literal notranslate"><span class="pre">label</span></code>, or “”.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.tools">
+<span class="sig-name descname"><span class="pre">tools</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.tools" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.Assistant.workflow">
+<span class="sig-name descname"><span class="pre">workflow</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.Assistant.workflow" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.BUILTIN">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.agents.assistants.</span></span><span class="sig-name descname"><span class="pre">BUILTIN</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('PyHydroGeophysX.agents.assistants.aquah:ASSISTANT',</span> <span class="pre">'PyHydroGeophysX.agents.assistants.geosage:ASSISTANT')</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.BUILTIN" title="Link to this definition">#</a></dt>
+<dd><p>The assistants that ship with PyHydroGeophysX, as <code class="docutils literal notranslate"><span class="pre">module:attribute</span></code>.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.DEFAULT_KEY">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.agents.assistants.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_KEY</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'aquah'</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.DEFAULT_KEY" title="Link to this definition">#</a></dt>
+<dd><p>The assistant the studio starts with.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.ENTRY_POINT_GROUP">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.agents.assistants.</span></span><span class="sig-name descname"><span class="pre">ENTRY_POINT_GROUP</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'pyhydrogeophysx.assistants'</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.ENTRY_POINT_GROUP" title="Link to this definition">#</a></dt>
+<dd><p>Where installed packages register further assistants.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.WORKFLOW_CONTRACT">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.agents.assistants.</span></span><span class="sig-name descname"><span class="pre">WORKFLOW_CONTRACT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&quot;run(payload,</span> <span class="pre">progress,</span> <span class="pre">*,</span> <span class="pre">approve=None,</span> <span class="pre">on_event=None,</span> <span class="pre">events=None,</span> <span class="pre">**hooks)</span> <span class="pre">-&gt;</span> <span class="pre">dict\n\npayload</span>&#160;&#160; <span class="pre">the</span> <span class="pre">run</span> <span class="pre">as</span> <span class="pre">the</span> <span class="pre">studio</span> <span class="pre">starts</span> <span class="pre">it:\n</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">request</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">the</span> <span class="pre">user's</span> <span class="pre">goal,</span> <span class="pre">in</span> <span class="pre">their</span> <span class="pre">words\n</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">inputs</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">{role:</span> <span class="pre">path</span> <span class="pre">or</span> <span class="pre">[paths]},</span> <span class="pre">roles</span> <span class="pre">from</span> <span class="pre">Assistant.input_roles\n</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">provider,</span> <span class="pre">model,</span> <span class="pre">api_key,</span> <span class="pre">reasoning_effort</span>&#160;&#160; <span class="pre">model</span> <span class="pre">access\n</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">output_dir</span>&#160;&#160;&#160;&#160; <span class="pre">where</span> <span class="pre">everything</span> <span class="pre">the</span> <span class="pre">run</span> <span class="pre">writes</span> <span class="pre">goes\n</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">step_mode</span>&#160;&#160;&#160;&#160;&#160; <span class="pre">True</span> <span class="pre">to</span> <span class="pre">pause</span> <span class="pre">before</span> <span class="pre">each</span> <span class="pre">step</span> <span class="pre">(pass</span> <span class="pre">approve</span> <span class="pre">on</span> <span class="pre">to</span> <span class="pre">drive)\n</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">use_rag,</span> <span class="pre">use_mcp\n</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">mode</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">'classify'</span> <span class="pre">with</span> <span class="pre">data_folder,</span> <span class="pre">when</span> <span class="pre">the</span> <span class="pre">assistant</span> <span class="pre">offers\n</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">folder</span> <span class="pre">classification\nprogress</span>&#160; <span class="pre">progress(step,</span> <span class="pre">fraction,</span> <span class="pre">details,</span> <span class="pre">module='')</span> <span class="pre">for</span> <span class="pre">the</span> <span class="pre">status</span> <span class="pre">line\napprove</span>&#160;&#160; <span class="pre">approve(event)</span> <span class="pre">-&gt;</span> <span class="pre">'proceed'</span> <span class="pre">|</span> <span class="pre">'skip'</span> <span class="pre">|</span> <span class="pre">'stop',</span> <span class="pre">or</span> <span class="pre">a</span> <span class="pre">question's</span> <span class="pre">option\n</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">id;</span> <span class="pre">blocks</span> <span class="pre">until</span> <span class="pre">the</span> <span class="pre">user</span> <span class="pre">answers.</span> <span class="pre">Pass</span> <span class="pre">to</span> <span class="pre">drive()</span> <span class="pre">as</span> <span class="pre">on_step</span> <span class="pre">via\n</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">runtime.step_by_step</span> <span class="pre">when</span> <span class="pre">payload['step_mode']</span> <span class="pre">is</span> <span class="pre">set,</span> <span class="pre">and</span> <span class="pre">as</span> <span class="pre">ask_user.\non_event</span>&#160; <span class="pre">structured</span> <span class="pre">step</span> <span class="pre">events;</span> <span class="pre">pass</span> <span class="pre">straight</span> <span class="pre">to</span> <span class="pre">drive(on_event=...)\nevents</span>&#160;&#160;&#160; <span class="pre">list</span> <span class="pre">the</span> <span class="pre">progress</span> <span class="pre">events</span> <span class="pre">are</span> <span class="pre">being</span> <span class="pre">collected</span> <span class="pre">in</span> <span class="pre">(for</span> <span class="pre">an</span> <span class="pre">audit)\n\nreturns</span>&#160;&#160; <span class="pre">{'status':</span> <span class="pre">'success'</span> <span class="pre">|</span> <span class="pre">'needs_review'</span> <span class="pre">|</span> <span class="pre">'incomplete',\n</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">'interpretation':</span> <span class="pre">str,</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">first</span> <span class="pre">lines</span> <span class="pre">shown</span> <span class="pre">in</span> <span class="pre">the</span> <span class="pre">chat\n</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">'warnings':</span> <span class="pre">[str],\n</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">'report_files':</span> <span class="pre">{'report_markdown':</span> <span class="pre">path,</span> <span class="pre">...},\n</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">'output_dir':</span> <span class="pre">str,</span> <span class="pre">'execution_plan':</span> <span class="pre">[...],</span> <span class="pre">'workflow_config':</span> <span class="pre">{...}}\n</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">or,</span> <span class="pre">for</span> <span class="pre">mode='classify',</span> <span class="pre">{'status':</span> <span class="pre">'classified',</span> <span class="pre">'catalog':</span> <span class="pre">{...}}\nraises</span>&#160;&#160;&#160; <span class="pre">for</span> <span class="pre">a</span> <span class="pre">run</span> <span class="pre">that</span> <span class="pre">cannot</span> <span class="pre">start</span> <span class="pre">or</span> <span class="pre">produced</span> <span class="pre">nothing;</span> <span class="pre">the</span> <span class="pre">message</span> <span class="pre">is</span> <span class="pre">shown\n&quot;</span></span><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.WORKFLOW_CONTRACT" title="Link to this definition">#</a></dt>
+<dd><p>What a workflow function is given and must return. Written out here because
+it is the one interface an assistant has to honour exactly.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.accepted_hooks">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.agents.assistants.</span></span><span class="sig-name descname"><span class="pre">accepted_hooks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">hooks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/agents/assistants.html#accepted_hooks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.accepted_hooks" title="Link to this definition">#</a></dt>
+<dd><p>The <code class="docutils literal notranslate"><span class="pre">hooks</span></code> that <code class="docutils literal notranslate"><span class="pre">fn</span></code> takes, by name or through <code class="docutils literal notranslate"><span class="pre">**kwargs</span></code>.</p>
+<p>A run function that predates them - an older caller, or a stub in a test -
+still runs; it simply cannot pause or ask. One whose signature cannot be
+read is given them all.</p>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">accepted_hooks</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">,</span> <span class="n">on_step</span><span class="o">=</span><span class="kc">None</span><span class="p">:</span> <span class="n">a</span><span class="p">,</span> <span class="n">on_step</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ask_user</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="go">{'on_step': 1}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">accepted_hooks</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">:</span> <span class="n">a</span><span class="p">,</span> <span class="n">on_step</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ask_user</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="go">{'on_step': 1, 'ask_user': 2}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.active">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.agents.assistants.</span></span><span class="sig-name descname"><span class="pre">active</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.agents.assistants.Assistant" title="PyHydroGeophysX.agents.assistants.Assistant"><span class="pre">Assistant</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/agents/assistants.html#active"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.active" title="Link to this definition">#</a></dt>
+<dd><p>The assistant the user has chosen in this process.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.assistants">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.agents.assistants.</span></span><span class="sig-name descname"><span class="pre">assistants</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#PyHydroGeophysX.agents.assistants.Assistant" title="PyHydroGeophysX.agents.assistants.Assistant"><span class="pre">Assistant</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/agents/assistants.html#assistants"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.assistants" title="Link to this definition">#</a></dt>
+<dd><p>Every registered assistant, built-ins first.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.get_assistant">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.agents.assistants.</span></span><span class="sig-name descname"><span class="pre">get_assistant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.agents.assistants.Assistant" title="PyHydroGeophysX.agents.assistants.Assistant"><span class="pre">Assistant</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/agents/assistants.html#get_assistant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.get_assistant" title="Link to this definition">#</a></dt>
+<dd><p>The assistant <code class="docutils literal notranslate"><span class="pre">key</span></code> (the active one when omitted).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>KeyError</strong> – For a key nobody registered, naming the ones that were.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.load_errors">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.agents.assistants.</span></span><span class="sig-name descname"><span class="pre">load_errors</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/agents/assistants.html#load_errors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.load_errors" title="Link to this definition">#</a></dt>
+<dd><p>Plug-ins that failed to load, with the reason.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.register_assistant">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.agents.assistants.</span></span><span class="sig-name descname"><span class="pre">register_assistant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">assistant</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#PyHydroGeophysX.agents.assistants.Assistant" title="PyHydroGeophysX.agents.assistants.Assistant"><span class="pre">Assistant</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.agents.assistants.Assistant" title="PyHydroGeophysX.agents.assistants.Assistant"><span class="pre">Assistant</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/agents/assistants.html#register_assistant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.register_assistant" title="Link to this definition">#</a></dt>
+<dd><p>Add <code class="docutils literal notranslate"><span class="pre">assistant</span></code> to the registry, replacing one with the same key.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="PyHydroGeophysX.agents.assistants.set_active">
+<span class="sig-prename descclassname"><span class="pre">PyHydroGeophysX.agents.assistants.</span></span><span class="sig-name descname"><span class="pre">set_active</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#PyHydroGeophysX.agents.assistants.Assistant" title="PyHydroGeophysX.agents.assistants.Assistant"><span class="pre">Assistant</span></a></span></span><a class="reference internal" href="../_modules/PyHydroGeophysX/agents/assistants.html#set_active"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#PyHydroGeophysX.agents.assistants.set_active" title="Link to this definition">#</a></dt>
+<dd><p>Choose the assistant this process works with; returns it.</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#subpackages">Subpackages</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-PyHydroGeophysX.agents.assistants">Module contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-an-assistant-supplies">What an assistant supplies</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#adding-one">Adding one</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant"><code class="docutils literal notranslate"><span class="pre">Assistant</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.availability"><code class="docutils literal notranslate"><span class="pre">Assistant.availability()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.colors"><code class="docutils literal notranslate"><span class="pre">Assistant.colors</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.domain"><code class="docutils literal notranslate"><span class="pre">Assistant.domain</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.examples"><code class="docutils literal notranslate"><span class="pre">Assistant.examples</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.folder_classifier"><code class="docutils literal notranslate"><span class="pre">Assistant.folder_classifier</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.input_roles"><code class="docutils literal notranslate"><span class="pre">Assistant.input_roles</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.key"><code class="docutils literal notranslate"><span class="pre">Assistant.key</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.load_tools"><code class="docutils literal notranslate"><span class="pre">Assistant.load_tools()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.load_workflow"><code class="docutils literal notranslate"><span class="pre">Assistant.load_workflow()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.name"><code class="docutils literal notranslate"><span class="pre">Assistant.name</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.ordered_roles"><code class="docutils literal notranslate"><span class="pre">Assistant.ordered_roles</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.persona"><code class="docutils literal notranslate"><span class="pre">Assistant.persona</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.providers"><code class="docutils literal notranslate"><span class="pre">Assistant.providers</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.requires_packages"><code class="docutils literal notranslate"><span class="pre">Assistant.requires_packages</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.status"><code class="docutils literal notranslate"><span class="pre">Assistant.status</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.status_note"><code class="docutils literal notranslate"><span class="pre">Assistant.status_note</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.studio_modules"><code class="docutils literal notranslate"><span class="pre">Assistant.studio_modules</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.summary"><code class="docutils literal notranslate"><span class="pre">Assistant.summary</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.title"><code class="docutils literal notranslate"><span class="pre">Assistant.title</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.tool_for_label"><code class="docutils literal notranslate"><span class="pre">Assistant.tool_for_label()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.tools"><code class="docutils literal notranslate"><span class="pre">Assistant.tools</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.Assistant.workflow"><code class="docutils literal notranslate"><span class="pre">Assistant.workflow</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.BUILTIN"><code class="docutils literal notranslate"><span class="pre">BUILTIN</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.DEFAULT_KEY"><code class="docutils literal notranslate"><span class="pre">DEFAULT_KEY</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.ENTRY_POINT_GROUP"><code class="docutils literal notranslate"><span class="pre">ENTRY_POINT_GROUP</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.WORKFLOW_CONTRACT"><code class="docutils literal notranslate"><span class="pre">WORKFLOW_CONTRACT</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.accepted_hooks"><code class="docutils literal notranslate"><span class="pre">accepted_hooks()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.active"><code class="docutils literal notranslate"><span class="pre">active()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.assistants"><code class="docutils literal notranslate"><span class="pre">assistants()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.get_assistant"><code class="docutils literal notranslate"><span class="pre">get_assistant()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.load_errors"><code class="docutils literal notranslate"><span class="pre">load_errors()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.register_assistant"><code class="docutils literal notranslate"><span class="pre">register_assistant()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#PyHydroGeophysX.agents.assistants.set_active"><code class="docutils literal notranslate"><span class="pre">set_active()</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/api/PyHydroGeophysX.agents.assistants.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/api/PyHydroGeophysX.agents.assistants.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

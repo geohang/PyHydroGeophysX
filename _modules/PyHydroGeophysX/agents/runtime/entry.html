@@ -1,0 +1,1234 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.agents.runtime.entry &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../../_static/documentation_options.js?v=1dd76d02"></script>
+    <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/agents/runtime/entry';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../../../../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/agents/runtime/entry.html" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../../_static/searchtools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <script src="../../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../changelog.html">
+    Changelog
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../agents/index.html">
+    AI workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../changelog.html">
+    Changelog
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.agents.runtime.entry</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.agents.runtime.entry</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""The workflow entry point, as a controller run.</span>
+
+<span class="sd">``BaseAgent.run_unified_agent_workflow`` keeps its signature and its four-value</span>
+<span class="sd">return, because the desktop app, the Streamlit app and the one-click runner all</span>
+<span class="sd">call it. What changed is everything behind that signature: instead of</span>
+<span class="sd">classifying the request into one of eight workflow types and running that</span>
+<span class="sd">type's fixed sequence, it builds a run context and lets the controller choose</span>
+<span class="sd">each step from the tools whose inputs exist.</span>
+
+<span class="sd">The old implementation is still present as</span>
+<span class="sd">``BaseAgent.run_legacy_agent_workflow``. It is not dead weight and not</span>
+<span class="sd">indecision: it covers workflow types whose tools cannot be exercised on this</span>
+<span class="sd">machine - there is no ParFlow output, no SEG-Y file and no GPU here - and</span>
+<span class="sd">keeping it reachable means a run that behaves differently can be compared</span>
+<span class="sd">against the code it replaced instead of argued about. Set</span>
+<span class="sd">``PHGX_LEGACY_WORKFLOW=1`` to use it.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">catalog</span>  <span class="c1"># noqa: F401 - importing registers every tool</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.catalog</span><span class="w"> </span><span class="kn">import</span> <span class="n">summarise_run</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.context</span><span class="w"> </span><span class="kn">import</span> <span class="n">RunContext</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.controller</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">DEFAULT_FINISH</span><span class="p">,</span> <span class="n">DEFAULT_MAX_STEPS</span><span class="p">,</span> <span class="n">PROCEED</span><span class="p">,</span> <span class="n">SKIP</span><span class="p">,</span> <span class="n">STEP_LIMIT</span><span class="p">,</span>
+                         <span class="n">STOP</span><span class="p">,</span> <span class="n">STOPPED</span><span class="p">,</span> <span class="n">route_ahead</span><span class="p">,</span> <span class="n">run_controller</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.modes</span><span class="w"> </span><span class="kn">import</span> <span class="n">announcement</span><span class="p">,</span> <span class="n">auto</span><span class="p">,</span> <span class="n">completion</span>
+
+<span class="c1">#: Set to 1 to run the pre-controller implementation instead.</span>
+<span class="n">LEGACY_ENV</span> <span class="o">=</span> <span class="s2">"PHGX_LEGACY_WORKFLOW"</span>
+
+<span class="c1">#: The keys that name a run's ERT data.</span>
+<span class="n">_ERT_KEYS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"time_lapse_files"</span><span class="p">,</span> <span class="s2">"timelapse_files"</span><span class="p">,</span> <span class="s2">"data_file"</span><span class="p">,</span> <span class="s2">"ert_file"</span><span class="p">)</span>
+
+<span class="c1">#: What else a request can state that a run takes, when the caller did not.</span>
+<span class="n">_STATED_KEYS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"electrode_file"</span><span class="p">,</span> <span class="s2">"seismic_file"</span><span class="p">,</span> <span class="s2">"raw_seismic_file"</span><span class="p">,</span> <span class="s2">"tdem_file"</span><span class="p">,</span>
+                <span class="s2">"mt_files"</span><span class="p">,</span> <span class="s2">"instrument"</span><span class="p">,</span> <span class="s2">"petrophysical_params"</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="adopt_request_inputs">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.entry.adopt_request_inputs">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">adopt_request_inputs</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""The configuration with what its request states and it leaves out, and a note on each.</span>
+
+<span class="sd">    A configuration of a request alone - ``{"user_request": "invert a.ohm and</span>
+<span class="sd">    estimate water content"}`` - used to end with "No step could run with the</span>
+<span class="sd">    inputs given": nothing read the files the request names unless the model</span>
+<span class="sd">    parser had run first. The rules are those of</span>
+<span class="sd">    ``AgentCoordinator._resolve_config``: only what the request itself states</span>
+<span class="sd">    is taken (:meth:`ContextInputAgent.request_inputs`, never the parser's</span>
+<span class="sd">    defaults), the ERT files only when the configuration names no ERT data,</span>
+<span class="sd">    and nothing the caller set is replaced.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    config : dict</span>
+<span class="sd">        The workflow configuration, with ``user_request``.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        ``(config, notes)`` - a new dictionary, and one sentence per value taken</span>
+<span class="sd">        from the request or named there and not used.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; config, notes = adopt_request_inputs({'user_request': 'invert a.ohm with a Syscal'})</span>
+<span class="sd">    &gt;&gt;&gt; config['data_file'], config['instrument']</span>
+<span class="sd">    ('a.ohm', 'Syscal')</span>
+<span class="sd">    &gt;&gt;&gt; print(notes[0])</span>
+<span class="sd">    The configuration names no ERT data, so the run uses the file the request names: a.ohm.</span>
+<span class="sd">    &gt;&gt;&gt; adopt_request_inputs({'data_file': 'b.ohm', 'user_request': 'invert b.ohm'})[1]</span>
+<span class="sd">    []</span>
+<span class="sd">    """</span>
+    <span class="n">request</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"user_request"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"request"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span>
+    <span class="n">resolved</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">resolved</span><span class="p">,</span> <span class="p">[]</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">..context_input_agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">ContextInputAgent</span><span class="p">,</span> <span class="n">_same_file</span>
+
+    <span class="n">listed</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"time_lapse_files"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"timelapse_files"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+    <span class="n">given</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"data_file"</span><span class="p">),</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ert_file"</span><span class="p">),</span> <span class="o">*</span><span class="n">listed</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="p">]</span>
+    <span class="n">stated</span> <span class="o">=</span> <span class="n">ContextInputAgent</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">request_inputs</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">known_files</span><span class="o">=</span><span class="n">given</span><span class="p">)</span>
+    <span class="n">notes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">named</span> <span class="o">=</span> <span class="n">stated</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"time_lapse_files"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+        <span class="p">[</span><span class="n">stated</span><span class="p">[</span><span class="s2">"data_file"</span><span class="p">]]</span> <span class="k">if</span> <span class="n">stated</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"data_file"</span><span class="p">)</span> <span class="k">else</span> <span class="p">[])</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_ERT_KEYS</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">named</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"time_lapse_files"</span><span class="p">,</span> <span class="s2">"data_file"</span><span class="p">,</span> <span class="s2">"ert_file"</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">stated</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+                    <span class="n">resolved</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">stated</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">stated</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"time_lapse_files"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"inversion_mode"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">resolved</span><span class="p">[</span><span class="s2">"inversion_mode"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"time-lapse"</span>
+            <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"The configuration names no ERT data, so the run uses the "</span>
+                         <span class="sa">f</span><span class="s2">"file</span><span class="si">{</span><span class="s1">'s'</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">named</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">''</span><span class="si">}</span><span class="s2"> the request names: "</span>
+                         <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span><span class="w"> </span><span class="n">named</span><span class="p">))</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">unused</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">named</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">_same_file</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">g</span><span class="p">)</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">given</span><span class="p">)]</span>
+        <span class="k">if</span> <span class="n">unused</span><span class="p">:</span>
+            <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The request names </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span><span class="w"> </span><span class="n">unused</span><span class="p">))</span><span class="si">}</span><span class="s2">, but the run uses "</span>
+                         <span class="sa">f</span><span class="s2">"the configuration's ERT data (</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">given</span><span class="p">)</span><span class="si">}</span><span class="s2">)."</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_STATED_KEYS</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">stated</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">resolved</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+            <span class="n">resolved</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">stated</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"_file"</span><span class="p">):</span>
+                <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The run uses the </span><span class="si">{</span><span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'_'</span><span class="p">,</span><span class="w"> </span><span class="s1">' '</span><span class="p">)</span><span class="si">}</span><span class="s2"> the request "</span>
+                             <span class="sa">f</span><span class="s2">"names: </span><span class="si">{</span><span class="n">stated</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">resolved</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">!=</span> <span class="n">stated</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
+            <span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The request gives </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">stated</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="si">!r}</span><span class="s2">, but the run uses "</span>
+                         <span class="sa">f</span><span class="s2">"the configuration's </span><span class="si">{</span><span class="n">resolved</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">resolved</span><span class="p">,</span> <span class="n">notes</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_ask</span><span class="p">(</span><span class="n">api_key</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">provider</span><span class="p">:</span> <span class="nb">str</span>
+              <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""A one-shot question to the model, or None when there is no key.</span>
+
+<span class="sd">    Returning None is what makes the controller fall back to its deterministic</span>
+<span class="sd">    policy, so an unconfigured run still executes rather than failing.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">api_key</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">..base_agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseAgent</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">_Controller</span><span class="p">(</span><span class="n">BaseAgent</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Exists only to reach ``query_llm``; it runs no workflow itself."""</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="p">{}</span>
+
+    <span class="n">agent</span> <span class="o">=</span> <span class="n">_Controller</span><span class="p">(</span><span class="s2">"workflow_controller"</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                        <span class="n">llm_provider</span><span class="o">=</span><span class="n">provider</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">ask</span><span class="p">(</span><span class="n">prompt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">on_text</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="c1"># Low temperature: this is a dispatch decision, not a piece of writing,</span>
+        <span class="c1"># and a creative answer here means a tool name that does not exist.</span>
+        <span class="c1"># ``on_text`` streams the reply as it is written (see `drive`).</span>
+        <span class="k">return</span> <span class="n">agent</span><span class="o">.</span><span class="n">query_llm</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">temperature</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">max_tokens</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">on_text</span><span class="o">=</span><span class="n">on_text</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ask</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_partial_field</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""The value of string field ``key`` in a JSON reply still being written.</span>
+
+<span class="sd">    The controller answers ``{"why": "...", "tool": "..."}`` with its reasoning</span>
+<span class="sd">    first, so the reasoning can be shown as the model writes it - the reply is</span>
+<span class="sd">    not valid JSON until it is complete, hence this rather than a parser.</span>
+
+<span class="sd">    &gt;&gt;&gt; _partial_field('{"why": "The model fits; next is the conv', 'why')</span>
+<span class="sd">    'The model fits; next is the conv'</span>
+<span class="sd">    &gt;&gt;&gt; _partial_field('{"why": "Say \\"done\\".", "tool": "x"}', 'why')</span>
+<span class="sd">    'Say "done".'</span>
+<span class="sd">    &gt;&gt;&gt; _partial_field('{"tool": "x"', 'why')</span>
+<span class="sd">    ''</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+
+    <span class="n">found</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">'"</span><span class="si">%s</span><span class="s1">"\s*:\s*"'</span> <span class="o">%</span> <span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="n">text</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">""</span>
+    <span class="n">out</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">raw</span> <span class="o">=</span> <span class="p">[],</span> <span class="n">found</span><span class="o">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">text</span>
+    <span class="n">escapes</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"n"</span><span class="p">:</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"t"</span><span class="p">:</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">,</span> <span class="s1">'"'</span><span class="p">:</span> <span class="s1">'"'</span><span class="p">,</span> <span class="s2">"</span><span class="se">\\</span><span class="s2">"</span><span class="p">:</span> <span class="s2">"</span><span class="se">\\</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"/"</span><span class="p">:</span> <span class="s2">"/"</span><span class="p">}</span>
+    <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">raw</span><span class="p">):</span>
+        <span class="n">char</span> <span class="o">=</span> <span class="n">raw</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">char</span> <span class="o">==</span> <span class="s1">'"'</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="k">if</span> <span class="n">char</span> <span class="o">==</span> <span class="s2">"</span><span class="se">\\</span><span class="s2">"</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">raw</span><span class="p">):</span>
+                <span class="k">break</span>                       <span class="c1"># an escape cut in half by the stream</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">escapes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">raw</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]))</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">2</span>
+            <span class="k">continue</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">char</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_streams</span><span class="p">(</span><span class="n">ask</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether ``ask`` takes ``on_text`` - an older or a test one may not."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">inspect</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">ask</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"on_text"</span> <span class="ow">or</span> <span class="n">p</span><span class="o">.</span><span class="n">kind</span> <span class="ow">is</span> <span class="n">p</span><span class="o">.</span><span class="n">VAR_KEYWORD</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">)</span>
+
+
+<span class="c1">#: Public name for assistants building their own workflow on :func:`drive`.</span>
+<span class="n">make_ask</span> <span class="o">=</span> <span class="n">_make_ask</span>
+
+
+<div class="viewcode-block" id="announced">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.entry.announced">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">announced</span><span class="p">(</span><span class="n">on_step</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+              <span class="n">announce</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="kc">None</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""``on_step``, followed by auto mode's "now running" event once it approves.</span>
+
+<span class="sd">    Step-by-step answered the approval and then said nothing until the step</span>
+<span class="sd">    had finished, so the desktop showed "Continuing · proceed" for the whole of</span>
+<span class="sd">    an inversion and the choice of the next step after it. Auto mode announces</span>
+<span class="sd">    each step as it starts; this sends the same announcement once the user has</span>
+<span class="sd">    approved one, and nothing for a step that was skipped or that ended the run.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    on_step : callable</span>
+<span class="sd">        The pause hook, as :func:`run_controller` takes it.</span>
+<span class="sd">    announce : callable</span>
+<span class="sd">        Receives the step's :func:`~.modes.announcement`.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    callable</span>
+<span class="sd">        A hook returning exactly what ``on_step`` returned. An ``announce``</span>
+<span class="sd">        that raises is ignored, as auto mode ignores it: a display must not</span>
+<span class="sd">        stop a run.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    None</span>
+<span class="sd">        What ``on_step`` raises propagates, for the controller to handle as it</span>
+<span class="sd">        always has.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from .tools import Tool</span>
+<span class="sd">    &gt;&gt;&gt; seen = []</span>
+<span class="sd">    &gt;&gt;&gt; hook = announced(lambda ctx, tool, why: 'proceed', seen.append)</span>
+<span class="sd">    &gt;&gt;&gt; tool = Tool('invert_ert', 'Invert.', lambda c: ('', {}), label='Run ERT inversion')</span>
+<span class="sd">    &gt;&gt;&gt; hook(RunContext('goal'), tool, 'the data are loaded')</span>
+<span class="sd">    'proceed'</span>
+<span class="sd">    &gt;&gt;&gt; seen[0]['label']</span>
+<span class="sd">    'Run ERT inversion'</span>
+<span class="sd">    &gt;&gt;&gt; announced(lambda ctx, tool, why: 'skip', seen.append)(RunContext('g'), tool, '')</span>
+<span class="sd">    'skip'</span>
+<span class="sd">    &gt;&gt;&gt; len(seen)</span>
+<span class="sd">    1</span>
+<span class="sd">    """</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">hook</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">,</span> <span class="n">tool</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="n">verdict</span> <span class="o">=</span> <span class="n">on_step</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tool</span><span class="p">,</span> <span class="n">reason</span><span class="p">)</span>
+        <span class="c1"># The controller reads a missing answer as "proceed", and so does this.</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">verdict</span> <span class="ow">or</span> <span class="n">PROCEED</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">STOP</span><span class="p">,</span> <span class="n">SKIP</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">announce</span><span class="p">(</span><span class="n">announcement</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tool</span><span class="p">,</span> <span class="n">reason</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - a display must not stop a run</span>
+                <span class="k">pass</span>
+        <span class="k">return</span> <span class="n">verdict</span>
+
+    <span class="k">return</span> <span class="n">hook</span></div>
+
+
+
+<div class="viewcode-block" id="drive">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.entry.drive">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">drive</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">tools</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+          <span class="n">ask</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+          <span class="n">progress_callback</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+          <span class="n">on_step</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+          <span class="n">on_event</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+          <span class="n">prompt</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">finish</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_FINISH</span><span class="p">,</span>
+          <span class="n">recovery</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">max_steps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_MAX_STEPS</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RunContext</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Run the controller over ``tools``, telling the caller about every step.</span>
+
+<span class="sd">    This is the agent loop any assistant runs on (see</span>
+<span class="sd">    :mod:`PyHydroGeophysX.agents.assistants`): the controller picks each step</span>
+<span class="sd">    from the tools whose inputs exist, and every step is announced before it</span>
+<span class="sd">    runs and reported after it ends - through ``progress_callback`` for a</span>
+<span class="sd">    progress line, and through ``on_event`` as structured events, which is what</span>
+<span class="sd">    the studio's live timeline, approvals and chat narration are built on. An</span>
+<span class="sd">    assistant that drives its tools through this gets all of that for nothing.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ctx : RunContext</span>
+<span class="sd">        The run: goal, configuration, output folder and settings. Mutated in</span>
+<span class="sd">        place and returned.</span>
+<span class="sd">    tools : dict, optional</span>
+<span class="sd">        The assistant's tool registry, name to :class:`~.tools.Tool`. Defaults</span>
+<span class="sd">        to the global registry, which holds AQUAH's tools.</span>
+<span class="sd">    ask : callable, optional</span>
+<span class="sd">        Takes a prompt, returns the model's reply. Without it the tools run in</span>
+<span class="sd">        dependency order.</span>
+<span class="sd">    progress_callback : callable, optional</span>
+<span class="sd">        ``(step, fraction, detail, module)``; the fourth argument is optional.</span>
+<span class="sd">    on_step : callable, optional</span>
+<span class="sd">        The pause policy, as for :func:`run_workflow`.</span>
+<span class="sd">    on_event : callable, optional</span>
+<span class="sd">        Receives ``phase="start"`` and ``phase="done"`` events for every step,</span>
+<span class="sd">        and a ``phase="route"`` event - ``ahead``, the steps still between the</span>
+<span class="sd">        run and ``finish`` as things stand (:func:`~.controller.route_ahead`) -</span>
+<span class="sd">        before the first step and after each one. While the model decides,</span>
+<span class="sd">        ``phase="thought"`` events carry its reasoning as it writes it, when</span>
+<span class="sd">        ``ask`` takes ``on_text`` (as :func:`make_ask`'s does).</span>
+<span class="sd">    prompt, finish, recovery, max_steps</span>
+<span class="sd">        Passed to :func:`~.controller.run_controller`: the decision prompt, the</span>
+<span class="sd">        artifact that has to exist before the run may finish, whether a failed</span>
+<span class="sd">        step may be retried with changed settings, and the step limit.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    RunContext</span>
+<span class="sd">        ``ctx``, with the steps taken and what they produced.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    None</span>
+<span class="sd">        Tool failures are recorded as steps; display callbacks that raise are</span>
+<span class="sd">        ignored.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from .tools import Tool</span>
+<span class="sd">    &gt;&gt;&gt; tools = {'load': Tool('load', 'Load.', lambda c: ('Loaded.', {'data': 1}),</span>
+<span class="sd">    ...                       produces=('data',)),</span>
+<span class="sd">    ...          'summarise': Tool('summarise', 'Summarise.',</span>
+<span class="sd">    ...                            lambda c: ('Done.', {'summary': 1}),</span>
+<span class="sd">    ...                            requires=('data',), produces=('summary',))}</span>
+<span class="sd">    &gt;&gt;&gt; seen = []</span>
+<span class="sd">    &gt;&gt;&gt; ctx = drive(RunContext('goal'), tools=tools, finish='summary',</span>
+<span class="sd">    ...             on_event=seen.append)</span>
+<span class="sd">    &gt;&gt;&gt; [s.tool for s in ctx.steps]</span>
+<span class="sd">    ['load', 'summarise']</span>
+<span class="sd">    &gt;&gt;&gt; [(e['phase'], e.get('tool', '')) for e in seen[:4]]</span>
+<span class="sd">    [('route', ''), ('start', 'load'), ('done', 'load'), ('route', '')]</span>
+<span class="sd">    &gt;&gt;&gt; [step['tool'] for step in seen[0]['ahead']], seen[3]['ahead'][0]['tool']</span>
+<span class="sd">    (['load', 'summarise'], 'summarise')</span>
+<span class="sd">    """</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">emit</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Hand a step event to ``on_event``; a display must not stop a run."""</span>
+        <span class="k">if</span> <span class="n">on_event</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">on_event</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - a display must not stop a run</span>
+            <span class="k">pass</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">announce</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Tell the caller where the run is working, before it starts working.</span>
+
+<span class="sd">        The progress callback is how the desktop learns which studio module to</span>
+<span class="sd">        bring forward, so this fires before the step rather than after it - by</span>
+<span class="sd">        the time a step reports its result the user has missed it happening.</span>
+<span class="sd">        Callbacks that predate the fourth argument still work: it is optional.</span>
+<span class="sd">        """</span>
+        <span class="n">emit</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="s2">"start"</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">progress_callback</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="c1"># How far along the run is. The honest answer is that nothing knows:</span>
+        <span class="c1"># the loop decides each step from what the previous one produced, so</span>
+        <span class="c1"># the total is not available until the run is over. Two attempts at a</span>
+        <span class="c1"># denominator both failed - DEFAULT_MAX_STEPS crawled to 31% across a</span>
+        <span class="c1"># complete six-step run and then jumped to 100, and counting currently</span>
+        <span class="c1"># runnable tools made the bar go *backwards* (95%, 95%, 73%) because</span>
+        <span class="c1"># only one tool can run before anything is loaded.</span>
+        <span class="c1">#</span>
+        <span class="c1"># So this is a monotone curve that approaches but never reaches the</span>
+        <span class="c1"># end, which is what an indeterminate run actually looks like. It</span>
+        <span class="c1"># claims no precision it does not have.</span>
+        <span class="n">fraction</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.95</span><span class="p">,</span> <span class="mf">0.1</span> <span class="o">+</span> <span class="mf">0.85</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="mf">0.7</span> <span class="o">**</span> <span class="n">event</span><span class="p">[</span><span class="s2">"step"</span><span class="p">]))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">progress_callback</span><span class="p">(</span><span class="n">event</span><span class="p">[</span><span class="s2">"label"</span><span class="p">],</span> <span class="n">fraction</span><span class="p">,</span> <span class="n">event</span><span class="p">[</span><span class="s2">"reason"</span><span class="p">],</span>
+                              <span class="n">event</span><span class="p">[</span><span class="s2">"module"</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">progress_callback</span><span class="p">(</span><span class="n">event</span><span class="p">[</span><span class="s2">"label"</span><span class="p">],</span> <span class="n">fraction</span><span class="p">,</span> <span class="n">event</span><span class="p">[</span><span class="s2">"reason"</span><span class="p">])</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">thinking</span><span class="p">(</span><span class="n">question</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""``ask``, with the model's reasoning sent on as it writes it.</span>
+
+<span class="sd">        Each ``phase="thought"`` event carries the reasoning so far, not the</span>
+<span class="sd">        newest fragment, so a listener that misses one loses nothing. Sent at</span>
+<span class="sd">        most every 50 ms: a display has no use for every token.</span>
+<span class="sd">        """</span>
+        <span class="n">sent</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"text"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span> <span class="s2">"at"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">}</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">on_text</span><span class="p">(</span><span class="n">reply</span><span class="p">):</span>
+            <span class="n">why</span> <span class="o">=</span> <span class="n">_partial_field</span><span class="p">(</span><span class="n">reply</span><span class="p">,</span> <span class="s2">"why"</span><span class="p">)</span>
+            <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">why</span> <span class="ow">and</span> <span class="n">why</span> <span class="o">!=</span> <span class="n">sent</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]</span> <span class="ow">and</span> <span class="n">now</span> <span class="o">-</span> <span class="n">sent</span><span class="p">[</span><span class="s2">"at"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.05</span><span class="p">:</span>
+                <span class="n">sent</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">why</span><span class="p">,</span> <span class="n">at</span><span class="o">=</span><span class="n">now</span><span class="p">)</span>
+                <span class="n">emit</span><span class="p">({</span><span class="s2">"phase"</span><span class="p">:</span> <span class="s2">"thought"</span><span class="p">,</span> <span class="s2">"text"</span><span class="p">:</span> <span class="n">why</span><span class="p">})</span>
+
+        <span class="n">reply</span> <span class="o">=</span> <span class="n">ask</span><span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="n">on_text</span><span class="o">=</span><span class="n">on_text</span><span class="p">)</span>
+        <span class="n">why</span> <span class="o">=</span> <span class="n">_partial_field</span><span class="p">(</span><span class="n">reply</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">,</span> <span class="s2">"why"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">why</span> <span class="ow">and</span> <span class="n">why</span> <span class="o">!=</span> <span class="n">sent</span><span class="p">[</span><span class="s2">"text"</span><span class="p">]:</span>
+            <span class="n">emit</span><span class="p">({</span><span class="s2">"phase"</span><span class="p">:</span> <span class="s2">"thought"</span><span class="p">,</span> <span class="s2">"text"</span><span class="p">:</span> <span class="n">why</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">reply</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">show_route</span><span class="p">(</span><span class="n">_ctx</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Tell the caller which steps still stand between the run and its end.</span>
+
+<span class="sd">        Recomputed from the run as it is now, so it follows the controller</span>
+<span class="sd">        rather than predicting it: a step the model chose out of order, or one</span>
+<span class="sd">        that failed, changes the route the next time it is drawn.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">on_event</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">ahead</span> <span class="o">=</span> <span class="n">route_ahead</span><span class="p">(</span><span class="n">_ctx</span><span class="p">,</span> <span class="n">tools</span><span class="p">,</span> <span class="n">finish</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - a projection must not stop a run</span>
+            <span class="k">return</span>
+        <span class="n">emit</span><span class="p">({</span><span class="s2">"phase"</span><span class="p">:</span> <span class="s2">"route"</span><span class="p">,</span> <span class="s2">"ahead"</span><span class="p">:</span> <span class="n">ahead</span><span class="p">,</span> <span class="s2">"step"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">_ctx</span><span class="o">.</span><span class="n">steps</span><span class="p">)})</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">report_result</span><span class="p">(</span><span class="n">_ctx</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Say what the step concluded, as soon as it has concluded it.</span>
+
+<span class="sd">        The announcement above can only say what is about to be attempted. The</span>
+<span class="sd">        studio's module panels hold their own state and the workflow runs</span>
+<span class="sd">        headless in another process, so without this the user watching a panel</span>
+<span class="sd">        the run had navigated to saw an empty tool and no evidence anything had</span>
+<span class="sd">        happened.</span>
+<span class="sd">        """</span>
+        <span class="n">event</span> <span class="o">=</span> <span class="n">completion</span><span class="p">(</span><span class="n">_ctx</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">tools</span><span class="p">)</span>
+        <span class="n">emit</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="s2">"done"</span><span class="p">))</span>
+        <span class="n">show_route</span><span class="p">(</span><span class="n">_ctx</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">progress_callback</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">event</span><span class="p">[</span><span class="s2">"summary"</span><span class="p">]:</span>
+            <span class="k">return</span>
+        <span class="n">fraction</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.95</span><span class="p">,</span> <span class="mf">0.1</span> <span class="o">+</span> <span class="mf">0.85</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="mf">0.7</span> <span class="o">**</span> <span class="n">event</span><span class="p">[</span><span class="s2">"step"</span><span class="p">]))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">progress_callback</span><span class="p">(</span><span class="n">event</span><span class="p">[</span><span class="s2">"label"</span><span class="p">],</span> <span class="n">fraction</span><span class="p">,</span> <span class="n">event</span><span class="p">[</span><span class="s2">"summary"</span><span class="p">],</span>
+                              <span class="n">event</span><span class="p">[</span><span class="s2">"module"</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">progress_callback</span><span class="p">(</span><span class="n">event</span><span class="p">[</span><span class="s2">"label"</span><span class="p">],</span> <span class="n">fraction</span><span class="p">,</span> <span class="n">event</span><span class="p">[</span><span class="s2">"summary"</span><span class="p">])</span>
+
+    <span class="c1"># One loop, two policies: without a pause hook this runs to the end, with</span>
+    <span class="c1"># one it stops before each step and asks. Both announce the same events, so</span>
+    <span class="c1"># the app follows along either way.</span>
+    <span class="n">show_route</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span>
+    <span class="n">streamed</span> <span class="o">=</span> <span class="n">thinking</span> <span class="k">if</span> <span class="p">(</span><span class="n">ask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">on_event</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">_streams</span><span class="p">(</span><span class="n">ask</span><span class="p">))</span> <span class="k">else</span> <span class="n">ask</span>
+    <span class="n">run_controller</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">ask</span><span class="o">=</span><span class="n">streamed</span><span class="p">,</span> <span class="n">max_steps</span><span class="o">=</span><span class="n">max_steps</span><span class="p">,</span> <span class="n">tools</span><span class="o">=</span><span class="n">tools</span><span class="p">,</span>
+                   <span class="n">on_step</span><span class="o">=</span><span class="n">announced</span><span class="p">(</span><span class="n">on_step</span><span class="p">,</span> <span class="n">announce</span><span class="p">)</span> <span class="k">if</span> <span class="n">on_step</span> <span class="k">else</span> <span class="n">auto</span><span class="p">(</span><span class="n">announce</span><span class="p">),</span>
+                   <span class="n">on_result</span><span class="o">=</span><span class="n">report_result</span><span class="p">,</span> <span class="n">recovery</span><span class="o">=</span><span class="n">recovery</span><span class="p">,</span> <span class="n">prompt</span><span class="o">=</span><span class="n">prompt</span><span class="p">,</span>
+                   <span class="n">finish</span><span class="o">=</span><span class="n">finish</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ctx</span></div>
+
+
+
+<div class="viewcode-block" id="run_workflow">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.entry.run_workflow">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_workflow</span><span class="p">(</span><span class="n">workflow_config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">api_key</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+                 <span class="n">llm_model</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">llm_provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+                 <span class="n">progress_callback</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">on_step</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">ask_user</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">on_event</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+                 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">list</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Run one workflow and return what its callers expect.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    workflow_config : dict</span>
+<span class="sd">        The parsed configuration, as ``ContextInputAgent`` produces it.</span>
+<span class="sd">    api_key, llm_model, llm_provider : str</span>
+<span class="sd">        Model access. Without a key the run still executes, deterministically.</span>
+<span class="sd">    output_dir : str or Path</span>
+<span class="sd">        Where results are written.</span>
+<span class="sd">    progress_callback : callable, optional</span>
+<span class="sd">        ``(step, fraction, detail, module)`` for the desktop progress bar; the</span>
+<span class="sd">        fourth argument is optional and older callbacks still work.</span>
+<span class="sd">    on_step : callable, optional</span>
+<span class="sd">        The pause policy. Omit for "auto to report"; pass</span>
+<span class="sd">        :func:`~PyHydroGeophysX.agents.runtime.modes.step_by_step` to walk the</span>
+<span class="sd">        run one approved step at a time.</span>
+<span class="sd">    ask_user : callable, optional</span>
+<span class="sd">        Answers a question a tool could not decide for itself, given</span>
+<span class="sd">        ``{"question", "options", "default"}`` and returning an option id.</span>
+<span class="sd">        Without it a run takes the stated default and records that nobody was</span>
+<span class="sd">        asked, so a headless run never hangs waiting for an answer.</span>
+<span class="sd">    on_event : callable, optional</span>
+<span class="sd">        Receives each step as a structured event: the</span>
+<span class="sd">        :func:`~PyHydroGeophysX.agents.runtime.modes.announcement` with</span>
+<span class="sd">        ``phase="start"`` before it runs, and its</span>
+<span class="sd">        :func:`~PyHydroGeophysX.agents.runtime.modes.completion` with</span>
+<span class="sd">        ``phase="done"`` after. The progress callback flattens both into one</span>
+<span class="sd">        line of text; this keeps the controller's reason, the step's status and</span>
+<span class="sd">        what it produced apart, which is what the studio's live timeline shows.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        ``(results, execution_plan, interpretation, report_files)`` - the same</span>
+<span class="sd">        four values the pipeline returned. ``execution_plan`` is now derived</span>
+<span class="sd">        from the steps that ran, so it can no longer describe a step that did</span>
+<span class="sd">        not happen. ``results["status"]`` is ``"incomplete"`` when the run</span>
+<span class="sd">        cannot be called complete (:func:`_incomplete_because`), with the</span>
+<span class="sd">        reasons among ``results["warnings"]`` and heading the interpretation.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        Only when steps ran and none of them succeeded. Individual tool</span>
+<span class="sd">        failures are recorded and reported rather than raised, so a run that</span>
+<span class="sd">        got most of the way still delivers what it has.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; results, plan, text, files = run_workflow(</span>
+<span class="sd">    ...     {'user_request': 'nothing to do'}, None, None, 'openai', '.')</span>
+<span class="sd">    &gt;&gt;&gt; plan, results['status']</span>
+<span class="sd">    ([], 'incomplete')</span>
+<span class="sd">    &gt;&gt;&gt; text.splitlines()[1]</span>
+<span class="sd">    '- No step could run with the inputs given, so the run produced nothing.'</span>
+<span class="sd">    """</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span>
+    <span class="n">output</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># The files a request names are run even when no parser read it first.</span>
+    <span class="n">config</span><span class="p">,</span> <span class="n">adopted</span> <span class="o">=</span> <span class="n">adopt_request_inputs</span><span class="p">(</span><span class="n">workflow_config</span><span class="p">)</span>
+    <span class="n">ctx</span> <span class="o">=</span> <span class="n">RunContext</span><span class="p">(</span>
+        <span class="n">goal</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"user_request"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">),</span>
+        <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+        <span class="n">output_dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">output</span><span class="p">),</span>
+        <span class="n">settings</span><span class="o">=</span><span class="p">{</span><span class="s2">"api_key"</span><span class="p">:</span> <span class="n">api_key</span><span class="p">,</span> <span class="s2">"model"</span><span class="p">:</span> <span class="n">llm_model</span><span class="p">,</span>
+                  <span class="s2">"llm_provider"</span><span class="p">:</span> <span class="n">llm_provider</span><span class="p">,</span>
+                  <span class="s2">"progress_callback"</span><span class="p">:</span> <span class="n">progress_callback</span><span class="p">,</span>
+                  <span class="s2">"ask_user"</span><span class="p">:</span> <span class="n">ask_user</span><span class="p">},</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">note</span> <span class="ow">in</span> <span class="n">adopted</span><span class="p">:</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="n">note</span><span class="p">)</span>
+
+    <span class="n">drive</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">ask</span><span class="o">=</span><span class="n">_make_ask</span><span class="p">(</span><span class="n">api_key</span><span class="p">,</span> <span class="n">llm_model</span><span class="p">,</span> <span class="n">llm_provider</span><span class="p">),</span>
+          <span class="n">progress_callback</span><span class="o">=</span><span class="n">progress_callback</span><span class="p">,</span> <span class="n">on_step</span><span class="o">=</span><span class="n">on_step</span><span class="p">,</span> <span class="n">on_event</span><span class="o">=</span><span class="n">on_event</span><span class="p">)</span>
+
+    <span class="n">failed</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">ctx</span><span class="o">.</span><span class="n">steps</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">"failed"</span><span class="p">]</span>
+    <span class="c1"># A step that failed is reported, not hidden: the request may have named the</span>
+    <span class="c1"># product it would have made, and an absence nobody states reads as a</span>
+    <span class="c1"># product nobody wanted.</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">failed</span><span class="p">:</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">description</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">step</span><span class="o">.</span><span class="n">tool</span><span class="si">}</span><span class="s2"> did not complete: </span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="c1"># A result that rests on a choice somebody made is not the same as one the</span>
+    <span class="c1"># data forced, and the report has to be able to say which it is.</span>
+    <span class="k">for</span> <span class="n">asked</span> <span class="ow">in</span> <span class="n">ctx</span><span class="o">.</span><span class="n">questions</span><span class="p">:</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="sa">f</span><span class="s2">"A choice was put to the user: </span><span class="si">{</span><span class="n">asked</span><span class="p">[</span><span class="s1">'question'</span><span class="p">]</span><span class="si">}</span><span class="s2"> "</span>
+                 <span class="sa">f</span><span class="s2">"Answered '</span><span class="si">{</span><span class="n">asked</span><span class="p">[</span><span class="s1">'answer'</span><span class="p">]</span><span class="si">}</span><span class="s2">'."</span><span class="p">)</span>
+
+    <span class="c1"># Raise only when nothing at all worked. The previous condition was</span>
+    <span class="c1"># `not ctx.has(a, b, c, d)`, and `has` requires *every* named artifact - so</span>
+    <span class="c1"># it was true whenever any one was missing, which is nearly always. One</span>
+    <span class="c1"># failed step therefore aborted runs that had produced everything else,</span>
+    <span class="c1"># which is the opposite of what the loop exists to do: a seismic file with</span>
+    <span class="c1"># a malformed geometry header killed a run that had gone on to invert the</span>
+    <span class="c1"># ERT surveys successfully.</span>
+    <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">steps</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">"ok"</span> <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">ctx</span><span class="o">.</span><span class="n">steps</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The workflow produced no result. </span><span class="si">{</span><span class="n">failed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tool</span><span class="si">}</span><span class="s2"> failed: "</span>
+                         <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">failed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">failed</span> <span class="k">else</span>
+                         <span class="s2">"The workflow produced no result."</span><span class="p">)</span>
+
+    <span class="n">results</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">results</span><span class="p">()</span>
+    <span class="c1"># The callers read the inversion's own keys off the top level, as they did</span>
+    <span class="c1"># when the pipeline returned that dictionary directly.</span>
+    <span class="n">inversion</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"inversion_results"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inversion</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">inversion</span><span class="p">,</span> <span class="o">**</span><span class="n">results</span><span class="p">}</span>
+    <span class="c1"># The status was "success" whatever the run did, so a run the model ended</span>
+    <span class="c1"># before its first step came back a success with no report and a text</span>
+    <span class="c1"># saying it had completed. A caller acts on this field, and a person reads</span>
+    <span class="c1"># the text's first line: both have to say when the run fell short.</span>
+    <span class="n">unfinished</span> <span class="o">=</span> <span class="n">_incomplete_because</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">results</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">reason</span> <span class="ow">in</span> <span class="n">unfinished</span><span class="p">:</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="n">reason</span><span class="p">)</span>
+    <span class="n">results</span><span class="p">[</span><span class="s2">"warnings"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">warnings</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">unfinished</span><span class="p">:</span>
+        <span class="n">results</span><span class="p">[</span><span class="s2">"status"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"incomplete"</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">results</span><span class="p">[</span><span class="s2">"status"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"success"</span> <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">steps</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">failed</span> <span class="k">else</span> <span class="n">results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">"status"</span><span class="p">,</span> <span class="s2">"success"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">ctx</span><span class="o">.</span><span class="n">plan</span><span class="p">(),</span> <span class="n">summarise_run</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">unfinished</span><span class="p">),</span>
+            <span class="n">ctx</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"report_files"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_incomplete_because</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">RunContext</span><span class="p">,</span> <span class="n">results</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Why the run cannot be called complete; empty when it can.</span>
+
+<span class="sd">    Complete means the run did what it could and was asked to do. It is not</span>
+<span class="sd">    when nothing ran; when the user or the step limit cut it off before its</span>
+<span class="sd">    report; when a step failed and was not recovered, whether or not a report</span>
+<span class="sd">    was written after it (the report lists it under "Not delivered"); or when</span>
+<span class="sd">    the request named a product the results do not hold, which is said with</span>
+<span class="sd">    the reason it is missing. A run with a broken TDEM file beside good ERT</span>
+<span class="sd">    data used to come back a success, the failure only among its warnings. A</span>
+<span class="sd">    run that ends without a report because none of its tools writes one - a</span>
+<span class="sd">    seismic line on its own - is complete: it ran out of work, not of steps.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ctx : RunContext</span>
+<span class="sd">        The run, after the controller has finished with it.</span>
+<span class="sd">    results : dict</span>
+<span class="sd">        What the run returns, for the check of the requested products.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list of str</span>
+<span class="sd">        One sentence per shortfall, to record as a warning.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; _incomplete_because(RunContext('invert the line'), {})</span>
+<span class="sd">    ['No step could run with the inputs given, so the run produced nothing.']</span>
+<span class="sd">    &gt;&gt;&gt; ctx = RunContext('invert the line')</span>
+<span class="sd">    &gt;&gt;&gt; _ = ctx.begin('invert_seismic'); ctx.finish('Inverted.')</span>
+<span class="sd">    &gt;&gt;&gt; ctx.ended = 'exhausted'</span>
+<span class="sd">    &gt;&gt;&gt; _incomplete_because(ctx, {})</span>
+<span class="sd">    []</span>
+<span class="sd">    &gt;&gt;&gt; ctx = RunContext('invert a.ohm and the sounding')</span>
+<span class="sd">    &gt;&gt;&gt; _ = ctx.begin('invert_tdem', description='Run TDEM inversion')</span>
+<span class="sd">    &gt;&gt;&gt; ctx.finish(status='failed', error='ValueError: no time column')</span>
+<span class="sd">    &gt;&gt;&gt; ctx.put('report_files', {'report_markdown': 'workflow_report.md'})</span>
+<span class="sd">    &gt;&gt;&gt; _incomplete_because(ctx, {})</span>
+<span class="sd">    ['Run TDEM inversion did not complete: ValueError: no time column']</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.._intent</span><span class="w"> </span><span class="kn">import</span> <span class="n">unmet_requests</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.catalog</span><span class="w"> </span><span class="kn">import</span> <span class="n">shortfall_reasons</span>
+
+    <span class="n">reasons</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">reported</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">has</span><span class="p">(</span><span class="s2">"report_files"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ctx</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
+        <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"No step could run with the inputs given, so the run "</span>
+                       <span class="s2">"produced nothing."</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="n">reported</span> <span class="ow">and</span> <span class="n">ctx</span><span class="o">.</span><span class="n">ended</span> <span class="o">==</span> <span class="n">STOPPED</span><span class="p">:</span>
+        <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"The run was stopped at the user's request before its "</span>
+                       <span class="s2">"report was written."</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="n">reported</span> <span class="ow">and</span> <span class="n">ctx</span><span class="o">.</span><span class="n">ended</span> <span class="o">==</span> <span class="n">STEP_LIMIT</span><span class="p">:</span>
+        <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"The run used all of its steps before its report was written."</span><span class="p">)</span>
+    <span class="c1"># The latest failure of each tool no later attempt recovered.</span>
+    <span class="n">broken</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">ctx</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">"failed"</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">ctx</span><span class="o">.</span><span class="n">ran</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">tool</span><span class="p">):</span>
+            <span class="n">broken</span><span class="p">[</span><span class="n">step</span><span class="o">.</span><span class="n">tool</span><span class="p">]</span> <span class="o">=</span> <span class="n">step</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">step</span><span class="o">.</span><span class="n">description</span> <span class="ow">or</span> <span class="n">step</span><span class="o">.</span><span class="n">tool</span> <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">broken</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+    <span class="k">if</span> <span class="n">broken</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">reported</span><span class="p">:</span>
+        <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"The run ended without a report, and "</span>
+                       <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">names</span><span class="p">))</span><span class="si">}</span><span class="s2"> did not complete."</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Worded as the run's own note on the failure, so the two are one warning.</span>
+        <span class="n">reasons</span> <span class="o">+=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">description</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">step</span><span class="o">.</span><span class="n">tool</span><span class="si">}</span><span class="s2"> did not complete: </span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span>
+                    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">broken</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+    <span class="n">reasons</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">unmet_requests</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">results</span><span class="p">,</span> <span class="n">shortfall_reasons</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">results</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">reasons</span>
+
+
+<div class="viewcode-block" id="use_legacy">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.entry.use_legacy">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">use_legacy</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether this process should run the pre-controller implementation."""</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">LEGACY_ENV</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">"1"</span><span class="p">,</span> <span class="s2">"true"</span><span class="p">,</span> <span class="s2">"yes"</span><span class="p">}</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

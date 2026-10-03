@@ -1,0 +1,29 @@
+PyHydroGeophysX.llm package
+===========================
+
+Submodules
+----------
+
+PyHydroGeophysX.llm.providers module
+------------------------------------
+
+.. automodule:: PyHydroGeophysX.llm.providers
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.llm.runtime\_options module
+-------------------------------------------
+
+.. automodule:: PyHydroGeophysX.llm.runtime_options
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: PyHydroGeophysX.llm
+   :members:
+   :show-inheritance:
+   :undoc-members:
