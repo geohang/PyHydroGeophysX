@@ -95,8 +95,6 @@ _E4D_CONFIG_FILTER = "E4D mesh configuration (*.cfg);;All files (*)"
 _E4D_MESH_FILTER = "E4D / TetGen mesh (*.node *.ele);;All files (*)"
 _ERT_FORWARD_SCHEMES = ("dd", "wa", "slm", "wb")
 #: A note under a row, and one that warns.
-_HINT_STYLE = "color:#5a6a7a; font-size:8pt;"
-_WARN_STYLE = "color:#b42318; font-size:8pt;"
 #: What the E4D engine lays its mesh out from while no .cfg is loaded.
 _E4D_FROM_STEPS = "No configuration loaded: the layout is built from steps 1, 3 and 4."
 
@@ -291,11 +289,11 @@ class Mesh3DModule(BaseModule):
         return scroll
 
     @staticmethod
-    def _note(text: str = "", style: str = _HINT_STYLE) -> QLabel:
+    def _note(text: str = "", tone: str = "hint") -> QLabel:
         """A wrapped note under a row."""
         label = QLabel(text)
         label.setWordWrap(True)
-        label.setStyleSheet(style)
+        theme.set_tone(label, tone)
         return label
 
     @staticmethod
@@ -386,7 +384,7 @@ class Mesh3DModule(BaseModule):
             name: self._add_rows(form, rows)
             for name, rows in zip(_ARRAY_TYPES, (grid, single, cross, line))}
         # Said here when a loaded E4D configuration sets the electrodes instead.
-        self._array_note = self._note(style=_WARN_STYLE)
+        self._array_note = self._note(tone="error")
         form.addRow(self._array_note)
         return box
 
@@ -1154,9 +1152,9 @@ class Mesh3DModule(BaseModule):
             f"{counts[0]} internal, {counts[2]} on the outer boundary), "
             f"{len(layout.boundaries)} internal boundaries, {len(layout.zones)} zones; "
             f"domain {span[0]:.0f} × {span[1]:.0f} m to {layout.bottom:.1f} m"
-            + "".join(f"<br><span style='color:#5a6a7a'>{html.escape(note)}</span>"
+            + "".join(f"<br><span style='color:{theme.color('muted')}'>{html.escape(note)}</span>"
                       for note in notes)
-            + (f"<br><span style='color:#b42318'>{' '.join(problems)}</span>" if problems else ""))
+            + (f"<br><span style='color:{theme.color('red')}'>{' '.join(problems)}</span>" if problems else ""))
         self.log(f"Previewed the E4D layout: {len(layout.points)} control points, "
                  f"{len(layout.zones)} zones.", "warn" if problems else "info")
         for note in notes:
@@ -1167,7 +1165,7 @@ class Mesh3DModule(BaseModule):
         try:
             self._plotter.clear()
             self._colour_actor(None, cmaps.MESH_REGIONS, "coolwarm", None)
-            colours = {0: "#1f78b4", 1: "#33a02c", 2: "#6a3d9a"}
+            colours = {0: "#007aff", 1: "#34c759", 2: "#af52de"}
             for flag, colour in colours.items():
                 chosen = layout.points[flags == flag]
                 if len(chosen):
@@ -1176,16 +1174,16 @@ class Mesh3DModule(BaseModule):
             for _, indices in layout.boundaries:
                 ring = layout.points[[int(i) - 1 for i in indices]]
                 self._plotter.add_mesh(self._pv.lines_from_points(np.vstack([ring, ring[:1]])),
-                                       color="#1f78b4", line_width=2)
+                                       color="#007aff", line_width=2)
             if len(outer):
                 bottom = outer.copy()
                 bottom[:, 2] = layout.bottom
                 for ring in (outer, bottom):
                     self._plotter.add_mesh(self._pv.lines_from_points(np.vstack([ring, ring[:1]])),
-                                           color="#6a3d9a", line_width=1)
+                                           color="#af52de", line_width=1)
                 for top, low in zip(outer, bottom):
                     self._plotter.add_mesh(self._pv.lines_from_points(np.vstack([top, low])),
-                                           color="#6a3d9a", line_width=1)
+                                           color="#af52de", line_width=1)
             self._overlay_sensors(sensors, labels=False)
             # A loaded configuration has zones of its own; the list is not used.
             # Zones are framed on the fine zone they lie in, a small part of the
@@ -1226,7 +1224,7 @@ class Mesh3DModule(BaseModule):
             f"{len(layout.boundaries)} internal boundaries, {len(layout.zones)} zones "
             f"({limits}); bottom at {layout.bottom:g} m. It sets the electrodes, the domain "
             "and the element sizes, so steps 1, 3 and 4 are not used."
-            + (f"<br><span style='color:#b42318'>{' '.join(problems)}</span>" if problems else ""))
+            + (f"<br><span style='color:{theme.color('red')}'>{' '.join(problems)}</span>" if problems else ""))
         self._mesh_engine.setCurrentText(mesh3d_builder.E4D_ENGINE)
         # Also when the engine already was E4D, which emits no change.
         self._update_visibility()
@@ -1402,13 +1400,13 @@ class Mesh3DModule(BaseModule):
                 for entry in zone_report)
             empty = [entry["name"] for entry in zone_report if not entry["cells"]]
             if empty:
-                zone_line += (f"<br><span style='color:#b42318'>{html.escape(', '.join(empty))}: "
+                zone_line += (f"<br><span style='color:{theme.color('red')}'>{html.escape(', '.join(empty))}: "
                               "no cell, so no effect</span>")
                 self.log(f"Zone(s) {', '.join(empty)} took no cell of the mesh and have no "
                          "effect: they lie outside its inverted region, or zones later in "
                          "the list cover them.", "warn")
         elif cfg.get("zones"):
-            zone_line = ("<br><span style='color:#b42318'>zones not used: the loaded E4D "
+            zone_line = (f"<br><span style='color:{theme.color('red')}'>zones not used: the loaded E4D "
                          "configuration defines its own</span>")
             self.log("The zones were not used: the loaded E4D configuration defines its own.",
                      "warn")
@@ -1583,7 +1581,7 @@ class Mesh3DModule(BaseModule):
             np.asarray(sensors_df["z"], dtype=float),
         ])
         cloud = self._pv.PolyData(pts)
-        self._plotter.add_mesh(cloud, color="#d7191c", render_points_as_spheres=True, point_size=12)
+        self._plotter.add_mesh(cloud, color="#ff3b30", render_points_as_spheres=True, point_size=12)
         if labels and len(pts) <= 60 and "n" in sensors_df:
             try:
                 self._plotter.add_point_labels(

@@ -3,6 +3,7 @@ Single-time ERT inversion functionality.
 """
 from dataclasses import dataclass, field, fields
 from functools import lru_cache
+import inspect
 import os
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
@@ -10,12 +11,13 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 import pygimli as pg
 from pygimli.physics import ert
+import scipy.sparse as sp
 from scipy.sparse import diags
 
 from PyHydroGeophysX._internal.utils import noop as _noop_log
 from PyHydroGeophysX._internal.optional_dependencies import BackendUnavailable
 from ..forward.ert_forward import ertforandjac2, ertforward2
-from ..solvers.linear_solvers import _SPD_METHODS, generalized_solver
+from ..solvers.linear_solvers import _SPD_METHODS, StackedSystem, generalized_solver
 from .base import InversionBase, InversionResult
 from .lambda_search import LAMBDA_BOUNDS, search_lambda_for_chi2
 from .metrics import metrics_from_manager
@@ -431,11 +433,15 @@ def _gauss_newton_step(system, rhs, method: str, **solver_options):
     itself, the SPD methods refused it as not square.
     """
     if str(method).lower().strip() in _SPD_METHODS:
-        system = np.asarray(system, dtype=float)
         rhs = np.asarray(rhs, dtype=float).reshape(-1, 1)
+        if isinstance(system, StackedSystem):
+            normal, normal_rhs = system.normal_matrix(), system.T @ rhs
+        else:
+            system = np.asarray(system, dtype=float)
+            normal, normal_rhs = system.T @ system, system.T @ rhs
         # The normal matrix is built for this call alone, so the factorization
         # may work in its buffer.
-        return generalized_solver(system.T @ system, system.T @ rhs, method=method,
+        return generalized_solver(normal, normal_rhs, method=method,
                                   use_gpu=solver_options.get("use_gpu", False),
                                   overwrite_a=True)
     return generalized_solver(system, rhs, method=method, **solver_options)
@@ -756,12 +762,18 @@ def _canonicalize_adtlert_polarity(container, *, log=_noop_log):
     return normalized
 
 
-def _build_adtlert_forward(container, mesh, *, log=_noop_log):
-    """Build one shared ADTLERT forward context for single or windowed ERT."""
+def _build_adtlert_forward(container, mesh, *, log=_noop_log, field_cache_entries=None):
+    """Build one shared ADTLERT forward context for single or windowed ERT.
+
+    ``field_cache_entries`` bounds the forward's cache of solved fields, which
+    keeps the total fields of the last 8 models by default - one wavenumber x
+    electrode x node array per model, 130 MB on a 7473-cell mesh with 56
+    electrodes, and a GPU copy of it besides. ``None`` keeps ADTLERT's default.
+    """
     _enable_adtlert_float64()
     try:
         import adtlert
-        from adtlert.forward import mesh_to_adtlert, survey_to_adtlert
+        from adtlert.forward import ERTForward2p5D, mesh_to_adtlert, survey_to_adtlert
         from adtlert.inversion import ParameterizedERTForward2p5D
     except ImportError as exc:
         raise BackendUnavailable(
@@ -799,6 +811,10 @@ def _build_adtlert_forward(container, mesh, *, log=_noop_log):
         "analytic" if bool(forward_mesh.is_flat_surface) else "numerical"
     )
     forward_solver = _adtlert_forward_solver_backend()
+    cache_options = {}
+    if field_cache_entries is not None and "normal_field_cache_max_entries" in (
+            inspect.signature(ERTForward2p5D.from_mesh_survey).parameters):
+        cache_options["normal_field_cache_max_entries"] = int(field_cache_entries)
     forward = ParameterizedERTForward2p5D.from_mesh_survey(
         forward_mesh,
         survey,
@@ -807,6 +823,7 @@ def _build_adtlert_forward(container, mesh, *, log=_noop_log):
         background_mode="pygimli_prolongation",
         topographic_geometric_factor_mode=geometric_mode,
         linear_solver_backend=forward_solver,
+        **cache_options,
     )
     # Zone outlines the smoothness must not cross reach ADTLERT the way it
     # takes known structure: one unit label per parameter cell, with no
@@ -815,6 +832,7 @@ def _build_adtlert_forward(container, mesh, *, log=_noop_log):
     if units is not None:
         forward.structural_prior_cell_ids = units
         forward.structural_cross_weight = 0.0
+    released = _release_adtlert_terrain_setup(getattr(forward, "forward_operator", forward))
     version = str(getattr(adtlert, "__version__", ""))
     log(
         f"  ADTLERT {version or '(unknown version)'}: "
@@ -822,8 +840,81 @@ def _build_adtlert_forward(container, mesh, *, log=_noop_log):
         f"{forward_solver} forward solver"
         + ("" if units is None else
            f"; smoothness cut along the zone outlines ({int(units.max()) + 1} parts)")
+        + ("; terrain setup meshes released after use" if released else "")
     )
     return forward, result_mesh, active_ids, version
+
+
+#: What ADTLERT's 2.5D forward builds over a surface with topography to set
+#: itself up, and the results that make each one unnecessary afterwards: the
+#: setup-only discretization, its intermediate potentials in _derived_cache,
+#: the prefix of its solver state in _cudss_state, and the cached result.
+_ADTLERT_TERRAIN_SETUP = (
+    # Unit primary potentials, solved on the P2 mesh and kept on the solve mesh.
+    ("primary_potential_discretization", "primary_potential_sub_potentials",
+     "primary_potential_", "auxiliary_sub_potentials", "_auxiliary_sub_potential_stack"),
+    # Numerical geometric factors.
+    ("geometric_auxiliary_discretization", "auxiliary_geometric_sub_potentials",
+     "auxiliary_geometric_", "geometric_factors", "_geometric_factors"),
+)
+
+
+def _release_adtlert_terrain_setup(forward) -> bool:
+    """Compute what ADTLERT's forward derives from topography, then drop its scaffolding.
+
+    Over a surface with topography the forward solves the unit primary
+    potentials and the numerical geometric factors on a P2 refinement of the
+    mesh, once, and keeps the results; every later solve reads those results.
+    The two P2 discretizations, their potentials and their cuDSS factorizations
+    stayed alive regardless: 1.05 GB of the 3.54 GB the forward held on the
+    DAS-1 example (5994 cells), whose solves and Jacobians are the same to
+    1e-15 without them. The results are computed here - the first solve's work
+    moved, not added: 19 s to build and solve once either way - and each piece
+    is released only once the result that replaces it is cached; anything this
+    ADTLERT does differently is left alone. Returns whether anything was
+    released.
+
+    This reaches into ADTLERT's private state, which offers no public way to
+    let go of it; ``adtlert<0.2`` is the version it was written against.
+    """
+    derived = getattr(forward, "_derived_cache", None)
+    solver_state = getattr(forward, "_cudss_state", None)
+    if not isinstance(derived, dict) or not isinstance(solver_state, dict):
+        return False
+    released = False
+    for field_name, potentials, prefix, result, compute in _ADTLERT_TERRAIN_SETUP:
+        discretization = getattr(forward, field_name, None)
+        if discretization is None or not callable(getattr(forward, compute, None)):
+            continue
+        getattr(forward, compute)()
+        if result not in derived:
+            continue
+        object.__setattr__(forward, field_name, None)  # a frozen dataclass field
+        if getattr(forward, "auxiliary_discretization", None) is discretization:
+            # Its constructor's fallback when there is no geometric discretization.
+            object.__setattr__(forward, "auxiliary_discretization",
+                               getattr(forward, "primary_auxiliary_discretization", None))
+        derived.pop(potentials, None)
+        for key in [key for key in solver_state if key.startswith(prefix)]:
+            entry = solver_state.pop(key)
+            if key.endswith("_solver_batch_gpu") or key.endswith("_solver_gpu"):
+                try:
+                    entry.free()  # as the forward's own close() releases a solver
+                except Exception:  # noqa: BLE001 - freeing is best effort
+                    pass
+        released = True
+    if released:
+        import gc
+
+        gc.collect()
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:  # noqa: BLE001 - no CUDA cache to empty
+            pass
+    return released
 
 
 def _adtlert_spatial_term(name: str, forward):
@@ -982,11 +1073,46 @@ class _ADTLertEngine:
         )
 
 
+def _E4DEngine(container, mesh, **kwargs):
+    """E4D, PNNL's 3-D code, run as an external program (see ``inversion.e4d``)."""
+    from .e4d import E4DEngine
+
+    return E4DEngine(container, mesh, **kwargs)
+
+
+def _R2Engine(container, mesh, **kwargs):
+    """Binley's R2, 2-D, run as an external program (see ``inversion.r2``)."""
+    from .r2 import R2Engine
+
+    return R2Engine(container, mesh, program="r2", **kwargs)
+
+
+def _R3tEngine(container, mesh, **kwargs):
+    """Binley's R3t, 3-D, run as an external program (see ``inversion.r2``)."""
+    from .r2 import R2Engine
+
+    return R2Engine(container, mesh, program="r3t", **kwargs)
+
+
 ENGINES = {
     "pyhydro": _PyHydroEngine,
     "pygimli": _PygimliEngine,
     "adtlert": _ADTLertEngine,
+    "e4d": _E4DEngine,
+    "r2": _R2Engine,
+    "r3t": _R3tEngine,
 }
+
+#: Engines that run an external program on a mesh of their own making, kept
+#: for the whole pipeline, with settings of their own.
+_EXTERNAL_ENGINES = ("e4d", "r2", "r3t")
+
+#: Engines that choose their regularization weight themselves at every
+#: iteration (Occam), so a lambda and the lambda search mean nothing to them.
+_SELF_REGULARIZING = ("r2", "r3t")
+
+#: How the external programs are named in logs and reports.
+_PROGRAM_NAMES = {"e4d": "E4D", "r2": "R2", "r3t": "R3t"}
 
 
 def _make_engine(name: str, container, mesh, **kwargs):
@@ -1214,12 +1340,13 @@ def _export_model_bundle(manager, output_dir: str | Path, stem: str) -> Dict[str
     return {key: str(path) for key, path in paths.items()}
 
 
-def _zone_notes(engine: str, prior) -> List[str]:
+def _zone_notes(engine: str, prior, holds_fixed: bool = False) -> List[str]:
     """What a zone list will and will not do on ``engine``, for the run log.
 
-    Only the in-house engine holds a fixed zone; the others start from the
-    a-priori values and invert every cell. A zone the user fixed that then moves
-    must be said up front, not discovered in the result.
+    The in-house engine, R2 and R3t hold a fixed zone (``holds_fixed``); the
+    others start from the a-priori values and invert every cell. A zone the
+    user fixed that then moves must be said up front, not discovered in the
+    result.
     """
     notes = []
     if prior is None:
@@ -1232,11 +1359,11 @@ def _zone_notes(engine: str, prior) -> List[str]:
     if empty:
         notes.append(f"  (zone(s) {', '.join(empty)} cover no cell of the "
                      "parameter domain and have no effect)")
-    if prior.any_fixed and engine != "pyhydro":
+    if prior.any_fixed and engine != "pyhydro" and not holds_fixed:
         notes.append(f"  Note: the {engine} engine cannot hold a zone fixed, so the "
                      "fixed zones are used as starting values and inverted like "
-                     "any other cell. Use the in-house Gauss-Newton engine to keep "
-                     "them fixed.")
+                     "any other cell. Use the in-house Gauss-Newton engine, R2 or "
+                     "R3t to keep them fixed.")
     return notes
 
 
@@ -1280,6 +1407,8 @@ def run_ert_manager_inversion(
     lambda_bounds: Tuple[float, float] = LAMBDA_BOUNDS,
     lambda_warm_start: bool = True,
     lambda_cold_retry_chi2: float = 15.0,
+    e4d: Optional[Dict[str, Any]] = None,
+    r2: Optional[Dict[str, Any]] = None,
     log: Callable[[str], None] = _noop_log,
 ) -> Dict[str, Any]:
     """Invert one ERT dataset, in the order that actually lowers chi2.
@@ -1322,6 +1451,28 @@ def run_ert_manager_inversion(
     ADTLERT matches the published real-data branch: fast normal sensitivity,
     no Robin-boundary derivative, line search, a maximum log step of one, and
     GPU CGLS when CUDA is available.
+
+    ``"e4d"`` runs PNNL's E4D, an external 3-D program, with ``e4d`` holding
+    its settings (:class:`~PyHydroGeophysX.inversion.e4d.E4DSettings`: the
+    launcher, the program, the MPI processes). E4D runs on Linux, on Windows
+    inside WSL 2, and on macOS when built from source; elsewhere its run
+    folder is written under ``output_dir/e4d`` and the run stops with
+    :class:`~PyHydroGeophysX.inversion.e4d.E4DNotRun` saying how to run it.
+    It never falls back to another engine. A profile is inverted on a 3-D
+    mesh built around the line and read back as the section along it.
+
+    ``"r2"`` and ``"r3t"`` run Andrew Binley's R2 (2-D profiles) and R3t (3-D
+    surveys, and profiles on a 3-D mesh around the line), with ``r2`` holding
+    their settings (:class:`~PyHydroGeophysX.inversion.r2.R2Settings`: the
+    program, the launcher). They are Windows programs, run natively there and
+    through Wine on Linux and macOS, found in an installed ResIPy unless named;
+    elsewhere their run folder is written under ``output_dir/r2`` (or
+    ``r3t``) and the run stops with
+    :class:`~PyHydroGeophysX.inversion.r2.R2NotRun`. Both search their
+    smoothing weight at every iteration themselves, so ``lam`` and
+    ``auto_lambda`` do not apply to them; ``max_iterations`` and
+    ``target_chi2`` (as an RMS of ``sqrt(target_chi2)``) do, and they hold
+    fixed zones fixed.
 
     ``zones`` carries a-priori resistivity zones (see
     :mod:`~PyHydroGeophysX.inversion.ert_zones`): polygons whose value the
@@ -1380,15 +1531,37 @@ def run_ert_manager_inversion(
         tolerance=geometric_factor_tolerance, log=log,
     )
 
+    engine_options: Dict[str, Any] = {}
+    if engine in _EXTERNAL_ENGINES:
+        # One mesh and set of run folders for the whole pipeline, kept with
+        # the results so a run can be inspected or repeated by hand.
+        settings = dict((e4d if engine == "e4d" else r2) or {})
+        settings.setdefault("workdir", str(out / engine))
+        engine_options = {"options": settings, "outer_width": outer_width}
+    external_engine = None
+
     def build_engine(container):
-        return _make_engine(engine, container, inversion_mesh,
-                            model_constraints=model_constraints, method=solver,
-                            zones=zones, log=log)
+        nonlocal external_engine
+        if external_engine is not None:
+            # The external program's mesh does not depend on which data are
+            # kept, so an outlier pass reuses it rather than meshing again.
+            return external_engine.with_data(container)
+        built = _make_engine(engine, container, inversion_mesh,
+                             model_constraints=model_constraints, method=solver,
+                             zones=zones, log=log, **engine_options)
+        if engine in _EXTERNAL_ENGINES:
+            external_engine = built
+        return built
 
     active_engine = build_engine(data)
     zone_prior_used = getattr(active_engine, "zone_prior", None)
-    for line in _zone_notes(engine, zone_prior_used):
+    holds_fixed = bool(getattr(active_engine, "holds_fixed_zones", engine == "pyhydro"))
+    for line in _zone_notes(engine, zone_prior_used, holds_fixed):
         log(line)
+    if engine in _SELF_REGULARIZING:
+        log(f"  {_PROGRAM_NAMES[engine]} searches its smoothing weight at "
+            "every iteration itself (an Occam inversion): the lambda setting does not apply, "
+            "and the alpha it settles on is reported.")
     requested_lam = float(lam)
     target = float(target_chi2)
     tol = abs(float(chi2_tolerance))
@@ -1424,7 +1597,7 @@ def run_ert_manager_inversion(
         # the fixed ones: a zone that silently moved would look like a result.
         "zones": [dict(entry) for entry in getattr(zone_prior_used, "report", [])],
         "zones_fixed_held": bool(zone_prior_used is not None
-                                 and zone_prior_used.any_fixed and engine == "pyhydro"),
+                                 and zone_prior_used.any_fixed and holds_fixed),
         # The outline edges the mesh gained, and the cell edges the smoothness
         # no longer crosses: 0 when the option was off or found nothing to do.
         "mesh_zone_outline_edges": int(mesh_report.get("zone_outline_edges", 0)),
@@ -1457,6 +1630,13 @@ def run_ert_manager_inversion(
     trial_order: List[Tuple[float, ERTRun]] = []
     if not auto_lambda:
         pass
+    elif engine in _SELF_REGULARIZING:
+        result["auto_lambda_status"] = "not_applicable"
+        result["auto_lambda_note"] = (
+            f"Auto-lambda was not run: {_PROGRAM_NAMES[engine]} chooses its own smoothing "
+            "weight at every iteration (it settled on alpha = "
+            f"{cleaned_run.metrics.get(engine + '_alpha', float('nan')):.4g}), so there is "
+            "no lambda to search.")
     elif cleaned_run.chi2 != cleaned_run.chi2:
         result["auto_lambda_status"] = "unavailable"
         result["auto_lambda_note"] = (
@@ -1485,6 +1665,18 @@ def run_ert_manager_inversion(
         # same problem, just reached from closer.
         solved: Dict[float, np.ndarray] = {requested_lam: cleaned_run.model}
         pinned = active_engine.reference_model() if lambda_warm_start else None
+        # A trial is kept for its chi2 and convergence; only the best one, the
+        # cleaned and the fixed-lambda runs are ever exported. On the pyGIMLi
+        # engine each run also holds its ERTManager - Jacobian, meshes and
+        # forward operator - and every trial of a sweep used to stay alive,
+        # thirteen with a cold retry. A run nothing can still select drops it;
+        # its result is then the model, mesh and response it already carries.
+        exported = {id(cleaned_run), id(fixed_run)}
+        protected = set()
+
+        def _release(candidate: Optional[ERTRun]) -> None:
+            if candidate is not None and id(candidate) not in exported | protected:
+                candidate.manager = None
 
         def _nearest_solved(trial_lam: float):
             if not lambda_warm_start or not solved:
@@ -1510,7 +1702,10 @@ def run_ert_manager_inversion(
             log(f"  lam {trial_lam:g}{origin} -> chi2 {trial.chi2:.3f} "
                 f"({trial.iterations} it)")
             if trial.chi2 == trial.chi2 and abs(trial.chi2 - target) < abs(best["chi2"] - target):
+                _release(best.get("run"))
                 best.update(run=trial, chi2=trial.chi2, lam=float(trial_lam))
+            else:
+                _release(trial)
             return trial.chi2
 
         search = search_lambda_for_chi2(
@@ -1527,6 +1722,7 @@ def run_ert_manager_inversion(
                 and search["status"] != "converged"):
             log(f"  chi2 still {best['chi2']:.1f}; retrying the sweep cold")
             warm_best, warm_search = dict(best), search
+            protected.add(id(warm_best["run"]))  # it may still win
             # Reset to the common starting point so the cold sweep is judged on
             # its own trials rather than inheriting the warm sweep's best.
             lambda_warm_start = False
@@ -1550,7 +1746,10 @@ def run_ert_manager_inversion(
             if helped:
                 log(f"  cold sweep won: chi2 {warm_best['chi2']:.2f} -> "
                     f"{cold_best['chi2']:.2f}")
+                protected.discard(id(warm_best["run"]))
+                _release(warm_best["run"])
             else:
+                _release(cold_best["run"])
                 best.clear()
                 best.update(warm_best)
                 search = warm_search
@@ -1642,9 +1841,36 @@ def run_ert_manager_inversion(
 
     metrics = dict(run.metrics)
     metrics.setdefault("chi2", run.chi2)
-    metrics["lambda"] = float(result["lambda_used"])
+    if engine in _SELF_REGULARIZING:
+        # No lambda was used: the program's own smoothing weight stands in its
+        # place, so a stored run does not report a lambda that never acted.
+        metrics.pop("lambda", None)
+        metrics["smoothing_alpha"] = float(run.metrics.get(f"{engine}_alpha", float("nan")))
+    else:
+        metrics["lambda"] = float(result["lambda_used"])
     metrics["n_data"] = int(container.size())
     metrics["iterations"] = run.iterations
+    if engine == "e4d":
+        # Where E4D's own files are: its log, every sigma.N, the 3-D model.
+        result["e4d"] = {"command": str(run.metrics.get("e4d_command", "")),
+                         "run_dir": str(run.metrics.get("e4d_run", "")),
+                         "elements": int(run.metrics.get("e4d_elements", 0)),
+                         "vtk_3d": str(Path(str(run.metrics.get("e4d_run", ""))) /
+                                       "resistivity_3d.vtk")}
+        log(f"  E4D files and the 3-D model: {result['e4d']['run_dir']}")
+    elif engine in _SELF_REGULARIZING:
+        # Where R2's or R3t's own files are, and the smoothing weight it chose,
+        # which stands in for lambda.
+        run_dir = str(run.metrics.get(f"{engine}_run", ""))
+        result[engine] = {"command": str(run.metrics.get(f"{engine}_command", "")),
+                          "run_dir": run_dir,
+                          "elements": int(run.metrics.get(f"{engine}_elements", 0)),
+                          "alpha": float(run.metrics.get(f"{engine}_alpha", float("nan"))),
+                          "stop_message": str(run.metrics.get(f"{engine}_stop_message", "")),
+                          "vtk_3d": str(run.metrics.get("vtk_3d", ""))}
+        result["lambda_applies"] = False
+        log(f"  {_PROGRAM_NAMES[engine]} files: {run_dir} (final alpha "
+            f"{result[engine]['alpha']:.4g})")
 
     result.update(
         {
@@ -2095,13 +2321,19 @@ class ERTInversion(InversionBase):
                 self.Wm_r.dot(delta_mr), dtype=float
             ).reshape(-1, 1)
             gc_r = np.vstack((wd * data_residual, L_mr * reg_residual))
-            # The stacked system is dense because Jr is, so densify the sparse
-            # regularization block here rather than storing a dense copy of it.
-            N11_R = np.vstack((wd * Jr, L_mr * self.Wm_r.toarray()))
+            # The stacked system [W_d J; L W_m; L sqrt(alpha_s) I] is held as
+            # its blocks, the Jacobian dense and the rest sparse. It used to be
+            # one dense array, built by densifying W_m (about 1.5 n^2 doubles)
+            # and np.eye(n), copied again by each vstack: 4.4 GB on top of the
+            # run for a 10779-cell mesh. The GPU solvers take it assembled.
+            blocks = [wd * Jr, L_mr * self.Wm_r]
             if alpha_s > 0:
                 gc_r = np.vstack((gc_r, L_mr * np.sqrt(alpha_s) * delta_mr))
-                N11_R = np.vstack((N11_R, L_mr * np.sqrt(alpha_s) * np.eye(N11_R.shape[1])))
-            
+                blocks.append(L_mr * np.sqrt(alpha_s) * sp.identity(Jr.shape[1], format="csr"))
+            N11_R = StackedSystem(blocks)
+            if self.parameters['use_gpu']:
+                N11_R = N11_R.toarray()
+
             gc_r = np.array(gc_r)
             gc_r = gc_r.reshape(-1, 1)
             
@@ -2130,7 +2362,8 @@ class ERTInversion(InversionBase):
                 free = ~fixed
                 d_mr = np.zeros_like(mr)
                 d_mr[free] = np.asarray(_gauss_newton_step(
-                    N11_R[:, free], -gc_r, self.parameters['method'],
+                    N11_R.columns(free) if isinstance(N11_R, StackedSystem) else N11_R[:, free],
+                    -gc_r, self.parameters['method'],
                     **solver_options), dtype=float).reshape(-1, 1)
             
             # Line search. Armijo sufficient decrease is

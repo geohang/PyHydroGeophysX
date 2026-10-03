@@ -773,6 +773,247 @@ def run_gravmag_inversion(spec: WorkflowSpec, context: RunContext) -> WorkflowRu
     return _legacy_result(spec, context, result)
 
 
+def _mt_runs(value: Any, context: RunContext, reader: Mapping[str, Any]) -> list:
+    """Time series from an artifact: a ``save_runs`` container, or an instrument's files."""
+    from PyHydroGeophysX.data_processing import mt
+
+    if value is None:
+        return []
+    path = context.resolve_artifact(value) if isinstance(value, ArtifactRef) else Path(str(value))
+    if path.is_file() and path.suffix.lower() == ".npz":
+        return mt.load_runs(path)
+    return mt.read_timeseries(path, **dict(reader))
+
+
+def _mt_table(tf: Any, path: Path) -> Path:
+    """Apparent resistivity and phase of each element, one row per frequency."""
+    rho, phase = tf.apparent_resistivity(), tf.phase()
+    rho_err = tf.apparent_resistivity_err() if tf.z_err is not None else np.full(rho.shape, np.nan)
+    phase_err = tf.phase_err() if tf.z_err is not None else np.full(rho.shape, np.nan)
+    with path.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.writer(stream)
+        names = ("xx", "xy", "yx", "yy")
+        writer.writerow(["frequency_hz", "period_s"] + [f"{q}_{n}" for n in names
+                        for q in ("rho", "rho_err", "phase", "phase_err")])
+        index = {"xx": (0, 0), "xy": (0, 1), "yx": (1, 0), "yy": (1, 1)}
+        for k in range(tf.n_frequencies):
+            row = [tf.frequency[k], tf.period[k]]
+            for n in names:
+                i, j = index[n]
+                row += [rho[k, i, j], rho_err[k, i, j], phase[k, i, j], phase_err[k, i, j]]
+            writer.writerow(row)
+    return path
+
+
+def run_mt_process(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
+    """Time series to impedance and tipper: ``process_mt`` on a site and its remote."""
+    from PyHydroGeophysX.data_processing import mt
+
+    parameters = dict(spec.parameters)
+    runs = _mt_runs(spec.inputs.get("recording"), context, parameters.pop("reader", None) or {})
+    if not runs:
+        raise ValueError("mt.process needs a 'recording' input (an instrument's files or a runs container).")
+    remote = _mt_runs(spec.inputs.get("remote"), context, parameters.pop("remote_reader", None) or {})
+    band_setup = spec.inputs.get("band_setup")
+    if band_setup is not None:
+        parameters["bands"] = mt.read_band_setup(context.resolve_artifact(band_setup))
+    station = parameters.pop("station", None)
+    context.progress(f"Read {len(runs)} run(s): " + "; ".join(sorted({f"{r.sample_rate:g} Hz" for r in runs})))
+    options = _keywords_for(mt.ProcessingConfig, parameters)
+    if "bands" in parameters:
+        options["bands"] = parameters["bands"]
+    tf = mt.process_mt(runs, remote=remote or None, config=mt.ProcessingConfig(**options),
+                       station=station, log=context.progress)
+    name = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in (tf.station or "site")) or "site"
+    edi_path = mt.write_edi(tf, context.output_dir / f"{name}.edi")
+    xml_path = mt.write_emtf_xml(tf, context.output_dir / f"{name}.xml")
+    table_path = _mt_table(tf, context.output_dir / f"{name}_rho_phase.csv")
+    coherence = [min(c.get("ex", np.nan), c.get("ey", np.nan)) for c in tf.metadata.get("coherence", [])]
+    relative = (tf.z_err[:, 0, 1] / np.abs(tf.z[:, 0, 1])) if tf.z_err is not None else np.array([np.nan])
+    artifacts = [
+        _artifact(Path(edi_path), context=context, artifact_id="mt:transfer_function:edi",
+                  kind="mt_transfer_function", format="edi"),
+        _artifact(Path(xml_path), context=context, artifact_id="mt:transfer_function:xml",
+                  kind="mt_transfer_function", format="xml"),
+        _artifact(table_path, context=context, artifact_id="mt:rho_phase:csv", kind="mt_rho_phase",
+                  metadata={"field": "Apparent resistivity", "units": "ohm m", "log_scale": True}),
+    ]
+    return WorkflowRunResult(
+        status="ok",
+        summary={
+            "workflow_id": spec.workflow_id,
+            "station": tf.station,
+            "runs": len(runs),
+            "remote_runs": len(remote),
+            "sample_rates": sorted({float(r.sample_rate) for r in runs}, reverse=True),
+            "n_frequencies": int(tf.n_frequencies),
+            "period_range_s": [float(tf.period.min()), float(tf.period.max())],
+            "tipper": bool(tf.has_tipper),
+        },
+        metrics={
+            "median_coherence": float(np.nanmedian(coherence)) if coherence else float("nan"),
+            "median_relative_error_zxy": float(np.nanmedian(relative)),
+        },
+        artifacts=artifacts,
+        provenance={"workflow_id": spec.workflow_id, "schema_version": spec.schema_version},
+        objects={"transfer_function": tf},
+    )
+
+
+def _tem_sounding(value: Any, context: RunContext, parameters: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
+    """A TDEM sounding for the joint inversion.
+
+    An ``.npz`` with ``times`` and ``response``, or a text table whose first
+    two numeric columns are gate time (s) and response; header lines are skipped.
+    """
+    if value is None:
+        return None
+    path = context.resolve_artifact(value) if isinstance(value, ArtifactRef) else Path(str(value))
+    if path.suffix.lower() == ".npz":
+        with np.load(path, allow_pickle=False) as archive:
+            times, response = np.asarray(archive["times"], float), np.asarray(archive["response"], float)
+    else:
+        rows = []
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            try:
+                rows.append([float(v) for v in line.replace(",", " ").split()[:2]])
+            except ValueError:
+                continue
+        table = np.asarray([r for r in rows if len(r) == 2], dtype=float)
+        if table.size == 0:
+            raise ValueError(f"{path.name} has no rows of gate time and response")
+        times, response = table[:, 0], table[:, 1]
+    return {"data": {"times": times.ravel(), "response": response.ravel()},
+            "geometry": dict(parameters.get("tem_geometry") or {}),
+            "inversion": dict(parameters.get("tem_inversion") or {})}
+
+
+def run_mt_invert_1d(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
+    """Occam 1D of one site, optionally with static shift, a TEM sounding and water content."""
+    from PyHydroGeophysX.data_processing import mt
+
+    parameters = dict(spec.parameters)
+    source = spec.inputs.get("transfer_function")
+    if source is None:
+        raise ValueError("mt.invert_1d needs a 'transfer_function' input (EDI, EMTF XML, Z- or J-file).")
+    tf = mt.read_transfer_function(context.resolve_artifact(source))
+    tem = _tem_sounding(spec.inputs.get("tem"), context, parameters)
+    options = _keywords_for(mt.occam1d, parameters)
+    if parameters.get("period_range"):
+        options["period_range"] = tuple(float(v) for v in parameters["period_range"])
+    if parameters.get("thickness"):
+        options["thickness"] = [float(v) for v in parameters["thickness"]]
+    context.progress(f"Occam 1D of {tf.station or 'the site'} ({options.get('mode', 'det')})"
+                     + (" jointly with a TEM sounding" if tem else ""))
+    result = mt.occam1d(tf, tem=tem, log=context.progress, **options)
+    petro = parameters.get("petrophysics")
+    water = None
+    if petro:
+        water = mt.water_content_profile(result, **{k: petro[k] for k in ("rhos", "n", "porosity", "sigma_sur")
+                                                     if k in petro})
+    model_path = context.output_dir / "mt1d_model.csv"
+    tops = result.depth
+    bottoms = np.r_[tops[1:], np.inf]
+    with model_path.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(["top_m", "bottom_m", "resistivity_ohm_m"] + (["water_content"] if water else []))
+        for k in range(result.resistivity.size):
+            writer.writerow([tops[k], bottoms[k], result.resistivity[k]]
+                            + ([water["water_content"][k]] if water else []))
+    fit_path = context.output_dir / "mt1d_fit.csv"
+    sounding = result.sounding
+    with fit_path.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(["mode", "frequency_hz", "log10_rho_observed", "log10_rho_error", "log10_rho_predicted",
+                         "phase_observed", "phase_error", "phase_predicted"])
+        for k, mode in enumerate(sounding.modes):
+            shift = np.log10(result.static_shift.get(mode, 1.0))
+            for n in range(sounding.frequency.size):
+                writer.writerow([mode, sounding.frequency[n], sounding.log_rho[k, n], sounding.log_rho_err[k, n],
+                                 result.predicted["log_rho_a"][n] + shift, sounding.phase[k, n],
+                                 sounding.phase_err[k, n], result.predicted["phase"][n]])
+    return WorkflowRunResult(
+        status="ok",
+        summary={
+            "workflow_id": spec.workflow_id,
+            "station": tf.station,
+            "mode": options.get("mode", "det"),
+            "layers": int(result.resistivity.size),
+            "joint_tem": tem is not None,
+            "static_shift": dict(result.static_shift),
+            "converged": bool(result.converged),
+        },
+        metrics={"rms": float(result.rms), "iterations": int(result.iterations),
+                 "roughness": float(result.roughness)},
+        artifacts=[
+            _artifact(model_path, context=context, artifact_id="mt1d:model:csv", kind="mt1d_model",
+                      metadata={"field": "Resistivity", "units": "ohm m", "log_scale": True}),
+            _artifact(fit_path, context=context, artifact_id="mt1d:fit:csv", kind="mt1d_fit"),
+        ],
+        provenance={"workflow_id": spec.workflow_id, "schema_version": spec.schema_version},
+        objects={"result": result, "transfer_function": tf, "water_content": water},
+    )
+
+
+def run_mt_invert_profile(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
+    """2D inversion of a profile's TE and TM impedances on SimPEG."""
+    from PyHydroGeophysX.data_processing import mt
+
+    parameters = dict(spec.parameters)
+    sources = spec.inputs.get("transfer_functions")
+    if isinstance(sources, Mapping):
+        sources = list(sources.values())
+    if not sources:
+        raise ValueError("mt.invert_profile needs 'transfer_functions': a list of the sites' files.")
+    tfs = [mt.read_transfer_function(context.resolve_artifact(ref)) for ref in sources]
+    if parameters.get("positions"):
+        positions = np.asarray(parameters["positions"], dtype=float)
+        azimuth = None
+    else:
+        positions, azimuth = mt.station_distances(tfs)
+    strike = parameters.get("strike")
+    if strike is None:
+        strike = 0.0 if azimuth is None else (azimuth + 90.0) % 180.0
+    options = _keywords_for(mt.invert_profile, parameters)
+    options.update(strike=float(strike), seed=int(spec.seed))
+    if parameters.get("modes"):
+        options["modes"] = [str(m).lower() for m in parameters["modes"]]
+    if parameters.get("frequencies"):
+        options["frequencies"] = [float(f) for f in parameters["frequencies"]]
+    context.progress(f"2D inversion of {len(tfs)} sites, strike {float(strike):.0f} deg, "
+                     f"modes {', '.join(options.get('modes', ['te', 'tm']))}")
+    result = mt.invert_profile(tfs, positions, log=context.progress, **options)
+    x_nodes, z_nodes, grid = result.section()
+    section_path = context.output_dir / "mt2d_section.npz"
+    np.savez_compressed(section_path, x_nodes=x_nodes, z_nodes=z_nodes, resistivity=grid,
+                        stations=positions, frequencies=result.frequencies)
+    cells_path = context.output_dir / "mt2d_cells.csv"
+    centres = result.profile.ground_centers
+    np.savetxt(cells_path, np.column_stack([centres, result.resistivity]), delimiter=",",
+               header="x_m,z_m,resistivity_ohm_m", comments="")
+    return WorkflowRunResult(
+        status="ok",
+        summary={
+            "workflow_id": spec.workflow_id,
+            "sites": len(tfs),
+            "stations": [tf.station for tf in tfs],
+            "positions_m": [float(v) for v in positions],
+            "strike_deg": float(strike),
+            "modes": list(result.modes),
+            "cells": int(result.resistivity.size),
+        },
+        metrics={"rms": float(result.rms), "iterations": len(result.history)},
+        artifacts=[
+            _artifact(section_path, context=context, artifact_id="mt2d:section:npz", kind="mt2d_section",
+                      metadata={"field": "Resistivity", "units": "ohm m", "log_scale": True,
+                                "array_key": "resistivity"}),
+            _artifact(cells_path, context=context, artifact_id="mt2d:cells:csv", kind="mt2d_cells"),
+        ],
+        provenance={"workflow_id": spec.workflow_id, "schema_version": spec.schema_version},
+        objects={"result": result},
+    )
+
+
 __all__ = [
     "run_em_inversion",
     "run_em_line_inversion",
@@ -786,6 +1027,9 @@ __all__ = [
     "run_hydro_geophysics",
     "run_joint",
     "run_mesh3d",
+    "run_mt_invert_1d",
+    "run_mt_invert_profile",
+    "run_mt_process",
     "run_seismic3d",
     "run_srt_inversion",
 ]

@@ -174,6 +174,12 @@ class ERTProcessingModule(BaseModule):
         self._adtlert_single_ready: Optional[bool] = None
         self._adtlert_timelapse_ready: Optional[bool] = None
         self._adtlert_checks: Dict[str, str] = {}
+        self._e4d_probe_worker: Optional[ProcessProbeWorker] = None
+        self._e4d_probe_serial = 0
+        self._e4d_found: Optional[Dict[str, Any]] = None   # the last E4D check
+        self._r2_probe_worker: Optional[ProcessProbeWorker] = None
+        self._r2_probe_serial = 0
+        self._r2_found: Optional[Dict[str, Any]] = None    # the last R2/R3t check
         self._ert_recipe_path: str = ""
         # Set by the Mode selector, which trades the pre-inversion checks against
         # turnaround. Quick skips them; Full validates and repairs k. A k that
@@ -230,7 +236,7 @@ class ERTProcessingModule(BaseModule):
         # View > Length Units: both plots here relabel and retick; the data stay
         # in metres.
         length_units.notifier().changed.connect(self._on_length_unit_changed)
-        self._scatter = pg.ScatterPlotItem(size=12, pen=pg.mkPen("#1565ff", width=1), brush=pg.mkBrush(30, 120, 255, 180))
+        self._scatter = pg.ScatterPlotItem(size=12, pen=pg.mkPen("#007aff", width=1), brush=pg.mkBrush(0, 122, 255, 170))
         self._sel_scatter = pg.ScatterPlotItem(size=18, pen=pg.mkPen("#ff8c00", width=2), brush=pg.mkBrush(255, 140, 0, 120))
         self._plot.addItem(self._scatter)
         self._plot.addItem(self._sel_scatter)
@@ -412,7 +418,7 @@ class ERTProcessingModule(BaseModule):
         # do not always agree on how many measurements a file holds, so it is
         # stated rather than left to the log.
         self._reader_status = QLabel()
-        self._reader_status.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        theme.set_tone(self._reader_status, "hint")
         self._reader_status.setWordWrap(True)
         lform.addRow("", self._reader_status)
         self._show_reader_status()
@@ -566,7 +572,7 @@ class ERTProcessingModule(BaseModule):
 
         self._qc_support_note = QLabel("Load data to see which checks are available.")
         self._qc_support_note.setWordWrap(True)
-        self._qc_support_note.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        theme.set_tone(self._qc_support_note, "hint")
         mform.addRow(self._qc_support_note)
 
         more_outer.addWidget(self._qc_more_body)
@@ -619,7 +625,10 @@ class ERTProcessingModule(BaseModule):
         self._engine = QComboBox()
         for label, value in (("In-house Gauss-Newton", "pyhydro"),
                              ("PyGIMLi ERTManager", "pygimli"),
-                             ("ADTLERT 2.5D (CUDA)", "adtlert")):
+                             ("ADTLERT 2.5D (CUDA)", "adtlert"),
+                             ("E4D 3D (PNNL, external)", "e4d"),
+                             ("R2 2D (Binley, external)", "r2"),
+                             ("R3t 3D (Binley, external)", "r3t")):
             self._engine.addItem(label, value)
         self._engine.setToolTip(
             "Solver. The in-house Gauss-Newton inversion exposes its own stopping rule "
@@ -628,7 +637,21 @@ class ERTProcessingModule(BaseModule):
             "ADTLERT uses a CUDA-accelerated cuDSS forward solve and GPU CGLS. "
             "CUDA 12 plus cuDSS are required. Windows is supported; Linux is "
             "recommended for the best performance. The controls below remain "
-            "available when this engine is selected.")
+            "available when this engine is selected.\n\n"
+            "E4D is PNNL's parallel 3D code, run as an external program under MPI; "
+            "it is not installed with PyHydroGeophysX. It runs on Linux, on Windows "
+            "only inside WSL 2, and on macOS when built from source. A profile is "
+            "inverted in 3D on a mesh built around the line and shown as the "
+            "section along it. A time-lapse series runs as E4D's own time-lapse "
+            "inversion: the first survey is the baseline, and each later one starts "
+            "from the solution before it, with the change from it smoothed.\n\n"
+            "R2 (2D profiles) and R3t (3D surveys, or a profile on a 3D mesh around "
+            "the line) are Andrew Binley's codes, the ones ResIPy runs; they are found "
+            "in an installed ResIPy unless named below. They are Windows programs: "
+            "native on Windows, through Wine on Linux and macOS, free for "
+            "non-commercial use. Both choose their own smoothing weight at every "
+            "iteration, so λ and auto-λ do not apply; they hold fixed zones fixed. A "
+            "time-lapse series is their difference inversion against the first survey.")
         self._engine.currentIndexChanged.connect(self._on_engine_changed)
         self._engine.currentIndexChanged.connect(self._sync_mesh_engine)
         iform.addRow("Engine", self._engine)
@@ -637,6 +660,8 @@ class ERTProcessingModule(BaseModule):
         self._adtlert_status.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self._adtlert_status.setVisible(False)
         iform.addRow("", self._adtlert_status)
+        self._build_e4d_rows(iform)
+        self._build_r2_rows(iform)
 
         self._lam = QDoubleSpinBox()
         self._lam.setDecimals(3)
@@ -687,7 +712,7 @@ class ERTProcessingModule(BaseModule):
         self._mesh_link = QLabel()
         self._mesh_link.setWordWrap(True)
         self._mesh_link.setTextFormat(Qt.RichText)
-        self._mesh_link.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        theme.set_tone(self._mesh_link, "hint")
         self._mesh_link.setToolTip(
             "The mesh, its sizing and what the a-priori zones do to it are set on "
             "the Mesh tab, which draws the mesh the run will invert on.")
@@ -1136,6 +1161,15 @@ class ERTProcessingModule(BaseModule):
 
     def _on_engine_changed(self, _index: int = -1) -> None:
         """Probe the selected CUDA backend without changing user parameters."""
+        e4d = self._engine.currentData() == "e4d"
+        self._set_rows_visible(self._e4d_rows, e4d)
+        if e4d:
+            self._check_e4d()
+        program = self._r2_program_name()
+        self._set_rows_visible(self._r2_rows, program is not None)
+        if program is not None:
+            self._load_r2_settings(program)
+            self._check_r2()
         previous = self._adtlert_probe_worker
         if previous is not None and previous.isRunning():
             previous.cancel()
@@ -1150,7 +1184,7 @@ class ERTProcessingModule(BaseModule):
         self._adtlert_timelapse_ready = None
         self._adtlert_checks = {}
         self._adtlert_status.setText("Checking CUDA, cuDSS, and GPU CGLS…")
-        self._adtlert_status.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        theme.set_tone(self._adtlert_status, "hint")
         self._adtlert_status.setVisible(True)
         worker = ProcessProbeWorker(
             "PyHydroGeophysX.inversion.adtlert_diagnostics",
@@ -1204,9 +1238,7 @@ class ERTProcessingModule(BaseModule):
         else:
             self._adtlert_status.setText(" · ".join(self._adtlert_checks.values()))
             healthy = self._adtlert_single_ready and self._adtlert_timelapse_ready
-            self._adtlert_status.setStyleSheet(
-                f"color:{'#238636' if healthy else '#b42318'}; font-size:8pt;"
-            )
+            theme.set_tone(self._adtlert_status, "ok" if healthy else "error")
 
     def _on_adtlert_probe_failed(self, serial: int, message: str) -> None:
         if serial != self._adtlert_probe_serial:
@@ -1219,7 +1251,285 @@ class ERTProcessingModule(BaseModule):
         self._adtlert_status.setText(
             f"CUDA check failed; GPU inversion is not verified. Select PyHydro CPU. {message}"
         )
-        self._adtlert_status.setStyleSheet("color:#b42318; font-size:8pt;")
+        theme.set_tone(self._adtlert_status, "error")
+
+    # -- E4D -----------------------------------------------------------------
+    _E4D_KEYS = {"launcher": "ert/e4d/launcher", "executable": "ert/e4d/executable",
+                 "processes": "ert/e4d/processes"}
+
+    def _build_e4d_rows(self, form: QFormLayout) -> None:
+        """How E4D is reached: shown only while E4D is the engine.
+
+        E4D is an external program, so where it is - this computer, WSL, or
+        nowhere, in which case the run folder is written for elsewhere - is the
+        first thing the page says about it. The choices are kept between
+        sessions, since they describe the machine rather than the survey.
+        """
+        from PySide6.QtCore import QSettings
+
+        saved = QSettings("PyHydroGeophysX", "Studio")
+        self._e4d_launcher = QComboBox()
+        for label, value in (("Auto (this computer, then WSL)", "auto"),
+                             ("This computer", "local"),
+                             ("WSL (Windows)", "wsl"),
+                             ("Write files only", "files")):
+            self._e4d_launcher.addItem(label, value)
+        index = self._e4d_launcher.findData(str(saved.value(self._E4D_KEYS["launcher"], "auto")))
+        self._e4d_launcher.setCurrentIndex(max(index, 0))
+        self._e4d_launcher.setToolTip(
+            "Where E4D runs. E4D is built from source (github.com/pnnl/E4D) with "
+            "gfortran, PETSc and MPI, for Linux.\n\n"
+            "This computer: Linux, or macOS with a source build; e4d and mpirun are "
+            "found on PATH, through PYHYDRO_E4D / PYHYDRO_MPIRUN, or from the program "
+            "given below.\n"
+            "WSL: on Windows, E4D built inside a WSL 2 Linux distribution; the "
+            "program below is then a Linux path. E4D has no Windows build of its own.\n"
+            "Write files only: the complete E4D run folder is written and the run "
+            "stops, for a cluster or another machine: run mpirun -np N e4d in it, "
+            "then read it back with inversion.e4d.read_e4d_run.")
+        form.addRow("Run E4D", self._e4d_launcher)
+        self._e4d_program = QLineEdit(str(saved.value(self._E4D_KEYS["executable"], "")))
+        self._e4d_program.setPlaceholderText("e4d on PATH")
+        self._e4d_program.setToolTip(
+            "The e4d program, when it is not on PATH: a path on this computer, or a "
+            "Linux path for WSL. Leave empty to use PATH or PYHYDRO_E4D.")
+        browse = QPushButton("…")
+        browse.setMaximumWidth(32)
+        browse.setToolTip("Choose the e4d program on this computer.")
+        browse.clicked.connect(self._browse_e4d)
+        self._e4d_program_row = merged_row(self._e4d_program, browse)
+        form.addRow("E4D program", self._e4d_program_row)
+        self._e4d_processes = QSpinBox()
+        self._e4d_processes.setRange(2, 1024)
+        self._e4d_processes.setValue(int(saved.value(self._E4D_KEYS["processes"], 4) or 4))
+        self._e4d_processes.setToolTip(
+            "MPI processes for mpirun -np. E4D needs at least two - one master and "
+            "one or more workers - and no more workers than electrodes.")
+        form.addRow("MPI processes", self._e4d_processes)
+        self._e4d_status = QLabel()
+        self._e4d_status.setWordWrap(True)
+        self._e4d_status.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        form.addRow("", self._e4d_status)
+        self._e4d_rows = [self._e4d_launcher, self._e4d_program_row,
+                          self._e4d_processes, self._e4d_status]
+        self._set_rows_visible(self._e4d_rows, False)
+        # A typed path is checked once typing pauses, not on every key.
+        self._e4d_timer = QTimer(self)
+        self._e4d_timer.setSingleShot(True)
+        self._e4d_timer.setInterval(600)
+        self._e4d_timer.timeout.connect(self._check_e4d)
+        self._e4d_launcher.currentIndexChanged.connect(self._e4d_settings_changed)
+        self._e4d_program.textChanged.connect(self._e4d_settings_changed)
+        self._e4d_processes.valueChanged.connect(self._e4d_settings_changed)
+
+    def _e4d_settings(self) -> Dict[str, Any]:
+        """The E4D settings a run is given (``inversion.e4d.E4DSettings``)."""
+        return {"launcher": str(self._e4d_launcher.currentData() or "auto"),
+                "executable": self._e4d_program.text().strip(),
+                "processes": int(self._e4d_processes.value())}
+
+    def _browse_e4d(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, "Choose the e4d program", "", "All files (*)")
+        if path:
+            self._e4d_program.setText(path)
+
+    def _e4d_settings_changed(self, *_args: Any) -> None:
+        from PySide6.QtCore import QSettings
+
+        saved = QSettings("PyHydroGeophysX", "Studio")
+        for key, value in self._e4d_settings().items():
+            saved.setValue(self._E4D_KEYS[key], value)
+        if self._engine.currentData() == "e4d":
+            self._e4d_timer.start()
+
+    def _check_e4d(self) -> None:
+        """Find E4D the way a run will, in a separate process: asking WSL can
+        take a few seconds while its virtual machine starts."""
+        previous = self._e4d_probe_worker
+        if previous is not None and previous.isRunning():
+            previous.cancel()
+        self._e4d_probe_serial += 1
+        serial = self._e4d_probe_serial
+        settings = self._e4d_settings()
+        self._e4d_found = None
+        self._e4d_status.setText("Looking for E4D…")
+        theme.set_tone(self._e4d_status, "hint")
+        arguments = ["--json", "--launcher", settings["launcher"],
+                     "--processes", str(settings["processes"])]
+        if settings["executable"]:
+            arguments += ["--executable", settings["executable"]]
+        worker = ProcessProbeWorker("PyHydroGeophysX.inversion.e4d", arguments=arguments,
+                                    timeout_ms=90000)
+        worker.succeeded.connect(lambda result, token=serial: self._on_e4d_found(token, result))
+        worker.failed.connect(lambda message, token=serial: self._on_e4d_found(
+            token, {"runs": False, "kind": "missing",
+                    "message": f"The E4D check did not finish: {message}"}))
+        self._e4d_probe_worker = self.register_worker(worker)
+        worker.start()
+
+    def _on_e4d_found(self, serial: int, result: Dict[str, Any]) -> None:
+        if serial != self._e4d_probe_serial or self._engine.currentData() != "e4d":
+            return
+        self._e4d_found = dict(result)
+        kind = str(result.get("kind", "missing"))
+        tone = {"local": "ok", "wsl": "ok", "command": "ok",
+                "files": "warn"}.get(kind, "error")
+        text = str(result.get("message", ""))
+        if kind == "missing":
+            text += " Runs will write the E4D run folder and stop."
+        self._e4d_status.setText(text)
+        theme.set_tone(self._e4d_status, tone)
+
+    # -- R2 / R3t ------------------------------------------------------------
+    #: The launcher is one choice for both programs; each has its own path.
+    _R2_KEYS = {"launcher": "ert/r2/launcher", "r2": "ert/r2/executable",
+                "r3t": "ert/r3t/executable"}
+
+    def _r2_program_name(self) -> Optional[str]:
+        """``r2`` or ``r3t`` while one of them is the engine, else None."""
+        engine = str(self._engine.currentData() or "")
+        return engine if engine in ("r2", "r3t") else None
+
+    def _build_r2_rows(self, form: QFormLayout) -> None:
+        """How R2 or R3t is reached: shown only while one of them is the engine.
+
+        Like E4D they are external programs, so the page first says whether
+        and how this computer runs them. The program path is kept per program
+        between sessions, since it describes the machine.
+        """
+        self._r2_launcher = QComboBox()
+        for label, value in (("Auto (this computer)", "auto"), ("Write files only", "files")):
+            self._r2_launcher.addItem(label, value)
+        self._r2_launcher.setToolTip(
+            "Whether R2/R3t is run here. They are Windows programs (R2.exe, R3t.exe) from "
+            "Andrew Binley's web page or any ResIPy installation.\n\n"
+            "Auto: run natively on Windows, through Wine on Linux and macOS. The program "
+            "is the one given below, else PYHYDRO_R2 / PYHYDRO_R3T, else ResIPy's copy, "
+            "else the first on PATH.\n"
+            "Write files only: the complete run folder is written and the run stops; run "
+            "R2.exe or R3t.exe in it elsewhere, then read it back with "
+            "inversion.r2.read_r2_run.")
+        form.addRow("Run R2/R3t", self._r2_launcher)
+        self._r2_program = QLineEdit()
+        self._r2_program.setPlaceholderText("ResIPy's copy, or PATH")
+        self._r2_program.setToolTip(
+            "The R2.exe or R3t.exe to run, when another than ResIPy's or the one on "
+            "PATH. Leave empty to search for it.")
+        browse = QPushButton("…")
+        browse.setMaximumWidth(32)
+        browse.setToolTip("Choose the R2 or R3t program.")
+        browse.clicked.connect(self._browse_r2)
+        self._r2_program_row = merged_row(self._r2_program, browse)
+        form.addRow("Program", self._r2_program_row)
+        self._r2_status = QLabel()
+        self._r2_status.setWordWrap(True)
+        self._r2_status.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        form.addRow("", self._r2_status)
+        self._r2_rows = [self._r2_launcher, self._r2_program_row, self._r2_status]
+        self._set_rows_visible(self._r2_rows, False)
+        self._r2_timer = QTimer(self)
+        self._r2_timer.setSingleShot(True)
+        self._r2_timer.setInterval(600)
+        self._r2_timer.timeout.connect(self._check_r2)
+        self._r2_launcher.currentIndexChanged.connect(self._r2_settings_changed)
+        self._r2_program.textChanged.connect(self._r2_settings_changed)
+
+    def _load_r2_settings(self, program: str) -> None:
+        """Show the saved choices for ``program`` without re-saving them."""
+        from PySide6.QtCore import QSettings
+
+        saved = QSettings("PyHydroGeophysX", "Studio")
+        for widget in (self._r2_launcher, self._r2_program):
+            widget.blockSignals(True)
+        index = self._r2_launcher.findData(str(saved.value(self._R2_KEYS["launcher"], "auto")))
+        self._r2_launcher.setCurrentIndex(max(index, 0))
+        self._r2_program.setText(str(saved.value(self._R2_KEYS[program], "") or ""))
+        self._r2_program.setPlaceholderText(
+            f"{'R2' if program == 'r2' else 'R3t'}.exe from ResIPy, or PATH")
+        for widget in (self._r2_launcher, self._r2_program):
+            widget.blockSignals(False)
+
+    def _r2_settings(self) -> Dict[str, Any]:
+        """The R2/R3t settings a run is given (``inversion.r2.R2Settings``)."""
+        return {"launcher": str(self._r2_launcher.currentData() or "auto"),
+                "executable": self._r2_program.text().strip()}
+
+    def _browse_r2(self) -> None:
+        name = "R2" if self._r2_program_name() == "r2" else "R3t"
+        path, _ = QFileDialog.getOpenFileName(self, f"Choose the {name} program", "",
+                                              "Programs (*.exe);;All files (*)")
+        if path:
+            self._r2_program.setText(path)
+
+    def _r2_settings_changed(self, *_args: Any) -> None:
+        from PySide6.QtCore import QSettings
+
+        program = self._r2_program_name()
+        if program is None:
+            return
+        saved = QSettings("PyHydroGeophysX", "Studio")
+        settings = self._r2_settings()
+        saved.setValue(self._R2_KEYS["launcher"], settings["launcher"])
+        saved.setValue(self._R2_KEYS[program], settings["executable"])
+        self._r2_timer.start()
+
+    def _check_r2(self) -> None:
+        """Find R2 or R3t the way a run will, in a separate process."""
+        program = self._r2_program_name()
+        if program is None:
+            return
+        previous = self._r2_probe_worker
+        if previous is not None and previous.isRunning():
+            previous.cancel()
+        self._r2_probe_serial += 1
+        serial = self._r2_probe_serial
+        settings = self._r2_settings()
+        self._r2_found = None
+        self._r2_status.setText("Looking for the program…")
+        theme.set_tone(self._r2_status, "hint")
+        arguments = ["--json", "--program", program, "--launcher", settings["launcher"]]
+        if settings["executable"]:
+            arguments += ["--executable", settings["executable"]]
+        worker = ProcessProbeWorker("PyHydroGeophysX.inversion.r2", arguments=arguments,
+                                    timeout_ms=60000)
+        worker.succeeded.connect(lambda result, token=serial: self._on_r2_found(token, result))
+        worker.failed.connect(lambda message, token=serial: self._on_r2_found(
+            token, {"runs": False, "kind": "missing",
+                    "message": f"The check did not finish: {message}"}))
+        self._r2_probe_worker = self.register_worker(worker)
+        worker.start()
+
+    def _on_r2_found(self, serial: int, result: Dict[str, Any]) -> None:
+        if serial != self._r2_probe_serial or self._r2_program_name() is None:
+            return
+        self._r2_found = dict(result)
+        kind = str(result.get("kind", "missing"))
+        tone = {"native": "ok", "wine": "ok",
+                "files": "warn"}.get(kind, "error")
+        text = str(result.get("message", ""))
+        if kind == "missing":
+            text += " Runs will write the run folder and stop."
+        # λ stays on the page for the other engines; say here that it is unused.
+        text += (" It chooses its own smoothing weight at every iteration: λ and "
+                 "auto-λ are not used.")
+        self._r2_status.setText(text)
+        theme.set_tone(self._r2_status, tone)
+
+    def _warn_external_not_running(self, what: str) -> None:
+        """Before a run on E4D, R2 or R3t, say when the program will not run
+        here: the run then writes its folder and stops."""
+        engine = str(self._engine.currentData() or "")
+        if engine == "e4d":
+            found, name = self._e4d_found or {}, "E4D"
+        elif engine in ("r2", "r3t"):
+            found, name = self._r2_found or {}, "R2" if engine == "r2" else "R3t"
+        else:
+            return
+        if not found.get("runs", False):
+            self.log(f"{name} will not run here ("
+                     + (str(found.get("message")) if found else "it has not been found yet")
+                     + f"). The run writes the complete {name} {what} and stops; its path "
+                     "is in the message.", "warn")
 
     # -- loading -------------------------------------------------------------
     def _start_load(self, path: str,
@@ -2154,6 +2464,7 @@ class ERTProcessingModule(BaseModule):
                 "warn",
             )
             return
+        self._warn_external_not_running("run folder")
         if str(self._inv_mode.currentData() or "quick") == "full":
             self._report_data_health()
         try:
@@ -2250,6 +2561,10 @@ class ERTProcessingModule(BaseModule):
                 "chi2_tolerance": float(self._chi2_tol.value()),
                 "max_lambda_trials": int(self._lam_trials.value()),
                 **self._zone_parameters(),
+                **({"e4d": self._e4d_settings()}
+                   if self._engine.currentData() == "e4d" else {}),
+                **({"r2": self._r2_settings()}
+                   if self._r2_program_name() is not None else {}),
             },
             metadata={"source_instrument": self._instrument.currentText()},
         )
@@ -2342,6 +2657,9 @@ class ERTProcessingModule(BaseModule):
             "convergence_stop": summary.get("convergence_stop", ""),
             "engine": summary.get("engine", ""),
             "engine_requested": summary.get("engine_requested", ""),
+            "e4d": dict(summary.get("e4d") or {}),
+            "r2": dict(summary.get("r2") or {}),
+            "r3t": dict(summary.get("r3t") or {}),
             "data_path": source,
         }
         try:
@@ -2385,6 +2703,10 @@ class ERTProcessingModule(BaseModule):
         engine = str(result.get("engine") or "")
         requested_engine = str(result.get("engine_requested") or engine)
         solver = str(metrics.get("linearized_solver") or "")
+        if engine in ("r2", "r3t"):
+            # They choose their own smoothing weight (shown as alpha); the λ the
+            # page holds was never used, so it is not shown as if it were.
+            metrics.pop("lambda", None)
         if engine:
             metrics.setdefault(
                 "method", f"{engine} · {self._instrument.currentText()}"
@@ -2413,6 +2735,19 @@ class ERTProcessingModule(BaseModule):
         extra: Dict[str, Any] = dict(metrics.get("extra") or {})
         if engine == "adtlert":
             extra["compute"] = "cuDSS forward · GPU CGLS"
+        elif engine == "e4d":
+            elements = int(dict(result.get("e4d") or {}).get("elements") or 0)
+            extra["compute"] = "E4D 3D" + (f" · {elements} elements" if elements else "")
+        elif engine in ("r2", "r3t"):
+            own = dict(result.get(engine) or {})
+            name = "R2" if engine == "r2" else "R3t"
+            elements = int(own.get("elements") or 0)
+            alpha = own.get("alpha")
+            extra["compute"] = f"{name} {'2D' if engine == 'r2' else '3D'}" + (
+                f" · {elements} elements" if elements else "")
+            if alpha is not None and alpha == alpha:
+                # Its own smoothing weight stands where λ would.
+                extra["alpha"] = f"{float(alpha):.4g} (chosen by {name}; λ not used)"
         if dropped:
             extra["data"] = f"{outliers.get('kept')} of {outliers.get('n_start')} kept"
             if outliers.get("limited_by_floor"):
@@ -2572,6 +2907,16 @@ class ERTProcessingModule(BaseModule):
         vtk = result.get("vtk")
         if vtk:
             self.log(f"Saved {Path(vtk).name} to {Path(vtk).parent}", "info")
+        e4d = dict(result.get("e4d") or {})
+        if e4d.get("run_dir"):
+            self.log(f"E4D's own files (e4d.log, sigma.N) and the 3D model "
+                     f"resistivity_3d.vtk are in {e4d['run_dir']}", "info")
+        for engine_key, name in (("r2", "R2"), ("r3t", "R3t")):
+            own = dict(result.get(engine_key) or {})
+            if own.get("run_dir"):
+                self.log(f"{name}'s own files ({name}.out, f001_res.dat, its VTK) are in "
+                         f"{own['run_dir']}; {name} stopped with "
+                         f"\"{own.get('stop_message') or 'no message'}\"", "info")
 
         mgr = result.get("mgr")
         if mgr is not None and hasattr(self.state, "register_geophysical_resource"):
@@ -2651,7 +2996,6 @@ class ERTProcessingModule(BaseModule):
         """
         box = QGroupBox("Mesh")
         form = QFormLayout(box)
-        muted = "color:#5a6a7a; font-size:8pt;"
 
         # An imported mesh. Building one from the electrode line is fine for a
         # 2D profile and hopeless for a 3D domain with topography, boreholes or
@@ -2678,14 +3022,14 @@ class ERTProcessingModule(BaseModule):
         form.addRow("Source", self._mesh_row)
         self._mesh_note = QLabel("Built from the electrode positions.")
         self._mesh_note.setWordWrap(True)
-        self._mesh_note.setStyleSheet(muted)
+        theme.set_tone(self._mesh_note, "hint")
         form.addRow("", self._mesh_note)
 
         def section(title: str, text: str) -> None:
             form.addRow(QLabel(f"<b>{title}</b>"))
             hint = QLabel(text)
             hint.setWordWrap(True)
-            hint.setStyleSheet(muted)
+            theme.set_tone(hint, "hint")
             form.addRow(hint)
 
         section("Inverted region",
@@ -2849,7 +3193,7 @@ class ERTProcessingModule(BaseModule):
         try:
             self._apply_mesh_file(path)
         except Exception as exc:  # noqa: BLE001 - said next to the button, not in a traceback
-            self._mesh_note.setText(f"<span style='color:#b42318'>{Path(path).name}: {exc}</span>")
+            self._mesh_note.setText(f"<span style='color:{theme.color('red')}'>{Path(path).name}: {exc}</span>")
             self.log(f"Could not import the mesh {Path(path).name}: {exc}", "error")
 
     def _mesh_from_e4d_config(self, path: str) -> str:
@@ -3317,6 +3661,7 @@ class ERTProcessingModule(BaseModule):
         if len(self._tl_files) < 2:
             self.log("Add at least two ordered ERT data files (a time sequence).", "warn")
             return
+        self._warn_external_not_running("time-lapse folder")
         if (
             self._engine.currentData() == "adtlert"
             and self._adtlert_timelapse_ready is not True
@@ -3361,6 +3706,12 @@ class ERTProcessingModule(BaseModule):
         }
         if self._tl_lowmem.isChecked():
             params["save_memory"] = True
+        if self._engine.currentData() == "e4d":
+            # E4D runs each survey to a plateau, judged by the same stopping rule.
+            params["e4d"] = self._e4d_settings()
+            params["plateau_tolerance"] = float(self._plateau.value()) / 100.0
+        if self._r2_program_name() is not None:
+            params["r2"] = self._r2_settings()
         if self._tl_clip.isChecked():
             params["figure_clip"] = "envelope"
             params["figure_clip_threshold"] = float(self._tl_clip_cut.value())
@@ -3685,13 +4036,22 @@ class ERTProcessingModule(BaseModule):
         requested_engine = str(result.get("engine_requested") or engine)
         solver = str(result.get("linearized_solver") or "")
         compute_note = "Joint χ² over all time steps."
-        if engine == "adtlert":
+        if engine == "e4d":
+            compute_note = ("E4D time-lapse: χ² of each survey in turn, the last one "
+                            "shown; each started from the solution before it.")
+        elif engine in ("r2", "r3t"):
+            compute_note = (f"{'R2' if engine == 'r2' else 'R3t'} difference inversion: χ² "
+                            "of each survey in turn, the last one shown; each later survey "
+                            "inverted against the first. λ is not used.")
+        elif engine == "adtlert":
             compute_note += f" cuDSS forward · {solver or 'gpu_cgls'}."
         elif requested_engine == "adtlert":
             compute_note += " ADTLERT was unavailable; original PyHydro ERT used."
         self._quality_view.show_quality(
             {"chi2": result.get("chi2"), "iterations": len(result.get("chi2_history") or []) or None,
-             "n_data": result.get("n_data"), "lambda": self._lam.value(),
+             "n_data": result.get("n_data"),
+             # R2 and R3t choose their own smoothing; a λ shown would be one never used.
+             "lambda": None if engine in ("r2", "r3t") else self._lam.value(),
              "method": (f"{engine} time-lapse "
                         f"{result.get('inversion_type', '')} "
                         f"({result.get('n_times')} steps)"),
@@ -3715,6 +4075,26 @@ class ERTProcessingModule(BaseModule):
                 f"Compute backend: ADTLERT · cuDSS forward · {solver or 'gpu_cgls'}.",
                 "info",
             )
+        e4d = dict(result.get("e4d") or {})
+        if e4d.get("run_dir"):
+            self.log(f"E4D's own files (e4d.log, tl_sig*) and the 3D models "
+                     f"resistivity_3d_timelapse.vtk are in {e4d['run_dir']}", "info")
+            if e4d.get("missing_fit"):
+                self.log("E4D overwrote the simulated data of survey(s) "
+                         + ", ".join(str(int(s) + 1) for s in e4d["missing_fit"])
+                         + " before they could be kept: their models are shown, their "
+                         "fit is not known.", "warn")
+        for engine_key, name in (("r2", "R2"), ("r3t", "R3t")):
+            own = dict(result.get(engine_key) or {})
+            if own.get("run_dir"):
+                self.log(f"{name}'s own files: the baseline in {own.get('baseline_run_dir')}, "
+                         f"the later surveys (f002_res.dat, ...) in {own['run_dir']}", "info")
+                stops = list(own.get("stop") or [])
+                if "iteration_cap" in stops:
+                    self.log(f"{name} reached the iteration limit on survey(s) "
+                             + ", ".join(str(i + 1) for i, s in enumerate(stops)
+                                         if s == "iteration_cap")
+                             + "; raise Max iterations to let them converge.", "warn")
         self.report_result(result)
         self.offer_map_export()
 
@@ -4141,7 +4521,7 @@ class ERTProcessingModule(BaseModule):
         # inverted belongs next to those numbers and not only in the log.
         note_txt = ""
         if self._data_note:
-            note_txt = (f"<br><span style='color:#b42318'>Not usable for "
+            note_txt = (f"<br><span style='color:{theme.color('red')}'>Not usable for "
                         f"inversion: {self._data_note} Check the Instrument / "
                         f"format setting.</span>")
         self._info.setText(
@@ -4446,7 +4826,14 @@ class ERTProcessingModule(BaseModule):
                           "or stack - each reading's stacking spread with the estimate in "
                           "quadrature, for data that record it), "
                           "absolute_error (Ohm). Convergence: plateau_tolerance (fraction), "
-                          "max_total_iterations, engine (pyhydro/pygimli/adtlert). "
+                          "max_total_iterations, engine (pyhydro/pygimli/adtlert/e4d/r2/"
+                          "r3t; e4d is PNNL's external 3D code, set up in the E4D rows the "
+                          "page shows for it, and runs on Linux, or on Windows only "
+                          "inside WSL 2 - elsewhere it writes the E4D run folder and "
+                          "stops; r2 (2D profiles) and r3t (3D) are Binley's programs "
+                          "that ResIPy runs, found in ResIPy, native on Windows and "
+                          "through Wine elsewhere; they choose their own smoothing, so "
+                          "lambda and auto_lambda do not apply to them). "
                           "Mode: inversion_mode ('quick', the default, skips the k check "
                           "and the lambda search; 'full' runs both). It is a preset, so "
                           "geometric_factor_policy or auto_lambda sent after it in the "

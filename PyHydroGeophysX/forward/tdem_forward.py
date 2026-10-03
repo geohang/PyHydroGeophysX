@@ -73,9 +73,9 @@ class TDEMSurveyConfig:
     #: project's ``GateShapePar1``. 0.667 leaves a 0.333 flat top.
     gate_window_par: float = 0.667
     #: Half-period of the bipolar transmitter cycle, in seconds. Set it to model
-    #: the earlier pulses of the train the way the reference implementation does.
+    #: the earlier pulses of the train as well as the last one.
     waveform_period: Optional[float] = None
-    #: How many earlier half-cycles the repetition sums, three in the reference.
+    #: How many earlier half-cycles the repetition sums.
     waveform_repetitions: int = 3
     #: Resolution of the internal grid the analog filter is integrated on, in
     #: samples per decade of time. See :func:`_analog_sampling`.
@@ -371,9 +371,7 @@ def _local_log_hermite_matrix_cached(source: tuple, target: tuple) -> np.ndarray
     Deliberately not SciPy's global cubic spline. A response tabulated at ten
     points per decade is conventionally interpolated with a local cubic Hermite
     polynomial whose nodal slopes are centred secants and whose endpoint slopes
-    come from the quadratic through the first three points; the same rule is
-    used by the open TEM1D reference implementation
-    (https://github.com/hydrogeophysicsgroup/TEM1D, MIT).
+    come from the quadratic through the first three points.
 
     Keeping it as a matrix applies the identical interpolation to the response
     and to the Jacobian. Values outside the source interval are zero.

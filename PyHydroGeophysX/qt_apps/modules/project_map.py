@@ -12,15 +12,17 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QF
 from .base import BaseModule
 from PyHydroGeophysX.qt_apps.project_map import ProjectMapStore, em_result
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets.flow_layout import FlowLayout, group as control_group
 from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.workers import TaskWorker
 from PyHydroGeophysX.visualization.axis_units import (
     set_length_axis, set_section_axes, to_display_length)
 from PyHydroGeophysX.visualization.basemap import TILE_SOURCES, basemap_image
+from PyHydroGeophysX.qt_apps import theme
 
 
-COLORS = {'ERT': '#cb6c24', 'EM': '#197a87', 'Seismic': '#8259b2',
-          'Gravity': '#ad4965', 'Magnetics': '#527931'}
+COLORS = {'ERT': '#ff9500', 'EM': '#30b0c7', 'Seismic': '#af52de',
+          'Gravity': '#ff2d55', 'Magnetics': '#34c759'}
 
 # Plan interpolation offered for any slice that carries one value per map
 # position: TEM/AEM depth slices, recovered grid layers and imported point
@@ -88,12 +90,12 @@ class VariogramDialog(QDialog):
         layout.addWidget(canvas, 1)
         axes = figure.add_subplot(111)
         lags, gamma = np.asarray(fit['lags']), np.asarray(fit['gamma'])
-        axes.plot(lags, gamma, 'o', color='#197a87', label='Experimental')
+        axes.plot(lags, gamma, 'o', color='#30b0c7', label='Experimental')
         fine = np.linspace(0, lags.max() * 1.05, 200)
         model = variogram_function(fit['model'], fit['nugget'], fit['sill'], fit['range'])
-        axes.plot(fine, model(fine), '-', color='#cb6c24', lw=2, label=f"{fit['model']} model")
-        axes.axhline(fit['sill'], ls=':', color='#7890a2')
-        axes.axvline(fit['range'], ls=':', color='#7890a2')
+        axes.plot(fine, model(fine), '-', color='#ff9500', lw=2, label=f"{fit['model']} model")
+        axes.axhline(fit['sill'], ls=':', color='#8e8e93')
+        axes.axvline(fit['range'], ls=':', color='#8e8e93')
         # The variogram describes the space that was interpolated, which is log10
         # for resistivity and the product's own units for everything else.
         units = 'log10 Ω·m' if result['log_values'] else entry.get('units', '')
@@ -108,7 +110,7 @@ class VariogramDialog(QDialog):
             'stretched by 1/cos(latitude), so a geographic range reads larger than the '
             'ground distance it represents.')
         summary.setWordWrap(True)
-        summary.setStyleSheet('color: #597185; font-size: 11px;')
+        theme.set_tone(summary, "hint")
         layout.addWidget(summary)
 
 
@@ -144,19 +146,17 @@ class ProjectMapModule(BaseModule):
         root.setSpacing(4)
         self._note = QLabel('Add results from any survey method using Add to Map… or import a point product.')
         self._note.setWordWrap(True)
-        self._note.setStyleSheet('color: #597185; font-size: 11px;')
+        theme.set_tone(self._note, "hint")
         split = QSplitter(Qt.Horizontal)
         root.addWidget(split, 1)
         root.addWidget(self._note)
         left = QWidget()
         left.setObjectName('MapLayersPanel')
-        left.setStyleSheet('QWidget#MapLayersPanel {background: #ffffff; border: 1px solid #dce5ed; border-radius: 8px;}')
-        left.setMinimumWidth(200)
         ll = QVBoxLayout(left)
         ll.setContentsMargins(6, 6, 6, 6)
         ll.setSpacing(4)
         layers_title = QLabel('SURVEY LAYERS')
-        layers_title.setStyleSheet('font-size: 10px; font-weight: 600; color: #597185; letter-spacing: 1px;')
+        layers_title.setObjectName('MapSectionTitle')
         ll.addWidget(layers_title)
         self._frame = QComboBox()
         self._frame.addItem('Geographic surveys', 'geographic')
@@ -192,7 +192,6 @@ class ProjectMapModule(BaseModule):
         split.addWidget(right)
         map_panel = QWidget()
         map_panel.setObjectName('ProjectMapPanel')
-        map_panel.setStyleSheet('QWidget#ProjectMapPanel {background: #ffffff; border: 1px solid #dce5ed; border-radius: 8px;}')
         ml = QVBoxLayout(map_panel)
         ml.setContentsMargins(4, 4, 4, 4)
         ml.setSpacing(2)
@@ -226,14 +225,14 @@ class ProjectMapModule(BaseModule):
         self._map_colormap.setEnabled(False)
         slices.addWidget(self._map_colormap)
         slices.addStretch(1)
-        surface = QHBoxLayout()
-        surface.addWidget(QLabel('Surface:'))
+        # Wraps in a narrow panel instead of widening the page (widgets.flow_layout).
+        surface = FlowLayout(spacing=6)
         self._interp = QComboBox()
         for text, value in SURFACES:
             self._interp.addItem(text, value)
         self._interp.setToolTip(SURFACE_HELP)
         self._interp.currentIndexChanged.connect(self._surface_changed)
-        surface.addWidget(self._interp)
+        surface.addWidget(control_group('Surface:', self._interp))
         self._interp_res = GridSpinBox()
         self._interp_res.setRange(40, 400)
         self._interp_res.setValue(140)
@@ -280,7 +279,6 @@ class ProjectMapModule(BaseModule):
         self._export_grid.setEnabled(False)
         self._export_grid.clicked.connect(self._export_surface)
         surface.addWidget(self._export_grid)
-        surface.addStretch(1)
         self._fig = Figure(figsize=(9, 4), layout='constrained')
         self._canvas = FigureCanvasQTAgg(self._fig)
         navigation = NavigationToolbar2QT(self._canvas, self, coordinates=False)
@@ -463,7 +461,7 @@ class ProjectMapModule(BaseModule):
             item.setCheckState(0, Qt.Checked if entry.get('visible', True) else Qt.Unchecked)
             item.setToolTip(0, f"{entry['crs']} · {entry['created_at']}")
             from PySide6.QtGui import QColor, QBrush
-            item.setForeground(1, QBrush(QColor(COLORS.get(entry['method'], '#597185'))))
+            item.setForeground(1, QBrush(QColor(COLORS.get(entry['method'], '#8e8e93'))))
             self._list.addTopLevelItem(item)
             if entry['id'] == self._selected:
                 self._list.setCurrentItem(item)
@@ -948,7 +946,7 @@ class ProjectMapModule(BaseModule):
                           transform=self._ax.transAxes, ha='center', va='center')
         # Keep map distances isotropic while filling wide and resized windows.
         self._ax.set_aspect('equal', adjustable='datalim')
-        self._ax.set_facecolor('#f8fbfd')
+        self._ax.set_facecolor(theme.color('canvas'))
         # Before the length axes: the unit's own formatter has no offset to turn
         # off, and ticklabel_format refuses any formatter but matplotlib's own.
         self._ax.ticklabel_format(useOffset=False, style='plain')
@@ -960,7 +958,7 @@ class ProjectMapModule(BaseModule):
         else:
             set_length_axis(self._ax, 'x', 'Project X')
             set_length_axis(self._ax, 'y', 'Project Y')
-        self._ax.grid(alpha=.2, linestyle=':', color='#7890a2')
+        self._ax.grid(alpha=.2, linestyle=':', color='#8e8e93')
         for spine in self._ax.spines.values():
             spine.set_color('#bacbd7')
         self._load_tiles.setEnabled(geographic and bool(all_xy) and self._tile_worker is None)
@@ -1143,3 +1141,278 @@ class ProjectMapModule(BaseModule):
     def closeEvent(self, event):
         self.stop_workers()
         super().closeEvent(event)
+
+    # -- agent command interface ----------------------------------------------
+    def agent_describe(self):
+        methods = [value or 'points' for _label, value in SURFACES]
+        return {
+            'module': self.module_key,
+            'title': self.module_title,
+            'state': self._agent_status(),
+            'actions': [
+                {'name': 'get_status', 'args': {},
+                 'desc': ('The surveys on the map (id, name, method, kind, units, visible), '
+                          'the one selected, its slices and the surface settings.')},
+                {'name': 'select_survey', 'args': {'survey': 'id or name'},
+                 'desc': ('Select a survey: its saved section is shown below the map and its '
+                          'slices can be chosen.')},
+                {'name': 'set_visible', 'args': {'survey': 'id or name', 'visible': 'bool'},
+                 'desc': 'Show or hide a survey on the map; saved with the project map.'},
+                {'name': 'set_frame', 'args': {'frame': ['geographic', 'local']},
+                 'desc': 'Show the geographic surveys or those in local project coordinates.'},
+                {'name': 'set_slice', 'args': {'slice': 'index (0 = survey locations) or its label'},
+                 'desc': "Choose the selected survey's depth or model slice to map in plan view."},
+                {'name': 'set_surface',
+                 'args': {'method': methods, 'cells': 'int 40-400',
+                          'blanking_m': 'number, 0 = no blanking', 'stations': 'bool'},
+                 'desc': ('How the slice is gridded: kriging (with its own variance), '
+                          'inverse distance, triangulation, nearest neighbour or thin-plate '
+                          'spline; points draws the stations only.')},
+                {'name': 'interpolate', 'args': {},
+                 'desc': 'Grid the chosen slice with the surface settings; runs in the background.'},
+                {'name': 'cancel_interpolation', 'args': {}, 'desc': 'Stop a running interpolation.'},
+                {'name': 'fit_surveys', 'args': {}, 'desc': 'Zoom the map to the surveys shown.'},
+                {'name': 'rename_survey', 'args': {'survey': 'id or name', 'name': 'str'},
+                 'desc': 'Rename a survey on the map; its source result is unchanged.'},
+                {'name': 'export_map_png', 'args': {'path': 'str (.png)'},
+                 'desc': 'Save the map as shown to a PNG.'},
+                {'name': 'export_grid', 'args': {'path': 'str (.asc or .csv)'},
+                 'desc': 'Write the interpolated surface as an ESRI ASCII grid or a point table.'},
+                {'name': 'import_points',
+                 'args': {'path': 'CSV with x,y,value columns', 'method': 'str', 'units': 'str',
+                          'crs': "'LOCAL' (default) or a CRS such as EPSG:32613",
+                          'name': 'str (optional)'},
+                 'desc': ('Add a point product (gravity, magnetics...) to the map at the x,y '
+                          'the file gives, in the CRS named.')},
+                {'name': 'refresh', 'args': {}, 'desc': 'Re-read the project map from disk.'},
+            ],
+            'note': 'Removing a survey from the map is left to the user (the Remove button).',
+        }
+
+    def agent_apply(self, action, args):
+        args = args or {}
+        handlers = {
+            'get_status': self._agent_status,
+            'select_survey': lambda: self._agent_select(args.get('survey')),
+            'set_visible': lambda: self._agent_set_visible(args.get('survey'),
+                                                           args.get('visible', True)),
+            'set_frame': lambda: self._agent_set_frame(args.get('frame')),
+            'set_slice': lambda: self._agent_set_slice(args.get('slice')),
+            'set_surface': lambda: self._agent_set_surface(args),
+            'interpolate': self._agent_interpolate,
+            'cancel_interpolation': self._agent_cancel,
+            'fit_surveys': self._agent_fit,
+            'rename_survey': lambda: self._agent_rename(args.get('survey'), args.get('name')),
+            'export_map_png': lambda: self._agent_export_png(args.get('path')),
+            'export_grid': lambda: self._agent_export_grid(args.get('path')),
+            'import_points': lambda: self._agent_import_points(
+                args.get('path'), args.get('method'), args.get('units'),
+                args.get('crs') or 'LOCAL', args.get('name')),
+            'refresh': lambda: (self.refresh(), self._agent_status())[1],
+        }
+        handler = handlers.get(action)
+        if handler is None:
+            return {'status': 'failed', 'error': f"Unknown action '{action}'.",
+                    'valid_actions': list(handlers)}
+        return handler()
+
+    def _agent_status(self):
+        entry = self._entry()
+        return {
+            'status': 'ok',
+            'project': str(self._root or ''),
+            'frame': self._frame.currentData(),
+            'surveys': [{'id': e['id'], 'name': e.get('name'), 'method': e.get('method'),
+                         'kind': e.get('kind'), 'units': e.get('units'),
+                         'visible': bool(e.get('visible', True)), 'frame': e.get('frame'),
+                         'crs': e.get('crs')} for e in self._entries],
+            'selected': entry['id'] if entry else None,
+            'slices': [self._depth.itemText(i) for i in range(self._depth.count())],
+            'slice': self._depth.currentIndex(),
+            'surface': {'method': self._interp.currentData() or 'points',
+                        'cells': self._interp_res.value(),
+                        'blanking_m': self._interp_blank.value(),
+                        'stations': self._stations.isChecked()},
+            'can_interpolate': self._surface_request is not None,
+            'interpolating': self._surface_job is not None,
+            'surface_ready': self._surface is not None,
+            'message': self._interpolation_status.text(),
+            'note': self._note.text(),
+        }
+
+    def _agent_find(self, survey):
+        """The map entry ``survey`` names - by id, by exact name, or by a unique part of one."""
+        key = str(survey or '').strip()
+        if not key:
+            return None, "Provide 'survey' (an id or a name)."
+        for entry in self._entries:
+            if entry['id'] == key:
+                return entry, ''
+        exact = [e for e in self._entries if str(e.get('name', '')).lower() == key.lower()]
+        partial = [e for e in self._entries if key.lower() in str(e.get('name', '')).lower()]
+        found = exact or partial
+        if len(found) == 1:
+            return found[0], ''
+        if not found:
+            return None, f"No survey named '{key}'."
+        return None, (f"'{key}' matches {len(found)} surveys; use an id: "
+                      + ', '.join(f"{e['id']} ({e.get('name')})" for e in found))
+
+    def _agent_select(self, survey):
+        entry, problem = self._agent_find(survey)
+        if entry is None:
+            return {'status': 'failed', 'error': problem}
+        self._selected = entry['id']
+        for combo, index in ((self._frame, self._frame.findData(entry.get('frame'))),
+                             (self._method, 0)):
+            if index >= 0:
+                combo.blockSignals(True)
+                combo.setCurrentIndex(index)
+                combo.blockSignals(False)
+        self._filter_changed()
+        return self._agent_status()
+
+    def _agent_set_visible(self, survey, visible):
+        entry, problem = self._agent_find(survey)
+        if entry is None:
+            return {'status': 'failed', 'error': problem}
+        if self._store is None:
+            return {'status': 'failed', 'error': 'The project map is not open.'}
+        try:
+            self._store.update(entry['id'], visible=bool(visible))
+        except Exception as exc:  # noqa: BLE001
+            return {'status': 'failed', 'error': str(exc)}
+        entry['visible'] = bool(visible)
+        self._filter_changed()
+        return {'status': 'ok', 'survey': entry['id'], 'visible': bool(visible)}
+
+    def _agent_set_frame(self, frame):
+        index = self._frame.findData(str(frame or ''))
+        if index < 0:
+            return {'status': 'failed', 'error': "frame is 'geographic' or 'local'."}
+        self._frame.setCurrentIndex(index)
+        return self._agent_status()
+
+    def _agent_set_slice(self, which):
+        if self._depth.count() <= 1:
+            return {'status': 'failed',
+                    'error': 'The selected survey has no slices (select an EM or grid survey).'}
+        index = -1
+        if isinstance(which, (int, float)) or str(which).strip().lstrip('-').isdigit():
+            index = int(which)
+        else:
+            index = self._depth.findText(str(which))
+        if not 0 <= index < self._depth.count():
+            return {'status': 'failed', 'error': f"No slice '{which}'.",
+                    'slices': [self._depth.itemText(i) for i in range(self._depth.count())]}
+        self._depth.setCurrentIndex(index)
+        return {'status': 'ok', 'slice': index, 'label': self._depth.itemText(index),
+                'can_interpolate': self._surface_request is not None,
+                'message': self._interpolation_status.text()}
+
+    def _agent_set_surface(self, args):
+        if 'method' in args:
+            method = None if str(args['method']).lower() in ('points', 'none', '') else args['method']
+            index = self._interp.findData(method)
+            if index < 0:
+                return {'status': 'failed', 'error': f"Unknown method '{args['method']}'.",
+                        'methods': [value or 'points' for _label, value in SURFACES]}
+            self._interp.setCurrentIndex(index)
+        if 'cells' in args:
+            self._interp_res.setValue(int(args['cells']))
+        if 'blanking_m' in args:
+            self._interp_blank.setValue(float(args['blanking_m'] or 0))
+        if 'stations' in args:
+            self._stations.setChecked(bool(args['stations']))
+        return self._agent_status()
+
+    def _agent_interpolate(self):
+        if self._surface_job is not None:
+            return {'status': 'failed', 'error': 'An interpolation is already running.'}
+        if self._surface_request is None:
+            return {'status': 'failed', 'error': self._surface_hint()}
+        self._start_surface()
+        return {'status': 'ok',
+                'detail': 'Interpolating in the background; get_status reports when the surface is ready.'}
+
+    def _agent_cancel(self):
+        if self._surface_job is None:
+            return {'status': 'failed', 'error': 'No interpolation is running.'}
+        self._cancel_surface()
+        return {'status': 'ok'}
+
+    def _agent_fit(self):
+        self._draw_map(fit=True)
+        return {'status': 'ok'}
+
+    def _agent_rename(self, survey, name):
+        entry, problem = self._agent_find(survey)
+        if entry is None:
+            return {'status': 'failed', 'error': problem}
+        name = str(name or '').strip()
+        if not name or self._store is None:
+            return {'status': 'failed', 'error': "Provide 'name'."}
+        try:
+            self._store.update(entry['id'], name=name)
+        except Exception as exc:  # noqa: BLE001
+            return {'status': 'failed', 'error': str(exc)}
+        self.refresh()
+        return {'status': 'ok', 'survey': entry['id'], 'name': name}
+
+    def _agent_export_png(self, path):
+        if not path:
+            return {'status': 'failed', 'error': "Provide 'path' (.png)."}
+        try:
+            self._fig.savefig(str(path), dpi=180)
+        except Exception as exc:  # noqa: BLE001
+            return {'status': 'failed', 'error': str(exc)}
+        return {'status': 'ok', 'path': str(path)}
+
+    def _agent_export_grid(self, path):
+        if self._surface is None:
+            return {'status': 'failed',
+                    'error': 'No interpolated surface yet: set a slice and a method, then interpolate.'}
+        if not path:
+            return {'status': 'failed', 'error': "Provide 'path' (.asc or .csv)."}
+        from PyHydroGeophysX.core.plan_interpolation import write_plan_grid
+        entry, result, layer = self._surface
+        try:
+            write_plan_grid(result, str(path))
+        except Exception as exc:  # noqa: BLE001
+            return {'status': 'failed', 'error': str(exc)}
+        self._note.setText(f"Wrote {result['method']} grid of {entry['name']} "
+                           f"({layer}) in {entry['crs']} to {path}.")
+        return {'status': 'ok', 'path': str(path), 'method': result.get('method')}
+
+    def _agent_import_points(self, path, method, units, crs='LOCAL', name=None):
+        """Add a point product without the placement dialog: a point product
+        carries its own x,y, so the only choice the dialog asks for is the CRS."""
+        from pathlib import Path
+
+        from PyHydroGeophysX.qt_apps.project_map import ProjectMapStore, point_snapshot
+
+        if not path or not Path(str(path)).is_file():
+            return {'status': 'failed', 'error': f'Not found: {path}'}
+        if not method or units is None:
+            return {'status': 'failed', 'error': "Provide 'method' and 'units'."}
+        crs = str(crs or 'LOCAL').strip()
+        try:
+            store = self.state.ensure_results_store()
+            if store.read_only:
+                return {'status': 'failed', 'error': 'This project is read-only.'}
+            if crs.upper() != 'LOCAL':
+                from pyproj import CRS
+                CRS.from_user_input(crs)
+            data = np.genfromtxt(str(path), delimiter=',', names=True, encoding='utf8')
+            xy = np.column_stack([np.atleast_1d(data[k]) for k in ('x', 'y')])
+            meta, arrays = point_snapshot(xy, data['value'], str(method), str(units),
+                                          Path(str(path)).stem)
+            meta.update(source_module=self.module_key, source_file=Path(str(path)).name)
+            entry = ProjectMapStore(store.root).add(meta, arrays, arrays['survey_xy'], crs,
+                                                    str(name or meta['label']))
+        except Exception as exc:  # noqa: BLE001
+            return {'status': 'failed', 'error': f'{type(exc).__name__}: {exc}'}
+        self.state.map_selected_id = entry['id']
+        self.log(f"Saved '{entry['name']}' to Project Map.", 'success')
+        self.refresh()
+        return {'status': 'ok', 'survey': entry['id'], 'name': entry['name'], 'crs': crs}

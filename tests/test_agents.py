@@ -150,6 +150,7 @@ def test_the_run_makes_the_steps_the_preview_lists(tmp_path, no_file_checks, con
     {"data_file": "a.ohm", "em_file": "sounding.csv"},
     {"data_file": "a.ohm", "seismic_file": "picks.dat"},
     {"data_file": "a.ohm", "raw_seismic_file": "line.sgy"},
+    {"data_file": "a.ohm", "mt_files": ["site.edi"]},
     {"user_request": "Invert the TDEM sounding in sounding.csv"},
     {"data_file": "a.ohm", "user_request": "Invert a.ohm and the TEM sounding"},
     {"user_request": "Invert the seismic travel times in srt.dat"},
@@ -192,7 +193,8 @@ def test_the_request_parsers_defaults_do_not_replace_the_runs(tmp_path, no_file_
         "user_request": "time-lapse ERT of the two surveys and their water content"})
     assert result["status"] == "success", result.get("error")
     assert _inputs(calls, "ert_inversion")[0]["inversion_params"] == {}
-    assert _inputs(calls, "water_content")[0]["uncertainty_analysis"] is False
+    # A water content always carries its uncertainty, whatever the parser said.
+    assert _inputs(calls, "water_content")[0]["uncertainty_analysis"] is True
 
 
 def test_a_survey_the_loader_refuses_stops_the_run_with_its_reason(tmp_path):
@@ -301,6 +303,17 @@ def test_a_request_asks_for_tdem_or_rules_it_out(text, asked):
     assert names_tdem(text) is asked
 
 
+@pytest.mark.parametrize("text, sites", [
+    ("Invert the MT sites a.edi and b.edi", ["a.edi", "b.edi"]),
+    ("大地电磁反演 nmx20.xml", ["nmx20.xml"]),
+    # An XML file is an MT site only when the request says MT, and "Mt." is a mountain.
+    ("Invert a.ohm and read meta.xml", None),
+    ("Invert a.ohm from the survey on Mt. Hood, settings in run.xml", None),
+])
+def test_a_request_names_its_mt_sites_or_none(text, sites):
+    assert ContextInputAgent(api_key=None).request_inputs(text).get("mt_files") == sites
+
+
 @pytest.mark.parametrize("text, instrument", [
     # "existing" holds "sting", "compares" "ares", "Albert" "bert".
     ("invert the existing survey a.ohm", None), ("compares the two lines", None),
@@ -329,7 +342,7 @@ def _convert(tmp_path, layer_params):
     from PyHydroGeophysX.agents.runtime import catalog
     from PyHydroGeophysX.agents.runtime.context import RunContext
 
-    ctx = RunContext("convert", config={"layer_params": layer_params, "n_realizations": 20},
+    ctx = RunContext("convert", config={"layer_params": layer_params, "n_realizations": 50},
                      output_dir=str(tmp_path))
     ctx.put("inversion_results", {"resistivity_model": np.linspace(80.0, 900.0, MARKERS.size),
                                   "cell_markers": MARKERS})
@@ -379,6 +392,44 @@ def test_a_failed_conversion_is_reported_as_failed_not_as_not_requested(tmp_path
     timelapse = ReportAgent(api_key=None)._generate_timelapse_water_content_section(
         {"water_content_failed": "ValueError: no model to convert"})
     assert timelapse.startswith("## Water Content") and "did not complete" in timelapse
+
+
+def test_water_content_always_states_its_uncertainty_and_whose_parameters(tmp_path):
+    # A hydrologic property read from geophysics always carries its spread, and
+    # one computed without the user's petrophysical relationship is flagged as
+    # unreliable while the run goes, naming the parameters drawn and their ranges.
+    from PyHydroGeophysX.agents.report_agent import ReportAgent
+    from PyHydroGeophysX.agents.runtime import catalog
+    from PyHydroGeophysX.agents.runtime.context import RunContext
+
+    model = 10 ** np.random.default_rng(0).uniform(1.3, 2.7, 200)
+
+    def convert(config):
+        ctx = RunContext("estimate water content", dict(config, request="water content"),
+                         output_dir=str(tmp_path))
+        ctx.put("inversion_results", {"resistivity_model": model, "mesh": None})
+        summary, produced = catalog._convert_water_content(ctx)
+        for key, value in produced.items():
+            ctx.put(key, value)
+        return ctx, summary
+
+    ctx, summary = convert({"n_realizations": 1})
+    assert "±" in summary and "Not reliable" in summary
+    assert any("raised from 1 to 50" in w for w in ctx.warnings)
+    stated = next(w for w in ctx.warnings if "it is not reliable" in w)
+    for parameter in ("cementation exponent m", "saturation exponent n", "porosity",
+                      "pore-fluid resistivity 20 Ω·m (fixed)"):
+        assert parameter in stated
+    report = ReportAgent(api_key=None)._generate_wc_summary(
+        catalog._survey_report_input(ctx, ctx.get("inversion_results"))["workflow_data"])
+    assert "Not Calibrated" in report and stated in report
+
+    ctx, _ = convert({"petrophysical_params": {"rho_sat": 541}})
+    assert any("saturation exponent n and porosity were not given" in w for w in ctx.warnings)
+
+    ctx, summary = convert({"petrophysical_params": {"m": 1.6, "n": 2.0, "porosity": 0.35,
+                                                     "rho_fluid": 25}})
+    assert "±" in summary and not any("default" in w for w in ctx.warnings)
 
 
 # --------------------------------------------------------------------------
@@ -578,3 +629,102 @@ def test_a_moved_helper_still_imports_from_base_agent(name, home):
     with pytest.warns(DeprecationWarning, match=f"PyHydroGeophysX.agents.{home}.{name}"):
         value = getattr(base_agent, name)
     assert value is getattr(importlib.import_module(f"PyHydroGeophysX.agents.{home}"), name)
+
+
+# --------------------------------------------------------------------------
+# Assistants: AQUAH, GeoSAGE and later ones plug into one runtime
+# --------------------------------------------------------------------------
+
+def test_each_assistant_registers_with_its_own_tools_and_workflow():
+    from PyHydroGeophysX.agents.assistants import assistants, get_assistant
+    from PyHydroGeophysX.agents.runtime.tools import TOOLS
+
+    assert [a.key for a in assistants()][:2] == ["aquah", "geosage"]
+    aquah = get_assistant("aquah")
+    assert aquah.availability() == (True, "")
+    assert aquah.load_tools() is TOOLS and "write_report" in TOOLS
+    assert callable(aquah.load_workflow())
+    # GeoSAGE is listed while it is ported, but cannot be chosen, and its tools
+    # never mix with AQUAH's, even where a name is the same.
+    geosage = get_assistant("geosage")
+    ready, why = geosage.availability()
+    assert not ready and "ported" in why
+    own = geosage.load_tools()
+    assert own is not TOOLS and own["write_report"] is not TOOLS["write_report"]
+    assert "run_joint_inversion" not in TOOLS
+    assert geosage.tool_for_label("Run joint gravity-magnetic inversion") == "run_joint_inversion"
+
+
+def test_an_assistant_runs_its_own_tools_to_its_own_final_product(tmp_path, monkeypatch):
+    # GeoSAGE's chain on the controller AQUAH uses, with stand-in handlers: the
+    # data dependencies alone order the steps, and the run ends with the
+    # reviewed report rather than at the first report-like product.
+    from PyHydroGeophysX.agents.assistants.geosage import tools, workflow
+
+    made = {"prepare_data": {"field_data": 1}, "compile_priors": {"geological_priors": None},
+            "run_joint_inversion": {"property_models": 1}, "build_quasi_geology": {"geo_model": 1},
+            "write_report": {"draft_report": {"summary": "Group 5 is the primary target."}},
+            "review_report": {"report_files": {"report_markdown": "report.md"}}}
+    for name, outputs in made.items():
+        monkeypatch.setattr(tools.TOOLS[name], "handler",
+                            lambda ctx, outputs=outputs: ("Done.", dict(outputs)))
+    events = []
+    result = workflow.run({"request": "find serpentinite targets", "output_dir": str(tmp_path)},
+                          lambda *a: None, on_event=events.append)
+    assert [e["tool"] for e in events if e["phase"] == "done"] == list(made)
+    # The route the studio draws: projected in full before the first step,
+    # one stop shorter after each, and empty once the final product exists.
+    routes = [[step["tool"] for step in e["ahead"]] for e in events if e["phase"] == "route"]
+    assert routes[0] == list(made)
+    assert routes[1] == list(made)[1:] and routes[-1] == []
+    assert result["status"] == "success"
+    assert result["report_files"] == {"report_markdown": "report.md"}
+    assert result["interpretation"] == "Group 5 is the primary target."
+
+
+def test_a_note_mid_run_is_read_at_the_next_decision_and_can_change_a_setting():
+    # The user can hold a run before its next step and tell it something; the
+    # controller's reasoning reaches the studio as it is written.
+    import threading
+
+    from PyHydroGeophysX.agents.runtime import steering
+    from PyHydroGeophysX.agents.runtime.context import RunContext
+    from PyHydroGeophysX.agents.runtime.entry import drive
+    from PyHydroGeophysX.agents.runtime.tools import Tool
+
+    used = {}
+
+    def invert(ctx):
+        used["lambda"] = ctx.config["inversion_params"]["lambda"]
+        return "Inverted.", {"report_files": {"report_markdown": "r.md"}}
+
+    tools = {"invert": Tool("invert", "Invert.", invert, produces=("report_files",))}
+
+    def ask(prompt, on_text=None):
+        heard = "The user has just told you" in prompt
+        reply = ('{"why": "You asked for lambda 20.", "tool": "invert", '
+                 '"settings": {"inversion_params": {"lambda": 20}}}' if heard
+                 else '{"why": "Done.", "done": true}')
+        for end in range(10, len(reply) + 1, 10):
+            on_text(reply[:end])
+        return reply
+
+    events = []
+    steer = steering.Steering(notify=events.append)
+    steer.say("use lambda 20")
+    steer.pause()
+    threading.Timer(0.2, steer.resume).start()
+    token = steering.current.set(steer)
+    try:
+        ctx = drive(RunContext("invert", {"inversion_params": {"lambda": 10}}), tools=tools,
+                    ask=ask, on_event=events.append)
+    finally:
+        steering.current.reset(token)
+    phases = [e["phase"] for e in events]
+    assert phases.index("paused") < phases.index("resumed") < phases.index("start")
+    assert used["lambda"] == 20 and ctx.guidance == ["use lambda 20"]
+    read = next(e for e in events if e["phase"] == "steer")
+    assert read["heard"] and read["changes"] == [
+        "inversion_params: {'lambda': 10} -> {'lambda': 20}"]
+    thoughts = [e["text"] for e in events if e["phase"] == "thought"]
+    assert len(thoughts) > 1 and thoughts[-1] == "You asked for lambda 20."

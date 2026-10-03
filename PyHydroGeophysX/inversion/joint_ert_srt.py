@@ -13,12 +13,12 @@ import numpy as np
 import pygimli as pg
 import pygimli.physics.traveltime as tt
 from pygimli.physics import TravelTimeManager, ert
-from scipy.sparse import csr_matrix, diags, vstack
+from scipy.sparse import csr_matrix, diags, issparse
 from scipy.sparse.linalg import lsqr
 
 from .base import InversionBase
 from .cross_constraints import StructuralConstraint
-from ..solvers.linear_solvers import generalized_solver
+from ..solvers.linear_solvers import _SPD_METHODS, StackedSystem, generalized_solver
 
 
 @dataclass
@@ -137,7 +137,7 @@ class JointERTSRTInversion(InversionBase):
         self.mv: Optional[np.ndarray] = None
         self.mr_ref: Optional[np.ndarray] = None
         self.mv_ref: Optional[np.ndarray] = None
-        self.RCM: Optional[np.ndarray] = None
+        self.RCM: Optional[csr_matrix] = None
         self.X: Optional[np.ndarray] = None
         self._ert_error_source: str = "unknown"
         self._ert_observed_source: str = "unknown"
@@ -211,6 +211,17 @@ class JointERTSRTInversion(InversionBase):
         if out.ndim == 1:
             out = out.reshape(-1, 1)
         return out
+
+    @staticmethod
+    def _jacobian_keep_sparse(jac: Any) -> Any:
+        """A pyGIMLi sparse Jacobian as CSR, any other as a dense ndarray.
+
+        The SRT ray Jacobian holds about 2% nonzeros; it used to be expanded to
+        a dense array here and copied back into CSR for the stacked system.
+        """
+        if isinstance(jac, (pg.matrix.SparseMapMatrix, pg.matrix.SparseMatrix)):
+            return pg.utils.sparseMatrix2coo(jac).tocsr()
+        return JointERTSRTInversion._jacobian_to_numpy(jac)
 
     @staticmethod
     def _clip_log_model(model_log: np.ndarray, lower_lin: float, upper_lin: float, inverse: bool = False) -> np.ndarray:
@@ -447,7 +458,8 @@ class JointERTSRTInversion(InversionBase):
         self.ert_fop.createJacobian(pg.Vector(rho))
         J_lin = self._jacobian_to_numpy(self.ert_fop.jacobian())
         J = J_lin * rho.reshape(1, -1)
-        J = J / dr_lin.reshape(-1, 1)
+        del J_lin
+        J /= dr_lin.reshape(-1, 1)
         return dr, J
 
     def _ert_forward(self, mr: np.ndarray) -> np.ndarray:
@@ -461,8 +473,14 @@ class JointERTSRTInversion(InversionBase):
         dt = self._as_col(np.asarray(self.srt_fop.response(pg.Vector(slowness)), dtype=float))
 
         self.srt_fop.createJacobian(pg.Vector(slowness))
-        J_lin = self._jacobian_to_numpy(self.srt_fop.jacobian())
-        J = J_lin * slowness.reshape(1, -1)
+        J_lin = self._jacobian_keep_sparse(self.srt_fop.jacobian())
+        if issparse(J_lin):
+            # Column scaling of the stored entries: J_ij * s_j, as the dense
+            # product computed it.
+            J = J_lin.tocsr()
+            J.data = J.data * slowness[J.indices]
+        else:
+            J = J_lin * slowness.reshape(1, -1)
         return dt, J
 
     def _srt_forward(self, mv: np.ndarray) -> np.ndarray:
@@ -477,29 +495,32 @@ class JointERTSRTInversion(InversionBase):
 
     def _stack_system(
         self,
-        J: np.ndarray,
+        J: Any,
         Wd: csr_matrix,
         Wm: csr_matrix,
-        B: np.ndarray,
+        B: Any,
         model: np.ndarray,
         model_ref: np.ndarray,
         data_pred: np.ndarray,
         data_obs: np.ndarray,
         lambda_model: float,
         lambda_cg: float,
-    ) -> Tuple[csr_matrix, np.ndarray, np.ndarray, float, float, float]:
+    ) -> Tuple[StackedSystem, np.ndarray, np.ndarray, float, float, float]:
         m = self._as_col(model)
         dm_ref = self._as_col(model - model_ref)
         dres = self._as_col(data_pred - data_obs)
 
-        Bm = B.dot(m)
+        # A dense Jacobian (ERT) stays dense and a sparse one (SRT) sparse.
         WdJ = Wd.dot(J)
         # Use sqrt(lambda) so that the squared norm in the least-squares
         # system gives effective weight = lambda, matching ERTInversion.
         LmWm = np.sqrt(float(lambda_model)) * Wm
-        LcB = np.sqrt(float(lambda_cg)) * csr_matrix(B)
+        LcB = np.sqrt(float(lambda_cg)) * (B if issparse(B) else csr_matrix(B))
 
-        A = vstack((csr_matrix(WdJ), LmWm, LcB), format="csr")
+        # Each block is kept in the form it was built in: stacking them into
+        # one CSR matrix copied the dense ERT Jacobian twice, 1.5x its size
+        # each time.
+        A = StackedSystem([WdJ, LmWm, LcB])
         rhs = -np.vstack(
             (
                 Wd.dot(dres),
@@ -525,7 +546,7 @@ class JointERTSRTInversion(InversionBase):
         data_obs: np.ndarray,
         Wd: csr_matrix,
         Wm: csr_matrix,
-        B: np.ndarray,
+        B: Any,
         model: np.ndarray,
         model_ref: np.ndarray,
         lambda_model: float,
@@ -534,19 +555,35 @@ class JointERTSRTInversion(InversionBase):
         m = self._as_col(model)
         dm_ref = self._as_col(model - model_ref)
         LmWm = np.sqrt(float(lambda_model)) * Wm
-        LcB = np.sqrt(float(lambda_cg)) * csr_matrix(B)
+        LcB = np.sqrt(float(lambda_cg)) * (B if issparse(B) else csr_matrix(B))
         phi_d = self._quad_norm(Wd, data_obs - data_pred)
         phi_m = self._quad_norm(LmWm, dm_ref)
         phi_cg = self._quad_norm(LcB, m)
         return phi_d + phi_m + phi_cg
 
-    def _solve_linear_update(self, A: csr_matrix, rhs: np.ndarray) -> np.ndarray:
+    def _solve_linear_update(self, A: Any, rhs: np.ndarray) -> np.ndarray:
         method = str(self.parameters.get("solver", "scipy_lsmr")).lower().strip()
         maxiter = int(self.parameters.get("solver_maxiter", 400))
         tol = float(self.parameters.get("solver_tol", 1e-8))
 
         try:
-            dm = generalized_solver(A, rhs, method=method, maxiter=maxiter, tol=tol)
+            if method in _SPD_METHODS:
+                # An SPD method needs the square normal matrix, as in
+                # ERTInversion's _gauss_newton_step: A^T A summed block by
+                # block, and A^T rhs. Handed the stacked system it refused it
+                # as not square, and the step fell back to LSQR below.
+                rhs_col = np.asarray(rhs, dtype=float).reshape(-1, 1)
+                if isinstance(A, StackedSystem):
+                    normal = A.normal_matrix()
+                elif issparse(A):
+                    normal = (A.T @ A).tocsr()
+                else:
+                    A = np.asarray(A, dtype=float)
+                    normal = A.T @ A
+                dm = generalized_solver(normal, A.T @ rhs_col, method=method,
+                                        maxiter=maxiter, tol=tol, overwrite_a=True)
+            else:
+                dm = generalized_solver(A, rhs, method=method, maxiter=maxiter, tol=tol)
             return self._as_col(dm)
         except Exception:
             # Fallback to SciPy LSMR if the chosen solver fails.
@@ -727,8 +764,10 @@ class JointERTSRTInversion(InversionBase):
             mr = self._line_search(mr, d_mr, g_r, ert_obj, clip_r)
             mr = clip_r(mr)
 
-            dt_eval, _ = self._srt_forward_and_jac(mv)
-            dr_eval, _ = self._ert_forward_and_jac(mr)
+            # chi2 needs only the responses; the Jacobians built here were
+            # discarded, and the next iteration builds its own.
+            dt_eval = self._srt_forward(mv)
+            dr_eval = self._ert_forward(mr)
             chi2_srt = self._compute_chi2(self.Wd_srt, self.dobs_srt, dt_eval)
             chi2_ert = self._compute_chi2(self.Wd_ert, self.dobs_ert, dr_eval)
             max_rel_srt = self._max_relative_residual(self.dobs_srt, dt_eval)
@@ -817,8 +856,8 @@ class JointERTSRTInversion(InversionBase):
             lam_ert = max(lam_min_ert, lam_ert * lam_rate_ert)
             lam_srt = max(lam_min_srt, lam_srt * lam_rate_srt)
 
-        dr_final, _ = self._ert_forward_and_jac(mr)
-        dt_final, _ = self._srt_forward_and_jac(mv)
+        dr_final = self._ert_forward(mr)
+        dt_final = self._srt_forward(mv)
 
         n_cells = int(self.mesh.cellCount())
 

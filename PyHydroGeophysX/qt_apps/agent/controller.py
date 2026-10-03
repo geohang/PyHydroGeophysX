@@ -1,4 +1,4 @@
-"""Main-thread command layer the AQUAH assistant uses to drive the studio.
+"""Main-thread command layer the studio's assistants use to drive the studio.
 
 The chat panel never touches Qt widgets directly. Instead it calls
 :meth:`StudioController.dispatch`, which maps a small set of generic tool
@@ -25,7 +25,7 @@ from PyHydroGeophysX.qt_apps.agent import capture as capture_mod
 
 #: One-line purpose per module so the agent can route a task to the right one.
 MODULE_PURPOSES: Dict[str, str] = {
-    "one_click": "Workflow workspace for data, progress and reports. To run end-to-end, the user selects Auto to report in AQUAH and sends their goal there.",
+    "one_click": "Workflow workspace for data, progress and reports. To run end-to-end, the user selects Auto to report in the assistant panel and sends their goal there.",
     "home": "Landing page / overview.",
     "seismic": "Process seismic shot gathers, pick first breaks, and run SRT travel-time "
                "tomography to get a velocity model from field data.",
@@ -40,6 +40,11 @@ MODULE_PURPOSES: Dict[str, str] = {
                        "sequential SRT-structure-constrained ERT workflow.",
     "gravmag": "Process gravity / magnetic station data: regional-residual separation, gridding, "
                "profiles, and simple body forward modeling. Has bundled examples (use_example_data).",
+    "mt": "Magnetotellurics: read instrument time series (Phoenix MTU-5C and legacy MTU, "
+          "Metronix ATS, Zonge Z3D, LEMI-424) or EDI / EMTF XML sites, estimate impedance and "
+          "tipper with robust remote-reference processing, then invert: Occam 1D per site "
+          "(static shift, optional joint TEM, water content) and a 2D TE/TM profile. Has an "
+          "example site (use_example_data).",
     "hydro_geophysics": "Generate SYNTHETIC geophysical data by 2D-profile FORWARD MODELING (ERT, "
                         "SRT, TDEM, FDEM, gravity) from a hydrologic model along a 2D line / "
                         "cross-section. Use this for forward modeling along a profile. Before loading "
@@ -74,13 +79,16 @@ class StudioController(QObject):
         if page is not None and hasattr(page, 'reset_request'):
             page.reset_request()
 
-    def run_to_report(self, request, settings, on_finished):
+    def run_to_report(self, request, settings, on_finished, on_step=None):
         self._window.show_module("one_click")
         page = self._window._pages["one_click"]
         if not hasattr(page, "submit_request"):
             return "Workflow page could not be loaded. See the Studio log."
         if not getattr(page, "_chat_connected", False):
             page.workflowFinished.connect(on_finished)
+            # Each step as it starts and ends, so the chat can narrate the run.
+            if on_step is not None and hasattr(page, "stepEvent"):
+                page.stepEvent.connect(on_step)
             page._chat_connected = True
         return page.submit_request(request, settings)
 
@@ -104,10 +112,27 @@ class StudioController(QObject):
         except Exception as exc:  # noqa: BLE001 - tools must never crash the agent
             return {"status": "failed", "error": f"{type(exc).__name__}: {exc}"}
 
-    def capabilities_summary(self) -> str:
-        """A short human-readable list of modules + purposes for the system prompt."""
+    def set_assistant(self, key: str) -> None:
+        """Make ``key`` the assistant the studio works with (chat, Workflow, glow)."""
+        setter = getattr(self._window, "set_assistant", None)
+        if callable(setter):
+            setter(key)
+        else:
+            from PyHydroGeophysX.agents.assistants import set_active
+
+            set_active(key)
+
+    def capabilities_summary(self, modules=()) -> str:
+        """A short human-readable list of modules + purposes for the system prompt.
+
+        ``modules`` limits it to the keys an assistant works with; empty lists
+        every module.
+        """
         lines = []
+        wanted = set(modules or ())
         for m in self._module_catalog():
+            if wanted and m["key"] not in wanted:
+                continue
             purpose = MODULE_PURPOSES.get(m["key"], "")
             lines.append(f"- {m['key']} ({m['title']}): {purpose}" if purpose
                          else f"- {m['key']} ({m['title']})")

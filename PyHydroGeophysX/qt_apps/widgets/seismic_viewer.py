@@ -20,8 +20,6 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
     QGraphicsPathItem,
-    QHBoxLayout,
-    QLabel,
     QPushButton,
     QSpinBox,
     QVBoxLayout,
@@ -29,6 +27,7 @@ from PySide6.QtWidgets import (
 )
 
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets.flow_layout import FlowLayout, group
 from PyHydroGeophysX.qt_apps.widgets.readout import ReadoutLabel
 
 pg.setConfigOptions(imageAxisOrder="row-major")
@@ -41,10 +40,10 @@ _SEIS_COLORS = cmaps.GATHER_COLORS
 
 # source -> (colour, pyqtgraph symbol, size)
 _PICK_STYLES: Dict[str, Tuple[str, str, int]] = {
-    "manual": ("#00843d", "o", 13),
-    "anchor": ("#ff9f1c", "star", 13),
-    "learned": ("#fdae61", "d", 10),
-    "auto": ("#d7191c", "x", 10),
+    "manual": ("#34c759", "o", 13),
+    "anchor": ("#ff9500", "star", 13),
+    "learned": ("#ffcc00", "d", 10),
+    "auto": ("#ff3b30", "x", 10),
 }
 
 _STYLES = ["Amplitude image", "Traditional wiggle", "Image + wiggle"]
@@ -160,45 +159,40 @@ class SeismicViewer(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        bar = QHBoxLayout()
-        bar.addWidget(QLabel("Display"))
+        # Wraps in a narrow panel instead of widening the page (widgets.flow_layout).
+        bar = FlowLayout(spacing=6)
         self._style_combo = QComboBox()
         self._style_combo.addItems(_STYLES)
         self._style_combo.currentTextChanged.connect(lambda *_: self._render())
-        bar.addWidget(self._style_combo)
         # The amplitude image's colour map, beside the display style. Opens on
         # the gather's own blue-white-red.
         self._colormap = cmaps.ColormapChooser(
             cmaps.SEISMIC_GATHER, cmaps.GATHER, shared=colormaps)
         self._colormap.colormapChanged.connect(self._apply_colormap)
-        bar.addWidget(self._colormap)
-        bar.addWidget(QLabel("Wiggle/N"))
+        bar.addWidget(group("Display", self._style_combo, self._colormap))
         self._stride = QSpinBox()
         self._stride.setRange(1, 64)
         self._stride.setValue(1)
         self._stride.valueChanged.connect(lambda *_: self._render())
-        bar.addWidget(self._stride)
-        bar.addWidget(QLabel("Max time"))
+        bar.addWidget(group("Wiggle/N", self._stride))
         self._tmax_spin = QDoubleSpinBox()
         self._tmax_spin.setDecimals(4)
         self._tmax_spin.setRange(0.0, 1e9)
         self._tmax_spin.setSuffix(" s")
         self._tmax_spin.setToolTip("Truncate the time axis (e.g. to the longest first arrival).")
         self._tmax_spin.valueChanged.connect(self._on_tmax_changed)
-        bar.addWidget(self._tmax_spin)
         self._auto_btn = QPushButton("Auto")
         self._auto_btn.setMaximumWidth(60)
         self._auto_btn.setToolTip("Auto-fit the time window to the first arrivals.")
         self._auto_btn.clicked.connect(self._reset_window)
-        bar.addWidget(self._auto_btn)
-        # The readout takes the row's spare width itself, its text kept at the
-        # right edge: the page lets long labels elide, and an eliding label beside
-        # a separate stretch is given no width at all. Rewritten on every mouse
-        # move, so not a QLabel, which would re-lay out the page each time (see
-        # widgets.readout).
+        bar.addWidget(group("Max time", self._tmax_spin, self._auto_btn))
+        # Rewritten on every mouse move, so not a QLabel, which would re-lay out
+        # the page each time (see widgets.readout); its width is that of its
+        # sample text, so the row does not re-flow as it changes.
         self._readout = ReadoutLabel("trace: -, time: -, amp: -",
-                                     alignment=Qt.AlignRight | Qt.AlignVCenter)
-        bar.addWidget(self._readout, 1)
+                                     alignment=Qt.AlignLeft | Qt.AlignVCenter,
+                                     sample="trace: 000, time: 0.0000 s, amp: -0.000e+00")
+        bar.addWidget(self._readout)
         layout.addLayout(bar)
 
         self._glw = pg.GraphicsLayoutWidget()
@@ -238,7 +232,7 @@ class SeismicViewer(QWidget):
             self._plot.addItem(scatter)
             self._scatters[src] = scatter
 
-        self._drag_line = pg.PlotDataItem(pen=pg.mkPen("#00843d", width=2, style=Qt.DashLine))
+        self._drag_line = pg.PlotDataItem(pen=pg.mkPen("#34c759", width=2, style=Qt.DashLine))
         self._drag_line.setZValue(25)
         self._plot.addItem(self._drag_line)
 

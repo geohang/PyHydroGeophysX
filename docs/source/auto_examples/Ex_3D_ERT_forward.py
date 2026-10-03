@@ -914,8 +914,10 @@ if PYVISTA_AVAILABLE:
     res_min, res_max = np.percentile(resistivity_mesh, [5, 95])
     print(f"Resistivity range (5-95 percentile): {res_min:.1f} - {res_max:.1f} Ohm-m")
 
-    # Create plotter with better window size
-    pl = pv.Plotter(window_size=(1200, 900))
+    # Create plotter with better window size. It renders off screen, so the
+    # screenshot below needs no open window; show() then displays the view
+    # inline in a notebook and does nothing in a script.
+    pl = pv.Plotter(window_size=(1200, 900), off_screen=True)
 
     # Add clipped mesh to see internal structure
     # Clip at y = center to show cross-section
@@ -1025,8 +1027,8 @@ if PYVISTA_AVAILABLE:
     sat_range = [np.percentile(saturation_mesh, 5), np.percentile(saturation_mesh, 95)]
     res_range = [np.percentile(resistivity_mesh, 5), np.percentile(resistivity_mesh, 95)]
 
-    # Create multi-view visualization with better layout
-    pl = pv.Plotter(shape=(2, 2), window_size=(1600, 1200))
+    # Create multi-view visualization with better layout (off screen, as above)
+    pl = pv.Plotter(shape=(2, 2), window_size=(1600, 1200), off_screen=True)
 
     # Get mesh bounds and electrode bounds for slice positions
     bounds = pv_mesh.bounds
@@ -1137,7 +1139,7 @@ if PYVISTA_AVAILABLE:
     # Use 3 Y positions - electrodes are at Y = 2, 6, 10, 14, 18
     y_positions = [6.0, 10.0, 14.0]
 
-    pl2 = pv.Plotter(shape=(1, 3), window_size=(1800, 600))
+    pl2 = pv.Plotter(shape=(1, 3), window_size=(1800, 600), off_screen=True)
 
     for i, y_pos in enumerate(y_positions):
         pl2.subplot(0, i)

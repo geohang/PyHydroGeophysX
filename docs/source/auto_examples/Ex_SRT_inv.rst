@@ -21,8 +21,14 @@
 Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation
 ===========================================================================
 
-This example demonstrates how to perform a 2D seismic refraction tomography (SRT) 
+This example demonstrates how to perform a 2D seismic refraction tomography (SRT)
 inversion and interpret the results to define subsurface structures.
+
+**Before you run it:** run ``EX_SRT_forward`` first. The long-profile inversion
+reads ``results/SRT_forward/synthetic_seismic_data_long.dat``, which that
+example writes; the short profile uses the shipped
+``data/Seismic/synthetic_seismic_data.dat``. The inversions take a few
+minutes.
 
 The script focuses on the inversion and post-processing stages of a geophysical workflow. 
 It begins by loading pre-existing synthetic travel time data and then uses tomographic inversion 
@@ -36,18 +42,18 @@ Visualization: The resulting velocity tomograms are plotted, showing the recover
 Interface Extraction: For the long profile, the script uses the extract_velocity_interface function to automatically delineate boundaries between different geological layers (e.g., regolith, fractured bedrock, and fresh bedrock) based on velocity thresholds.
 Exporting Results: The coordinates of the extracted interfaces are saved to text files, making them available for constraining other models, such as hydrogeological simulations.
 
-.. GENERATED FROM PYTHON SOURCE LINES 21-23
+.. GENERATED FROM PYTHON SOURCE LINES 27-29
 
 .. code-block:: Python
 
     from typing import Any
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 24-25
+.. GENERATED FROM PYTHON SOURCE LINES 30-31
 
 sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_SRT_inv_fig_01.png'
 
-.. GENERATED FROM PYTHON SOURCE LINES 29-65
+.. GENERATED FROM PYTHON SOURCE LINES 35-71
 
 .. code-block:: Python
 
@@ -88,7 +94,7 @@ sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_SRT_inv_fig_01.png'
     from PyHydroGeophysX.petrophysics.velocity_models import DEMModel, HertzMindlinModel
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 66-200
+.. GENERATED FROM PYTHON SOURCE LINES 72-206
 
 .. code-block:: Python
 
@@ -227,15 +233,15 @@ sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_SRT_inv_fig_01.png'
         fig.savefig(os.path.join(output_dir, output_name), dpi=300, bbox_inches="tight")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 201-202
+.. GENERATED FROM PYTHON SOURCE LINES 207-208
 
 ## Long seismic profile
 
-.. GENERATED FROM PYTHON SOURCE LINES 204-205
+.. GENERATED FROM PYTHON SOURCE LINES 210-211
 
 ### Load seismic data and inversion
 
-.. GENERATED FROM PYTHON SOURCE LINES 207-233
+.. GENERATED FROM PYTHON SOURCE LINES 213-239
 
 .. code-block:: Python
 
@@ -266,15 +272,15 @@ sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_SRT_inv_fig_01.png'
     coverage_long_custom = long_custom_result.coverage
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 234-235
+.. GENERATED FROM PYTHON SOURCE LINES 240-241
 
 ### Get parameters for plotting layers
 
-.. GENERATED FROM PYTHON SOURCE LINES 237-238
+.. GENERATED FROM PYTHON SOURCE LINES 243-244
 
 Get coverage and cell positions
 
-.. GENERATED FROM PYTHON SOURCE LINES 238-245
+.. GENERATED FROM PYTHON SOURCE LINES 244-251
 
 .. code-block:: Python
 
@@ -286,7 +292,7 @@ Get coverage and cell positions
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 246-276
+.. GENERATED FROM PYTHON SOURCE LINES 252-282
 
 .. code-block:: Python
 
@@ -321,7 +327,7 @@ Get coverage and cell positions
                              facecolor='black', edgecolor='black')
     fig.savefig(os.path.join(output_dir, 'seismic_velocity_long.tiff'), dpi=300, bbox_inches='tight')
 
-.. GENERATED FROM PYTHON SOURCE LINES 277-288
+.. GENERATED FROM PYTHON SOURCE LINES 283-294
 
 Long Profile Seismic Velocity Model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -335,11 +341,11 @@ geological interfaces at 1200 and 5000 m/s respectively.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 290-291
+.. GENERATED FROM PYTHON SOURCE LINES 296-297
 
 ### Compare direct inversion with `SRTInversion` (same setup)
 
-.. GENERATED FROM PYTHON SOURCE LINES 293-304
+.. GENERATED FROM PYTHON SOURCE LINES 299-310
 
 .. code-block:: Python
 
@@ -355,7 +361,7 @@ geological interfaces at 1200 and 5000 m/s respectively.
         title_prefix="Long profile",
     )
 
-.. GENERATED FROM PYTHON SOURCE LINES 305-318
+.. GENERATED FROM PYTHON SOURCE LINES 311-324
 
 Long Profile Direct vs Custom Inversion
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -371,11 +377,11 @@ Both panels are shown with standardized coverage masking.
 %% [markdown]
 ### Get subsurface structure for hydrologic modeling
 
-.. GENERATED FROM PYTHON SOURCE LINES 320-321
+.. GENERATED FROM PYTHON SOURCE LINES 326-327
 
 Assuming TT.model.array() gives you the velocity values
 
-.. GENERATED FROM PYTHON SOURCE LINES 321-332
+.. GENERATED FROM PYTHON SOURCE LINES 327-338
 
 .. code-block:: Python
 
@@ -391,11 +397,11 @@ Assuming TT.model.array() gives you the velocity values
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 333-334
+.. GENERATED FROM PYTHON SOURCE LINES 339-340
 
 # plot the extracted interfaces withe filled velocity images
 
-.. GENERATED FROM PYTHON SOURCE LINES 334-348
+.. GENERATED FROM PYTHON SOURCE LINES 340-354
 
 .. code-block:: Python
 
@@ -414,7 +420,7 @@ Assuming TT.model.array() gives you the velocity values
     np.savetxt(os.path.join(output_dir, 'regolith_interface.txt'), np.c_[smooth_x1, smooth_z1])
     np.savetxt(os.path.join(output_dir, 'fractured_bedrock_interface.txt'), np.c_[smooth_x2, smooth_z2])
 
-.. GENERATED FROM PYTHON SOURCE LINES 349-363
+.. GENERATED FROM PYTHON SOURCE LINES 355-369
 
 Automated Interface Extraction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -431,7 +437,7 @@ exported as text files for integration with hydrogeological models.
 %% [markdown]
 ## Short seismic profiles
 
-.. GENERATED FROM PYTHON SOURCE LINES 365-386
+.. GENERATED FROM PYTHON SOURCE LINES 371-392
 
 .. code-block:: Python
 
@@ -457,7 +463,7 @@ exported as text files for integration with hydrogeological models.
     coverage_short_custom = short_custom_result.coverage
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 387-392
+.. GENERATED FROM PYTHON SOURCE LINES 393-398
 
 .. code-block:: Python
 
@@ -467,7 +473,7 @@ exported as text files for integration with hydrogeological models.
     filled_cov1 = fill_holes_2d(pos, TT_short.standardizedCoverage())
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 393-424
+.. GENERATED FROM PYTHON SOURCE LINES 399-430
 
 .. code-block:: Python
 
@@ -503,7 +509,7 @@ exported as text files for integration with hydrogeological models.
                              facecolor='black', edgecolor='black')
     fig.savefig(os.path.join(output_dir, 'seismic_velocity_short.tiff'), dpi=300, bbox_inches='tight')
 
-.. GENERATED FROM PYTHON SOURCE LINES 425-436
+.. GENERATED FROM PYTHON SOURCE LINES 431-442
 
 Short Profile Multi-Scale Comparison
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -517,11 +523,11 @@ shows excellent agreement with the long profile.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 438-439
+.. GENERATED FROM PYTHON SOURCE LINES 444-445
 
 ### Short profile: direct vs custom inversion comparison
 
-.. GENERATED FROM PYTHON SOURCE LINES 441-452
+.. GENERATED FROM PYTHON SOURCE LINES 447-458
 
 .. code-block:: Python
 
@@ -537,7 +543,7 @@ shows excellent agreement with the long profile.
         title_prefix="Short profile",
     )
 
-.. GENERATED FROM PYTHON SOURCE LINES 453-464
+.. GENERATED FROM PYTHON SOURCE LINES 459-470
 
 Short Profile Direct vs Custom Inversion
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -551,7 +557,7 @@ while preserving shallow structural detail.
    :width: 900px
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 466-476
+.. GENERATED FROM PYTHON SOURCE LINES 472-482
 
 Summary
 ~~~~~~~

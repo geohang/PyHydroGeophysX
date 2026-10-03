@@ -83,14 +83,14 @@ class ArrayViewer(QWidget):
         self._glw.addItem(self._hist, row=0, col=1)
 
         self._marker_scatter = pg.ScatterPlotItem(
-            size=11, pen=pg.mkPen("#ff3030", width=2), brush=pg.mkBrush(255, 80, 80, 160), symbol="x"
+            size=11, pen=pg.mkPen("#ff3b30", width=2), brush=pg.mkBrush(255, 59, 48, 160), symbol="x"
         )
         self._plot.addItem(self._marker_scatter)
         self._profile_scatter = pg.ScatterPlotItem(
-            size=13, pen=pg.mkPen("#1565ff", width=2), brush=pg.mkBrush(40, 120, 255, 180), symbol="o"
+            size=13, pen=pg.mkPen("#007aff", width=2), brush=pg.mkBrush(0, 122, 255, 170), symbol="o"
         )
         self._plot.addItem(self._profile_scatter)
-        self._profile_line = pg.PlotDataItem(pen=pg.mkPen("#1565ff", width=2))
+        self._profile_line = pg.PlotDataItem(pen=pg.mkPen("#007aff", width=2))
         self._plot.addItem(self._profile_line)
 
         # The colour map, shared under colormap_key with every other viewer of

@@ -500,9 +500,18 @@ tools whose inputs the run already holds (``load_ert_surveys``,
 ``fetch_climate``, ``invert_ert``, ``invert_time_lapse``,
 ``evaluate_inversion``, ``convert_water_content``, ``invert_seismic``,
 ``derive_structure``, ``fuse_methods``, ``invert_tdem``,
+``convert_tdem_water_content``, ``invert_mt``, ``convert_mt_water_content``,
 ``load_model_output``, ``write_report``), asks the model which one to run and
 reads the result before choosing again. Without an API key it takes the first
 runnable tool in registration order, which is dependency order.
+
+``invert_mt`` runs when the configuration names MT sites (``mt_files``: EDI,
+EMTF XML, Z- or J-files, or folders of them; a request that names ``.edi``
+files sets it). It inverts each site in 1D by Occam's method, with the options
+of ``mt_params``, and a line of three or more located sites also in 2D, with
+``mt_profile_params``; ``convert_mt_water_content`` converts the layered
+models when the request asks for water content and no ERT or TDEM model is
+there to carry it.
 
 **Inputs**: ``workflow_config`` dict, as ``ContextInputAgent.parse_request``
 produces it.

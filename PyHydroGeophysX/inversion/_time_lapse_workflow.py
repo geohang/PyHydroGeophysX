@@ -447,9 +447,14 @@ def run_timelapse_ert(
         raise ValueError(
             "engine='adtlert' currently requires windowed=True for time-lapse ERT"
         )
-    if engine not in ("pyhydro", "adtlert"):
+    if engine in ("e4d", "r2", "r3t"):
+        # E4D runs the series itself (its ERT4 mode), one survey after another;
+        # R2 and R3t invert each survey against the baseline.
+        use_windowed = False
+    if engine not in ("pyhydro", "adtlert", "e4d", "r2", "r3t"):
         raise ValueError(
-            "Time-lapse ERT engine must be 'pyhydro' or windowed 'adtlert'"
+            "Time-lapse ERT engine must be 'pyhydro', windowed 'adtlert', 'e4d', 'r2' "
+            "or 'r3t'"
         )
 
     # Acquisition times. Absolute timestamps are what make the sequence readable —
@@ -535,7 +540,7 @@ def run_timelapse_ert(
         fop.setMesh(mesh)
         prior = zone_prior(fop.paraDomain, zones,
                            bounds=(float(p["rho_min"]), float(p["rho_max"])))
-        for line in _zone_notes(engine, prior):
+        for line in _zone_notes(engine, prior, engine in ("r2", "r3t")):
             log(line)
         zone_report = [dict(entry) for entry in prior.report]
 
@@ -569,7 +574,52 @@ def run_timelapse_ert(
             "constraint; the interval weighting is used by the PyHydro engine "
             "only.")
 
-    if use_windowed:
+    if engine == "e4d":
+        from .e4d import invert_e4d_time_lapse
+
+        log(f"Running E4D time-lapse inversion (ERT4): {len(files)} steps, "
+            f"lambda (E4D beta) = {p['lambda_val']}")
+        ignored = [name for name, used in (
+            ("alpha", float(p.get("alpha", 0.0)) > 0),
+            ("auto-lambda", bool(p.get("auto_lambda", False))),
+            ("iteration limit", True)) if used]
+        log("  Note: E4D runs each survey until its misfit stops falling or meets the "
+            f"target, from the solution before it; {', '.join(ignored)} "
+            f"{'do' if len(ignored) > 1 else 'does'} not apply to it.")
+        settings = dict(p.get("e4d") or {})
+        settings.setdefault("workdir", str(Path(out_dir) / "e4d_timelapse"))
+        result = invert_e4d_time_lapse(
+            containers, mesh, lam=float(p["lambda_val"]),
+            plateau_tolerance=float(p.get("plateau_tolerance", 0.005) or 0.005),
+            target_chi2=float(p.get("target_chi2", 1.0)),
+            model_constraints=(float(p["rho_min"]), float(p["rho_max"])),
+            zones=zones or None, options=settings,
+            outer_width=float(p.get("outer_width", 0.0) or 0.0),
+            relative_error=float(p["relativeError"]), log=log)
+        mode = "e4d"
+    elif engine in ("r2", "r3t"):
+        from .r2 import ENGINES as _R2_PROGRAMS, invert_r2_time_lapse
+
+        program = _R2_PROGRAMS[engine]
+        log(f"Running {program} time-lapse inversion (difference inversion against the "
+            f"first survey): {len(files)} steps")
+        ignored = [name for name, used in (
+            ("lambda", True), ("alpha", float(p.get("alpha", 0.0)) > 0),
+            ("auto-lambda", bool(p.get("auto_lambda", False)))) if used]
+        log(f"  Note: {program} chooses its own smoothing weight at every iteration, and "
+            f"every later survey starts from the baseline model; {', '.join(ignored)} "
+            f"{'do' if len(ignored) > 1 else 'does'} not apply to it.")
+        settings = dict(p.get("r2") or {})
+        settings.setdefault("workdir", str(Path(out_dir) / f"{engine}_timelapse"))
+        result = invert_r2_time_lapse(
+            containers, mesh, program=engine, max_iterations=int(p["max_iterations"]),
+            target_chi2=float(p.get("target_chi2", 1.0)),
+            model_constraints=(float(p["rho_min"]), float(p["rho_max"])),
+            zones=zones or None, options=settings,
+            outer_width=float(p.get("outer_width", 0.0) or 0.0),
+            relative_error=float(p["relativeError"]), log=log)
+        mode = engine
+    elif use_windowed:
         window_size = int(p["window_size"])
         log(f"Running {engine} windowed {p['inversion_type']} time-lapse "
             f"inversion: {len(files)} steps, "
@@ -792,6 +842,12 @@ def run_timelapse_ert(
         "mode": mode,
         "engine": engine,
         "engine_requested": requested_engine,
+        # E4D's own run folder: its log, every step's model, the 3-D models.
+        "e4d": dict(result.meta.get("e4d") or {}),
+        # R2's or R3t's run folders (baseline, then the difference inversion),
+        # and the smoothing weight each survey settled on.
+        "r2": dict(result.meta.get("r2") or {}),
+        "r3t": dict(result.meta.get("r3t") or {}),
         "backend_version": str(result.meta.get("backend_version", "")),
         "linearized_solver": str(result.meta.get("linearized_solver", "")),
         "sensitivity_profile": str(

@@ -5,6 +5,8 @@ This example compares direct cross-gradient and geostatistical cross-gradient
 coupling using the same ERT and SRT field data. Data loading, shared settings,
 the two inversion runs, result saving, and visualization are presented as
 separate steps.
+
+**Run time:** about 44 minutes on the maintainer's machine.
 """
 
 # %%

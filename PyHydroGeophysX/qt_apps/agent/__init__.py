@@ -1,7 +1,10 @@
-"""AQUAH in-app assistant for the PyHydroGeophysX Qt studio.
+"""The in-app assistant for the PyHydroGeophysX Qt studio.
 
-This subpackage wires a natural-language chat panel (the right-hand dock) to the
-studio through a small, stable command layer:
+The assistant itself - AQUAH for hydrogeophysics, GeoSAGE for geological
+modelling, or another - is a plug-in from :mod:`PyHydroGeophysX.agents.assistants`;
+this subpackage is the part every assistant shares. It wires a natural-language
+chat panel (the right-hand dock) to the studio through a small, stable command
+layer:
 
 - :class:`controller.StudioController` exposes a handful of generic,
   JSON-friendly operations (list modules, navigate, describe the current module,
@@ -14,9 +17,12 @@ studio through a small, stable command layer:
   user-selectable at run time.
 - :mod:`runtime` holds the ``QThread`` that performs one blocking model call off
   the UI thread.
-- :class:`chat_panel.AquahChatPanel` is the dock widget: it renders the
-  conversation, asks the user to approve every proposed tool call (per-step
-  confirmation), and executes approved calls through the controller.
+- :class:`chat_panel.AssistantChatPanel` is the dock widget: it lets the user
+  pick the assistant, renders the conversation, asks the user to approve every
+  proposed tool call (per-step confirmation), and executes approved calls
+  through the controller.
+- :mod:`one_click_runner` is the process an automatic run happens in; it runs
+  the workflow of the assistant the request names.
 
 Importing this package pulls in PySide6, so it must only be imported inside the
 desktop process (never from ``PyHydroGeophysX.qt_apps.__init__``). The provider

@@ -772,9 +772,9 @@ class Mesh3DCreator:
                                   subsurface_marker: int = 2) -> pg.Mesh:
         """
         Create a 3D prism mesh by extruding a 2D mesh along z-axis.
-        
-        This follows the PyGIMLi approach using triangular prisms.
-        
+
+        Each triangle of the 2D mesh becomes a column of triangular prisms.
+
         Parameters
         ----------
         mesh2d : pg.Mesh

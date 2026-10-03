@@ -51,7 +51,24 @@ Cite the engines you used
    * - ERT data processing and quality control
      - Blanchy, G., Saneiyan, S., Boyd, J., McLachlan, P., and Binley, A.
        (2020). ResIPy. *Computers and Geosciences*, 137, 104423.
-   * - E4D-style 3-D meshes (the 3D Mesh Builder's E4D engine), E4D mesh
+   * - R2 or R3t inversions (``engine="r2"`` or ``engine="r3t"``, single
+       surveys or time-lapse)
+     - Binley, A. and Slater, L. (2020). *Resistivity and Induced
+       Polarization: Theory and Applications to the Near-Surface Earth*.
+       Cambridge University Press. https://doi.org/10.1017/9781108685955;
+       Binley, A. (2015). Tools and Techniques: Electrical Methods. In
+       *Treatise on Geophysics* (2nd ed.), 233-259. Elsevier.
+       https://doi.org/10.1016/B978-0-444-53802-4.00192-5; Binley, A. and
+       Kemna, A. (2005). DC Resistivity and Induced Polarization Methods. In
+       *Hydrogeophysics*, 129-156. Springer.
+       https://doi.org/10.1007/1-4020-3102-5_5
+   * - A time-lapse series inverted by R2 or R3t (their difference inversion)
+     - LaBrecque, D. J. and Yang, X. (2001). Difference inversion of ERT data:
+       a fast inversion method for 3-D in situ monitoring. *Journal of
+       Environmental and Engineering Geophysics*, 6(2), 83-89.
+       https://doi.org/10.4133/JEEG6.2.83
+   * - E4D inversions (``engine="e4d"``, single surveys or time-lapse),
+       E4D-style 3-D meshes (the 3D Mesh Builder's E4D engine), E4D mesh
        configurations, or E4D meshes imported for inversion
      - Johnson, T. C., Versteeg, R. J., Ward, A., Day-Lewis, F. D., and Revil,
        A. (2010). Improved hydrogeophysical characterization and monitoring
@@ -74,6 +91,51 @@ Cite the engines you used
    * - TDEM or FDEM forward modelling and inversion
      - Cockett, R., Kang, S., Heagy, L. J., Pidlisecky, A., and Oldenburg,
        D. W. (2015). SimPEG. *Computers and Geosciences*, 85, 142-154.
+   * - MT time-series processing (``mt.process_mt``)
+     - Egbert, G. D. and Booker, J. R. (1986). Robust estimation of
+       geomagnetic transfer functions. *Geophysical Journal International*,
+       87(1), 173-194. https://doi.org/10.1111/j.1365-246X.1986.tb04552.x;
+       Egbert, G. D. (1997). Robust multiple-station magnetotelluric data
+       processing. *Geophysical Journal International*, 130(2), 475-496.
+       https://doi.org/10.1111/j.1365-246X.1997.tb05663.x; with a remote
+       reference, Gamble, T. D., Goubau, W. M., and Clarke, J. (1979).
+       Magnetotellurics with a remote magnetic reference. *Geophysics*, 44(1),
+       53-68. https://doi.org/10.1190/1.1440923; with leverage weights, Chave,
+       A. D. and Thomson, D. J. (2004). Bounded influence magnetotelluric
+       response function estimation. *Geophysical Journal International*,
+       157(3), 988-1006. https://doi.org/10.1111/j.1365-246X.2004.02203.x
+   * - MT 1D inversion (``mt.occam1d``), with or without a TEM sounding for
+       the static shift
+     - Constable, S. C., Parker, R. L., and Constable, C. G. (1987). Occam's
+       inversion: A practical algorithm for generating smooth models from
+       electromagnetic sounding data. *Geophysics*, 52(3), 289-300.
+       https://doi.org/10.1190/1.1442303; Wait, J. R. (1954). On the
+       relation between telluric currents and the Earth's magnetic field.
+       *Geophysics*, 19(2), 281-289. https://doi.org/10.1190/1.1437994; with
+       TEM, Meju, M. A. (1996). Joint inversion of TEM and distorted MT
+       soundings: Some effective practical considerations. *Geophysics*,
+       61(1), 56-65. https://doi.org/10.1190/1.1443956, and Sternberg, B. K.,
+       Washburne, J. C., and Pellerin, L. (1988). Correction for the static
+       shift in magnetotellurics using transient electromagnetic soundings.
+       *Geophysics*, 53(11), 1459-1468. https://doi.org/10.1190/1.1442426
+   * - MT 2D profile inversion (``mt.invert_profile``)
+     - SimPEG (Cockett et al. 2015, above)
+   * - MT phase tensor, skew and strike (``mt.phase_tensor``)
+     - Caldwell, T. G., Bibby, H. M., and Brown, C. (2004). The
+       magnetotelluric phase tensor. *Geophysical Journal International*,
+       158(2), 457-469. https://doi.org/10.1111/j.1365-246X.2004.02281.x
+   * - EMTF XML files (``mt.read_emtf_xml``, ``mt.write_emtf_xml``)
+     - Kelbert, A. (2020). EMTF XML: New data interchange format and
+       conversion tools for electromagnetic transfer functions. *Geophysics*,
+       85(1), F1-F17. https://doi.org/10.1190/geo2018-0679.1
+   * - The example MT site NMX20 (``examples/data/MT``)
+     - Schultz, A., Pellerin, L., Bedrosian, P., Kelbert, A., and Crosbie, J.
+       (2020-2023). USMTArray South Magnetotelluric Transfer Functions.
+       Seismological Facility for the Advancement of Geoscience.
+       https://doi.org/10.17611/DP/EMTF/USMTARRAY/SOUTH; Incorporated
+       Research Institutions for Seismology (2011). Data Services Products:
+       EMTF, The Magnetotelluric Transfer Functions.
+       https://doi.org/10.17611/DP/EMTF.1 (CC BY 4.0)
    * - MODFLOW, read or written through FloPy
      - Bakker, M., Post, V., Langevin, C. D., Hughes, J. D., White, J. T.,
        Starn, J. J., and Fienen, M. N. (2016). *Groundwater*, 54(5), 733-739.
@@ -104,6 +166,29 @@ Cite the engines you used
        https://doi.org/10.1016/j.advwatres.2012.10.001. Cite the ParFlow
        release you ran as well: https://doi.org/10.5281/zenodo.4816884
        resolves to the latest one.
+   * - ATS outputs (``ATSSaturation``, ``ATSWaterContent``, ...)
+     - The code, as ATS asks in all works: Coon, E. T., Berndt, M., Jan, A.,
+       Svyatsky, D., Atchley, A. L., Kikinzon, E., Harp, D. R., Manzini, G.,
+       Shelef, E., Lipnikov, K., Garimella, R., Xu, C., Moulton, J. D., Karra,
+       S., Painter, S. L., Jafarov, E., and Molins, S. (2020). *Advanced
+       Terrestrial Simulator*, version 1.0. U.S. Department of Energy.
+       https://doi.org/10.11578/dc.20190911.1; and for watershed hydrology,
+       Coon, E. T., Moulton, J. D., Kikinzon, E., Berndt, M., Manzini, G.,
+       Garimella, R., Lipnikov, K., and Painter, S. L. (2020). Coupling surface
+       flow and subsurface flow in complex soil structures using mimetic
+       finite differences. *Advances in Water Resources*, 144, 103701.
+       https://doi.org/10.1016/j.advwatres.2020.103701
+   * - PFLOTRAN outputs (``PFLOTRANSaturation``, ``PFLOTRANWaterContent``,
+       ...)
+     - The references PFLOTRAN asks users to cite: Hammond, G. E., Lichtner,
+       P. C., and Mills, R. T. (2014). Evaluating the performance of parallel
+       subsurface simulators: An illustrative example with PFLOTRAN. *Water
+       Resources Research*, 50(1), 208-228.
+       https://doi.org/10.1002/2012WR013483; Lichtner, P. C., Hammond, G. E.,
+       Lu, C., Karra, S., Bisht, G., Andre, B., Mills, R. T., Kumar, J., and
+       Frederick, J. M. (2020). *PFLOTRAN User Manual*.
+       http://documentation.pflotran.org; and the PFLOTRAN web page (same
+       authors, 2020), http://www.pflotran.org
    * - A petrophysical relationship
      - The reference for the model you used, listed with it in
        :doc:`the petrophysics API <api/petrophysics>`.

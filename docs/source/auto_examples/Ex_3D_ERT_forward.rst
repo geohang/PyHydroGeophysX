@@ -1102,7 +1102,7 @@ pair vs MN measurement pair) in the dipole-dipole survey.
 
 3D visualization with PyVista (if available)
 
-.. GENERATED FROM PYTHON SOURCE LINES 905-994
+.. GENERATED FROM PYTHON SOURCE LINES 905-996
 
 .. code-block:: Python
 
@@ -1118,8 +1118,10 @@ pair vs MN measurement pair) in the dipole-dipole survey.
         res_min, res_max = np.percentile(resistivity_mesh, [5, 95])
         print(f"Resistivity range (5-95 percentile): {res_min:.1f} - {res_max:.1f} Ohm-m")
 
-        # Create plotter with better window size
-        pl = pv.Plotter(window_size=(1200, 900))
+        # Create plotter with better window size. It renders off screen, so the
+        # screenshot below needs no open window; show() then displays the view
+        # inline in a notebook and does nothing in a script.
+        pl = pv.Plotter(window_size=(1200, 900), off_screen=True)
 
         # Add clipped mesh to see internal structure
         # Clip at y = center to show cross-section
@@ -1196,7 +1198,7 @@ pair vs MN measurement pair) in the dipole-dipole survey.
         pl.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 995-1005
+.. GENERATED FROM PYTHON SOURCE LINES 997-1007
 
 3D Resistivity Model
 ~~~~~~~~~~~~~~~~~~~~
@@ -1209,7 +1211,7 @@ electrode positions on the topographic surface.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 1005-1010
+.. GENERATED FROM PYTHON SOURCE LINES 1007-1012
 
 .. code-block:: Python
 
@@ -1219,11 +1221,11 @@ electrode positions on the topographic surface.
         print("Install with: pip install pyvista")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1011-1012
+.. GENERATED FROM PYTHON SOURCE LINES 1013-1014
 
 Create 2D slices for visualization - Multiple cross-sections
 
-.. GENERATED FROM PYTHON SOURCE LINES 1012-1122
+.. GENERATED FROM PYTHON SOURCE LINES 1014-1124
 
 .. code-block:: Python
 
@@ -1243,8 +1245,8 @@ Create 2D slices for visualization - Multiple cross-sections
         sat_range = [np.percentile(saturation_mesh, 5), np.percentile(saturation_mesh, 95)]
         res_range = [np.percentile(resistivity_mesh, 5), np.percentile(resistivity_mesh, 95)]
 
-        # Create multi-view visualization with better layout
-        pl = pv.Plotter(shape=(2, 2), window_size=(1600, 1200))
+        # Create multi-view visualization with better layout (off screen, as above)
+        pl = pv.Plotter(shape=(2, 2), window_size=(1600, 1200), off_screen=True)
 
         # Get mesh bounds and electrode bounds for slice positions
         bounds = pv_mesh.bounds
@@ -1338,7 +1340,7 @@ Create 2D slices for visualization - Multiple cross-sections
         pl.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1123-1133
+.. GENERATED FROM PYTHON SOURCE LINES 1125-1135
 
 2D Property Slices
 ~~~~~~~~~~~~~~~~~~
@@ -1351,7 +1353,7 @@ of the electrode array to show the vertical distribution of properties.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 1133-1178
+.. GENERATED FROM PYTHON SOURCE LINES 1135-1180
 
 .. code-block:: Python
    :dedent: 1
@@ -1363,7 +1365,7 @@ of the electrode array to show the vertical distribution of properties.
         # Use 3 Y positions - electrodes are at Y = 2, 6, 10, 14, 18
         y_positions = [6.0, 10.0, 14.0]
 
-        pl2 = pv.Plotter(shape=(1, 3), window_size=(1800, 600))
+        pl2 = pv.Plotter(shape=(1, 3), window_size=(1800, 600), off_screen=True)
 
         for i, y_pos in enumerate(y_positions):
             pl2.subplot(0, i)
@@ -1402,7 +1404,7 @@ of the electrode array to show the vertical distribution of properties.
         pl2.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1179-1189
+.. GENERATED FROM PYTHON SOURCE LINES 1181-1191
 
 Multiple Y Cross-Sections
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1415,7 +1417,7 @@ along the electrode array.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 1189-1193
+.. GENERATED FROM PYTHON SOURCE LINES 1191-1195
 
 .. code-block:: Python
 
@@ -1424,7 +1426,7 @@ along the electrode array.
         print("PyVista not available for slice visualization.")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1194-1212
+.. GENERATED FROM PYTHON SOURCE LINES 1196-1214
 
 ## Step 8: Alternative Mesh Creation Methods
 
@@ -1445,12 +1447,12 @@ The `mesh_3d.py` module supports multiple mesh creation approaches:
 
 Below we show the manual approach for comparison:
 
-.. GENERATED FROM PYTHON SOURCE LINES 1214-1216
+.. GENERATED FROM PYTHON SOURCE LINES 1216-1218
 
 Alternative: Manual 2D mesh creation for prism extrusion
 This gives you more control over the 2D base mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 1216-1236
+.. GENERATED FROM PYTHON SOURCE LINES 1218-1238
 
 .. code-block:: Python
 
@@ -1475,11 +1477,11 @@ This gives you more control over the 2D base mesh
     print(f"2D base mesh: {mesh2d_with_bnd}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1237-1238
+.. GENERATED FROM PYTHON SOURCE LINES 1239-1240
 
 Visualize 2D mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 1238-1247
+.. GENERATED FROM PYTHON SOURCE LINES 1240-1249
 
 .. code-block:: Python
 
@@ -1493,7 +1495,7 @@ Visualize 2D mesh
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1248-1258
+.. GENERATED FROM PYTHON SOURCE LINES 1250-1260
 
 2D Base Mesh for Prism Extrusion
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1506,11 +1508,11 @@ near electrodes and coarser at boundaries.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 1260-1261
+.. GENERATED FROM PYTHON SOURCE LINES 1262-1263
 
 Create z-discretization vector
 
-.. GENERATED FROM PYTHON SOURCE LINES 1261-1271
+.. GENERATED FROM PYTHON SOURCE LINES 1263-1273
 
 .. code-block:: Python
 
@@ -1525,11 +1527,11 @@ Create z-discretization vector
     print(f"Z-vector: {len(z_vec)} levels from {z_vec.min():.1f} to {z_vec.max():.1f}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1272-1273
+.. GENERATED FROM PYTHON SOURCE LINES 1274-1275
 
 Create 3D prism mesh using mesh_3d.py
 
-.. GENERATED FROM PYTHON SOURCE LINES 1273-1296
+.. GENERATED FROM PYTHON SOURCE LINES 1275-1298
 
 .. code-block:: Python
 
@@ -1557,7 +1559,7 @@ Create 3D prism mesh using mesh_3d.py
     print(f"Prism mesh saved to {output_dir}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 1297-1344
+.. GENERATED FROM PYTHON SOURCE LINES 1299-1346
 
 ## Summary
 
@@ -1607,7 +1609,7 @@ This notebook demonstrated:
 - Analyze resolution and sensitivity
 - Time-lapse monitoring applications
 
-.. GENERATED FROM PYTHON SOURCE LINES 1346-1364
+.. GENERATED FROM PYTHON SOURCE LINES 1348-1366
 
 .. code-block:: Python
 

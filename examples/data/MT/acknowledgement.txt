@@ -1,0 +1,32 @@
+NMX20.xml : magnetotelluric transfer functions of USMTArray station NMX20
+(Nations Draw, New Mexico, USA; 34.4705 N, 108.7123 W, 1940 m), in EMTF XML.
+
+The station was recorded with NIMS long-period instruments from 2020-09-20 to
+2020-10-07 (runs NMX20a, NMX20b) and processed with remote reference; the file
+holds the impedance and tipper at 33 periods from 4.7 s to 29 000 s, with their
+full error covariance. Read it with
+PyHydroGeophysX.data_processing.mt.read_transfer_function.
+
+Source   : IRIS/SAGE SPUD EMTF repository, http://ds.iris.edu/spud/emtf
+Dataset  : Schultz, A., Pellerin, L., Bedrosian, P., Kelbert, A., Crosbie, J.
+           (2020-2023). USMTArray South Magnetotelluric Transfer Functions.
+           Seismological Facility for the Advancement of Geoscience.
+           https://doi.org/10.17611/DP/EMTF/USMTARRAY/SOUTH
+Product  : Incorporated Research Institutions for Seismology (2011). Data
+           Services Products: EMTF, The Magnetotelluric Transfer Functions.
+           https://doi.org/10.17611/DP/EMTF.1
+Licence  : Creative Commons Attribution 4.0 International (CC BY 4.0). The file's
+           own conditions of use: the data may be copied freely, duplicated and
+           further distributed provided that this data set is cited as the
+           reference and that the authors' contributions are acknowledged.
+
+Acknowledgement: the authors' acknowledgement, which the conditions of use ask
+users to give, is the <Copyright><Acknowledgement> element of NMX20.xml itself.
+In short, the USMTArray-CONUS South campaign was a cooperative agreement between
+the U.S. Geological Survey and Oregon State University, with 40 stations funded
+by NASA grant 80NSSC19K0232; Green Geophysics did the permitting, field work,
+quality control and field processing, with project management and engineering
+support from Oregon State University and Chaytus Engineering; the USGS
+Geomagnetism Program and the Geology, Geophysics and Geochemistry Science Centers
+did the oversight, definitive processing and archiving; and the federal and
+state land agencies and the private landowners gave access to the land.

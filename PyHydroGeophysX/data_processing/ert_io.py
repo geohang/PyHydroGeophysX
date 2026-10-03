@@ -599,12 +599,14 @@ def normalize_for_timelapse(files: Sequence[str], instrument: Optional[str],
                             electrode_file: Optional[str] = None):
     """Write native files, filtering each survey independently.
 
-    PyHydro keeps each survey's own measurement count and ordering. ADTLERT
-    aligns the union of surviving ABMN rows and fills missing rows at 100% error.
-    ``electrode_file`` places every survey's electrodes, as it does one survey's
-    in :func:`load_ert_container`.
+    PyHydro keeps each survey's own measurement count and ordering, and so do
+    E4D, which inverts the measurements common to every survey, and R2 and
+    R3t, which invert each survey's readings shared with the first. ADTLERT
+    aligns the union of surviving ABMN rows and fills missing rows at 100%
+    error. ``electrode_file`` places every survey's electrodes, as it does one
+    survey's in :func:`load_ert_container`.
     """
-    if engine not in ("pyhydro", "adtlert"):
+    if engine not in ("pyhydro", "adtlert", "e4d", "r2", "r3t"):
         raise ValueError(f"Unsupported time-lapse engine: {engine}")
     base = Path(out_dir) / "qt_ert_timelapse" / "normalized"
     base.mkdir(parents=True, exist_ok=True)

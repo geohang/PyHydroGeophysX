@@ -19,6 +19,7 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 from PyHydroGeophysX.inversion.metrics import metrics_from_manager
 from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.visualization.axis_units import set_length_axis
+from PyHydroGeophysX.qt_apps import theme
 
 
 class InversionQualityView(QWidget):
@@ -52,15 +53,17 @@ class InversionQualityView(QWidget):
 
     @staticmethod
     def _verdict(chi2: Optional[float]) -> Tuple[str, str]:
+        # Palette entries, read when the verdict is shown, so the text follows
+        # the Light and Dark appearances.
         if chi2 is None or chi2 != chi2:
-            return "#888888", "no chi-square reported"
+            return theme.color("muted"), "no chi-square reported"
         if chi2 <= 1.2:
-            return "#2e7d32", "excellent fit (χ² ≈ 1)"
+            return theme.color("green"), "excellent fit (χ² ≈ 1)"
         if chi2 <= 2.0:
-            return "#558b2f", "good fit"
+            return theme.color("green"), "good fit"
         if chi2 <= 5.0:
-            return "#f9a825", "fair fit — consider tuning λ or errors"
-        return "#c62828", "high misfit — check data errors / λ / geometry"
+            return theme.color("amber"), "fair fit — consider tuning λ or errors"
+        return theme.color("red"), "high misfit — check data errors / λ / geometry"
 
     def show_quality(self, metrics: Optional[Dict[str, Any]] = None,
                      convergence: Optional[Sequence[float]] = None, title: str = "",
@@ -103,7 +106,7 @@ class InversionQualityView(QWidget):
 
         title_html = f"<b>{title}</b><br>" if title else ""
         head = "  ·  ".join(parts) if parts else "inversion finished"
-        note = f"<br><span style='color:#888888'>{m['note']}</span>" if m.get("note") else ""
+        note = f"<br><span style='color:#8e8e93'>{m['note']}</span>" if m.get("note") else ""
         self._metrics.setText(
             f"{title_html}<span style='font-size:13px'>{head}</span><br>"
             f"<span style='color:{color}'><b>{verdict}</b></span>{note}")
@@ -130,10 +133,10 @@ class InversionQualityView(QWidget):
                 continue
             values = np.asarray(values, float)
             xs = np.arange(cursor, cursor + len(values))
-            ax.plot(xs, values, "o-", color="#1565ff", lw=1.6, ms=3,
+            ax.plot(xs, values, "o-", color="#007aff", lw=1.6, ms=3,
                     label="Weighted χ²" if not plotted else None)
             if plotted:
-                ax.axvline(cursor-.5, color="#9e9e9e", ls=":", lw=.8)
+                ax.axvline(cursor-.5, color="#8e8e93", ls=":", lw=.8)
             if np.isfinite(stage.get("chi2_original", np.nan)):
                 raw_x.append(xs[-1])
                 raw_y.append(stage["chi2_original"])
@@ -141,24 +144,24 @@ class InversionQualityView(QWidget):
             plotted = True
         if not plotted:
             # Independent soundings have no shared iteration axis.
-            ax.plot([1], [robust["chi2_effective"]], "o", color="#1565ff", label="Weighted χ²")
-            ax.axhline(robust["chi2_original"], color="#888888", ls="--", lw=1.2,
+            ax.plot([1], [robust["chi2_effective"]], "o", color="#007aff", label="Weighted χ²")
+            ax.axhline(robust["chi2_original"], color="#8e8e93", ls="--", lw=1.2,
                        label="Original-error χ² (final reference)")
             ax.set_xticks([1], ["Final"])
         elif raw_x:
             if len(raw_x) == 1:
-                ax.axhline(raw_y[0], color="#888888", ls="--", lw=1.2,
+                ax.axhline(raw_y[0], color="#8e8e93", ls="--", lw=1.2,
                            label="Original-error χ² (recorded endpoint)")
             else:
-                ax.plot(raw_x, raw_y, "--", color="#888888", lw=1.2,
+                ax.plot(raw_x, raw_y, "--", color="#8e8e93", lw=1.2,
                         label="Original-error χ² (solve endpoints)")
         target = float(robust.get("target_chi2", 0) or 1.)
         tolerance = float(robust.get("target_tolerance", 0.)) if robust.get("target_chi2", 0) else 0.
         if tolerance:
             ax.axhspan(max(target-tolerance, 1e-6), target+tolerance,
-                       color="#558b2f", alpha=.12, label=f"Target {target:g} ± {tolerance:g}")
+                       color="#34c759", alpha=.12, label=f"Target {target:g} ± {tolerance:g}")
         else:
-            ax.axhline(target, color="#558b2f", ls=":", lw=1., label=f"Target χ² = {target:g}")
+            ax.axhline(target, color="#34c759", ls=":", lw=1., label=f"Target χ² = {target:g}")
         ax.set_yscale("log")
         ax.set_xlabel("Iteration (all recorded solves)" if plotted else "Run")
         ax.set_ylabel("χ²")
@@ -177,7 +180,7 @@ class InversionQualityView(QWidget):
         for i, stage in enumerate(track):
             median = np.asarray(stage["chi2_median"], float)
             xs = np.arange(cursor, cursor + len(median))
-            ax.plot(xs, median, "o-", color="#1565ff", lw=1.6, ms=3,
+            ax.plot(xs, median, "o-", color="#007aff", lw=1.6, ms=3,
                     label=("Weighted median χ²" if weighted else "Median χ²") if i == 0 else None)
             ax.plot(xs, stage["chi2"], ":", color="#777777", lw=1.1,
                     label=("Weighted global χ²" if weighted else "Global χ²") if i == 0 else None)
@@ -190,7 +193,7 @@ class InversionQualityView(QWidget):
         if raw_x:
             ax.plot(raw_x, raw_y, "--", color="#999999", lw=1.2,
                     label="Original-error median χ² (solve endpoints)")
-        ax.axhline(1., color="#558b2f", ls=":", lw=.8, label="χ² = 1 reference")
+        ax.axhline(1., color="#34c759", ls=":", lw=.8, label="χ² = 1 reference")
         ax.set(xlabel="Accepted iterate (stages in order)", ylabel="χ²",
                title="Median sounding convergence", yscale="log")
         ax.grid(True, which="both", ls=":", alpha=.35)
@@ -214,7 +217,7 @@ class InversionQualityView(QWidget):
         if not segments:
             return False
 
-        colours = ["#1565ff", "#00897b", "#8e24aa", "#f4511e", "#3949ab", "#00838f"]
+        colours = ["#007aff", "#34c759", "#af52de", "#ff9500", "#5856d6", "#30b0c7"]
         start = 1
         ticks = []
         for index, (seg, values) in enumerate(segments):
@@ -222,7 +225,7 @@ class InversionQualityView(QWidget):
             colour = colours[index % len(colours)]
             ax.plot(xs, values, "o-", color=colour, lw=1.6, ms=3.5, zorder=3)
             if index:
-                ax.axvline(start - 0.5, color="#9e9e9e", ls=":", lw=1.0, zorder=1)
+                ax.axvline(start - 0.5, color="#8e8e93", ls=":", lw=1.0, zorder=1)
                 # Join the segments so the jump at a boundary is visible as a
                 # step rather than as a gap.
                 previous = segments[index - 1][1][-1]
@@ -237,8 +240,8 @@ class InversionQualityView(QWidget):
         top = ax.get_ylim()[1]
         for x, label in ticks:
             ax.annotate(label, xy=(x, top), xytext=(0, -2), textcoords="offset points",
-                        ha="center", va="top", fontsize=7.5, color="#555555")
-        ax.axhline(1.0, color="#c62828", ls="--", lw=1.0, label="target χ² = 1")
+                        ha="center", va="top", fontsize=7.5, color="#6e6e73")
+        ax.axhline(1.0, color="#ff3b30", ls="--", lw=1.0, label="target χ² = 1")
         ax.set_yscale("log")
         ax.set_xlabel("Iteration (all stages, in order)")
         ax.set_ylabel("χ²")
@@ -263,13 +266,13 @@ class InversionQualityView(QWidget):
         positioned = x is not None and np.size(x) == values.size
         x = (np.asarray(x, dtype=float).ravel() if positioned
              else np.arange(values.size, dtype=float))
-        ax.plot(x, values, "o-", color="#1565ff", lw=1.3, ms=3.5, zorder=3,
+        ax.plot(x, values, "o-", color="#007aff", lw=1.3, ms=3.5, zorder=3,
                 label=per_item.get("value_label"))
         reference = np.asarray(per_item.get("reference_values", []), dtype=float).ravel()
         if reference.size == values.size:
-            ax.plot(x, reference, "--", color="#888888", lw=1.1, zorder=2,
+            ax.plot(x, reference, "--", color="#8e8e93", lw=1.1, zorder=2,
                     label="Original-error χ²")
-        ax.axhline(float(target), color="#558b2f", ls=":", lw=1.0,
+        ax.axhline(float(target), color="#34c759", ls=":", lw=1.0,
                    label=f"target χ² = {float(target):g}")
         # An item with no data of its own reports no misfit; its model came from
         # its neighbours. Saying so is the point of showing this panel.
@@ -278,13 +281,13 @@ class InversionQualityView(QWidget):
             empty = np.asarray(counts).ravel() == 0
             if empty.any():
                 ax.plot(x[empty], np.full(int(empty.sum()), float(target)), "x",
-                        color="#9e9e9e", ms=5, zorder=4,
+                        color="#8e8e93", ms=5, zorder=4,
                         label=f"no data of its own ({int(empty.sum())})")
         groups = per_item.get("groups")
         if groups is not None and np.size(groups) == values.size:
             groups = np.asarray(groups).ravel()
             for index in np.flatnonzero(groups[1:] != groups[:-1]) + 1:
-                ax.axvline(0.5 * (x[index - 1] + x[index]), color="#9e9e9e",
+                ax.axvline(0.5 * (x[index - 1] + x[index]), color="#8e8e93",
                            ls=":", lw=1.0, zorder=1)
         plotted_values = np.r_[values, reference] if reference.size == values.size else values
         if np.nanmax(plotted_values) / max(np.nanmin(plotted_values[plotted_values > 0], initial=1.0), 1e-9) > 20:
@@ -336,8 +339,8 @@ class InversionQualityView(QWidget):
                     continue
         if conv:
             iters = list(range(1, len(conv) + 1))
-            ax.plot(iters, conv, "o-", color="#1565ff", lw=1.6, ms=4)
-            ax.axhline(1.0, color="#c62828", ls="--", lw=1.0, label="target χ² = 1")
+            ax.plot(iters, conv, "o-", color="#007aff", lw=1.6, ms=4)
+            ax.axhline(1.0, color="#ff3b30", ls="--", lw=1.0, label="target χ² = 1")
             ax.set_yscale("log")
             ax.set_xlabel("Iteration")
             ax.set_ylabel("χ²")
@@ -348,9 +351,9 @@ class InversionQualityView(QWidget):
                 ax.set_xticks(iters)
         elif final_chi2 is not None and final_chi2 == final_chi2:
             value = float(final_chi2)
-            color = "#2e7d32" if value <= 1.2 else "#f9a825" if value <= 5.0 else "#c62828"
+            color = "#34c759" if value <= 1.2 else "#ff9500" if value <= 5.0 else "#ff3b30"
             ax.bar(["Final \u03c7\u00b2"], [value], color=color, width=0.5)
-            ax.axhline(1.0, color="#1565ff", ls="--", lw=1.2, label="target \u03c7\u00b2 = 1")
+            ax.axhline(1.0, color="#007aff", ls="--", lw=1.2, label="target \u03c7\u00b2 = 1")
             ax.set_ylabel("\u03c7\u00b2")
             ax.set_title("Final data misfit")
             ax.grid(True, axis="y", ls=":", alpha=0.4)
@@ -358,7 +361,7 @@ class InversionQualityView(QWidget):
             ax.text(0, value, f"  {value:.2f}", va="bottom", ha="center", fontsize=9)
         else:
             ax.text(0.5, 0.5, "No per-iteration history for this inversion.",
-                    ha="center", va="center", transform=ax.transAxes, color="#888888")
+                    ha="center", va="center", transform=ax.transAxes, color="#8e8e93")
             ax.axis("off")
         # This tab is usually hidden when an inversion worker completes; draw()
         # guarantees the finished figure is ready when the user opens it.
@@ -366,7 +369,7 @@ class InversionQualityView(QWidget):
 
     def clear(self) -> None:
         self._drawn = None
-        self._metrics.setText("<span style='color:#888888'>Run an inversion to see its "
+        self._metrics.setText("<span style='color:#8e8e93'>Run an inversion to see its "
                               "quality (χ², RMS, convergence) here.</span>")
         self._fig.clear()
         ax = self._fig.add_subplot(111)

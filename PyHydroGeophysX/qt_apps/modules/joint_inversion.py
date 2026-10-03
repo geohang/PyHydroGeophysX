@@ -241,7 +241,7 @@ class JointInversionModule(BaseModule):
         try:
             capability = get_joint_capability(self._method_a.currentText(), self._method_b.currentText())
         except ValueError as exc:
-            self._capability.setText(f"<span style='color:#b42318'><b>Unavailable:</b> {html.escape(str(exc))}</span>")
+            self._capability.setText(f"<span style='color:{theme.color('red')}'><b>Unavailable:</b> {html.escape(str(exc))}</span>")
             self._strategy.blockSignals(True); self._strategy.clear(); self._strategy.blockSignals(False)
             self._update_strip()
             return
@@ -259,11 +259,11 @@ class JointInversionModule(BaseModule):
                 f"backend: {html.escape(backend_text)}<br>{capability.description}")
         elif backend_error:
             self._capability.setText(
-                f"<span style='color:#b42318'><b>Backend unavailable:</b> "
+                f"<span style='color:{theme.color('red')}'><b>Backend unavailable:</b> "
                 f"{html.escape(backend_error)}</span>")
         else:
             self._capability.setText(
-                "<span style='color:#b42318'><b>Planned:</b> no scientifically validated "
+                f"<span style='color:{theme.color('red')}'><b>Planned:</b> no scientifically validated "
                 "joint runner is registered for this pair.</span>")
         self._validated = False
         self._result = None
@@ -519,7 +519,7 @@ class JointInversionModule(BaseModule):
         for method in self._selected_methods():
             value = self._data.get(method)
             if value is None:
-                lines.append(f"<li>{method}: <span style='color:#b42318'>not loaded</span></li>")
+                lines.append(f"<li>{method}: <span style='color:{theme.color('red')}'>not loaded</span></li>")
                 continue
             if method in {"ERT", "SRT"}:
                 count = int(value.size())
@@ -570,7 +570,7 @@ class JointInversionModule(BaseModule):
         self._alignment_figure.clear(); axis = self._alignment_figure.add_subplot(111)
         if pair == ("ERT", "SRT") and all(method in self._data for method in pair):
             heights = []
-            for method, color in (("ERT", "#d95f02"), ("SRT", "#1b9e77")):
+            for method, color in (("ERT", "#ff9500"), ("SRT", "#30b0c7")):
                 positions = self._data[method].sensorPositions()
                 x = np.asarray([float(position.x()) for position in positions])
                 z = np.asarray([float(position.y()) for position in positions])
@@ -590,13 +590,13 @@ class JointInversionModule(BaseModule):
             for method in pair:
                 value = self._data.get(method, {})
                 counts.append(len(value.get("soundings", [])) or (1 if value else 0))
-            axis.bar(pair, counts, color=("#4c78a8", "#f58518")); axis.set_ylabel("Soundings")
+            axis.bar(pair, counts, color=("#007aff", "#ff9500")); axis.set_ylabel("Soundings")
             self._alignment_note.setText(
                 "With coordinates, soundings are matched one-to-one by distance. Without coordinates, "
                 "equal-sized lines are paired by index; unequal counts require a pairing table.")
         elif pair == ("Gravity", "Magnetics") and all(method in self._data for method in pair):
             for method, color, marker in (
-                ("Gravity", "#4c78a8", "o"), ("Magnetics", "#e45756", "+")
+                ("Gravity", "#007aff", "o"), ("Magnetics", "#ff3b30", "+")
             ):
                 value = self._data[method]
                 axis.scatter(

@@ -177,7 +177,7 @@ class GravMagProcessingModule(BaseModule):
 
         hint = QLabel("Upload x, y, value and optionally z_m (positive-up station elevation). "
                        "Gravity is mGal; magnetics is nT. Use Data QC before inversion.")
-        hint.setWordWrap(True); hint.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        hint.setWordWrap(True); theme.set_tone(hint, "hint")
         v.addWidget(hint)
         self._info = QLabel("No data loaded."); self._info.setWordWrap(True)
         v.addWidget(self._info)
@@ -205,7 +205,7 @@ class GravMagProcessingModule(BaseModule):
         hint = QLabel("Inverts the uploaded field for a subsurface model: gravity → density "
                       "contrast (g/cc), magnetics → susceptibility (SI). Slice the result at "
                       "different depths and positions in the Inversion model tab.")
-        hint.setWordWrap(True); hint.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        hint.setWordWrap(True); theme.set_tone(hint, "hint")
         form.addRow(hint)
 
         self._solver = QComboBox()
@@ -249,7 +249,7 @@ class GravMagProcessingModule(BaseModule):
             "spatially balanced sampling rather than file-row order.")
         self._elevation_source = QLabel("Using global station elevation.")
         self._elevation_source.setWordWrap(True)
-        self._elevation_source.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        theme.set_tone(self._elevation_source, "hint")
         form.addRow("Detrend degree", self._detrend)
         form.addRow("Station elevation (m)", self._station_z)
         form.addRow("Elevation source", self._elevation_source)
@@ -578,7 +578,7 @@ class GravMagProcessingModule(BaseModule):
         profile = extract_profile(self._qc["grids"][self._qc_field.currentText()],
                                   self._qc_picks[0], self._qc_picks[1])
         self._profile_plot.clear()
-        self._profile_plot.plot(profile["distance"], profile["value"], pen=pg.mkPen("#1f77b4", width=2))
+        self._profile_plot.plot(profile["distance"], profile["value"], pen=pg.mkPen("#007aff", width=2))
         return profile
 
     def _refresh_backend_state(self) -> bool:
@@ -586,7 +586,7 @@ class GravMagProcessingModule(BaseModule):
         available = bool(status["available"])
         if available:
             self._backend_label.setText("Ready: SimPEG potential-field backend available.")
-            self._backend_label.setStyleSheet("color:#27734b; font-size:8pt;")
+            theme.set_tone(self._backend_label, "ok")
         else:
             self._backend_label.setText(
                 "Unavailable: install the geophysics extra (SimPEG + pymatsolver). "

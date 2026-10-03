@@ -26,7 +26,15 @@ AQUAH: one assistant, two execution modes
 For folder classification, terrain inputs, reasoning, RAG, MCP and detailed
 processing reports, see :doc:`agent_workbench`.
 
-Use the right-hand AQUAH panel to enter goals and configure the request level,
+The right-hand panel holds the AI assistant. AQUAH, for hydrogeophysics, is
+the default; pick another at the top of the panel, such as GeoSAGE for
+geological modelling once it is ready. An assistant that is still being built,
+or whose packages are not installed, is listed greyed out with the reason.
+Switching starts a new conversation, gives the Workflow page the input files
+that assistant takes and the glow its colours, and is remembered. Adding an
+assistant is described in :doc:`adding_an_assistant`.
+
+Use the panel to enter goals and configure the request level,
 provider, and session API key. Choose **Step-by-step assistance** to approve
 individual operations, or **Auto to report** to execute a complete analysis
 workflow. Auto mode supports OpenAI and Claude and may incur provider API
@@ -37,6 +45,62 @@ progress, results, report preview and activity. It contains no second prompt or
 AI settings. If data are missing, AQUAH retains the goal: add files by role in
 Workflow and send **continue** in the assistant. Time-lapse surveys can be moved
 up or down before execution.
+
+While AQUAH runs, the studio shows that the agent, not you, is doing the work.
+A soft glow of blue, purple, pink and orange flows round the central area; it
+turns a steady orange while AQUAH waits for you, and flashes green (or red) as
+the run ends. The Workflow banner shows AQUAH's orb, what it is doing and a
+running clock, and the
+**Live** tab lists every step it decided on as it happens: why the
+controller chose it, the module it worked in, how long it took, what it found
+and the figures it wrote. Between steps the tab shows AQUAH choosing the next
+one. The run stays on this page; it no longer switches the studio from module
+to module, unless you tick **Also bring each module to the front as it runs**.
+With **Approve each step before it runs**, or when a step needs a decision, the
+question and its buttons appear in the timeline. The chat narrates the same
+steps, and the raw event stream is still in **Raw log**.
+
+Across the top of the **Live** tab runs the route: the steps taken, in the
+assistant's colours, the one running with a ring turning round it, and the
+steps still between the run and its report as hollow stops on a dashed line.
+The route ahead is the run's own projection from the data it has, redrawn
+after every step, so it changes when the assistant takes a different turn;
+click a stop to scroll to its step. Beside the steps, the newest figure the
+run has written is shown large as soon as it is written, with the earlier ones
+in a strip beneath (click to look again, double-click to open). When the run
+ends, a card at the foot of the timeline says how it went, how long it worked,
+how many steps, figures and files it produced, what to check before relying
+on the result, and offers **Read the report** and **Open output folder**.
+
+While the assistant chooses its next step, its reasoning appears under
+"choosing the next step" as the model writes it, word by word, and becomes the
+step's "Why" once the step starts. The banner counts the tokens the run's model
+calls have used and their cost, estimated from the provider's list prices
+(for example "12.4k tokens · ≈$0.03"); the finish card repeats the total.
+
+Below the timeline, while a run goes, you can steer it. **Pause after this
+step** holds the run before its next step - the step that is running finishes
+first, since an inversion stopped half-way is of no use - and **Resume** lets
+it carry on. A note typed there ("use lambda 20", "leave the seismic line out")
+is read before the assistant's next decision: it appears in the timeline as
+yours, and once read, with what the assistant decided and any setting it
+changed. Notes can change the run's adjustable settings (inversion parameters,
+thresholds, the number of realizations...), never a file. A run without an API
+key has no model to read notes; it says so, and pause and stop still work.
+
+Every run is recorded beside its results as ``live_replay.json``. **Replay
+this run** on the finish card, or **Replay a run…** under the Workflow page for
+an earlier one, plays it back in the Live tab: play, pause, speed (0.5× to
+8×) and a slider to scrub, with the run's own clock. Long waits are shortened
+so a replay is quick to watch; nothing is recomputed and no model is asked
+anything. **Save frame** writes the Live tab as it looks at that moment to a
+PNG in the run's folder, for a talk or a paper.
+
+The studio has a light and a dark appearance. Choose one in **View →
+Appearance** (Match System, Light or Dark) or with the day/night switch at the
+right end of the toolbar; the choice is remembered, and Match System follows
+the operating system. Plots stay on a light canvas in either appearance, so
+traces drawn in black and colormaps read the same way.
 
 During execution, use **Stop** in Workflow to cancel. Each attempt has an
 independent output directory; partial files and inputs remain available for retry.
@@ -69,7 +133,7 @@ Watch the updated Qt interface walkthrough:
 The main window has six working areas:
 
 1. **Project tree** -- select Seismic, ERT, 3D Mesh Builder, EM,
-   Gravity / Magnetics, Hydro -> Geophysics, Seismic -> Structure, or
+   Gravity / Magnetics, Magnetotellurics, Hydro -> Geophysics, Seismic -> Structure, or
    ERT -> Water Content. Multiple tree entries under Hydro -> Geophysics open
    different stages of the same guided module.
 2. **Module workspace** -- plots, maps, model viewers, and step-by-step controls
@@ -227,7 +291,7 @@ order. PySide6 also ships its own Qt, so pulling ``qt6-main`` in from conda-forg
 next to a pip-installed PySide6 puts two Qt runtimes in one environment.
 
 Module keys for ``--module``: ``home``, ``seismic``, ``ert``, ``mesh3d``, ``em``,
-``gravmag``, ``hydro_geophysics``, ``geo_hydrology``, ``seismic3d``.
+``gravmag``, ``mt``, ``hydro_geophysics``, ``geo_hydrology``, ``seismic3d``.
 
 Your First Studio Run: ERT Inversion
 --------------------------------------------------------------------------------
@@ -400,7 +464,10 @@ are off by default.
   in black; with **Mesh follows the zones** they are the outlines themselves.
   Every engine honours it: the in-house engine and PyGIMLi's manager through
   pyGIMLi's region manager, which leaves no constraint across a marked cell
-  edge, and ADTLERT through its structure-guided smoothness.
+  edge, ADTLERT through its structure-guided smoothness, E4D by making each
+  part of the section an E4D zone of its own, linked to none, and R2 and R3t
+  by making each part one of their zones, between which they apply no
+  smoothness.
 
 What a zone does depends on the engine, and the note under the table says so for
 the engine selected:
@@ -410,8 +477,10 @@ the engine selected:
   so the contrast at a zone's edge costs nothing unless the data argue against
   it. A fixed zone is not inverted. The same holds for every survey of a
   time-lapse run.
-- **PyGIMLi ERTManager** and **ADTLERT** start from the zone values but invert
-  every cell, fixed zones included.
+- **PyGIMLi ERTManager**, **ADTLERT** and **E4D** start from the zone values
+  but invert every cell, fixed zones included.
+- **R2** and **R3t** start from the zone values and hold a fixed zone at its
+  value (their ``param = 0``); the other cells are inverted.
 - The **ADTLERT** time-lapse backend takes no zone values; the run log says they
   were not applied. **Sharp zone edges** still applies to it.
 
@@ -545,7 +614,65 @@ the ``.sig`` as resistivity). On the ERT page, **Import mesh...** takes the same
 E4D mesh files as an inversion mesh, or a ``.cfg``, which is meshed once on
 import.
 
-Please cite E4D and TetGen when you use these meshes; see :doc:`../citation`.
+.. _e4d-engine:
+
+E4D as the inversion engine
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ERT page's **Engine** list also offers **E4D 3D (PNNL, external)**, which
+runs E4D itself on the survey - a single one, or a time-lapse series in E4D's
+own time-lapse mode. E4D is not installed with PyHydroGeophysX; it is built from
+source (https://github.com/pnnl/E4D) with gfortran, PETSc and MPI. Selecting it
+shows three rows under the engine, and a line saying whether E4D was found:
+
+- **Run E4D**: *Auto* looks on this computer, then in WSL; *This computer*
+  (Linux, or macOS with a source build) finds ``e4d`` and ``mpirun`` on PATH or
+  through ``PYHYDRO_E4D`` / ``PYHYDRO_MPIRUN``; *WSL (Windows)* uses E4D built in
+  a WSL 2 Linux distribution, since E4D has no Windows build; *Write files only*
+  writes the complete E4D run folder and stops, for a cluster or another machine.
+- **E4D program**: the ``e4d`` program when it is not on PATH - a Linux path for
+  WSL.
+- **MPI processes**: at least two (one master, one or more workers), and no more
+  workers than electrodes.
+
+These are kept between sessions. When E4D cannot run, a run writes the folder
+and stops with its path in the message; it never runs another engine instead.
+A profile is inverted in 3-D on a mesh built around the line and shown as the
+section along it; E4D's own files - ``e4d.log``, every ``sigma.N`` or
+``tl_sig*``, and the 3-D model as ``resistivity_3d.vtk`` - stay in the ``e4d``
+folder of the run, which the log names.
+
+Please cite E4D and TetGen when you use these meshes or the engine; see
+:doc:`../citation`.
+
+.. _r2-engine:
+
+R2 and R3t as the inversion engine
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The **Engine** list also offers **R2 2D (Binley, external)** and **R3t 3D
+(Binley, external)**: Andrew Binley's inversion codes, the ones ResIPy runs, for
+a single survey or a time-lapse series. They are Windows programs, run natively
+on Windows and through Wine on Linux and macOS, free for non-commercial use.
+Selecting either shows two rows under the engine, and a line saying whether the
+program was found:
+
+- **Run R2/R3t**: *Auto* runs the program here; *Write files only* writes the
+  complete run folder and stops, for another machine.
+- **Program**: the ``R2.exe`` or ``R3t.exe`` to run. Left empty, the one inside
+  an installed ResIPy is used, else ``PYHYDRO_R2`` / ``PYHYDRO_R3T``, else PATH.
+  Each program keeps its own path between sessions.
+
+Both choose their own smoothing weight at every iteration, so **λ** and
+**Auto-λ** do not apply to them: the quality panel shows the weight they settled
+on (``alpha``) instead of a λ, and **Max iterations** and **Target χ²** are what
+steer them. A fixed zone is held at its value. R2 inverts the profile's own
+mesh; R3t a 3-D mesh, or a profile on a 3-D mesh built around the line as for
+E4D. A time-lapse series is their difference inversion: every later survey is
+inverted against the first, starting from its model. Their own files -
+``R2.out`` or ``R3t.out``, ``f001_res.dat`` and their VTK model - stay in the
+``r2`` or ``r3t`` folder of the run, which the log names. Please cite them as
+:doc:`../citation` lists.
 
 .. _mesh3d-zones:
 
@@ -690,6 +817,23 @@ own process instead.
        model grid and errors; click **Run 3D inversion**.
      - Corrected/QC data, density or susceptibility model, NPZ/VTK, and
        convergence history.
+   * - **Magnetotellurics**
+     - Each view tab brings up the side panel for its step, as on the Seismic
+       page. **Time series:** open a recording folder or file (Phoenix MTU-5C
+       and legacy MTU, Metronix ATS, Zonge Z3D, LEMI-424), optionally a remote
+       reference and a calibration override; set the sample rates, window,
+       decimation and robust cuts; click **Process time series**, or add sites
+       processed elsewhere. **Sounding** and **Dimensionality:** the site list
+       (processed sites, or EDI / EMTF XML / Z- / J-files from disk), the
+       selected site's details and export, and which curves to draw.
+       **1D model:** the site to invert, data mode and layers, the static shift
+       with an optional TEM sounding, Waxman-Smits water content; click **Run
+       1D inversion**. **Phase tensors** and **2D section:** tick the profile's
+       sites (their ellipses show the strike), set the modes, strike (normal to
+       the profile by default) and frequencies; click **Run 2D inversion**.
+     - EDI and EMTF XML transfer functions, apparent resistivity and phase
+       CSV, the 1D model and fit CSV, the 2D section (NPZ and CSV), and a
+       Project Map layer of either model.
    * - **Hydro -> Geophysics**
      - **Data:** use example/context data or select the hydrologic-output folder.
        **Profile:** pick two map points. **Methods:** select ERT, SRT, EM, or
@@ -927,6 +1071,11 @@ Modules
    * - Gravity / Magnetics
      - Load station data, remove regional trends, and run SimPEG 3D inversion with an
        interactive model viewer.
+   * - Magnetotellurics
+     - Read MT time series from the common instruments or EDI / EMTF XML sites,
+       process them into impedances with robust remote-reference processing,
+       read dimensionality and strike from the phase tensor, and invert the
+       sites in 1D (static shift, joint TEM, water content) and in 2D.
    * - Hydro -> Geophysics
      - Load hydrologic model outputs (water content, porosity, surfaces), pick a
        profile, set petrophysical parameters, and run forward modeling for the

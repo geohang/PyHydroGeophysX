@@ -230,7 +230,7 @@ def _collect_data_files(cfg: Dict[str, Any]) -> Dict[str, Any]:
     """Pull the data-file fields out of a workflow config for the Qt handoff."""
     keys = [
         "data_file", "ert_file", "time_lapse_files", "timelapse_files",
-        "seismic_file", "raw_seismic_file", "tdem_file", "electrode_file",
+        "seismic_file", "raw_seismic_file", "tdem_file", "mt_files", "electrode_file",
         "modflow_dir", "parflow_dir",
     ]
     return {k: cfg[k] for k in keys if cfg.get(k)}
@@ -312,7 +312,7 @@ _WORKFLOW_TYPE_TO_QT_MODULE: Dict[str, str] = {
     "Unknown": "home",
 }
 
-_QT_MODULES = ["home", "ert", "seismic", "hydro_geophysics", "mesh3d", "em", "gravmag",
+_QT_MODULES = ["home", "ert", "seismic", "hydro_geophysics", "mesh3d", "em", "gravmag", "mt",
                "geo_hydrology", "seismic3d"]
 
 #: Human-friendly labels for the Qt module launch grid.
@@ -322,6 +322,7 @@ _QT_MODULE_LABELS: Dict[str, str] = {
     "ert": "⚡ ERT + time-lapse",
     "em": "📡 EM (FDEM/TDEM)",
     "gravmag": "🧲 Gravity / Magnetics",
+    "mt": "🌐 Magnetotellurics (MT)",
     "mesh3d": "🧊 Mesh 3D + forward",
     "hydro_geophysics": "🌱 Hydro → Geophysics",
     "geo_hydrology": "💧 ERT → Water Content",
@@ -11234,8 +11235,8 @@ def render_geophysical_data_processing_tab(sidebar_state: Dict[str, Any]) -> Non
         "Local tools for field-data QC, preprocessing, picking/conversion, inversion setup, and method-specific exports."
     )
 
-    seismic_tab, ert_tab, mesh3d_tab, em_tab, gravmag_tab = st.tabs(
-        ["Seismic", "ERT", "Mesh 3D", "EM", "Gravity / Magnetics"]
+    seismic_tab, ert_tab, mesh3d_tab, em_tab, gravmag_tab, mt_tab = st.tabs(
+        ["Seismic", "ERT", "Mesh 3D", "EM", "Gravity / Magnetics", "MT"]
     )
 
     with seismic_tab:
@@ -11276,6 +11277,28 @@ def render_geophysical_data_processing_tab(sidebar_state: Dict[str, Any]) -> Non
                 "Processed EM curves",
                 "1D inversion input",
                 "Conductivity-depth summary",
+            ],
+        )
+
+    with mt_tab:
+        _render_processing_module_shell(
+            module_key="mt_processing",
+            module_name="Magnetotelluric Processing",
+            data_types=["Phoenix MTU-5C / legacy MTU", "Metronix ATS", "Zonge Z3D", "LEMI-424",
+                        "EDI / EMTF XML / Z-files"],
+            workflow_steps=[
+                "Read time series and calibrations",
+                "Robust remote-reference processing",
+                "Phase-tensor dimensionality and strike",
+                "Occam 1D with static shift (optionally with TEM)",
+                "2D TE/TM profile inversion",
+                "Water content from the 1D models",
+            ],
+            output_products=[
+                "EDI and EMTF XML transfer functions",
+                "Apparent resistivity and phase tables",
+                "Layered resistivity models",
+                "2D resistivity section",
             ],
         )
 

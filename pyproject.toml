@@ -48,6 +48,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+hydrology = ["h5py>=3.8,<4.0"]
 mcp = ["mcp>=1.12,<2; python_version >= '3.10'"]
 geophysics = [
     "pygimli>=1.5.5,<2.0",
@@ -133,6 +134,7 @@ dev = [
     "flake8",
 ]
 all = [
+    "h5py>=3.8,<4.0",
     "threadpoolctl>=3.0",
     "pygimli>=1.5.5,<2.0",
     "simpeg>=0.24,<1.0",

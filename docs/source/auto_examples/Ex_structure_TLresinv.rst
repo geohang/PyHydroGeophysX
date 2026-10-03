@@ -22,8 +22,12 @@ Ex. Structure-Constrained Time-Lapse Resistivity Inversion
 ==========================================================
 
 This example demonstrates advanced time-lapse ERT inversion using structural
-constraints derived from seismic interpretation to monitor subsurface water 
+constraints derived from seismic interpretation to monitor subsurface water
 content changes in layered geological media.
+
+**Before you run it:** run ``Ex_Structure_resinv`` first. This example loads
+the mesh it writes, ``results/Structure_WC/mesh_with_interface.bms``. The
+windowed time-lapse inversion takes about 3 hours on the maintainer's machine.
 
 The comprehensive workflow includes:
 
@@ -49,7 +53,7 @@ This technique is particularly valuable for watershed monitoring, groundwater
 management, and landslide early warning systems where geological structure
 plays a critical role in subsurface flow patterns.
 
-.. GENERATED FROM PYTHON SOURCE LINES 35-37
+.. GENERATED FROM PYTHON SOURCE LINES 39-41
 
 .. code-block:: Python
    :dedent: 1
@@ -57,7 +61,7 @@ plays a critical role in subsurface flow patterns.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 39-64
+.. GENERATED FROM PYTHON SOURCE LINES 43-68
 
 .. code-block:: Python
 
@@ -87,7 +91,7 @@ plays a critical role in subsurface flow patterns.
     from PyHydroGeophysX.inversion.windowed import WindowedTimeLapseERTInversion
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 65-102
+.. GENERATED FROM PYTHON SOURCE LINES 69-106
 
 .. code-block:: Python
 
@@ -129,7 +133,7 @@ plays a critical role in subsurface flow patterns.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 103-145
+.. GENERATED FROM PYTHON SOURCE LINES 107-149
 
 .. code-block:: Python
 
@@ -176,7 +180,7 @@ plays a critical role in subsurface flow patterns.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 146-151
+.. GENERATED FROM PYTHON SOURCE LINES 150-155
 
 .. code-block:: Python
 
@@ -186,7 +190,7 @@ plays a critical role in subsurface flow patterns.
     result.all_coverage.shape
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 152-173
+.. GENERATED FROM PYTHON SOURCE LINES 156-177
 
 .. code-block:: Python
 
@@ -212,7 +216,7 @@ plays a critical role in subsurface flow patterns.
     result.mesh.save(os.path.join(structure_output_dir, "mesh_res.bms"))
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 174-249
+.. GENERATED FROM PYTHON SOURCE LINES 178-253
 
 .. code-block:: Python
 
@@ -292,7 +296,7 @@ plays a critical role in subsurface flow patterns.
     )
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 250-278
+.. GENERATED FROM PYTHON SOURCE LINES 254-282
 
 Structure-Constrained Time-Lapse Inversion Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -323,7 +327,7 @@ the 12-month monitoring period.
 %%
 plot the true resistivity model
 
-.. GENERATED FROM PYTHON SOURCE LINES 278-324
+.. GENERATED FROM PYTHON SOURCE LINES 282-328
 
 .. code-block:: Python
 
@@ -374,7 +378,7 @@ plot the true resistivity model
             cbar.remove()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 325-347
+.. GENERATED FROM PYTHON SOURCE LINES 329-351
 
 True Resistivity Model Comparison
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -399,7 +403,7 @@ the value of integrating geophysical constraints in time-lapse monitoring.
    :align: center
    :width: 900px
 
-.. GENERATED FROM PYTHON SOURCE LINES 350-359
+.. GENERATED FROM PYTHON SOURCE LINES 354-363
 
 Summary and Best Practices
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

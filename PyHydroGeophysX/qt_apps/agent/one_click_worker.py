@@ -21,6 +21,10 @@ class OneClickWorker(ProcessProbeWorker):
     #: or a question with options. Carries the event dict; reply with
     #: :meth:`answer`.
     asked = Signal(dict)
+    #: A step began (``phase == 'start'``, with the controller's reason) or
+    #: ended (``phase == 'done'``, with its summary and status). The fields the
+    #: progress line flattens into one string, for the live timeline.
+    stepped = Signal(dict)
 
     def __init__(self, payload, parent=None):
         super().__init__('PyHydroGeophysX.qt_apps.agent.one_click_runner',
@@ -29,9 +33,14 @@ class OneClickWorker(ProcessProbeWorker):
         # line to start, then blocks on the same stream whenever it needs an
         # answer. Closing it after the payload - which is what this did - makes
         # every later question read end-of-input and give up.
+        # Notes, pause and resume reach the run through this file, which it
+        # reads between steps; it also records what the user told the run.
+        self._control_path = Path(payload['output_dir']) / 'steering.jsonl'
+        payload = dict(payload, control_file=str(self._control_path))
         self._payload = (json.dumps(payload) + '\n').encode('utf-8')
         self._log_path = Path(payload['output_dir']) / 'activity.log'
         self._log_path.parent.mkdir(parents=True, exist_ok=True)
+        self._control_path.write_text('', encoding='utf-8')
         environment = self.process.processEnvironment()
         environment.insert('PYTHONUNBUFFERED', '1')
         self.process.setProcessEnvironment(environment)
@@ -59,6 +68,26 @@ class OneClickWorker(ProcessProbeWorker):
         """
         return self._write(
             (json.dumps({'decision': str(decision)}) + '\n').encode('utf-8'))
+
+    def steer(self, text):
+        """Send the running workflow a note, read before its next decision."""
+        return self._control({'steer': str(text)})
+
+    def pause(self):
+        """Hold the workflow before its next step; the running step finishes."""
+        return self._control({'pause': True})
+
+    def resume(self):
+        return self._control({'resume': True})
+
+    def _control(self, message):
+        """Append one message to the run's control file (see steering.ControlFile)."""
+        try:
+            with self._control_path.open('a', encoding='utf-8') as stream:
+                stream.write(json.dumps(message) + '\n')
+            return True
+        except OSError:
+            return False
 
     def _write(self, payload):
         """Write to the child and make sure it actually leaves this process.
@@ -101,6 +130,8 @@ class OneClickWorker(ProcessProbeWorker):
                                    str(event.get('module', '')))
             elif isinstance(event, dict) and event.get('event') in ('approve', 'question'):
                 self.asked.emit(event)
+            elif isinstance(event, dict) and event.get('event') == 'step':
+                self.stepped.emit(event)
             elif not isinstance(event, dict) or 'ok' not in event:
                 self.logged.emit(line)
 

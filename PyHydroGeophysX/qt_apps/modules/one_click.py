@@ -6,11 +6,18 @@ from PySide6.QtCore import Qt, QUrl, Signal, QTimer, QElapsedTimer
 from PySide6.QtGui import QDesktopServices, QImage, QTextCursor
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QHBoxLayout,
     QLabel, QListWidget, QListWidgetItem, QPlainTextEdit, QProgressBar,
-    QPushButton, QScrollArea, QTabWidget, QTextBrowser, QVBoxLayout, QWidget,
+    QPushButton, QScrollArea, QSplitter, QTabWidget, QTextBrowser, QVBoxLayout, QWidget,
     QTableWidget, QTableWidgetItem, QHeaderView)
 
 from .base import BaseModule
+from PyHydroGeophysX.qt_apps import theme
+from PyHydroGeophysX.agents import assistants as assistant_registry
 from PyHydroGeophysX.qt_apps.agent.one_click_worker import OneClickWorker
+from PyHydroGeophysX.qt_apps.widgets import ai_presence as presence
+from PyHydroGeophysX.qt_apps.widgets.ai_presence import (AgentHeader, AgentTimeline,
+                                                          FinishCard, LiveCanvas, RunRoute,
+                                                          SteerBar, usage_text)
+from PyHydroGeophysX.qt_apps.widgets import run_replay
 
 #: How many times a module is offered the run's data before giving up on it.
 _OPEN_ATTEMPTS = 3
@@ -141,10 +148,22 @@ def _iter_fragments(block):
         iterator += 1
 
 
+def _without_clock(details):
+    """A progress detail without the runner's ``[12.3s]`` elapsed prefix."""
+    text = str(details or '')
+    if text.startswith('[') and 's] ' in text[:12]:
+        return text.split('s] ', 1)[1]
+    return text
+
+
 class OneClickModule(BaseModule):
     module_key = 'one_click'
     module_title = 'Workflow'
     workflowFinished = Signal(str)
+    #: Each step as the run reports it - ``phase`` 'start' with the
+    #: controller's reason, 'done' with its summary and status - so the chat
+    #: can narrate the run as it goes.
+    stepEvent = Signal(dict)
 
     def __init__(self, state, log, parent=None):
         super().__init__(state, log, parent)
@@ -178,27 +197,41 @@ class OneClickModule(BaseModule):
         self._clock = QTimer(self)
         self._clock.setInterval(1000)
         self._clock.timeout.connect(self._tick)
+        # When the step now running began, so the figures it writes can be put
+        # on its own card in the timeline.
+        self._step_started_at = 0.0
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel('<h2>Workflow</h2>Data, progress, results and report · Controlled by AQUAH on the right'))
+        # The assistant this page works for. It is the one active when the page
+        # is built and changes with set_assistant(); a run keeps the one it
+        # started with.
+        self._assistant = assistant_registry.active()
+        self._title_label = QLabel()
+        layout.addWidget(self._title_label)
+        # The agent's own banner: what the assistant is doing, in its colours, with a
+        # clock. Hidden until the first run so an idle page stays plain.
+        self.header = AgentHeader()
+        self.header.setVisible(False)
+        layout.addWidget(self.header)
         self.tabs = QTabWidget()
         setup = QWidget()
         form = QVBoxLayout(setup)
         self._request_text = ''
         self._ai_settings = {}
-        self.goal = QLabel('Describe your goal in AQUAH on the right and select Auto to report.')
+        self.goal = QLabel()
         self.goal.setWordWrap(True)
         form.addWidget(self.goal)
         folder_row = QHBoxLayout()
         choose_folder = QPushButton('Choose data folder · AI classification…')
         choose_folder.clicked.connect(self._choose_folder)
         folder_row.addWidget(choose_folder)
+        self._choose_folder_btn = choose_folder
         self.folder_label = QLabel('No data folder selected')
         self.folder_label.setWordWrap(True)
         folder_row.addWidget(self.folder_label, 1)
         form.addLayout(folder_row)
-        folder_note = QLabel('AQUAH scans filenames and short text previews in this folder using your selected AI model. Review file roles below before sending “continue”. No files are moved.')
-        folder_note.setWordWrap(True)
-        form.addWidget(folder_note)
+        self._folder_note = QLabel()
+        self._folder_note.setWordWrap(True)
+        form.addWidget(self._folder_note)
         self.catalog_table = QTableWidget(0, 4)
         self.catalog_table.setHorizontalHeaderLabels(['File', 'Role (editable)', 'Confidence', 'Evidence'])
         self.catalog_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -206,7 +239,7 @@ class OneClickModule(BaseModule):
         self.catalog_table.setVisible(False)
         form.addWidget(self.catalog_table)
         # The manual path, kept as a fallback rather than an equal alternative.
-        # Choosing a folder and letting AQUAH classify it is how this is meant
+        # Choosing a folder and letting the assistant classify it is how this is meant
         # to be used, but classification needs a model - without an API key it
         # cannot run at all - and files are not always gathered in one folder.
         manual = QLabel('<b>Or add files yourself</b><br>'
@@ -216,14 +249,8 @@ class OneClickModule(BaseModule):
         manual.setWordWrap(True)
         form.addWidget(manual)
         row = QHBoxLayout()
+        # What the files can be is the assistant's to say (Assistant.input_roles).
         self.role = QComboBox()
-        for label, key in [('ERT survey', 'data_file'), ('Time-lapse ERT (ordered surveys)', 'time_lapse_files'),
-                           ('Electrode coordinates', 'electrode_file'), ('Seismic travel times', 'seismic_file'),
-                           ('Raw seismic SEG-Y', 'raw_seismic_file'), ('TDEM survey', 'tdem_file'),
-                           ('Terrain / topography', 'topography_file'), ('Geophone coordinates', 'geophone_file'),
-                           ('Reference document', 'reference_file'),
-                           ('MODFLOW folder', 'modflow_dir'), ('ParFlow folder', 'parflow_dir')]:
-            self.role.addItem(label, key)
         row.addWidget(self.role)
         add = QPushButton('Add data…')
         add.clicked.connect(self._choose_files)
@@ -246,40 +273,99 @@ class OneClickModule(BaseModule):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(setup)
-        self.tabs.addTab(scroll, 'Data')
+        self._data_tab = scroll
+        self.tabs.addTab(scroll, '1 · Data')
+        # The run as the assistant sees it: one card per step it decided on, with its
+        # reason, its module, its time and what it found. This is where a run
+        # is watched; the raw event log stays in its own tab.
+        self.timeline = AgentTimeline()
+        # Above it, the route the run is on, as the run itself projects it;
+        # beside it, the newest figure the run has written, shown large as it
+        # appears. The canvas stays hidden until there is a figure to show.
+        self.route = RunRoute()
+        self.route.nodeClicked.connect(self.timeline.scroll_to_step)
+        self.route.setVisible(False)
+        self.canvas = LiveCanvas()
+        self._canvas_host = QWidget()
+        self._canvas_host.setObjectName('agentLive')
+        host_layout = QVBoxLayout(self._canvas_host)
+        host_layout.setContentsMargins(0, 16, 16, 16)
+        host_layout.addWidget(self.canvas)
+        self._canvas_host.setVisible(False)
+        self._live_split = QSplitter(Qt.Horizontal)
+        self._live_split.setObjectName('agentLiveSplit')
+        self._live_split.setChildrenCollapsible(False)
+        self._live_split.addWidget(self.timeline)
+        self._live_split.addWidget(self._canvas_host)
+        self._live_tab = QWidget()
+        self._live_tab.setObjectName('agentLive')
+        live_layout = QVBoxLayout(self._live_tab)
+        live_layout.setContentsMargins(0, 0, 0, 0)
+        live_layout.setSpacing(0)
+        # A finished run can be watched again here (run_replay); the bar is
+        # its transport, shown only while a replay is open.
+        self.replay_bar = run_replay.ReplayBar()
+        self.replay_bar.setVisible(False)
+        self.replay_bar.playToggled.connect(self._replay_play)
+        self.replay_bar.speedChanged.connect(self._replay_speed)
+        self.replay_bar.scrubbed.connect(self._replay_seek)
+        self.replay_bar.frameRequested.connect(self._save_frame)
+        self.replay_bar.closed.connect(self._end_replay)
+        live_layout.addWidget(self.replay_bar)
+        live_layout.addWidget(self.route)
+        live_layout.addWidget(self._live_split, 1)
+        # While a run goes: pause it before its next step, or tell it something.
+        self.steer = SteerBar()
+        self.steer.setVisible(False)
+        self.steer.noteSent.connect(self._send_note)
+        self.steer.pauseRequested.connect(self._request_pause)
+        live_layout.addWidget(self.steer)
+        self.tabs.addTab(self._live_tab, '2 · Live')
         self.report = _FittedReportBrowser()
         self.report.setOpenLinks(False)
         self.report.anchorClicked.connect(self._open_link)
         self.report.setPlainText('Your interpretation and report will appear here after the workflow finishes.')
-        self.tabs.addTab(self.report, '2 · Results & report')
+        # '&&': a single ampersand is a Qt mnemonic, which rendered the tab as
+        # "Results _report".
+        self.tabs.addTab(self.report, '3 · Results && report')
         self.files = QListWidget()
         self.files.itemDoubleClicked.connect(lambda item: self._open_path(item.data(Qt.UserRole)))
         self.tabs.addTab(self.files, 'Output files')
         self.details = QPlainTextEdit()
         self.details.setReadOnly(True)
         self.details.document().setMaximumBlockCount(3000)
-        self.tabs.addTab(self.details, 'Activity')
+        self.tabs.addTab(self.details, 'Raw log')
         layout.addWidget(self.tabs, 1)
         self.status = QLabel('Ready · Select data and describe your goal.')
         self.status.setWordWrap(True)
         layout.addWidget(self.status)
         self.live_detail = QLabel('Actual workflow events will appear here.')
         self.live_detail.setWordWrap(True)
+        theme.set_tone(self.live_detail, 'mono')
         layout.addWidget(self.live_detail)
         self.elapsed_label = QLabel('')
+        theme.set_tone(self.elapsed_label, 'muted')
         layout.addWidget(self.elapsed_label)
+        # Thin. Its fraction is a monotone guess - the loop does not know how
+        # many steps it will take - so it is not the thing to read; the banner
+        # and the timeline are.
         self.progress = QProgressBar()
+        self.progress.setObjectName('agentProgress')
+        self.progress.setTextVisible(False)
+        self.progress.setFixedHeight(4)
         layout.addWidget(self.progress)
-        # The run visits the module doing each piece of work, so the user
-        # watches it happen instead of watching a bar. Off-switch included: a
-        # window that moves under someone reading a panel is worse than one
-        # that never moves.
-        self.follow = QCheckBox('Follow along: show each module as it runs')
-        self.follow.setChecked(True)
+        # Off by default. The run used to visit the module doing each piece of
+        # work, so the user would watch it happen rather than a bar; now the
+        # live timeline shows each step's reason, result and figures on
+        # this page, and a window that keeps switching panels under the user
+        # was the worse way to show it. Kept as an option for anyone who wants
+        # to see each module's own panel as well.
+        self.follow = QCheckBox('Also bring each module to the front as it runs')
+        self.follow.setChecked(False)
         self.follow.setToolTip(
-            'Bring the studio module doing the current step to the front. '
-            'Switching module yourself turns this off for the rest of the run.')
-        self._follow_enabled = True
+            'The run is followed in the Live tab on this page. Tick this to have '
+            'the studio also switch to the module doing each step.')
+        self._follow_enabled = False
         self._current_followed = None
         self.follow.toggled.connect(self._on_follow_toggled)
         layout.addWidget(self.follow)
@@ -315,11 +401,82 @@ class OneClickModule(BaseModule):
         self.folder = QPushButton('Open output folder')
         self.folder.setEnabled(False)
         self.folder.clicked.connect(lambda: self._open_path(self._output))
+        self.replay_button = QPushButton('Replay a run…')
+        self.replay_button.setToolTip('Watch a finished run again, from the live_replay.json '
+                                      'in its output folder. Nothing is recomputed.')
+        self.replay_button.clicked.connect(self._choose_replay)
         self.run.hide()
-        for button in (self.stop, self.folder):
+        for button in (self.stop, self.folder, self.replay_button):
             actions.addWidget(button)
         layout.addLayout(actions)
         self._setup = setup
+        self.set_assistant(self._assistant)
+        # Everything the Live views are told is recorded, with its time, so the
+        # run can be watched again; see run_replay.
+        self._recorder = run_replay.LiveRecorder({
+            'timeline': (self.timeline, ('reset', 'thinking', 'thought', 'ask',
+                                         'clear_question', 'step_started', 'step_done',
+                                         'step_skipped', 'finish', 'note', 'notes_read')),
+            'route': (self.route, ('reset', 'set_ahead', 'set_thinking', 'step_started',
+                                   'step_done', 'finish')),
+            'canvas': (self.canvas, ('reset', 'add_figure')),
+            'header': (self.header, ('show_state', 'set_clock', 'set_usage', 'clear_usage')),
+            'page': (self, ('_place_finish', '_reveal_canvas')),
+        })
+        self._player = None
+        self._replaying = False
+        self._replay_dir = ''
+        self._last_replay = ''
+        #: How the last run ended, for the assistant to read (agent_describe).
+        self._last_result = None
+        self._usage_total = {}
+        self._step_clock = None
+
+    def _name(self):
+        """The assistant's name, for what this page says."""
+        return self._assistant.name
+
+    def _goal_hint(self):
+        return (f'Describe your goal to {self._name()} in the assistant panel on the '
+                'right and select Auto to report.')
+
+    def set_assistant(self, assistant):
+        """Work for ``assistant``: its input roles, its name, its folder sorting.
+
+        Inputs added for a role the new assistant does not take are dropped, so
+        a run never receives a file it cannot place. Refused while a run is
+        going: the run belongs to the assistant that started it.
+        """
+        if self._worker is not None:
+            return False
+        self._assistant = assistant
+        name = assistant.name
+        self._title_label.setText(
+            f'<h2>Workflow</h2>Data, progress, results and report · {name} '
+            f'({assistant.domain}) works from the assistant panel on the right')
+        if not self._request_text:
+            self.goal.setText(self._goal_hint())
+        self.role.clear()
+        for label, key in assistant.input_roles:
+            self.role.addItem(label, key)
+        roles = {key for _label, key in assistant.input_roles}
+        dropped = [key for key in self._inputs if key not in roles]
+        for key in dropped:
+            self._inputs.pop(key, None)
+        if dropped:
+            self._refresh_inputs()
+        classify = bool(assistant.folder_classifier)
+        self._choose_folder_btn.setEnabled(classify)
+        self._choose_folder_btn.setToolTip(
+            '' if classify else f'{name} does not sort folders; add files below.')
+        self._folder_note.setText(
+            f'{name} scans filenames and short text previews in this folder using your '
+            'selected AI model. Review file roles below before sending “continue”. '
+            'No files are moved.' if classify else
+            f'{name} does not sort a folder for you: add each file below with its role.')
+        self.header.headline.setText(name)
+        self.steer.set_name(name)
+        return True
 
     def _choose_folder(self):
         folder = QFileDialog.getExistingDirectory(self, 'Select the folder containing survey data and supporting files')
@@ -335,7 +492,7 @@ class OneClickModule(BaseModule):
             self.catalog_table.setRowCount(0)
             self.catalog_table.setVisible(False)
             self.folder_label.setText(folder)
-            self.status.setText('Folder selected · Send your goal in AQUAH to scan and classify files.')
+            self.status.setText(f'Folder selected · Send your goal to {self._name()} to scan and classify files.')
 
     def _catalog_rows(self):
         rows = []
@@ -345,7 +502,30 @@ class OneClickModule(BaseModule):
 
     def _tick(self):
         self._refresh_activity()
-        self.elapsed_label.setText(f'Running · {self._elapsed.elapsed() / 1000:.0f}s elapsed · Latest backend event shown above')
+        seconds = self._elapsed.elapsed() / 1000
+        self.elapsed_label.setText(f'Running · {seconds:.0f}s elapsed · Latest backend event shown above')
+        self.header.set_clock(seconds, self._steps_done(), running=True,
+                              ahead=self.route.counts()[1])
+        self._collect_figures()
+
+    def _steps_done(self):
+        return sum(1 for card in self.timeline.steps() if card.status != 'running')
+
+    def _presence(self, state, headline, detail=None, glow_state=None):
+        """Say what the agent is doing, everywhere it is shown at once.
+
+        The banner here and the glow round the studio's central area describe
+        one state, so they are set together and cannot disagree. ``glow_state``
+        differs only when the run is over but has left the user something to
+        do: the banner keeps asking, while the edge stops pulsing.
+        """
+        self.header.show_state(state, headline, detail)
+        glow = getattr(self.window(), 'set_agent_presence', None)
+        if callable(glow):
+            try:
+                glow(glow_state or state)
+            except Exception:  # noqa: BLE001 - a display must not stop a run
+                pass
 
     def _show_catalog(self, catalog):
         from PyHydroGeophysX.agents.folder_catalog import ROLES, ROLE_LABELS
@@ -373,18 +553,30 @@ class OneClickModule(BaseModule):
             paths, _ = QFileDialog.getOpenFileNames(self, 'Select data files')
         if not paths:
             return
-        if role == 'time_lapse_files':
-            paths = list(dict.fromkeys(self._inputs.get(role, []) + paths))
-            self._inputs.pop('data_file', None)
+        problem = self._add_inputs(role, paths)
+        if problem:
+            self.status.setText(problem)
+
+    def _add_inputs(self, role, paths):
+        """Give ``role`` these files; returns why not, or "".
+
+        A role the assistant takes in order (time-lapse surveys) collects them;
+        any other takes one, replacing what it had.
+        """
+        if role in self._assistant.ordered_roles:
+            paths = list(dict.fromkeys(list(self._inputs.get(role, [])) + list(paths)))
+            if role == 'time_lapse_files':
+                self._inputs.pop('data_file', None)
             self._inputs[role] = paths
         else:
             if len(paths) > 1:
-                self.status.setText('Select one file for this role, or choose Time-lapse ERT for multiple surveys.')
-                return
+                return ('Select one file for this role, or a role that takes '
+                        'several files in order.')
             if role == 'data_file':
                 self._inputs.pop('time_lapse_files', None)
             self._inputs[role] = paths[0]
         self._refresh_inputs()
+        return ''
 
     def _refresh_inputs(self):
         self.inputs.clear()
@@ -409,7 +601,7 @@ class OneClickModule(BaseModule):
         if not item:
             return
         role, path = item.data(Qt.UserRole)
-        if role != 'time_lapse_files':
+        if role not in self._assistant.ordered_roles:
             return
         paths = self._inputs[role]
         index = paths.index(path)
@@ -426,7 +618,7 @@ class OneClickModule(BaseModule):
         """Start a new conversational goal while keeping the selected data."""
         if self._worker is None:
             self._request_text = ''
-            self.goal.setText('Describe your goal in AQUAH on the right and select Auto to report.')
+            self.goal.setText(self._goal_hint())
 
     def submit_request(self, text, settings):
         if self._worker is not None:
@@ -455,8 +647,8 @@ class OneClickModule(BaseModule):
                 return str(exc)
         if not self._inputs and not self._data_folder:
             self._ai_settings = {}
-            self.status.setText('Waiting for data · Add files here, then send “continue” in AQUAH.')
-            self.tabs.setCurrentIndex(0)
+            self.status.setText(f'Waiting for data · Add files here, then send “continue” to {self._name()}.')
+            self.tabs.setCurrentWidget(self._data_tab)
             return 'Add your data in the Workflow page, then send “continue” here. I have kept your goal.'
         self._start(step_mode=self.step_through.isChecked())
         self._ai_settings = {}
@@ -486,17 +678,20 @@ class OneClickModule(BaseModule):
         try:
             handle = self.begin_persisted_run('unified', label=request[:120])
             self._output = str(handle.outputs_dir)
-            payload = dict(request=request, inputs=dict(self._inputs), provider=provider,
+            payload = dict(assistant=self._assistant.key,
+                           request=request, inputs=dict(self._inputs), provider=provider,
                            model=self._ai_settings.get('model'), api_key=key, output_dir=self._output)
             payload.update({k: self._ai_settings.get(k) for k in ('reasoning_effort', 'use_rag', 'use_mcp')})
             payload['step_mode'] = bool(step_mode)
-            if self._data_folder and self._catalog is None:
+            if (self._data_folder and self._catalog is None
+                    and self._assistant.folder_classifier):
                 payload.update(mode='classify', data_folder=self._data_folder)
             if self._catalog:
                 payload['classification'] = self._catalog_rows()
             worker = OneClickWorker(payload, self)
             self._worker = self.register_worker(worker)
             worker.progress.connect(self._on_progress)
+            worker.stepped.connect(self._on_step_event)
             worker.asked.connect(self._on_asked)
             worker.logged.connect(self._on_log)
             worker.succeeded.connect(self._succeeded)
@@ -509,10 +704,33 @@ class OneClickModule(BaseModule):
             self.folder.setEnabled(True)
             self.details.clear()
             self.files.clear()
-            self.report.setPlainText('Workflow running. You can follow progress below or open Activity.')
+            self.report.setPlainText('Workflow running. Follow it in the Live tab, or the raw events in Raw log.')
             self.progress.setValue(0)
             self.status.setText('Starting · You can continue using other Studio modules.')
-            self.tabs.setCurrentIndex(3)
+            classify = payload.get('mode') == 'classify'
+            self._end_replay()
+            self._recorder.start()
+            self._recording_meta = {'assistant': self._assistant.key, 'name': self._name(),
+                                    'goal': request, 'started': time.strftime('%Y-%m-%d %H:%M')}
+            self.timeline.reset(request)
+            self.route.reset()
+            self.route.setVisible(not classify)
+            self.route.set_thinking(True)
+            self.canvas.reset()
+            self._reveal_canvas(False)
+            self._usage_total = {}
+            self._step_clock = None
+            self.header.clear_usage()
+            self.steer.set_name(self._name())
+            self.steer.set_state(SteerBar.RUNNING)
+            self.steer.setVisible(not classify)
+            self.replay_button.setEnabled(False)
+            reading = f'{self._name()} is reading your folder' if classify else f'{self._name()} is reading your request'
+            self.timeline.thinking(reading)
+            self._presence(presence.THINKING, reading,
+                           'Working out what to do from your goal and your data.')
+            self.header.set_clock(0, 0)
+            self.tabs.setCurrentWidget(self._live_tab)
             self._run_started_at = time.time()
             self._inputs_shown = {}
             self._staged = {}
@@ -528,7 +746,114 @@ class OneClickModule(BaseModule):
         self.status.setText(f'{step} · {details}')
         self.details.appendPlainText(f'{step}: {details}')
         self._latest_step, self._latest_detail = step, details
+        # Stages that are not one of the controller's steps - reading the
+        # request, retrieving references, writing the audit - are the agent
+        # busy between steps, and are shown as such.
+        if self.timeline.current() is None and not module:
+            self.timeline.thinking(f'{self._name()} · {step}')
+            self.header.show_state(presence.THINKING, f'{self._name()} · {step}',
+                                   _without_clock(details))
         self._follow_along(module, step, details)
+
+    def _on_step_event(self, event):
+        """A step began or ended: put it on the timeline and the banner."""
+        phase = str(event.get('phase') or '')
+        label = str(event.get('label') or event.get('tool') or 'Step')
+        module = str(event.get('module') or '')
+        tool = str(event.get('tool') or '')
+        if phase == 'route':
+            self.route.set_ahead(event.get('ahead') or [])
+        elif phase == 'thought':
+            self.timeline.thought(str(event.get('text') or ''))
+        elif phase == 'usage':
+            self._usage_total = dict(event)
+            self.header.set_usage(int(event.get('tokens') or 0),
+                                  float(event.get('cost_usd') or 0.0),
+                                  int(event.get('calls') or 0))
+        elif phase == 'steer':
+            self._on_notes_read(event)
+        elif phase == 'paused':
+            self._on_paused(str(event.get('label') or ''))
+        elif phase == 'resumed':
+            self.steer.set_state(SteerBar.RUNNING)
+            self.route.set_thinking(True)
+            self.timeline.thinking(f'{self._name()} is choosing the next step')
+            self._presence(presence.THINKING, f'{self._name()} is carrying on', '')
+        elif phase == 'start':
+            self._step_started_at = time.time()
+            self._step_clock = event.get('elapsed_seconds')
+            reason = str(event.get('reason') or '')
+            self.timeline.step_started(label, module, reason)
+            self.route.step_started(tool, label)
+            where = f' in {presence.module_title(module)}' if module else ''
+            self._presence(presence.WORKING, f'{self._name()} · {label}',
+                           f'Why: {reason}' if reason else f'Working{where}.')
+        elif phase == 'done':
+            status = str(event.get('status') or 'ok')
+            summary = str(event.get('summary') or '')
+            figures = self._recent_figures(since=self._step_started_at or self._run_started_at)
+            seconds = None
+            try:
+                seconds = max(0.0, float(event['elapsed_seconds']) - float(self._step_clock))
+            except (KeyError, TypeError, ValueError):
+                pass
+            self.timeline.step_done(label, status, summary, figures, module, seconds=seconds)
+            self.route.step_done(tool, label, status)
+            self.route.set_thinking(True)
+            self._collect_figures(label)
+            self.timeline.thinking(f'{self._name()} is choosing the next step')
+            verb = {'ok': 'finished', 'failed': 'could not finish'}.get(status, status)
+            self._presence(presence.THINKING, f'{self._name()} is choosing the next step',
+                           f'{label} {verb}' + (f': {summary}' if summary else '.'))
+        if self._elapsed.isValid():
+            self.header.set_clock(self._elapsed.elapsed() / 1000, self._steps_done(),
+                                  ahead=self.route.counts()[1])
+        self.stepEvent.emit(dict(event))
+
+    # -- telling a run something while it works ------------------------------------
+    def _send_note(self, text):
+        """Pass the user's note to the run; it is read before the next decision."""
+        if self._worker is None:
+            return
+        self._worker.steer(text)
+        self.timeline.note(text)
+        self.details.appendPlainText(f'-> note to the run: {text}')
+        when = ('when it carries on' if self.steer.state() == SteerBar.PAUSED
+                else 'before its next decision')
+        self.status.setText(f'Note sent · {self._name()} reads it {when}.')
+
+    def _request_pause(self, pause):
+        """Hold the run before its next step, or let it carry on."""
+        if self._worker is None:
+            return
+        if pause:
+            self._worker.pause()
+            self.details.appendPlainText('-> pause requested')
+            self.status.setText(f'Pausing · {self._name()} stops before its next step; '
+                                'the step running now finishes first.')
+        else:
+            self._worker.resume()
+            self.steer.set_state(SteerBar.RUNNING)
+            self.details.appendPlainText('-> resume')
+
+    def _on_paused(self, after):
+        self.steer.set_state(SteerBar.PAUSED)
+        self.route.set_thinking(False)
+        where = f' after {after}' if after else ''
+        self.timeline.thinking(f'Paused{where}', presence.WAITING)
+        self._presence(presence.WAITING, f'{self._name()} is paused{where}',
+                       'Send it a note, then Resume - or Stop.')
+        self.status.setText(f'Paused · {self._name()} is waiting before its next step.')
+
+    def _on_notes_read(self, event):
+        notes = [str(n) for n in event.get('notes') or []]
+        heard = bool(event.get('heard', True))
+        changes = [str(c) for c in event.get('changes') or []]
+        self.timeline.notes_read(notes, str(event.get('why') or ''), changes, heard)
+        self.status.setText(
+            (f'{self._name()} read your note' + (f' and changed {len(changes)} setting(s)'
+                                                  if changes else '') + '.')
+            if heard else 'This run has no model to read notes; pause and stop still work.')
 
     def _on_follow_toggled(self, enabled):
         self._follow_enabled = bool(enabled)
@@ -627,25 +952,17 @@ class OneClickModule(BaseModule):
         """Show the report as it is being written, then the report itself."""
         if str(tool) != 'write_report':
             return ''
-        self.tabs.setCurrentIndex(3)     # Activity, while it is being written
-        return 'Activity'
+        self.tabs.setCurrentWidget(self._live_tab)   # while it is being written
+        return 'Live'
 
     def _current_tool(self, step):
-        """The registered tool whose label is ``step``, or "".
+        """The assistant's tool whose label is ``step``, or "".
 
-        Looked up in the registry the runtime and the studio already share,
-        rather than matched against the wording of a progress line: the label is
-        what the tool calls itself, so this is an identity, not a guess.
+        Looked up in the registry the run is choosing from, rather than matched
+        against the wording of a progress line: the label is what the tool calls
+        itself, so this is an identity, not a guess.
         """
-        try:
-            from PyHydroGeophysX.agents.runtime import TOOLS
-            from PyHydroGeophysX.agents.runtime import catalog  # noqa: F401
-        except Exception:  # noqa: BLE001 - the studio runs without the runtime
-            return ''
-        for name, tool in TOOLS.items():
-            if (getattr(tool, 'label', '') or name) == step:
-                return name
-        return ''
+        return self._assistant.tool_for_label(step)
 
     def _show_stage_on(self, page, module, step):
         """Put the module on the view that matches the step now running."""
@@ -724,16 +1041,235 @@ class OneClickModule(BaseModule):
         pages = getattr(self.window(), '_pages', None)
         return pages.get(module) if isinstance(pages, dict) else None
 
-    def _recent_figures(self, limit=4):
+    def _collect_figures(self, step=None):
+        """Put each figure the run writes on the Live canvas as it appears.
+
+        The canvas opens beside the timeline with the run's first figure;
+        before that it would only be an empty frame.
+        """
+        if step is None:
+            steps = self.timeline.steps()
+            step = steps[-1].label if steps else ''
+        added = False
+        for path in reversed(self._recent_figures(limit=24)):
+            added = self.canvas.add_figure(path, step) or added
+        if added and self._canvas_host.isHidden():
+            self._reveal_canvas(True)
+        self.canvas.tick()
+
+    def _reveal_canvas(self, show):
+        """Open the canvas beside the timeline, or put it away."""
+        if bool(show) != self._canvas_host.isHidden():
+            return
+        self._canvas_host.setVisible(bool(show))
+        if show:
+            total = max(2, self._live_split.width())
+            self._live_split.setSizes([int(total * 0.56), int(total * 0.44)])
+
+    def _show_finish(self, result=None, error='', stopped=False):
+        """End the Live tab with the run's outcome: how it went, what it made,
+        what to check, and the way to the report."""
+        if self.timeline.finish_card() is not None and not stopped:
+            return
+        if self._output:
+            self._collect_figures()
+        self.route.finish()
+        result = result or {}
+        seconds = self._elapsed.elapsed() / 1000 if self._elapsed.isValid() else 0.0
+        taken = sum(1 for card in self.timeline.steps() if card.status == 'ok')
+        warnings = [str(w) for w in result.get('warnings') or []]
+        reports = result.get('report_files') or {}
+
+        def count(n, noun):
+            return f'{n} {noun}' + ('' if n == 1 else 's')
+
+        stats = [count(taken, 'step'), count(len(self.canvas.figures()), 'figure')]
+        if self.files.count():
+            stats.append(count(self.files.count(), 'file'))
+        if self._usage_total.get('tokens'):
+            stats.append(usage_text(self._usage_total['tokens'],
+                                    self._usage_total.get('cost_usd') or 0.0))
+        if warnings:
+            stats.append(f'{len(warnings)} to check')
+        actions = []
+        if reports:
+            actions.append('report')
+        if self._recorder.recording:
+            actions.append('replay')
+        if self._output:
+            actions.append('folder')
+        gaps = warnings
+        if error:
+            state, title, gaps = presence.FAILED, f'{self._name()} could not complete the run', [error]
+            actions.insert(0, 'log')
+        elif stopped:
+            state, title = presence.WAITING, f'Stopped · {self._name()} handed control back to you'
+            gaps = ['The run was stopped before it finished; partial files remain in the output folder.']
+        elif result.get('status') == 'incomplete':
+            state, title = presence.FAILED, f'{self._name()} could not finish the run'
+        elif warnings:
+            state, title = presence.WAITING, ('Report ready · needs your review' if reports
+                                              else 'Finished · needs your review')
+        else:
+            state, title = presence.DONE, 'Report ready' if reports else 'Finished'
+        report = str((reports or {}).get('report_markdown') or '')
+        self._last_result = {'outcome': title, 'status': result.get('status') or
+                             ('failed' if error else 'stopped' if stopped else 'success'),
+                             'warnings': list(gaps), 'report': report or None,
+                             'seconds': round(seconds, 1)}
+        self._place_finish(state, title, seconds, stats, gaps, actions, report)
+        self.tabs.setCurrentWidget(self._live_tab)
+
+    def _place_finish(self, state, title, seconds, stats, gaps, actions, report=''):
+        """Put the outcome card at the foot of the timeline.
+
+        One call with plain arguments, so a replay can place the same card:
+        ``actions`` are keys - report, replay, folder, log - not callbacks.
+        """
+        folder = self._replay_dir if self._replaying else self._output
+        if self._replaying:
+            read = ('Read the report', lambda: self._open_path(report))
+        else:
+            read = ('Read the report', lambda: self.tabs.setCurrentWidget(self.report))
+        known = {'report': read,
+                 'replay': ('Replay this run', lambda: self.start_replay(
+                     self._last_replay if not self._replaying else '')),
+                 'folder': ('Open output folder', lambda: self._open_path(folder)),
+                 'log': ('Show raw log', lambda: self.tabs.setCurrentWidget(self.details))}
+        buttons = [known[key] for key in actions or [] if key in known]
+        self.timeline.add_finish(FinishCard(state, title, seconds, stats, gaps, buttons))
+
+    # -- watching a finished run again -------------------------------------------------
+    def _save_replay(self):
+        """Keep the run's recording beside its results, as live_replay.json."""
+        self._recorder.stop()
+        if not self._output or not self._recorder.events:
+            return ''
+        meta = dict(getattr(self, '_recording_meta', {}) or {})
+        if self._elapsed.isValid():
+            meta['run_seconds'] = round(self._elapsed.elapsed() / 1000, 1)
+        try:
+            path = self._recorder.save(str(Path(self._output) / run_replay.FILE_NAME), meta)
+        except OSError as exc:
+            self.details.appendPlainText(f'Could not save the run recording: {exc}')
+            return ''
+        self._last_replay = path
+        return path
+
+    def _choose_replay(self):
+        start = self._output or ''
+        path, _ = QFileDialog.getOpenFileName(
+            self, 'Replay a run', start,
+            f'Run recording ({run_replay.FILE_NAME});;JSON files (*.json)')
+        if path:
+            self.start_replay(path)
+
+    def start_replay(self, path=''):
+        """Watch a finished run again in the Live tab, from its recording.
+
+        Returns False, saying why, while a run is going or when the file is not
+        a recording. Nothing is recomputed and no model is asked anything.
+        """
+        if self._worker is not None:
+            self.status.setText('A run is going · Replay it once it has finished.')
+            return False
+        path = path or self._last_replay
+        try:
+            recording = run_replay.load(path)
+        except (OSError, ValueError) as exc:
+            self.status.setText(f'Could not open the recording · {exc}')
+            return False
+        self._end_replay()
+        self._replaying = True
+        self._replay_dir = str(Path(path).parent)
+        self.canvas.set_show_age(False)
+        player = run_replay.ReplayPlayer(recording, self._recorder.objects(),
+                                         self._replay_substitute, self)
+        player.moved.connect(self.replay_bar.show_position)
+        player.ended.connect(lambda: self.replay_bar.set_playing(False))
+        player.set_speed(self.replay_bar.speed_value())
+        self._player = player
+        meta = recording.get('meta') or {}
+        self.replay_bar.set_run_length(float(meta.get('run_seconds')
+                                             or player.real_time(player.length())))
+        self.replay_bar.setVisible(True)
+        self.route.setVisible(True)
+        self.steer.setVisible(False)
+        self.tabs.setCurrentWidget(self._live_tab)
+        player.seek(0.0)
+        player.play()
+        self.replay_bar.set_playing(True)
+        who = meta.get('name') or 'The assistant'
+        when = f" on {meta['started']}" if meta.get('started') else ''
+        self.status.setText(f"Replaying {who}'s run{when} · nothing is recomputed.")
+        return True
+
+    @staticmethod
+    def _replay_substitute(target, call, args, kwargs):
+        """Stand-ins for what a recording cannot hold: a question's buttons do nothing."""
+        if target == 'timeline' and call == 'ask':
+            args = list(args) + [None] * (4 - len(args))
+            args[3] = lambda _decision: None
+        return args, kwargs
+
+    def _replay_play(self, play):
+        if self._player is None:
+            return
+        if play:
+            self._player.play()
+        else:
+            self._player.pause()
+        self.replay_bar.set_playing(bool(play))
+
+    def _replay_speed(self, speed):
+        if self._player is not None:
+            self._player.set_speed(speed)
+
+    def _replay_seek(self, position):
+        if self._player is None:
+            return
+        self._player.pause()
+        self.replay_bar.set_playing(False)
+        self._player.seek(position)
+
+    def _save_frame(self):
+        """Save the Live tab as it looks now - without the replay bar - as a PNG."""
+        from PySide6.QtCore import QRect
+
+        folder = Path(self._replay_dir or self._output or '.')
+        top = self.replay_bar.height() if self.replay_bar.isVisible() else 0
+        area = QRect(0, top, self._live_tab.width(), self._live_tab.height() - top)
+        index = 1
+        while (folder / f'replay_frame_{index:02d}.png').exists():
+            index += 1
+        path = folder / f'replay_frame_{index:02d}.png'
+        if self._live_tab.grab(area).save(str(path)):
+            self.status.setText(f'Saved the frame · {path}')
+        else:
+            self.status.setText(f'Could not save the frame to {folder}.')
+
+    def _end_replay(self):
+        """Close the replay, leaving the run shown as it ended."""
+        if self._player is not None:
+            self._player.finish()
+            self._player.deleteLater()
+            self._player = None
+        self._replaying = False
+        self.canvas.set_show_age(True)
+        self.replay_bar.setVisible(False)
+
+    def _recent_figures(self, limit=4, since=None):
         """The newest figures this run has written, most recent first.
 
         Found by looking at the run directory rather than by asking the child
         what it produced: the layout differs per method and per branch, while
         "an image file that did not exist when this run started" is the same
-        question everywhere and cannot fall out of date.
+        question everywhere and cannot fall out of date. ``since`` narrows it to
+        what was written after a given moment - one step's figures, for its card.
         """
         if not self._output:
             return []
+        since = self._run_started_at if since is None else since
         from PyHydroGeophysX.qt_apps.modules.base import FIGURE_SUFFIXES
         found = []
         try:
@@ -741,7 +1277,7 @@ class OneClickModule(BaseModule):
                 if path.suffix.lower() not in FIGURE_SUFFIXES or not path.is_file():
                     continue
                 stat = path.stat()
-                if stat.st_mtime < self._run_started_at or not stat.st_size:
+                if stat.st_mtime < since or not stat.st_size:
                     continue
                 found.append((stat.st_mtime, str(path)))
         except OSError:
@@ -771,8 +1307,11 @@ class OneClickModule(BaseModule):
           files disagreeing about their origin, a conversion with no
           calibration - and is offering the defensible options.
 
-        The module doing the work is brought to the front first, so the choice
-        is made while looking at the panel it concerns rather than at a bar.
+        The question is asked in the Live timeline, where the run is
+        being watched, and the Workflow page is brought back to the front if
+        the user has gone elsewhere: the run cannot go on until it is answered.
+        With follow-along switched on it is asked on the module doing the work
+        instead, so the choice is made while looking at the panel it concerns.
         """
         kind = str(event.get('event') or 'approve')
         self._clear_pause()
@@ -794,20 +1333,38 @@ class OneClickModule(BaseModule):
                  'detail': 'End here and keep whatever has been produced so far.'}]
         module = str(event.get('module') or '')
         self._follow_along(module, prompt)
+        waiting = (f'{self._name()} is waiting for your approval · {self._asked_step}'
+                   if kind != 'question' and self._asked_step else
+                   f'{self._name()} is waiting for your answer')
+        self.timeline.thinking(waiting, presence.WAITING)
+        self._presence(presence.WAITING, f'{self._name()} is waiting for you', prompt)
+        self.stepEvent.emit({'phase': 'waiting', 'label': self._asked_step or '',
+                             'question': prompt})
         # A question with no options would leave the run wedged behind a bar
         # with nothing to press; the default answer is better than a deadlock.
         if not options:
             self._answer(str(event.get('default') or 'stop'))
             return
-        # Ask on the panel the run has just moved to. Putting the buttons back
-        # here would leave the user watching a stopped run on one page with the
-        # only way to answer it on another.
+        self.status.setText('Paused · ' + prompt)
+        self.details.appendPlainText(f'? {prompt}')
+        # Ask where the user is looking. With follow-along on that is the panel
+        # the run has just moved to - buttons back here would leave the user
+        # watching a stopped run on one page with the only way to answer it on
+        # another. Otherwise it is the timeline on this page.
         page = self._module_page(module)
         activity = getattr(page, '_run_activity', None) if page is not None else None
-        if activity is not None and activity.ask(prompt, options, self._answer):
+        if (module and module == self._current_followed and activity is not None
+                and activity.ask(prompt, options, self._answer)):
             self._asked_on = page
-            self.status.setText('Paused · ' + prompt)
-            self.details.appendPlainText(f'? {prompt}')
+            return
+        if self.timeline.ask(waiting, prompt, options, self._answer):
+            show = getattr(self.window(), 'show_module', None)
+            if callable(show):
+                try:
+                    show(self.module_key)
+                except Exception:  # noqa: BLE001 - navigation must not stop a run
+                    pass
+            self.tabs.setCurrentWidget(self._live_tab)
             return
         self.pause_label.setText('<b>Waiting for you</b><br>' + prompt)
         for option in options:
@@ -819,8 +1376,6 @@ class OneClickModule(BaseModule):
             self.pause_buttons.addWidget(button)
         self.pause_buttons.addStretch(1)
         self.pause_box.setVisible(True)
-        self.status.setText('Paused · ' + prompt)
-        self.details.appendPlainText(f'? {prompt}')
 
     def _answer(self, decision):
         """Send the user's decision back to the running workflow."""
@@ -831,6 +1386,13 @@ class OneClickModule(BaseModule):
         self._worker.answer(decision)
         self.details.appendPlainText(f'-> answered: {decision}')
         self.status.setText(self._answered_status(step, decision))
+        if step and decision == 'skip':
+            self.timeline.step_skipped(step)
+            self.route.step_done('', step, 'skipped')
+        self.route.set_thinking(decision != 'stop')
+        self.timeline.thinking(f'{self._name()} is stopping the run' if decision == 'stop'
+                               else f'{self._name()} is carrying on')
+        self._presence(presence.THINKING, self._answered_status(step, decision), '')
 
     @staticmethod
     def _answered_status(step, decision):
@@ -857,6 +1419,7 @@ class OneClickModule(BaseModule):
         if activity is not None:
             activity.clear_question()
         self._asked_on = None
+        self.timeline.clear_question()
         while self.pause_buttons.count():
             item = self.pause_buttons.takeAt(0)
             widget = item.widget()
@@ -874,8 +1437,14 @@ class OneClickModule(BaseModule):
         if result.get('status') == 'classified':
             self.finish_persisted_run(result, 'unified')
             self._show_catalog(result['catalog'])
-            self.tabs.setCurrentIndex(0)
+            self.tabs.setCurrentWidget(self._data_tab)
             self.progress.setValue(100)
+            self.timeline.finish()
+            self.route.finish()
+            self.route.setVisible(False)
+            self._presence(presence.WAITING, f'{self._name()} has sorted your files',
+                           f'Check the roles in Data, then send \u201ccontinue\u201d to {self._name()}.',
+                           glow_state=presence.DONE)
             message = 'File classification ready. Review/edit the roles in Workflow, then send “continue”. Unknown files must be assigned or ignored.'
             if result['catalog'].get('warnings'):
                 message += '\n' + '\n'.join(result['catalog']['warnings'])
@@ -906,13 +1475,25 @@ class OneClickModule(BaseModule):
                 result.get('warnings') or ['The run ended before it finished; inspect Activity.']))
         elif result.get('warnings'):
             self.status.setText('Complete · Needs review: ' + '; '.join(result['warnings']))
-        self.tabs.setCurrentIndex(1)
+        self.timeline.finish()
+        incomplete = result.get('status') == 'incomplete'
+        self._presence(presence.FAILED if incomplete else presence.DONE,
+                       f'{self._name()} could not finish the run' if incomplete else
+                       (f'{self._name()} finished · needs your review' if result.get('warnings')
+                        else f'{self._name()} finished the report'),
+                       self.status.text().split(' · ', 1)[-1])
+        # The outcome is shown where the run was watched, with the report one
+        # click away, rather than swapping the Live tab out from under the user.
+        self._show_finish(result)
         summary = str(result.get('interpretation') or '')[:1500]
         self.workflowFinished.emit(self.status.text() + ('\n\n' + summary if summary else ''))
 
     def _failed(self, error):
         self.fail_persisted_run(error, 'unified')
         self.status.setText(f'Could not complete · {error}')
+        self.timeline.finish()
+        self._show_finish(error=str(error))
+        self._presence(presence.FAILED, f'{self._name()} could not complete the run', str(error))
         self.details.appendPlainText(error)
         self.report.setPlainText(f'The workflow did not complete.\n\n{error}\n\nYour inputs are retained. Adjust them and run again.')
         self.log(error, 'error')
@@ -936,11 +1517,21 @@ class OneClickModule(BaseModule):
         self._current_followed = None
         if self._elapsed.isValid():
             self.elapsed_label.setText(f'Finished · {self._elapsed.elapsed() / 1000:.1f}s elapsed')
+            self.header.set_clock(self._elapsed.elapsed() / 1000, self._steps_done(), running=False)
+        self.timeline.finish()
+        self.route.finish()
         if self._worker and self._worker.is_cancelled():
+            self._show_finish(stopped=True)
+            self._presence(presence.IDLE, f'Stopped · {self._name()} handed control back to you',
+                           'Partial files remain in the output folder.')
             self.cancel_persisted_run('Stopped by user', 'unified')
             self.status.setText('Stopped · Partial files remain in the output folder. You can edit and retry.')
             self.report.setPlainText('Workflow stopped. Partial outputs may be available in the output folder.')
             self.workflowFinished.emit('Workflow stopped. Inputs are retained for retry.')
+        self.steer.setVisible(False)
+        if self._recorder.recording:
+            self._save_replay()
+        self.replay_button.setEnabled(True)
         self._worker = None
         self._setup.setEnabled(True)
         self.run.setEnabled(True)
@@ -954,3 +1545,223 @@ class OneClickModule(BaseModule):
     def _open_path(self, path):
         if path and Path(path).exists():
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(path).resolve())))
+
+    # -- agent command interface ----------------------------------------------
+    #: The page's tabs by the names the assistant uses.
+    _AGENT_TABS = ('data', 'live', 'report', 'files', 'log')
+
+    def agent_describe(self):
+        roles = [{'role': key, 'label': label,
+                  'takes_several_in_order': key in self._assistant.ordered_roles}
+                 for label, key in self._assistant.input_roles]
+        return {
+            'module': self.module_key,
+            'title': self.module_title,
+            'state': self._agent_status(),
+            'input_roles': roles,
+            'actions': [
+                {'name': 'get_status', 'args': {},
+                 'desc': ('The run: whether one is going or paused, its request and inputs, '
+                          'the steps taken with their status and time, the steps still '
+                          'ahead, tokens and cost so far, and how the last run ended '
+                          '(its warnings and report path).')},
+                {'name': 'get_report', 'args': {'max_chars': 'int (default 6000)'},
+                 'desc': 'The text of the report the last run wrote, as shown in Results & report.'},
+                {'name': 'add_input', 'args': {'role': [r['role'] for r in roles],
+                                               'path': 'str', 'paths': 'list of str'},
+                 'desc': ('Give an input role a file (or, for a role that takes several '
+                          'in order, files appended in order).')},
+                {'name': 'remove_input', 'args': {'role': 'str', 'path': 'str (optional)'},
+                 'desc': 'Remove one file from a role, or the whole role without a path.'},
+                {'name': 'clear_inputs', 'args': {}, 'desc': 'Remove every input.'},
+                {'name': 'set_options',
+                 'args': {'follow_along': 'bool', 'approve_each_step': 'bool'},
+                 'desc': ('follow_along brings each module to the front as the run works '
+                          'in it; approve_each_step makes the next run wait for approval '
+                          'before every step.')},
+                {'name': 'show_tab', 'args': {'tab': list(self._AGENT_TABS)},
+                 'desc': 'Show Data, the Live timeline, Results & report, Output files or Raw log.'},
+                {'name': 'pause_run', 'args': {},
+                 'desc': 'Hold the running workflow before its next step (the running step finishes).'},
+                {'name': 'resume_run', 'args': {}, 'desc': 'Let a paused run carry on.'},
+                {'name': 'send_note', 'args': {'text': 'str'},
+                 'desc': ('Tell the running workflow something; it is read before the next '
+                          'decision and may change an adjustable setting.')},
+                {'name': 'stop_run', 'args': {},
+                 'desc': 'Stop the running workflow. Inputs and partial files are kept.'},
+                {'name': 'replay_run', 'args': {'path': 'str (optional live_replay.json)'},
+                 'desc': 'Play a finished run back in the Live tab; the last run by default.'},
+            ],
+            'note': ('Runs are started from the assistant panel (Auto to report, or '
+                     'Step-by-step); this page holds their inputs, follows them live and '
+                     'shows the report.'),
+        }
+
+    def agent_apply(self, action, args):
+        args = args or {}
+        handlers = {
+            'get_status': self._agent_status,
+            'get_report': lambda: self._agent_report(args.get('max_chars', 6000)),
+            'add_input': lambda: self._agent_add_input(
+                args.get('role'), args.get('paths') or ([args['path']] if args.get('path') else [])),
+            'remove_input': lambda: self._agent_remove_input(args.get('role'), args.get('path')),
+            'clear_inputs': self._agent_clear_inputs,
+            'set_options': lambda: self._agent_set_options(args),
+            'show_tab': lambda: self._agent_show_tab(args.get('tab')),
+            'pause_run': lambda: self._agent_steer('pause'),
+            'resume_run': lambda: self._agent_steer('resume'),
+            'send_note': lambda: self._agent_steer('note', args.get('text')),
+            'stop_run': self._agent_stop,
+            'replay_run': lambda: self._agent_replay(args.get('path')),
+        }
+        handler = handlers.get(action)
+        if handler is None:
+            return {'status': 'failed', 'error': f"Unknown action '{action}'.",
+                    'valid_actions': list(handlers)}
+        return handler()
+
+    def _agent_status(self):
+        usage = self._usage_total or {}
+        return {
+            'status': 'ok',
+            'assistant': self._assistant.key,
+            'assistant_name': self._name(),
+            'running': self._worker is not None,
+            'paused': self._worker is not None and self.steer.state() == SteerBar.PAUSED,
+            'replaying': self._replaying,
+            'request': self._request_text or '',
+            'inputs': {role: (list(value) if isinstance(value, list) else value)
+                       for role, value in self._inputs.items()},
+            'output_dir': str(self._output or ''),
+            'progress_percent': self.progress.value(),
+            'status_line': self.status.text(),
+            'steps': [{'label': card.label, 'status': card.status,
+                       'seconds': round(card.elapsed(), 1)} for card in self.timeline.steps()],
+            'ahead': [node['label'] for node in self.route.nodes() if node['status'] == 'ahead'],
+            'usage': ({'tokens': int(usage.get('tokens') or 0),
+                       'cost_usd': float(usage.get('cost_usd') or 0.0),
+                       'calls': int(usage.get('calls') or 0)} if usage else None),
+            'last_result': self._last_result,
+            'recording': self._last_replay or None,
+            'tab': self._agent_tab_name(),
+            'options': {'follow_along': self.follow.isChecked(),
+                        'approve_each_step': self.step_through.isChecked()},
+        }
+
+    def _agent_tab_name(self):
+        current = self.tabs.currentWidget()
+        widgets = (self._data_tab, self._live_tab, self.report, self.files, self.details)
+        return next((name for name, widget in zip(self._AGENT_TABS, widgets)
+                     if widget is current), '')
+
+    def _agent_report(self, max_chars):
+        try:
+            limit = max(200, int(max_chars))
+        except (TypeError, ValueError):
+            limit = 6000
+        text = self.report.toPlainText()
+        return {'status': 'ok', 'report': text[:limit], 'truncated': len(text) > limit,
+                'report_file': (self._last_result or {}).get('report')}
+
+    def _agent_add_input(self, role, paths):
+        if self._worker is not None:
+            return {'status': 'failed', 'error': 'A run is going; add inputs once it has finished.'}
+        roles = [key for _label, key in self._assistant.input_roles]
+        if role not in roles:
+            return {'status': 'failed', 'error': f"Unknown role '{role}'.", 'roles': roles}
+        paths = [str(p) for p in paths or [] if str(p).strip()]
+        if not paths:
+            return {'status': 'failed', 'error': "Provide 'path' or 'paths'."}
+        missing = [p for p in paths if not Path(p).exists()]
+        if missing:
+            return {'status': 'failed', 'error': f'Not found: {", ".join(missing)}'}
+        if role.endswith('_dir') and not all(Path(p).is_dir() for p in paths):
+            return {'status': 'failed', 'error': f"Role '{role}' takes a folder."}
+        problem = self._add_inputs(role, paths)
+        if problem:
+            return {'status': 'failed', 'error': problem}
+        return {'status': 'ok', 'inputs': self._agent_status()['inputs']}
+
+    def _agent_remove_input(self, role, path=None):
+        if self._worker is not None:
+            return {'status': 'failed', 'error': 'A run is going; change inputs once it has finished.'}
+        if role not in self._inputs:
+            return {'status': 'failed', 'error': f"No input for role '{role}'.",
+                    'inputs': list(self._inputs)}
+        value = self._inputs[role]
+        if path and isinstance(value, list) and len(value) > 1:
+            if path not in value:
+                return {'status': 'failed', 'error': f'{path} is not among {role}.'}
+            value.remove(path)
+        elif path and not isinstance(value, list) and str(value) != str(path):
+            return {'status': 'failed', 'error': f'{role} holds {value}, not {path}.'}
+        else:
+            self._inputs.pop(role)
+        self._refresh_inputs()
+        return {'status': 'ok', 'inputs': self._agent_status()['inputs']}
+
+    def _agent_clear_inputs(self):
+        if self._worker is not None:
+            return {'status': 'failed', 'error': 'A run is going; change inputs once it has finished.'}
+        self._inputs.clear()
+        self._refresh_inputs()
+        return {'status': 'ok', 'inputs': {}}
+
+    def _agent_set_options(self, args):
+        changed = {}
+        if 'follow_along' in args:
+            self.follow.setChecked(bool(args['follow_along']))
+            changed['follow_along'] = self.follow.isChecked()
+        if 'approve_each_step' in args:
+            if self._worker is not None:
+                return {'status': 'failed',
+                        'error': 'approve_each_step applies to the next run; one is going now.'}
+            self.step_through.setChecked(bool(args['approve_each_step']))
+            changed['approve_each_step'] = self.step_through.isChecked()
+        if not changed:
+            return {'status': 'failed', 'error': 'Give follow_along and/or approve_each_step.'}
+        return {'status': 'ok', 'options': changed}
+
+    def _agent_show_tab(self, tab):
+        widgets = dict(zip(self._AGENT_TABS, (self._data_tab, self._live_tab, self.report,
+                                              self.files, self.details)))
+        widget = widgets.get(str(tab or '').lower())
+        if widget is None:
+            return {'status': 'failed', 'error': f"Unknown tab '{tab}'.",
+                    'tabs': list(self._AGENT_TABS)}
+        self.tabs.setCurrentWidget(widget)
+        return {'status': 'ok', 'tab': tab}
+
+    def _agent_steer(self, what, text=None):
+        if self._worker is None:
+            return {'status': 'failed', 'error': 'No run is going.'}
+        if what == 'note':
+            text = str(text or '').strip()
+            if not text:
+                return {'status': 'failed', 'error': "Provide 'text'."}
+            self._send_note(text)
+            return {'status': 'ok', 'note': text,
+                    'detail': 'Read before the next decision; the timeline shows what came of it.'}
+        if what == 'pause':
+            if self.steer.state() != SteerBar.RUNNING:
+                return {'status': 'ok', 'detail': 'Already pausing or paused.'}
+            self.steer.set_state(SteerBar.PAUSING)
+            self._request_pause(True)
+            return {'status': 'ok', 'detail': 'Pausing after the step that is running.'}
+        if self.steer.state() != SteerBar.PAUSED:
+            return {'status': 'failed', 'error': 'The run is not paused.'}
+        self._request_pause(False)
+        return {'status': 'ok', 'detail': 'Carrying on.'}
+
+    def _agent_stop(self):
+        if self._worker is None:
+            return {'status': 'failed', 'error': 'No run is going.'}
+        self._cancel()
+        return {'status': 'ok', 'detail': 'Stopping; inputs and partial files are kept.'}
+
+    def _agent_replay(self, path=None):
+        if not (path or self._last_replay):
+            return {'status': 'failed', 'error': 'No recorded run yet; give the path of a live_replay.json.'}
+        if not self.start_replay(str(path or '')):
+            return {'status': 'failed', 'error': self.status.text()}
+        return {'status': 'ok', 'detail': self.status.text()}

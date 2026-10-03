@@ -45,21 +45,21 @@ from .log_scale_axis import label_axis_in_physical_units
 #: How each verdict is drawn, as verdict -> (colour, symbol, filled). Kept gates
 #: are the only filled ones, so the picture reads before the legend does.
 _VERDICT_STYLE = {
-    "kept": ("#1f77b4", "o", True),
-    "flagged out": ("#9e9e9e", "o", False),
-    "noisy": ("#ef6c00", "s", False),
-    "after a noisy one": ("#ffb74d", "s", False),
-    "reversed sign": ("#c62828", "t", False),
+    "kept": ("#007aff", "o", True),
+    "flagged out": ("#8e8e93", "o", False),
+    "noisy": ("#ff9500", "s", False),
+    "after a noisy one": ("#ffb340", "s", False),
+    "reversed sign": ("#ff3b30", "t", False),
     "dummy": ("#555555", "x", False),
 }
 
 #: Per-moment line colour for the modelled response.
-_MODEL_COLOUR = {"LM": "#2e7d32", "HM": "#6a1b9a"}
+_MODEL_COLOUR = {"LM": "#34c759", "HM": "#af52de"}
 
 #: A gate the loader kept and the inversion then threw out. Drawn over the kept
 #: marker rather than replacing it, because both facts are true of that gate and
 #: the second one only exists once a fit has run.
-_REJECTED_PEN = "#d81b60"
+_REJECTED_PEN = "#ff2d55"
 
 _COLUMNS = ("Moment", "Gate", "Centre (us)", "Open (us)", "Close (us)",
             "Value (V)", "Rel. std", "Flag", "Verdict")
@@ -267,7 +267,7 @@ class EMGateView(QWidget):
         self._plot.addItem(pg.ErrorBarItem(
             x=log_t[pick], y=log_v[pick],
             top=np.log10(1.0 + std[pick]), bottom=-np.log10(floor),
-            pen=pg.mkPen("#1f77b4", width=1.0), beam=0.01))
+            pen=pg.mkPen("#007aff", width=1.0), beam=0.01))
 
     def _draw_negatives(self, log_t: np.ndarray, log_v: np.ndarray,
                         values: np.ndarray, drawable: np.ndarray,
@@ -282,7 +282,7 @@ class EMGateView(QWidget):
             return
         self._plot.addItem(pg.ScatterPlotItem(
             x=log_t[pick], y=log_v[pick], symbol="o", size=15,
-            pen=pg.mkPen("#c62828", width=1.2, style=Qt.DotLine), brush=None,
+            pen=pg.mkPen("#ff3b30", width=1.2, style=Qt.DotLine), brush=None,
             name=_label("negative value", labelled)))
 
     def _draw_windows(self, moment: Dict[str, Any], log_v: np.ndarray,

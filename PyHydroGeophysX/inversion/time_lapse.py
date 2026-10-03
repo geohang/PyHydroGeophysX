@@ -270,10 +270,12 @@ class TimeLapseERTInversion(InversionBase):
                 - relativeError: Relative data error
                 - lambda_rate: Lambda reduction rate
                 - lambda_min: Minimum lambda value
-                - save_memory: Use sparse operators and a float32 Jacobian to
-                  reduce RAM consumption. With 'spd_cholesky' the normal matrix
-                  is factored block by block in float64 in either mode, so this
-                  mainly halves the Jacobian's memory.
+                - save_memory: Keep the Jacobian in float32, and for a method
+                  other than 'spd_cholesky' build it and the normal matrix
+                  sparse rather than dense. The regularization operators are
+                  sparse in either mode, and with 'spd_cholesky' the normal
+                  matrix is factored block by block in float64 in either mode,
+                  so with the default solver this halves the Jacobian's memory.
                 - temporal_weighting: 'interval' (default) weights each adjacent
                   pair by the interval between the two surveys, so the temporal
                   constraint penalizes the rate of change; 'uniform' weights every
@@ -335,7 +337,7 @@ class TimeLapseERTInversion(InversionBase):
             'lambda_min': 1.0,
             'inversion_type': 'L2',  # 'L1', 'L2', or 'L1L2'
             'model_constraints':(0.0001,10000.0),  # min and max resistivity
-            'save_memory': False,  # use sparse operators to reduce RAM
+            'save_memory': False,  # float32 Jacobian; see the docstring
             # Stopping. Both were hard-coded (chi2 < 1.5, dPhi < 0.01 after 5
             # iterations); a lambda sweep needs them configurable so a flattened
             # misfit means the lambda is spent, not that the budget ran out.
@@ -487,13 +489,13 @@ class TimeLapseERTInversion(InversionBase):
         self._Wm_block = sp.csr_matrix(Wm_r, dtype=self.dtype)
         self._WmTWm_block = None
 
-        if self.use_sparse:
-            Wm_r = Wm_r.tocsr().astype(self.dtype, copy=False)
-            self.Wm = sparse_block_diag([Wm_r for _ in range(self.size)], format="csr", dtype=self.dtype)
-        else:
-            Wm_dense = Wm_r.todense().astype(self.dtype, copy=False)
-            self.Wm = dense_block_diag(*[Wm_dense for _ in range(self.size)]).astype(self.dtype, copy=False)
-        
+        # Sparse in either memory mode. Wm and Wt only ever multiply vectors -
+        # the normal matrix is built from the blocks above - and the dense mode
+        # used to store them dense: (N C) x (N n) and (N - 1) n x N n, almost
+        # all zeros. At the 15000 unknowns below which the studio keeps the
+        # dense mode that was 5.6 GB, and every product with them paid for it.
+        self.Wm = sparse_block_diag([self._Wm_block] * self.size, format="csr", dtype=self.dtype)
+
         # Create temporal regularization matrix. One weight per adjacent pair,
         # repeated over the cells of that block row. Weighting by the interval
         # turns the penalty from one on the raw difference between surveys into
@@ -523,28 +525,8 @@ class TimeLapseERTInversion(InversionBase):
         temporal_weights_full = np.repeat(pair_weights, cell_count).astype(
             self.dtype, copy=False)
         self._temporal_row_weights = temporal_weights_full
-        if self.use_sparse:
-            Wt = _sparse_temporal_difference_matrix(
-                cell_count,
-                self.size,
-                self.dtype,
-            )
-        else:
-            # Dense mode remains faster when constructed directly. Converting
-            # a very large sparse Kronecker product back to dense is costly.
-            Wt = np.zeros(
-                (cell_count * (self.size - 1), cell_count * self.size),
-                dtype=self.dtype,
-            )
-            identity = np.eye(cell_count, dtype=self.dtype)
-            for i in range(self.size - 1):
-                idx = i * cell_count
-                Wt[idx:idx + cell_count, idx:idx + cell_count] = identity
-                Wt[
-                    idx:idx + cell_count,
-                    idx + cell_count:idx + 2 * cell_count,
-                ] = -identity
-        self.Wt = diags(temporal_weights_full, dtype=self.dtype).dot(Wt)
+        Wt = _sparse_temporal_difference_matrix(cell_count, self.size, self.dtype)
+        self.Wt = diags(temporal_weights_full, dtype=self.dtype).dot(Wt).tocsr()
     
     def _normal_blocks(self, jacobian, data_weights, Lambda, alpha,
                        model_weights=None, temporal_weights=None, shift=0.0):

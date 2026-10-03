@@ -16,6 +16,9 @@ The workflow includes:
 
 This example serves as a comprehensive tutorial showing the integration
 of hydrological and geophysical modeling for watershed monitoring applications.
+
+**Run time:** about 12 minutes, with a memory peak of about 13.5 GB, on the
+maintainer's machine.
 """
 # sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_ERT_workflow_fig_01.png'
 

@@ -37,6 +37,16 @@ from .plotting import (
     plot_apparent_resistivity_timelapse,
 )
 
+# --- Magnetotellurics ---
+from .mt_plots import (
+    plot_mt_sounding,
+    plot_mt_model_1d,
+    plot_phase_tensor_pseudosection,
+    plot_mt_section,
+    plot_mt_pseudosection,
+    plot_mt_dimensionality,
+)
+
 # --- Animations ---
 from .animation import (
     create_timelapse_gif,
@@ -84,6 +94,13 @@ __all__ = [
     "plot_coverage",
     "plot_apparent_resistivity_pseudosection",
     "plot_apparent_resistivity_timelapse",
+    # Magnetotellurics
+    "plot_mt_sounding",
+    "plot_mt_model_1d",
+    "plot_phase_tensor_pseudosection",
+    "plot_mt_section",
+    "plot_mt_pseudosection",
+    "plot_mt_dimensionality",
     # Animations
     "create_timelapse_gif",
     "create_timelapse_mp4",

@@ -44,5 +44,6 @@ The agent stack includes dedicated support for SRT, FDEM, and joint ERT+SRT inve
    quick_start
    workflows
    agent_reference
+   adding_an_assistant
    troubleshooting
    overview

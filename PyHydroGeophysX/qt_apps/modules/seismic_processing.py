@@ -175,7 +175,7 @@ class SeismicProcessingModule(BaseModule):
         self._load_btn = load_btn
         formats = "SEG-Y, Geometrics DAT, SEG-2, NPY/CSV" if _SEISMIC_OK else "NPY/NPZ/CSV/TXT"
         hint = QLabel(f"Formats: {formats}")
-        hint.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        theme.set_tone(hint, "hint")
         layout.addWidget(hint)
         self._info = QLabel("No data loaded.")
         self._info.setWordWrap(True)
@@ -189,7 +189,7 @@ class SeismicProcessingModule(BaseModule):
         pos_btn.clicked.connect(self._load_geometry_dialog)
         layout.addWidget(pos_btn)
         self._geo_info = QLabel("Even spacing (no position file).")
-        self._geo_info.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        theme.set_tone(self._geo_info, "hint")
         self._geo_info.setWordWrap(True)
         layout.addWidget(self._geo_info)
 
@@ -257,7 +257,7 @@ class SeismicProcessingModule(BaseModule):
         pbox.addWidget(self._pick_mode)
         tip = QLabel("Tip: Ctrl+drag draws a line and picks every trace it crosses.")
         tip.setWordWrap(True)
-        tip.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        theme.set_tone(tip, "hint")
         pbox.addWidget(tip)
         tform = QFormLayout()
         self._threshold = QDoubleSpinBox()
@@ -322,7 +322,7 @@ class SeismicProcessingModule(BaseModule):
         acc = QLabel("Pick first breaks across shots and set each shot's x on the "
                      "Gather tab, or skip picking and upload pre-picked times.")
         acc.setWordWrap(True)
-        acc.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        theme.set_tone(acc, "hint")
         srcbox.addWidget(acc)
 
         up_row = QHBoxLayout()
@@ -346,7 +346,7 @@ class SeismicProcessingModule(BaseModule):
         # drift the moment either path forgets to update the other.
         self._tt_status = QLabel()
         self._tt_status.setWordWrap(True)
-        self._tt_status.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        theme.set_tone(self._tt_status, "hint")
         srcbox.addWidget(self._tt_status)
         layout.addWidget(src)
 
@@ -1090,14 +1090,14 @@ class SeismicProcessingModule(BaseModule):
             return
         from collections import defaultdict
 
-        # PyGIMLi-style first-pick plot: travel time vs ABSOLUTE geophone position,
+        # First-pick plot: travel time vs ABSOLUTE geophone position,
         # one connected branch per shot, each shot marked with a star at t = 0.
         by_shot = defaultdict(list)
         shot_x: Dict[int, float] = {}
         for p in picks:
             by_shot[int(p.source_id)].append((float(p.receiver_x), float(p.time_s) * 1000.0))
             shot_x[int(p.source_id)] = float(p.source_x)
-        colors = ["#1f77b4", "#d62728", "#2ca02c", "#9467bd", "#ff7f0e", "#17becf", "#8c564b", "#e377c2"]
+        colors = ["#007aff", "#ff3b30", "#34c759", "#af52de", "#ff9500", "#30b0c7", "#a2845e", "#ff2d55"]
         for i, shot in enumerate(sorted(by_shot, key=lambda s: shot_x.get(s, 0.0))):
             pts = sorted(by_shot[shot])  # by geophone position
             xs = [a for a, _ in pts]
@@ -1106,7 +1106,7 @@ class SeismicProcessingModule(BaseModule):
             self._tt_plot.plot(xs, ys, pen=pg.mkPen(color, width=1.5), symbol="o", symbolSize=5,
                                symbolBrush=color, symbolPen=None,
                                name=self._shot_legend(shot_x.get(shot, 0.0)))
-            # shot location on the t = 0 baseline (like pygimli drawFirstPicks)
+            # shot location on the t = 0 baseline
             self._tt_plot.plot([shot_x.get(shot, 0.0)], [0.0], pen=None, symbol="star",
                                symbolSize=15, symbolBrush=color, symbolPen=pg.mkPen("#222", width=0.8))
 
@@ -1292,7 +1292,7 @@ class SeismicProcessingModule(BaseModule):
                 continue
             by_shot[si].append((float(pos[gi, 0]), float(t[i])))
             shot_x[si] = float(pos[si, 0])
-        colors = ["#1f77b4", "#d62728", "#2ca02c", "#9467bd", "#ff7f0e", "#17becf", "#8c564b", "#e377c2"]
+        colors = ["#007aff", "#ff3b30", "#34c759", "#af52de", "#ff9500", "#30b0c7", "#a2845e", "#ff2d55"]
         for i, shot in enumerate(sorted(by_shot, key=lambda ss: shot_x.get(ss, 0.0))):
             pts = sorted(by_shot[shot])
             xs = [a for a, _ in pts]; ys = [b for _, b in pts]

@@ -75,6 +75,88 @@ _LEAST_SQUARES_METHODS = frozenset(
 _SPD_METHODS = frozenset({"spd_cholesky", "spd_cg"})
 
 
+class StackedSystem(splinalg.LinearOperator):
+    """A stacked least-squares system ``[B_1; B_2; ...]`` held as its row blocks.
+
+    An inversion's Gauss-Newton system, ``[W_d J; sqrt(lambda) W_m; ...]``, is a
+    dense Jacobian over a sparse regularization. Stacked into one dense array
+    the regularization rows cost C x n doubles - 1.5 n^2 for a pyGIMLi
+    smoothness operator, 2.7 GB at n = 15000 - and every product with the
+    system multiplied their zeros. Held as blocks, each block keeps the form it
+    was built in.
+
+    The least-squares solvers only multiply by the system and its transpose,
+    which this does as a ``LinearOperator``. ``normal_matrix`` gives an SPD
+    solver ``A^T A`` summed block by block, ``columns`` keeps a subset of the
+    columns (cells held fixed), and ``toarray`` assembles the dense array for a
+    solver that needs one, such as the GPU path.
+    """
+
+    def __init__(self, blocks: List[Any]) -> None:
+        self.blocks = [block.tocsr() if scipy.sparse.issparse(block)
+                       else np.asarray(block, dtype=float) for block in blocks]
+        widths = {int(block.shape[1]) for block in self.blocks}
+        if len(widths) != 1:
+            raise ValueError("stacked blocks must have the same number of columns")
+        self._edges = np.concatenate([[0], np.cumsum([block.shape[0] for block in self.blocks])])
+        super().__init__(dtype=np.dtype(float), shape=(int(self._edges[-1]), widths.pop()))
+
+    def _matvec(self, x: Any) -> Any:
+        x = np.asarray(x, dtype=float).reshape(-1)
+        return np.concatenate([np.asarray(block @ x).reshape(-1) for block in self.blocks])
+
+    def _rmatvec(self, y: Any) -> Any:
+        y = np.asarray(y, dtype=float).reshape(-1)
+        out = np.zeros(self.shape[1])
+        for block, lo, hi in zip(self.blocks, self._edges[:-1], self._edges[1:]):
+            out += np.asarray(block.T @ y[lo:hi]).reshape(-1)
+        return out
+
+    def _matmat(self, X: Any) -> Any:
+        X = np.asarray(X, dtype=float)
+        return np.vstack([np.asarray(block @ X) for block in self.blocks])
+
+    def _rmatmat(self, Y: Any) -> Any:
+        Y = np.asarray(Y, dtype=float)
+        out = np.zeros((self.shape[1], Y.shape[1]))
+        for block, lo, hi in zip(self.blocks, self._edges[:-1], self._edges[1:]):
+            out += np.asarray(block.T @ Y[lo:hi])
+        return out
+
+    def columns(self, keep: Any) -> "StackedSystem":
+        """The system restricted to the columns ``keep`` selects."""
+        return StackedSystem([block[:, keep] for block in self.blocks])
+
+    def normal_matrix(self) -> np.ndarray:
+        """``A^T A`` as a dense array, summed block by block."""
+        out = None
+        for block in self.blocks:
+            if scipy.sparse.issparse(block):
+                continue
+            out = block.T @ block if out is None else out + block.T @ block
+        if out is None:
+            out = np.zeros((self.shape[1], self.shape[1]))
+        for block in self.blocks:
+            if scipy.sparse.issparse(block):
+                gram = (block.T @ block).tocoo()
+                np.add.at(out, (gram.row, gram.col), gram.data)
+        return out
+
+    def column_norms(self) -> np.ndarray:
+        """The Euclidean norm of every column."""
+        squares = np.zeros(self.shape[1])
+        for block in self.blocks:
+            if scipy.sparse.issparse(block):
+                squares += np.asarray(block.multiply(block).sum(axis=0)).reshape(-1)
+            else:
+                squares += np.einsum("ij,ij->j", block, block)
+        return np.sqrt(squares)
+
+    def toarray(self) -> np.ndarray:
+        return np.vstack([block.toarray() if scipy.sparse.issparse(block) else block
+                          for block in self.blocks])
+
+
 def _info(*args: Any) -> None:
     """Emit solver progress on stderr.
 
@@ -104,9 +186,9 @@ def _scipy_lsmr_solve(A, b, maxiter=400, tol=1e-8, damp=0.0, **kwargs):
 
     LSMR is mathematically equivalent to applying MINRES to the normal
     equations and converges faster than LSQR for ill-conditioned systems.
+    LSMR takes a dense array, a sparse matrix or a ``LinearOperator`` as it
+    is; a dense system used to be copied into CSR first, 1.5 times its size.
     """
-    if not scipy.sparse.isspmatrix(A):
-        A = scipy.sparse.csr_matrix(A)
     b_flat = np.asarray(b, dtype=float).ravel()
     result = splinalg.lsmr(A, b_flat, atol=tol, btol=tol, maxiter=maxiter, damp=damp)
     x = result[0]
@@ -123,10 +205,10 @@ def _precond_lsmr_solve(A, b, maxiter=400, tol=1e-8, damp=0.0, **kwargs):
     Computes column norms d_j = ||A[:,j]|| and solves the preconditioned
     system (A D^{-1})(D x) = b, then recovers x = D^{-1} y.  This
     balances parameter sensitivities across the different block rows
-    (data, regularization, cross-gradient) of the stacked system.
+    (data, regularization, cross-gradient) of the stacked system. A sparse
+    system is scaled as a sparse matrix; a dense one or a ``StackedSystem``
+    through the operator product, rather than copied into CSR first.
     """
-    if not scipy.sparse.isspmatrix(A):
-        A = scipy.sparse.csr_matrix(A)
     b_flat = np.asarray(b, dtype=float).ravel()
 
     # LSMR's own damp would act on the scaled unknowns y = D x, i.e. penalise
@@ -135,20 +217,30 @@ def _precond_lsmr_solve(A, b, maxiter=400, tol=1e-8, damp=0.0, **kwargs):
     # [A; damp I] x = [b; 0] instead: the same problem as 'scipy_lsmr'.
     if damp:
         n_col = A.shape[1]
-        A = scipy.sparse.vstack(
-            [A, float(damp) * scipy.sparse.identity(n_col, format="csr")],
-            format="csr",
-        )
+        identity = float(damp) * scipy.sparse.identity(n_col, format="csr")
+        if scipy.sparse.issparse(A):
+            A = scipy.sparse.vstack([A, identity], format="csr")
+        else:
+            A = StackedSystem((A.blocks if isinstance(A, StackedSystem) else [A]) + [identity])
         b_flat = np.concatenate([b_flat, np.zeros(n_col)])
         damp = 0.0
 
     # Column-norm scaling
-    col_norms = scipy.sparse.linalg.norm(A, axis=0)
+    if scipy.sparse.issparse(A):
+        col_norms = scipy.sparse.linalg.norm(A, axis=0)
+    elif isinstance(A, StackedSystem):
+        col_norms = A.column_norms()
+    else:
+        A = np.asarray(A, dtype=float)
+        col_norms = np.linalg.norm(A, axis=0)
     col_norms = np.asarray(col_norms, dtype=float).ravel()
     col_norms[col_norms < 1e-12] = 1.0  # avoid division by zero
 
     D_inv = scipy.sparse.diags(1.0 / col_norms, format="csr")
-    A_scaled = A.dot(D_inv)
+    if scipy.sparse.issparse(A):
+        A_scaled = A.dot(D_inv)
+    else:
+        A_scaled = splinalg.aslinearoperator(A) @ splinalg.aslinearoperator(D_inv)
 
     result = splinalg.lsmr(A_scaled, b_flat, atol=tol, btol=tol, maxiter=maxiter, damp=damp)
     y = result[0]
@@ -222,7 +314,7 @@ def _warn_if_least_squares_on_symmetric(A: Any, method: Any) -> None:
     until the first warning fires.
     """
     global _SQUARE_LS_WARNED
-    if _SQUARE_LS_WARNED:
+    if _SQUARE_LS_WARNED or isinstance(A, splinalg.LinearOperator):
         return
     shape = getattr(A, "shape", None)
     if shape is None or len(shape) != 2 or shape[0] != shape[1] or shape[0] < 2:
@@ -765,8 +857,8 @@ def generalized_solver(
     if m == "precond_lsmr":
         return _precond_lsmr_solve(A, b, maxiter=maxiter, tol=tol, damp=damp)
     if m == "scipy_lsqr":
-        if not scipy.sparse.isspmatrix(A):
-            A = scipy.sparse.csr_matrix(A)
+        # LSQR takes a dense array, a sparse matrix or a LinearOperator as it
+        # is; a dense system used to be copied into CSR first.
         b_flat = np.asarray(b, dtype=float).ravel()
         result = splinalg.lsqr(A, b_flat, atol=tol, btol=tol, iter_lim=maxiter, damp=damp)
         return np.asarray(result[0], dtype=float).reshape(-1, 1)
@@ -781,6 +873,10 @@ def generalized_solver(
 
     # Convert A and b to appropriate arrays
     if use_gpu:
+        if isinstance(A, StackedSystem):
+            A = A.toarray()
+        elif isinstance(A, splinalg.LinearOperator):
+            raise TypeError("A LinearOperator is solved on the CPU; pass use_gpu=False.")
         if scipy.sparse.isspmatrix(A):
             A = csr_matrix(A)
         else:
@@ -789,7 +885,7 @@ def generalized_solver(
     else:
         if scipy.sparse.isspmatrix(A):
             A = A.tocsr()
-        else:
+        elif not isinstance(A, splinalg.LinearOperator):
             A = np.asarray(A)
         b = np.asarray(b)
 
@@ -850,7 +946,7 @@ def _matrix_multiply(A, v, use_gpu, parallel, n_jobs, xp):
         v = xp.asarray(v)
         return A.dot(v)
     else:
-        if scipy.sparse.isspmatrix(A):
+        if scipy.sparse.isspmatrix(A) or isinstance(A, splinalg.LinearOperator):
             return A.dot(v)
         else:
             if parallel and PARALLEL_AVAILABLE:

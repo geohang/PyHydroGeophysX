@@ -79,31 +79,41 @@ class RunActivity(QFrame):
     has just written so the work is visible as it happens. It is an overlay
     rather than a row in each module's layout: modules lay themselves out in
     several different ways, and none of them should have to know about this.
+
+    It carries the agent's orb (:mod:`..widgets.ai_presence`) on a translucent
+    material, so a panel being worked on by the assistant looks different from one the
+    user is driving. Its colours come from the studio stylesheet (``#runActivity``),
+    so it follows the Light and Dark appearances.
     """
 
     def __init__(self, page: QWidget) -> None:
+        from PyHydroGeophysX.qt_apps.widgets.ai_presence import AiOrb
+
         super().__init__(page)
         self.setObjectName("runActivity")
         self.setFrameShape(QFrame.StyledPanel)
-        self.setStyleSheet(
-            "#runActivity { background: rgba(23, 92, 145, 235); border: none; }"
-            "#runActivity QLabel { color: #ffffff; }")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 6, 10, 6)
         layout.setSpacing(4)
+        head = QHBoxLayout()
+        head.setSpacing(10)
+        self._orb = AiOrb(30)
+        head.addWidget(self._orb, 0, Qt.AlignTop)
         self._headline = QLabel()
         self._headline.setWordWrap(True)
-        layout.addWidget(self._headline)
+        head.addWidget(self._headline, 1)
+        layout.addLayout(head)
         self._note = QLabel(
             "The workflow runs in its own process and writes to the run folder; "
             "this panel's own controls are untouched.")
+        self._note.setObjectName("runActivityNote")
         self._note.setWordWrap(True)
-        self._note.setStyleSheet("font-size: 11px; color: #d8e6f2;")
         layout.addWidget(self._note)
         # A container widget rather than a bare nested layout: a QVBoxLayout's
         # heightForWidth does not account for a child layout, so the strip was
         # measured as though it held nothing and the figures were clipped away.
         self._strip_host = QWidget()
+        self._strip_host.setObjectName("runStrip")
         self._strip = QHBoxLayout(self._strip_host)
         self._strip.setContentsMargins(0, 0, 0, 0)
         self._strip.setSpacing(8)
@@ -113,17 +123,16 @@ class RunActivity(QFrame):
         # generated code means having read it, so it must be legible and
         # copyable, not summarised into a label.
         self._code = QPlainTextEdit()
+        self._code.setObjectName("runCode")
         self._code.setReadOnly(True)
         self._code.setLineWrapMode(QPlainTextEdit.NoWrap)
         self._code.setMaximumHeight(200)
-        self._code.setStyleSheet(
-            "background: #0f2b40; color: #e6f1f8; border: 1px solid #3d6a8c;"
-            "font-family: Consolas, 'DejaVu Sans Mono', monospace; font-size: 11px;")
         self._code.setVisible(False)
         layout.addWidget(self._code)
         self._opens = QHBoxLayout()
         self._opens.setSpacing(8)
         self._open_host = QWidget()
+        self._open_host.setObjectName("runOpens")
         self._open_host.setLayout(self._opens)
         self._open_host.setVisible(False)
         layout.addWidget(self._open_host)
@@ -131,6 +140,7 @@ class RunActivity(QFrame):
         self._choices = QHBoxLayout()
         self._choices.setSpacing(8)
         self._choice_host = QWidget()
+        self._choice_host.setObjectName("runChoices")
         self._choice_host.setLayout(self._choices)
         self._choice_host.setVisible(False)
         layout.addWidget(self._choice_host)
@@ -209,7 +219,8 @@ class RunActivity(QFrame):
         # replace the question the user is being asked with the last step's
         # description - leaving buttons under text that no longer explains them.
         if not self._pending:
-            self._headline.setText(f"<b>AQUAH is working here</b> — {step}"
+            self._orb.set_state("working")
+            self._headline.setText(f"<b>{_assistant_name()} is working here</b> — {step}"
                                    + (f"<br>{details}" if details else ""))
         figures = list(figures or [])
         if figures != self._shown:
@@ -267,7 +278,8 @@ class RunActivity(QFrame):
         # monospaced, scrollable, selectable box rather than into a label that
         # would wrap it into prose or a button that would hide it.
         head, code = _split_code(prompt)
-        self._headline.setText(f"<b>AQUAH is waiting for you</b><br>"
+        self._orb.set_state("waiting")
+        self._headline.setText(f"<b>{_assistant_name()} is waiting for you</b><br>"
                                f"{html.escape(head).replace(chr(10), '<br>')}")
         if code:
             self._code.setPlainText(code)
@@ -281,6 +293,7 @@ class RunActivity(QFrame):
     def clear_question(self) -> None:
         """Take the buttons away once answered, keeping the activity strip."""
         self._pending = False
+        self._orb.set_state("working")
         self._clear_choices()
         self._reposition()
 
@@ -294,6 +307,16 @@ class RunActivity(QFrame):
             if widget is not None:
                 widget.deleteLater()
         self._choice_host.setVisible(False)
+
+
+def _assistant_name() -> str:
+    """The name of the assistant the studio is working with."""
+    try:
+        from PyHydroGeophysX.agents.assistants import active
+
+        return html.escape(active().name)
+    except Exception:  # noqa: BLE001 - a label must not fail
+        return "The assistant"
 
 
 def _split_code(prompt: str) -> Tuple[str, str]:
@@ -609,7 +632,7 @@ class HomePage(BaseModule):
         intro = QLabel(
             "Select a module from the project tree on the left.<br><br>"
             "<b>Geophysical Data Processing</b>: Seismic, ERT, Mesh 3D, EM, "
-            "Gravity / Magnetics, and Joint Inversion.<br>"
+            "Gravity / Magnetics, Magnetotellurics, and Joint Inversion.<br>"
             "<b>Hydro → Geophysics</b>: load hydrologic model outputs, pick a "
             "profile, set survey geometry, and run forward modeling.<br>"
             "<b>Geophy → Hydrology</b>: derive subsurface structure and "

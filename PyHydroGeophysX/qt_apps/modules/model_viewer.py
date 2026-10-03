@@ -53,21 +53,23 @@ _RUN_ROLE = Qt.UserRole
 #: Symbol, colour and wording per Result Store status. A run list is scanned, not
 #: read, so the outcome has to survive peripheral vision.
 _STATUS_DISPLAY = {
-    "success": ("✓", "#2e7d32", "Succeeded"),
-    "failed": ("✕", "#c62828", "Failed"),
-    "cancelled": ("⊘", "#ef6c00", "Cancelled"),
-    "interrupted": ("⚠", "#ef6c00", "Interrupted"),
-    "incomplete": ("◐", "#ef6c00", "Incomplete"),
-    "running": ("●", "#1565c0", "Running"),
+    "success": ("✓", "#34c759", "Succeeded"),
+    "failed": ("✕", "#ff3b30", "Failed"),
+    "cancelled": ("⊘", "#ff9500", "Cancelled"),
+    "interrupted": ("⚠", "#ff9500", "Interrupted"),
+    "incomplete": ("◐", "#ff9500", "Incomplete"),
+    "running": ("●", "#0a84ff", "Running"),
     "unknown": ("?", "#616161", "Unknown"),
 }
 
 #: Metrics worth putting in the run summary before the raw record.
-_HEADLINE_METRICS = ("chi2", "rrms", "mean_chi2", "iterations", "n_data", "lambda")
+#: ``smoothing_alpha`` is the weight R2 and R3t chose themselves, in place of lambda.
+_HEADLINE_METRICS = ("chi2", "rrms", "mean_chi2", "iterations", "n_data", "lambda",
+                     "smoothing_alpha")
 
 #: Heading for runs this session produced that are not in the Project yet.
 _UNSAVED_GROUP = "⬤ Unsaved (this session)"
-_UNSAVED_COLOUR = "#1565c0"
+_UNSAVED_COLOUR = "#0a84ff"
 
 
 def _human_size(size: int) -> str:
@@ -1406,5 +1408,234 @@ class ModelViewerModule(BaseModule):
         self._size_cache.pop(record_id, None)
         self.refresh()
 
+
+    # -- agent command interface ----------------------------------------------
+    _AGENT_TABS = ("overview", "metrics", "visualization", "files")
+
+    def agent_describe(self) -> Dict[str, Any]:
+        return {
+            "module": self.module_key,
+            "title": self.module_title,
+            "state": self._agent_status(),
+            "actions": [
+                {"name": "get_status", "args": {},
+                 "desc": ("The Project shown, how many runs (and unsaved ones) it holds, "
+                          "the filter, and the run selected with its artifacts.")},
+                {"name": "list_runs",
+                 "args": {"status": "str (optional)", "search": "str (optional)",
+                          "limit": "int (default 30)"},
+                 "desc": "Runs, newest first: id, label, module, operation, status, when, unsaved."},
+                {"name": "select_run", "args": {"run": "id or label", "compare": "id or label (optional)"},
+                 "desc": ("Select a run to show its overview, metrics and results; with "
+                          "'compare', two runs side by side in Metrics.")},
+                {"name": "get_overview", "args": {"max_chars": "int (default 4000)"},
+                 "desc": "The selected run's overview as text: status, timing, numbers, record."},
+                {"name": "set_filter", "args": {"search": "str", "status": "str"},
+                 "desc": "Filter the run list by text and/or status (All statuses to clear)."},
+                {"name": "show_tab", "args": {"tab": list(self._AGENT_TABS)},
+                 "desc": "Show the Overview, Metrics, Visualization or Files tab."},
+                {"name": "show_artifact", "args": {"artifact": "index or name"},
+                 "desc": "Show one of the selected run's artifacts in Visualization."},
+                {"name": "set_label_notes", "args": {"label": "str", "notes": "str"},
+                 "desc": "Name the selected run and/or write its notes (current Project only)."},
+                {"name": "save_run", "args": {},
+                 "desc": "Add the selected unsaved run to the Project's history."},
+                {"name": "use_current_project", "args": {},
+                 "desc": "Show the Project that new computations are written to."},
+                {"name": "refresh", "args": {}, "desc": "Re-read the run history from disk."},
+            ],
+            "note": "Deleting or discarding a run is left to the user (Delete Run…).",
+        }
+
+    def agent_apply(self, action: str, args: Dict[str, Any]) -> Dict[str, Any]:
+        args = args or {}
+        handlers = {
+            "get_status": self._agent_status,
+            "list_runs": lambda: self._agent_list(args.get("status"), args.get("search"),
+                                                  args.get("limit", 30)),
+            "select_run": lambda: self._agent_select(args.get("run"), args.get("compare")),
+            "get_overview": lambda: self._agent_overview(args.get("max_chars", 4000)),
+            "set_filter": lambda: self._agent_filter(args),
+            "show_tab": lambda: self._agent_show_tab(args.get("tab")),
+            "show_artifact": lambda: self._agent_show_artifact(args.get("artifact")),
+            "set_label_notes": lambda: self._agent_label_notes(args),
+            "save_run": self._agent_save,
+            "use_current_project": lambda: (self.use_current_store(), self._agent_status())[1],
+            "refresh": lambda: (self.refresh(), self._agent_status())[1],
+        }
+        handler = handlers.get(action)
+        if handler is None:
+            return {"status": "failed", "error": f"Unknown action '{action}'.",
+                    "valid_actions": list(handlers)}
+        return handler()
+
+    def _agent_record(self, record: RunRecord) -> Dict[str, Any]:
+        return {"run_id": record.run_id, "label": _run_title(record),
+                "module": record.module_key, "operation": record.operation_id,
+                "status": record.status, "when": _local_time(record.created_at),
+                "took": _duration(record.created_at, record.finished_at),
+                "unsaved": record.run_id in self._unsaved_ids,
+                "folder": str(record.run_dir)}
+
+    def _agent_status(self) -> Dict[str, Any]:
+        current = self._current
+        return {
+            "status": "ok",
+            "project": str(self._store.root) if self._store is not None else None,
+            "read_only": bool(self._store.read_only) if self._store is not None else None,
+            "runs": len(self._records),
+            "unsaved": len(self._unsaved_ids),
+            "filter": {"search": self._search.text(), "status": self._status.currentText()},
+            "selected": self._agent_record(current) if current is not None else None,
+            "compared": [r.run_id for r in self._selected_records()[1:2]],
+            "artifacts": [self._artifact.itemText(i) for i in range(self._artifact.count())],
+            "artifact": self._artifact.currentText(),
+            "tab": self._AGENT_TABS[self._tabs.currentIndex()]
+            if 0 <= self._tabs.currentIndex() < len(self._AGENT_TABS) else "",
+        }
+
+    def _agent_list(self, status=None, search=None, limit=30) -> Dict[str, Any]:
+        records = sorted(self._records.values(), key=lambda r: r.created_at or "", reverse=True)
+        if status and status != "All statuses":
+            records = [r for r in records if r.status == status]
+        if search:
+            needle = str(search).lower()
+            records = [r for r in records if needle in " ".join(
+                [r.label, r.notes, r.module_key, r.operation_id, r.workflow_id, r.run_id]).lower()]
+        try:
+            limit = max(1, int(limit))
+        except (TypeError, ValueError):
+            limit = 30
+        return {"status": "ok", "total": len(records),
+                "runs": [self._agent_record(r) for r in records[:limit]]}
+
+    def _agent_resolve(self, run) -> tuple:
+        key = str(run or "").strip()
+        if not key:
+            return None, "Provide 'run' (an id or a label)."
+        if key in self._records:
+            return self._records[key], ""
+        found = [r for r in self._records.values()
+                 if key.lower() in (r.label or "").lower() or key.lower() in _run_title(r).lower()]
+        if len(found) == 1:
+            return found[0], ""
+        if not found:
+            return None, f"No run matches '{key}'."
+        return None, (f"'{key}' matches {len(found)} runs; use an id: "
+                      + ", ".join(r.run_id for r in found[:8]))
+
+    def _agent_items(self, run_ids) -> Dict[str, QTreeWidgetItem]:
+        wanted, found = set(run_ids), {}
+
+        def walk(item: QTreeWidgetItem) -> None:
+            run_id = item.data(0, _RUN_ROLE)
+            if run_id in wanted:
+                found[run_id] = item
+            for index in range(item.childCount()):
+                walk(item.child(index))
+
+        for index in range(self._tree.topLevelItemCount()):
+            walk(self._tree.topLevelItem(index))
+        return found
+
+    def _agent_select(self, run, compare=None) -> Dict[str, Any]:
+        records = []
+        for which in [run] + ([compare] if compare else []):
+            record, problem = self._agent_resolve(which)
+            if record is None:
+                return {"status": "failed", "error": problem}
+            records.append(record)
+        items = self._agent_items([r.run_id for r in records])
+        missing = [r.run_id for r in records if r.run_id not in items]
+        if missing:
+            return {"status": "failed", "error": f"Not in the list: {', '.join(missing)}."}
+        self._tree.blockSignals(True)
+        self._tree.clearSelection()
+        # The run asked for first is the one shown; the tree reports a
+        # selection in the order it was made.
+        for record in records:
+            item = items[record.run_id]
+            item.setHidden(False)
+            item.setSelected(True)
+        self._tree.scrollToItem(items[records[0].run_id])
+        self._tree.blockSignals(False)
+        self._selection_changed()
+        return self._agent_status()
+
+    def _agent_overview(self, max_chars=4000) -> Dict[str, Any]:
+        if self._current is None:
+            return {"status": "failed", "error": "No run is selected."}
+        try:
+            limit = max(200, int(max_chars))
+        except (TypeError, ValueError):
+            limit = 4000
+        text = self._overview.toPlainText()
+        return {"status": "ok", "run_id": self._current.run_id,
+                "overview": text[:limit], "truncated": len(text) > limit}
+
+    def _agent_filter(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        if "status" in args:
+            index = self._status.findText(str(args["status"] or "All statuses"))
+            if index < 0:
+                return {"status": "failed", "error": f"Unknown status '{args['status']}'.",
+                        "statuses": [self._status.itemText(i) for i in range(self._status.count())]}
+            self._status.setCurrentIndex(index)
+        if "search" in args:
+            self._search.setText(str(args["search"] or ""))
+        return self._agent_status()
+
+    def _agent_show_tab(self, tab) -> Dict[str, Any]:
+        name = str(tab or "").lower()
+        if name not in self._AGENT_TABS:
+            return {"status": "failed", "error": f"Unknown tab '{tab}'.", "tabs": list(self._AGENT_TABS)}
+        self._tabs.setCurrentIndex(self._AGENT_TABS.index(name))
+        return {"status": "ok", "tab": name}
+
+    def _agent_show_artifact(self, artifact) -> Dict[str, Any]:
+        names = [self._artifact.itemText(i) for i in range(self._artifact.count())]
+        if not names:
+            return {"status": "failed", "error": "The selected run has no artifacts to show."}
+        index = -1
+        if isinstance(artifact, (int, float)) or str(artifact).strip().isdigit():
+            index = int(artifact)
+        else:
+            key = str(artifact or "").lower()
+            matches = [i for i, name in enumerate(names) if key and key in name.lower()]
+            index = matches[0] if len(matches) == 1 else -1
+        if not 0 <= index < len(names):
+            return {"status": "failed", "error": f"No single artifact matches '{artifact}'.",
+                    "artifacts": names}
+        self._tabs.setCurrentIndex(self._AGENT_TABS.index("visualization"))
+        self._artifact.setCurrentIndex(index)
+        return {"status": "ok", "artifact": names[index]}
+
+    def _agent_label_notes(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        if self._current is None or self._store is None:
+            return {"status": "failed", "error": "No run is selected."}
+        if self._store.read_only or self._store is not self.state.results_store:
+            return {"status": "failed", "error": "This Project is open read-only."}
+        if "label" not in args and "notes" not in args:
+            return {"status": "failed", "error": "Give 'label' and/or 'notes'."}
+        if "label" in args:
+            self._label.setText(str(args["label"] or ""))
+        if "notes" in args:
+            self._notes.setPlainText(str(args["notes"] or ""))
+        run_id = self._current.run_id
+        self._save_metadata()
+        record = self._records.get(run_id)
+        return {"status": "ok", "run": self._agent_record(record) if record else run_id}
+
+    def _agent_save(self) -> Dict[str, Any]:
+        if self._current is None:
+            return {"status": "failed", "error": "No run is selected."}
+        if self._current.run_id not in self._unsaved_ids:
+            return {"status": "ok", "detail": "This run is already in the Project's history."}
+        if self._current.status == "running":
+            return {"status": "failed", "error": "A running computation cannot be saved yet."}
+        run_id = self._current.run_id
+        self._save_current_run()
+        saved = run_id not in self._unsaved_ids
+        return ({"status": "ok", "run_id": run_id} if saved else
+                {"status": "failed", "error": "The run could not be saved; see the log."})
 
 __all__ = ["ModelViewerModule"]

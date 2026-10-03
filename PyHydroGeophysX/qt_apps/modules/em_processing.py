@@ -450,7 +450,7 @@ class EMProcessingModule(BaseModule):
         grow.addWidget(self._geom_btn); grow.addStretch(1)
         gv.addLayout(grow)
         self._geom_info = QLabel("Geometry: uniform spacing.")
-        self._geom_info.setStyleSheet("color:#5a6a7a; font-size:8pt;"); self._geom_info.setWordWrap(True)
+        theme.set_tone(self._geom_info, "hint"); self._geom_info.setWordWrap(True)
         gv.addWidget(self._geom_info)
         self._geom_row.setVisible(False)
         v.addWidget(self._geom_row)
@@ -458,7 +458,7 @@ class EMProcessingModule(BaseModule):
         hint = QLabel("Choose a data format, then load a file or project folder. "
                       "FDEM: columns freq, real, imag. TDEM: columns time, response. "
                       "Several soundings are inverted into a resistivity section/map.")
-        hint.setWordWrap(True); hint.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        hint.setWordWrap(True); theme.set_tone(hint, "hint")
         v.addWidget(hint)
 
         # Picker for files that hold several soundings (drives the preview curve).
@@ -478,7 +478,7 @@ class EMProcessingModule(BaseModule):
         v.addWidget(self._info)
         self._example_note = QLabel("")
         self._example_note.setWordWrap(True)
-        self._example_note.setStyleSheet("color:#5a6a7a; font-size:8pt;")
+        theme.set_tone(self._example_note, "hint")
         self._example_note.setVisible(False)
         v.addWidget(self._example_note)
         return box
@@ -1293,7 +1293,7 @@ class EMProcessingModule(BaseModule):
         available = bool(status["available"])
         if available:
             self._backend_label.setText("Ready: SimPEG backend available.")
-            self._backend_label.setStyleSheet("color:#27734b; font-size:8pt;")
+            theme.set_tone(self._backend_label, "ok")
         else:
             self._backend_label.setText(
                 "Unavailable: install the geophysics extra (SimPEG + discretize). "

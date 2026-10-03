@@ -54,10 +54,10 @@ from PyHydroGeophysX.visualization.axis_units import set_section_axes, to_displa
 
 __all__ = ["MeshPreviewView", "engine_zone_note"]
 
-_OUTER_FACE = "#e4e7eb"
+_OUTER_FACE = "#e5e5ea"
 _OUTER_EDGE = "#a3acb7"
 _PARA_EDGE = "#7b8794"
-_ELECTRODE = "#1565ff"
+_ELECTRODE = "#007aff"
 _CUT_EDGE = "#1f2933"
 
 _NAME, _RHO, _FIXED, _CELLS = range(4)
@@ -92,7 +92,11 @@ def engine_zone_note(engine: str, time_lapse: bool, zones: Sequence[Dict[str, An
         return ("The ADTLERT time-lapse backend does not take zones: they will not "
                 "be applied. Use the in-house engine to invert with them.",
                 bool(zones))
-    name = "PyGIMLi" if engine == "pygimli" else "ADTLERT"
+    if engine in ("r2", "r3t"):
+        name = "R2" if engine == "r2" else "R3t"
+        return (f"{name} starts from the zone values and holds a fixed zone at its "
+                "value; the other cells are inverted." + cut, False)
+    name = {"pygimli": "PyGIMLi", "e4d": "E4D"}.get(engine, "ADTLERT")
     if any_fixed:
         return (f"{name} cannot hold a zone fixed: the fixed zones only set its "
                 "starting model and are inverted like any other cell. Use the "

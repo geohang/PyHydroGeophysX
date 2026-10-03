@@ -17,13 +17,15 @@ against the code it replaced instead of argued about. Set
 """
 
 import os
+import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import catalog  # noqa: F401 - importing registers every tool
 from .catalog import summarise_run
 from .context import RunContext
-from .controller import PROCEED, SKIP, STEP_LIMIT, STOP, STOPPED, run_controller
+from .controller import (DEFAULT_FINISH, DEFAULT_MAX_STEPS, PROCEED, SKIP, STEP_LIMIT,
+                         STOP, STOPPED, route_ahead, run_controller)
 from .modes import announcement, auto, completion
 
 #: Set to 1 to run the pre-controller implementation instead.
@@ -34,7 +36,7 @@ _ERT_KEYS = ("time_lapse_files", "timelapse_files", "data_file", "ert_file")
 
 #: What else a request can state that a run takes, when the caller did not.
 _STATED_KEYS = ("electrode_file", "seismic_file", "raw_seismic_file", "tdem_file",
-                "instrument", "petrophysical_params")
+                "mt_files", "instrument", "petrophysical_params")
 
 
 def adopt_request_inputs(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
@@ -136,12 +138,64 @@ def _make_ask(api_key: Optional[str], model: Optional[str], provider: str
     agent = _Controller("workflow_controller", api_key=api_key, model=model,
                         llm_provider=provider)
 
-    def ask(prompt: str) -> str:
+    def ask(prompt: str, on_text: Optional[Callable[[str], None]] = None) -> str:
         # Low temperature: this is a dispatch decision, not a piece of writing,
         # and a creative answer here means a tool name that does not exist.
-        return agent.query_llm(prompt, temperature=0.0, max_tokens=300)
+        # ``on_text`` streams the reply as it is written (see `drive`).
+        return agent.query_llm(prompt, temperature=0.0, max_tokens=300, on_text=on_text)
 
     return ask
+
+
+def _partial_field(text: str, key: str) -> str:
+    r"""The value of string field ``key`` in a JSON reply still being written.
+
+    The controller answers ``{"why": "...", "tool": "..."}`` with its reasoning
+    first, so the reasoning can be shown as the model writes it - the reply is
+    not valid JSON until it is complete, hence this rather than a parser.
+
+    >>> _partial_field('{"why": "The model fits; next is the conv', 'why')
+    'The model fits; next is the conv'
+    >>> _partial_field('{"why": "Say \\"done\\".", "tool": "x"}', 'why')
+    'Say "done".'
+    >>> _partial_field('{"tool": "x"', 'why')
+    ''
+    """
+    import re
+
+    found = re.search(r'"%s"\s*:\s*"' % re.escape(key), text or "")
+    if not found:
+        return ""
+    out, i, raw = [], found.end(), text
+    escapes = {"n": "\n", "t": "\t", '"': '"', "\\": "\\", "/": "/"}
+    while i < len(raw):
+        char = raw[i]
+        if char == '"':
+            break
+        if char == "\\":
+            if i + 1 >= len(raw):
+                break                       # an escape cut in half by the stream
+            out.append(escapes.get(raw[i + 1], raw[i + 1]))
+            i += 2
+            continue
+        out.append(char)
+        i += 1
+    return "".join(out)
+
+
+def _streams(ask: Callable[..., str]) -> bool:
+    """Whether ``ask`` takes ``on_text`` - an older or a test one may not."""
+    import inspect
+
+    try:
+        parameters = inspect.signature(ask).parameters.values()
+    except (TypeError, ValueError):
+        return False
+    return any(p.name == "on_text" or p.kind is p.VAR_KEYWORD for p in parameters)
+
+
+#: Public name for assistants building their own workflow on :func:`drive`.
+make_ask = _make_ask
 
 
 def announced(on_step: Callable[..., Optional[str]],
@@ -202,11 +256,195 @@ def announced(on_step: Callable[..., Optional[str]],
     return hook
 
 
+def drive(ctx: RunContext, *, tools: Optional[Dict[str, Any]] = None,
+          ask: Optional[Callable[[str], str]] = None,
+          progress_callback: Optional[Callable[..., None]] = None,
+          on_step: Optional[Callable[..., Optional[str]]] = None,
+          on_event: Optional[Callable[[Dict[str, Any]], None]] = None,
+          prompt: Optional[str] = None, finish: str = DEFAULT_FINISH,
+          recovery: bool = True, max_steps: int = DEFAULT_MAX_STEPS) -> RunContext:
+    """Run the controller over ``tools``, telling the caller about every step.
+
+    This is the agent loop any assistant runs on (see
+    :mod:`PyHydroGeophysX.agents.assistants`): the controller picks each step
+    from the tools whose inputs exist, and every step is announced before it
+    runs and reported after it ends - through ``progress_callback`` for a
+    progress line, and through ``on_event`` as structured events, which is what
+    the studio's live timeline, approvals and chat narration are built on. An
+    assistant that drives its tools through this gets all of that for nothing.
+
+    Parameters
+    ----------
+    ctx : RunContext
+        The run: goal, configuration, output folder and settings. Mutated in
+        place and returned.
+    tools : dict, optional
+        The assistant's tool registry, name to :class:`~.tools.Tool`. Defaults
+        to the global registry, which holds AQUAH's tools.
+    ask : callable, optional
+        Takes a prompt, returns the model's reply. Without it the tools run in
+        dependency order.
+    progress_callback : callable, optional
+        ``(step, fraction, detail, module)``; the fourth argument is optional.
+    on_step : callable, optional
+        The pause policy, as for :func:`run_workflow`.
+    on_event : callable, optional
+        Receives ``phase="start"`` and ``phase="done"`` events for every step,
+        and a ``phase="route"`` event - ``ahead``, the steps still between the
+        run and ``finish`` as things stand (:func:`~.controller.route_ahead`) -
+        before the first step and after each one. While the model decides,
+        ``phase="thought"`` events carry its reasoning as it writes it, when
+        ``ask`` takes ``on_text`` (as :func:`make_ask`'s does).
+    prompt, finish, recovery, max_steps
+        Passed to :func:`~.controller.run_controller`: the decision prompt, the
+        artifact that has to exist before the run may finish, whether a failed
+        step may be retried with changed settings, and the step limit.
+
+    Returns
+    -------
+    RunContext
+        ``ctx``, with the steps taken and what they produced.
+
+    Raises
+    ------
+    None
+        Tool failures are recorded as steps; display callbacks that raise are
+        ignored.
+
+    Examples
+    --------
+    >>> from .tools import Tool
+    >>> tools = {'load': Tool('load', 'Load.', lambda c: ('Loaded.', {'data': 1}),
+    ...                       produces=('data',)),
+    ...          'summarise': Tool('summarise', 'Summarise.',
+    ...                            lambda c: ('Done.', {'summary': 1}),
+    ...                            requires=('data',), produces=('summary',))}
+    >>> seen = []
+    >>> ctx = drive(RunContext('goal'), tools=tools, finish='summary',
+    ...             on_event=seen.append)
+    >>> [s.tool for s in ctx.steps]
+    ['load', 'summarise']
+    >>> [(e['phase'], e.get('tool', '')) for e in seen[:4]]
+    [('route', ''), ('start', 'load'), ('done', 'load'), ('route', '')]
+    >>> [step['tool'] for step in seen[0]['ahead']], seen[3]['ahead'][0]['tool']
+    (['load', 'summarise'], 'summarise')
+    """
+    def emit(event):
+        """Hand a step event to ``on_event``; a display must not stop a run."""
+        if on_event is None:
+            return
+        try:
+            on_event(event)
+        except Exception:  # noqa: BLE001 - a display must not stop a run
+            pass
+
+    def announce(event):
+        """Tell the caller where the run is working, before it starts working.
+
+        The progress callback is how the desktop learns which studio module to
+        bring forward, so this fires before the step rather than after it - by
+        the time a step reports its result the user has missed it happening.
+        Callbacks that predate the fourth argument still work: it is optional.
+        """
+        emit(dict(event, phase="start"))
+        if progress_callback is None:
+            return
+        # How far along the run is. The honest answer is that nothing knows:
+        # the loop decides each step from what the previous one produced, so
+        # the total is not available until the run is over. Two attempts at a
+        # denominator both failed - DEFAULT_MAX_STEPS crawled to 31% across a
+        # complete six-step run and then jumped to 100, and counting currently
+        # runnable tools made the bar go *backwards* (95%, 95%, 73%) because
+        # only one tool can run before anything is loaded.
+        #
+        # So this is a monotone curve that approaches but never reaches the
+        # end, which is what an indeterminate run actually looks like. It
+        # claims no precision it does not have.
+        fraction = min(0.95, 0.1 + 0.85 * (1.0 - 0.7 ** event["step"]))
+        try:
+            progress_callback(event["label"], fraction, event["reason"],
+                              event["module"])
+        except TypeError:
+            progress_callback(event["label"], fraction, event["reason"])
+
+    def thinking(question):
+        """``ask``, with the model's reasoning sent on as it writes it.
+
+        Each ``phase="thought"`` event carries the reasoning so far, not the
+        newest fragment, so a listener that misses one loses nothing. Sent at
+        most every 50 ms: a display has no use for every token.
+        """
+        sent = {"text": "", "at": 0.0}
+
+        def on_text(reply):
+            why = _partial_field(reply, "why")
+            now = time.monotonic()
+            if why and why != sent["text"] and now - sent["at"] >= 0.05:
+                sent.update(text=why, at=now)
+                emit({"phase": "thought", "text": why})
+
+        reply = ask(question, on_text=on_text)
+        why = _partial_field(reply or "", "why")
+        if why and why != sent["text"]:
+            emit({"phase": "thought", "text": why})
+        return reply
+
+    def show_route(_ctx):
+        """Tell the caller which steps still stand between the run and its end.
+
+        Recomputed from the run as it is now, so it follows the controller
+        rather than predicting it: a step the model chose out of order, or one
+        that failed, changes the route the next time it is drawn.
+        """
+        if on_event is None:
+            return
+        try:
+            ahead = route_ahead(_ctx, tools, finish)
+        except Exception:  # noqa: BLE001 - a projection must not stop a run
+            return
+        emit({"phase": "route", "ahead": ahead, "step": len(_ctx.steps)})
+
+    def report_result(_ctx, step):
+        """Say what the step concluded, as soon as it has concluded it.
+
+        The announcement above can only say what is about to be attempted. The
+        studio's module panels hold their own state and the workflow runs
+        headless in another process, so without this the user watching a panel
+        the run had navigated to saw an empty tool and no evidence anything had
+        happened.
+        """
+        event = completion(_ctx, step, tools)
+        emit(dict(event, phase="done"))
+        show_route(_ctx)
+        if progress_callback is None:
+            return
+        if not event["summary"]:
+            return
+        fraction = min(0.95, 0.1 + 0.85 * (1.0 - 0.7 ** event["step"]))
+        try:
+            progress_callback(event["label"], fraction, event["summary"],
+                              event["module"])
+        except TypeError:
+            progress_callback(event["label"], fraction, event["summary"])
+
+    # One loop, two policies: without a pause hook this runs to the end, with
+    # one it stops before each step and asks. Both announce the same events, so
+    # the app follows along either way.
+    show_route(ctx)
+    streamed = thinking if (ask is not None and on_event is not None and _streams(ask)) else ask
+    run_controller(ctx, ask=streamed, max_steps=max_steps, tools=tools,
+                   on_step=announced(on_step, announce) if on_step else auto(announce),
+                   on_result=report_result, recovery=recovery, prompt=prompt,
+                   finish=finish)
+    return ctx
+
+
 def run_workflow(workflow_config: Dict[str, Any], api_key: Optional[str],
                  llm_model: Optional[str], llm_provider: str, output_dir: Any,
                  progress_callback: Optional[Callable[[str, float, str], None]] = None,
                  on_step: Optional[Callable[..., Optional[str]]] = None,
-                 ask_user: Optional[Callable[[Dict[str, Any]], str]] = None
+                 ask_user: Optional[Callable[[Dict[str, Any]], str]] = None,
+                 on_event: Optional[Callable[[Dict[str, Any]], None]] = None
                  ) -> Tuple[Dict[str, Any], list, str, Dict[str, str]]:
     """Run one workflow and return what its callers expect.
 
@@ -230,6 +468,14 @@ def run_workflow(workflow_config: Dict[str, Any], api_key: Optional[str],
         ``{"question", "options", "default"}`` and returning an option id.
         Without it a run takes the stated default and records that nobody was
         asked, so a headless run never hangs waiting for an answer.
+    on_event : callable, optional
+        Receives each step as a structured event: the
+        :func:`~PyHydroGeophysX.agents.runtime.modes.announcement` with
+        ``phase="start"`` before it runs, and its
+        :func:`~PyHydroGeophysX.agents.runtime.modes.completion` with
+        ``phase="done"`` after. The progress callback flattens both into one
+        line of text; this keeps the controller's reason, the step's status and
+        what it produced apart, which is what the studio's live timeline shows.
 
     Returns
     -------
@@ -274,61 +520,8 @@ def run_workflow(workflow_config: Dict[str, Any], api_key: Optional[str],
     for note in adopted:
         ctx.note(note)
 
-    def announce(event):
-        """Tell the caller where the run is working, before it starts working.
-
-        The progress callback is how the desktop learns which studio module to
-        bring forward, so this fires before the step rather than after it - by
-        the time a step reports its result the user has missed it happening.
-        Callbacks that predate the fourth argument still work: it is optional.
-        """
-        if progress_callback is None:
-            return
-        # How far along the run is. The honest answer is that nothing knows:
-        # the loop decides each step from what the previous one produced, so
-        # the total is not available until the run is over. Two attempts at a
-        # denominator both failed - DEFAULT_MAX_STEPS crawled to 31% across a
-        # complete six-step run and then jumped to 100, and counting currently
-        # runnable tools made the bar go *backwards* (95%, 95%, 73%) because
-        # only one tool can run before anything is loaded.
-        #
-        # So this is a monotone curve that approaches but never reaches the
-        # end, which is what an indeterminate run actually looks like. It
-        # claims no precision it does not have.
-        fraction = min(0.95, 0.1 + 0.85 * (1.0 - 0.7 ** event["step"]))
-        try:
-            progress_callback(event["label"], fraction, event["reason"],
-                              event["module"])
-        except TypeError:
-            progress_callback(event["label"], fraction, event["reason"])
-
-    def report_result(_ctx, step):
-        """Say what the step concluded, as soon as it has concluded it.
-
-        The announcement above can only say what is about to be attempted. The
-        studio's module panels hold their own state and the workflow runs
-        headless in another process, so without this the user watching a panel
-        the run had navigated to saw an empty tool and no evidence anything had
-        happened.
-        """
-        if progress_callback is None:
-            return
-        event = completion(_ctx, step)
-        if not event["summary"]:
-            return
-        fraction = min(0.95, 0.1 + 0.85 * (1.0 - 0.7 ** event["step"]))
-        try:
-            progress_callback(event["label"], fraction, event["summary"],
-                              event["module"])
-        except TypeError:
-            progress_callback(event["label"], fraction, event["summary"])
-
-    # One loop, two policies: without a pause hook this runs to the end, with
-    # one it stops before each step and asks. Both announce the same events, so
-    # the app follows along either way.
-    run_controller(ctx, ask=_make_ask(api_key, llm_model, llm_provider),
-                   on_step=announced(on_step, announce) if on_step else auto(announce),
-                   on_result=report_result)
+    drive(ctx, ask=_make_ask(api_key, llm_model, llm_provider),
+          progress_callback=progress_callback, on_step=on_step, on_event=on_event)
 
     failed = [s for s in ctx.steps if s.status == "failed"]
     # A step that failed is reported, not hidden: the request may have named the

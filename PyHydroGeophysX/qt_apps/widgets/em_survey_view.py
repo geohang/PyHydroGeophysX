@@ -522,10 +522,10 @@ class EMSignalNoiseView(QWidget):
                 continue
             plot.addItem(pg.PlotDataItem(
                 x=distance, y=_running_mean(signal, width),
-                pen=pg.mkPen("#1f77b4", width=2), name="|signal|"))
+                pen=pg.mkPen("#007aff", width=2), name="|signal|"))
             plot.addItem(pg.PlotDataItem(
                 x=distance, y=_running_mean(noise, width),
-                pen=pg.mkPen("#c62828", width=2), name="absolute noise"))
+                pen=pg.mkPen("#ff3b30", width=2), name="absolute noise"))
             ratio = np.nanmedian(signal) / np.nanmedian(noise)
             notes.append("%s median SNR %.1f" % (name, ratio))
         self._caption.setText("%d stations   |   %s" % (

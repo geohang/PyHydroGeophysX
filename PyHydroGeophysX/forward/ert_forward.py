@@ -444,10 +444,12 @@ def ertforandjac2(
     solved = fob.response(rhomodel) if response is None else response
     fob.createJacobian(rhomodel)
     J = fob.jacobian()
+    # gmat2numpy builds a new array, so it is scaled in place: two more D x n
+    # copies of every survey's Jacobian, one per operation, used to be made.
     J = pg.utils.gmat2numpy(J)
-    J = derivative.T * J
+    J *= derivative.reshape(1, -1)
     dr = np.array(solved, dtype=float)
-    J = J/dr.reshape(dr.shape[0],1)
+    J /= dr.reshape(-1, 1)
     if with_response:
         return np.log(dr), J, dr
     dr = np.log(dr)

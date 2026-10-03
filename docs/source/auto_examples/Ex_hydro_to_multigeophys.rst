@@ -25,16 +25,18 @@ snapshot, builds a common mesh, and simulates ERT, SRT, TDEM, FDEM, and gravity
 responses. Each processing and forward-modeling stage is kept separate so the
 intermediate hydrological profiles and mesh properties can be inspected.
 
-.. GENERATED FROM PYTHON SOURCE LINES 11-13
+**Memory:** the run peaks at about 8 GB on the maintainer's machine.
+
+.. GENERATED FROM PYTHON SOURCE LINES 13-15
 
 Step 1: Import packages and prepare the output folder
 -----------------------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 15-16
+.. GENERATED FROM PYTHON SOURCE LINES 17-18
 
 sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_hydro_to_multigeophys_fig_01.png'
 
-.. GENERATED FROM PYTHON SOURCE LINES 16-51
+.. GENERATED FROM PYTHON SOURCE LINES 18-53
 
 .. code-block:: Python
 
@@ -74,7 +76,7 @@ sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_hydro_to_multigeophys_f
     )
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 52-57
+.. GENERATED FROM PYTHON SOURCE LINES 54-59
 
 .. code-block:: Python
 
@@ -84,12 +86,12 @@ sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_hydro_to_multigeophys_f
     rng_seed = 7
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 58-60
+.. GENERATED FROM PYTHON SOURCE LINES 60-62
 
 Step 2: Load one hydrological snapshot and extract a 2D profile
 ---------------------------------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 62-78
+.. GENERATED FROM PYTHON SOURCE LINES 64-80
 
 .. code-block:: Python
 
@@ -110,7 +112,7 @@ Step 2: Load one hydrological snapshot and extract a 2D profile
     print(f"Layer boundaries:        {bot.shape[0] + 1}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 79-101
+.. GENERATED FROM PYTHON SOURCE LINES 81-103
 
 .. code-block:: Python
 
@@ -137,14 +139,14 @@ Step 2: Load one hydrological snapshot and extract a 2D profile
     L_profile = np.asarray(interpolator.L_profile, dtype=float)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 102-106
+.. GENERATED FROM PYTHON SOURCE LINES 104-108
 
 Fill missing values along the profile
 -------------------------------------
 
 Missing values are filled independently within each model layer using linear interpolation along the profile. A single valid value is extended across that layer.
 
-.. GENERATED FROM PYTHON SOURCE LINES 108-157
+.. GENERATED FROM PYTHON SOURCE LINES 110-159
 
 .. code-block:: Python
 
@@ -198,12 +200,12 @@ Missing values are filled independently within each model layer using linear int
     n_layers, n_profile = water_content_profile.shape
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 158-160
+.. GENERATED FROM PYTHON SOURCE LINES 160-162
 
 Step 3: Build the common 2D mesh
 --------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 162-184
+.. GENERATED FROM PYTHON SOURCE LINES 164-186
 
 .. code-block:: Python
 
@@ -230,7 +232,7 @@ Step 3: Build the common 2D mesh
     print(f"Mesh cells:     {mesh.cellCount()}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 185-215
+.. GENERATED FROM PYTHON SOURCE LINES 187-217
 
 .. code-block:: Python
 
@@ -265,12 +267,12 @@ Step 3: Build the common 2D mesh
     print(dict(zip(unique_markers, marker_counts)))
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 216-218
+.. GENERATED FROM PYTHON SOURCE LINES 218-220
 
 Interpolate water content and porosity to the mesh
 --------------------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 220-270
+.. GENERATED FROM PYTHON SOURCE LINES 222-272
 
 .. code-block:: Python
 
@@ -325,7 +327,7 @@ Interpolate water content and porosity to the mesh
     porosity_mesh = mesh_profiles["porosity"]
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 271-290
+.. GENERATED FROM PYTHON SOURCE LINES 273-292
 
 .. code-block:: Python
 
@@ -349,12 +351,12 @@ Interpolate water content and porosity to the mesh
     )
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 291-293
+.. GENERATED FROM PYTHON SOURCE LINES 293-295
 
 Visualize the hydrological profile
 ----------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 295-328
+.. GENERATED FROM PYTHON SOURCE LINES 297-330
 
 .. code-block:: Python
 
@@ -392,7 +394,7 @@ Visualize the hydrological profile
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 329-335
+.. GENERATED FROM PYTHON SOURCE LINES 331-337
 
 The extracted snapshot preserves topography and vertical water-content
 structure along the selected profile.
@@ -401,12 +403,12 @@ structure along the selected profile.
    :width: 900px
    :align: center
 
-.. GENERATED FROM PYTHON SOURCE LINES 337-339
+.. GENERATED FROM PYTHON SOURCE LINES 339-341
 
 Step 4: Simulate ERT and SRT on the common mesh
 -----------------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 341-368
+.. GENERATED FROM PYTHON SOURCE LINES 343-370
 
 .. code-block:: Python
 
@@ -438,7 +440,7 @@ Step 4: Simulate ERT and SRT on the common mesh
     }
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 369-391
+.. GENERATED FROM PYTHON SOURCE LINES 371-393
 
 .. code-block:: Python
 
@@ -465,7 +467,7 @@ Step 4: Simulate ERT and SRT on the common mesh
     print(f"SRT data count: {srt_data.size()}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 392-415
+.. GENERATED FROM PYTHON SOURCE LINES 394-417
 
 .. code-block:: Python
 
@@ -493,12 +495,12 @@ Step 4: Simulate ERT and SRT on the common mesh
     print(f"ERT data count: {ert_data.size()}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 416-418
+.. GENERATED FROM PYTHON SOURCE LINES 418-420
 
 Compare the ERT and SRT models and responses
 --------------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 420-458
+.. GENERATED FROM PYTHON SOURCE LINES 422-460
 
 .. code-block:: Python
 
@@ -541,7 +543,7 @@ Compare the ERT and SRT models and responses
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 459-465
+.. GENERATED FROM PYTHON SOURCE LINES 461-467
 
 The ERT and SRT models and measurements come from the same mesh and
 hydrological state.
@@ -550,12 +552,12 @@ hydrological state.
    :width: 900px
    :align: center
 
-.. GENERATED FROM PYTHON SOURCE LINES 467-469
+.. GENERATED FROM PYTHON SOURCE LINES 469-471
 
 Step 5: Select profile stations for TDEM, FDEM, and gravity
 -----------------------------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 471-489
+.. GENERATED FROM PYTHON SOURCE LINES 473-491
 
 .. code-block:: Python
 
@@ -578,12 +580,12 @@ Step 5: Select profile stations for TDEM, FDEM, and gravity
     print(f"Profile stations: {len(x_station)}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 490-492
+.. GENERATED FROM PYTHON SOURCE LINES 492-494
 
 Simulate the pseudo-2D TDEM response
 ------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 494-519
+.. GENERATED FROM PYTHON SOURCE LINES 496-521
 
 .. code-block:: Python
 
@@ -613,12 +615,12 @@ Simulate the pseudo-2D TDEM response
     print(f"TDEM relative L2 noise: {tdem_relative_l2:.4f}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 520-522
+.. GENERATED FROM PYTHON SOURCE LINES 522-524
 
 Simulate the pseudo-2D FDEM response
 ------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 524-552
+.. GENERATED FROM PYTHON SOURCE LINES 526-554
 
 .. code-block:: Python
 
@@ -651,12 +653,12 @@ Simulate the pseudo-2D FDEM response
     print(f"FDEM relative L2 noise: {fdem_relative_l2:.4f}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 553-555
+.. GENERATED FROM PYTHON SOURCE LINES 555-557
 
 Simulate the pseudo-2D gravity response
 ---------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 557-576
+.. GENERATED FROM PYTHON SOURCE LINES 559-578
 
 .. code-block:: Python
 
@@ -680,12 +682,12 @@ Simulate the pseudo-2D gravity response
     )
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 577-579
+.. GENERATED FROM PYTHON SOURCE LINES 579-581
 
 Compare the TDEM, FDEM, and gravity responses
 ---------------------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 581-640
+.. GENERATED FROM PYTHON SOURCE LINES 583-642
 
 .. code-block:: Python
 
@@ -749,7 +751,7 @@ Compare the TDEM, FDEM, and gravity responses
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 641-647
+.. GENERATED FROM PYTHON SOURCE LINES 643-649
 
 The pseudo-2D panels summarize the TDEM, FDEM, and gravity responses along
 the same hydrological profile.
@@ -758,7 +760,7 @@ the same hydrological profile.
    :width: 900px
    :align: center
 
-.. GENERATED FROM PYTHON SOURCE LINES 649-653
+.. GENERATED FROM PYTHON SOURCE LINES 651-655
 
 Summary
 -------

@@ -100,7 +100,7 @@ class StructuralConstraint:
         correlation_lengths: Sequence[float] = (4.0, 4.0),
         threshold: float = 1e-2,
         binarize: bool = True,
-    ) -> np.ndarray:
+    ) -> csr_matrix:
         """
         Build the neighborhood/correlation matrix used by cross-gradient.
 
@@ -120,74 +120,113 @@ class StructuralConstraint:
             Entries with absolute value below this threshold are zeroed.
         binarize
             If ``True``, convert nonzero entries to 1.
+
+        Returns
+        -------
+        scipy.sparse.csr_matrix
+            The ``n x n`` matrix, sparse. ``Wm^T Wm`` of a smoothness operator
+            has a handful of entries per row; it used to be formed as a dense
+            array, 0.2 GB at 5,000 cells and growing as n^2.
         """
         src = str(source).lower().strip()
 
         if src == "smoothness":
             if Wm is None:
                 raise ValueError("Wm is required for source='smoothness'.")
-            Wm_arr = Wm.toarray() if issparse(Wm) else np.asarray(Wm, dtype=float)
-            RCM = np.asarray(Wm_arr.T.dot(Wm_arr), dtype=float)
+            Wm_sp = csr_matrix(Wm, dtype=float)
+            RCM = csr_matrix(Wm_sp.T @ Wm_sp)
         elif src in ("covariance", "geostat"):
+            # pyGIMLi returns the covariance as a dense array; it is thresholded
+            # and kept sparse, so the dense copy lives only for this call.
             corr = tuple(float(v) for v in correlation_lengths)
             cov = np.asarray(pg.utils.covarianceMatrix(mesh, I=list(corr)), dtype=float)
-            RCM = cov.copy()
+            if threshold > 0:
+                cov[np.abs(cov) < float(threshold)] = 0.0
+            RCM = csr_matrix(cov)
+            del cov
         else:
             raise ValueError("source must be 'smoothness', 'covariance', or 'geostat'.")
 
+        RCM.sum_duplicates()
         if threshold > 0:
-            RCM[np.abs(RCM) < float(threshold)] = 0.0
+            RCM.data[np.abs(RCM.data) < float(threshold)] = 0.0
+        RCM.eliminate_zeros()
         if binarize:
-            RCM = (RCM != 0).astype(float)
+            RCM.data[:] = 1.0
         return RCM
 
     @staticmethod
     def build_linearized_cross_gradient_blocks(
-        RCM: np.ndarray,
+        RCM: Any,
         X: np.ndarray,
         model_a: np.ndarray,
         model_b: np.ndarray,
         mode: str = "direct",
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[csr_matrix, csr_matrix]:
         """
         Build linearized cross-gradient blocks ``B1`` and ``B2``.
 
         ``B1`` multiplies model_a and ``B2`` multiplies model_b. The resulting
         penalty terms are ``||B1 m_a||^2`` and ``||B2 m_b||^2``.
+
+        Row ``i`` is the weighted least-squares gradient estimate over the
+        cells ``j`` with ``RCM[i, j] != 0``, so ``B1`` and ``B2`` have the
+        sparsity of ``RCM`` and are returned as CSR matrices. ``RCM`` may be
+        dense or sparse. Each row is assembled from its own neighbourhood:
+        ``X^T W X`` with ``W = diag(RCM[i])`` used to be formed from an
+        ``n x n`` ``W`` for every row, O(n^3) per call, on dense ``n x n``
+        blocks.
         """
-        R = np.asarray(RCM, dtype=float)
-        if R.ndim != 2 or R.shape[0] != R.shape[1]:
+        if issparse(RCM):
+            R = csr_matrix(RCM)
+        else:
+            R = np.asarray(RCM, dtype=float)
+            if R.ndim != 2:
+                raise ValueError("RCM must be a square 2D matrix.")
+            R = csr_matrix(R)
+        if R.shape[0] != R.shape[1]:
             raise ValueError("RCM must be a square 2D matrix.")
 
         X_arr = np.asarray(X, dtype=float)
         if X_arr.ndim != 2 or X_arr.shape[0] != R.shape[0] or X_arr.shape[1] < 2:
             raise ValueError("X must have shape (n_cells, >=2) and align with RCM.")
 
-        ma = np.asarray(model_a, dtype=float).reshape(-1, 1)
-        mb = np.asarray(model_b, dtype=float).reshape(-1, 1)
+        ma = np.asarray(model_a, dtype=float).ravel()
+        mb = np.asarray(model_b, dtype=float).ravel()
         if ma.shape[0] != R.shape[0] or mb.shape[0] != R.shape[0]:
             raise ValueError("model_a and model_b sizes must match RCM size.")
 
         m = str(mode).lower().strip()
-        if m == "direct":
-            R_work = (R != 0).astype(float)
-        elif m in {"spatial", "covariance"}:
-            R_work = R.copy()
-        else:
+        if m not in {"direct", "spatial", "covariance"}:
             raise ValueError("mode must be 'direct' or 'spatial'.")
 
+        # Row neighbourhoods are the stored nonzeros, in column order. The
+        # caller's matrix is copied only when it needs tidying.
+        if not R.has_canonical_format or np.any(R.data == 0):
+            R = R.astype(float, copy=True)
+            R.sum_duplicates()
+            R.eliminate_zeros()
+        # 'direct' weights every neighbour by 1, as the dense (R != 0) did.
+        weights = np.ones(R.nnz) if m == "direct" else np.asarray(R.data, dtype=float)
+        indptr, indices = R.indptr, R.indices
+
         n_cells = R.shape[0]
-        B1 = np.zeros((n_cells, n_cells), dtype=float)
-        B2 = np.zeros((n_cells, n_cells), dtype=float)
+        b1 = np.zeros(R.nnz, dtype=float)
+        b2 = np.zeros(R.nnz, dtype=float)
 
         for i in range(n_cells):
-            cc = np.asarray(R_work[i, :], dtype=float).ravel()
+            lo, hi = indptr[i], indptr[i + 1]
+            cc = weights[lo:hi]
             if not np.any(np.abs(cc) > 0):
                 continue
+            cols = indices[lo:hi]
 
-            W = np.diag(cc)
-            XtWX = X_arr.T.dot(W.T).dot(X_arr)
-            XtWW = X_arr.T.dot(W.T).dot(W)
+            # X^T W X and X^T W W on the neighbourhood: the columns of
+            # X^T W W outside it are zero, and so are those of Xbar.
+            Xi = X_arr[cols]
+            XW = Xi * cc[:, None]
+            XtWX = XW.T.dot(Xi)
+            XtWW = (XW * cc[:, None]).T
 
             try:
                 Xbar = np.linalg.solve(XtWX, XtWW)
@@ -195,14 +234,19 @@ class StructuralConstraint:
                 Xbar = np.linalg.pinv(XtWX).dot(XtWW)
 
             Xbar1 = Xbar[0:2, :]
-            g1 = Xbar1.dot(ma)
-            g2 = Xbar1.dot(mb)
+            g1 = Xbar1.dot(ma[cols])
+            g2 = Xbar1.dot(mb[cols])
             g1[np.abs(g1) < 1e-8] = 0.0
             g2[np.abs(g2) < 1e-8] = 0.0
 
-            B1[i, :] = Xbar1[0, :] * float(g2[1, 0]) - Xbar1[1, :] * float(g2[0, 0])
-            B2[i, :] = -(Xbar1[0, :] * float(g1[1, 0]) - Xbar1[1, :] * float(g1[0, 0]))
+            b1[lo:hi] = Xbar1[0, :] * float(g2[1]) - Xbar1[1, :] * float(g2[0])
+            b2[lo:hi] = -(Xbar1[0, :] * float(g1[1]) - Xbar1[1, :] * float(g1[0]))
 
+        shape = (n_cells, n_cells)
+        B1 = csr_matrix((b1, indices.copy(), indptr.copy()), shape=shape)
+        B2 = csr_matrix((b2, indices.copy(), indptr.copy()), shape=shape)
+        B1.eliminate_zeros()
+        B2.eliminate_zeros()
         return B1, B2
 
     @staticmethod

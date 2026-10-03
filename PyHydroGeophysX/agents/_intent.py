@@ -195,6 +195,33 @@ def names_tdem(text: str) -> bool:
             or names_unnegated(text, "transient electromagnetic", prefix=True))
 
 
+#: "mt" or "amt" in any case but the upper one: "Mt." is a mountain, "MT" the method.
+_NOT_MT = re.compile(r"(?<![A-Za-z0-9])(?!A?MT(?![A-Za-z0-9]))[Aa]?[Mm][Tt](?![A-Za-z0-9])")
+
+
+def names_mt(text: str) -> bool:
+    """Whether ``text`` asks for magnetotellurics, under any of the names a request uses.
+
+    Examples
+    --------
+    >>> names_mt("Invert the MT sites in edi/")
+    True
+    >>> names_mt("an AMT sounding beside the well")
+    True
+    >>> names_mt("大地电磁测深数据反演")
+    True
+    >>> names_mt("ERT only, no MT")
+    False
+    >>> names_mt("the survey on Mt. Hood")
+    False
+    """
+    text = str(text or "")
+    upper_only = _NOT_MT.sub("--", text)
+    return (names_unnegated(upper_only, "mt") or names_unnegated(upper_only, "amt")
+            or names_unnegated(text, "magnetotelluric", prefix=True)
+            or names_unnegated(text, "大地电磁"))
+
+
 def infer_instrument(text: str) -> Optional[str]:
     """The ERT instrument that ``text`` names, or ``None`` when it names none.
 

@@ -32,6 +32,8 @@ _UNSUPPORTED_INPUTS = {
     "em_file": "TDEM",
     "raw_seismic_file": "raw SEG-Y seismic processing",
     "seismic_file": "seismic travel-time inversion",
+    "mt_files": "magnetotelluric inversion",
+    "mt_file": "magnetotelluric inversion",
 }
 
 #: The keys that name the ERT data of a run.
@@ -467,6 +469,7 @@ class AgentCoordinator:
             "seismic_file": {".dat", ".txt"},
             "raw_seismic_file": {".sgy", ".segy"},
             "tdem_file": {".dat", ".txt", ".csv"},
+            "mt_file": {".edi", ".xml", ".zmm", ".zrr", ".zss", ".j"},
             "csv_file": {".csv"},
             "metadata_file": {".json"},
         }
@@ -1072,11 +1075,16 @@ class AgentCoordinator:
                     wc_results = ckpt
                     self._log("  → Loaded from checkpoint")
                 else:
+                    from ._uncertainty import realizations
+
+                    # A water content always carries its uncertainty: a single
+                    # draw reported a standard deviation of exactly zero, which
+                    # reads as certainty about a conversion nobody calibrated.
                     wc_results = self._execute_agent('water_content', {
                         'inversion_results': _water_content_input(inversion_results),
                         'petrophysical_params': config.get('petrophysical_params', {}),
-                        'uncertainty_analysis': config.get('run_uncertainty', False),
-                        'n_realizations': config.get('n_realizations', 100)
+                        'uncertainty_analysis': True,
+                        'n_realizations': realizations(config, note=self._log)
                     })
                     self._save_checkpoint('convert_to_wc', wc_results)
                 self.workflow_state['data']['water_content'] = wc_results

@@ -593,6 +593,58 @@ def _hydro_parameters(p: Mapping[str, Any]) -> Sequence[str]:
     )
 
 
+def _mt_process_parameters(p: Mapping[str, Any]) -> Sequence[str]:
+    known = dict(p)
+    reader = dict(known.pop("reader", None) or {})
+    remote_reader = dict(known.pop("remote_reader", None) or {})
+    station = known.pop("station", None)
+    return (
+        f"READER = {reader!r}"
+        "   # reader options: format, sample_rate, components, start/end, calibration",
+        f"REMOTE_READER = {remote_reader!r}"
+        "   # the same for the remote reference recording",
+        f"STATION = {station!r}"
+        "   # site name written to the EDI; None keeps the recording's own",
+        f"PROCESSING = {known!r}"
+        "   # ProcessingConfig: window length, decimation, Huber/redescending cuts, min_points",
+    )
+
+
+def _mt_invert_1d_parameters(p: Mapping[str, Any]) -> Sequence[str]:
+    known = dict(p)
+    petrophysics = known.pop("petrophysics", None)
+    tem_geometry = dict(known.pop("tem_geometry", None) or {})
+    tem_inversion = dict(known.pop("tem_inversion", None) or {})
+    if known.get("period_range"):
+        known["period_range"] = tuple(float(v) for v in known["period_range"])
+    return (
+        f"OCCAM = {known!r}"
+        "   # mode ('det', 'xy', 'yx' or 'both'), layers, target RMS, static_shift, error floor",
+        f"TEM_GEOMETRY = {tem_geometry!r}"
+        "   # loop of the TEM sounding, when there is one: radius, height, waveform",
+        f"TEM_INVERSION = {tem_inversion!r}"
+        "   # its error model, as em1d.tdem_invert takes it",
+        f"PETROPHYSICS = {petrophysics!r}"
+        "   # Waxman-Smits rhos, n, porosity, sigma_sur for water content; None skips it",
+    )
+
+
+def _mt_profile_parameters(p: Mapping[str, Any]) -> Sequence[str]:
+    known = dict(p)
+    positions = known.pop("positions", None)
+    strike = known.pop("strike", None)
+    if known.get("modes"):
+        known["modes"] = [str(m).lower() for m in known["modes"]]
+    return (
+        f"POSITIONS = {positions!r}"
+        "   # distance of each site along the profile (m); None measures it from the coordinates",
+        f"STRIKE = {strike!r}"
+        "   # geoelectric strike, degrees clockwise from north; None takes the profile normal",
+        f"INVERSION = {known!r}"
+        "   # modes, frequencies, error floor, iterations, smallness and beta schedule",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Workflow definitions
 # ---------------------------------------------------------------------------
@@ -1584,6 +1636,257 @@ WALKTHROUGHS["joint_inversion.run"] = Walkthrough(
     reading=(
         "inversion.joint_api.get_joint_capabilities - which method pairs and strategies exist",
         "inversion.joint_ert_srt                    - the ERT/SRT cross-gradient solver",
+    ),
+)
+
+
+_MT_IMPORTS = _NUMPY_IMPORTS + (
+    "from PyHydroGeophysX.workflows import mt",
+)
+
+
+WALKTHROUGHS["mt.process"] = Walkthrough(
+    summary=(
+        "Magnetotelluric processing: an instrument's time series to an impedance "
+        "and tipper, written as EDI and EMTF XML."
+    ),
+    imports=_MT_IMPORTS + (
+        "from PyHydroGeophysX.visualization import plot_mt_sounding",
+    ),
+    parameters=_mt_process_parameters,
+    steps=(
+        Step(
+            title="Read the time series",
+            note=(
+                "The reader recognises Phoenix MTU-5C and legacy MTU files, Metronix ATS, "
+                "Zonge Z3D and LEMI-424 by their contents; a .npz is a container of runs "
+                "saved earlier with mt.save_runs. Each run lists its channels and whether "
+                "a calibration was found for them: an uncalibrated coil gives a wrong "
+                "impedance at every period, so check that line before processing."
+            ),
+            code=(
+                "def read_runs(source, options):\n"
+                "    if source is None:\n"
+                "        return []\n"
+                "    source = Path(source)\n"
+                '    if source.suffix.lower() == ".npz":\n'
+                "        return mt.load_runs(source)\n"
+                "    return mt.read_timeseries(source, **options)\n"
+                "\n"
+                "runs = read_runs(recording, READER)\n"
+                'remote_runs = read_runs(globals().get("remote"), REMOTE_READER)\n'
+                "for run in runs + remote_runs:\n"
+                "    print(run.summary())"
+            ),
+        ),
+        Step(
+            title="Estimate the transfer function",
+            note=(
+                "Each run is cut into tapered windows, decimated level by level and "
+                "Fourier transformed; within each frequency band a robust regression "
+                "(Huber weights, then a redescending cut) solves E = Z H, using the "
+                "remote site's fields as instruments when there is one, so that noise "
+                "local to the site does not bias Z downward. The errors come from the "
+                "regression's residuals; bands with fewer than min_points independent "
+                "estimates are dropped."
+            ),
+            code=(
+                'bands = mt.read_band_setup(band_setup) if "band_setup" in globals() else None\n'
+                "config = mt.ProcessingConfig(**PROCESSING, **({\"bands\": bands} if bands else {}))\n"
+                "tf = mt.process_mt(runs, remote=remote_runs or None, config=config,\n"
+                "                   station=STATION, log=print)\n"
+                "\n"
+                'print(f"{tf.n_frequencies} frequencies, periods "\n'
+                '      f"{tf.period.min():.3g} to {tf.period.max():.3g} s")\n'
+                'mt.write_edi(tf, OUT_DIR / f"{tf.station or \'site\'}.edi")\n'
+                'mt.write_emtf_xml(tf, OUT_DIR / f"{tf.station or \'site\'}.xml")'
+            ),
+        ),
+        Step(
+            title="Plot the sounding",
+            note=(
+                "Apparent resistivity and phase of the two off-diagonal elements. Over "
+                "layered ground they lie on top of each other and change smoothly with "
+                "period; scattered points with large error bars mark the dead bands "
+                "(around 1 s and 1 kHz) where the natural signal is weakest."
+            ),
+            code=(
+                "fig = plot_mt_sounding(tf)\n"
+                'fig.savefig(OUT_DIR / "mt_sounding.png", dpi=150)'
+            ),
+        ),
+    ),
+    reading=(
+        "mt.read_timeseries - instrument formats and their calibration files",
+        "mt.ProcessingConfig - every processing setting and its default",
+        "mt.phase_tensor     - dimensionality and strike from the result",
+    ),
+)
+
+
+WALKTHROUGHS["mt.invert_1d"] = Walkthrough(
+    summary=(
+        "Occam 1D inversion of a magnetotelluric site, optionally with static shift, "
+        "a TEM sounding and a water-content profile."
+    ),
+    imports=_MT_IMPORTS + (
+        "from PyHydroGeophysX.visualization import plot_mt_model_1d, plot_mt_sounding",
+    ),
+    parameters=_mt_invert_1d_parameters,
+    steps=(
+        Step(
+            title="Load the site",
+            note=(
+                "EDI, EMTF XML and Z- or J-files all read into the same transfer "
+                "function. A TEM sounding from the same place, when there is one, is "
+                "read as gate times and response: TEM measures no electric field, so it "
+                "is free of the static shift that galvanic distortion puts on MT."
+            ),
+            code=(
+                "tf = mt.read_transfer_function(transfer_function)\n"
+                "\n"
+                "tem_sounding = None\n"
+                'if "tem" in globals():\n'
+                '    if Path(tem).suffix.lower() == ".npz":\n'
+                "        archive = np.load(tem)\n"
+                '        times, response = archive["times"], archive["response"]\n'
+                "    else:\n"
+                "        rows = []\n"
+                '        for line in Path(tem).read_text().splitlines():\n'
+                "            try:\n"
+                '                rows.append([float(v) for v in line.replace(",", " ").split()[:2]])\n'
+                "            except ValueError:\n"
+                "                continue   # a header line\n"
+                "        times, response = np.asarray([r for r in rows if len(r) == 2]).T\n"
+                '    tem_sounding = {"data": {"times": times, "response": response},\n'
+                '                    "geometry": TEM_GEOMETRY, "inversion": TEM_INVERSION}\n'
+                'print(f"{tf.station}: {tf.n_frequencies} frequencies"\n'
+                '      + (", with a TEM sounding" if tem_sounding else ""))'
+            ),
+        ),
+        Step(
+            title="Invert for the smoothest model",
+            note=(
+                "Occam's method looks for the smoothest layered model whose misfit "
+                "reaches the target RMS, sweeping the trade-off parameter at every "
+                "iteration. With static_shift on, each mode also gets one multiplier of "
+                "its apparent resistivity. MT alone cannot tell such a multiplier from a "
+                "change of resistivity everywhere, so its estimate is only relative "
+                "between the modes; the TEM sounding is what pins the absolute level."
+            ),
+            code=(
+                "result = mt.occam1d(tf, tem=tem_sounding, log=print, **OCCAM)\n"
+                "\n"
+                'print(f"RMS {result.rms:.2f} after {result.iterations} iterations")\n'
+                "for mode, factor in result.static_shift.items():\n"
+                '    print(f"  static shift {mode}: {factor:.2f}")'
+            ),
+        ),
+        Step(
+            title="Water content",
+            note=(
+                "Waxman-Smits turns each layer's resistivity into a water content, "
+                "given the pore-water resistivity rhos, the saturation exponent n, the "
+                "porosity and the surface conductivity. They can be one value or one "
+                "per layer; the profile is only as good as those numbers."
+            ),
+            code=(
+                "water = None\n"
+                "if PETROPHYSICS:\n"
+                "    water = mt.water_content_profile(result, **PETROPHYSICS)\n"
+                '    print("water content, top 5 layers:", np.round(water["water_content"][:5], 3))'
+            ),
+        ),
+        Step(
+            title="Plot the fit and the model",
+            note=(
+                "The predicted curve should run through the data within their error "
+                "bars. The model is reliable down to about one skin depth at the longest "
+                "period; below that it only returns to the starting resistivity."
+            ),
+            code=(
+                "sounding = result.sounding\n"
+                'fit = {sounding.modes[0]: (1 / sounding.frequency, 10 ** result.predicted["log_rho_a"],\n'
+                '                           result.predicted["phase"])}\n'
+                "fig = plot_mt_sounding(tf, predicted=fit)\n"
+                'fig.savefig(OUT_DIR / "mt1d_fit.png", dpi=150)\n'
+                'fig = plot_mt_model_1d({"Occam 1D": result})    # length_unit="ft" for feet\n'
+                'fig.savefig(OUT_DIR / "mt1d_model.png", dpi=150)'
+            ),
+        ),
+    ),
+    reading=(
+        "mt.occam1d                - every option, including fixed layers and bounds",
+        "mt.estimate_static_shift  - the shift against a reference resistivity instead",
+        "mt.niblett_bostick        - a quick depth transform to compare against",
+    ),
+)
+
+
+WALKTHROUGHS["mt.invert_profile"] = Walkthrough(
+    summary=(
+        "2D inversion of a magnetotelluric profile: the sites' TE and TM impedances "
+        "to a resistivity section, on SimPEG."
+    ),
+    imports=_MT_IMPORTS + (
+        "from PyHydroGeophysX.visualization import plot_mt_section",
+    ),
+    parameters=_mt_profile_parameters,
+    steps=(
+        Step(
+            title="Load the sites and place them on the profile",
+            note=(
+                "Every site should share one set of frequencies. Without given positions "
+                "the sites are projected onto their best-fitting straight line; the "
+                "impedances are then rotated to the strike, which by default is taken "
+                "normal to that line. Check the strike against the phase tensors first: "
+                "a 2D inversion of data rotated to the wrong strike mixes TE and TM."
+            ),
+            code=(
+                "sites = transfer_functions if isinstance(transfer_functions, list) else [transfer_functions]\n"
+                "tfs = [mt.read_transfer_function(path) for path in sites]\n"
+                "if POSITIONS is not None:\n"
+                "    positions, azimuth = np.asarray(POSITIONS, dtype=float), None\n"
+                "else:\n"
+                "    positions, azimuth = mt.station_distances(tfs)\n"
+                "strike = STRIKE if STRIKE is not None else (\n"
+                "    0.0 if azimuth is None else (azimuth + 90.0) % 180.0)\n"
+                'print(f"{len(tfs)} sites over {np.ptp(positions):.0f} m, strike {strike:.0f} deg")'
+            ),
+        ),
+        Step(
+            title="Invert",
+            note=(
+                "SimPEG solves the 2D Maxwell equations on a tensor mesh with air above "
+                "and padding around the sites; TE is the electric field along strike and "
+                "TM the field across it. The inversion is a Gauss-Newton search on log "
+                "conductivity whose trade-off parameter is cooled until the misfit "
+                "reaches the target; an RMS near 1 means the section explains the data "
+                "to their errors."
+            ),
+            code=(
+                "result = mt.invert_profile(tfs, positions, strike=strike, log=print, **INVERSION)\n"
+                "\n"
+                'print(f"RMS {result.rms:.2f} after {len(result.history)} iterations")'
+            ),
+        ),
+        Step(
+            title="Plot the section",
+            note=(
+                "Read the section down to roughly half the profile length: deeper, the "
+                "sites see too little of the ground to place structure beneath them."
+            ),
+            code=(
+                'fig = plot_mt_section(result, title=f"2D MT, RMS {result.rms:.2f}")'
+                '   # length_unit="ft" for feet\n'
+                'fig.savefig(OUT_DIR / "mt2d_section.png", dpi=150)'
+            ),
+        ),
+    ),
+    reading=(
+        "mt.build_profile_mesh - the mesh, its cell sizes and padding",
+        "mt.forward_profile    - the forward response of any section",
+        "mt.phase_tensor       - choosing the strike before inverting",
     ),
 )
 

@@ -21,11 +21,18 @@ continues. The model sees its own mistake in the transcript on the next turn,
 which is how it corrects. Raising instead would end the run over a typo.
 """
 
+import json
 from typing import Any, Callable, Dict, List, Optional
 
 from ..._internal.utils import parse_json_object
-from .context import RunContext
+from . import steering
+from .context import PROJECTED, RunContext
 from .tools import TOOLS, invoke, menu, runnable_tools
+
+#: The artifact that has to exist before the controller may finish. AQUAH's
+#: runs end with a report; an assistant whose last product is something else -
+#: a reviewed report, say - passes its own key as ``finish``.
+DEFAULT_FINISH = "report_files"
 
 #: A run that has taken this many steps is looping rather than progressing.
 #: Generous: a time-lapse run with a retry and a report is about eight.
@@ -39,10 +46,10 @@ the single next action.
 Actions you can take now:
 {menu}
 
-Reply with JSON only - no prose, no code fence:
-{{"tool": "<name from the list>", "why": "<one short sentence>"}}
+Reply with JSON only - no prose, no code fence. Give your reasoning first:
+{{"why": "<one or two sentences: what the run has shown so far, and so what to do next>", "tool": "<name from the list>"}}
 or, when the goal has been met and a report has been written:
-{{"done": true, "why": "<one short sentence>"}}
+{{"why": "<one short sentence>", "done": true}}
 
 Rules:
 - Choose only from the list above. A tool not listed cannot run yet, usually
@@ -57,16 +64,37 @@ Rules:
 
 
 def _parse_choice(reply: Any) -> Optional[Dict[str, Any]]:
-    """The controller's decision, or None when the reply is unusable."""
+    """The controller's decision, or None when the reply is unusable.
+
+    ``settings`` is kept when the reply carries a dict of them: it is how a
+    decision follows a note from the user (:data:`STEERING_PROMPT`).
+    """
     answer = parse_json_object(reply)
     if not isinstance(answer, dict):
         return None
+    extra = ({"settings": answer["settings"]}
+             if isinstance(answer.get("settings"), dict) and answer["settings"] else {})
     if answer.get("done"):
-        return {"done": True, "why": str(answer.get("why", ""))}
+        return {"done": True, "why": str(answer.get("why", "")), **extra}
     tool = answer.get("tool")
     if not isinstance(tool, str) or not tool.strip():
         return None
-    return {"tool": tool.strip(), "why": str(answer.get("why", ""))}
+    return {"tool": tool.strip(), "why": str(answer.get("why", "")), **extra}
+
+
+#: Added to the decision prompt when the user has just said something. The
+#: settings it may change are the recovery's (:data:`~.recovery.ADJUSTABLE`):
+#: numbers and switches between behaviours already implemented, never a path.
+STEERING_PROMPT = """
+The user has just told you, while the run is going:
+{notes}
+Follow it where you can. If it asks for a different setting, add the changed
+keys to your JSON as "settings", using these current values as the template
+(change only what the user asked for):
+{settings}
+If it asks for something none of the actions or settings can do, say so in
+"why" and carry on with the best next action.
+"""
 
 
 def next_by_policy(ctx: RunContext,
@@ -112,6 +140,79 @@ def next_by_policy(ctx: RunContext,
     return None
 
 
+def route_ahead(ctx: RunContext, tools: Optional[Dict[str, Any]] = None,
+                finish: str = DEFAULT_FINISH, limit: int = 12) -> List[Dict[str, str]]:
+    """The steps still between the run as it stands and its final product.
+
+    Worked out on a copy of the run: :func:`next_by_policy` takes a step, the
+    step is assumed to make what it declares, and so on until ``finish``
+    exists or nothing more can run. It is the dependency order applied to
+    what the run actually has, not a promise - the controller may choose
+    differently, a step may fail - which is why the desktop recomputes it after
+    every step and calls it the route *as things stand*. The products of a
+    projected step are :data:`~.context.PROJECTED`, which the ``when`` gates
+    that look inside an artifact recognise.
+
+    Parameters
+    ----------
+    ctx : RunContext
+        The run as it stands; not modified.
+    tools : dict, optional
+        The registry to project over; the global one by default.
+    finish : str
+        The artifact that ends the run.
+    limit : int
+        At most this many steps are projected.
+
+    Returns
+    -------
+    list of dict
+        ``{"tool", "label", "module"}`` per step, in order. Empty once the
+        final product exists, or when nothing can run.
+
+    Raises
+    ------
+    None
+
+    Examples
+    --------
+    >>> from .tools import Tool
+    >>> chain = {'load': Tool('load', 'Load.', lambda c: ('', {}), produces=('data',),
+    ...                       label='Load data'),
+    ...          'report': Tool('report', 'Report.', lambda c: ('', {}),
+    ...                         requires=('data',), produces=('report_files',),
+    ...                         label='Write the report')}
+    >>> [step['label'] for step in route_ahead(RunContext('x'), chain)]
+    ['Load data', 'Write the report']
+    >>> ctx = RunContext('x')
+    >>> ctx.put('data', [1])
+    >>> _ = ctx.begin('load'); ctx.finish()
+    >>> [step['tool'] for step in route_ahead(ctx, chain)]
+    ['report']
+    """
+    goal = finish or DEFAULT_FINISH
+    shadow = RunContext(ctx.goal, ctx.config, ctx.output_dir)
+    shadow.artifacts = dict(ctx.artifacts)
+    shadow.steps = list(ctx.steps)
+    projected: List[Dict[str, str]] = []
+    while len(projected) < limit and not shadow.has(goal):
+        planned = {step["tool"] for step in projected}
+        # A repeatable tool stays on offer after it has run; on paper it runs once.
+        options = [tool for tool in runnable_tools(shadow, tools)
+                   if tool.name not in planned]
+        if not options:
+            break
+        tool = options[0]
+        shadow.begin(tool.name, "projected")
+        shadow.finish()
+        for key in tool.produces:
+            if not shadow.has(key):
+                shadow.artifacts[key] = PROJECTED
+        projected.append({"tool": tool.name, "label": tool.label or tool.name,
+                          "module": tool.module or ""})
+    return projected
+
+
 #: What an ``on_step`` hook may answer. ``proceed`` is the default for any
 #: other value, including None, so a hook that forgets to return cannot stall a
 #: run.
@@ -129,7 +230,9 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
                    tools: Optional[Dict[str, Any]] = None,
                    on_step: Optional[Callable[..., Optional[str]]] = None,
                    on_result: Optional[Callable[..., None]] = None,
-                   recovery: bool = True
+                   recovery: bool = True,
+                   prompt: Optional[str] = None,
+                   finish: str = DEFAULT_FINISH
                    ) -> RunContext:
     """Drive the run to completion, one chosen action at a time.
 
@@ -166,6 +269,13 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
         ``on_step`` fires *before* a step and so can only say what is about to
         happen; this is where what a step actually concluded becomes available
         to a caller while the run is still going.
+    prompt : str, optional
+        The decision prompt, with ``{transcript}`` and ``{menu}`` fields.
+        Defaults to :data:`CONTROLLER_PROMPT`; an assistant for another domain
+        passes its own framing.
+    finish : str
+        The artifact that must exist before "done" is accepted
+        (:data:`DEFAULT_FINISH`, the report, unless the assistant says otherwise).
 
     Returns
     -------
@@ -199,13 +309,23 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
     """
     # Recoveries spent per tool, so one bad setting cannot be retried forever.
     spent: Dict[str, int] = {}
+    steer = steering.current.get()
     for index in range(max_steps):
+        # Between steps is where the user's pause and notes take effect: the
+        # step that was running has finished, and nothing new has started.
+        if steer is not None and not steer.checkpoint(
+                ctx.steps[-1].description or ctx.steps[-1].tool if ctx.steps else ""):
+            ctx.ended = STOPPED
+            break
+        notes = _take_notes(ctx, steer)
         options = runnable_tools(ctx, tools)
         if not options:
             ctx.ended = EXHAUSTED
             break
-        choice = _decide(ctx, ask, tools)
-        if choice is not None and choice.get("done") and not _may_finish(ctx):
+        choice = _decide(ctx, ask, tools, prompt, finish, notes)
+        if notes:
+            _answer_notes(ctx, steer, notes, choice, heard=ask is not None)
+        if choice is not None and choice.get("done") and not _may_finish(ctx, finish):
             # "done" is a valid answer only once a report exists: the prompt
             # says so and forced_choice counts on it. Taken at its word here, a
             # model answering "done" with steps on offer ended the run on the
@@ -291,7 +411,8 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
 
 
 def forced_choice(ctx: RunContext,
-                  tools: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+                  tools: Optional[Dict[str, Any]] = None,
+                  finish: str = DEFAULT_FINISH) -> Optional[Dict[str, Any]]:
     """The decision to take without asking, when the menu leaves only one.
 
     The model may answer with a tool from the menu, or with "done" once a
@@ -308,6 +429,8 @@ def forced_choice(ctx: RunContext,
         The run as it stands.
     tools : dict, optional
         The registry to choose from; the global one by default.
+    finish : str
+        The artifact whose existence makes "done" a valid answer.
 
     Returns
     -------
@@ -333,28 +456,74 @@ def forced_choice(ctx: RunContext,
     True
     """
     options = runnable_tools(ctx, tools)
-    if len(options) != 1 or _may_finish(ctx):
+    if len(options) != 1 or _may_finish(ctx, finish):
         return None
     name = options[0].name
     return {"tool": name, "why": f"only one action was available: {name}"}
 
 
-def _may_finish(ctx: RunContext) -> bool:
-    """Whether "done" is a valid answer: the prompt allows it once a report exists."""
-    return ctx.has("report_files")
+def _take_notes(ctx: RunContext, steer: Optional["steering.Steering"]) -> List[str]:
+    """The user's new notes, added to the run's record of what it was told."""
+    notes = steer.take_notes() if steer is not None else []
+    ctx.guidance.extend(notes)
+    return notes
+
+
+def _answer_notes(ctx: RunContext, steer: Any, notes: List[str],
+                  choice: Optional[Dict[str, Any]], heard: bool) -> None:
+    """Act on the settings a decision changed for the user, and say so.
+
+    The answer goes back to whoever sent the notes: what the controller made of
+    them (its reason) and which settings changed, or that this run has no
+    model to read them.
+    """
+    from .recovery import apply_changes
+
+    changes: List[str] = []
+    if heard and choice is not None and choice.get("settings"):
+        changes = apply_changes(ctx, choice["settings"])
+        for change in changes:
+            ctx.note(f"Changed at the user's request: {change}.")
+    if not heard:
+        ctx.note("The user sent notes during the run, but it had no model to read "
+                 "them: " + "; ".join(notes))
+    if steer is not None:
+        steer.tell({"phase": "steer", "notes": list(notes), "changes": changes,
+                    "heard": bool(heard),
+                    "why": str((choice or {}).get("why", "")) if heard else "",
+                    "tool": str((choice or {}).get("tool", "") or "")})
+
+
+def _may_finish(ctx: RunContext, finish: str = DEFAULT_FINISH) -> bool:
+    """Whether "done" is a valid answer: once the run's final product exists."""
+    return ctx.has(finish or DEFAULT_FINISH)
 
 
 def _decide(ctx: RunContext, ask: Optional[Callable[[str], str]],
-            tools: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
-    """One decision: the model's if it can make one, the policy's otherwise."""
+            tools: Optional[Dict[str, Any]] = None,
+            template: Optional[str] = None,
+            finish: str = DEFAULT_FINISH,
+            notes: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
+    """One decision: the model's if it can make one, the policy's otherwise.
+
+    ``notes`` are what the user has just said; with them the model is asked
+    even when the menu leaves one choice, since a note can change a setting
+    or end the run as well as pick a step.
+    """
     if ask is not None:
         # Nothing to decide, nothing to ask. Without a model the policy below
         # takes the same step, as it always has.
-        forced = forced_choice(ctx, tools)
+        forced = None if notes else forced_choice(ctx, tools, finish)
         if forced is not None:
             return forced
-        prompt = CONTROLLER_PROMPT.format(transcript=ctx.transcript(),
-                                         menu=menu(ctx, tools))
+        prompt = (template or CONTROLLER_PROMPT).format(transcript=ctx.transcript(),
+                                                        menu=menu(ctx, tools))
+        if notes:
+            from .recovery import settings_for
+
+            prompt += STEERING_PROMPT.format(
+                notes="\n".join(f"- {note}" for note in notes),
+                settings=json.dumps(settings_for(ctx), default=str, indent=1) or "{}")
         try:
             choice = _parse_choice(ask(prompt))
         except Exception:  # noqa: BLE001 - an unreachable model is not a failed run

@@ -36,6 +36,14 @@ PyHydroGeophysX.visualization.animation module
    :undoc-members:
    :show-inheritance:
 
+PyHydroGeophysX.visualization.mt\_plots module
+----------------------------------------------
+
+.. automodule:: PyHydroGeophysX.visualization.mt_plots
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 PyHydroGeophysX.visualization.vtk\_export module
 -------------------------------------------------
 

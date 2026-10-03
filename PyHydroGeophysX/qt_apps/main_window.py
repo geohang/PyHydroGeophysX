@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
     QMessageBox,
+    QSizePolicy,
     QStackedWidget,
     QTabWidget,
     QTextEdit,
@@ -28,7 +29,8 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX.core import mesh_serialization
 from PyHydroGeophysX.qt_apps import theme
-from PyHydroGeophysX.qt_apps.agent.chat_panel import AquahChatPanel
+from PyHydroGeophysX.agents import assistants as assistant_registry
+from PyHydroGeophysX.qt_apps.agent.chat_panel import AssistantChatPanel
 from PyHydroGeophysX.qt_apps.agent.controller import StudioController
 from PyHydroGeophysX.qt_apps import stall_watch
 from PyHydroGeophysX.qt_apps.layout_fit import elide_label, relax_minimum_width
@@ -37,6 +39,7 @@ from PyHydroGeophysX.qt_apps.modules.base import BaseModule
 from PyHydroGeophysX.qt_apps.state import StudioState
 from PyHydroGeophysX.qt_apps.workers import prepare_workflow_process
 from PyHydroGeophysX.qt_apps.widgets import length_units
+from PyHydroGeophysX.qt_apps.widgets.ai_presence import AgentGlowFrame
 from PyHydroGeophysX.qt_apps.widgets.array_viewer import ArrayViewer
 from PyHydroGeophysX.qt_apps.widgets.log_panel import LogPanel
 from PyHydroGeophysX.qt_apps.widgets.project_tree import ProjectTree
@@ -76,7 +79,10 @@ class PyHydroGeophysXStudio(QMainWindow):
         outer.setSpacing(0)
         self._header = self._build_header()
         outer.addWidget(self._header)
-        content = QWidget()
+        # The margin round the modules is where the agent's glow is drawn while
+        # an automatic run is in control, so it never covers a control.
+        content = AgentGlowFrame(margin=8)
+        self._agent_glow = content
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(8, 8, 8, 8)
         content_layout.addWidget(self._stack)
@@ -88,13 +94,16 @@ class PyHydroGeophysXStudio(QMainWindow):
         self._tree.moduleSelected.connect(self.show_module)
         self._tree_dock = self._make_dock("Project", self._tree, Qt.LeftDockWidgetArea)
 
-        # Right: AQUAH chat assistant + properties summary, in a tabbed dock.
+        # Right: the assistant's chat + properties summary, in a tabbed dock.
+        # The assistant chosen last time is restored before anything that shows
+        # its name is built.
+        self._restore_assistant()
         self._properties = QTextEdit()
         self._properties.setReadOnly(True)
         self._controller = StudioController(self)
-        self._chat = AquahChatPanel(self._controller, self.log)
+        self._chat = AssistantChatPanel(self._controller, self.log)
         right_tabs = QTabWidget()
-        right_tabs.addTab(self._chat, "AQUAH Chat")
+        right_tabs.addTab(self._chat, "Assistant")
         right_tabs.addTab(self._properties, "Properties")
         # Adds directly to the window's minimum width, so it is a floor for
         # comfort rather than for function: the chat panel itself needs 273, and
@@ -253,7 +262,8 @@ class PyHydroGeophysXStudio(QMainWindow):
         text_box.setSpacing(0)
         title = QLabel("Professional Studio")
         title.setObjectName("HeaderTitle")
-        subtitle = QLabel("AQUAH — Autonomous Query-driven Understanding Agent for Hydrogeophysics")
+        subtitle = QLabel(self._assistant_subtitle())
+        self._header_subtitle = subtitle
         subtitle.setObjectName("HeaderSubtitle")
         # The header has a fixed height, so this line cannot wrap; without this it
         # sets a 635 px floor under every module page.
@@ -319,6 +329,17 @@ class PyHydroGeophysXStudio(QMainWindow):
             action.setStatusTip("Show distances, elevations and depths on every plot in "
                                 f"{text.lower()}. The data themselves stay in metres.")
             self._unit_group.addAction(action)
+        # Light, Dark, or whatever the operating system is set to; remembered.
+        appearance_menu = view_menu.addMenu("Appearance")
+        self._appearance_group = QActionGroup(self)
+        self._appearance_group.setExclusive(True)
+        for value, text in (("system", "Match System"), ("light", "Light"), ("dark", "Dark")):
+            action = self._add_action(
+                appearance_menu, text,
+                lambda _checked=False, v=value: self._set_appearance(v), checkable=True)
+            action.setData(value)
+            action.setChecked(value == theme.appearance())
+            self._appearance_group.addAction(action)
         view_menu.addSeparator()
         view_menu.addAction(self._tree_dock.toggleViewAction())
         view_menu.addAction(self._properties_dock.toggleViewAction())
@@ -360,6 +381,44 @@ class PyHydroGeophysXStudio(QMainWindow):
         self._add_action(toolbar, "Zoom", lambda: self._set_mouse_mode(rect=True), icon_name="fa5s.search-plus")
         self._pick_action = self._add_action(toolbar, "Pick", self._toggle_pick, checkable=True, icon_name="fa5s.crosshairs")
         self._add_action(toolbar, "Delete", self._delete_last_marker, icon_name="fa5s.eraser")
+        # Day and night, at the far end of the toolbar.
+        spacer = QWidget()
+        spacer.setObjectName("toolbarSpacer")
+        spacer.setStyleSheet("#toolbarSpacer { background: transparent; }")
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        toolbar.addWidget(spacer)
+        self._appearance_action = self._add_action(
+            toolbar, "", self._toggle_appearance)
+        self._sync_appearance_controls()
+        theme.notifier().changed.connect(lambda _mode: self._sync_appearance_controls())
+
+    def _set_appearance(self, value: str) -> None:
+        """Switch the whole studio to Light, Dark or the system's appearance."""
+        from PySide6.QtWidgets import QApplication
+
+        applied = theme.set_appearance(QApplication.instance(), value)
+        self._sync_appearance_controls()
+        label = {"system": f"Match System ({applied})", "light": "Light",
+                 "dark": "Dark"}.get(value, value)
+        self.log(f"Appearance: {label}.", "info")
+
+    def _toggle_appearance(self) -> None:
+        """The toolbar's day/night switch: the other of Light and Dark."""
+        self._set_appearance("light" if theme.is_dark() else "dark")
+
+    def _sync_appearance_controls(self) -> None:
+        """Point the menu and the toolbar switch at the appearance in force."""
+        group = getattr(self, "_appearance_group", None)
+        if group is not None:
+            for action in group.actions():
+                action.setChecked(action.data() == theme.appearance())
+        action = getattr(self, "_appearance_action", None)
+        if action is not None:
+            dark = theme.is_dark()
+            action.setIcon(theme.icon("fa5s.sun" if dark else "fa5s.moon"))
+            action.setText("Light" if dark else "Dark")
+            action.setToolTip("Switch to the light appearance" if dark
+                              else "Switch to the dark appearance")
 
     def _set_length_unit(self, unit: str) -> None:
         """Redraw every plot with its axes in ``unit`` (``'m'`` or ``'ft'``)."""
@@ -400,6 +459,61 @@ class PyHydroGeophysXStudio(QMainWindow):
         self._refresh_properties()
         title = getattr(self._pages[key], "module_title", key)
         self._status_label.setText(f"Module: {title}    ·    Ready")
+
+    @staticmethod
+    def _assistant_subtitle() -> str:
+        agent = assistant_registry.active()
+        return f"{agent.name} — {agent.title}"
+
+    def _restore_assistant(self) -> None:
+        """Start with the assistant used last, if it can still run here."""
+        saved = QSettings("PyHydroGeophysX", "Studio").value("assistant/key")
+        try:
+            agent = assistant_registry.get_assistant(str(saved)) if saved else None
+        except KeyError:
+            agent = None
+        if agent is None or not agent.availability()[0]:
+            agent = assistant_registry.get_assistant(assistant_registry.DEFAULT_KEY)
+        self._apply_assistant(agent)
+
+    def _apply_assistant(self, agent) -> None:
+        assistant_registry.set_active(agent.key)
+        theme.set_ai_colors(agent.colors)
+
+    def set_assistant(self, key: str) -> None:
+        """Work with the assistant ``key``: its chat, its Workflow page, its glow.
+
+        Refused while a workflow is running, since the run belongs to the
+        assistant that started it.
+        """
+        workflow = self._pages.get("one_click")
+        if workflow is not None and getattr(workflow, "_worker", None) is not None:
+            self.log("A workflow is running; finish or stop it before switching assistant.",
+                     "warn")
+            return
+        agent = assistant_registry.get_assistant(key)
+        ready, why = agent.availability()
+        if not ready:
+            self.log(why, "warn")
+            return
+        self._apply_assistant(agent)
+        QSettings("PyHydroGeophysX", "Studio").setValue("assistant/key", agent.key)
+        if hasattr(self, "_header_subtitle"):
+            self._header_subtitle.setText(self._assistant_subtitle())
+        if workflow is not None and hasattr(workflow, "set_assistant"):
+            workflow.set_assistant(agent)
+        self.log(f"Assistant: {agent.name} ({agent.domain}).", "info")
+
+    def set_agent_presence(self, state: str) -> None:
+        """Light the central area's edge while the assistant is doing the work.
+
+        ``state`` is one of the :mod:`~PyHydroGeophysX.qt_apps.widgets.ai_presence`
+        states: thinking and working glow in the agent's colours, waiting pulses
+        amber, done and failed flash green or red and fade, idle clears it.
+        """
+        glow = getattr(self, "_agent_glow", None)
+        if glow is not None:
+            glow.set_state(state)
 
     def _view_mesh_in_3d(self, path: str) -> None:
         """Open the Mesh 3D module and load ``path`` (e.g. a seismic 3D volume)."""

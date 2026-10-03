@@ -66,6 +66,20 @@ class Step:
         return " ".join(parts)
 
 
+class _Projected:
+    """What an artifact is while a projected route only assumes it."""
+
+    def __repr__(self) -> str:
+        return "<projected>"
+
+
+#: Stands in for the products of the steps a route has only projected
+#: (:func:`.controller.route_ahead`). A ``when`` gate that looks inside an
+#: artifact asks :meth:`RunContext.projected` first and answers from the
+#: configuration instead, since there is nothing inside yet.
+PROJECTED = _Projected()
+
+
 class RunContext:
     """Everything one workflow run knows about itself.
 
@@ -111,6 +125,10 @@ class RunContext:
         #: the report can say a result rests on a decision somebody made, which
         #: is otherwise invisible in the numbers.
         self.questions: List[Dict[str, Any]] = []
+        #: What the user told the run while it worked (:mod:`.steering`), in
+        #: order. Part of the transcript, so every later decision is made with
+        #: it in view, not only the one that first read it.
+        self.guidance: List[str] = []
         #: How the controller's loop ended: ``finished``, ``exhausted``,
         #: ``stopped`` or ``step_limit`` (see ``controller``), "" until it has
         #: run. A run the user or the step limit cut off did not run out of
@@ -134,6 +152,16 @@ class RunContext:
     def has(self, *keys: str) -> bool:
         """True when every named artifact is present and not None."""
         return all(self.artifacts.get(key) is not None for key in keys)
+
+    def projected(self, key: str) -> bool:
+        """True when ``key`` exists only in a projected route, not yet in fact.
+
+        >>> ctx = RunContext('x')
+        >>> ctx.put('data', PROJECTED)
+        >>> ctx.has('data'), ctx.projected('data')
+        (True, True)
+        """
+        return self.artifacts.get(key) is PROJECTED
 
     def note(self, message: str) -> None:
         """A warning the user should see, deduplicated."""
@@ -273,6 +301,10 @@ class RunContext:
         if self.warnings:
             lines.append("Warnings raised:")
             lines.extend(f"  - {w}" for w in self.warnings)
+        if self.guidance:
+            lines.append("What the user told you during the run, oldest first "
+                         "(follow it where the actions and settings allow):")
+            lines.extend(f"  - {note}" for note in self.guidance)
         return "\n".join(lines)
 
     def plan(self) -> List[Dict[str, Any]]:

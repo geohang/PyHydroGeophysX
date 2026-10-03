@@ -3,8 +3,8 @@
   {
    "is_class": false,
    "is_explicit": false,
-   "module": "PyHydroGeophysX.model_output.modflow_output",
-   "module_short": "PyHydroGeophysX.model_output.modflow_output",
+   "module": "PyHydroGeophysX.model_output.water_content",
+   "module_short": "PyHydroGeophysX.model_output.water_content",
    "name": "MODFLOWPorosity"
   }
  ],
@@ -12,8 +12,8 @@
   {
    "is_class": false,
    "is_explicit": false,
-   "module": "PyHydroGeophysX.model_output.modflow_output",
-   "module_short": "PyHydroGeophysX.model_output.modflow_output",
+   "module": "PyHydroGeophysX.model_output.water_content",
+   "module_short": "PyHydroGeophysX.model_output.water_content",
    "name": "MODFLOWWaterContent"
   }
  ],

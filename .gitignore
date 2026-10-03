@@ -141,6 +141,7 @@ local_plans/
 !/examples/QUICK_START.md
 !/examples/WEB_APP_GUIDE.md
 !/examples/data/EM/synthetic_tem_lci/README.md
+!/examples/data/README.md
 
 # Internal review data follows the same local-only policy as its report.
 docs/comment_review_inventory_*.csv

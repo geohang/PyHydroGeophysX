@@ -181,7 +181,6 @@ except Exception as e:
 
 # =============================================================================
 # READERS
-# Original authors: Guillaume Blanchy, Jimmy Boyd, Sina Saneiyan, Pedro Concha
 # =============================================================================
 
 def _is_index_column(col0) -> bool:
@@ -748,9 +747,8 @@ def _warn_resipy_once() -> None:
             + resipy_install_hint())
 
 
-#: Formats 0.3.0 read with parsers adapted from ResIPy. ResIPy is GPL-3.0 and
-#: this package is Apache-2.0, so those parsers were removed in 0.5.0, and these
-#: files now need ResIPy itself.
+#: Formats 0.3.0 read without ResIPy and 0.5.0 onwards reads only through it,
+#: an optional dependency under its own GPL-3.0 license.
 _READERS_REMOVED_IN_050 = ("Syscal", "Protocol DC", "Protocol IP")
 
 
@@ -765,11 +763,9 @@ def _needs_resipy(instrument: str):
     removed = ""
     if instrument in _READERS_REMOVED_IN_050:
         removed = (
-            f"PyHydroGeophysX 0.3.0 read {instrument} files with a built-in parser "
-            "adapted from ResIPy. That parser was removed in 0.5.0 for licensing "
-            "reasons: ResIPy is GPL-3.0 and this package is Apache-2.0. Install "
-            "ResIPy, an optional dependency under its own GPL-3.0 license, to read "
-            "them:\n    pip install resipy\n\n")
+            f"PyHydroGeophysX 0.3.0 read {instrument} files without ResIPy; since "
+            "0.5.0 they need ResIPy, an optional dependency under its own GPL-3.0 "
+            "license:\n    pip install resipy\n\n")
 
     def _raise(fname):
         raise NotImplementedError(
@@ -1573,13 +1569,17 @@ def load_ert_resipy(
     local_ref: Optional[LocalRef] = None
 ) -> StandardERT:
     """
-    Load ERT data using RESIPY with an explicit instrument type, apply light QC,
-    and return a standardized dataset.
+    Load ERT data with an explicit instrument type, apply light QC, and return
+    a standardized dataset.
+
+    The file is read through ResIPy when it is installed, otherwise with this
+    package's own readers.
 
     Parameters
     ----------
     project_dir : str
-        RESIPY project folder (created if not exists).
+        Working folder, the ResIPy project folder when ResIPy is used
+        (created if not exists).
     data_file : str
         Path to raw ERT data file exported from the instrument/software.
     instrument : Instrument

@@ -1,0 +1,13 @@
+mt._snodgrass_monitoring_site_climate.csv : daily weather at the Mt. Snodgrass
+monitoring site, East River, Colorado (38.92584 N, 106.97998 W), 1980-01-01 to
+2024-12-30: day length, precipitation, shortwave radiation, maximum and minimum
+temperature from Daymet, and potential evapotranspiration computed from them
+(Penman-Monteith). The .json beside it records the request; the data were
+fetched on 2025-11-08.
+
+Dataset: Thornton, M.M., Shrestha, R., Wei, Y., Thornton, P.E., Kao, S-C. (2022).
+         Daymet: Daily Surface Weather Data on a 1-km Grid for North America,
+         Version 4 R1. ORNL Distributed Active Archive Center.
+DOI    : https://doi.org/10.3334/ORNLDAAC/2129
+Terms  : ORNL DAAC data are openly available; the archive asks that the dataset
+         be cited as above.

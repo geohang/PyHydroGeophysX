@@ -2,8 +2,14 @@
 Ex. Seismic Refraction Tomography (SRT) Inversion and Interface Delineation
 ===========================================================================
 
-This example demonstrates how to perform a 2D seismic refraction tomography (SRT) 
+This example demonstrates how to perform a 2D seismic refraction tomography (SRT)
 inversion and interpret the results to define subsurface structures.
+
+**Before you run it:** run ``EX_SRT_forward`` first. The long-profile inversion
+reads ``results/SRT_forward/synthetic_seismic_data_long.dat``, which that
+example writes; the short profile uses the shipped
+``data/Seismic/synthetic_seismic_data.dat``. The inversions take a few
+minutes.
 
 The script focuses on the inversion and post-processing stages of a geophysical workflow. 
 It begins by loading pre-existing synthetic travel time data and then uses tomographic inversion 

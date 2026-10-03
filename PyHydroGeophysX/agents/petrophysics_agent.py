@@ -22,6 +22,37 @@ from .base_agent import BaseAgent
 #: Below this a "layer" is a handful of cells whose statistics are noise.
 MIN_CELLS_PER_LAYER = 10
 
+#: The parameters of the relationship a user can supply.
+_RELATIONSHIP_KEYS = ("rho_sat", "m", "rho_fluid", "n", "porosity")
+
+#: Spread given to a parameter the user did NOT supply when they supplied others:
+#: half its value, as for a geology-informed guess - not the 5% a measured value gets.
+_UNGIVEN_SCALE = 0.5
+
+
+def _distribution_of(given: Any, default_mean: float, relative: float,
+                     floor: float) -> Dict[str, float]:
+    """A parameter's distribution: from the value or ``[low, high]`` the user gave,
+    or, when they gave none, the default mean with a generous spread.
+
+    >>> _distribution_of(2.0, 1.7, 0.05, 0.3)
+    {'mean': 2.0, 'std': 0.1}
+    >>> _distribution_of([0.3, 0.4], 0.42, 0.05, 0.08)
+    {'mean': 0.35, 'std': 0.025}
+    >>> _distribution_of(None, 2.1, 0.05, 0.3)
+    {'mean': 2.1, 'std': 1.05}
+    """
+    bounds = _as_range(given) if isinstance(given, (list, tuple, str)) else None
+    if bounds is not None:
+        low, high = bounds
+        return {'mean': round((low + high) / 2, 12), 'std': round(abs(high - low) / 4, 12)}
+    if given is not None:
+        mean = float(given)
+        return {'mean': mean, 'std': round(abs(mean) * relative, 12)}
+    return {'mean': float(default_mean),
+            'std': round(max(abs(float(default_mean)) * _UNGIVEN_SCALE, floor), 12)}
+
+
 #: The per-layer ranges a request can give, and the parameter each one sets.
 LAYER_RANGE_KEYS = (("rho_sat_range", "rho_sat"), ("n_range", "n"),
                     ("porosity_range", "porosity"))
@@ -156,6 +187,8 @@ class PetrophysicsAgent(BaseAgent):
                  llm_provider: str = "openai"):
         """Initialize Petrophysics Agent."""
         super().__init__("petrophysics", api_key, model, llm_provider)
+        # Per layer, the relationship parameters the user supplied (execute).
+        self._given_by_layer: Dict[int, set] = {}
         self.system_message = """You are an expert in petrophysical modeling and hydrogeophysics.
 You understand how to convert electrical resistivity to water content using Archie's law
 and modified petrophysical relationships. You can recommend appropriate parameters for
@@ -190,7 +223,10 @@ different geological materials and quantify uncertainties."""
             # Normalize legacy key name
             petrophysical_params = input_data.get('petrophysical_params', None) or input_data.get('petrophysical_parameters', None)
             geological_context = input_data.get('geological_context', 'generic')
-            n_realizations = input_data.get('n_realizations', 100)
+            from ._uncertainty import describe_prior, realizations
+
+            realization_notes: List[str] = []
+            n_realizations = realizations(input_data, note=realization_notes.append)
             seed = int(input_data.get('seed', 7))
             output_dir = input_data.get('output_dir', 'results/petrophysics')
             
@@ -228,8 +264,14 @@ different geological materials and quantify uncertainties."""
             
             self._log_execution(f"Information level: {info_level}")
             
-            # Get layer parameters
+            # Get layer parameters. ``given`` records, per layer, which of
+            # them the user supplied - everything else drawn is a default, and
+            # the result says so with the ranges it drew (describe_prior).
             layer_param_notes: List[str] = []
+            self._given_by_layer = {}
+            global_given = {key for key in _RELATIONSHIP_KEYS
+                            if petrophysical_params and petrophysical_params.get(key) is not None}
+            requested_layers = layer_params
             if layer_params is None:
                 self._log_execution("Generating layer parameters based on available information")
                 layer_params = self._get_layer_params_with_uncertainty(
@@ -255,13 +297,6 @@ different geological materials and quantify uncertainties."""
                 )
                 for note in layer_param_notes:
                     self._log_execution(note, level='WARNING')
-            
-            # Get LLM recommendations if available
-            if self.api_key and petrophysical_params is None and 'generic' not in geological_context.lower():
-                self._log_execution("Requesting LLM recommendations for petrophysical parameters")
-                llm_params = self._get_recommended_params(resistivity_array, cell_markers, geological_context)
-                if llm_params:
-                    layer_params = llm_params
             
             # Monte Carlo simulation
             self._log_execution("Starting Monte Carlo simulation...")
@@ -310,6 +345,18 @@ different geological materials and quantify uncertainties."""
             # Calculate statistics
             wc_mean_overall = np.mean(water_content_mean)
             wc_std_overall = np.mean(water_content_std)
+
+            given = {}
+            for layer_id in (int(layer) for layer in unique_layers):
+                keys = set(global_given) | set(self._given_by_layer.get(layer_id, ()))
+                if (requested_layers and not self._given_by_layer
+                        and isinstance(requested_layers.get(layer_id), dict)):
+                    # Numeric layer parameters handed over whole, by a script.
+                    keys |= {k for k in requested_layers[layer_id] if k in _RELATIONSHIP_KEYS}
+                given[layer_id] = sorted(keys)
+            prior = describe_prior(mc_results['params_used'], given, n_realizations)
+            if prior['relationship'] != 'user':
+                self._log_execution(prior['statement'], level='WARNING')
             
             self.results = {
                 'status': 'success',
@@ -331,6 +378,15 @@ different geological materials and quantify uncertainties."""
                 'layer_param_notes': layer_param_notes,
                 'petrophysical_params': petrophysical_params or {},
                 'params_used': mc_results['params_used'],
+                # Whose relationship this was and the ranges actually drawn: a
+                # water content means little without them.
+                'param_given': given,
+                'petrophysical_relationship': prior['relationship'],
+                'prior_ranges': prior['ranges'],
+                'prior_ranges_text': prior['ranges_text'],
+                'prior_statement': prior['statement'],
+                'realization_notes': realization_notes,
+                'n_realizations': n_realizations,
                 'statistics': {
                     'mean_water_content': wc_mean_overall,
                     'mean_uncertainty': wc_std_overall,
@@ -506,6 +562,7 @@ different geological materials and quantify uncertainties."""
                 converted[key] = {'mean': (low + high) / 2, 'std': (high - low) / 4}
                 if key == 'rho_sat':
                     converted['use_rho_sat'] = True
+                self._given_by_layer.setdefault(layer_id, set()).add(key)
 
             # Add default sigma_sur (surface conductivity)
             if 'sigma_sur' not in converted:
@@ -607,32 +664,41 @@ different geological materials and quantify uncertainties."""
                 template = 'regolith' if i == 0 else 'bedrock'
                 base = self.DEFAULT_LAYER_PARAMS[template].copy()
                 
-                # Override with explicit values if provided
-                porosity_val = petrophysical_params.get('porosity', base['porosity']['mean'])
-                n_val = petrophysical_params.get('n', base['n']['mean'])
-                m_val = petrophysical_params.get('m', base['m']['mean'])
-                rho_sat_val = petrophysical_params.get('rho_sat', None)
-                
+                # A value given is used with a tight spread (or the range given);
+                # one not given keeps the default with a generous spread. It
+                # used to take the default at the given values' 5%, which
+                # made a guess look like a measurement.
+                def value(key, default_mean, floor, relative=scale):
+                    return _distribution_of(petrophysical_params.get(key), default_mean,
+                                            relative, floor)
+
+                porosity_val = value('porosity', base['porosity']['mean'], 0.08)
+                n_val = value('n', base['n']['mean'], 0.3)
+                m_val = value('m', base['m']['mean'], 0.3)
+                rho_sat_given = petrophysical_params.get('rho_sat')
+
                 # When rho_sat is provided, use it directly instead of calculating via m
                 # With zero surface conductivity, S = (rho_sat / rho)^(1/n).
-                if rho_sat_val:
+                if rho_sat_given is not None and rho_sat_given != 0:
                     # Heuristic prior: use one tenth of the generic relative
                     # uncertainty for a supplied rho_sat; this is not a measured error.
-                    rho_sat_uncertainty_scale = scale * 0.1
+                    rho_sat_val = _distribution_of(rho_sat_given, 100.0, scale * 0.1, 0.0)
                     layer_params[int(layer_id)] = {
-                        'n': {'mean': n_val, 'std': n_val * scale},
+                        'n': n_val,
                         'sigma_sur': base['sigma_sur'].copy(),
-                        'porosity': {'mean': porosity_val, 'std': porosity_val * scale},
-                        'rho_sat': {'mean': rho_sat_val, 'std': rho_sat_val * rho_sat_uncertainty_scale},  # Use rho_sat directly
+                        'porosity': porosity_val,
+                        'rho_sat': rho_sat_val,  # Use rho_sat directly
                         'use_rho_sat': True  # Flag to use rho_sat instead of m
                     }
                 else:
+                    fluid = petrophysical_params.get('rho_fluid')
                     layer_params[int(layer_id)] = {
-                        'm': {'mean': m_val, 'std': m_val * scale},
-                        'n': {'mean': n_val, 'std': n_val * scale},
+                        'm': m_val,
+                        'n': n_val,
                         'sigma_sur': base['sigma_sur'].copy(),
-                        'porosity': {'mean': porosity_val, 'std': porosity_val * scale},
-                        'rho_fluid': base['rho_fluid'],
+                        'porosity': porosity_val,
+                        'rho_fluid': (_distribution_of(fluid, 20.0, scale, 0.0)
+                                      if fluid is not None else base['rho_fluid']),
                         'use_rho_sat': False
                     }
                 

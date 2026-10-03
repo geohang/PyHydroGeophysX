@@ -403,12 +403,19 @@ register(Tool(
 # ---------------------------------------------------------------------------
 # 3. inversion
 # ---------------------------------------------------------------------------
+def _survey_count(ctx: RunContext) -> int:
+    """How many ERT surveys the run holds - or, on a projected route, will hold."""
+    if ctx.projected("ert_data"):
+        return len(survey_files(ctx.config))
+    return len(ctx.get("ert_data") or [])
+
+
 def _is_time_lapse(ctx: RunContext) -> bool:
-    return len(ctx.get("ert_data") or []) >= 2
+    return _survey_count(ctx) >= 2
 
 
 def _is_single(ctx: RunContext) -> bool:
-    return len(ctx.get("ert_data") or []) == 1
+    return _survey_count(ctx) == 1
 
 
 def _invert_time_lapse(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
@@ -604,11 +611,13 @@ def _water_content_wanted(ctx: RunContext) -> bool:
 
 
 #: The tools that make each product a request can name (``_intent.PRODUCTS``).
-PRODUCERS = {"water_content": ("convert_water_content", "convert_tdem_water_content"),
+PRODUCERS = {"water_content": ("convert_water_content", "convert_tdem_water_content",
+                               "convert_mt_water_content"),
              "climate": ("fetch_climate",)}
 
 #: The steps that recover a resistivity model a conversion can start from.
-_MODEL_STEPS = ("load_ert_surveys", "invert_time_lapse", "invert_ert", "invert_tdem")
+_MODEL_STEPS = ("load_ert_surveys", "invert_time_lapse", "invert_ert", "invert_tdem",
+                "invert_mt")
 
 
 def plain_error(error: Any) -> str:
@@ -648,7 +657,7 @@ def _water_content_failure(ctx: RunContext, results: Mapping[str, Any]) -> Optio
     failed = _last_failure(ctx, PRODUCERS["water_content"])
     if failed is not None:
         return plain_error(failed.error or failed.summary)
-    if not (ctx.has("inversion_results") or ctx.has("tdem_results")):
+    if not (ctx.has("inversion_results") or ctx.has("tdem_results") or ctx.has("mt_results")):
         broken = _last_failure(ctx, _MODEL_STEPS)
         return ("no resistivity model was recovered to convert"
                 + (f": {broken.description or broken.tool} failed "
@@ -728,7 +737,7 @@ def _structure_pending(ctx: RunContext) -> bool:
     and the constrained one was never used. A conversion or a fusion therefore
     waits until the constraint has been tried, or can no longer be.
     """
-    if len(ctx.get("ert_data") or []) != 1:
+    if _survey_count(ctx) != 1:
         return False
     if not any(ctx.config.get(key) for key in ("seismic_file", "raw_seismic_file")):
         return False
@@ -736,6 +745,34 @@ def _structure_pending(ctx: RunContext) -> bool:
         return False
     # A seismic step that failed or was skipped leaves nothing to constrain with.
     return not (ctx.attempted("invert_seismic") and not ctx.has("seismic_results"))
+
+
+def _state_prior(ctx: RunContext, step: Dict[str, Any]) -> str:
+    """Tell the user what the conversion assumed; return the flag for the summary.
+
+    Every conversion to water content says which petrophysical parameters it
+    drew and over what ranges (:func:`.._uncertainty.describe_prior`). When any
+    of them were defaults rather than the user's, that is a warning - the
+    result exists but is not reliable - and the step's own summary says so too,
+    so it is seen while the run is still going, not only in the report.
+    """
+    for note in step.get("realization_notes") or []:
+        ctx.note(note)
+    dropped = ctx.config.get("petrophysics_dropped") or []
+    if dropped:
+        ctx.note("Petrophysical values the request does not contain were not used ("
+                 + "; ".join(map(str, dropped)) + "): they came from reading the "
+                 "request, not from you, and only a relationship you give counts as yours.")
+    relationship = step.get("petrophysical_relationship") or ""
+    if relationship and relationship != "user" and step.get("prior_statement"):
+        ctx.note(step["prior_statement"])
+    if relationship == "default":
+        return (" Not reliable: no petrophysical relationship was given, so it rests on "
+                "generic default parameters (named, with their ranges, in the warnings).")
+    if relationship == "partial":
+        return (" Partly on default petrophysical parameters (named, with their ranges, "
+                "in the warnings).")
+    return ""
 
 
 def _convert_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
@@ -808,11 +845,20 @@ def _convert_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     results["water_content_mean"] = per_step[0].get("water_content_mean")
     results["water_content_std"] = per_step[0].get("water_content_std")
     results["petrophysical_params"] = config.get("petrophysical_params", {})
+    first = per_step[0]
+    for key in ("petrophysical_relationship", "prior_statement", "prior_ranges_text",
+                "n_realizations"):
+        results[key] = first.get(key)
+    flag = _state_prior(ctx, first)
 
-    layering = per_step[0].get("layering") or ""
+    layering = first.get("layering") or ""
     source = " the structure-constrained" if results.get("structure_constrained") else ""
+    means = [float(np.nanmean(step.get("water_content_mean"))) for step in per_step]
+    sigmas = [float(np.nanmean(step.get("water_content_std"))) for step in per_step]
     summary = (f"Converted {len(per_step)} of {len(models)}{source} model(s) to water "
-               f"content by Monte Carlo petrophysics.")
+               f"content by Monte Carlo petrophysics ({first.get('n_realizations', '')} "
+               f"draws): mean {np.mean(means):.3f} ± {np.mean(sigmas):.3f} "
+               f"(average standard deviation per cell).{flag}")
     if layering:
         summary += f" {layering}"
     return summary, {"inversion_results": results, "water_content": per_step}
@@ -1006,9 +1052,66 @@ def _tdem_water_content_wanted(ctx: RunContext) -> bool:
     return _water_content_wanted(ctx) and not survey_files(ctx.config)
 
 
+def _layered_water_content(ctx: RunContext, resistivity: Any, thicknesses: Any, *,
+                           label: str, folder: Path):
+    """Water content of a layered resistivity model, layer by layer, by Monte Carlo.
+
+    Shared by the TDEM sounding and the MT sites. Returns ``(mean, std, step,
+    table)``: the per-layer mean and spread, the petrophysics step's result
+    with the layering stated, and the CSV written (or None).
+    """
+    from ..petrophysics_agent import PetrophysicsAgent
+
+    config = ctx.config
+    resistivity = np.asarray(resistivity, dtype=float).ravel()
+    n_layers = resistivity.size
+    thicknesses = np.asarray(thicknesses if thicknesses is not None else [], dtype=float).ravel()
+    if thicknesses.size == n_layers - 1:
+        # The last layer of a 1D model is the half-space below the others.
+        top = np.concatenate([[0.0], np.cumsum(thicknesses)])
+        bottom = np.concatenate([np.cumsum(thicknesses), [np.inf]])
+    else:
+        top = bottom = np.full(n_layers, np.nan)
+    if config.get("layer_params"):
+        ctx.note("Layer parameters given for " + ", ".join(map(str, config["layer_params"]))
+                 + f" were not applied: the {label} model's layers are not divided into "
+                   "geological units, so the conversion used "
+                 + ("petrophysical_params." if config.get("petrophysical_params")
+                    else "generated petrophysical parameters."))
+    # The model's layers are one unit: a smooth 1D model draws no interface
+    # between them, so there is no layer boundary to hang a second set on.
+    step = PetrophysicsAgent(**agent_kwargs(ctx)).execute({
+        "resistivity_model": resistivity,
+        "cell_markers": np.zeros(n_layers, dtype=int),
+        "petrophysical_params": config.get("petrophysical_params", {}),
+        "n_realizations": config.get("n_realizations", 100),
+        "geological_context": config.get("geological_context", "generic watershed"),
+        "output_dir": str(folder / "petrophysics"),
+    })
+    if step.get("status") != "success":
+        raise ValueError(str(step.get("error") or f"The {label} water-content conversion failed."))
+    step = {**step, "prior_flag": _state_prior(ctx, step)}
+    mean = np.asarray(step.get("water_content_mean"), dtype=float).ravel()
+    std = np.asarray(step.get("water_content_std"), dtype=float).ravel()
+    table: Optional[Path] = folder / "water_content_by_layer.csv"
+    try:
+        table.parent.mkdir(parents=True, exist_ok=True)
+        np.savetxt(table, np.column_stack([top, bottom, resistivity, mean, std]),
+                   delimiter=",", fmt="%.6g", comments="",
+                   header="depth_top_m,depth_bottom_m,resistivity_ohm_m,"
+                          "water_content_mean,water_content_std")
+    except Exception as exc:  # noqa: BLE001 - a table is not the result
+        ctx.note(f"The {label} water-content table could not be written ({exc}).")
+        table = None
+    step = {**step, "layering": (
+        f"The {n_layers}-layer {label} model was converted as one unit with one "
+        f"petrophysical parameter set; no interface divides its layers into "
+        f"geological units."), "depth_top_m": top, "depth_bottom_m": bottom}
+    return mean, std, step, table
+
+
 def _convert_tdem_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     from .._uncertainty import result_caveats
-    from ..petrophysics_agent import PetrophysicsAgent
 
     config = ctx.config
     tdem = dict(ctx.get("tdem_results") or {})
@@ -1018,57 +1121,20 @@ def _convert_tdem_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     if resistivity is None:
         raise ValueError("The TDEM inversion returned no layered resistivity model "
                          "to convert.")
-    resistivity = np.asarray(resistivity, dtype=float).ravel()
-    n_layers = resistivity.size
-    thicknesses = np.asarray(tdem.get("thicknesses") if tdem.get("thicknesses") is not None
-                             else [], dtype=float).ravel()
-    if thicknesses.size == n_layers - 1:
-        # The last layer of a 1D model is the half-space below the others.
-        top = np.concatenate([[0.0], np.cumsum(thicknesses)])
-        bottom = np.concatenate([np.cumsum(thicknesses), [np.inf]])
-    else:
-        top = bottom = np.full(n_layers, np.nan)
-    if config.get("layer_params"):
-        ctx.note("Layer parameters given for " + ", ".join(map(str, config["layer_params"]))
-                 + " were not applied: the TDEM model's layers are not divided into "
-                   "geological units, so the conversion used "
-                 + ("petrophysical_params." if config.get("petrophysical_params")
-                    else "generated petrophysical parameters."))
-    # The sounding's layers are one unit: a smooth 1D model draws no interface
-    # between them, so there is no layer boundary to hang a second set on.
-    step = PetrophysicsAgent(**agent_kwargs(ctx)).execute({
-        "resistivity_model": resistivity,
-        "cell_markers": np.zeros(n_layers, dtype=int),
-        "petrophysical_params": config.get("petrophysical_params", {}),
-        "n_realizations": config.get("n_realizations", 100),
-        "geological_context": config.get("geological_context", "generic watershed"),
-        "output_dir": str(Path(ctx.output_dir) / "tdem" / "petrophysics"),
-    })
-    if step.get("status") != "success":
-        raise ValueError(str(step.get("error") or "The TDEM water-content conversion failed."))
-    mean = np.asarray(step.get("water_content_mean"), dtype=float).ravel()
-    std = np.asarray(step.get("water_content_std"), dtype=float).ravel()
-    table = Path(ctx.output_dir) / "tdem" / "water_content_by_layer.csv"
-    try:
-        table.parent.mkdir(parents=True, exist_ok=True)
-        np.savetxt(table, np.column_stack([top, bottom, resistivity, mean, std]),
-                   delimiter=",", fmt="%.6g", comments="",
-                   header="depth_top_m,depth_bottom_m,resistivity_ohm_m,"
-                          "water_content_mean,water_content_std")
-    except Exception as exc:  # noqa: BLE001 - a table is not the result
-        ctx.note(f"The TDEM water-content table could not be written ({exc}).")
-        table = None
-    step = {**step, "layering": (
-        f"The {n_layers}-layer TDEM model was converted as one unit with one "
-        f"petrophysical parameter set; no interface divides its layers into "
-        f"geological units."), "depth_top_m": top, "depth_bottom_m": bottom}
+    n_layers = np.asarray(resistivity).size
+    mean, std, step, table = _layered_water_content(
+        ctx, resistivity, tdem.get("thicknesses"), label="TDEM",
+        folder=Path(ctx.output_dir) / "tdem")
     tdem.update({"water_content_mean": mean, "water_content_std": std,
                  "water_content_table": str(table) if table else None})
     for caveat in result_caveats(config, tdem):
         ctx.note(caveat)
+    tdem.update({key: step.get(key) for key in ("petrophysical_relationship",
+                                                 "prior_statement", "prior_ranges_text")})
     return (f"Converted the {n_layers}-layer TDEM resistivity model to water content by "
             f"Monte Carlo petrophysics: {float(np.nanmin(mean)):.3f} to "
-            f"{float(np.nanmax(mean)):.3f} (mean uncertainty {float(np.nanmean(std)):.3f}).",
+            f"{float(np.nanmax(mean)):.3f} (mean uncertainty ± {float(np.nanmean(std)):.3f})."
+            f"{step.get('prior_flag', '')}",
             {"tdem_results": tdem, "water_content": [step]})
 
 
@@ -1085,6 +1151,201 @@ register(Tool(
     label="Convert TDEM model to water content",
     module="em",
     when=_tdem_water_content_wanted,
+))
+
+
+# ---------------------------------------------------------------------------
+# magnetotellurics
+# ---------------------------------------------------------------------------
+def mt_files(config: Mapping[str, Any]) -> List[str]:
+    """The MT sites the configuration names: transfer-function files or folders of them."""
+    listed = config.get("mt_files") or config.get("mt_file") or []
+    if isinstance(listed, (str, Path)):
+        listed = [listed]
+    return [str(item) for item in listed if item]
+
+
+def _mt_sites(ctx: RunContext) -> List[Path]:
+    """Every transfer-function file the configuration names, a folder standing for its files."""
+    from PyHydroGeophysX.data_processing import mt
+
+    sites: List[Path] = []
+    for item in mt_files(ctx.config):
+        path = Path(resolve_path(item, ctx.config.get("project_dir", ".")))
+        if path.is_dir():
+            sites += sorted({p for pattern in mt.TRANSFER_FUNCTION_PATTERNS for p in path.glob(pattern)
+                             if mt.is_transfer_function_file(p)})
+        elif path.is_file():
+            sites.append(path)
+        else:
+            raise ValueError(f"MT site file not found: {item}")
+    if not sites:
+        raise ValueError("No MT transfer-function files (EDI, EMTF XML, Z- or J-files) were found in "
+                         + ", ".join(mt_files(ctx.config)) + ".")
+    return list(dict.fromkeys(sites))
+
+
+def _mt_figure(tf: Any, model: Any, path: Path) -> str:
+    """The site's sounding with the model's fit, beside the model, as one PNG."""
+    from matplotlib.figure import Figure
+
+    from PyHydroGeophysX.visualization import plot_mt_model_1d, plot_mt_sounding
+
+    figure = Figure(figsize=(11, 6.5))
+    grid = figure.add_gridspec(2, 2, width_ratios=[1.6, 1], height_ratios=[3, 2])
+    ax_rho = figure.add_subplot(grid[0, 0])
+    ax_phase = figure.add_subplot(grid[1, 0], sharex=ax_rho)
+    ax_model = figure.add_subplot(grid[:, 1])
+    sounding = model.sounding
+    mode = sounding.modes[0] if len(sounding.modes) == 1 else "xy"
+    shift = model.static_shift.get(mode, 1.0)
+    fit = {mode: (1 / sounding.frequency, 10 ** model.predicted["log_rho_a"] * shift,
+                  model.predicted["phase"])}
+    plot_mt_sounding(tf, components=("xy", "yx") + (("det",) if mode == "det" else ()),
+                     axes=(ax_rho, ax_phase), predicted=fit, title=tf.station or path.stem)
+    plot_mt_model_1d({f"Occam 1D (RMS {model.rms:.2f})": model}, ax=ax_model)
+    figure.tight_layout()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(path, dpi=150)
+    return str(path)
+
+
+def _site_folder(index: int, path: Path) -> str:
+    return f"{index:02d}_" + "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in path.stem)
+
+
+def _invert_mt(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    from PyHydroGeophysX.workflows import ArtifactRef, WorkflowSpec, run_workflow
+    from PyHydroGeophysX.workflows import RunContext as WorkflowContext
+
+    sites = _mt_sites(ctx)
+    parameters = dict(ctx.config.get("mt_params") or {})
+    profile = parameters.pop("profile", None)
+    out = Path(ctx.output_dir) / "mt"
+
+    def site_ref(index: int, path: Path) -> ArtifactRef:
+        return ArtifactRef.from_path(path, artifact_id=f"mt:site:{index}",
+                                     kind="mt_transfer_function", base_dir=path.parent)
+
+    entries: List[Dict[str, Any]] = []
+    tfs: List[Any] = []
+    for k, path in enumerate(sites):
+        folder = out / _site_folder(k, path)
+        spec = WorkflowSpec("mt.invert_1d", inputs={"transfer_function": site_ref(k, path)},
+                            parameters=parameters)
+        result = run_workflow(spec, WorkflowContext(project_root=path.parent, output_dir=folder))
+        model, tf = result.objects["result"], result.objects["transfer_function"]
+        tfs.append(tf)
+        tops = np.asarray(model.depth, dtype=float)
+        entries.append({
+            "station": tf.station or path.stem, "path": str(path),
+            "latitude": tf.latitude, "longitude": tf.longitude,
+            "periods_s": [float(tf.period.min()), float(tf.period.max())],
+            "rms": float(model.rms), "iterations": int(model.iterations),
+            "static_shift": dict(model.static_shift),
+            "depth_top_m": tops, "thicknesses": np.diff(tops),
+            "resistivity_ohm_m": np.asarray(model.resistivity, dtype=float),
+            "model_csv": str(folder / "mt1d_model.csv"), "fit_csv": str(folder / "mt1d_fit.csv"),
+            "figure": _mt_figure(tf, model, folder / "mt1d.png"),
+        })
+    results: Dict[str, Any] = {"sites": entries, "output_dir": str(out),
+                               "figures": [entry["figure"] for entry in entries]}
+    rms = [entry["rms"] for entry in entries]
+    summary = (f"Inverted {len(entries)} MT site{'s' if len(entries) > 1 else ''} in 1D (Occam), "
+               f"RMS {min(rms):.2f}" + (f" to {max(rms):.2f}" if len(rms) > 1 else "") + ".")
+    located = all(np.isfinite([e["latitude"], e["longitude"]]).all() for e in entries)
+    if profile or (profile is None and len(entries) >= 3 and located):
+        from matplotlib.figure import Figure
+
+        from PyHydroGeophysX.visualization import plot_mt_section
+
+        # A section along a line of sites; few frequencies keep an unattended run bounded.
+        frequency = np.sort(np.asarray(tfs[0].frequency, dtype=float))[::-1]
+        index = np.unique(np.round(np.linspace(0, frequency.size - 1,
+                                               min(12, frequency.size))).astype(int))
+        spec = WorkflowSpec(
+            "mt.invert_profile",
+            inputs={"transfer_functions": [site_ref(k, path) for k, path in enumerate(sites)]},
+            parameters={"frequencies": [float(f) for f in frequency[index]], "max_iterations": 10,
+                        **dict(ctx.config.get("mt_profile_params") or {})},
+            seed=0)
+        try:
+            section = run_workflow(spec, WorkflowContext(project_root=sites[0].parent,
+                                                         output_dir=out / "profile")).objects["result"]
+        except Exception as exc:  # noqa: BLE001 - the 1D models stand on their own
+            ctx.note(f"The 2D MT profile could not be inverted ({plain_error(exc)}); "
+                     "the sites are reported as 1D models.")
+        else:
+            figure = Figure(figsize=(10, 4.5))
+            plot_mt_section(section, ax=figure.add_subplot(111),
+                            title=f"2D MT section (RMS {section.rms:.2f})")
+            figure.savefig(out / "profile" / "mt2d_section.png", dpi=150)
+            results["profile"] = {"rms": float(section.rms), "iterations": len(section.history),
+                                  "section_npz": str(out / "profile" / "mt2d_section.npz"),
+                                  "figure": str(out / "profile" / "mt2d_section.png")}
+            results["figures"].append(results["profile"]["figure"])
+            summary += (f" A 2D TE/TM section along the {len(entries)} sites fits to "
+                        f"RMS {section.rms:.2f}.")
+    return summary, {"mt_results": results}
+
+
+register(Tool(
+    name="invert_mt",
+    description="Invert magnetotelluric sites (EDI, EMTF XML, Z- or J-files) for "
+                "layered resistivity by Occam 1D, and a line of three or more "
+                "located sites for a 2D TE/TM section.",
+    handler=_invert_mt,
+    produces=("mt_results",),
+    agent="MT inversion (Occam 1D, SimPEG 2D)",
+    label="Run MT inversion",
+    module="mt",
+    when=_configured("mt_files", "mt_file"),
+))
+
+
+def _mt_water_content_wanted(ctx: RunContext) -> bool:
+    """Water content is asked for, and the MT sites hold the run's resistivity models."""
+    config = ctx.config
+    return (_water_content_wanted(ctx) and not survey_files(config)
+            and not (config.get("tdem_file") or config.get("em_file")))
+
+
+def _convert_mt_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    mt_results = dict(ctx.get("mt_results") or {})
+    entries = [dict(entry) for entry in mt_results.get("sites") or []]
+    if not entries:
+        raise ValueError("The MT inversion returned no layered model to convert.")
+    steps, ranges = [], []
+    for entry in entries:
+        mean, std, step, table = _layered_water_content(
+            ctx, entry["resistivity_ohm_m"], entry["thicknesses"],
+            label=f"MT ({entry['station']})", folder=Path(entry["model_csv"]).parent)
+        entry.update({"water_content_mean": mean, "water_content_std": std,
+                      "water_content_table": str(table) if table else None})
+        steps.append(step)
+        ranges.append(f"{entry['station']} {float(np.nanmin(mean)):.3f}-{float(np.nanmax(mean)):.3f}"
+                      f" (± {float(np.nanmean(std)):.3f})")
+    mt_results["sites"] = entries
+    mt_results.update({key: steps[0].get(key) for key in (
+        "petrophysical_relationship", "prior_statement", "prior_ranges_text")})
+    return ("Converted the MT sites' layered models to water content by Monte Carlo "
+            "petrophysics: " + "; ".join(ranges) + "." + (steps[0].get("prior_flag") or ""),
+            {"mt_results": mt_results, "water_content": steps})
+
+
+register(Tool(
+    name="convert_mt_water_content",
+    description="Convert each MT site's layered resistivity model to volumetric water "
+                "content, layer by layer, propagating petrophysical uncertainty by "
+                "Monte Carlo. Required when the request asks about water content and "
+                "the MT sites are the run's only resistivity models.",
+    handler=_convert_mt_water_content,
+    requires=("mt_results",),
+    produces=("water_content",),
+    agent="PetrophysicsAgent",
+    label="Convert MT models to water content",
+    module="mt",
+    when=_mt_water_content_wanted,
 ))
 
 
@@ -1565,8 +1826,11 @@ def _survey_report_input(ctx: RunContext, results: Dict[str, Any]) -> Dict[str, 
             "petrophysical_params": config.get("petrophysical_params", {}),
             "layer_params_applied": results.get("layer_params_applied") or {},
             "layer_params_not_applied": results.get("layer_params_not_applied") or {},
-            "n_realizations": config.get("n_realizations", 100),
+            "n_realizations": step.get("n_realizations") or config.get("n_realizations", 100),
             "interpretation": step.get("interpretation"),
+            "petrophysical_relationship": step.get("petrophysical_relationship"),
+            "prior_statement": step.get("prior_statement"),
+            "prior_ranges_text": step.get("prior_ranges_text"),
         }
         workflow_data["petrophysics_results"] = step
         workflow_data["petrophysical_params"] = config.get("petrophysical_params", {})

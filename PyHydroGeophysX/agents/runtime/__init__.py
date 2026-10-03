@@ -15,9 +15,9 @@ design:
 - Nothing could react. A stage that found a problem had no way to change what
   happened next, beyond one special case for re-running an inversion.
 
-This package replaces the dispatcher with the shape Claude Code uses: one
-transcript, one tool per capability, and a controller that reads the transcript,
-chooses the next action, observes its result, and chooses again.
+This package replaces the dispatcher with a controller loop: one transcript,
+one tool per capability, and a controller that reads the transcript, chooses
+the next action, observes its result, and chooses again.
 
 - :mod:`~PyHydroGeophysX.agents.runtime.context` is the transcript: the goal,
   every step taken, what each step found, and the artifacts they produced.

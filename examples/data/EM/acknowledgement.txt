@@ -13,11 +13,18 @@ dist_m is the cumulative along-line distance. The soundings are about 12 km apar
 (a coarse regional transect, ~48 km total). Load it with "Load geometry..." in the
 EM panel to place the section on real distance instead of uniform spacing.
 
-Source : Geoscience Australia, ga-aem repository, example "SkyTEM-BHMAR-2009"
-         (Broken Hill Managed Aquifer Recharge project). Crown Copyright,
-         Commonwealth of Australia (Geoscience Australia).
-Link   : https://github.com/GeoscienceAustralia/ga-aem
+Dataset: Brodie, R.C. (2019). Broken Hill Managed Aquifer Recharge (BHMAR)
+         SkyTEM Airborne Electromagnetic Survey, NSW, 2009. Commonwealth of
+         Australia (Geoscience Australia).
+DOI    : https://doi.org/10.26186/5d314c5de8040
+Licence: Creative Commons Attribution 4.0 International (CC BY 4.0),
+         https://creativecommons.org/licenses/by/4.0/
+         (c) Commonwealth of Australia (Geoscience Australia) 2019
+Taken  : from the "SkyTEM-BHMAR-2009" example of Geoscience Australia's ga-aem
+         repository, https://github.com/GeoscienceAustralia/ga-aem
+Changes: five soundings of one flight line kept, the high-moment vertical
+         dB/dt only, rewritten as the two CSV tables described above.
 
 
-We thank Geoscience Australia for making the BHMAR SkyTEM example data and the
-ga-aem package openly available.
+We thank Geoscience Australia for making the BHMAR SkyTEM data and the ga-aem
+package openly available.

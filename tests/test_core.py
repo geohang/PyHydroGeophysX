@@ -295,6 +295,65 @@ def test_dense_and_sparse_smoothness_matrices_scale_alike(sparse):
     np.testing.assert_allclose(dense(scale(given, [2., 5.])), [[2., -2., 0.], [0., 5., -5.]])
 
 
+@pytest.mark.parametrize("mode", ["direct", "spatial"])
+def test_sparse_cross_gradient_operators_equal_the_dense_assembly(mode):
+    pg = pytest.importorskip("pygimli")
+    from scipy.sparse import csr_matrix, diags, issparse
+
+    from PyHydroGeophysX.inversion.cross_constraints import StructuralConstraint
+    from PyHydroGeophysX.inversion.joint_ert_srt import JointERTSRTInversion
+
+    # Graded cells; every neighbourhood spans three non-collinear centres.
+    mesh = pg.createGrid(x=30. * np.linspace(0., 1., 31)**1.3, y=-6. * np.linspace(1., 0., 9)**1.5)
+    n = mesh.cellCount()
+    pairs = np.asarray(StructuralConstraint._cell_neighbors(mesh))
+    Wm = csr_matrix((np.tile([1., -1.], len(pairs)),
+                     (np.repeat(np.arange(len(pairs)), 2), pairs.ravel())), shape=(len(pairs), n))
+    X = StructuralConstraint.build_local_design_matrix(mesh)
+    ma = np.sin(X[:, 0] / 2.) + X[:, 1] / 3.
+    mb = np.cos(X[:, 0] / 3.) * np.exp(X[:, 1] / 4.)
+
+    # The dense assembly the sparse one replaced, with W = diag(RCM[i]) per row.
+    if mode == "direct":
+        R = (Wm.T @ Wm).toarray()
+    else:
+        R = np.asarray(pg.utils.covarianceMatrix(mesh, I=[4., 4.]), dtype=float)
+    R[np.abs(R) < .01] = 0.
+    if mode == "direct":
+        R = (R != 0).astype(float)
+    B1_ref, B2_ref = np.zeros((n, n)), np.zeros((n, n))
+    for i in range(n):
+        W = np.diag(R[i])
+        Xbar = np.linalg.solve(X.T.dot(W.T).dot(X), X.T.dot(W.T).dot(W))[:2]
+        g1, g2 = Xbar @ ma, Xbar @ mb
+        g1[np.abs(g1) < 1e-8] = 0.
+        g2[np.abs(g2) < 1e-8] = 0.
+        B1_ref[i] = Xbar[0] * g2[1] - Xbar[1] * g2[0]
+        B2_ref[i] = -(Xbar[0] * g1[1] - Xbar[1] * g1[0])
+
+    RCM = StructuralConstraint.build_neighborhood_matrix(
+        mesh, Wm=Wm, source="smoothness" if mode == "direct" else "geostat",
+        correlation_lengths=(4., 4.), threshold=.01, binarize=mode == "direct")
+    assert issparse(RCM)
+    np.testing.assert_array_equal(RCM.toarray(), R)
+    for given in (RCM, R):
+        B1, B2 = StructuralConstraint.build_linearized_cross_gradient_blocks(given, X, ma, mb, mode=mode)
+        assert issparse(B1) and issparse(B2)
+        for B, ref in ((B1, B1_ref), (B2, B2_ref)):
+            np.testing.assert_allclose(B.toarray(), ref, rtol=0., atol=1e-11 * np.abs(ref).max())
+
+    # The stacked system keeps a dense Jacobian dense and the rest sparse.
+    inv = object.__new__(JointERTSRTInversion)
+    J = np.random.default_rng(0).standard_normal((9, n))
+    Wd = diags(np.linspace(1., 2., 9), format="csr")
+    d_obs, d_pred = np.ones((9, 1)), np.full((9, 1), 1.1)
+    A = inv._stack_system(J, Wd, Wm, B1, ma, 0. * ma, d_pred, d_obs, 10., 80.)[0]
+    assert [issparse(block) for block in A.blocks] == [False, True, True]
+    np.testing.assert_allclose(
+        A.toarray(), np.vstack([Wd @ J, np.sqrt(10.) * Wm.toarray(), np.sqrt(80.) * B1_ref]),
+        rtol=0., atol=1e-11 * np.abs(B1_ref).max())
+
+
 class _LinearForward:
     """Positive, non-diagonal response with an exact physical Jacobian."""
 
@@ -573,6 +632,390 @@ def test_an_e4d_mesh_reads_back_into_survey_coordinates(tmp_path, name):
     assert marks == {(0, 1, 2): 1}
 
 
+#: E4D's modes 3 and 4 as far as their files go: inputs read the way
+#: READ_INP.F90 reads them, refusing what E4D refuses, and E4D's outputs written
+#: as it writes them - a sigma.N per update, the simulated data rewritten at
+#: every forward run, a time-lapse step starting from the last forward run.
+_E4D_STAND_IN = r'''
+import sys, time
+from pathlib import Path
+import numpy as np
+
+def records(name):
+    return [line.split() for line in Path(name).read_text().splitlines() if line.strip()]
+
+updates, pause = int(sys.argv[1]), float(sys.argv[2])
+inp = records("e4d.inp")
+mode, mesh, srv, sig, out, inv = (row[0] for row in inp[:6])
+cut = mesh.index(".")
+assert mode == ("4" if len(inp) > 7 else "3") and mesh[cut:] == ".1.node"
+trn = np.loadtxt(mesh[:cut + 1] + "trn")
+node = records(mesh[:cut + 2] + ".node")
+nodes = np.array([[float(v) for v in row[1:4]] for row in node[1:]])
+assert {row[5] for row in node[1:]} == {"0", "1", "2"}
+elements = records(mesh[:cut + 2] + ".ele")
+ne = int(elements[0][0])
+assert min(int(row[5]) for row in elements[1:]) >= 1
+assert int(records(mesh[:cut + 2] + ".neigh")[0][0]) == ne
+
+def survey(name, base=None):
+    rows = records(name)
+    n = int(rows[0][0])
+    where = np.array([[float(v) for v in row[1:4]] for row in rows[1:n + 1]])
+    gap = np.linalg.norm(nodes[None] - (where - trn)[:, None], axis=2).min(axis=1)
+    assert gap.max() < 1e-3                      # every electrode on a node
+    m = int(rows[n + 1][0])
+    meas = rows[n + 2:n + 2 + m]
+    abmn = np.array([[int(v) for v in row[1:5]] for row in meas])
+    assert abmn.min() >= 0 and abmn.max() <= n and len(meas) == m
+    if base is not None:                         # get_dobs_tl: same ABMN, in order
+        assert np.array_equal(abmn, base)
+    data = np.array([[float(v) for v in row[5:7]] for row in meas])
+    assert np.all(data[:, 1] > 0)
+    return abmn, data[:, 0], data[:, 1]
+
+abmn, dobs, sd = survey(srv)
+start = records(sig)
+assert int(start[0][0]) == ne
+sigma = np.array([float(row[0]) for row in start[1:ne + 1]])
+dpd = records(out)[1][0]
+options = records(inv)
+blocks, line = int(options[0][0]), 1
+for _ in range(blocks):
+    expected = ("8", "pref") if mode == "4" else ("2", "0.0")
+    assert (options[line + 1][0], options[line + 4][0]) == expected
+    line += 6
+assert float(options[line + 1][0]) > 0 and options[line + 4][0] == "3"
+steps = []
+if mode == "4":
+    assert inp[7][1] == "2"
+    listing = records(inp[7][0])
+    steps = [(row[0], float(row[1])) for row in listing[1:int(listing[0][0]) + 1]]
+log = open("e4d.log", "w")
+
+def report(header, chi2):
+    log.write(f"\n {header}\n Chi2 is currently {chi2:10.4g}   Target value is   1.000\n"
+              " ****\n")
+    log.flush()
+
+def forward(observed, factor):
+    predicted = observed * factor
+    with open(dpd, "w") as f:
+        f.write(f" {len(observed)}\n" + "".join(
+            f"{i + 1:8d}{a:8d}{b:8d}{m:8d}{n:8d}{o:15.6g}{p:15.6g}\n"
+            for i, ((a, b, m, n), o, p) in enumerate(zip(abmn, observed, predicted))))
+    return float(np.mean(((observed - predicted) / sd) ** 2))
+
+def invert(observed, sigma, baseline):
+    # A time-lapse step starts from the previous forward run: no new data file.
+    chi2 = forward(observed, 1.3) if baseline else 9.0
+    report("*** CONVERGENCE STATISTICS AT STARTING MODEL ***", chi2)
+    for it in range(1, updates + 1):
+        time.sleep(pause)                        # the Jacobian takes a while
+        sigma = sigma * 1.1
+        chi2 = forward(observed, 1.0 + 0.3 / (it + 1))
+        if baseline:
+            Path(f"sigma.{it}").write_text(f" {ne} 1 {chi2}\n"
+                                           + "".join(f" {v}\n" for v in sigma))
+        report(f"*** CONVERGENCE STATISTICS AFTER INVERSE UPDATE # {it:03d} ***", chi2)
+    return sigma, chi2
+
+sigma, chi2 = invert(dobs, sigma, True)
+for name, t in steps:
+    _, observed, sd = survey(name, abmn)
+    sigma, chi2 = invert(observed, sigma, False)
+    Path(f"tl_sig{t:8.3f}".replace(" ", "")).write_text(
+        f" {ne} 1 {chi2}\n" + "".join(f" {v}\n" for v in sigma))
+'''
+
+
+def _tetrahedral_box(nx, ny, nz):
+    """A box of unit cubes, each cut into six tetrahedra along one diagonal."""
+    import pygimli as pg
+
+    grid = np.stack(np.meshgrid(np.arange(nx + 1.0), np.arange(ny + 1.0),
+                                -np.arange(nz + 1.0), indexing="ij"), -1)
+    index = np.arange(grid[..., 0].size).reshape(grid.shape[:3])
+    mesh = pg.Mesh(3)
+    for point in grid.reshape(-1, 3):
+        mesh.createNode(pg.Pos(*point))
+    for i in range(nx):
+        for j in range(ny):
+            for k in range(nz):
+                v = {(a, b, c): int(index[i + a, j + b, k + c])
+                     for a in (0, 1) for b in (0, 1) for c in (0, 1)}
+                inner = abs(i + 0.5 - nx / 2) < nx / 2 - 1 and k == 0
+                for path in ((1, 0, 0), (1, 1, 0)), ((1, 1, 0), (0, 1, 0)), \
+                        ((0, 1, 0), (0, 1, 1)), ((0, 1, 1), (0, 0, 1)), \
+                        ((0, 0, 1), (1, 0, 1)), ((1, 0, 1), (1, 0, 0)):
+                    mesh.createCell([v[0, 0, 0], v[path[0]], v[path[1]], v[1, 1, 1]],
+                                    marker=2 if inner else 1)
+    mesh.createNeighborInfos()
+    return mesh
+
+
+def test_the_e4d_engine_writes_what_e4d_reads_and_reads_back_what_it_writes(tmp_path):
+    """E4D is an external program, so a stand-in that reads its inputs the way
+    E4D does checks the files; the engine must stop E4D at the iteration limit
+    (E4D has none of its own) and keep each time-lapse survey's simulated
+    data, which E4D overwrites at the next survey's first forward run."""
+    pg = pytest.importorskip("pygimli")
+    import sys
+
+    from PyHydroGeophysX.inversion import e4d
+
+    mesh = _tetrahedral_box(6, 2, 2)
+    data = pg.DataContainerERT()
+    for x in range(1, 6):
+        data.createSensor(pg.Pos(float(x), 1.0, 0.0))
+    for row, (a, b, m, n) in enumerate([(0, 1, 2, 3), (1, 2, 3, 4), (0, -1, 2, 3)]):
+        data.createFourPointData(row, a, b, m, n)
+    data["k"] = np.array([10.0, 10.0, -20.0])
+    data["rhoa"] = np.array([80.0, 100.0, 120.0])
+    data["err"] = np.full(3, 0.05)
+    stand_in = tmp_path / "e4d_stand_in.py"
+    stand_in.write_text(_E4D_STAND_IN)
+
+    def options(updates, pause):
+        return {"command": f'"{sys.executable}" "{stand_in}" {updates} {pause}',
+                "workdir": str(tmp_path / f"e4d_{updates}")}
+
+    engine = e4d.E4DEngine(data, mesh, options=options(5, 1.0))
+    run = engine.fit(lam=10.0, max_iterations=2, plateau_tolerance=0.01, target_chi2=1.0)
+    folder = Path(run.metrics["e4d_run"])
+    survey = e4d.read_e4d_survey(folder / e4d.SURVEY_FILE)
+    assert survey["abmn"].tolist() == [[1, 2, 3, 4], [2, 3, 4, 5], [1, 0, 3, 4]]
+    assert np.allclose(survey["resistance"], [8.0, 10.0, -6.0])
+    assert np.allclose(survey["std"], [0.4, 0.5, 0.3])
+    assert (run.stop, run.iterations) == ("iteration_cap", 2)
+    assert np.allclose(run.model, 100.0 / 1.1 ** 2)          # sigma.2, on the marked cells
+    assert len(run.model) == int(np.sum(np.asarray(mesh.cellMarkers()) > 1))
+    assert np.allclose(run.response, [80.0, 100.0, 120.0] * np.array([1.1, 1.1, 1.1]), rtol=1e-5)
+    assert np.isclose(run.chi2, np.mean((0.1 * np.array([8.0, 10.0, 6.0])
+                                         / np.array([0.4, 0.5, 0.3])) ** 2), rtol=1e-4)
+    assert len(run.convergence) == 3                          # start and two updates
+
+    later = pg.DataContainerERT(data)
+    later["rhoa"] = np.asarray(data["rhoa"]) * 1.2
+    missing = pg.DataContainerERT(data)
+    missing.markInvalid(pg.core.BVector(np.array([False, True, False])))
+    missing.removeInvalid()                                   # one survey lost a reading
+    series = e4d.invert_e4d_time_lapse([data, missing, later], mesh, lam=10.0,
+                                       options=options(1, 1.5))
+    assert series.final_models.shape == (len(run.model), 3)
+    assert np.allclose(series.final_models[:, -1], 100.0 / 1.1 ** 3)
+    assert series.meta["e4d"]["measurements"] == 2
+    assert series.meta["e4d"]["missing_fit"] == []
+    assert np.all(np.isfinite(series.iteration_chi2))
+    assert np.allclose(series.responses[2], np.asarray(later["rhoa"])[[0, 2]] * 1.15, rtol=1e-5)
+
+
+_R2_OUT = """
+ Processing dataset   1
+   Iteration   1
+     Initial RMS Misfit:        12.10       Number of data ignored:     0
+     Alpha:         968.573   RMS Misfit:        4.72  Roughness:       14.393
+     Alpha:         449.572   RMS Misfit:        3.68  Roughness:       15.153
+     Final RMS Misfit:        3.68
+   Iteration   2
+     Initial RMS Misfit:         3.68       Number of data ignored:     0
+     Alpha:         208.673   RMS Misfit:        1.00  Roughness:       25.289
+     Final RMS Misfit:        1.00
+ Solution converged - Outputing results to file
+ Processing dataset   2
+   Iteration   1
+     Initial RMS Misfit:         2.00       Number of data ignored:     0
+     Alpha:          96.857   RMS Misfit:        1.50  Roughness:       37.220
+     Final RMS Misfit:        1.50
+ WARNING: Solution not converged in   1 iterations
+"""
+
+
+def test_r2_and_r3t_hold_zones_land_on_their_cells_and_invert_series_and_3d(
+        synthetic_series, tmp_path):
+    """R2 and R3t are Binley's external programs, which ResIPy carries. Their
+    log is read for the misfit, the weight they chose and why they stopped.
+    Where R2 can run, a fixed zone must stay at its value, the model must land
+    on the cells R2 reports it for, the prediction handed back must be R2's
+    own, lambda must not be reported as if it had been used, and a series -
+    R2's difference inversion - must see the shallow layer grow more resistive
+    (50, 60, 75 ohm-m over 400). Every apparent resistivity of that short array
+    rises by a third or more, so the smoothest change R2 finds fades with depth
+    rather than stopping at the layer. Where R3t can run, data it predicts for
+    a conductive block on a 3-D mesh must invert back to that block."""
+    from PyHydroGeophysX.inversion import r2
+
+    (tmp_path / "R2.out").write_text(_R2_OUT)
+    datasets = r2.read_r2_out(tmp_path / "R2.out")["datasets"]
+    assert [d["rms"] for d in datasets] == [[12.1, 3.68, 1.0], [2.0, 1.5]]
+    assert [d["stop"] for d in datasets] == ["target", "iteration_cap"]
+    assert datasets[0]["alpha"] == [449.572, 208.673]
+
+    pytest.importorskip("pygimli")
+    launcher = r2.find_r2("r2")
+    if not launcher.runs:
+        pytest.skip(f"R2 cannot run here: {launcher.reason}")
+    from pygimli.physics import ert
+
+    from PyHydroGeophysX.inversion.ert_inversion import run_ert_manager_inversion
+    from PyHydroGeophysX.inversion.ert_zones import zone_prior
+
+    files, mesh = synthetic_series
+    result = run_ert_manager_inversion(
+        files[0], tmp_path / "single", engine="r2", zones=[BLOCK, TOP], auto_lambda=True,
+        max_iterations=10, mesh_quality=33, para_depth=8)
+    assert result["auto_lambda_status"] == "not_applicable" and result["zones_fixed_held"]
+    assert "lambda" not in result["metrics"]
+    assert np.isfinite(result["metrics"]["smoothing_alpha"])
+    manager = result["mgr"]
+    prior = zone_prior(manager.paraDomain, [BLOCK, TOP])
+    assert prior.fixed.sum() > 0 and np.allclose(manager.model[prior.fixed], 400.0)
+    assert not np.allclose(manager.model[prior.in_zone & ~prior.fixed], 50.0)
+
+    folder = Path(result["r2"]["run_dir"])
+    written = np.loadtxt(folder / "f001_res.dat")          # x, z, rho, log10 rho
+    order = np.load(folder / "order.npy")
+    row = np.empty(len(order), dtype=int)
+    row[order] = np.arange(len(order))
+    mine = written[row[np.load(folder / "cell_elements.npy")]]
+    centres = np.asarray(manager.paraDomain.cellCenters())[:, :2]
+    assert np.ptp(centres[:, 0] - mine[:, 0]) < 5e-3     # one shift, to the array's centre
+    assert np.allclose(centres[:, 1], mine[:, 1], atol=5e-3)
+    assert np.allclose(manager.model, mine[:, 2])
+    data = np.load(folder / "data_001.npz")
+    errors = r2.read_r2_errors(folder / "f001_err.dat")
+    assert np.allclose(np.asarray(manager.response) / data["k"] / data["fitted"],
+                       errors["calculated"] / errors["observed"], rtol=1e-4)
+
+    series = r2.invert_r2_time_lapse([ert.load(f) for f in files], mesh, program="r2",
+                                     max_iterations=10,
+                                     options={"workdir": str(tmp_path / "series")})
+    assert series.final_models.shape[1] == 3
+    depth = np.asarray(series.mesh.cellCenters())[:, 1]
+    change = series.final_models[:, 2] / series.final_models[:, 0]
+    shallow, deep = np.median(change[depth > -2.0]), np.median(change[depth < -6.0])
+    assert 1.3 < shallow < 1.7 and shallow > deep + 0.1
+
+    # R3t on a 3-D mesh: data R3t itself predicts for a conductive block are
+    # inverted back to it, on the marked cells of the mesh.
+    three_d = r2.find_r2("r3t")
+    if not three_d.runs:
+        return
+    pg = pytest.importorskip("pygimli")
+    box = _tetrahedral_box(10, 4, 3)
+    survey = pg.DataContainerERT()
+    places = [(x, y) for y in (1, 2, 3) for x in range(1, 10)]
+    for x, y in places:
+        survey.createSensor(pg.Pos(float(x), float(y), 0.0))
+    lines = [[places.index((x, y)) for x in range(1, 10)] for y in (1, 2, 3)]
+    quads = [(line[a], line[a + 1], line[a + 1 + s], line[a + 2 + s])
+             for line in lines for s in (1, 2, 3) for a in range(len(line) - 2 - s)]
+    for row, quad in enumerate(quads):
+        survey.createFourPointData(row, *quad)
+    survey["k"] = np.asarray(pg.physics.ert.geometricFactors(survey), dtype=float)
+    survey["rhoa"] = np.full(len(quads), 100.0)
+    survey["err"] = np.full(len(quads), 0.03)
+    truth = r2.R2Engine(survey, box, program="r3t", options={"workdir": str(tmp_path / "truth")})
+    centres = np.asarray(box.cellCenters())
+    block = (np.abs(centres[:, 0] - 5.0) < 1.5) & (centres[:, 2] > -1.0)
+    folder = truth._prepare([{"abmn": truth._abmn, "data": truth._resistance, "std": truth._std,
+                              "fitted": truth._resistance, "k": truth._k}],
+                            start=np.where(block, 20.0, 100.0), tolerance=1.0, max_iterations=1)
+    (folder / "f001_res.dat").write_bytes((folder / r2.START_FILE).read_bytes())
+    survey["r"] = r2.forward_r2(folder, three_d)
+    survey["rhoa"] = np.asarray(survey["r"]) * np.asarray(survey["k"])
+    fit = r2.R2Engine(survey, box, program="r3t", options={"workdir": str(tmp_path / "r3t")}).fit(
+        lam=0.0, max_iterations=6, plateau_tolerance=0.0, target_chi2=1.0)
+    inside = (np.abs(np.asarray(fit.mesh.cellCenters())[:, 0] - 5.0) < 1.0)
+    assert len(fit.model) == int(np.sum(np.asarray(box.cellMarkers()) > 1))
+    assert np.median(fit.model[inside]) < 0.8 * np.median(fit.model[~inside])
+    assert np.allclose(fit.response, np.asarray(survey["rhoa"]), rtol=0.1)
+
+
+# --------------------------------------------------------------------------
+# Magnetotellurics
+# --------------------------------------------------------------------------
+
+_MT_RHO, _MT_THICKNESS = np.array([100.0, 10.0, 1000.0]), np.array([500.0, 2000.0])
+
+
+def _mt_run(rng, sample_rate=64.0, n=2 ** 16, noise=0.03):
+    """Natural-field-like H and the E a layered earth makes of it, in field units."""
+    from PyHydroGeophysX.data_processing import mt
+
+    def field():
+        walk = np.cumsum(rng.standard_normal(n)) * 0.02 + rng.standard_normal(n)
+        return walk - walk.mean()
+
+    hx, hy = field(), field()
+    f = np.fft.rfftfreq(n, 1.0 / sample_rate)
+    z = np.zeros(f.size, complex)
+    z[1:] = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, f[1:]) / mt.FIELD_TO_OHM
+    ex = np.fft.irfft(z * np.fft.rfft(hy), n=n)
+    ey = np.fft.irfft(-z * np.fft.rfft(hx), n=n)
+    ex += noise * ex.std() * rng.standard_normal(n)
+    ey += noise * ey.std() * rng.standard_normal(n)
+    channels = [mt.Channel("ex", ex, "mV/km"), mt.Channel("ey", ey, "mV/km"),
+                mt.Channel("hx", hx, "nT"), mt.Channel("hy", hy, "nT")]
+    return mt.TimeSeriesRun(channels, sample_rate, "2024-01-01T00:00:00", station="T1",
+                            latitude=41.66, longitude=-91.53)
+
+
+def test_mt_processing_recovers_a_layered_impedance_with_honest_errors(tmp_path):
+    """The impedance, its sign convention and its error bars; and EDI / EMTF XML keep them."""
+    from PyHydroGeophysX.data_processing import mt
+
+    tf = mt.process_mt(_mt_run(np.random.default_rng(3)))
+    true = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, tf.frequency)
+    for (i, j), sign in (((0, 1), 1.0), ((1, 0), -1.0)):
+        miss = np.abs(tf.z[:, i, j] - sign * true)
+        assert np.median(miss / np.abs(true)) < 0.04
+        # Errors neither hide the scatter nor swamp it.
+        assert 0.5 < np.median(miss / tf.z_err[:, i, j]) < 1.6
+    for name, write in (("site.edi", mt.write_edi), ("site.xml", mt.write_emtf_xml)):
+        back = mt.read_transfer_function(write(tf, tmp_path / name))
+        assert np.allclose(back.frequency, tf.frequency, rtol=1e-6)
+        assert np.allclose(back.z, tf.z, rtol=1e-4, atol=1e-12 * np.abs(tf.z).max())
+        assert np.allclose(back.z_err, tf.z_err, rtol=1e-3)
+
+
+def test_mt_1d_sensitivity_differentiates_the_forward_model():
+    from PyHydroGeophysX.data_processing.mt import forward1d
+
+    f = np.logspace(-3, 3, 13)
+    z, d_rho, d_phase = forward1d.sensitivity_1d(_MT_RHO, _MT_THICKNESS, f)
+    for k in range(_MT_RHO.size):
+        step = _MT_RHO.copy()
+        step[k] *= np.exp(1e-6)
+        z2 = forward1d.impedance_1d(step, _MT_THICKNESS, f)
+        assert np.allclose(d_rho[:, k], 2 * np.log10(np.abs(z2 / z)) / 1e-6, atol=1e-5)
+        assert np.allclose(d_phase[:, k], np.angle(z2 / z) / 1e-6, atol=1e-5)
+
+
+def test_a_tem_sounding_fixes_the_mt_static_shift_that_mt_alone_cannot():
+    pytest.importorskip("simpeg")
+    from PyHydroGeophysX.data_processing import mt
+    from PyHydroGeophysX.inversion.em1d import DEFAULT_INVERSION, build_sounding_block
+
+    f = np.logspace(-1, 3, 25)
+    z = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, f)
+    Z = np.zeros((f.size, 2, 2), complex)
+    Z[:, 0, 1], Z[:, 1, 0] = z, -z
+    tf = mt.TransferFunction(frequency=f, z=Z, z_err=0.02 * np.abs(Z) + 1e-30, station="T")
+    shifted = mt.apply_static_shift(tf, 1 / 2.0, 1 / 2.0)    # rho_a up by a factor 2
+    times = np.logspace(-5.5, -3.0, 20)
+    geometry = {"height": 0.0, "source_radius": 20.0}
+    block = build_sounding_block({"times": times, "response": np.ones_like(times)}, geometry,
+                                 {**DEFAULT_INVERSION, "n_layers": 3, "layer_thicknesses": _MT_THICKNESS},
+                                 "TDEM")
+    tem = {"data": {"times": times, "response": block.forward(1.0 / _MT_RHO)},
+           "geometry": geometry, "inversion": {"rel_error": 0.03}}
+    alone = mt.occam1d(shifted, mode="both", static_shift=True, error_floor=0.02, n_layers=30)
+    joint = mt.occam1d(shifted, mode="both", static_shift=True, error_floor=0.02, n_layers=30, tem=tem)
+    assert all(abs(np.log(v / 2.0)) > abs(np.log(1.5)) for v in alone.static_shift.values())
+    assert all(abs(np.log(v / 2.0)) < np.log(1.15) for v in joint.static_shift.values())
+
+
 # --------------------------------------------------------------------------
 # Seismic records (Geometrics DAT / SEG-2)
 # --------------------------------------------------------------------------
@@ -697,6 +1140,36 @@ def test_time_lapse_absolute_u_error_is_a_voltage_on_both_engines(tmp_path, with
                                      verbose=False, **kwargs)
         full.setup()
         np.testing.assert_allclose(np.expm1(1. / full.Wd.diagonal()), full_error)
+
+
+def test_adtlert_forward_releases_its_terrain_setup_without_changing_a_solve(monkeypatch):
+    # The release reaches into ADTLERT's private state, so an ADTLERT that
+    # changes it must fail here rather than in a user's run.
+    pytest.importorskip("pygimli")
+    from pygimli.physics import ert
+
+    from PyHydroGeophysX.inversion import ert_inversion
+    from PyHydroGeophysX.inversion.ert_mesh import build_inversion_mesh
+
+    ert_inversion._enable_adtlert_float64()  # before adtlert is first imported
+    pytest.importorskip("adtlert")
+    x = np.linspace(0., 23., 24)
+    data = ert.createData(elecs=np.column_stack([x, .6 * np.sin(x / 4.)]), schemeName="dd")
+    data["k"], data["rhoa"] = ert.createGeometricFactors(data), np.full(data.size(), 100.)
+    mesh = build_inversion_mesh(data, mesh_quality=33, para_depth=8)
+    built = {}
+    for release in (False, True):
+        with monkeypatch.context() as patch:
+            if not release:
+                patch.setattr(ert_inversion, "_release_adtlert_terrain_setup", lambda forward: False)
+            built[release], _, active, _ = ert_inversion._build_adtlert_forward(data, mesh)
+    inner = built[True].forward_operator
+    assert inner.primary_potential_discretization is None
+    assert inner.geometric_auxiliary_discretization is None
+    model = np.log(100.) + np.linspace(-.5, .5, active.size)
+    for actual, expected in zip(built[True].forward_and_jacobian(model, log_transform=True),
+                                built[False].forward_and_jacobian(model, log_transform=True)):
+        np.testing.assert_allclose(actual, expected, rtol=1e-9, atol=1e-12 * np.abs(expected).max())
 
 
 def test_srt_inversions_penalize_the_smoothness_they_are_given(tmp_path):
@@ -1069,6 +1542,135 @@ def test_a_discard_windows_refuses_leaves_no_run_to_save(tmp_path, monkeypatch):
     monkeypatch.undo()
     assert not store.has_unsaved()
     assert [path.resolve() for path in store.abandoned_run_dirs()] == [run.run_dir]
+
+
+# --------------------------------------------------------------------------
+# Hydrological model outputs: ATS and PFLOTRAN (HDF5)
+# --------------------------------------------------------------------------
+
+def test_ats_output_reads_cycles_volumetric_water_content_and_its_own_mesh(tmp_path):
+    """ATS names the subsurface's variables "domain-<name>" and writes cycles
+    in any order; water content is porosity times saturation (ATS's own
+    water_content is extensive); the cell centres come from the mesh file ATS
+    writes beside the data, in the data's cell order, and map the state onto a
+    geophysical section."""
+    h5py = pytest.importorskip("h5py")
+    from PyHydroGeophysX import ATSPorosity, ATSSaturation, ATSWaterContent
+    from PyHydroGeophysX.petrophysics.resistivity_models import water_content_to_resistivity
+
+    # Four cells along x in two layers, saturation rising along x.
+    saturation = np.tile(0.2 + 0.1 * np.arange(4), 2)[:, None]
+    with h5py.File(tmp_path / "ats_vis_data.h5", "w") as handle:
+        handle.attrs["time unit"] = "d"
+        for cycle, time in ((10, 2.0), (2, 1.0)):
+            for name, values in (("saturation_liquid", saturation),
+                                 ("porosity", np.full((8, 1), 0.4))):
+                handle.create_dataset(f"domain-{name}.cell.0/{cycle}",
+                                      data=values).attrs["Time"] = time
+        handle.create_dataset("domain-water_content.cell.0/2", data=np.full((8, 1), 1000.0))
+
+    def node(x, y, level):
+        return x + 5 * y + 10 * level
+
+    nodes = [(x, y, -level) for level in range(3) for y in range(2) for x in range(5)]
+    hexes = [[9] + [node(i + dx, dy, level + dz) for dz in (0, 1)
+                    for dx, dy in ((0, 0), (1, 0), (1, 1), (0, 1))]
+             for level in range(2) for i in range(4)]
+    with h5py.File(tmp_path / "ats_vis_mesh.h5", "w") as handle:   # a fixed mesh, written once
+        handle.create_dataset("2/Mesh/Nodes", data=np.asarray(nodes, dtype=float))
+        handle.create_dataset("2/Mesh/MixedElements", data=np.asarray(hexes).reshape(-1, 1))
+
+    reader = ATSSaturation(tmp_path)
+    assert reader.get_timestep_info() == [(2, 1.0), (10, 2.0)] and reader.time_unit == "d"
+    np.testing.assert_allclose(reader.load_timestep(0), saturation[:, 0])
+    assert reader.load_time_range(1, 1).shape == (0, 8)
+    np.testing.assert_allclose(reader.load_time_range(0, -1), reader.load_time_range()[:1])
+    water = ATSWaterContent(tmp_path)
+    np.testing.assert_allclose(water.load_timestep(1), 0.4 * saturation[:, 0])
+    np.testing.assert_allclose(ATSPorosity(tmp_path).load_timestep(0), 0.4)
+    with pytest.raises(ValueError, match="Porosity shape"):
+        water.get_water_content(0, porosity=np.ones((8, 1)))
+    with pytest.raises(ValueError, match="between 0 and 1"):
+        water.get_water_content(0, porosity=1.1)
+    np.testing.assert_allclose(reader.output_cell_centers(1),
+                               [[i + 0.5, 0.5, -level - 0.5] for level in range(2) for i in range(4)])
+    # On a section in x and z: half way between the second and third cells.
+    theta = water.interpolate_timestep(0, np.array([[2.0, -1.0], [9.0, -1.0]]), axes="xz")
+    np.testing.assert_allclose(theta[0], 0.4 * 0.35)
+    assert np.isnan(theta[1])                                # outside the model
+    assert np.isfinite(water_content_to_resistivity(theta[:1], rhos=100.0, n=2.0, porosity=0.4)).all()
+
+    # A file under another name: no mesh beside it, names that must be chosen.
+    with h5py.File(tmp_path / "custom_data.h5", "w") as handle:
+        handle.create_dataset("saturation_liquid/0", data=np.ones((4, 1)))
+        handle.create_dataset("domain-saturation_liquid/0", data=np.ones((4, 1)))
+        handle.create_dataset("vector/0", data=np.ones((4, 3)))
+    with pytest.raises(KeyError, match="uniquely"):
+        ATSSaturation(tmp_path, "custom_data.h5")
+    custom = ATSSaturation(tmp_path, "custom_data.h5",
+                           variable_map={"saturation": "domain-saturation_liquid"})
+    assert custom.time_unit is None and np.isnan(custom.times[0])
+    with pytest.raises(ValueError, match="scalar cell"):
+        custom.read_field("vector", 0)
+    with pytest.raises(FileNotFoundError, match="custom_mesh.h5"):
+        custom.output_cell_centers(0)
+
+
+def test_pflotran_output_keeps_runs_apart_and_finds_its_cell_centres(tmp_path):
+    """PFLOTRAN's numbered files make one run, in time order, and a run whose
+    name merely starts with it is not joined in. A structured grid's fields are
+    (nx, ny, nz) and its Coordinates hold the cell edges; an unstructured
+    grid's Domain holds XDMF cells. Either way the centres line up with the
+    values."""
+    h5py = pytest.importorskip("h5py")
+    from PyHydroGeophysX import PFLOTRANPorosity, PFLOTRANSaturation, PFLOTRANWaterContent
+
+    edges = {"X": [0.0, 1.0, 3.0, 6.0], "Y": [0.0, 1.0], "Z": [-2.0, -1.0, 0.0]}
+    x, _, z = np.meshgrid([0.5, 2.0, 4.5], [0.5], [-1.5, -0.5], indexing="ij")   # (nx, ny, nz)
+
+    def write(path, times, unit="y"):
+        with h5py.File(path, "w") as handle:
+            for axis, values in edges.items():
+                handle.create_dataset(f"Coordinates/{axis} [m]", data=values)
+            for time in times:
+                group = handle.create_group(f"Time:  {time:.5E} {unit}")
+                group.create_dataset("Liquid_Saturation", data=x / 10 - z / 100 + time / 1000)
+                group.create_dataset("Porosity", data=np.full(x.shape, 0.4))
+
+    write(tmp_path / "run-001.h5", [10.0])
+    write(tmp_path / "run-002.h5", [2.0, 0.0])
+    write(tmp_path / "run-hires.h5", [0.5])
+    reader = PFLOTRANSaturation(tmp_path, "run")
+    assert reader.times.tolist() == [0.0, 2.0, 10.0] and reader.time_unit == "y"
+    assert reader.load_time_range().shape == (3, 3, 1, 2)
+    np.testing.assert_allclose(PFLOTRANWaterContent(tmp_path, "run").load_timestep(2),
+                               0.4 * (x / 10 - z / 100 + 0.01))
+    np.testing.assert_allclose(PFLOTRANPorosity(tmp_path, "run").load_timestep(0), 0.4)
+    assert PFLOTRANSaturation(tmp_path, filename="run-hires.h5").times.tolist() == [0.5]
+    centres = reader.output_cell_centers(0)
+    np.testing.assert_allclose(reader.load_timestep(0).ravel(),
+                               centres[:, 0] / 10 - centres[:, 2] / 100)
+    np.testing.assert_allclose(reader.interpolate_timestep(0, np.array([[1.25, -1.0]]), axes="xz"),
+                               [0.125 + 0.01])
+
+    write(tmp_path / "dup-1.h5", [0.0])
+    write(tmp_path / "dup-2.h5", [0.0])
+    with pytest.raises(ValueError, match="Duplicate"):
+        PFLOTRANSaturation(tmp_path, "dup")
+    write(tmp_path / "dup-2.h5", [2.0], unit="d")
+    with pytest.raises(ValueError, match="Mixed"):
+        PFLOTRANSaturation(tmp_path, "dup")
+
+    # An unstructured grid of a tetrahedron and a wedge.
+    vertices = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1),
+                (2, 0, 0), (3, 0, 0), (2, 1, 0), (2, 0, 1), (3, 0, 1), (2, 1, 1)]
+    with h5py.File(tmp_path / "unstructured.h5", "w") as handle:
+        handle.create_dataset("Domain/Vertices", data=np.asarray(vertices, dtype=float))
+        handle.create_dataset("Domain/Cells", data=[6, 0, 1, 2, 3, 8, 4, 5, 6, 7, 8, 9])
+        handle.create_group("Time:  0.00000E+00 d").create_dataset("Liquid_Saturation", data=[0.3, 0.6])
+    np.testing.assert_allclose(
+        PFLOTRANSaturation(tmp_path, filename="unstructured.h5").output_cell_centers(),
+        [[0.25, 0.25, 0.25], [7 / 3, 1 / 3, 0.5]])
 
 
 # --------------------------------------------------------------------------

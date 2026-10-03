@@ -52,6 +52,14 @@ PyHydroGeophysX.workflows.gravmag module
    :show-inheritance:
    :undoc-members:
 
+PyHydroGeophysX.workflows.mt module
+-----------------------------------
+
+.. automodule:: PyHydroGeophysX.workflows.mt
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.workflows.models module
 ---------------------------------------
 

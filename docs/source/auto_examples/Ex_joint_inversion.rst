@@ -25,11 +25,13 @@ coupling using the same ERT and SRT field data. Data loading, shared settings,
 the two inversion runs, result saving, and visualization are presented as
 separate steps.
 
-.. GENERATED FROM PYTHON SOURCE LINES 11-12
+**Run time:** about 44 minutes on the maintainer's machine.
+
+.. GENERATED FROM PYTHON SOURCE LINES 13-14
 
 sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_joint_inversion_fig_01.png'
 
-.. GENERATED FROM PYTHON SOURCE LINES 12-38
+.. GENERATED FROM PYTHON SOURCE LINES 14-40
 
 .. code-block:: Python
 
@@ -60,12 +62,12 @@ sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_joint_inversion_fig_01.
     from PyHydroGeophysX.inversion import JointERTSRTInversion
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 39-41
+.. GENERATED FROM PYTHON SOURCE LINES 41-43
 
 Load the ERT and SRT field data
 -------------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 43-62
+.. GENERATED FROM PYTHON SOURCE LINES 45-64
 
 .. code-block:: Python
 
@@ -89,14 +91,14 @@ Load the ERT and SRT field data
     print(f"SRT: {srt_data.sensorCount()} sensors, {srt_data.size()} travel times")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 63-67
+.. GENERATED FROM PYTHON SOURCE LINES 65-69
 
 Define the settings shared by both inversions
 ---------------------------------------------
 
 The environment variables ``PHGX_JOINT_MAX_ITER`` and ``PHGX_JOINT_VERBOSE`` can be used for quick tests without editing the notebook.
 
-.. GENERATED FROM PYTHON SOURCE LINES 69-112
+.. GENERATED FROM PYTHON SOURCE LINES 71-114
 
 .. code-block:: Python
 
@@ -144,14 +146,14 @@ The environment variables ``PHGX_JOINT_MAX_ITER`` and ``PHGX_JOINT_VERBOSE`` can
     print(f"Verbose output: {verbose}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 113-117
+.. GENERATED FROM PYTHON SOURCE LINES 115-119
 
 Run the direct cross-gradient inversion
 ---------------------------------------
 
 This case uses the model smoothness matrices to construct the cross-gradient coupling.
 
-.. GENERATED FROM PYTHON SOURCE LINES 119-158
+.. GENERATED FROM PYTHON SOURCE LINES 121-160
 
 .. code-block:: Python
 
@@ -195,14 +197,14 @@ This case uses the model smoothness matrices to construct the cross-gradient cou
     print(f"Final SRT chi2: {cross_result.chi2_srt:.4f}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 159-163
+.. GENERATED FROM PYTHON SOURCE LINES 161-165
 
 Run the geostatistical joint inversion
 --------------------------------------
 
 This case uses continuous spatial covariance weights for the cross-gradient neighborhood.
 
-.. GENERATED FROM PYTHON SOURCE LINES 165-214
+.. GENERATED FROM PYTHON SOURCE LINES 167-216
 
 .. code-block:: Python
 
@@ -256,14 +258,14 @@ This case uses continuous spatial covariance weights for the cross-gradient neig
     print(f"Final SRT chi2: {geo_result.chi2_srt:.4f}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 215-219
+.. GENERATED FROM PYTHON SOURCE LINES 217-221
 
 Save the inversion results
 --------------------------
 
 Each case gets its own folder containing the recovered models, chi-square histories, and a text summary.
 
-.. GENERATED FROM PYTHON SOURCE LINES 221-265
+.. GENERATED FROM PYTHON SOURCE LINES 223-267
 
 .. code-block:: Python
 
@@ -312,14 +314,14 @@ Each case gets its own folder containing the recovered models, chi-square histor
         print(f"Saved {case_name}: {case_dir}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 266-270
+.. GENERATED FROM PYTHON SOURCE LINES 268-272
 
 Compare the recovered ERT and SRT models
 ----------------------------------------
 
 The same color limits are used across the two coupling strategies. Coverage is applied as transparency to de-emphasize poorly constrained cells.
 
-.. GENERATED FROM PYTHON SOURCE LINES 272-295
+.. GENERATED FROM PYTHON SOURCE LINES 274-297
 
 .. code-block:: Python
 
@@ -347,7 +349,7 @@ The same color limits are used across the two coupling strategies. Coverage is a
     geo_srt_cov = geo_result.srt_coverage
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 296-376
+.. GENERATED FROM PYTHON SOURCE LINES 298-378
 
 .. code-block:: Python
 
@@ -432,7 +434,7 @@ The same color limits are used across the two coupling strategies. Coverage is a
     axes[0, 2].legend(loc="best", fontsize=8)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 377-455
+.. GENERATED FROM PYTHON SOURCE LINES 379-457
 
 .. code-block:: Python
 
@@ -515,7 +517,7 @@ The same color limits are used across the two coupling strategies. Coverage is a
     axes[1, 2].legend(loc="best", fontsize=8)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 456-462
+.. GENERATED FROM PYTHON SOURCE LINES 458-464
 
 .. code-block:: Python
 
@@ -526,7 +528,7 @@ The same color limits are used across the two coupling strategies. Coverage is a
     plt.show()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 463-469
+.. GENERATED FROM PYTHON SOURCE LINES 465-471
 
 The recovered models use common color limits, and the history panels show how
 each coupling strategy approaches the target chi-squared value.
@@ -535,12 +537,12 @@ each coupling strategy approaches the target chi-squared value.
    :width: 1000px
    :align: center
 
-.. GENERATED FROM PYTHON SOURCE LINES 471-473
+.. GENERATED FROM PYTHON SOURCE LINES 473-475
 
 Write the comparison summary
 ----------------------------
 
-.. GENERATED FROM PYTHON SOURCE LINES 475-506
+.. GENERATED FROM PYTHON SOURCE LINES 477-508
 
 .. code-block:: Python
 

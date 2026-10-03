@@ -1,14 +1,15 @@
-MODFLOW and ParFlow
-===================
+MODFLOW, ParFlow, ATS and PFLOTRAN
+==================================
 
 The hydrological end of the connection. Every other method in this section
-measures the subsurface; MODFLOW and ParFlow are what those measurements are
-compared against, and what an interpreted result is written back into.
+measures the subsurface; MODFLOW, ParFlow, ATS and PFLOTRAN outputs can be
+compared with those measurements. Parameter write-back supports MODFLOW and
+ParFlow.
 
 What you can do
 ---------------
 
-- Read water content, saturation and porosity out of a MODFLOW or ParFlow run,
+- Read water content, saturation and porosity out of a supported hydrological run,
   for one timestep or a whole series.
 - Carry those states through petrophysics into a geophysical property, then
   forward model the survey that property would produce.
@@ -20,6 +21,15 @@ What you can do
 
 Required inputs
 ---------------
+
+ATS and PFLOTRAN snapshot readers are available through the Python API.
+See :doc:`/tutorials/ats_pflotran_outputs` for output formats, time units,
+volumetric water content and mapping cells to a geophysical mesh.
+
+.. toctree::
+   :hidden:
+
+   /tutorials/ats_pflotran_outputs
 
 .. list-table::
    :header-rows: 1
@@ -37,6 +47,15 @@ Required inputs
      - Saturation, porosity, domain mask
      - ``ParflowSaturation`` takes the run directory and the run name, and
        discovers the available timesteps itself.
+   * - ATS
+     - Visualization HDF5 scalar cell fields, and the ``*_mesh.h5`` beside them
+     - Liquid saturation, porosity, derived volumetric liquid water content;
+       the cell centres for spatial interpolation come from ATS's mesh file.
+   * - PFLOTRAN
+     - Snapshot HDF5 time groups, single or multiple files
+     - Preserves native array axes and time units; the cell centres come from
+       the run's ``Coordinates`` (structured) or ``Domain`` (unstructured)
+       group. Select a run name or explicit filename.
 
 For writing, you supply the update as an array matching the model grid exactly,
 in the model's own length and time units.
@@ -136,7 +155,16 @@ installed by the ``geophysics`` extra:
 
    pip install "pyhydrogeophysx[geophysics]"
 
-The ParFlow readers are imported conditionally, so the package still loads
-without pftools; only the ParFlow classes are unavailable. Writing inputs is
-not running a model: the writers produce a copy for you to run yourself, and a
-MODFLOW 6 groundwater-flow model is required.
+The ParFlow readers have a standalone PFB fallback and work without pftools.
+ATS and PFLOTRAN HDF5 readers require the ``hydrology`` extra (h5py), loaded
+only when constructing a reader:
+
+.. code-block:: bash
+
+   pip install "pyhydrogeophysx[hydrology]"
+
+These adapters provide the Python output and interpolation API. The Desktop
+Studio's hydrology page, the hydro bundle and the agent workflows read MODFLOW
+and ParFlow only; ATS and PFLOTRAN are not available there yet.
+Writing inputs is not running a model: the writers produce a copy for you to
+run yourself, and the MODFLOW writer requires a MODFLOW 6 groundwater-flow model.

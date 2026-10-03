@@ -148,3 +148,74 @@ instrument formats. A differentiable 2.5D backend, selected with
 ``engine="adtlert"``, runs on the GPU and needs Python 3.11 or newer; it falls
 back to the built-in engine when CUDA is unavailable, and the engine that
 actually ran is reported. See :doc:`/installation` for both.
+
+E4D, PNNL's parallel 3-D ERT code, is an external engine (``engine="e4d"``),
+for single surveys and for time-lapse series in E4D's own time-lapse mode. It
+is not installed with the package and is built from source
+(https://github.com/pnnl/E4D) with gfortran, PETSc and MPI. Where it runs:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 32 40
+
+   * - Platform
+     - E4D
+     - How PyHydroGeophysX reaches it
+   * - Linux (workstation, cluster node)
+     - Supported; E4D's own platform
+     - ``e4d`` and ``mpirun`` on PATH, ``PYHYDRO_E4D`` / ``PYHYDRO_MPIRUN``, or
+       paths in the settings (``launcher="local"``)
+   * - Windows
+     - Only inside WSL 2; there is no Windows build
+     - E4D built in the WSL Linux, ``launcher="wsl"``; PyHydroGeophysX stays on
+       Windows
+   * - macOS
+     - When built from source (not in E4D's instructions; untested)
+     - As on Linux
+   * - Anywhere else, or a cluster with a scheduler
+     - Elsewhere
+     - ``launcher="files"`` writes the complete run folder; run
+       ``mpirun -np N e4d`` in it, then read it back with
+       ``inversion.e4d.read_e4d_run`` or ``read_e4d_time_lapse``
+
+``python -m PyHydroGeophysX.inversion.e4d`` reports what the current machine
+offers. E4D needs at least two MPI processes and no more workers than
+electrodes. When it cannot run, the run writes its folder and stops with a
+message giving the path; it never falls back to another engine.
+
+R2 (2-D) and R3t (3-D), Andrew Binley's inversion codes and the ones ResIPy
+runs, are external engines too (``engine="r2"``, ``engine="r3t"``), for single
+surveys and for time-lapse series (their difference inversion against the
+first survey). They are not installed with the package; they are free for
+non-commercial use, and commercial use needs the author's permission
+(http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm). Where they run:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 32 40
+
+   * - Platform
+     - R2 / R3t
+     - How PyHydroGeophysX reaches them
+   * - Windows
+     - Supported natively (``R2.exe``, ``R3t.exe``)
+     - An installed ResIPy's copy, found without importing ResIPy; or the
+       program in the settings, ``PYHYDRO_R2`` / ``PYHYDRO_R3T``, or PATH
+   * - Linux
+     - Through Wine, as their manuals and ResIPy run them
+     - ``wine`` or ``wine64`` on PATH and the same ``.exe`` files
+   * - macOS
+     - Through Wine (untested here)
+     - As on Linux
+   * - Anywhere else
+     - Elsewhere
+     - ``launcher="files"`` writes the complete run folder; run the program in
+       it, then read it back with ``inversion.r2.read_r2_run``
+
+``python -m PyHydroGeophysX.inversion.r2 --program r2`` (or ``r3t``) reports
+what the current machine offers. R2 inverts a profile on its own mesh; R3t a
+3-D survey on its tetrahedral mesh, or a profile on a 3-D mesh around the line.
+Both search their smoothing weight at every iteration (an Occam inversion), so
+``lam`` and ``auto_lambda`` do not apply to them and the weight they settled on
+is reported instead; they stop at an RMS misfit of ``sqrt(target_chi2)``. They
+hold a fixed a-priori zone at its value.

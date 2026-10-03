@@ -22,7 +22,7 @@ import sys
 import time
 
 # Modules safe to construct on a headless/offscreen display (no GL viewer).
-_NAV_SAFE = ["seismic", "ert", "em", "gravmag", "hydro_geophysics", "geo_hydrology", "seismic3d"]
+_NAV_SAFE = ["seismic", "ert", "em", "gravmag", "mt", "hydro_geophysics", "geo_hydrology", "seismic3d"]
 
 
 def _build_app():
@@ -208,7 +208,7 @@ def main() -> int:
 
     # 8. Panel pauses on an 'awaiting_user' tool result (ends the turn, no re-request).
     class _StubController:
-        def capabilities_summary(self):
+        def capabilities_summary(self, modules=()):
             return "stub"
 
         def dispatch(self, name, args):

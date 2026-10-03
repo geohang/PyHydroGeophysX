@@ -1,9 +1,11 @@
 """
 Windowed time-lapse ERT inversion for handling large temporal datasets.
 """
+import dataclasses
 import os
 import sys
 import tempfile
+import time
 from multiprocessing import Lock
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -88,6 +90,79 @@ class _ADTLERTWindowProgress:
             value = event.get("final_chi2")
             suffix = "" if value is None else f", final chi2 {float(value):.3f}"
             self.log(f"ADTLERT windowed inversion complete: {total}/{total} windows{suffix}")
+
+
+def _adtlert_windows(forward, observed, initial, *, window_size: int,
+                     window_step: int, config, progress):
+    """ADTLERT's sliding-window time-lapse inversion, one window at a time.
+
+    The windows, the stitching - a time step's model is the geometric mean of
+    the windows holding it - and the progress events are those of adtlert's
+    ``invert_windowed_timelapse_log_resistivity``, each window inverted by
+    ``invert_timelapse_log_resistivity`` as there. That function also keeps a
+    forward-and-Jacobian cache across windows, up to window x (iterations + 2)
+    x 4 dense Jacobians (84 by default, 128 at most), until the run ends. It
+    reuses the few a window shares with the one before: on the DAS-1 example,
+    942 readings and 6024 cells over five surveys, 4 of 54, while the cache
+    grew to 2 GB and the run's peak to 9.2 GB. At a reported run's 63 MB per
+    survey it fills with 5.3 GB, and that run ran out of memory.
+    """
+    from adtlert.inversion import (
+        TimeLapseERTInversionResult,
+        invert_timelapse_log_resistivity,
+    )
+
+    observed = np.asarray(observed, dtype=float)
+    n_times = int(observed.shape[0])
+    step = max(1, int(window_step))
+    starts = sorted(set(range(0, n_times - window_size + 1, step)) | {n_times - window_size})
+    data_std = np.asarray(config.data_std, dtype=float)
+    progress({"event": "windowed_start", "n_windows": len(starts), "n_times": n_times,
+              "window_size": int(window_size)})
+    contributions: List[List[np.ndarray]] = [[] for _ in range(n_times)]
+    coverage_bank, window_chi2, reports = [], [], []
+    for index, start in enumerate(starts, start=1):
+        end = start + int(window_size)
+        progress({"event": "window_start", "window_index": index, "n_windows": len(starts),
+                  "start_idx": start, "end_idx": end - 1})
+        window_config = config if data_std.ndim == 0 else dataclasses.replace(
+            config, data_std=np.broadcast_to(data_std, observed.shape)[start:end].copy())
+        began = time.perf_counter()
+        window = invert_timelapse_log_resistivity(
+            forward, observed[start:end], initial[:, start:end], config=window_config)
+        for local, log_model in enumerate(window.final_log_models.T):
+            contributions[start + local].append(log_model)
+        if window.coverage is not None:
+            coverage_bank.append(np.asarray(window.coverage, dtype=float).ravel())
+        final_chi2 = float(window.iteration_chi2[-1]) if window.iteration_chi2 else None
+        if final_chi2 is not None:
+            window_chi2.append(final_chi2)
+        reports.append({"start_idx": start, "end_idx": end - 1, "final_chi2_data": final_chi2,
+                        "iterations": len(window.iteration_chi2),
+                        "elapsed_sec": time.perf_counter() - began})
+        progress({"event": "window_done", "window_index": index, "n_windows": len(starts),
+                  "final_chi2": final_chi2})
+        del window
+
+    final_log = np.column_stack([np.mean(np.column_stack(models), axis=1)
+                                 for models in contributions])
+    progress({"event": "windowed_prediction_start", "n_times": n_times})
+    predicted_log = np.vstack([np.asarray(forward.forward(final_log[:, t], log_transform=True),
+                                          dtype=float) for t in range(n_times)])
+    progress({"event": "windowed_done", "n_windows": len(starts),
+              "final_chi2": window_chi2[-1] if window_chi2 else None})
+    return TimeLapseERTInversionResult(
+        final_models=np.exp(final_log),
+        final_log_models=final_log,
+        predicted_data=np.exp(predicted_log),
+        predicted_log_data=predicted_log,
+        coverage=(np.nanmedian(np.column_stack(coverage_bank), axis=1) if coverage_bank
+                  else np.zeros(final_log.shape[0])),
+        all_coverage=coverage_bank,
+        all_chi2=np.asarray(window_chi2, dtype=float),
+        iteration_chi2=window_chi2,
+        window_reports=reports,
+    )
 
 
 class _PyHydroWindowProgress:
@@ -440,10 +515,7 @@ class WindowedTimeLapseERTInversion:
 
     def _run_adtlert(self) -> TimeLapseInversionResult:
         try:
-            from adtlert.inversion import (
-                InversionConfig,
-                invert_windowed_timelapse_log_resistivity,
-            )
+            from adtlert.inversion import InversionConfig
         except ImportError as exc:
             from PyHydroGeophysX._internal.optional_dependencies import (
                 BackendUnavailable,
@@ -465,8 +537,12 @@ class WindowedTimeLapseERTInversion:
         else:
             mesh = self.mesh
 
+        # No time-lapse step solves a model twice: the candidate's Jacobian is
+        # computed with its fields, and an accepted candidate's is reused. Kept,
+        # the forward's field cache only held 1 GB on the DAS-1 example (eight
+        # 130 MB entries, and their GPU copies) for no hit in 59 lookups.
         forward, result_mesh, active_ids, version = _build_adtlert_forward(
-            datasets[0], mesh
+            datasets[0], mesh, field_cache_entries=0
         )
         inversion_type = str(
             self.inversion_params.get("inversion_type", "L2")
@@ -535,13 +611,14 @@ class WindowedTimeLapseERTInversion:
                 for row in observed
             ]
         ).T
-        inverted = invert_windowed_timelapse_log_resistivity(
+        inverted = _adtlert_windows(
             forward,
             observed,
             initial,
             window_size=int(self.window_size),
             window_step=int(self.inversion_params.get("window_step", 1)),
             config=config,
+            progress=progress,
         )
 
         result = TimeLapseInversionResult()

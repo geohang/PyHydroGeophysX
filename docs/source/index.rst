@@ -225,6 +225,7 @@ structural or joint workflow.
      <a class="phgx-tag" href="methods/em.html">FDEM</a>
      <a class="phgx-tag" href="methods/potential_fields.html">Gravity</a>
      <a class="phgx-tag" href="methods/potential_fields.html">Magnetics</a>
+     <a class="phgx-tag" href="methods/mt.html">MT</a>
      <a class="phgx-tag phgx-tag--hydro" href="methods/hydrological_models.html">MODFLOW</a>
      <a class="phgx-tag phgx-tag--hydro" href="methods/hydrological_models.html">ParFlow</a>
    </p>

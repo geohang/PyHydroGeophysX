@@ -48,6 +48,10 @@ geometry.
 Cell markers of the returned mesh are the zone numbers. Zone 1 of the layouts
 built here is the outer zone, which is also what PyGIMLi treats as the
 background region (marker 1), so the mesh can be inverted as it is.
+
+:func:`write_e4d_mesh` goes the other way, writing any tetrahedral mesh as
+the ``.node``/``.ele``/``.face``/``.neigh``/``.trn`` files E4D itself runs on;
+the E4D inversion engine (``inversion.e4d``) hands its meshes to E4D that way.
 """
 
 from __future__ import annotations
@@ -73,6 +77,7 @@ __all__ = [
     "read_e4d_config",
     "read_e4d_mesh",
     "write_e4d_config",
+    "write_e4d_mesh",
     "write_tetgen_poly",
 ]
 
@@ -350,7 +355,7 @@ def _surface_function(surface: Union[float, Callable[[float, float], float], Non
 
 def e4d_config_from_electrodes(
         electrodes: Any, *, surface: Union[float, Callable[[float, float], float], None] = 0.0,
-        fine_padding: float = 1.0, fine_depth_padding: float = 1.0,
+        fine_padding: Union[float, Tuple[float, float]] = 1.0, fine_depth_padding: float = 1.0,
         outer_distance: float = 100.0, bottom_depth: float = 150.0,
         fine_volume: float = 1.0, outer_volume: float = 1.0e12, quality: float = 1.28,
         refine_offset: float = 0.01, conductivity: float = 0.1,
@@ -367,6 +372,8 @@ def e4d_config_from_electrodes(
     beyond the fine zone. The fine zone's four walls and floor are internal
     boundaries. Zone 1 is the outer zone, at ``outer_volume``; zone 2 the fine
     zone, at ``fine_volume``; both start at ``conductivity`` (S/m).
+    ``fine_padding`` may be a pair, the padding in x and in y: a surface line
+    along x needs its fine zone to reach well to either side of the line.
 
     ``zones`` - boxes as ``core.mesh_3d.normalize_box_zones`` gives them - become
     zones 3, 4, ... inside the fine zone, as E4D models known structure: their
@@ -424,8 +431,10 @@ def e4d_config_from_electrodes(
         for x, y in tops:
             add(x, y, ground(x, y) - 5.0 * offset, INTERIOR)
 
-    x0, y0 = xyz[:, 0].min() - fine_padding, xyz[:, 1].min() - fine_padding
-    x1, y1 = xyz[:, 0].max() + fine_padding, xyz[:, 1].max() + fine_padding
+    pad_x, pad_y = ((float(fine_padding),) * 2 if np.ndim(fine_padding) == 0
+                    else (float(fine_padding[0]), float(fine_padding[1])))
+    x0, y0 = xyz[:, 0].min() - pad_x, xyz[:, 1].min() - pad_y
+    x1, y1 = xyz[:, 0].max() + pad_x, xyz[:, 1].max() + pad_y
     fine_bottom = float(xyz[:, 2].min()) - float(fine_depth_padding)
     corners = [(x0, y0), (x0, y1), (x1, y1), (x1, y0)]
     top_corner = [add(x, y, ground(x, y), SURFACE) for x, y in corners]
@@ -1222,6 +1231,105 @@ def read_e4d_mesh(base: Union[str, Path], *, translation: Optional[Sequence[floa
                 mesh["conductivity"] = sigma
                 mesh["resistivity"] = np.where(sigma > 0, 1.0 / np.maximum(sigma, 1e-300), np.nan)
     return mesh
+
+
+def _outer_faces(cells: np.ndarray, nodes: np.ndarray):
+    """The faces of a tetrahedral mesh, and its neighbour table, as TetGen gives them.
+
+    Returns ``(neighbours, outer, up)``: ``neighbours[c, k]`` is the cell across
+    the face opposite corner ``k`` of cell ``c`` (-1 on the outside, TetGen's
+    ``.neigh`` order); ``outer`` the outside faces as node triples; ``up``
+    whether each of them faces upward, i.e. lies on the ground surface.
+    """
+    opposite = np.array([[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]])
+    faces = cells[:, opposite].reshape(-1, 3)
+    keys = np.sort(faces, axis=1)
+    _, inverse, counts = np.unique(keys, axis=0, return_inverse=True, return_counts=True)
+    inverse = inverse.reshape(-1)
+    order = np.argsort(inverse, kind="stable")
+    paired = counts[inverse[order]] == 2
+    first, second = order[paired][0::2], order[paired][1::2]
+    neighbours = np.full(len(faces), -1, dtype=np.int64)
+    neighbours[first], neighbours[second] = second // 4, first // 4
+    alone = np.flatnonzero(counts[inverse] == 1)
+    outer = faces[alone]
+    # Oriented away from the corner the face is opposite, the normal points out.
+    a, b, c = nodes[outer[:, 0]], nodes[outer[:, 1]], nodes[outer[:, 2]]
+    normal = np.cross(b - a, c - a)
+    inward = nodes[cells[alone // 4, alone % 4]] - a
+    normal *= -np.sign(np.einsum("ij,ij->i", normal, inward))[:, None]
+    length = np.linalg.norm(normal, axis=1)
+    up = normal[:, 2] > 0.05 * np.where(length > 0, length, 1.0)
+    return neighbours.reshape(-1, 4), outer, up
+
+
+def write_e4d_mesh(mesh, folder: Union[str, Path], name: str = "e4d", *,
+                   translation: Optional[Sequence[float]] = None,
+                   zones: Optional[Sequence[int]] = None) -> Dict[str, Any]:
+    """Write a tetrahedral mesh as the files E4D runs on.
+
+    ``<name>.1.node``, ``.ele``, ``.face`` and ``.neigh``, numbered from 1 as
+    TetGen writes them, and ``<name>.trn``, the translation E4D adds back:
+    coordinates are written less ``translation`` (by default the mean node
+    position), since E4D holds them in single precision. Node boundary flags
+    are those E4D's own mesh build leaves: 2 on the outer walls and the
+    bottom, where E4D holds the potential at zero; 1 on the ground surface
+    (an outside face whose normal points up), where no current leaves; 0
+    inside. Element zones are ``zones``, by default the cell markers, renumbered
+    1, 2, ... in order, as E4D requires.
+
+    Cell order is kept, so E4D's conductivity files follow the cell order of
+    ``mesh``. ``name`` must not contain a dot: E4D finds the ``.trn`` by
+    cutting the mesh file name at its first one.
+
+    Returns ``{"files", "node_file", "translation", "zones", "zone_of_marker"}``,
+    ``node_file`` being what ``e4d.inp`` names.
+    """
+    if "." in name:
+        raise ValueError(f"E4D mesh name {name!r} must not contain a dot.")
+    nodes = np.asarray(mesh.positions(), dtype=float)
+    cells = [cell.ids() for cell in mesh.cells()]
+    if int(mesh.dim()) != 3 or any(len(ids) != 4 for ids in cells):
+        raise ValueError("E4D runs on tetrahedral 3-D meshes; this mesh is not one.")
+    cells = np.asarray(cells, dtype=np.int64)
+    shift = (nodes.mean(axis=0) if translation is None
+             else np.asarray(translation, dtype=float).reshape(3))
+    raw = np.asarray(mesh.cellMarkers() if zones is None else zones, dtype=int).reshape(-1)
+    levels = np.unique(raw)
+    zone_of_marker = {int(level): number for number, level in enumerate(levels, start=1)}
+    zone = np.searchsorted(levels, raw) + 1
+
+    neighbours, outer, up = _outer_faces(cells, nodes)
+    flags = np.zeros(len(nodes), dtype=int)
+    flags[np.unique(outer[up])] = SURFACE
+    flags[np.unique(outer[~up])] = OUTER          # a rim node is held, as E4D does
+
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    base = folder / f"{name}.1"
+    local = nodes - shift
+    lines = [f"{len(nodes)} 3 1 1"]
+    lines += [f"{i} {x:.10g} {y:.10g} {z:.10g} 1 {f}"
+              for i, ((x, y, z), f) in enumerate(zip(local, flags), start=1)]
+    Path(f"{base}.node").write_text("\n".join(lines) + "\n", encoding="ascii")
+    lines = [f"{len(cells)} 4 1"]
+    lines += [f"{i} {a + 1} {b + 1} {c + 1} {d + 1} {z}"
+              for i, ((a, b, c, d), z) in enumerate(zip(cells, zone), start=1)]
+    Path(f"{base}.ele").write_text("\n".join(lines) + "\n", encoding="ascii")
+    lines = [f"{len(outer)} 1"]
+    lines += [f"{i} {a + 1} {b + 1} {c + 1} {SURFACE if u else OUTER}"
+              for i, ((a, b, c), u) in enumerate(zip(outer, up), start=1)]
+    Path(f"{base}.face").write_text("\n".join(lines) + "\n", encoding="ascii")
+    one_based = np.where(neighbours >= 0, neighbours + 1, -1)
+    lines = [f"{len(cells)} 4"]
+    lines += [f"{i} {a} {b} {c} {d}" for i, (a, b, c, d) in enumerate(one_based, start=1)]
+    Path(f"{base}.neigh").write_text("\n".join(lines) + "\n", encoding="ascii")
+    trn = folder / f"{name}.trn"
+    trn.write_text("  ".join(f"{v:.12E}" for v in shift) + "\n", encoding="ascii")
+    files = {suffix: f"{base}.{suffix}" for suffix in ("node", "ele", "face", "neigh")}
+    files["trn"] = str(trn)
+    return {"files": files, "node_file": f"{name}.1.node", "translation": shift,
+            "zones": zone, "zone_of_marker": zone_of_marker}
 
 
 def _edge_length(volume: float) -> float:

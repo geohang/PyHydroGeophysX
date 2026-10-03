@@ -6,13 +6,15 @@ from pathlib import Path
 from PyHydroGeophysX._internal.utils import parse_json_object
 
 ROLES = ('data_file', 'time_lapse_files', 'electrode_file', 'seismic_file',
-         'raw_seismic_file', 'tdem_file', 'topography_file', 'geophone_file',
+         'raw_seismic_file', 'tdem_file', 'mt_files', 'topography_file', 'geophone_file',
          'reference_file', 'modflow_dir', 'parflow_dir', 'unknown', 'ignore')
 ROLE_LABELS = dict(zip(ROLES, ('ERT survey', 'Time-lapse ERT', 'Electrode coordinates',
-    'Seismic travel times', 'Raw seismic SEG-Y', 'TDEM survey', 'Terrain / topography',
+    'Seismic travel times', 'Raw seismic SEG-Y', 'TDEM survey', 'MT sites (EDI / EMTF)',
+    'Terrain / topography',
     'Geophone coordinates', 'Reference document', 'MODFLOW model', 'ParFlow model',
     'Unknown — review', 'Ignore')))
-TEXT_SUFFIXES = {'.txt', '.csv', '.tsv', '.dat', '.ohm', '.data', '.sgt', '.xyz', '.md', '.rst', '.nam'}
+TEXT_SUFFIXES = {'.txt', '.csv', '.tsv', '.dat', '.ohm', '.data', '.sgt', '.xyz', '.md', '.rst', '.nam',
+                 '.edi', '.xml', '.zmm', '.zrr', '.zss', '.j'}
 DATA_SUFFIXES = TEXT_SUFFIXES | {'.sgy', '.segy', '.pfb', '.npy', '.npz', '.tif', '.tiff', '.asc', '.vtk', '.bms', '.pdf', '.xlsx', '.shp', '.las'}
 SKIP_DIRS = {'.git', '.venv', 'venv', '__pycache__', 'node_modules', 'results', 'outputs'}
 
@@ -64,6 +66,7 @@ def classify_catalog(catalog, request, provider, progress=None):
               'structure is not evidence that a file is unrelated. Use ignore only with positive '
               'evidence of irrelevance. A .sgy is raw seismic, not travel times. '
               'geophone_file requires receiver_id,x,z; an x,z profile is topography_file. '
+              'An .edi, an EMTF .xml, a .zmm/.zrr/.zss or a .j file is a magnetotelluric site: mt_files. '
               'Multiple ERT files are time-lapse only when the request/evidence establishes repeated surveys. '
               'modflow_dir/parflow_dir labels identify files belonging to a model folder.')
     output = []
@@ -104,7 +107,7 @@ def catalog_inputs(rows):
             raise ValueError(f'Unsupported file role: {role}')
         if role.endswith('_dir'):
             path = str(Path(path).parent)
-        if role in {'time_lapse_files', 'reference_file'}:
+        if role in {'time_lapse_files', 'reference_file', 'mt_files'}:
             inputs.setdefault(role, []).append(path)
         elif role in inputs and inputs[role] != path:
             raise ValueError(f'Multiple files assigned to {role}; select one, or group repeated ERT surveys as time_lapse_files.')

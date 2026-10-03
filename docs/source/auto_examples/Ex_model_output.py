@@ -35,7 +35,7 @@ if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
 from PyHydroGeophysX.model_output.parflow_output import ParflowSaturation, ParflowPorosity
-from PyHydroGeophysX.model_output.modflow_output import MODFLOWWaterContent, MODFLOWPorosity
+from PyHydroGeophysX.model_output.water_content import MODFLOWWaterContent, MODFLOWPorosity
 
 ###############################################################################
 # 1. ParFlow Example

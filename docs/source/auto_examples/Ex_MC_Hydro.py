@@ -2,8 +2,15 @@
 Ex. Monte Carlo Uncertainty Quantification for Hydrologic Properties Estimation
 ===============================================================================
 
-This example demonstrates Monte Carlo uncertainty quantification for 
+This example demonstrates Monte Carlo uncertainty quantification for
 converting ERT resistivity models to water content estimates.
+
+**Before you run it:** this example reads the output of
+``Ex_structure_TLresinv`` (``resmodel.npy``, ``all_coverage.npy``,
+``index_marker.npy`` and ``mesh_res.bms`` in ``results/Structure_WC``).
+Produce it by running ``Ex_Structure_resinv`` and then
+``Ex_structure_TLresinv``, which takes about 3 hours on the maintainer's
+machine.
 
 The analysis includes:
 1. Loading inverted resistivity models from time-lapse ERT

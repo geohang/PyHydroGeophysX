@@ -12,7 +12,7 @@ from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple
 
 from PyHydroGeophysX._internal.utils import parse_json_object
 
-from ._intent import (MAX_CONCURRENT_STAGES, ask_concurrently, infer_instrument, names_tdem,
+from ._intent import (MAX_CONCURRENT_STAGES, ask_concurrently, infer_instrument, names_mt, names_tdem,
                       names_unnegated, read_request, stage_enabled)
 from ._method import IMPLEMENTED_SCHEME
 from .base_agent import AgentResult, BaseAgent
@@ -144,6 +144,80 @@ def _same_file(a: str, b: str) -> bool:
 # ---------------------------------------------------------------------------
 # Context Input Agent
 # ---------------------------------------------------------------------------
+
+#: Petrophysical keys whose values decide whether a water content is the user's.
+_PETRO_VALUE_KEYS = ("rho_sat", "porosity", "n", "m", "rho_fluid")
+
+
+def _stated_numbers(text):
+    """Every number written in ``text``, and each as a fraction of a percentage."""
+    import re
+
+    numbers = []
+    for raw in re.findall(r"\d+(?:\.\d+)?", str(text or "")):
+        value = float(raw)
+        numbers.extend((value, value / 100.0))
+    return numbers
+
+
+def _is_stated(value, numbers):
+    values = value if isinstance(value, (list, tuple)) else [value]
+    try:
+        values = [float(v) for v in values]
+    except (TypeError, ValueError):
+        return False
+    return bool(values) and all(
+        any(abs(v - s) <= 1e-9 + 1e-6 * abs(s) for s in numbers) for v in values)
+
+
+def drop_unstated_petrophysics(config, request):
+    """Remove petrophysical values the request does not contain, and say which.
+
+    Whether a water content is reliable turns on whose petrophysical
+    relationship it used, and a value the parser produced itself - from the
+    example in its own prompt, or a misread - would be reported as the
+    user's. A value counts as stated when the request contains that number,
+    or the percentage it is a fraction of.
+
+    Returns
+    -------
+    list of str
+        ``"key value"`` for each value removed.
+
+    Examples
+    --------
+    >>> config = {'petrophysical_params': {'n': 1.8, 'porosity': 0.3},
+    ...           'layer_params': {'regolith': {'rho_sat_range': [50, 250],
+    ...                                         'n_range': [1.3, 2.2]}}}
+    >>> drop_unstated_petrophysics(config, 'n is 1.8, porosity 30%, rho_sat 50 to 250 ohm-m')
+    ['regolith n_range [1.3, 2.2]']
+    >>> config['layer_params']
+    {'regolith': {'rho_sat_range': [50, 250]}}
+    """
+    numbers = _stated_numbers(request)
+    dropped = []
+    params = config.get('petrophysical_params')
+    if isinstance(params, dict):
+        for key in [k for k in params if k in _PETRO_VALUE_KEYS]:
+            if params[key] is not None and not _is_stated(params[key], numbers):
+                dropped.append(f"{key} {params.pop(key)}")
+    layers = config.get('layer_params')
+    if isinstance(layers, dict):
+        for name in list(layers):
+            layer = layers[name]
+            if not isinstance(layer, dict):
+                continue
+            for key in [k for k in layer
+                        if k.endswith('_range') or k in _PETRO_VALUE_KEYS]:
+                if layer[key] is not None and not _is_stated(layer[key], numbers):
+                    dropped.append(f"{name} {key} {layer.pop(key)}")
+            if not layer:
+                layers.pop(name)
+        if not layers:
+            config.pop('layer_params')
+    return dropped
+
+
 class ContextInputAgent(BaseAgent):
     """
     Agent that interprets natural language requests and generates workflow configurations.
@@ -258,6 +332,13 @@ class ContextInputAgent(BaseAgent):
         # a request and took the ERT .dat file for a TDEM sounding.
         if names_tdem(text) and tdem_file:
             config["tdem_file"] = tdem_file
+
+        # Magnetotelluric sites: EDI and EMTF Z-files are MT whatever the
+        # request calls them; an XML or J-file only when the request says MT.
+        mt_suffixes = [".edi", ".zmm", ".zrr", ".zss"] + ([".xml", ".j"] if names_mt(text) else [])
+        mt_files = list(dict.fromkeys(name for name, _, _ in _file_names(text, mt_suffixes)))
+        if mt_files:
+            config["mt_files"] = mt_files
 
         instrument = self._infer_instrument_from_text(text)
         if instrument:
@@ -589,6 +670,12 @@ class ContextInputAgent(BaseAgent):
         if workflow_config.get('fusion_pattern'):
             workflow_config = self._normalize_fusion_config(workflow_config)
         
+        # Only petrophysical values the request actually contains are the
+        # user's; one the parser supplied itself would be reported as theirs.
+        dropped = drop_unstated_petrophysics(workflow_config, user_request)
+        if dropped:
+            workflow_config['petrophysics_dropped'] = dropped
+
         print("[OK] Multi-stage extraction complete")
         return workflow_config
     
@@ -813,6 +900,8 @@ class ContextInputAgent(BaseAgent):
             or bool(workflow_config.get("seismic_file") or workflow_config.get("raw_seismic_file"))
         )
         wants_tdem = names_unnegated(lower, "tdem") or bool(workflow_config.get("tdem_file"))
+        wants_mt = names_mt(user_request or "") or bool(workflow_config.get("mt_files")
+                                                         or workflow_config.get("mt_file"))
         instrument_is_explicit = any(
             token in lower
             for token in [
@@ -855,7 +944,10 @@ class ContextInputAgent(BaseAgent):
         if wants_tdem and not workflow_config.get("tdem_file") and not workflow_config.get("data_file"):
             missing.append("tdem_file")
 
-        if not any([wants_ert, wants_time_lapse, wants_seismic, wants_tdem]):
+        if wants_mt and not (workflow_config.get("mt_files") or workflow_config.get("mt_file")):
+            missing.append("mt_files")
+
+        if not any([wants_ert, wants_time_lapse, wants_seismic, wants_tdem, wants_mt]):
             missing.append("workflow type")
 
         # Keep order stable and remove duplicates.
@@ -1584,6 +1676,9 @@ Keep it brief (3-5 sentences) and avoid technical jargon where possible."""
                            ("tdem_file", "a TDEM sounding")):
             if config.get(key):
                 parts.append(f"{label} from {config[key]}")
+        sites = config.get("mt_files") or ([config["mt_file"]] if config.get("mt_file") else [])
+        if sites:
+            parts.append(f"{len(sites)} MT site{'s' if len(sites) > 1 else ''} from {', '.join(map(str, sites))}")
         text = ", with ".join(parts[:1] + [", ".join(parts[1:])]) if len(parts) > 1 else (
             parts[0] if parts else "No input data are named yet")
         if config.get("instrument"):

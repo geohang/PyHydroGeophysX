@@ -9,6 +9,69 @@ minor release can change the API.
 
 ### Added
 
+- Magnetotelluric data, `data_processing.mt`, on NumPy and SciPy alone - no
+  new dependency. `TransferFunction` holds one site's impedance and tipper in
+  ohms and e^{+iωt}, with their errors and, where known, the full covariance,
+  and rotates them; `read_transfer_function` reads EDI (impedance, apparent
+  resistivity and phase, and spectra sections), EMTF XML, Egbert Z-files
+  (`.zmm`, `.zrr`, `.zss`) and J-files, and `write_edi` / `write_emtf_xml`
+  write them back. EDI and J-files do not state their sign convention, so it is
+  decided from the phases. `read_timeseries` reads the instruments' own files
+  into `TimeSeriesRun`s of `Channel`s, each with its response chain (sensor,
+  dipole, receiver filters) so that `calibrated()` gives mV/km and nT: Phoenix
+  MTU-5C/5P/8A recordings (native `.bin`, decimated `.td_*`, with `rxcal.json`
+  and `scal.json`), legacy Phoenix MTU-5A/V8 sites (`.TS2`-`.TS5` with `.TBL`),
+  Metronix ATS (with the measurement XML's or a text file's coil calibration),
+  Zonge Z3D (with the coil table stored in the file) and LEMI-424 text files.
+  Times come out in UTC.
+- MT processing: `mt.process_mt(runs, remote=...)` estimates the impedance and
+  tipper from any instrument's runs - cascade decimation, windowed and
+  prewhitened Fourier coefficients in field units, Huber then redescending
+  regression, remote reference, EMTF's band set by default (or an EMTF
+  band-setup file) - with EMTF's full error covariance. The errors allow for
+  the correlation the taper puts between a band's harmonics; on synthetic data
+  they are calibrated, and on EMTF's own test sites the impedances match
+  EMTF's to about 1%. Runs at several sample rates merge into one site.
+  `mt.phase_tensor`, `swift_skew`, `bahr_skew`, `swift_strike`,
+  `induction_arrows` and `niblett_bostick` describe dimensionality and depth;
+  `estimate_static_shift`, `static_shift_from_layers` (for instance against a
+  TEM sounding's layered model) and `apply_static_shift` remove static shift.
+  `mt.impedance_1d` and `sensitivity_1d` give a layered earth's impedance and
+  its derivatives.
+- MT inversion. `mt.occam1d` finds the smoothest layered model that fits a
+  site's apparent resistivity and phase (determinant, either mode, or both
+  against one model) to a target misfit, with exact derivatives; it can solve
+  a static shift per mode, and with `tem=` it fits a TDEM sounding jointly
+  through the package's TDEM forward operator, which fixes the static shift
+  the MT alone cannot (on a synthetic site shifted by 0.5 it returns 0.51 and
+  0.50, and the true model). `mt.water_content_profile` turns the layers into
+  water content with the Waxman-Smits link the rest of the package uses.
+  `mt.invert_profile` inverts a profile's TE and TM impedances for a 2D
+  section on SimPEG's NSEM simulations (`build_profile_mesh` lays the mesh out
+  from the band, `forward_profile` models a section); SimPEG is imported only
+  when they run. The 1D layering starts from the apparent resistivity at the
+  sounding's highest frequency and ends at its lowest, so a resistive site
+  under a conductive cover no longer gets a top layer tens of metres thick.
+- MT across the package. Three workflows, `mt.process`, `mt.invert_1d` (with
+  an optional TEM sounding and water content) and `mt.invert_profile`, run
+  through `run_workflow` and export a recipe, a runner and a walkthrough like
+  the others; `workflows.mt` gathers their names. The studio has a
+  **Magnetotellurics** page laid out like the Seismic page: the Time series,
+  Sounding, Dimensionality, 1D model, Phase tensors and 2D section tabs each
+  bring up the side panel for their step - reading and processing (with a
+  remote reference and a calibration override), the sites, the 1D inversion,
+  the profile and its 2D inversion; every run is recorded in the Project, a
+  model can be added to Project Map, and AQUAH can drive the page.
+  The agent runtime has `invert_mt` and `convert_mt_water_content`: a request
+  that names `.edi` files (or says MT and names XML or J-files), or a
+  configuration with `mt_files`, inverts the sites in 1D and a located line of
+  three or more in 2D; the folder classifier knows MT sites. The Streamlit app
+  lists the page. `visualization.plot_mt_dimensionality` draws a site's phase
+  tensor against period. New example `Ex_MT_workflow` (a MODFLOW column to AMT
+  time series and back to an EDI file, the static shift fixed by TEM, water
+  content, a 2D profile, and USMTArray station NMX20, shipped in
+  `examples/data/MT` under CC BY 4.0) and a methods page, with the references
+  in the README and on the citation page.
 - Figures can show lengths in feet. `visualization.axis_units` holds the
   choice: `set_length_unit("ft")` sets it for every figure, `length_unit("ft")`
   sets it for one block, and the section, map and profile functions in
@@ -22,9 +85,179 @@ minor release can change the API.
 - `visualization.plot_model_section`, `plot_timelapse_snapshots`,
   `plot_difference_map`, `plot_coverage`, the pseudosection plots and the
   animations take `vertical="auto"`, `"elevation"` or `"depth"`.
+- E4D as an ERT engine (`engine="e4d"`, and **E4D 3D (PNNL, external)** on the
+  studio's ERT page). `inversion.e4d` writes the files PNNL's E4D reads - mesh,
+  survey, starting conductivity, inversion and output options, `e4d.inp` - runs
+  E4D under MPI, and reads back its `sigma.N`, simulated data and `e4d.log`, so
+  an E4D run goes through the same QC, error model, outlier rejection, λ search,
+  viewers and exports as the other engines. A profile is inverted on a 3D mesh
+  built around the line and read back as its section; a 3D survey on an
+  imported tetrahedral mesh is inverted on that mesh. A time-lapse series runs
+  as E4D's own time-lapse inversion (ERT4): each survey starts from the solution
+  before it and the change from it is smoothed. E4D is not bundled: it runs on
+  Linux, on Windows only inside WSL 2, and on macOS when built from source; the
+  `files` launcher writes the complete run folder for a cluster or another
+  machine, read back with `read_e4d_run` / `read_e4d_time_lapse`, and
+  `python -m PyHydroGeophysX.inversion.e4d` reports what the current machine
+  offers. A run that cannot reach E4D stops with the folder's path; it never
+  falls back to another engine.
+- `core.e4d_mesh.write_e4d_mesh` writes any tetrahedral mesh as E4D's
+  `.node`/`.ele`/`.face`/`.neigh`/`.trn` files, with the boundary flags E4D's
+  own mesh build gives (2 on the outer walls and bottom, 1 on the ground);
+  `e4d_config_from_electrodes` takes the fine-zone padding as an (x, y) pair.
+- ATS and PFLOTRAN output readers (`ATSSaturation`, `ATSPorosity`,
+  `ATSWaterContent`, `PFLOTRANSaturation`, `PFLOTRANPorosity`,
+  `PFLOTRANWaterContent`), with the same `load_timestep` / `load_time_range` /
+  `get_timestep_info` methods as the MODFLOW and ParFlow readers. They read
+  ATS visualization files (cycles in any order, plain, `.cell.0` or
+  domain-prefixed names) and PFLOTRAN snapshot files (one file, or the numbered
+  files of one run - not another run named alike), keep the simulator's cell
+  order, axes and time units, and give volumetric water content as porosity
+  times liquid saturation. `output_cell_centers` reads the cell centres from
+  the simulator's own mesh - ATS's `*_mesh.h5`, PFLOTRAN's `Coordinates` or
+  `Domain` group - and `interpolate_timestep` maps a state onto a geophysical
+  mesh with them (`axes="xz"` for a section). They need the new `hydrology`
+  extra (h5py), and are Python API only: the studio, the hydro bundle and the
+  agents still read MODFLOW and ParFlow alone.
+- R2 and R3t as ERT engines (`engine="r2"` / `"r3t"`, and **R2 2D (Binley,
+  external)** / **R3t 3D (Binley, external)** on the studio's ERT page).
+  `inversion.r2` writes the files Andrew Binley's programs read - `mesh.dat` or
+  `mesh3d.dat`, `protocol.dat`, the starting model, `R2.in` / `R3t.in` - runs
+  them, and reads back `f001_res.dat`, `f001_err.dat`, the sensitivity map and
+  the `.out` log, so a run goes through the same QC, error model, outlier
+  rejection, viewers and exports as the other engines. R2 inverts a profile on
+  its own mesh; R3t a 3D survey on its tetrahedral mesh, or a profile on a 3D
+  mesh built around the line. Both choose their smoothing weight at every
+  iteration, so λ and auto-λ do not apply: the run says so and reports the
+  weight they chose (`smoothing_alpha`). Fixed a-priori zones are held fixed,
+  zone outlines become zones the smoothness does not cross, and a time-lapse
+  series is their difference inversion against the first survey. The programs
+  are not bundled: on Windows they run natively, found in an installed ResIPy
+  unless named; on Linux and macOS through Wine; the `files` launcher writes
+  the run folder for elsewhere, read back with `read_r2_run`, and
+  `python -m PyHydroGeophysX.inversion.r2` reports what the machine offers.
+- The desktop studio shows when the assistant is the one working
+  (`qt_apps.widgets.ai_presence`). During an automatic run a soft glow of blue,
+  purple, pink and orange flows round the central area (steady orange while it
+  waits for you, a green or red flash as it ends), the Workflow page carries a
+  banner with the assistant's animated orb (breathing while it decides, a
+  turning ring while a step runs), what it is doing and a clock, and a new
+  **Live** tab lists each step as a card: the controller's reason for choosing
+  it, the module, the time taken, what it found (written out as it arrives) and
+  the figures it wrote, with a card for the assistant choosing the next step in
+  between.
+  Approvals and questions are asked in that card. The chat reports each
+  finished step. `run_workflow` takes an `on_event` hook that receives each
+  step's start and end as fields, and the desktop runner passes them across as
+  `step` events.
+- Light and dark appearances for the desktop studio, in View > Appearance
+  (Match System, Light, Dark) and the toolbar's day/night switch; the choice is
+  remembered, and Match System follows the operating system as it changes.
+- AI assistants are plug-ins (`agents.assistants`), so a domain assistant can
+  sit beside AQUAH: GeoSAGE, for geological modelling from gravity and
+  magnetic data, is being ported this way. An `Assistant` describes one - name
+  and domain, chat persona and examples, the input files it takes, its glow
+  colours, the packages it needs - and names its workflow and tools, which load
+  only when a run starts. Assistants are found in the package and through the
+  `pyhydrogeophysx.assistants` entry point, so one can ship in its own
+  package; one that fails to import is reported by `load_errors()` and left
+  out. The studio's assistant panel has a picker: choosing an assistant starts
+  a new conversation with it, gives the Workflow page its input roles and the
+  glow its colours, and is remembered. One that is not ready, or whose
+  packages are missing, is listed greyed out with the reason. GeoSAGE is
+  registered as *in development*, with its six stages laid out as tools after
+  the paper's agents (data, petrology, joint inversion, quasi-geology, report,
+  review). `docs/source/agents/adding_an_assistant.rst` is the guide to adding
+  one.
+- The **Live** tab shows the run as a route, its newest figure, and its
+  outcome. Across the top, the steps taken are drawn in the assistant's
+  colours, the running one with a turning ring and, while the assistant
+  decides, a light travelling to the next stop; the steps still ahead are
+  hollow stops on a dashed line. The route ahead is the run's own projection,
+  `agents.runtime.controller.route_ahead`, recomputed after every step and sent
+  to the studio as `phase="route"` events, so it follows the controller rather
+  than promising a plan; the banner counts "about N to go" from it. Projected
+  artifacts are `context.PROJECTED`, which `RunContext.projected(key)` tests,
+  so the ERT gates count the configured surveys instead of guessing. Beside the
+  steps, each figure the run writes is shown large the moment it appears,
+  revealed behind a band of the assistant's colours, with the earlier ones in a
+  strip. A run ends with a card - how it went, how long it worked, its steps,
+  figures and files, what to check before relying on it - offering **Read the
+  report** and **Open output folder**; the page stays on the Live tab rather
+  than switching to the report.
+- A run's reasoning streams as it is written. The controller's model call
+  streams its reply (`BaseAgent.query_llm(..., on_text=...)`, OpenAI and Claude),
+  the decision prompt asks for the reasoning first, and `drive` sends it on as
+  `phase="thought"` events; the Live tab shows it under "choosing the next step"
+  and the step card does not type it out a second time.
+- Steering a running workflow. **Pause after this step** holds the run before
+  its next step (the running step finishes) and **Resume** lets it go on; a note
+  typed under the timeline is read before the next decision, added to the
+  transcript (`RunContext.guidance`), and that decision may change the run's
+  adjustable settings to follow it (`recovery.ADJUSTABLE` - never a file). The
+  note appears in the timeline as the user's, then with what the assistant made
+  of it and which settings changed; a run without a model says it cannot read
+  notes. Notes, pause and resume travel through `steering.jsonl` in the run's
+  folder, which the run reads between steps (`agents.runtime.steering`,
+  `ControlFile`) and which records what the user told the run; answers to
+  questions still go over stdin. (A thread reading stdin for them froze runs on
+  Windows: a pending pipe read stalls process creation in the same process.)
+- Token and cost counter. Every model call's tokens and estimated cost reach a
+  live total (`llm.runtime_options.add_usage_listener`), shown in the Workflow
+  banner and on the finish card, priced from the provider's list prices.
+- Run replay. The Live tab's views are recorded with their timing and saved
+  beside the results as `live_replay.json` (`qt_apps.widgets.run_replay`);
+  **Replay this run** and **Replay a run…** play it back with play, pause,
+  speed and a scrub slider, long waits shortened and the run's own clock shown,
+  and **Save frame** writes the Live tab to a PNG. Nothing is recomputed.
+- `agents.runtime.entry.drive(ctx, tools=..., prompt=..., finish=...)` runs
+  the controller loop over any set of tools with the step events, approvals
+  and progress the studio uses, for an assistant's own workflow.
+  `run_controller` takes the decision prompt and the product that ends a run
+  (`finish`, by default `report_files`) the same way.
+
 
 ### Changed
 
+- Water content from geophysics always states its uncertainty and whose
+  petrophysical relationship it used. When the user gave none, the conversion
+  still runs, but a warning says the result is not reliable and names every
+  parameter drawn with its range - 5-95% of the actual Monte Carlo draws, for
+  example "cementation exponent m 1.0-3.5, pore-fluid resistivity 20 Ω·m
+  (fixed), saturation exponent n 1.0-4.0, porosity 0.01-0.9" - and asks for the
+  site's relationship; when only part of it was given, the warning names the
+  parameters that took defaults. The step's own summary carries the mean and
+  its ± and the "not reliable" flag, so it is seen while the run goes, and the
+  report prints the same statement (`_uncertainty.describe_prior`). This holds
+  for ERT (single and time-lapse), TDEM and MT conversions.
+- A water-content conversion uses at least 50 Monte Carlo draws, saying so when
+  fewer were asked for; one draw reported a standard deviation of exactly zero.
+  The CLI coordinator (`AgentCoordinator`) now always runs the uncertainty
+  analysis rather than a single estimate.
+- Parameters a user leaves out of a partly supplied relationship take the
+  default with a generous spread (half its value), not the 5% a supplied value
+  gets; `rho_fluid` is read when given, and a `[low, high]` range is accepted
+  for any parameter.
+- Petrophysical values the request parser produced that the request does not
+  contain are dropped, with a warning, so a value from the parser's own example
+  is never reported as the user's (`context_input_agent.drop_unstated_petrophysics`).
+- AQUAH's desktop workflow moved to `agents.assistants.aquah.workflow`; the
+  studio's run process (`qt_apps.agent.one_click_runner`) runs whichever
+  assistant the request names and no longer holds AQUAH's code. The chat
+  panel is `AssistantChatPanel` (`AquahChatPanel` is kept as an alias), and its
+  system prompt is assembled from the active assistant's description.
+
+- An automatic run no longer switches the studio from module to module; it is
+  followed in the **Live** tab on the Workflow page. **Also bring each module to
+  the front as it runs** (off by default) restores the old behaviour.
+- The desktop studio has a new look: neutral greys and white (near-black in
+  the dark appearance), one blue accent, green, orange and red for success,
+  caution and failure, segmented tabs, rounded cards, thin scrollbars and
+  sliders, and a log that is no longer a black console. The saturated brand
+  blue is gone. Plots stay on a light canvas in either appearance, so black
+  traces and colormaps keep their meaning; their default line colours match
+  the accent and status colours. Status text is coloured through the stylesheet (`theme.set_tone`),
+  so it follows the appearance.
 - A section without elevations is labelled Depth, not Elevation. A survey read
   without elevations puts every electrode at z = 0, and its vertical axis now
   reads "Depth (m)", positive downward, in the library plots, the studio and the
@@ -36,6 +269,97 @@ minor release can change the API.
   `plot_apparent_resistivity_pseudosection` and `create_timelapse_gif`/`_mp4`
   are now None, meaning the labels above; a label passed explicitly is used as
   it is.
+
+### Fixed
+
+- The assistant could navigate to the Workflow page, the Project Map and the
+  Model Viewer but not read or drive them: none implemented the agent
+  interface, and the studio's agent self-test failed on it. The Workflow page
+  now reports the run (steps, steps ahead, tokens and cost, how the last run
+  ended and its report) and takes inputs by role, options, tabs, pause,
+  resume, a note, stop and replay; the Project Map selects surveys, shows or
+  hides them, chooses slices and surface settings, interpolates, exports the
+  map and the grid, renames, and imports point products (with the CRS given,
+  without the placement dialog); the Model Viewer lists, filters, selects and
+  compares runs, reads a run's overview, shows its artifacts, labels it and
+  saves it to the Project. Removing a survey or deleting a run stays with the
+  user.
+- The studio window fits a 1920 px screen again. Its minimum width had grown to
+  2211 px because a row of view controls cannot be narrower than all of them
+  side by side, and that sum became the page's minimum and then the window's.
+  The section view shared by the ERT and seismic pages contributed 1125 px, the
+  seismic gather bar 817, the Project Map's surface row about 990, the EM
+  section bar 784 and the sounding plot bar 757. These rows now wrap onto a
+  second line in a narrow panel (`qt_apps.widgets.flow_layout.FlowLayout`),
+  with a label kept on the same line as the control it names, so the window's
+  minimum is now about 1650 to 1800 px, depending on fonts. The Project Map's
+  layer panel no longer has a fixed 200 px minimum that clipped its Rename,
+  Remove and Refresh buttons at that width.
+- `PetrophysicsAgent` asked a model for parameters, discarded its reply and
+  replaced the parameters the user had given with defaults whenever a
+  geological context was set; that branch is gone.
+- The single-survey report said "Default Archie parameters were used based on
+  geological layer type" for what were generic guesses; it now states the
+  parameters and ranges drawn, and whose they were.
+- The Workflow page's report tab read "Results _report": its "&" was taken as
+  a keyboard mnemonic. It now reads "Results & report".
+- The ADTLERT windowed time-lapse inversion no longer runs out of memory on a
+  long series. ADTLERT's window driver kept every survey's dense Jacobian it
+  computed, up to 84 of them, until the run ended, and its forward kept the
+  solved fields of the last eight models; on the DAS-1 example (942 readings,
+  6024 cells, five surveys) the two held 3 GB and were reused for 4 of 54
+  Jacobians and none of 59 field solves. The windows are now inverted one at a
+  time through `invert_timelapse_log_resistivity`, with the same windows,
+  stitching and progress, and the forward keeps no fields: the example's peak
+  falls from 9.2 GB to 6.7 GB and stays flat however many windows follow, for
+  the same models (they differ by 1e-4, as two ADTLERT runs do) and run time.
+- An ADTLERT forward over topography no longer keeps what it needs only to set
+  itself up. It solves the unit primary potentials and the numerical geometric
+  factors on a P2 refinement of the mesh once, and kept both P2 meshes, their
+  potentials and their solver factorizations for the rest of the run. They
+  are released once their results are cached: the DAS-1 forward (5994 cells)
+  holds 2.5 GB instead of 3.5 GB in the same time, with identical solves and
+  Jacobians, and the windowed example above peaks at 5.6 GB. This applies to
+  the single-survey ADTLERT inversion as well.
+- The in-house time-lapse ERT inversion builds its spatial and temporal
+  regularization operators sparse whatever `save_memory` says. The default mode
+  stored them dense - (N C) x (N n) and (N - 1) n x N n arrays of almost only
+  zeros, 5.6 GB at the 15000 unknowns below which the studio keeps that mode -
+  although they only ever multiply vectors. Five DAS-1 surveys on 1181 cells
+  now peak at 1.6 GB instead of 2.2 GB, with the same models to 1e-12.
+- The in-house single-survey ERT inversion no longer makes its stacked
+  Gauss-Newton system one dense array. It densified the smoothness operator
+  (about 1.5 n^2 values) and, with a reference weight, an n x n identity on
+  every iteration; the system is now held as its blocks
+  (`solvers.linear_solvers.StackedSystem`), the Jacobian dense and the rest
+  sparse, and an SPD solver's normal matrix is summed block by block. On the
+  BERT example refined to 10779 cells the run needs 1.7 GB instead of 4.4 GB
+  and 120 s instead of 160 s, with the same chi2. The GPU solvers still receive
+  the assembled array.
+- An auto-lambda sweep on the pyGIMLi engine keeps the ERTManager - Jacobian,
+  meshes, forward operator - only of the runs that can still be exported: the
+  fixed-lambda run, the best trial, and during a cold retry the warm sweep's
+  best. Every trial used to keep its own; a five-trial sweep on the BERT
+  example peaked at 4.4 GB and now at 2.9 GB, with the same lambda and chi2.
+- `generalized_solver` takes a `LinearOperator`, and `scipy_lsqr`,
+  `scipy_lsmr` and `precond_lsmr` no longer copy a dense system into CSR, 1.5
+  times its size, before solving it.
+- `ertforandjac2` scales the Jacobian in place, rather than through two more
+  full copies of it per survey and iteration.
+- The joint ERT+SRT inversion keeps its structural operators sparse. The
+  cross-gradient neighbourhood matrix and the linearized blocks `B1`, `B2`
+  were dense n x n arrays, and each of `B1`'s n rows was assembled from an
+  n x n weight matrix, O(n^3) per Gauss-Newton step; each row now uses only
+  its neighbours. The SRT ray Jacobian stays sparse, the stacked system is
+  held as its blocks, an SPD solver gets its normal matrix (it used to fall
+  back to LSQR, refusing the stacked system as not square), and the chi2
+  checks no longer build Jacobians they throw away. On the shipped BERT and
+  refraction lines the run takes 144 s instead of 1866 s at 2661 cells and
+  127 s instead of 4565 s at 5515 cells, with peak memory 1.5 GB and 2.5 GB
+  instead of 1.8 GB and 3.6 GB. The matrices are the same entry for entry
+  (the cross-gradient blocks to 1e-10); the models differ only as LSMR's
+  300-iteration truncation does under a change of summation order (chi2 to
+  4e-4).
 
 ## [0.5.0] - 2026-09-28
 

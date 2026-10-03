@@ -44,6 +44,14 @@ requires.
       Potential-field anomalies, forward modelling of bodies, and compact 3D
       inversion.
 
+   .. grid-item-card:: Magnetotellurics
+      :link: mt
+      :link-type: doc
+
+      MT and AMT: instrument time series to impedances by robust processing,
+      phase tensors, Occam 1D with the static shift fixed by TEM, and 2D
+      profiles.
+
    .. grid-item-card:: MODFLOW and ParFlow
       :link: hydrological_models
       :link-type: doc
@@ -78,6 +86,11 @@ What each geophysical method needs and gives back
      - Density, magnetic susceptibility
      - 3D property distribution
      - Basin and structural geometry
+   * - Magnetotellurics
+     - Electrical resistivity, from metres to kilometres deep
+     - Layered soundings and 2D sections
+     - Aquifer and basement geometry below the reach of ERT; water content
+       through a petrophysical relationship
 
 :doc:`MODFLOW and ParFlow <hydrological_models>` sit on the other side of that
 table. They supply the water content, saturation and porosity the first column
@@ -114,4 +127,5 @@ site.
    seismic
    em
    potential_fields
+   mt
    hydrological_models

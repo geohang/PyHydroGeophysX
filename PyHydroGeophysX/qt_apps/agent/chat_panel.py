@@ -1,4 +1,11 @@
-"""The AQUAH chat panel: the right-hand dock that drives the studio in words.
+"""The assistant chat panel: the right-hand dock that drives the studio in words.
+
+Which assistant the user is talking to - AQUAH for hydrogeophysics, GeoSAGE for
+geological modelling, or another registered in
+:mod:`PyHydroGeophysX.agents.assistants` - is chosen at the top of the panel.
+The assistant supplies its name, its part of the system prompt, its example
+requests and the workflow "Auto to report" runs; the rules for driving the
+studio are this panel's and the same for every assistant.
 
 The panel keeps a provider-neutral ``messages`` list and a small per-turn state
 machine. The only blocking step (the model call) runs on a ``QThread``; tool
@@ -24,7 +31,7 @@ import time
 from typing import Any, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import Qt, QTimer, QUrl, Signal
-from PySide6.QtGui import QImage, QTextDocument
+from PySide6.QtGui import QColor, QImage, QTextDocument
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -36,6 +43,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QSizePolicy,
+    QStyledItemDelegate,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -61,6 +69,9 @@ from PyHydroGeophysX.qt_apps.agent.providers import (
     tier_model,
 )
 from PyHydroGeophysX.qt_apps.agent.runtime import LlmCallWorker
+from PyHydroGeophysX.qt_apps.widgets import ai_presence as presence
+from PyHydroGeophysX.agents import assistants as assistant_registry
+from PyHydroGeophysX.qt_apps.widgets.ai_presence import AiOrb
 from PyHydroGeophysX.agents.studio_tools import tool_specs
 
 _P = theme.PALETTE
@@ -69,24 +80,20 @@ _P = theme.PALETTE
 _CONTINUE_WORDS = frozenset({"continue", "next", "go", "go on", "proceed", "done",
                              "next shot", "继续", "下一炮", "下一个"})
 
-SYSTEM_PROMPT = """You are AQUAH, an assistant embedded in the PyHydroGeophysX desktop studio, a hydrogeophysics tool. You help the user process and model geophysical data by driving the studio GUI through tools, not by writing code.
+SYSTEM_PROMPT = """You are {name} ({title}), an assistant embedded in the PyHydroGeophysX desktop studio. {summary} You help the user by driving the studio GUI through tools, not by writing code.
 
 Rules:
 - You act only through the provided tools: list_modules, navigate, describe_current_module, apply_action, get_studio_state.
-- Pick the module by matching the task to the module purposes listed under "Studio modules" below — read them before choosing. For 2D-profile forward modeling / synthetic data (ERT/SRT/EM/gravity along a line), use hydro_geophysics. For 3D ERT forward modeling, use mesh3d (first 'generate' the 3D mesh, then 'run_ert_forward'). Do NOT use ert for forward modeling — it inverts field data.
+- Pick the module by matching the task to the module purposes listed under "Studio modules" below — read them before choosing.
 - Every tool call you make is automatically shown to the user with Approve / Reject buttons before it runs, so you do NOT need to ask for permission in words. Never end your turn with a question like "Shall I proceed?" — instead, briefly say what you are about to do and then make the tool call in the same turn.
 - Take one action at a time: call a single tool, wait for its result, then decide the next step.
 - navigate returns the opened module's description under "current_module": its actions with their parameter keys, its current state and its views. Use those real action names and parameter keys in apply_action. Do not call describe_current_module right after navigate - it would return the same description again; call it only to refresh the state later (for example after data were loaded or a run finished), or when no navigate result is at hand.
-- Never invent file paths or other inputs. Except for Hydro -> Geophysics, if an action needs a data file and the user did not give you a path, prefer an example-data action (such as use_example_data or use_example) when the module offers one; only call load_data with a path the user actually provided. If neither is possible, ask the user for the file.
+- Never invent file paths or other inputs. If an action needs a data file and the user did not give you a path, prefer an example-data action (such as use_example_data or use_example) when the module offers one, unless a rule below says to ask first; only call load_data with a path the user actually provided. If neither is possible, ask the user for the file.
 - For a processing request, a typical sequence is: navigate to the right module (its result describes the module), load data (use the example data if the user gave none), set parameters, then run.
-- In Hydro -> Geophysics, data-source choice is a mandatory user checkpoint. Once the module is open, if the user has not explicitly chosen a source, STOP and ask whether to use (1) the bundled example data or (2) the user's own hydrologic-model output folder. Do not call use_example_data or set_data_dir until the user answers. If project-context data are already displayed, treat them as user data and still ask whether to use them. For bundled data call use_example_data; for user data call set_data_dir only with a path supplied by the user or reported by the studio context.
-- In Hydro -> Geophysics, if the user wants to choose a profile interactively on the map rather than provide coordinates, call start_profile_pick. It opens the Profile step and pauses for the user's two clicks. Do not claim that profile points are selected until the user has completed those clicks and resumed the workflow.
-- In Hydro -> Geophysics, after select_methods returns parameter_defaults, STOP before set_params or run and ask whether the user wants those displayed defaults or wants to specify parameters. Do not silently invent or apply acquisition/noise values. If the user chooses defaults, leave the existing UI values unchanged; after either choice, call confirm_parameters ONLY after the user explicitly confirms it, then run.
 - If a tool result has status "failed" or "declined", read it and adjust, or ask the user what to do. Do not invent module names, actions, or parameters; discover them with the tools.
 - Always finish your turn by telling the user the next step: what you will do next, or what they can ask for. When you START a long job (a tool result with status "started"), say it is running in the background and that the user can ask for its status (for example "is it done?") or say "continue" to proceed once it finishes — then end your turn rather than guessing the job is complete.
-- Seismic first-break picking is PER SHOT and has a mandatory human checkpoint. Workflow: load_data -> (load_geometry if the user gives a geophone positions/topography file) -> set_geometry (for a REGULAR shot interval, pass first_shot_x + shot_spacing ONCE so each record's shot_x auto-fills on select_record — do NOT set shot_x for every record; use a per-record shot_x only to override an irregular shot) -> then step through shots with pick_next_shot — ONE call that selects the next un-picked record, auto-picks it, and pauses for review (it returns records_remaining and next_record). After the user says continue: if records_remaining is non-empty, call pick_next_shot again; repeat until none remain. Prefer pick_next_shot over separate select_record/auto_pick/review_picks (it is much faster, one call per shot); use the individual actions only to manually re-pick a specific shot. Run run_srt ONLY when records_remaining is empty (every shot picked and reviewed). Never run_srt while shots remain, and never run_srt in the same turn as auto_pick.
-- When a tool returns status "awaiting_user", the workflow is paused for the user to act in the GUI (for example correcting picks). Relay the message, end your turn, and resume only when the user says to continue. During the pause the user may also ask you to set_pick or delete_pick specific traces.
-{vision_rules}
+- When a tool returns status "awaiting_user", the workflow is paused for the user to act in the GUI (for example correcting picks). Relay the message, end your turn, and resume only when the user says to continue.
+{persona}{vision_rules}
 Studio modules (key: purpose):
 {modules}
 """
@@ -136,7 +143,7 @@ def _default_provider_id() -> str:
     return "openai"
 
 
-class AquahChatPanel(QWidget):
+class AssistantChatPanel(QWidget):
     """Conversation panel that turns plain language into approved tool calls."""
 
     def __init__(
@@ -199,10 +206,18 @@ class AquahChatPanel(QWidget):
         except Exception:  # noqa: BLE001 - an odd provider simply gets no vision
             self._vision = False
         self._tool_specs = tool_specs(vision=self._vision)
+        agent = assistant_registry.active()
         self._system = SYSTEM_PROMPT.format(
-            modules=self._controller.capabilities_summary(),
+            name=agent.name, title=agent.title, summary=agent.summary,
+            persona=agent.persona,
+            modules=self._controller.capabilities_summary(agent.studio_modules),
             vision_rules=VISION_RULES if self._vision else "",
         )
+
+    @staticmethod
+    def _name() -> str:
+        """The name of the assistant the user is talking to."""
+        return assistant_registry.active().name
 
     # -- UI ------------------------------------------------------------------
     def _build_ui(self) -> None:
@@ -211,7 +226,34 @@ class AquahChatPanel(QWidget):
         root.setSpacing(8)
 
         header = QHBoxLayout()
-        header.addWidget(QLabel("<b>AQUAH Assistant</b>"))
+        # Which assistant this is. One that cannot run here - not installed, or
+        # still being ported - is listed but greyed out, with the reason.
+        self._assistant_combo = QComboBox()
+        self._assistant_combo.setToolTip("The AI assistant you are talking to")
+        # A styled delegate, so a greyed-out entry is drawn grey: the combo's
+        # default menu delegate draws every entry alike.
+        self._assistant_combo.setItemDelegate(QStyledItemDelegate(self._assistant_combo))
+        for agent in assistant_registry.assistants():
+            # The name alone: the header has little room, and the domain is in
+            # the tooltip, the welcome note and the Workflow page's title.
+            ready, why = agent.availability()
+            label = agent.name if ready else f"{agent.name} ({agent.status if agent.status != 'ready' else 'unavailable'})"
+            self._assistant_combo.addItem(label, agent.key)
+            index = self._assistant_combo.count() - 1
+            self._assistant_combo.setItemData(
+                index, f"{agent.title}\n{agent.summary}" + (f"\n\n{why}" if why else ""),
+                Qt.ToolTipRole)
+            if not ready:
+                item = self._assistant_combo.model().item(index)
+                if item is not None:
+                    item.setEnabled(False)
+                # The combo's own delegate ignores the stylesheet's disabled
+                # colour; a grey that reads on both appearances says it instead.
+                self._assistant_combo.setItemData(index, QColor("#8e8e93"), Qt.ForegroundRole)
+        current = self._assistant_combo.findData(assistant_registry.active().key)
+        self._assistant_combo.setCurrentIndex(max(0, current))
+        self._assistant_combo.currentIndexChanged.connect(self._on_assistant_changed)
+        header.addWidget(self._assistant_combo)
         header.addStretch(1)
         # Provider, model, key and the tool switches are chosen once a session
         # and then only read back, so they collapse behind this button. What
@@ -231,7 +273,7 @@ class AquahChatPanel(QWidget):
 
         self._status_label = QLabel("")
         self._status_label.setWordWrap(True)
-        self._status_label.setStyleSheet(f"color:{_P['muted']};")
+        theme.set_tone(self._status_label, "muted")
         root.addWidget(self._status_label)
 
         self._settings = self._build_settings()
@@ -252,22 +294,32 @@ class AquahChatPanel(QWidget):
 
         # Shown while a model request is in flight, with how long it has been.
         # The Send button's "…" was the only sign of the wait step-by-step
-        # spends most of its time in.
+        # spends most of its time in. The orb is the agent's presence in the
+        # studio's one visual language: the same one is on the Workflow page
+        # and on every panel an automatic run is working in.
+        self._thinking_row = QWidget()
+        thinking_layout = QHBoxLayout(self._thinking_row)
+        thinking_layout.setContentsMargins(0, 0, 0, 0)
+        thinking_layout.setSpacing(8)
+        self._thinking_orb = AiOrb(22)
+        thinking_layout.addWidget(self._thinking_orb)
         self._thinking = QLabel()
-        self._thinking.setStyleSheet(f"color:{_P['muted']}; font-style:italic;")
-        self._thinking.setVisible(False)
-        root.addWidget(self._thinking)
+        self._thinking.setObjectName("aquahThinking")
+        thinking_layout.addWidget(self._thinking, 1)
+        self._thinking_row.setVisible(False)
+        root.addWidget(self._thinking_row)
+        # What an automatic run is doing right now, while it runs; None when
+        # no run is going.
+        self._live: Optional[str] = None
         self._thinking_clock = QTimer(self)
         self._thinking_clock.setInterval(1000)
         self._thinking_clock.timeout.connect(self._update_thinking)
 
         # Pending tool-call confirmation card (hidden until needed).
         self._confirm = QFrame()
+        # Styled by the studio stylesheet (#ConfirmCard), so it follows the
+        # Light and Dark appearances.
         self._confirm.setObjectName("ConfirmCard")
-        self._confirm.setStyleSheet(
-            f"#ConfirmCard {{ background:{_P['select_bg']}; border:1px solid {_P['border_blue']};"
-            f" border-radius:8px; }}"
-        )
         clay = QVBoxLayout(self._confirm)
         self._confirm_label = QLabel()
         self._confirm_label.setWordWrap(True)
@@ -391,6 +443,29 @@ class AquahChatPanel(QWidget):
         lay.addWidget(self._rag, 4, 2)
         lay.addWidget(self._mcp, 4, 3)
         return box
+
+    # -- assistant -------------------------------------------------------------
+    def _on_assistant_changed(self, _index: int) -> None:
+        """Talk to another assistant: a new conversation, with its own prompt."""
+        key = self._assistant_combo.currentData()
+        if not key or key == assistant_registry.active().key:
+            return
+        if hasattr(self._controller, "set_assistant"):
+            self._controller.set_assistant(key)
+        else:
+            assistant_registry.set_active(key)
+        self._refresh_capabilities()
+        self._reset_conversation()
+
+    def sync_assistant(self) -> None:
+        """Show the active assistant in the picker, e.g. after a restore."""
+        index = self._assistant_combo.findData(assistant_registry.active().key)
+        if index >= 0 and index != self._assistant_combo.currentIndex():
+            self._assistant_combo.blockSignals(True)
+            self._assistant_combo.setCurrentIndex(index)
+            self._assistant_combo.blockSignals(False)
+            self._refresh_capabilities()
+            self._reset_conversation()
 
     # -- settings handling ---------------------------------------------------
     def _on_settings_toggled(self, shown: bool) -> None:
@@ -543,13 +618,18 @@ class AquahChatPanel(QWidget):
             "<br>&#8226; <i>capture the inversion section and tell me if it looks reasonable</i>"
             if self._vision else ""
         )
+        agent = assistant_registry.active()
+        if agent.examples:
+            self._input.setPlaceholderText(f"e.g. {agent.examples[0]}")
+        examples = "".join(f"<br>&#8226; <i>{html.escape(example)}</i>"
+                           for example in agent.examples)
         self._render_note(
-            "AQUAH is ready — describe what you want to do in plain language. Examples:"
-            "<br>&#8226; <i>open Hydro &#8594; Geophysics and run an ERT forward model on the example data</i>"
-            "<br>&#8226; <i>load ERT data from &lt;path&gt; as E4D and run the inversion with lambda 30</i>"
-            "<br>&#8226; <i>build and export a 3D crosshole mesh</i>"
-            f"{vision_line}"
-            "<br>Choose Step-by-step to approve individual actions, or Auto to report to run a complete workflow."
+            f"<b>{html.escape(agent.name)}</b> · {html.escape(agent.domain)} is ready — "
+            "describe what you want to do in plain language."
+            + (f" Examples:{examples}" if examples else "")
+            + f"{vision_line}"
+            "<br>Choose Step-by-step to approve individual actions, or Auto to report "
+            "to run a complete workflow."
         )
         self._refresh_ready_state()
 
@@ -593,30 +673,97 @@ class AquahChatPanel(QWidget):
         self._render_user(text)
         self._messages.append({"role": "user", "content": text})
         if self._execution_mode.currentData() == "auto":
-            if self._provider_id not in {"openai", "anthropic"}:
-                self._render_note("Auto to report currently supports OpenAI and Claude. Choose one above, or use step-by-step assistance.")
+            agent = assistant_registry.active()
+            if self._provider_id not in set(agent.providers):
+                self._render_note(f"Auto to report with {html.escape(agent.name)} supports "
+                                  f"{', '.join(agent.providers)}. Choose one of those above, "
+                                  "or use step-by-step assistance.")
                 return
-            settings = {"provider": "claude" if self._provider_id == "anthropic" else "openai",
+            settings = {"assistant": agent.key,
+                        "provider": "claude" if self._provider_id == "anthropic" else "openai",
                         "model": self._provider.model,
                         "api_key": self._provider._api_key,
                         "reasoning_effort": self._reasoning.currentText(),
                         "use_rag": self._rag.isChecked(), "use_mcp": self._mcp.isChecked()}
             try:
-                message = self._controller.run_to_report(text, settings, self._on_workflow_finished)
+                message = self._controller.run_to_report(
+                    text, settings, self._on_workflow_finished,
+                    on_step=self._on_workflow_step)
             except Exception as exc:
                 message = f"Could not start workflow: {exc}"
             self._on_workflow_finished(message)
             if message.startswith("Workflow started."):
                 self._set_busy(True)
+            if message.startswith("Workflow started"):
+                self._set_live(f"{self._name()} is reading your request", presence.THINKING)
             return
         self._paused_resume = None  # a non-"continue" message takes manual control
         self._set_busy(True)
         self._start_request()
 
     def _on_workflow_finished(self, message):
+        self._set_live(None)
         self._render_note(html.escape(message))
         self._messages.append({"role": "assistant", "content": message})
         self._set_busy(False)
+
+    def _on_workflow_step(self, event: Dict[str, Any]) -> None:
+        """Narrate an automatic run here, a line per step as each one ends.
+
+        The run used to say "Workflow started." in the chat and then nothing
+        until the report, so the conversation that started it went quiet for
+        the whole run. Each finished step now reports back with what it found,
+        and the line under the transcript says what the assistant is doing meanwhile.
+        """
+        label = str(event.get("label") or event.get("tool") or "Step")
+        if event.get("phase") == "start":
+            self._set_live(f"{self._name()} · {label}", presence.WORKING)
+            return
+        if event.get("phase") == "paused":
+            self._set_live(f"{self._name()} is paused · Resume under the Live timeline",
+                           presence.WAITING)
+            return
+        if event.get("phase") == "resumed":
+            self._set_live(f"{self._name()} is carrying on", presence.THINKING)
+            return
+        if event.get("phase") == "waiting":
+            what = f"your approval of {label}" if label else "your answer"
+            self._set_live(f"{self._name()} is waiting for {what} in Workflow", presence.WAITING)
+            return
+        if event.get("phase") != "done":
+            return
+        status = str(event.get("status") or "ok")
+        # Fixed system colours that read on both appearances: these lines stay
+        # in the transcript when the appearance changes.
+        mark, color = (("&#10003;", "#34c759") if status == "ok" else
+                       ("&#8631;", presence.CARET_GRAY) if status == "skipped" else
+                       ("&#10007;", "#ff3b30"))
+        summary = str(event.get("summary") or "")
+        if len(summary) > 280:
+            summary = summary[:277].rstrip() + "…"
+        self._transcript.append(
+            f"<div style='margin:4px 0;'>"
+            f"<span style='color:#af52de;'>&#9679;</span> "
+            f"<b>{html.escape(label)}</b> "
+            f"<span style='color:{color}; font-weight:700;'>"
+            f"{mark}</span>"
+            + (f"<br><span style='color:{presence.CARET_GRAY};'>{html.escape(summary)}</span>"
+               if summary else "")
+            + "</div>")
+        self._scroll_to_end()
+        self._set_live(f"{self._name()} is choosing the next step", presence.THINKING)
+
+    def _set_live(self, text: Optional[str], state: str = presence.WORKING) -> None:
+        """Show what an automatic run is doing under the transcript, or clear it."""
+        self._live = text
+        if text is None:
+            if not self._thinking_clock.isActive():
+                self._thinking_orb.set_state(presence.IDLE)
+                self._thinking_row.setVisible(False)
+            return
+        self._thinking.setText(text + "…")
+        self._thinking_orb.set_state(state)
+        self._thinking_row.setVisible(True)
 
     def _resume_paused(self, text: str) -> None:
         """Run the paused checkpoint's resume action directly (no LLM call), keeping the
@@ -662,13 +809,19 @@ class AquahChatPanel(QWidget):
             self._thinking_started = time.monotonic()
             self._update_thinking()
             self._thinking_clock.start()
-        else:
-            self._thinking_clock.stop()
-        self._thinking.setVisible(on)
+            self._thinking_orb.set_state(presence.THINKING)
+            self._thinking_row.setVisible(True)
+            return
+        self._thinking_clock.stop()
+        if self._live is not None:
+            self._set_live(self._live)
+            return
+        self._thinking_orb.set_state(presence.IDLE)
+        self._thinking_row.setVisible(False)
 
     def _update_thinking(self) -> None:
         seconds = int(time.monotonic() - self._thinking_started)
-        self._thinking.setText("AQUAH is thinking…" + (f" {seconds} s" if seconds else ""))
+        self._thinking.setText(f"{self._name()} is thinking…" + (f" {seconds} s" if seconds else ""))
 
     def _prewarm_provider(self) -> None:
         """Do the provider's first-request setup while the user is still typing.
@@ -820,6 +973,8 @@ class AquahChatPanel(QWidget):
     def _set_busy(self, busy: bool) -> None:
         self._busy = busy
         self._execution_mode.setEnabled(not busy)
+        # One assistant per conversation turn: no switching mid-run.
+        self._assistant_combo.setEnabled(not busy)
         self._new_btn.setEnabled(not busy)
         self._input.setEnabled(not busy)
         self._send_btn.setEnabled(not busy)
@@ -830,7 +985,7 @@ class AquahChatPanel(QWidget):
     def _describe_call(self, name: str, args: Dict[str, Any]) -> str:
         arg_str = ", ".join(f"{k}={v!r}" for k, v in args.items()) or "(no arguments)"
         return (
-            f"<b>AQUAH wants to run:</b> <code>{html.escape(name)}</code><br>"
+            f"<b>{html.escape(self._name())} wants to run:</b> <code>{html.escape(name)}</code><br>"
             f"<span style='color:{_P['muted']}'>{html.escape(arg_str)}</span>"
         )
 
@@ -846,7 +1001,7 @@ class AquahChatPanel(QWidget):
         self._bubble("You", text, _P["primary"])
 
     def _render_assistant(self, text: str) -> None:
-        self._bubble("AQUAH", text, _P["accent"])
+        self._bubble(self._name(), text, _P["accent"])
 
     def _render_note(self, html_text: str) -> None:
         self._transcript.append(
@@ -874,7 +1029,7 @@ class AquahChatPanel(QWidget):
         if status == "started":
             self._render_note(
                 "&#9203; This is running in the background. Ask <i>“is it done?”</i> for the "
-                "status, or say <i>“continue”</i> / tell AQUAH the next step.")
+                "status, or say <i>“continue”</i> / tell the assistant the next step.")
         elif status == "awaiting_user":
             note = html.escape(str(result.get("message")
                                    or "Paused. Correct the picks, then say “continue”."))
@@ -909,3 +1064,7 @@ class AquahChatPanel(QWidget):
     def _scroll_to_end(self) -> None:
         sb = self._transcript.verticalScrollBar()
         sb.setValue(sb.maximum())
+
+
+#: The panel's name before assistants became pluggable; kept for callers.
+AquahChatPanel = AssistantChatPanel

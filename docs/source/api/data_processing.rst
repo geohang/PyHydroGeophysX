@@ -14,7 +14,7 @@ ERT Data Agent
 Overview
 ~~~~~~~~
 
-The ``ert_data_agent`` module provides a standardized interface for working with electrical resistivity tomography (ERT) field data. It integrates with RESIPY to support data loading from multiple commercial instruments and provides quality control visualization and export functionality.
+The ``ert_data_agent`` module provides a standardized interface for working with electrical resistivity tomography (ERT) field data. It reads data from multiple commercial instruments with its own readers, or with ResIPy when that optional dependency is installed, and provides quality control visualization and export functionality.
 
 **Key Features:**
 
@@ -124,9 +124,10 @@ load_ert_resipy
 
 .. py:function:: load_ert_resipy(project_dir: str, data_file: str, instrument: str, crs: str = "local", local_ref: LocalRef | None = None, epsg: int | None = None) -> StandardERT
 
-   Load ERT field data using RESIPY library with support for multiple instruments.
+   Load ERT field data from multiple instruments: through ResIPy when it is
+   installed, otherwise with this package's own readers.
 
-   :param project_dir: Directory for RESIPY project (working directory)
+   :param project_dir: Working directory (the ResIPy project folder when ResIPy is used)
    :type project_dir: str
    :param data_file: Path to ERT data file (relative or absolute)
    :type data_file: str
@@ -140,7 +141,7 @@ load_ert_resipy
    :type epsg: int | None
    :return: Complete ERT dataset with electrodes, measurements, and metadata
    :rtype: StandardERT
-   :raises ImportError: If RESIPY is not installed
+   :raises NotImplementedError: If the format has no reader of its own and ResIPy is not installed
    :raises FileNotFoundError: If data_file does not exist
    :raises ValueError: If instrument type is not supported or CRS parameters are invalid
 
@@ -414,16 +415,118 @@ For time-lapse monitoring, process each timestep separately:
 
    print(f"Processed {len(bert_files)} time-lapse surveys")
 
+Magnetotellurics
+----------------
+
+``PyHydroGeophysX.data_processing.mt`` reads MT time series and transfer functions,
+estimates impedances by robust processing, and inverts them; see
+:doc:`/methods/mt` for an overview.
+
+.. automodule:: PyHydroGeophysX.data_processing.mt
+   :no-members:
+
+Transfer functions and their files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.transfer_function
+   :members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.io
+   :members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.edi
+   :members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.emtf_xml
+   :members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.zfile
+   :members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.jfile
+   :members:
+   :show-inheritance:
+
+Instrument time series
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.timeseries
+   :members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.phoenix
+   :members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.phoenix_legacy
+   :members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.metronix
+   :members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.zonge
+   :members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.lemi
+   :members:
+   :show-inheritance:
+
+Processing
+~~~~~~~~~~
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.spectra
+   :members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.robust
+   :members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.processing
+   :members:
+   :show-inheritance:
+
+Analysis
+~~~~~~~~
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.analysis
+   :members:
+   :show-inheritance:
+
+Forward modelling and inversion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.forward1d
+   :members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.inversion1d
+   :members:
+   :show-inheritance:
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.inversion2d
+   :members:
+   :show-inheritance:
+
 See Also
 ~~~~~~~~
 
 * :doc:`/getting_started`: Getting started guide
 * :doc:`inversion`: ERT inversion module
+* :doc:`/methods/mt`: magnetotellurics
 
 Acknowledgments
 ~~~~~~~~~~~~~~~
 
-The ERT data processing module is built on `RESIPY <https://gitlab.com/hkex/resipy>`_, an intuitive open-source software for complex geoelectrical inversion/modeling developed by Guillaume Blanchy, Jimmy Boyd, and contributors.
+When `ResIPy <https://gitlab.com/hkex/resipy>`_ is installed, an optional dependency under its own GPL-3.0 license, the ERT data processing module reads field data through it; without it, the package's own readers handle the formats listed in :doc:`/methods/ert`.
 
 This module integrates with `pyGIMLi <https://www.pygimli.org/>`_, an open-source library for geophysical modeling and inversion developed by Carsten Rücker, Thomas Günther, Florian Wagner, and contributors.
 

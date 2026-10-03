@@ -4,6 +4,20 @@ model\_output package
 Submodules
 ----------
 
+ATS output readers
+------------------
+
+.. automodule:: PyHydroGeophysX.model_output.ats_output
+   :members:
+   :show-inheritance:
+
+PFLOTRAN output readers
+-----------------------
+
+.. automodule:: PyHydroGeophysX.model_output.pflotran_output
+   :members:
+   :show-inheritance:
+
 PyHydroGeophysX.model\_output.base module
 -----------------------------------------
 

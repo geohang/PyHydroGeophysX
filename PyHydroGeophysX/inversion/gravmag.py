@@ -268,7 +268,7 @@ BETA_BOUNDS: Tuple[float, float] = (1e-12, 1e8)
 
 def estimate_beta0(dmis, reg, m, *, ratio: float = 1.0, seed: int = 42,
                    n_power: int = 20) -> float:
-    """Scale-free starting beta, as SimPEG's ``BetaEstimate_ByEig`` does it.
+    """Scale-free starting beta from the largest eigenvalues of the two Hessians.
 
     Power-iterate both Hessians and take the ratio of their largest eigenvalues,
     so beta starts where the two objective terms are comparable regardless of

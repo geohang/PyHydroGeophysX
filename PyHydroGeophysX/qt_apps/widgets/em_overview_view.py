@@ -25,8 +25,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
-    QHBoxLayout,
-    QLabel,
     QSlider,
     QVBoxLayout,
     QWidget,
@@ -34,6 +32,7 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX.inversion.em1d_lci import DOI_SENSITIVITY_THRESHOLD
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets.flow_layout import FlowLayout, group
 from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.visualization.axis_units import set_length_axis, to_display_length
 from PyHydroGeophysX.visualization.basemap import (
@@ -49,7 +48,7 @@ from PyHydroGeophysX.visualization.basemap import (
 _MAP_SPAN_FLOOR = 0.08
 _ALL_COLOR = "#111111"
 _LINE_COLOR = "#d62728"
-_START_COLOR = "#1f77b4"
+_START_COLOR = "#007aff"
 
 
 class EMOverviewView(QWidget):
@@ -96,7 +95,8 @@ class EMOverviewView(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        row = QHBoxLayout()
+        # Wraps in a narrow panel instead of widening the page (widgets.flow_layout).
+        row = FlowLayout(spacing=6)
         row.setContentsMargins(6, 2, 6, 2)
         self._line = QComboBox()
         self._line.setToolTip(
@@ -105,7 +105,6 @@ class EMOverviewView(QWidget):
             "other; 'All lines' chains them and marks the joins.")
         self._line.currentIndexChanged.connect(self._redraw)
         row.addWidget(self._line)
-        row.addSpacing(18)
         self._basemap = QCheckBox("Basemap")
         self._basemap.setToolTip(
             "Draw map tiles under the soundings. Tiles are fetched once and cached "
@@ -127,16 +126,14 @@ class EMOverviewView(QWidget):
             "Width of the map column, against the section beside it. Scrolling "
             "over either panel zooms it about the cursor, dragging pans, and a "
             "double-click returns to the whole survey.")
-        map_label = QLabel("Map")
-        row.addWidget(map_label)
-        row.addWidget(self._map_share)
+        map_group = group("Map", self._map_share)
+        row.addWidget(map_group)
         if self._section_only:
-            for control in (self._basemap, self._basemap_source, self._map_share, map_label):
+            for control in (self._basemap, self._basemap_source, map_group):
                 control.hide()
         # Through the timer, and not straight to it: QTimer.start takes an
         # interval, so the slider's own value would become the delay.
         self._map_share.valueChanged.connect(lambda _v: self._resize_timer.start())
-        row.addSpacing(18)
         # Same idea as the ERT view's coverage cut: how far down the data reach
         # is a judgement, so it is a dial on the picture rather than something
         # frozen into the result.
@@ -197,10 +194,8 @@ class EMOverviewView(QWidget):
         self._colormap.colormapChanged.connect(self._redraw)
         row.addWidget(self._style)
         row.addWidget(self._vertical)
-        row.addWidget(self._below_doi)
-        row.addWidget(self._doi_threshold)
+        row.addWidget(group(self._below_doi, self._doi_threshold))
         row.addWidget(self._colormap)
-        row.addStretch(1)
         self._row = QWidget()
         self._row.setLayout(row)
         layout.addWidget(self._row)

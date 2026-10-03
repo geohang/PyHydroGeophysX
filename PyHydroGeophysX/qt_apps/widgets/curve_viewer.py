@@ -10,16 +10,16 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QFileDialog,
-    QHBoxLayout,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
 from PyHydroGeophysX.qt_apps import theme
+from PyHydroGeophysX.qt_apps.widgets.flow_layout import FlowLayout
 from PyHydroGeophysX.qt_apps.widgets.readout import ReadoutLabel
 
-_CURVE_COLORS = ["#1f77b4", "#d62728", "#2ca02c", "#9467bd", "#ff7f0e", "#17becf", "#8c564b"]
+_CURVE_COLORS = ["#007aff", "#ff3b30", "#34c759", "#af52de", "#ff9500", "#30b0c7", "#a2845e"]
 
 
 class _ThinLogAxis(pg.AxisItem):
@@ -74,12 +74,13 @@ class CurveViewer(QWidget):
         self._plot.addItem(self._pick_scatter)
         self._picked: List[Tuple[float, float]] = []
 
-        bar = QHBoxLayout()
+        # Wraps in a narrow panel instead of widening the page (widgets.flow_layout).
+        bar = FlowLayout(spacing=6)
         # Rewritten on every mouse move: a QLabel would re-lay out the page each
         # time (see widgets.readout).
-        self._readout = ReadoutLabel("x: -, y: -")
+        self._readout = ReadoutLabel("x: -, y: -", sample="x: -0000.000, y: -0000.000")
         self._readout.setMinimumWidth(180)
-        bar.addWidget(self._readout, stretch=1)
+        bar.addWidget(self._readout)
 
         self._logx = QCheckBox("log x")
         self._logy = QCheckBox("log y")

@@ -19,7 +19,8 @@
 #   full
 #       Collects the supported engines listed below when they are installed
 #       in the build environment (pygimli/pgcore, SimPEG, pyvista/vtk, ...).
-#       ResIPy requires explicit PHGX_BUNDLE_RESIPY=1; see THIRD_PARTY_NOTICES.md.
+#       ResIPy requires explicit PHGX_BUNDLE_RESIPY=1 and the tetgen package
+#       PHGX_BUNDLE_TETGEN=1; see THIRD_PARTY_NOTICES.md.
 #       Much larger output. Engines missing from the build environment are
 #       skipped with a warning and degrade gracefully at runtime, same as light.
 #
@@ -96,6 +97,11 @@ excludes = [
 _bundle_resipy = os.environ.get("PHGX_BUNDLE_RESIPY", "0") == "1"
 if not _bundle_resipy:
     excludes.append("resipy")
+# The same for the tetgen package, which compiles in TetGen (AGPL-3.0). Without
+# it, E4D-style meshes run a TetGen program found on the machine, or Gmsh.
+_bundle_tetgen = os.environ.get("PHGX_BUNDLE_TETGEN", "0") == "1"
+if not _bundle_tetgen:
+    excludes.append("tetgen")
 
 if variant == "light":
     excludes += ["pygimli", "pgcore", "simpeg", "resipy", "pyvista", "pyvistaqt", "vtk", "vtkmodules"]

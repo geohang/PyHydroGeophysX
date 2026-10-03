@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX._internal.utils import velocity_of
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets.flow_layout import FlowLayout, group
 from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.coalesce import Coalesced
 from PyHydroGeophysX.qt_apps.widgets.readout import navigation_toolbar
@@ -128,9 +129,11 @@ class MeshResultView(QWidget):
         self._derived: dict = {}
         self._drawn = None        # what the figure on screen was drawn from
 
-        bar = QHBoxLayout()
-        bar.addWidget(self._toolbar)
-        bar.addWidget(self._coords, stretch=1)
+        # The controls wrap onto a second line in a narrow panel rather than
+        # holding the page - and the window - at their combined width (see
+        # widgets.flow_layout). Controls that belong together wrap together.
+        bar = FlowLayout(spacing=6)
+        bar.addWidget(group(self._toolbar, self._coords))
         self._show_mesh = QCheckBox("Show mesh")
         self._show_mesh.setChecked(True)
         self._show_mesh.setToolTip("Overlay the inversion mesh cell boundaries.")
@@ -142,7 +145,6 @@ class MeshResultView(QWidget):
         # draws filled contours on a regular grid, which is the continuous image
         # traditional resistivity software produces. Both are display choices: no
         # resolution is added and the exported model is unchanged.
-        bar.addWidget(QLabel("Smooth"))
         self._smooth = QComboBox()
         self._smooth.addItem("Off", 0)
         self._smooth.addItem("Cells ×1", 1)
@@ -159,7 +161,6 @@ class MeshResultView(QWidget):
             "they draw the whole section: use “Hide below” or “Clean cut” to trim "
             "it to what the data resolve.")
         self._smooth.currentIndexChanged.connect(self._on_smooth_changed)
-        bar.addWidget(self._smooth)
 
         self._levels = QSpinBox()
         self._levels.setRange(4, 128)
@@ -173,7 +174,7 @@ class MeshResultView(QWidget):
             "off but invents edges where the model is smooth.")
         self._levels.setVisible(False)
         self._levels.valueChanged.connect(self._redraw)
-        bar.addWidget(self._levels)
+        bar.addWidget(group("Smooth", self._smooth, self._levels))
 
         # Sensitivity controls. ERT resolution falls off with depth and away from
         # the line, so part of every section is decoration; these say how much.
@@ -189,7 +190,6 @@ class MeshResultView(QWidget):
             "Blank the cells whose coverage falls under the threshold, rather than "
             "letting poorly constrained cells read as real structure.")
         self._mask_low.toggled.connect(self._redraw)
-        bar.addWidget(self._mask_low)
 
         # Blanking cells can only cut on cell boundaries, and an inversion mesh has
         # ten-metre triangles at depth, so the cut comes out as a saw-tooth with
@@ -203,7 +203,6 @@ class MeshResultView(QWidget):
             "“Hide below”.")
         self._clean_cut.setEnabled(False)
         self._clean_cut.toggled.connect(self._redraw)
-        bar.addWidget(self._clean_cut)
 
         self._cov_threshold = QDoubleSpinBox()
         self._cov_threshold.setRange(-10.0, 10.0)
@@ -214,7 +213,8 @@ class MeshResultView(QWidget):
             "Coverage cut in log10 units. The status line under the plot reports the "
             "range for the current result and how much of the section survives.")
         self._cov_threshold.valueChanged.connect(self._redraw)
-        bar.addWidget(self._cov_threshold)
+        self._cut_group = group(self._mask_low, self._clean_cut, self._cov_threshold)
+        bar.addWidget(self._cut_group)
 
         self._rays = QCheckBox("Rays")
         self._rays.setToolTip(
@@ -250,7 +250,6 @@ class MeshResultView(QWidget):
             "is stretched to its own min/max and the change between them cannot "
             "be read off the colours.")
         self._lock_range.toggled.connect(self._on_lock_toggled)
-        bar.addWidget(self._lock_range)
 
         self._cmin = QDoubleSpinBox()
         self._cmax = QDoubleSpinBox()
@@ -264,7 +263,7 @@ class MeshResultView(QWidget):
                            "ticked. While it is unticked these track the result "
                            "on screen, so ticking the box keeps what you see.")
             box.valueChanged.connect(self._on_limit_changed)
-            bar.addWidget(box)
+        bar.addWidget(group(self._lock_range, self._cmin, self._cmax))
 
         # The colour map, one per quantity - resistivity, change, velocity,
         # coverage - each shared with every other view of it, and each opening

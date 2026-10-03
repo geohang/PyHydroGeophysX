@@ -52,7 +52,7 @@ ADJUSTABLE = (
     "quality_threshold", "max_attempts", "auto_adjust",
     "velocity_threshold", "seismic_inversion_params", "align_origin",
     "petrophysical_params", "n_realizations", "coverage_threshold",
-    "instrument", "crs", "first_break_params", "tdem_params",
+    "instrument", "crs", "first_break_params", "tdem_params", "mt_params",
 )
 
 RECOVERY_PROMPT = """A step of a hydrogeophysical workflow failed. Say what to do.

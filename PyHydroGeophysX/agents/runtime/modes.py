@@ -74,7 +74,8 @@ def announcement(ctx: RunContext, tool: Any, reason: str) -> Dict[str, Any]:
             "step": len(ctx.steps) + 1}
 
 
-def completion(ctx: RunContext, step: Any) -> Dict[str, Any]:
+def completion(ctx: RunContext, step: Any,
+               tools: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """What the app is told about a step that has just finished.
 
     The counterpart to :func:`announcement`. That one fires before a step and so
@@ -104,7 +105,7 @@ def completion(ctx: RunContext, step: Any) -> Dict[str, Any]:
     """
     from .tools import TOOLS
 
-    tool = TOOLS.get(getattr(step, "tool", ""))
+    tool = (TOOLS if tools is None else tools).get(getattr(step, "tool", ""))
     return {"tool": getattr(step, "tool", "") or "",
             "label": (getattr(step, "description", "")
                       or getattr(tool, "label", "") or getattr(step, "tool", "")

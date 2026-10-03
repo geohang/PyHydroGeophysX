@@ -20,6 +20,14 @@ PyHydroGeophysX.inversion.cross\_constraints module
    :show-inheritance:
    :undoc-members:
 
+PyHydroGeophysX.inversion.e4d module
+------------------------------------
+
+.. automodule:: PyHydroGeophysX.inversion.e4d
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.inversion.em1d module
 -------------------------------------
 
@@ -160,6 +168,14 @@ PyHydroGeophysX.inversion.multi\_method module
 ----------------------------------------------
 
 .. automodule:: PyHydroGeophysX.inversion.multi_method
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.inversion.r2 module
+-----------------------------------
+
+.. automodule:: PyHydroGeophysX.inversion.r2
    :members:
    :show-inheritance:
    :undoc-members:

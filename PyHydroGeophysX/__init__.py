@@ -66,6 +66,14 @@ _EXPORTS.update(_exports(
     "ParflowSaturation",
     "ParflowPorosity",
 ))
+_EXPORTS.update(_exports(
+    "PyHydroGeophysX.model_output.ats_output",
+    "ATSOutput", "ATSSaturation", "ATSPorosity", "ATSWaterContent",
+))
+_EXPORTS.update(_exports(
+    "PyHydroGeophysX.model_output.pflotran_output",
+    "PFLOTRANOutput", "PFLOTRANSaturation", "PFLOTRANPorosity", "PFLOTRANWaterContent",
+))
 # The return leg: interpreted geophysics mapped onto a hydrological grid and
 # written as inputs for another simulation. Exported beside the readers above
 # so both directions of the coupling are reachable from the top level.
@@ -270,6 +278,22 @@ _EXPORTS.update(_exports(
 _EXPORTS.update(_exports(
     "PyHydroGeophysX.inversion.gravmag",
     "invert_gravmag",
+))
+_EXPORTS.update(_exports(
+    "PyHydroGeophysX.data_processing.mt",
+    "TransferFunction",
+    "TimeSeriesRun",
+    "read_transfer_function",
+    "read_timeseries",
+    "write_edi",
+    "write_emtf_xml",
+    "process_mt",
+    "phase_tensor",
+    "occam1d",
+))
+_EXPORTS.update(_exports(
+    "PyHydroGeophysX.data_processing.mt.inversion2d",
+    "invert_profile",
 ))
 _EXPORTS["BackendUnavailable"] = (
     "PyHydroGeophysX._internal.optional_dependencies",

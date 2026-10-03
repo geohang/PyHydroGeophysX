@@ -90,6 +90,10 @@ MODULE_DESCRIPTORS: Dict[str, ModuleDescriptor] = {
         ("gravmag.process", "gravmag.forward_bodies", "gravmag.invert"),
         aliases=("gravmag_processing",),
     ),
+    "mt": ModuleDescriptor(
+        "mt", "mt_processing", ("mt.process", "mt.invert_1d", "mt.invert_profile"),
+        aliases=("mt_processing",),
+    ),
     "joint_inversion": ModuleDescriptor(
         "joint_inversion", "joint_inversion", ("joint_inversion.run",),
     ),
@@ -194,6 +198,25 @@ _register_builtins([
         "PyHydroGeophysX.workflows.domain:run_em_inversion",
         "FDEM or TDEM inversion from a persisted sounding.",
         module_key="em",
+    ),
+    WorkflowDescriptor(
+        "mt.process",
+        "PyHydroGeophysX.workflows.domain:run_mt_process",
+        "Robust MT processing of a site's time series (and a remote reference) to impedance and tipper.",
+        module_key="mt",
+    ),
+    WorkflowDescriptor(
+        "mt.invert_1d",
+        "PyHydroGeophysX.workflows.domain:run_mt_invert_1d",
+        "Occam 1D inversion of a site's transfer functions, with static shift and an optional TEM sounding.",
+        module_key="mt",
+    ),
+    WorkflowDescriptor(
+        "mt.invert_profile",
+        "PyHydroGeophysX.workflows.domain:run_mt_invert_profile",
+        "SimPEG 2D inversion of a profile's TE and TM impedances.",
+        stochastic=True,
+        module_key="mt",
     ),
     WorkflowDescriptor(
         "mesh3d.build",

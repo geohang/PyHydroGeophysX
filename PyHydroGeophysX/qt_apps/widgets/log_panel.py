@@ -7,14 +7,18 @@ import html
 
 from PySide6.QtWidgets import QTextEdit
 
+#: Level colours that read on both the light and the dark appearance, so the
+#: lines already logged stay legible when the appearance changes. Plain
+#: messages take no colour at all and follow the panel's text colour.
 _LEVEL_COLORS = {
-    "info": "#d4d4d4",
-    "success": "#4caf50",
-    "warn": "#e0a800",
-    "warning": "#e0a800",
-    "error": "#f44336",
-    "debug": "#888888",
+    "info": None,
+    "success": "#34c759",
+    "warn": "#ff9500",
+    "warning": "#ff9500",
+    "error": "#ff3b30",
+    "debug": "#8e8e93",
 }
+_TIME_COLOR = "#8e8e93"
 
 
 class LogPanel(QTextEdit):
@@ -22,24 +26,22 @@ class LogPanel(QTextEdit):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self.setObjectName("logPanel")
         self.setReadOnly(True)
         self.setMinimumHeight(110)
         self.document().setMaximumBlockCount(2000)  # cap memory
-        self.setStyleSheet(
-            "QTextEdit { background:#1e1e1e; color:#d4d4d4; "
-            "font-family: Consolas, 'Courier New', monospace; font-size:12px; }"
-        )
 
     def log(self, message: str, level: str = "info") -> None:
         """Append ``message`` with a timestamp and a color for ``level``."""
         level = (level or "info").lower()
-        color = _LEVEL_COLORS.get(level, _LEVEL_COLORS["info"])
+        color = _LEVEL_COLORS.get(level)
         ts = datetime.datetime.now().strftime("%H:%M:%S")
         safe = html.escape(str(message))
+        tint = f' style="color:{color}"' if color else ""
         self.append(
-            f'<span style="color:#6a9955">[{ts}]</span> '
-            f'<span style="color:{color}; font-weight:bold">{level.upper():7}</span> '
-            f'<span style="color:{color}">{safe}</span>'
+            f'<span style="color:{_TIME_COLOR}">[{ts}]</span> '
+            f'<b{tint}>{level.upper():7}</b> '
+            f'<span{tint}>{safe}</span>'
         )
         scrollbar = self.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
