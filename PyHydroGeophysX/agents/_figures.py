@@ -35,6 +35,12 @@ from PyHydroGeophysX._internal.utils import parse_json_object as _parse_json_obj
 #: Figure key -> the topic it belongs to and how to describe it. The keys are
 #: the ones the report agent stores in its ``vis_files`` mapping.
 FIGURE_CATALOG: Dict[str, Dict[str, str]] = {
+    "raw_apparent_resistivity": {
+        "topic": "data",
+        "caption": "Apparent resistivity of the surveys as read, each reading at the "
+                   "midpoint of its four electrodes and a pseudo-depth of 0.19 of their "
+                   "spread, on one colour scale: the data the inversion fitted.",
+    },
     "baseline_resistivity": {
         "topic": "resistivity",
         "caption": "Recovered resistivity model for the baseline survey.",
@@ -61,10 +67,19 @@ FIGURE_CATALOG: Dict[str, Dict[str, str]] = {
         "topic": "water_content",
         "caption": "Volumetric water content derived from the resistivity model.",
     },
+    # The uncertainty of a water content travels with it: it is drawn whenever
+    # the water content is, whatever the request named.
     "water_content_uncertainty": {
-        "topic": "uncertainty",
+        "topic": "water_content",
         "caption": "Standard deviation of the water-content estimate from the "
                    "Monte Carlo ensemble.",
+    },
+    "timelapse_water_content_uncertainty": {
+        "topic": "water_content",
+        "caption": "Standard deviation of the water content in each survey from the "
+                   "Monte Carlo ensemble, on one colour scale from zero: a difference "
+                   "between surveys smaller than the standard deviation there is not "
+                   "resolved.",
     },
     "climate_correlation": {
         "topic": "climate",
@@ -77,8 +92,12 @@ FIGURE_CATALOG: Dict[str, Dict[str, str]] = {
     },
 }
 
+#: The topic drawn whatever the request names: the measurements themselves.
+ALWAYS_SHOWN = "data"
+
 #: Topic -> what it means, for the prompt and for the warning text.
 FIGURE_TOPICS: Dict[str, str] = {
+    "data": "the measurements as read, before inversion",
     "resistivity": "the recovered resistivity model or section",
     "change": "how resistivity changed between surveys",
     "water_content": "water content, moisture or saturation",
@@ -280,6 +299,9 @@ def plan_figures(available: Sequence[str], user_request: str = "",
     ...                     topics=asked)
     >>> plan['draw'], plan['omitted']
     (['timelapse_water_content'], ['baseline_resistivity'])
+    >>> plan = plan_figures(['baseline_resistivity', 'raw_apparent_resistivity'], topics=asked)
+    >>> plan['draw'], plan['omitted']      # the data as read, first and always
+    (['raw_apparent_resistivity'], ['baseline_resistivity'])
     >>> plan_figures([], topics={'topics': {'water_content'}, 'only_these': False})
     {'draw': [], 'omitted': [], 'missing': ['water_content']}
     """
@@ -296,11 +318,15 @@ def plan_figures(available: Sequence[str], user_request: str = "",
     def topic_of(key: str) -> str:
         return FIGURE_CATALOG.get(key, {}).get("topic", "")
 
-    requested = [k for k in keys if topic_of(k) in wanted]
+    # The data as read are always shown, first: they are what every other
+    # figure was fitted to, whatever the request wanted to see.
+    data = [k for k in keys if topic_of(k) == ALWAYS_SHOWN]
+    keys = [k for k in keys if topic_of(k) != ALWAYS_SHOWN]
+    requested = data + [k for k in keys if topic_of(k) in wanted]
     others = [k for k in keys if topic_of(k) not in wanted]
     draw = requested + ([] if only else others)
     omitted = others if only else []
-    present = {topic_of(k) for k in keys}
+    present = {topic_of(k) for k in keys + data}
     missing = sorted(t for t in wanted if t not in present)
     return {"draw": draw, "omitted": omitted, "missing": missing}
 

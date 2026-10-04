@@ -76,6 +76,13 @@ def origin_shift(picks, profile):
     return float(profile[0, 0] - min(header_x))
 
 
+def _receiver_xs(positions, picks):
+    """The receivers' x positions, sorted, from the geophone file or the headers."""
+    if positions:
+        return sorted(x for x, _ in positions.values())
+    return sorted({float(p.receiver_x) for p in picks if np.isfinite(p.receiver_x)})
+
+
 def _station_spacing(positions, picks):
     """Typical distance between neighbouring receivers, or ``0.0``.
 
@@ -83,21 +90,39 @@ def _station_spacing(positions, picks):
     tolerance for off-end shots - the honest answer when the geometry gives no
     scale to judge them against.
     """
-    if positions:
-        xs = sorted(x for x, _ in positions.values())
-    else:
-        xs = sorted({float(p.receiver_x) for p in picks
-                     if np.isfinite(p.receiver_x)})
+    xs = _receiver_xs(positions, picks)
     return float(np.median(np.diff(xs))) if len(xs) > 1 else 0.0
+
+
+def off_end_reach(positions, picks):
+    """How far beyond the spread a shot may stand: half its length, at least a spacing.
+
+    Off-end shots are part of an ordinary refraction layout - on one 11.5 m
+    spread of 0.5 m geophones the shots ran from 2 m before the first geophone
+    to 2.5 m after the last, five spacings out - and they are what carries the
+    deepest refractions. The receivers are what show whether the coordinate
+    file and the headers describe the same line, and they are held to the
+    profile exactly; a source farther out than half the spread is more likely a
+    coordinate in another frame or unit than a shot.
+
+    >>> from types import SimpleNamespace as P
+    >>> picks = [P(receiver_x=x) for x in np.arange(0.0, 12.0, 0.5)]
+    >>> off_end_reach({}, picks)
+    5.75
+    """
+    xs = _receiver_xs(positions, picks)
+    if len(xs) < 2:
+        return 0.0
+    return float(max(_station_spacing(positions, picks), 0.5 * (xs[-1] - xs[0])))
 
 
 def apply_pick_geometry(picks, geophone_file=None, topography_file=None,
                         align_origin=None, warn=None):
     """Map explicit receiver IDs and interpolate elevations along an x/z profile.
 
-    No index/CRS guessing. Receivers must lie on the profile; a shot may sit up
-    to one station spacing off either end, which is ordinary off-end acquisition
-    rather than a geometry error.
+    No index/CRS guessing. Receivers must lie on the profile; a shot may sit
+    off either end by up to half the spread's length (:func:`off_end_reach`),
+    which is ordinary off-end acquisition rather than a geometry error.
 
     Parameters
     ----------
@@ -134,12 +159,11 @@ def apply_pick_geometry(picks, geophone_file=None, topography_file=None,
         profile = profile[np.argsort(profile[:, 0])]
         if len(profile) < 2 or np.any(np.diff(profile[:, 0]) <= 0):
             raise ValueError('Elevation profile requires at least two unique increasing x coordinates.')
-    # How far off the end of the spread a shot may sit: one station spacing.
-    # Taken from the receiver positions, not from the profile's own sampling -
-    # an independent topography line may be described by two points 10 m apart
-    # while the geophones are at 2 m, and that coarse sampling must not become
-    # a licence to extrapolate five times as far.
-    spacing = _station_spacing(positions, picks)
+    # How far off the end of the spread a shot may sit. Taken from the receiver
+    # positions, not from the profile's own sampling - an independent
+    # topography line may be described by two points 10 m apart while the
+    # geophones are at 2 m.
+    reach = off_end_reach(positions, picks)
     # Applied to SEG-Y x coordinates; 'segy' expresses the same translation by
     # moving the file's frame instead, so the two choices differ only in which
     # origin the exported coordinates carry.
@@ -192,18 +216,18 @@ def apply_pick_geometry(picks, geophone_file=None, topography_file=None,
                     f'an origin and units; extrapolation is disabled.',
                     shift=origin_shift(picks, profile))
             overshoot = max(low - source_x, source_x - high, 0.0)
-            if overshoot > spacing + 1e-9:
-                raise OriginMismatch(
+            if overshoot > reach + 1e-9:
+                # Not an OriginMismatch: the receivers sit on the profile, so the
+                # two frames agree and there is no origin to choose between.
+                raise ValueError(
                     f'Source x={source_x:g} lies {overshoot:g} m outside the '
-                    f'elevation profile (x={low:g} to {high:g}), which is more '
-                    f'than the {spacing:g} m station spacing. Check that the '
-                    f'geometry file and the SEG-Y headers share an origin and '
-                    f'units; extrapolation is disabled.',
-                    shift=origin_shift(picks, profile))
+                    f'elevation profile (x={low:g} to {high:g}), more than half '
+                    f'the spread ({reach:g} m) beyond its end. Check the shot '
+                    f'coordinates in the SEG-Y headers, or give a topography '
+                    f'profile that reaches the shots.')
             off_end = max(off_end, overshoot)
             # np.interp holds the end value outside the range, so an off-end
-            # shot takes the elevation of the station it sits beyond - which is
-            # what a shot a spacing past the last geophone is standing on.
+            # shot takes the elevation of the end of the profile it sits beyond.
             source_z = float(np.interp(source_x, profile[:, 0], profile[:, 1]))
             if topography_file:
                 z = float(np.interp(x, profile[:, 0], profile[:, 1]))
@@ -215,9 +239,8 @@ def apply_pick_geometry(picks, geophone_file=None, topography_file=None,
         result.append(replace(pick, receiver_x=float(x), receiver_z=float(z),
                               source_x=float(source_x), source_z=source_z))
     if off_end > 0 and callable(warn):
-        warn(f'{off_end:g} m of the shot positions lie beyond the ends of the '
-             f'receiver spread, which is ordinary off-end acquisition. Those '
-             f'shots take the elevation of the station they sit beyond, so '
-             f'their depth is known to about the relief over one station '
-             f'spacing.')
+        warn(f'Shots stand up to {off_end:g} m beyond the ends of the elevation '
+             f'profile, which is ordinary off-end acquisition. They take the '
+             f'elevation of the profile\'s end, so their height is known to about '
+             f'the relief over that distance.')
     return result

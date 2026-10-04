@@ -498,12 +498,97 @@ The entry point hands the parsed configuration to the controller in
 ``PyHydroGeophysX.agents.runtime``. Before each step the controller lists the
 tools whose inputs the run already holds (``load_ert_surveys``,
 ``fetch_climate``, ``invert_ert``, ``invert_time_lapse``,
-``evaluate_inversion``, ``convert_water_content``, ``invert_seismic``,
-``derive_structure``, ``fuse_methods``, ``invert_tdem``,
-``convert_tdem_water_content``, ``invert_mt``, ``convert_mt_water_content``,
+``evaluate_inversion``, ``convert_water_content``, ``pick_first_breaks``,
+``load_seismic_traveltimes``, ``invert_seismic``,
+``evaluate_seismic_inversion``, ``extract_seismic_interfaces``,
+``derive_structure``, ``fuse_methods``, ``load_tdem_data``, ``invert_tdem``,
+``evaluate_tdem_inversion``, ``map_tdem_plan_view``,
+``convert_tdem_water_content``, ``load_mt_sites``, ``invert_mt``,
+``evaluate_mt_inversion``, ``convert_mt_water_content``,
+``load_gravmag_data``, ``invert_gravmag``, ``evaluate_gravmag_inversion``,
 ``load_model_output``, ``write_report``), asks the model which one to run and
 reads the result before choosing again. Without an API key it takes the first
 runnable tool in registration order, which is dependency order.
+
+Every method runs the same way: its data are read and drawn, inverted, and
+the inversion is evaluated before anything is built on it.
+
+- **Reading draws the data.** ``load_ert_surveys`` draws an
+  apparent-resistivity pseudosection of each survey as it loads it (up to six
+  of a long series, the first and last among them), each reading at the
+  midpoint of its electrodes and a pseudo-depth of 0.19 of their spread
+  (``data_processing.ert_io.pseudosection_points``, which the studio's ERT page
+  uses too); ``load_seismic_traveltimes`` draws a travel-time file's curves,
+  one per shot; ``load_tdem_data`` the decays of up to six soundings beside the
+  station layout; ``load_mt_sites`` each site's apparent resistivity and phase;
+  ``load_gravmag_data`` the gravity or magnetic station values on a map, and
+  says which field the table holds before anything is inverted.
+  The figures are written under ``raw_data/`` in the run folder, where the
+  studio's Live tab shows them as they appear, and they open the method's
+  figures in the report. The step summaries give the counts and ranges: for
+  ERT, the electrodes, the readings and the apparent resistivity. The ERT
+  reports (single survey and time-lapse) open with the surveys'
+  pseudosections side by side on one colour scale, and that figure is drawn
+  whatever the request narrows the figures to.
+- **Evaluation.** ``evaluate_seismic_inversion``, ``evaluate_tdem_inversion``,
+  ``evaluate_mt_inversion`` and ``evaluate_gravmag_inversion`` score the model
+  out of 100 as
+  ``evaluate_inversion`` scores ERT, with the same chi-squared rule
+  (``agents._method_evaluation.chi2_fit_score``): for seismic refraction the
+  fit of the picks, the share of the model the rays cover, cells at a
+  velocity bound and the convergence; for TDEM each sounding's chi-squared,
+  the soundings that resolved a model and the physical range of the
+  resistivities; for MT each site's RMS against Occam's target, the static
+  shifts and the physical range; for gravity and magnetics the residual
+  anomaly's chi-squared, the stations misfit by more than three errors, a
+  model at the solver's bound, and the beta search. Each draws its fit, writes recommendations,
+  and below the threshold (``quality_threshold``, 70) leaves one short
+  warning. The seismic evaluation re-inverts with lambda doubled when the fit
+  is below the target and halved when above, up to ``max_attempts``
+  inversions, and keeps the best-scoring model. The others search their own
+  regularization or hold it fixed on purpose, so they are scored, not re-run:
+  Occam's method takes the smoothest MT model that reaches its target, the
+  potential-field inversion sweeps beta for chi-squared one, and the TDEM line
+  inversion has its own smoothness search (``auto_lambda``), which the
+  ground-TEM preset leaves off because a sounding of four or five gates fitted
+  to chi-squared one is fitting noise; the TDEM evaluation says so, and how to
+  turn it on, when the fit is off. The report's Inversion
+  Quality section gives the score, its components and any retries; the
+  interfaces, plan-view maps and water content are built on the model the
+  evaluation kept.
+- **Water content is drawn with its standard deviation.** Each conversion
+  draws the mean and the Monte Carlo standard deviation as it ends (the ERT
+  section of the first, middle and last survey; a TEM survey's section; an MT
+  site or TEM sounding against depth, with one- and two-sigma bands), and the
+  time-lapse report adds the standard deviation of every survey on one scale
+  from zero beside the water content.
+
+A seismic line given as raw SEG-Y runs in three steps: ``pick_first_breaks``
+("Pick first-arrival travel times") picks the first arrivals - with the sample
+interval of the acquisition record beside the SEG-Y file when the header has
+rounded it - places them on the survey geometry, picks again along its shot's
+first-arrival curve each pick that strays from it or stopped at time zero,
+leaves out what still strays and the shots whose times disagree with their
+reciprocals, and picks again - or leaves out - a pick that disagrees with the
+neighbouring shots' picks at the same geophone
+(``data_processing.seismic.pick_and_correct``, ``screen_picks`` and
+``neighbour_shot_check``, which the studio's Seismic page uses too;
+``first_break_params`` takes ``repick``, ``monotonic_check``,
+``reciprocity_check`` and ``neighbour_check`` to turn each off). It draws the picks
+on wiggle plots of shot gathers spread along the line
+(``seismic_shot_gathers.png``, ``gathers_figure``) and as travel-time curves;
+``invert_seismic`` inverts the travel times, with mesh and velocities scaled to
+the survey where the request does not set them; ``extract_seismic_interfaces``
+("Extract layer interfaces") traces the threshold velocities
+(``velocity_threshold``, 1200 m/s by default) through the model. A line given
+as travel times starts at ``load_seismic_traveltimes``.
+
+``map_tdem_plan_view`` ("Interpolate plan-view maps") follows ``invert_tdem``
+when the request asks for the spatial distribution of a TEM survey. It kriges
+log10 resistivity at several depths across the survey outline
+(``visualization.em_maps``) and draws a second map of the kriging standard
+deviation, over the survey's basemap; a survey it cannot map, such as a single
+line, is reported as not delivered with the reason.
 
 ``invert_mt`` runs when the configuration names MT sites (``mt_files``: EDI,
 EMTF XML, Z- or J-files, or folders of them; a request that names ``.edi``

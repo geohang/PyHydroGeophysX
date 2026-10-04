@@ -285,6 +285,73 @@ def standard_to_pg(std):
 
 
 # ---------------------------------------------------------------------------
+# Pseudosection placement
+# ---------------------------------------------------------------------------
+#: Pseudo-depth of a reading as a fraction of its electrode spread: Edwards'
+#: (1977) median depth of investigation of a Wenner-Schlumberger array, 0.19 of
+#: its length, used for every array as a display convention.
+PSEUDO_DEPTH_FACTOR = 0.19
+
+
+def pseudosection_points(x, a, b, m, n, rhoa) -> np.ndarray:
+    """Where each reading sits on a pseudosection, as ``(x, pseudo-depth, rhoa)`` rows.
+
+    A reading is placed at the mean position of its four electrodes, at a
+    pseudo-depth of :data:`PSEUDO_DEPTH_FACTOR` times their spread (at least
+    1 cm), positive downward. The studio's ERT page and the workflow's
+    raw-data figure place readings this way, so the two show the same picture.
+
+    Parameters
+    ----------
+    x : array_like
+        Electrode positions along the line.
+    a, b, m, n : array_like of int
+        Electrode indices of each reading, 0-based; all-1-based indices (none
+        below 1 and some equal to ``len(x)``) are shifted down by one.
+    rhoa : array_like
+        Apparent resistivity of each reading.
+
+    Returns
+    -------
+    numpy.ndarray
+        Shape ``(n_readings, 3)``. A reading that names an electrode outside
+        ``x`` is left out.
+
+    Examples
+    --------
+    >>> pseudosection_points([0.0, 1.0, 2.0, 3.0], [0], [3], [1], [2], [100.0]).round(2).tolist()
+    [[1.5, 0.57, 100.0]]
+    """
+    x = np.asarray(x, dtype=float)
+    a, b, m, n = (np.asarray(v, dtype=int).ravel() for v in (a, b, m, n))
+    rhoa = np.asarray(rhoa, dtype=float).ravel()
+    if a.size:
+        every = np.concatenate([a, b, m, n])
+        if every.min() >= 1 and every.max() >= x.size:
+            a, b, m, n = a - 1, b - 1, m - 1, n - 1
+    ids = np.stack([a, b, m, n], axis=1)
+    inside = ((ids >= 0) & (ids < x.size)).all(axis=1)
+    if not inside.any():
+        return np.zeros((0, 3))
+    xs = x[ids[inside]]
+    spread = xs.max(axis=1) - xs.min(axis=1)
+    return np.column_stack([xs.mean(axis=1), np.maximum(spread * PSEUDO_DEPTH_FACTOR, 0.01),
+                            rhoa[inside]])
+
+
+def container_pseudosection(data) -> np.ndarray:
+    """:func:`pseudosection_points` for a pyGIMLi ERT container.
+
+    The position along the line is the electrodes' first coordinate, and the
+    apparent resistivity is NaN where the container has none.
+    """
+    pos = np.asarray(data.sensors(), dtype=float)
+    rhoa = (np.asarray(data["rhoa"], dtype=float) if data.haveData("rhoa")
+            else np.full(int(data.size()), np.nan))
+    return pseudosection_points(pos[:, 0], data["a"], data["b"], data["m"], data["n"], rhoa)
+
+
+# ---------------------------------------------------------------------------
 # Robust single-file loader
 # ---------------------------------------------------------------------------
 _AUTO_NAMES = ("", "auto", "none", "auto-detect", "auto-detect (pygimli)")

@@ -27,13 +27,17 @@ from __future__ import annotations
 
 import base64
 import html
+import re
 import time
+from pathlib import Path
+from urllib.parse import urlsplit
 from typing import Any, Dict, List, Optional, Tuple
 
-from PySide6.QtCore import Qt, QTimer, QUrl, Signal
+from PySide6.QtCore import Qt, QTimer, QUrl, Signal, QProcess, QProcessEnvironment
 from PySide6.QtGui import QColor, QImage, QTextDocument
 from PySide6.QtWidgets import (
     QCheckBox,
+    QApplication,
     QComboBox,
     QFrame,
     QGridLayout,
@@ -54,7 +58,8 @@ from PyHydroGeophysX.qt_apps.agent.controller import StudioController
 from PyHydroGeophysX.qt_apps.agent.providers import (
     MODEL_TIERS,
     PROVIDER_META,
-    PROVIDER_ORDER,
+    DESKTOP_PROVIDER_ORDER as PROVIDER_ORDER,
+    CLI_PROVIDER_IDS,
     TIER_CUSTOM,
     TIER_ORDER,
     image_block,
@@ -68,7 +73,7 @@ from PyHydroGeophysX.qt_apps.agent.providers import (
     tier_label,
     tier_model,
 )
-from PyHydroGeophysX.qt_apps.agent.runtime import LlmCallWorker
+from PyHydroGeophysX.qt_apps.agent.runtime import LlmCallWorker, CliSetupWorker
 from PyHydroGeophysX.qt_apps.widgets import ai_presence as presence
 from PyHydroGeophysX.agents import assistants as assistant_registry
 from PyHydroGeophysX.qt_apps.widgets.ai_presence import AiOrb
@@ -133,14 +138,8 @@ class ChatInputEdit(QPlainTextEdit):
 
 
 def _default_provider_id() -> str:
-    """Pick the first provider that is ready (has a key); else OpenAI."""
-    for pid in PROVIDER_ORDER:
-        try:
-            if make_provider(pid).available()[0]:
-                return pid
-        except Exception:  # noqa: BLE001
-            continue
-    return "openai"
+    """Start the desktop with Codex; automatic setup handles missing installs."""
+    return "codex_cli"
 
 
 class AssistantChatPanel(QWidget):
@@ -174,6 +173,10 @@ class AssistantChatPanel(QWidget):
         self._paused_resume: Optional[Dict[str, Any]] = None  # resume action while paused
         self._resume_seq = 0
         self._busy = False
+        self._cli_states = {}
+        self._cli_workers = {}
+        self._cli_logins = {}
+        self._closing = False
         self._worker: Optional[LlmCallWorker] = None
         # Captures answered this turn, flushed once the tool batch is drained.
         self._pending_images: List[Tuple[str, Dict[str, Any]]] = []
@@ -286,7 +289,10 @@ class AssistantChatPanel(QWidget):
         self._execution_mode.setToolTip(
             "Step-by-step: review each action before it runs. "
             "Auto to report: run your goal through to a report using the data in Workflow.")
-        root.addWidget(self._execution_mode)
+        execution_row = QHBoxLayout()
+        execution_row.addWidget(self._cli_login_row)
+        execution_row.addWidget(self._execution_mode, stretch=1)
+        root.addLayout(execution_row)
 
         self._transcript = QTextBrowser()
         self._transcript.setOpenExternalLinks(True)
@@ -421,6 +427,24 @@ class AssistantChatPanel(QWidget):
         self._apply_btn.clicked.connect(self._on_apply_settings)
         lay.addWidget(self._apply_btn, 3, 3)
 
+        self._login_help = QLabel()
+        self._login_help.setWordWrap(True)
+        self._login_help.setOpenExternalLinks(True)
+        lay.addWidget(self._login_help, 5, 0, 1, 4)
+
+        self._cli_login_row = QWidget()
+        login_row = QHBoxLayout(self._cli_login_row)
+        login_row.setContentsMargins(0, 0, 0, 0)
+        self._login_btn = QPushButton("Log In")
+        self._login_btn.clicked.connect(self._on_cli_login)
+        self._cli_retry_btn = QPushButton("Retry setup")
+        self._cli_retry_btn.clicked.connect(self._retry_cli_setup)
+        self._cancel_login_btn = QPushButton("Cancel login")
+        self._cancel_login_btn.clicked.connect(self._cancel_cli_login)
+        login_row.addWidget(self._login_btn)
+        login_row.addWidget(self._cli_retry_btn)
+        login_row.addWidget(self._cancel_login_btn)
+
         lay.addWidget(QLabel("Reasoning"), 4, 0)
         self._reasoning = QComboBox()
         self._reasoning.addItems(['none', 'low', 'medium', 'high', 'xhigh', 'max'])
@@ -497,6 +521,160 @@ class AssistantChatPanel(QWidget):
         self._sync_level_widgets()
         self._base_url_row.setVisible(bool(meta.get("needs_base_url")))
         self._key_edit.setPlaceholderText(f"Paste {meta['env_key']} for this session")
+        cli = self._provider_id in CLI_PROVIDER_IDS
+        self._key_edit.clear()
+        self._key_edit.setVisible(not cli)
+        self._apply_btn.setVisible(not cli)
+        self._login_help.setText(meta.get("login_help", ""))
+        self._login_help.setVisible(cli)
+        self._cli_login_row.setVisible(cli)
+        self._reasoning.setEnabled(self._provider_id != "claude_code")
+        if cli:
+            if self._provider_id not in self._cli_states:
+                self._start_cli_setup(self._provider)
+            self._refresh_cli_controls()
+
+    def _start_cli_setup(self, provider, check_only=False):
+        pid = provider.id
+        if pid in self._cli_workers or self._closing:
+            return
+        self._cli_states[pid] = {"state": "preparing", "message": "Checking login…" if check_only else "Setting up automatically…"}
+        app = QApplication.instance()
+        worker = CliSetupWorker(provider, check_only, parent=app)
+        self._cli_workers[pid] = worker
+        app.aboutToQuit.connect(worker.cancel_and_wait)
+        worker.progress.connect(lambda text, p=pid: self._cli_setup_progress(p, text))
+        worker.succeeded.connect(lambda result, p=pid: self._cli_setup_done(p, result))
+        worker.failed.connect(lambda message, p=pid: self._cli_setup_failed(p, message))
+        worker.finished.connect(lambda p=pid: self._cli_setup_finished(p))
+        worker.finished.connect(worker.deleteLater)
+        worker.start()
+        if pid == self._provider_id:
+            self._refresh_ready_state()
+
+    def _cli_setup_progress(self, pid, message):
+        if self._closing:
+            return
+        self._cli_states[pid] = {"state": "preparing", "message": message}
+        if pid == self._provider_id:
+            self._refresh_ready_state()
+
+    def _cli_setup_finished(self, pid):
+        self._cli_workers.pop(pid, None)
+        if not self._closing and pid == self._provider_id:
+            self._refresh_ready_state()
+
+    def _cli_setup_done(self, pid, result):
+        if self._closing:
+            return
+        self._cli_states[pid] = {"state": "ready" if result["logged_in"] else "login",
+                                 "message": result["message"]}
+        if pid == self._provider_id:
+            if not result["logged_in"]:
+                self._settings_btn.setChecked(True)
+            self._refresh_ready_state()
+
+    def _cli_setup_failed(self, pid, message):
+        if self._closing:
+            return
+        self._cli_states[pid] = {"state": "error", "message": "Setup could not finish: " + message[:600]}
+        if pid == self._provider_id:
+            self._settings_btn.setChecked(True)
+            self._refresh_ready_state()
+
+    def _refresh_cli_controls(self):
+        status = self._cli_states.get(self._provider_id, {"state": "preparing", "message": "Setting up automatically…"})
+        self._login_help.setText(html.escape(status["message"]))
+        self._login_btn.setVisible(True)
+        self._login_btn.setEnabled(status["state"] in ("login", "ready") and not self._busy)
+        self._login_btn.setToolTip(
+            "Already signed in. Click to sign in again or use another account."
+            if status["state"] == "ready" else "Sign in with your subscription account.")
+        self._cli_retry_btn.setVisible(status["state"] == "error")
+        self._cli_retry_btn.setEnabled(self._provider_id not in self._cli_workers)
+        self._cancel_login_btn.setVisible(status["state"] == "signing_in")
+        url = status.get("url")
+        if url:
+            self._login_help.setText(html.escape(status["message"]) +
+                                     f' <a href="{html.escape(url, quote=True)}">Open login page</a>')
+
+    def _retry_cli_setup(self):
+        self._start_cli_setup(self._provider)
+
+    def _on_cli_login(self):
+        provider = self._provider
+        pid = provider.id
+        if pid not in CLI_PROVIDER_IDS or pid in self._cli_logins or self._busy:
+            return
+        try:
+            command = provider._command()
+        except FileNotFoundError:
+            self._start_cli_setup(provider)
+            return
+        process = QProcess(self)
+        env = QProcessEnvironment()
+        for key, value in provider._environment().items():
+            env.insert(key, value)
+        process.setProcessEnvironment(env)
+        process.setWorkingDirectory(str(Path.home()))
+        process.setProcessChannelMode(QProcess.MergedChannels)
+        self._cli_logins[pid] = process
+        self._cli_states[pid] = {"state": "signing_in", "message": "Complete sign-in in your browser…"}
+        process.readyReadStandardOutput.connect(lambda p=pid, proc=process: self._cli_login_output(p, proc))
+        process.errorOccurred.connect(lambda error, p=provider, proc=process: self._cli_login_failed(p, proc))
+        process.finished.connect(lambda code, status, p=provider, proc=process: self._cli_login_finished(p, proc, code))
+        args = ["login"] if pid == "codex_cli" else ["auth", "login"]
+        process.start(command[0], command[1:] + args)
+        self._refresh_ready_state()
+
+    def _cli_login_output(self, pid, process):
+        output = bytes(process.readAllStandardOutput()).decode("utf-8", errors="replace")
+        status = self._cli_states.get(pid)
+        if not status or status["state"] != "signing_in":
+            return
+        # The CLI opens the browser. Keep an official-link fallback in the UI
+        # without copying tokens, running a shell or opening arbitrary URLs.
+        output = (status.get("output", "") + output)[-24000:]
+        status["output"] = output
+        for url in re.findall(r"https://[^\s<>]+", output):
+            if urlsplit(url).hostname in ("auth.openai.com", "login.openai.com", "claude.ai"):
+                status["url"] = url
+                break
+        if pid == self._provider_id:
+            self._refresh_cli_controls()
+
+    def _cli_login_failed(self, provider, process):
+        if self._cli_logins.get(provider.id) is not process:
+            return
+        self._cli_logins.pop(provider.id, None)
+        self._cli_setup_failed(provider.id, "Login could not start. " + process.errorString())
+        process.deleteLater()
+
+    def _cli_login_finished(self, provider, process, code):
+        if self._cli_logins.get(provider.id) is not process:
+            return
+        self._cli_logins.pop(provider.id, None)
+        process.deleteLater()
+        # Check saved authentication even on nonzero exit, because the browser
+        # may have completed sign-in while the CLI was closing.
+        self._start_cli_setup(provider, check_only=True)
+
+    def _cancel_cli_login(self):
+        process = self._cli_logins.pop(self._provider_id, None)
+        if process is not None:
+            process.kill()
+            process.waitForFinished(1000)
+            process.deleteLater()
+            self._start_cli_setup(self._provider, check_only=True)
+
+    def closeEvent(self, event):
+        self._closing = True
+        for process in list(self._cli_logins.values()):
+            process.kill()
+            process.waitForFinished(1000)
+        for worker in list(self._cli_workers.values()):
+            worker.requestInterruption()
+        super().closeEvent(event)
 
     def _sync_level_widgets(self) -> None:
         """Relabel the ladder for this provider and select the level in force.
@@ -594,7 +772,7 @@ class AssistantChatPanel(QWidget):
         if meta.get("needs_base_url"):
             self._provider.set_base_url(self._base_url_edit.text())
         key = self._key_edit.text().strip()
-        if key:
+        if key and self._provider_id not in CLI_PROVIDER_IDS:
             self._provider.set_api_key(key)
             self._key_edit.clear()
         self._provider.set_model(self._model_combo.currentText())
@@ -635,12 +813,18 @@ class AssistantChatPanel(QWidget):
 
     def _refresh_ready_state(self) -> None:
         ok, reason = self._provider.available()
+        if self._provider_id in CLI_PROVIDER_IDS:
+            self._refresh_cli_controls()
+            status = self._cli_states.get(self._provider_id, {})
+            ok = ok and status.get("state") == "ready"
+            reason = status.get("message", "Setting up automatically…")
         self._input.setEnabled(ok and not self._busy)
         self._send_btn.setEnabled(ok and not self._busy)
         label = PROVIDER_META.get(self._provider_id, {}).get("label", self._provider_id)
         if ok:
             eye = " · 👁" if self._vision else ""
-            price = price_label(self._provider.model, compact=True)
+            price = ("" if self._provider_id in CLI_PROVIDER_IDS
+                     else price_label(self._provider.model, compact=True))
             cost = f" · {html.escape(price)}" if price else ""
             tier = MODEL_TIERS.get(tier_for_model(self._provider_id, self._provider.model))
             level = f"{html.escape(tier['name'])} · " if tier else ""
@@ -653,6 +837,10 @@ class AssistantChatPanel(QWidget):
     # -- sending / receiving -------------------------------------------------
     def _on_send(self) -> None:
         if self._busy:
+            return
+        if (self._provider_id in CLI_PROVIDER_IDS
+                and self._cli_states.get(self._provider_id, {}).get("state") != "ready"):
+            self._refresh_ready_state()
             return
         text = self._input.toPlainText().strip()
         if not text:
@@ -680,7 +868,7 @@ class AssistantChatPanel(QWidget):
                                   "or use step-by-step assistance.")
                 return
             settings = {"assistant": agent.key,
-                        "provider": "claude" if self._provider_id == "anthropic" else "openai",
+                        "provider": "claude" if self._provider_id == "anthropic" else self._provider_id,
                         "model": self._provider.model,
                         "api_key": self._provider._api_key,
                         "reasoning_effort": self._reasoning.currentText(),
@@ -703,7 +891,8 @@ class AssistantChatPanel(QWidget):
 
     def _on_workflow_finished(self, message):
         self._set_live(None)
-        self._render_note(html.escape(message))
+        # The run's warnings arrive a line each; the page shows only their count.
+        self._render_note(html.escape(message).replace("\n", "<br>"))
         self._messages.append({"role": "assistant", "content": message})
         self._set_busy(False)
 
@@ -972,6 +1161,8 @@ class AssistantChatPanel(QWidget):
     # -- state / rendering ---------------------------------------------------
     def _set_busy(self, busy: bool) -> None:
         self._busy = busy
+        if self._provider_id in CLI_PROVIDER_IDS:
+            self._refresh_cli_controls()
         self._execution_mode.setEnabled(not busy)
         # One assistant per conversation turn: no switching mid-run.
         self._assistant_combo.setEnabled(not busy)

@@ -34,6 +34,7 @@ _UNSUPPORTED_INPUTS = {
     "seismic_file": "seismic travel-time inversion",
     "mt_files": "magnetotelluric inversion",
     "mt_file": "magnetotelluric inversion",
+    "gravmag_file": "gravity / magnetic inversion",
 }
 
 #: The keys that name the ERT data of a run.
@@ -486,6 +487,10 @@ class AgentCoordinator:
             if not absolute.exists():
                 errors.append(f"{field}: file does not exist at {absolute}")
                 return
+            if field == "tdem_file":
+                from .tdem_agent import TDEMAgent
+                if TDEMAgent._is_instrument_survey(absolute):
+                    return     # a TEM2Go project or folder, not a sounding table
             allowed = extension_map.get(field)
             if allowed and absolute.suffix.lower() not in allowed:
                 errors.append(

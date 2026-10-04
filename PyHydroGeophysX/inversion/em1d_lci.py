@@ -33,6 +33,7 @@ import contextlib
 import inspect
 import math
 import os
+import threading
 import time
 import warnings
 from concurrent.futures import ThreadPoolExecutor
@@ -122,6 +123,9 @@ class SoundingBlock:
     label: str = ""
     prior_lower: Optional[np.ndarray] = None
     prior_weights: Optional[np.ndarray] = None
+    #: The predicted data of a half-space of the given conductivity, when the
+    #: caller has a cheaper way to it than ``forward`` on a uniform model.
+    halfspace: Optional[Callable[[float], np.ndarray]] = None
 
     def __post_init__(self) -> None:
         self.dobs = np.asarray(self.dobs, dtype=float).ravel()
@@ -267,19 +271,29 @@ def resolve_worker_count(n_soundings: int, requested: int = 0) -> int:
     return max(1, min(int(n_soundings), int(available or 1)))
 
 
+#: The forward-operator cache of the chunk of soundings this thread is working
+#: through, while it is (:func:`_map_soundings`). The operators a thread builds
+#: go there rather than into the thread's own cache; see
+#: :func:`PyHydroGeophysX.inversion.em1d._thread_local_modeler`.
+_LANE = threading.local()
+
+
 @contextlib.contextmanager
 def _worker_pool(workers: int) -> Iterator[Optional[ThreadPoolExecutor]]:
     """A pool for one solve, or None when there is nothing to gain from one.
 
     Held open across the whole solve rather than per iteration: an LCI run makes
     several forward passes per iteration, and building a pool for each of them
-    would spend more on thread startup than the pass costs.
+    would spend more on thread startup than the pass costs. The pool carries one
+    forward-operator cache per chunk of soundings (``lane_caches``), which ends
+    with it.
     """
     if workers <= 1:
         yield None
         return
     with ThreadPoolExecutor(max_workers=workers,
                             thread_name_prefix="lci") as executor:
+        executor.lane_caches = {}
         with _single_threaded_blas():
             yield executor
 
@@ -306,16 +320,18 @@ def _single_threaded_blas() -> Iterator[None]:
 def _map_soundings(executor: Optional[ThreadPoolExecutor], fn, count: int) -> list:
     """``fn`` over every sounding index, in order, on the pool if there is one.
 
-    The work is split into one contiguous chunk per worker rather than handed
-    out a station at a time. Both give the same list, since the chunks are
-    collected in order, but the chunked form keeps a station on the same thread
-    from one pass to the next, and that is what makes the thread-local forward
-    operators pay. A station's operator depends on its own transmitter-receiver
-    distance, so a line presents many distinct operators: 134 on a 140-station
-    survey. Handing stations out dynamically walks every thread through all of
-    them, evicting each before it is reused, and the pass then rebuilds about
-    half the operators it needs. Measured on that survey, one forward pass took
-    4.4 s against 2.5 s of actual forward calls.
+    The work is split into one contiguous chunk per worker - a lane - rather
+    than handed out a station at a time, and each lane builds its forward
+    operators into a cache of its own, kept by the pool. A station's operator
+    depends on its own transmitter-receiver distance, so a line presents many
+    distinct operators: 134 on a 140-station survey. The cache used to belong to
+    the thread, on the assumption that a chunk returns to the same thread from
+    one pass to the next; a ``ThreadPoolExecutor`` gives no such guarantee, so
+    every thread came to build the operator of nearly every station. On that
+    survey a 20-thread pool built 1,946 operators for 280 blocks, each warm-up
+    holding the GIL, and a forward pass ran only 2.2 times faster than one
+    thread. With the cache on the lane, which runs on one thread at a time, it
+    builds 280 and the pass runs 12.8 times faster.
 
     Equal chunks assume the stations cost about the same, which holds when they
     share a layer grid and differ only in how many gates survived. A survey
@@ -325,18 +341,25 @@ def _map_soundings(executor: Optional[ThreadPoolExecutor], fn, count: int) -> li
     if executor is None or count < 2:
         return [fn(s) for s in range(count)]
     workers = int(getattr(executor, "_max_workers", 0) or 1)
-    if workers < 2 or workers >= count:
+    if workers < 2:
         return list(executor.map(fn, range(count)))
+    caches = getattr(executor, "lane_caches", None)
 
-    def run(start: int, stop: int) -> list:
-        return [fn(s) for s in range(start, stop)]
+    def run(lane: int, start: int, stop: int) -> list:
+        previous = getattr(_LANE, "cache", None)
+        _LANE.cache = None if caches is None else caches.setdefault(lane, {})
+        try:
+            return [fn(s) for s in range(start, stop)]
+        finally:
+            _LANE.cache = previous
 
-    size, extra = divmod(count, workers)
+    lanes = min(workers, count)
+    size, extra = divmod(count, lanes)
     futures, start = [], 0
-    for index in range(workers):
+    for index in range(lanes):
         stop = start + size + (1 if index < extra else 0)
         if stop > start:
-            futures.append(executor.submit(run, start, stop))
+            futures.append(executor.submit(run, index, start, stop))
         start = stop
     results: list = []
     for future in futures:
@@ -1097,14 +1120,18 @@ def cumulated_sensitivity(block: SoundingBlock, model: np.ndarray) -> np.ndarray
 
 def sensitivity_doi(block: SoundingBlock, model: np.ndarray,
                     depth_edges: np.ndarray, *,
-                    threshold: float = DOI_SENSITIVITY_THRESHOLD) -> float:
+                    threshold: float = DOI_SENSITIVITY_THRESHOLD,
+                    cumulated: Optional[np.ndarray] = None) -> float:
     """Depth of investigation: the bottom of the deepest layer still resolved.
 
     Returns ``0.0`` when even the shallowest layer misses the threshold, which
     is the honest answer for a station whose gates were all rejected: it has no
     depth of investigation, and its column carries only what its neighbours say.
+    ``cumulated`` is :func:`cumulated_sensitivity` of ``block`` at ``model``
+    when the caller has it already; each costs a Jacobian.
     """
-    cumulated = cumulated_sensitivity(block, model)
+    if cumulated is None:
+        cumulated = cumulated_sensitivity(block, model)
     edges = np.asarray(depth_edges, dtype=float).ravel()
     resolved = np.flatnonzero(cumulated >= float(threshold))
     if not resolved.size or resolved[-1] + 1 >= edges.size:

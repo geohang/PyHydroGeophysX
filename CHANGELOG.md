@@ -9,6 +9,171 @@ minor release can change the API.
 
 ### Added
 
+- Seismic refraction, TDEM and MT runs now go the way ERT runs do: the data
+  are read and drawn, inverted, and the inversion is evaluated before anything
+  is built on it. New workflow steps `load_seismic_traveltimes`,
+  `load_tdem_data` and `load_mt_sites` read the data and draw them (travel-time
+  curves per shot; the decays of up to six soundings beside the station
+  layout; each site's apparent resistivity and phase), and
+  `evaluate_seismic_inversion`, `evaluate_tdem_inversion` and
+  `evaluate_mt_inversion` score the model out of 100 with the ERT evaluation's
+  chi-squared rule (`agents._method_evaluation`, which `evaluate_inversion` now
+  shares): the fit of the picks, ray coverage, cells at a velocity bound and
+  convergence for seismic; each sounding's chi-squared, the soundings resolved
+  and the physical range for TDEM; each site's RMS against Occam's target and
+  the static shifts for MT. Each draws its fit and writes recommendations. The
+  seismic evaluation re-inverts with lambda doubled or halved while the fit is
+  off, up to `max_attempts`, and keeps the best-scoring model (on the example
+  line, chi-squared 0.67 at lambda 50 became 0.89 at lambda 100). Interfaces,
+  plan-view maps and water content wait for the evaluation and use the model
+  it kept, and the reports gain an Inversion Quality section with the score,
+  its components and any retries. Gravity and magnetic runs have the same two
+  steps: `load_gravmag_data` maps the station values and settles which field
+  the table holds before anything is inverted, and `evaluate_gravmag_inversion`
+  scores the residual anomaly's fit (the inversion now returns its data and
+  prediction at the inverted stations), a model at the solver's bound and the
+  beta search, and draws data, model and misfit. Only the seismic evaluation
+  re-inverts: Occam, the potential-field beta sweep and the TDEM line
+  inversion's `auto_lambda` search their own regularization, which the
+  ground-TEM preset leaves off on purpose, as the TDEM evaluation says when
+  the fit is off.
+- Loading ERT data draws an apparent-resistivity pseudosection of each survey
+  as it loads (up to six of a long series), so the studio's Live tab shows the
+  data during a load that can take a minute, and the step says what it read:
+  electrodes, readings and the apparent-resistivity range. The figures are kept
+  under `raw_data/` in the run folder and open each method's figures in the
+  report. Readings are placed as the ERT page places them, now in one function
+  both use (`data_processing.ert_io.pseudosection_points`). The ERT reports,
+  single survey and time-lapse, open their figures with the surveys'
+  pseudosections side by side on one colour scale (up to six of a series), the
+  data the inversion fitted, and keep it whatever figures the request narrows
+  them to; report figures in a subfolder of the run are now linked by their
+  relative path, not their file name alone.
+- Water content is drawn with its standard deviation. Each conversion draws the
+  mean and the Monte Carlo standard deviation as it ends (the Live tab shows
+  it): the ERT section of the first, middle and last survey; a TEM survey's
+  section; an MT site or TEM sounding against depth with one- and two-sigma
+  bands, an MT site down to its sensitivity depth. The time-lapse report adds
+  the standard deviation of every survey on one colour scale from zero, and the
+  uncertainty figures are drawn whenever water content is, whatever the request
+  named.
+
+- The Qt assistant can use locally authenticated Codex CLI or Claude Code CLI
+  without an API key, for step-by-step studio tools, folder classification and
+  AQUAH's Auto to report. Selecting a CLI automatically discovers an existing
+  installation or downloads and verifies the official native binary. A Log In
+  button opens the official browser sign-in; chat becomes ready after the
+  saved subscription login is checked, without manual PATH configuration.
+  CLI settings hide the API key field; model replies pass through the existing
+  studio approval flow. The
+  initial CLI bridge supports text and structured studio state.
+
+- A raw seismic line runs as the steps it is made of: "Pick first-arrival
+  travel times" (`pick_first_breaks`), "Run seismic refraction inversion" and
+  "Extract layer interfaces" (`extract_seismic_interfaces`), then the report,
+  where it used to be one step that did all three out of sight. The picking
+  step checks its own picks: each side of each shot is fitted with the closest
+  non-decreasing first-arrival curve, a pick that strays from it is picked
+  again along it by the AIC picker (Maeda, 1985) in a window around where the
+  curve puts it (`data_processing.seismic.repick_against_curve`), what still
+  strays is left out (`monotonic_pick_check`), and a shot whose times disagree
+  with their reciprocals by the same amount pair after pair - a timing error
+  of its own record - is left out whole (`reciprocal_shot_check`). On one
+  24-geophone line two shots in seventeen came out 14 and 9.8 ms early and 17
+  of 408 picks had jumped to noise; with the picks corrected and the shots
+  left out the inversion went from chi-squared 49 to 5.4 and lost the
+  4000 m/s artefacts 3 m under a soil. On a second line, whose far traces the
+  threshold picker had taken at 0-5 ms - the noise just after time zero,
+  lifted by the AGC, where the first arrival came at 30-40 ms - or at time
+  zero itself, on traces that start on a DC level, 80 of 384 picks were
+  corrected rather than lost, one shot 7.8 ms early was found, and
+  chi-squared fell from 14.6 to 9.3. Re-picking every trace by AIC, or picking
+  by energy ratio and AIC alone, fitted worse on both lines than correcting
+  only the stray picks. The picks are drawn - corrected ones ringed, left-out
+  ones crossed - and the report lists all three; the interfaces are drawn on
+  the model in a figure of their own. The picking is two functions any caller
+  can use, `data_processing.seismic.pick_and_correct` (threshold picks on the
+  traces with AGC, placed on the survey's geometry, the stray ones picked
+  again) and `screen_picks` (the curve check, the reciprocity check, then the
+  neighbouring shots, below), with `apply_record_interval` for the sample
+  interval; the studio's Seismic page uses the same three.
+- The picking step also holds each pick to the neighbouring shots' picks at
+  the same geophone (`data_processing.seismic.neighbour_shot_check`, on by
+  default; `first_break_params={"neighbour_check": False}` turns it off). By
+  reciprocity one geophone's picks across the shots form a first-arrival curve
+  just as a shot's do, and the neighbouring shots, a few metres apart, place a
+  pick more closely than its own shot's curve, which far from the shot leaves
+  room for a pick a quarter early and has no reciprocals to check against off
+  the end of the spread. The geophone's curve finds the conflict but not which
+  pick is wrong - by the curve alone the next shot's right pick was taken as
+  often as the stray one - so the pick that also lies out of line in its own
+  shot's gather is taken, picked again by AIC where the neighbours put it, and
+  left out if it still disagrees. It runs after the reciprocity check, so a
+  shot with a timing error is still left out whole. On the two lines above it
+  picked again 10 and 1 picks and left out 3 and 1: chi-squared went from 9.2
+  to 6.6 and from 5.4 to 4.6, and on the first the reciprocal times - which it
+  never looks at - came to agree to 1.75 ms on average instead of 2.4. On the
+  shipped `AP_411.sgy` it changed one pick and the fit not at all. A low-cut
+  filter before picking was tried for the noisy far traces first and fitted
+  worse on one line or the other at every corner tried, 2 to 20 Hz: their noise
+  is at the first arrival's own 40 Hz, and a causal filter that close to it
+  moves the onset late.
+- The seismic picking step draws its evidence: shot gathers spread along the
+  line, and every shot left out, as variable-area wiggle traces at their
+  receiver positions with the picker's AGC, with the picks on them - kept,
+  picked again, left out (`seismic_shot_gathers.png`). It is the report's
+  first seismic figure and appears on the studio's Workflow page while the run
+  is still going. On the second line above it shows at a glance what the
+  numbers do not: the far traces of the first shot start on a DC drift, and
+  their picks scatter by several milliseconds.
+- Plan-view resistivity maps for TEM surveys. When a request asks for the
+  spatial distribution ("spatial", "map", "plan view", "depth slice",
+  "空间分布", ...), a step of its own after the TDEM inversion, "Interpolate
+  plan-view maps" (`map_tdem_plan_view`), maps resistivity at up to six depths
+  that enough soundings resolve (`visualization/em_maps.py`): log10 resistivity
+  ordinary-kriged from the soundings resolving each depth with
+  `core.plan_interpolation`, a variogram fitted per depth to lags out to eight
+  times 0.6 of the wider gaps between lines (11 m on one TEM2Go day), and
+  filled across the outline of all the soundings, the gaps between lines and
+  the parts of a deep map no sounding reaches included; a sounding below its
+  depth of investigation is left out at that depth, and `max_distance` blanks
+  beyond a distance when asked. On the sections' colour scale, in metres or
+  feet. A second figure maps the kriging standard deviation of every cell, in
+  decades with the factor it stands for, small beside the soundings and
+  growing into the gaps. Kriging all six depths of a 564-sounding day takes a
+  few seconds; held-out soundings at 10 m are predicted to 0.106 decade RMS,
+  as linear interpolation does (0.105), with a median standard deviation of
+  0.10-0.29 decade by depth on that day. The maps are drawn over the survey's
+  own georeferenced image when it has one - the satellite image a TEM2Go
+  controller keeps under `Maps`, read with its world file
+  (`basemap.local_basemap_image`) - and over satellite tiles otherwise. A TEM2Go project records each sounding midway between loop
+  and coil but the instrument's GPS fix as its longitude and latitude, 7 m
+  apart on one survey, which kept the tile fit from registering; the sounding
+  coordinates are now converted from their UTM zone instead. Each depth's
+  resistivity and kriging standard deviation are also written as ESRI ASCII
+  grids for GIS, and the report gains a "Resistivity in Plan View" section with
+  each depth's variogram (model, range, nugget share) and kriging standard
+  deviation (median and 90th percentile), both figures, a limitation on
+  kriging between lines, and - when the soundings cannot make a map, such as a
+  single line - a "Not Delivered" entry saying why. The Qt studio shows both
+  maps too: the EM Processing page's "Resistivity model" view gains "Plan view"
+  and "Plan-view uncertainty" once a survey of several lines is inverted,
+  kriged off the UI thread by the same code (`em_maps.survey_plan_grids`), on
+  the section's colour map and redrawn in feet or metres with the studio's
+  length unit; a workflow run's maps appear on the Workflow page with its
+  other figures.
+- The file classifier lists the whole TEM2Go survey folder, not the project
+  file alone: the instrument's raw stream (`Data/`) as a second source of the
+  same survey, one role change away, which this package stacks itself without
+  anything TEMImage wrote; the protocol and line file, read with the survey;
+  the controller's field models, a quick look that is not an input; and the
+  georeferenced map image, under a new "Map background" role (`basemap_file`),
+  also offered when files are added by hand. The project stays the default
+  because it carries the station and gate edits made in TEMImage. On one
+  575-station day the raw stream gave 11 more stations than the project, the
+  same response levels (median ratio 1.00 to 1.01, the same relative errors),
+  but stations grouped from different records, so a model 0.22 decades apart
+  at the median.
 - Magnetotelluric data, `data_processing.mt`, on NumPy and SciPy alone - no
   new dependency. `TransferFunction` holds one site's impedance and tipper in
   ohms and e^{+iωt}, with their errors and, where known, the full covariance,
@@ -219,6 +384,78 @@ minor release can change the API.
 
 ### Changed
 
+- A run that ends with things to check no longer spells them out across the
+  Workflow page: the banner, the line under the report and the finish card say
+  how many there are, and the list goes to the assistant's conversation, one
+  line each. Four warnings had filled the banner and the status line with the
+  same paragraph twice.
+
+- Seismic refraction inversions scale their mesh and velocities to the survey
+  for any setting the request does not give (`SeismicAgent.survey_scaled_defaults`):
+  mesh depth 0.4 of the line, at most 30 m; cells of two sensor spacings, at
+  most 2 m; a starting gradient from the direct wave's velocity, at most
+  500 m/s, to 1.5 times the far-offset apparent velocity, at most 5000 m/s;
+  and a lower velocity bound of half the direct wave's, at most 300 m/s. The
+  fixed values - a 30 m mesh of 2 m cells over 500-5000 m/s, bounded at
+  300 m/s - could not fit a soil whose surface layer carries 120 m/s, and an
+  LLM's recommendation no longer replaces the survey's own velocities, only
+  the smoothing. On the shipped `srtfieldline2.dat` chi-squared goes from 7.8
+  to 0.67; a long line over fast ground keeps the fixed values.
+- The studio's Seismic page picks as the seismic workflow does. "Auto-pick
+  this shot" takes threshold picks on the traces (with AGC when AGC is on),
+  places them at the page's geophone and shot positions, picks the stray ones
+  again along the shot's curve - drawn as orange circles - and leaves out what
+  still breaks it; "All shots" picks every record at its own shot x and adds
+  the reciprocity and neighbouring-shot checks, keeping picks made by hand. A line picked on the page
+  and the same line picked by a run now agree pick for pick. "Threshold (of
+  trace peak)" and "Latest first arrival" replace the STA/LTA ratio, and a
+  SEG-Y file takes its acquisition record's sample interval when loaded. The
+  page's assistant tools gain `auto_pick_all` and the `pick_threshold`,
+  `pick_max_time_ms`, `screen_picks` and `display` (image, wiggle or both)
+  settings; `sta_lta_ratio` is ignored with a note naming `pick_threshold`.
+- TEM line inversions run six to nine times faster: a 627-station TEM2Go
+  survey in 84 s instead of about 735 s, a 140-station one in 19 s instead of
+  114 s. Profiling showed a 20-thread pool using four or five cores, and the
+  solver spending its last half converging on a chi-squared that had stopped
+  moving. Six changes:
+  - Each chunk of soundings now keeps its forward operators for the whole
+    solve (`em1d_lci._map_soundings`). The cache belonged to the thread, and a
+    thread pool does not return a chunk to the same thread, so every thread
+    came to build nearly every station's operator - 1,946 builds for 280
+    blocks, each holding the GIL - and a forward pass ran 2.2 times faster
+    than one thread instead of 12.8.
+  - The depth of investigation is computed on the worker pool, with one
+    Jacobian per station instead of two; it ran on one thread after the
+    inversion, about two minutes on the 627-station survey.
+  - The starting-model scan models its uniform candidates as one-layer
+    half-spaces rather than through twenty identical layers (same response
+    to 3e-11, same choice at every station tested).
+  - The conductivity Jacobian and the response are computed by numba kernels
+    (`forward/_tdem_kernels.py`). SimPEG's `getJ` also computes the thickness
+    and permeability gradients and discards them, and its megabytes of
+    intermediates per sounding held a parallel pass to five cores; the
+    kernels are the same recursions, summed through the Hankel filter as they
+    go. They agree with SimPEG's `getJ` to 2.5e-10 and its `dpred` to 4.4e-10
+    of the largest entry, so the response of TEMcompany's own models
+    differs from TEMcompany's `ForwardData` exactly as SimPEG's does (median
+    3 to 5 %). Each process compares its first compiled response and
+    Jacobian with SimPEG's and falls back to SimPEG for good if they disagree;
+    without numba, or with `PHGX_TDEM_COMPILED=0`, SimPEG computes both.
+    `numba` is now listed in the `geophysics` and `all` extras (it was
+    installed only through pftools).
+  - The Ground TEM preset stops the coupled solve at `lci_ftol` 1e-3 instead
+    of the general 1e-4. Measured on four TEM2Go surveys (140 to 1,013
+    stations): 22 to 40 % less time, chi-squared 0.1 to 1.8 % higher, every
+    depth of investigation unchanged, 0.5 to 1.4 % of cells more than 25 %
+    from the 1e-4 model, and the median difference from TEMcompany's own
+    inversion of each survey (0.13 to 0.26 decades) within 0.003 decades of
+    what 1e-4 gives.
+
+  The first three changes reproduce earlier results exactly. The compiled
+  kernels can move the trust-region solver onto a slightly different path:
+  at the same tolerance, on the 627-station survey, it stopped after 39
+  evaluations instead of 43, at chi-squared 1.014 instead of 1.013, with 99%
+  of cells within 4% of the earlier model.
 - Water content from geophysics always states its uncertainty and whose
   petrophysical relationship it used. When the user gave none, the conversion
   still runs, but a warning says the result is not reliable and names every
@@ -272,6 +509,107 @@ minor release can change the API.
 
 ### Fixed
 
+- The seismic inversion recorded its velocity limits as slowness: pyGIMLi turns
+  the list it is given into slowness in place, so the run's settings read
+  [1/8000, 1/86] and a re-inversion from them would have bounded the model by
+  those values. The agent now passes a copy.
+
+- Times read from a 32 kHz seismic record were 0.8% short, and every velocity
+  0.8% too high: SEG-Y keeps the sample interval in whole microseconds, so
+  31.25 us is written 31. The picking step now takes the interval from the
+  acquisition record a seismograph writes beside the file (`<name>_record.txt`,
+  "Sample interval: 31.25 us", or the record length and sample count), when it
+  is within rounding of the header's, and says so in the run's notes;
+  `read_segy(sample_interval_s=...)` and `record_sample_interval()` do the same
+  for any caller.
+- A shot standing over the geophone at x = 0 was moved: `pick_first_breaks`
+  took a trace whose source and receiver x are both zero for one without
+  coordinates and placed it at its shot and trace numbers, so one line carried
+  a 1.3 ms travel time between x = 3 and x = 1 m into its inversion. Zero
+  coordinates now mean missing ones only when no trace of the file has
+  others; on that line chi-squared fell from 13.6 to 9.3.
+- A trace the picker stopped at time zero on was counted as a pick and then
+  dropped from the travel times without a word - 24 traces of one line. It is
+  now picked again along its shot's curve wherever the curve has a timed pick
+  nearer the shot; one right beside the shot, where the curve says nothing, is
+  left out and counted in the run's notes, and the pick count is that of the
+  travel times inverted.
+- A seismic line with ordinary off-end shots could not be processed: a shot
+  more than one geophone spacing past the elevation profile was refused as an
+  "origin mismatch", and the run then asked which origin to use although the
+  two origins were 0 m apart, re-ran the same geometry whatever the answer and
+  failed. Shots may now stand up to half the spread's length beyond its ends
+  (`survey_geometry.off_end_reach`), taking the elevation of the profile's end
+  with a note; the receivers are still held to the profile exactly, and the
+  origin question is asked only when the two origins actually differ. The
+  velocity figure's colour scale no longer floors at 300 m/s, and its sensor
+  marks are sized to the sensor spacing rather than a fixed 0.8 m.
+- Reading a TEM2Go acquisition straight from its raw `.stb` stream decoded,
+  filtered and stacked the whole stream again for every station: 1.3 s each,
+  so a 575-station day spent over twelve minutes reading before it inverted
+  anything. The stacks are now decoded once per stream and kept while the
+  stream file is unchanged; the same inversion took 129 s.
+- "Read the report" on a replayed run handed the Markdown file to whatever
+  program the machine associates with `.md`. It now opens in the studio's own
+  report tab for a replayed run as for a live one (finding the report beside
+  the recording when the run folder has moved), and a report or figure linked
+  from the report, or double-clicked under Output files, opens inside the
+  studio too; other files still open in their own programs.
+- The agents did not recognise TEM2Go data. A survey folder holds a
+  `project.tiw`/`project.db` beside a `.sts` protocol and the instrument's
+  `Data/`, `Logs/`, `Maps/` and `Models/` folders, none of which the folder
+  inventory listed, so a selected TEM2Go folder came back empty; a path to one
+  in a request named nothing; and `TDEMAgent` read only `TIME BZ` text files,
+  modelling a 10 m circular loop. The inventory now finds TEMcompany/TEM2Go
+  projects, raw `.stb` acquisition folders, `*_StationData.xyz` exports and
+  tTEM `.skb` files by their content and classifies them without the model
+  (one survey per run; a sibling such as `project2.tiw` is listed as Ignore,
+  saying what it holds). A request naming such a folder or file by its path
+  takes it as the TDEM data, and "TEM2Go", "tTEM" and "瞬变电磁" count as asking
+  for TDEM. `TDEMAgent` inverts these surveys through `em1d.load_sounding` and
+  `em1d.invert_line` with the system the project records and its stored
+  inversion settings over the `ground_tem` preset - what the EM Processing page
+  uses - and draws one section per line. Water content from a TDEM section
+  converts cell by cell, leaving cells below the depth of investigation blank.
+- A request to process TEM2Go data with a model parser showed Load ERT data,
+  Run ERT inversion and Evaluate inversion quality after the TDEM inversion in
+  the studio's route, and its report waited for the ERT loader to be tried on
+  the `.tiw` project. The parser's ERT stage runs on every request and was
+  told its data file is required, so it gave the project the user had
+  selected as TDEM data as `data_file` too. A file another method takes - the
+  same file, or one inside another method's survey folder - and a TEMcompany
+  project are no longer ERT data, both when the request is parsed and when the
+  run starts (`drop_borrowed_ert_files`), and the ERT stage is told to leave
+  `data_file` out when the request has no ERT data.
+- A run without ERT ended "success" with no report, because the report step
+  needed an ERT inversion: TDEM, seismic refraction and MT runs all did, and
+  gravity / magnetic data had no agent step at all. Such a run now writes its
+  own report - `tdem_report.md`, `seismic_report.md`, `mt_report.md`,
+  `gravmag_report.md`, or `survey_report.md` for several methods - with
+  document control, findings, data and method (the settings actually used),
+  the fit, the model by depth with its coverage, water content with its
+  uncertainty where converted, figures, recommendations and the output files.
+  An ERT report gives every other method of the run its own section. Each
+  method writes its sections in its own module (`agents/_tdem_report.py`,
+  `_seismic_report.py`, `_mt_report.py`, `_gravmag_report.py`), laid out by
+  `agents/_survey_report.py`; `SeismicAgent` now returns its chi-squared,
+  relative RMS and the settings it used, for the report to state.
+- Gravity and magnetic data in the agent workflow: `GravMagAgent` and the
+  runtime step `invert_gravmag` do what the Gravity / Magnetics page does with
+  its default settings - regional-residual separation, maps, and a SimPEG 3D
+  density-contrast or susceptibility inversion - and state what they assumed
+  (the field from the file's header or the request; a flat 1 m datum without a
+  z column; the page's default inducing field when none is given). Folders
+  classify station tables as `gravmag_file`, a request naming gravity or
+  magnetics takes the station table it names (method words are read from the
+  request's prose, not from its file paths), and AQUAH's Workflow page offers
+  "MT sites" and "Gravity / magnetic stations" when files are added by hand.
+- `em1d.invert_line` fitted a TEM2Go/TEMcompany line with every gate's sign
+  flipped when the geometry carried only the moment: `tdem_moment_blocks` read
+  `response_sign` from the caller's geometry alone, while the rest of the
+  forward geometry was completed from the station's recorded system. Line 1 of
+  a field survey came back at chi-squared ~750 with a blank section and no
+  error; it now matches the run given the full system (chi-squared 0.54).
 - The assistant could navigate to the Workflow page, the Project Map and the
   Model Viewer but not read or drive them: none implemented the agent
   interface, and the studio's agent self-test failed on it. The Workflow page

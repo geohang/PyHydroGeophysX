@@ -436,6 +436,24 @@ def _station_geometry(geom: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, A
     column with the nominal 15 m moves one survey's low-moment response by 1.4
     percent at the median and 18 percent at its worst gate.
 
+    It is also where this package and TEMimage part ways. TEMimage 3 (Lupus
+    3.0.2) hands its solver the spec's nominal ``RxCoilXYZPos`` for every
+    station, as the run's stored ``InversionInput`` shows. Given that same 15 m,
+    this forward reproduces TEMimage's stored ``ForwardData`` for TEMimage's own
+    models to a median 0.09 (LM) and 0.15 (HM) data errors over 627 stations and
+    12,763 gates, the largest systematic gap 2 percent; given each station's own
+    distance it differs by a median 2.0 data errors at the low moment, almost
+    all of it at the early gates. The measured distance is the right one. On
+    that survey an inversion with it fits equally well at every station
+    (median chi-squared 0.65 to 0.93 whatever the station's distance), while
+    with the nominal 15 m the fit falls apart as the distance departs from it:
+    chi-squared 0.77 within half a metre, 5.7 at 2 to 4 m and 16 beyond 4 m,
+    and TEMimage's own data fit worsens the same way, 1.3 to 3.9 (correlation
+    0.61 with the departure). The distance also accounts for most of the
+    difference between the two programs' models: 0.20 decades at the median
+    where the station is 2 m or more off nominal, 0.10 where it is within 1 m,
+    and 0.10 in both groups once this package is given the nominal distance too.
+
     ``tx_rx_sep`` is passed through as the file records it. It used to be
     rounded to :data:`STATION_DISTANCE_BIN_M`, which now defaults to zero; set
     ``tx_rx_sep_bin`` to a positive number of metres to round again.
@@ -583,7 +601,7 @@ def _best_starting_resistivity(blocks, n_layers: int, workers: int, *,
     ``initial_models`` rather than extending the scan here.
     """
     from PyHydroGeophysX.inversion.em1d_lci import (
-        _forward_line, _misfit, _worker_pool, resolve_worker_count,
+        _forward_line, _map_soundings, _misfit, _worker_pool, resolve_worker_count,
     )
 
     if not blocks:
@@ -593,12 +611,19 @@ def _best_starting_resistivity(blocks, n_layers: int, workers: int, *,
     n_data = int(sum(block.dobs.size for block in sampled))
     if n_data <= 0:
         return default
+    # A block that can model a half-space directly does it in one layer.
+    direct = all(block.halfspace is not None for block in sampled)
     best_rho, best_chi2 = float(default), float("inf")
     try:
         with _worker_pool(resolve_worker_count(len(sampled), workers)) as pool:
             for rho in _STARTING_HALF_SPACES:
-                x = np.full(len(sampled) * n_layers, math.log10(float(rho)))
-                residual, _ = _misfit(sampled, _forward_line(sampled, x, n_layers, pool))
+                if direct:
+                    predicted = _map_soundings(
+                        pool, lambda s: sampled[s].halfspace(1.0 / float(rho)), len(sampled))
+                else:
+                    x = np.full(len(sampled) * n_layers, math.log10(float(rho)))
+                    predicted = _forward_line(sampled, x, n_layers, pool)
+                residual, _ = _misfit(sampled, predicted)
                 chi2 = float(residual @ residual) / n_data
                 if np.isfinite(chi2) and chi2 < best_chi2:
                     best_rho, best_chi2 = float(rho), chi2
@@ -959,7 +984,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     neighbor_starts = None
     if neighbor_start:
         from PyHydroGeophysX.inversion.em1d import (
-            _moment_forward, _moment_jacobian, tdem_moment_blocks,
+            _moment_forward, _moment_halfspace, _moment_jacobian, tdem_moment_blocks,
         )
         from PyHydroGeophysX.inversion.em1d_lci import SoundingBlock, _map_soundings
         raw_starts = np.full(n_pos, np.nan)
@@ -985,7 +1010,8 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                     jacobian=_moment_jacobian(blocks),
                     dobs=np.concatenate([b["observed"] for b in blocks]),
                     uncertainty=np.concatenate([b["uncertainty"] for b in blocks]),
-                    position=float(pos_lci[s]), line=int(line_numbers[s]))
+                    position=float(pos_lci[s]), line=int(line_numbers[s]),
+                    halfspace=_moment_halfspace(blocks))
                 return s, _best_starting_resistivity(
                     [block], n_layers, 1, default=scan_default, log=_noop), None
             except Exception as exc:  # noqa: BLE001 - keep the line going
@@ -1501,6 +1527,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     # single time borrowed from the first sounding on the line.
     from PyHydroGeophysX.inversion.em1d_lci import (
         DOI_SENSITIVITY_THRESHOLD,
+        _map_soundings,
         cumulated_sensitivity,
         sensitivity_doi,
     )
@@ -1510,15 +1537,29 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     sensitivity = np.full((n_pos, n_layers), np.nan, dtype=float)
     doi = np.full(n_pos, np.nan, dtype=float)
     mu0 = 4e-7 * np.pi
+
+    def reach(s: int):
+        """One station's cumulated sensitivity and depth of investigation, or None.
+
+        On the worker pool, and the Jacobian once: this loop ran on one
+        thread and computed each station's Jacobian twice, which on a
+        627-station TEM2Go survey was about two minutes after the inversion.
+        """
+        row, block = surface_models[s], doi_blocks.get(s)
+        if block is None or not np.all(np.isfinite(row)):
+            return None
+        cumulated = cumulated_sensitivity(block, row)
+        return cumulated, sensitivity_doi(block, row, depth_edges, threshold=doi_threshold,
+                                          cumulated=cumulated)
+
+    with _worker_pool(resolve_worker_count(n_pos, int(inv.get("parallel_workers", 0)))) as pool:
+        reached = _map_soundings(pool, reach, n_pos)
     for s in range(n_pos):
         row = surface_models[s]
         if not np.all(np.isfinite(row)):
             continue
-        block = doi_blocks.get(s)
-        if block is not None:
-            sensitivity[s] = cumulated_sensitivity(block, row)
-            doi[s] = sensitivity_doi(block, row, depth_edges,
-                                     threshold=doi_threshold)
+        if reached[s] is not None:
+            sensitivity[s], doi[s] = reached[s]
             continue
         rho_ref = float(np.nanpercentile(row, 40))
         last_time = _latest_gate(datasets[s]) if datasets[s] is not None else t_ref

@@ -19,9 +19,11 @@ With optional seismic data integration for structure-constrained inversion and c
 1. **ERTLoaderAgent**: Loads and quality-checks ERT field data from various instruments
 2. **ERTInversionAgent**: Performs ERT inversion with optional structural constraints
 3. **WaterContentAgent**: Converts resistivity to water content using petrophysical models
-4. **ReportAgent**: Generates comprehensive reports with visualizations
+4. **ReportAgent**: Generates comprehensive reports with visualizations - for an ERT run, with a section for each other method beside it, and for a run without ERT (TDEM, seismic, MT, gravity/magnetics) a report of its own
 5. **SeismicAgent** (optional): Processes seismic refraction data for structural constraints
 6. **ClimateDataAgent** (optional): Fetches meteorological data and computes PET for hydrologic analysis
+7. **TDEMAgent** (optional): Inverts TDEM soundings, and TEM2Go/TEMcompany or tTEM surveys as laterally constrained 1D sections
+8. **GravMagAgent** (optional): Separates the regional trend from gravity or magnetic station data and inverts the residual for a 3D density-contrast or susceptibility model
 
 ## Key Features
 

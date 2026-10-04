@@ -37,6 +37,28 @@ _MODULE_OUTPUTS = {
 }
 
 
+def _count(n, noun):
+    """``'1 thing'``, ``'3 things'``."""
+    return f'{n} {noun}' + ('' if n == 1 else 's')
+
+
+def _finish_message(status, warnings, incomplete):
+    """What the assistant's conversation is told when a run ends: the outcome,
+    and every warning on a line of its own.
+
+    >>> print(_finish_message('Complete · ready.', ['a', 'b'], False))
+    The run finished; 2 things to check before relying on the results:
+    • a
+    • b
+    """
+    if not warnings:
+        return status
+    head = ('The run did not complete:' if incomplete else
+            f'The run finished; {_count(len(warnings), "thing")} to check before relying '
+            'on the results:')
+    return head + ''.join(f'\n• {warning}' for warning in warnings)
+
+
 class _FittedReportBrowser(QTextBrowser):
     """A report view that scales its figures down to the pane width.
 
@@ -329,7 +351,7 @@ class OneClickModule(BaseModule):
         # "Results _report".
         self.tabs.addTab(self.report, '3 · Results && report')
         self.files = QListWidget()
-        self.files.itemDoubleClicked.connect(lambda item: self._open_path(item.data(Qt.UserRole)))
+        self.files.itemDoubleClicked.connect(lambda item: self._preview(item.data(Qt.UserRole)))
         self.tabs.addTab(self.files, 'Output files')
         self.details = QPlainTextEdit()
         self.details.setReadOnly(True)
@@ -672,7 +694,7 @@ class OneClickModule(BaseModule):
                     return
         provider = self._ai_settings.get('provider', 'openai')
         key = self._ai_settings.get('api_key')
-        if not key:
+        if not key and provider not in ('codex_cli', 'claude_code'):
             self.status.setText('Enter an API key or set the provider environment variable before running.')
             return
         try:
@@ -1127,10 +1149,15 @@ class OneClickModule(BaseModule):
         ``actions`` are keys - report, replay, folder, log - not callbacks.
         """
         folder = self._replay_dir if self._replaying else self._output
-        if self._replaying:
-            read = ('Read the report', lambda: self._open_path(report))
-        else:
-            read = ('Read the report', lambda: self.tabs.setCurrentWidget(self.report))
+        if self._replaying and report and not Path(report).is_file():
+            # A recording names the report where the run wrote it; a run
+            # folder moved or copied since keeps it beside the recording.
+            beside = Path(self._replay_dir) / Path(report).name
+            report = str(beside) if beside.is_file() else report
+        # In the page's own report tab, for a replayed run too: handing the
+        # Markdown file to the system sent the reader to whatever program the
+        # machine associates with .md, without the figures laid out.
+        read = ('Read the report', lambda: self._show_report(report))
         known = {'report': read,
                  'replay': ('Replay this run', lambda: self.start_replay(
                      self._last_replay if not self._replaying else '')),
@@ -1457,12 +1484,7 @@ class OneClickModule(BaseModule):
         reports = result.get('report_files') or {}
         markdown = reports.get('report_markdown')
         self.report.setPlainText(str(result.get('interpretation') or 'Computation finished. See output files for available results.'))
-        try:
-            if markdown and Path(markdown).is_file():
-                self.report.document().setBaseUrl(QUrl.fromLocalFile(str(Path(markdown).resolve().parent) + '/'))
-                self.report.setMarkdown(Path(markdown).read_text(encoding='utf-8', errors='replace'))
-        except OSError as exc:
-            self.details.appendPlainText(f'Could not preview report: {exc}. Open the output folder to inspect results.')
+        self._show_report(markdown, switch=False)
         for path in sorted(Path(self._output).rglob('*')):
             if path.is_file():
                 item = QListWidgetItem(str(path.relative_to(self._output)))
@@ -1470,23 +1492,30 @@ class OneClickModule(BaseModule):
                 self.files.addItem(item)
         self.status.setText('Complete · Report and output files are ready.' if reports else
                             'Computation complete · No report was generated; inspect Activity and output files.')
-        if result.get('status') == 'incomplete':
-            self.status.setText('Did not complete · ' + '; '.join(
-                result.get('warnings') or ['The run ended before it finished; inspect Activity.']))
-        elif result.get('warnings'):
-            self.status.setText('Complete · Needs review: ' + '; '.join(result['warnings']))
-        self.timeline.finish()
+        # The page says how many things need checking and where they are; the
+        # list itself goes to the assistant's conversation. Spelled out here,
+        # four warnings filled the banner and the line under the report.
+        warnings = [str(w) for w in result.get('warnings') or []]
         incomplete = result.get('status') == 'incomplete'
+        where = 'listed in the assistant panel'
+        if incomplete:
+            self.status.setText(f'Did not complete · {_count(max(1, len(warnings)), "problem")}, '
+                                f'{where}.')
+        elif warnings:
+            self.status.setText(f'Complete · {_count(len(warnings), "thing")} to check before '
+                                f'relying on the results, {where}.')
+        self.timeline.finish()
         self._presence(presence.FAILED if incomplete else presence.DONE,
                        f'{self._name()} could not finish the run' if incomplete else
-                       (f'{self._name()} finished · needs your review' if result.get('warnings')
+                       (f'{self._name()} finished · needs your review' if warnings
                         else f'{self._name()} finished the report'),
                        self.status.text().split(' · ', 1)[-1])
         # The outcome is shown where the run was watched, with the report one
         # click away, rather than swapping the Live tab out from under the user.
         self._show_finish(result)
         summary = str(result.get('interpretation') or '')[:1500]
-        self.workflowFinished.emit(self.status.text() + ('\n\n' + summary if summary else ''))
+        self.workflowFinished.emit(_finish_message(self.status.text(), warnings, incomplete)
+                                   + ('\n\n' + summary if summary else ''))
 
     def _failed(self, error):
         self.fail_persisted_run(error, 'unified')
@@ -1538,9 +1567,66 @@ class OneClickModule(BaseModule):
         self.step_through.setEnabled(True)
         self.stop.setEnabled(False)
 
+    #: Files the page shows itself rather than handing to another program.
+    _REPORT_SUFFIXES = {'.md', '.markdown'}
+    _IMAGE_SUFFIXES = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg'}
+
+    def _show_report(self, path, switch=True):
+        """Show a Markdown report in the report tab, its figures resolved beside it."""
+        report = Path(path) if path else None
+        if report is not None and report.is_file():
+            try:
+                text = report.read_text(encoding='utf-8', errors='replace')
+            except OSError as exc:
+                self.details.appendPlainText(
+                    f'Could not preview report: {exc}. Open the output folder to inspect results.')
+            else:
+                self.report.document().setBaseUrl(
+                    QUrl.fromLocalFile(str(report.resolve().parent) + '/'))
+                self.report.setMarkdown(text)
+        if switch:
+            self.tabs.setCurrentWidget(self.report)
+
+    def _show_image(self, path):
+        """A figure in a window of the studio's own, scaled to fit the screen."""
+        from PySide6.QtGui import QPixmap
+        from PySide6.QtWidgets import QDialog
+
+        pixmap = QPixmap(str(path))
+        if pixmap.isNull():
+            self._open_path(path)
+            return
+        dialog = QDialog(self)
+        dialog.setWindowTitle(Path(path).name)
+        screen = (self.screen() or dialog.screen()).availableGeometry()
+        fitted = pixmap.scaled(int(screen.width() * 0.85), int(screen.height() * 0.8),
+                               Qt.KeepAspectRatio, Qt.SmoothTransformation) \
+            if pixmap.width() > screen.width() * 0.85 or pixmap.height() > screen.height() * 0.8 \
+            else pixmap
+        label = QLabel()
+        label.setPixmap(fitted)
+        label.setAlignment(Qt.AlignCenter)
+        scroll = QScrollArea()
+        scroll.setWidget(label)
+        scroll.setWidgetResizable(True)
+        box = QVBoxLayout(dialog)
+        box.addWidget(scroll)
+        dialog.resize(fitted.width() + 40, fitted.height() + 40)
+        dialog.show()
+
+    def _preview(self, path):
+        """A report or figure inside the studio; any other file in its own program."""
+        suffix = Path(str(path)).suffix.lower()
+        if suffix in self._REPORT_SUFFIXES:
+            self._show_report(path)
+        elif suffix in self._IMAGE_SUFFIXES:
+            self._show_image(path)
+        else:
+            self._open_path(path)
+
     def _open_link(self, url):
         if url.isLocalFile():
-            self._open_path(url.toLocalFile())
+            self._preview(url.toLocalFile())
 
     def _open_path(self, path):
         if path and Path(path).exists():

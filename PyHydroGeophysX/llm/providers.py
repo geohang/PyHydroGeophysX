@@ -596,8 +596,23 @@ class AnthropicProvider(Provider):
 
 # -- registry -----------------------------------------------------------------
 PROVIDER_ORDER = ["openai", "anthropic", "openai_compatible"]
+# Desktop-only choices: a hosted web app cannot use its visitor's local CLI.
+DESKTOP_PROVIDER_ORDER = PROVIDER_ORDER + ["codex_cli", "claude_code"]
+CLI_PROVIDER_IDS = frozenset({"codex_cli", "claude_code"})
 
 PROVIDER_META: Dict[str, Dict[str, Any]] = {
+    "codex_cli": {
+        "label": "Codex CLI (ChatGPT login)", "env_key": "",
+        "model_env": "PHGX_CODEX_MODEL", "models": ["default"],
+        "default_model": "default", "needs_base_url": False, "vision": False,
+        "login_help": "Setup is automatic. Click Log In when prompted. Subscription limits apply.",
+    },
+    "claude_code": {
+        "label": "Claude Code CLI (local login)", "env_key": "",
+        "model_env": "PHGX_CLAUDE_MODEL", "models": ["default", "sonnet", "opus", "haiku"],
+        "default_model": "default", "needs_base_url": False, "vision": False,
+        "login_help": "Setup is automatic. Click Log In when prompted. Subscription limits apply.",
+    },
     "openai": {
         "label": "OpenAI",
         "env_key": "OPENAI_API_KEY",
@@ -856,10 +871,13 @@ def make_provider(
     """Build a provider, filling model/key/base_url from the environment by default."""
     meta = PROVIDER_META.get(provider_id, PROVIDER_META["openai"])
     cls = _PROVIDER_CLASSES.get(provider_id, OpenAIProvider)
+    if provider_id in CLI_PROVIDER_IDS:
+        from .cli_providers import CodexCliProvider, ClaudeCodeProvider
+        cls = CodexCliProvider if provider_id == "codex_cli" else ClaudeCodeProvider
     if model is None:
         env_model = os.getenv(meta["model_env"]) if meta.get("model_env") else None
         model = env_model or meta["default_model"]
-    if api_key is None:
+    if api_key is None and meta.get("env_key"):
         api_key = os.getenv(meta["env_key"])
     if base_url is None and meta.get("base_url_env"):
         base_url = os.getenv(meta["base_url_env"])

@@ -13,6 +13,9 @@ once as a matrix and applied to the forward and the Jacobian alike. A dataset
 that does not describe an instrument keeps SimPEG's direct receiver path.
 """
 
+import os
+import threading
+import warnings
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import List, Optional, Tuple, Union
@@ -684,6 +687,138 @@ def _has_instrument_model(config: "TDEMSurveyConfig") -> bool:
 # ---------------------------------------------------------------------------
 # TDEMForward Modeling
 # ---------------------------------------------------------------------------
+#: Set to 0 to compute every TDEM response and Jacobian through SimPEG's own
+#: ``dpred`` and ``getJ``.
+COMPILED_ENV = "PHGX_TDEM_COMPILED"
+
+_KERNEL_LOCK = threading.Lock()
+#: :mod:`._tdem_kernels` once imported, False when numba is unavailable.
+_KERNELS = None
+#: Per product, None until its first compiled value has been compared with
+#: SimPEG's, then whether the two agreed.
+_AGREES = {"forward": None, "jacobian": None}
+
+
+def _compiled_kernels():
+    """:mod:`PyHydroGeophysX.forward._tdem_kernels`, compiled on first use; None without numba.
+
+    A line inversion spends nearly all its time in two layered-earth kernels,
+    which SimPEG takes from geoana: the TE reflection coefficient for the
+    response, and its gradient for the Jacobian. The gradient also comes with
+    the derivatives with respect to the layer thicknesses and the permeability,
+    which a conductivity inversion discards, and both arrive as megabytes of
+    intermediates per sounding that the Hankel filter then reduces to a few
+    hundred numbers; on a 20-thread line pass that memory traffic, not the
+    cores, set the pace. The compiled kernels are the same recursions, after
+    geoana's own NumPy versions, summed through the Hankel filter as they go,
+    and they release the GIL.
+    """
+    global _KERNELS
+    if _KERNELS is not None:
+        return _KERNELS or None
+    with _KERNEL_LOCK:
+        if _KERNELS is None:
+            try:
+                from PyHydroGeophysX.forward import _tdem_kernels
+            except ImportError:
+                _KERNELS = False
+            else:
+                _KERNELS = _tdem_kernels
+    return _KERNELS or None
+
+
+def _layered_inputs(simulation, model: np.ndarray):
+    """What the compiled kernels take for ``simulation`` at ``model``, or None.
+
+    None - and SimPEG's own path - when the simulation inverts anything besides
+    conductivity, numba is missing, ``PHGX_TDEM_COMPILED`` is 0, or the SimPEG
+    internals read here are not there.
+    """
+    if os.environ.get(COMPILED_ENV, "1").strip() == "0":
+        return None
+    if (simulation.sigmaMap is None or simulation.hMap is not None
+            or simulation.muMap is not None or simulation.thicknessesMap is not None):
+        return None
+    kernels = _compiled_kernels()
+    if kernels is None:
+        return None
+    try:
+        simulation.model = model
+        simulation._compute_coefficients()
+        frequencies = np.asarray(simulation._frequencies, dtype=float)
+        sigma = np.ascontiguousarray(simulation.compute_complex_sigma(frequencies),
+                                     dtype=np.complex128)
+        mu = np.ascontiguousarray(simulation.compute_complex_mu(frequencies),
+                                  dtype=np.complex128)
+        # SimPEG forms ((C0s * rTE) @ j0 + (C1s * rTE) @ j1) with rTE spread
+        # over each receiver's filter points by _inv_lambs; the same sum,
+        # gathered per unique wavenumber, is one small weight matrix. It
+        # depends only on the coefficients, so it is kept with them.
+        cached = getattr(simulation, "_phgx_hankel_weights", None)
+        if cached is None or cached[0] is not simulation._C0s:
+            unique = np.asarray(simulation._unique_lambs, dtype=float)
+            inverse = np.asarray(simulation._inv_lambs)
+            hankel = simulation._fhtfilt
+            per_point = simulation._C0s * hankel.j0 + simulation._C1s * hankel.j1
+            weights = np.zeros((unique.size, inverse.shape[0]), dtype=float)
+            for receiver in range(inverse.shape[0]):
+                np.add.at(weights[:, receiver], inverse[receiver], per_point[receiver])
+            cached = (simulation._C0s, unique, weights, simulation._W.toarray())
+            simulation._phgx_hankel_weights = cached
+    except AttributeError:
+        return None
+    _, unique, weights, W = cached
+    return (kernels, frequencies, unique, sigma, mu,
+            np.asarray(simulation.thicknesses, dtype=float), weights, W)
+
+
+def _compiled_dpred(simulation, model: np.ndarray) -> Optional[np.ndarray]:
+    """``Simulation1DLayered.fields`` line for line, with ``rte_hankel``."""
+    inputs = _layered_inputs(simulation, model)
+    if inputs is None:
+        return None
+    kernels, frequencies, unique, sigma, mu, thicknesses, weights, W = inputs
+    summed = kernels.rte_hankel(frequencies, unique, sigma, mu, thicknesses, weights)
+    return simulation._project_to_data((summed @ W.T).T)
+
+
+def _compiled_sigma_jacobian(simulation, model: np.ndarray) -> Optional[np.ndarray]:
+    """The ``ds`` branch of ``Simulation1DLayered._getJ``, with ``rte_dsigma_hankel``."""
+    inputs = _layered_inputs(simulation, model)
+    if inputs is None:
+        return None
+    kernels, frequencies, unique, sigma, mu, thicknesses, weights, W = inputs
+    summed = kernels.rte_dsigma_hankel(frequencies, unique, sigma, mu, thicknesses, weights)
+    return simulation._project_to_data((summed @ W.T).T) @ simulation.sigmaDeriv
+
+
+def _checked(product: str, compiled, reference, simulation, model: np.ndarray):
+    """``compiled(simulation, model)``, compared once per process with ``reference``.
+
+    The comparison guards against a SimPEG release that changes what its
+    internals mean: if the two disagree by more than 1e-6 of the largest
+    entry, this warns once and every later ``product`` comes from SimPEG.
+    Returns None when SimPEG's own path is to be used.
+    """
+    if _AGREES[product] is False:
+        return None
+    fast = compiled(simulation, model)
+    if fast is None or _AGREES[product]:
+        return fast
+    with _KERNEL_LOCK:
+        if _AGREES[product] is None:
+            expected = np.asarray(reference(model), dtype=float)
+            scale = float(np.max(np.abs(expected))) or 1.0
+            _AGREES[product] = bool(
+                np.shape(fast) == expected.shape
+                and float(np.max(np.abs(np.asarray(fast) - expected))) <= 1e-6 * scale)
+            if not _AGREES[product]:
+                warnings.warn(
+                    f"The compiled TDEM {product} disagreed with SimPEG's; every TDEM "
+                    f"{product} now comes from SimPEG.", RuntimeWarning, stacklevel=3)
+    return fast if _AGREES[product] else None
+
+
 class TDEMForwardModeling:
     """Class for forward modeling of Time-Domain Electromagnetic (TDEM) data.
     
@@ -842,7 +977,11 @@ class TDEMForwardModeling:
         else:
             sigma = np.asarray(conductivity)
 
-        predicted = np.asarray(self.simulation.dpred(sigma), dtype=float).ravel()
+        predicted = _checked("forward", _compiled_dpred, self.simulation.dpred,
+                             self.simulation, np.asarray(sigma))
+        if predicted is None:
+            predicted = self.simulation.dpred(sigma)
+        predicted = np.asarray(predicted, dtype=float).ravel()
         weights = getattr(self, "_gate_weights", None)
         return predicted if weights is None else weights @ predicted
 
@@ -850,10 +989,16 @@ class TDEMForwardModeling:
         """Analytic d(response)/d(conductivity), averaged over the gate windows.
 
         The same reduction the forward applies has to be applied to the
-        Jacobian, or the two describe different data.
+        Jacobian, or the two describe different data. The conductivity term
+        comes from :func:`_compiled_sigma_jacobian` where it applies, and from
+        SimPEG's ``getJ`` otherwise.
         """
-        jacobian = np.asarray(self.simulation.getJ(np.asarray(conductivity)),
-                              dtype=float)
+        model = np.asarray(conductivity)
+        jacobian = _checked("jacobian", _compiled_sigma_jacobian, self.simulation.getJ,
+                            self.simulation, model)
+        if jacobian is None:
+            jacobian = self.simulation.getJ(model)
+        jacobian = np.asarray(jacobian, dtype=float)
         weights = getattr(self, "_gate_weights", None)
         return jacobian if weights is None else weights @ jacobian
     

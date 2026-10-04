@@ -44,6 +44,16 @@ PyHydroGeophysX does not include or redistribute TetGen. E4D-style meshes
 but whose compiled-in TetGen 1.6 library is AGPL-3.0. Without either, the same
 geometry is meshed with Gmsh.
 
+## geoana
+
+`forward/_tdem_kernels.py` holds numba versions of the TE reflection
+coefficient of a layered earth and its conductivity gradient, `_rTE_forward`
+and `_rTE_gradient` in [geoana](https://github.com/simpeg/geoana)
+(`geoana/kernels/tranverse_electric_reflections.py`), Copyright (c) 2017 SimPEG
+Team, MIT License. The licence text is kept at the top of that file, so it
+travels with the code in every distribution, including the wheel, which does
+not carry this document.
+
 ## Desktop builds
 
 The default light/full builds exclude ResIPy, even if installed in the build

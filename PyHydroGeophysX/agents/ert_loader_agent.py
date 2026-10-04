@@ -140,7 +140,7 @@ different data formats, coordinate systems, and common data quality issues."""
                 self.update_context('qc_results', qc_results)
             
             # Use LLM to provide intelligent insights about the data
-            if self.api_key:
+            if self.llm_enabled:
                 data_summary = f"""
                 Data Summary:
                 - Instrument: {instrument}
