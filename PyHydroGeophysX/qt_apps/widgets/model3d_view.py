@@ -24,7 +24,7 @@ import numpy as np
 
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import (
-    QCheckBox, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget,
+    QCheckBox, QComboBox, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget,
 )
 
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
@@ -67,7 +67,13 @@ class VTKVolumeView(QWidget):
         self._scalar: Optional[str] = None
         self._cmap = "turbo"
         self._opacity = 0.65
+        self._base_colormap_key = colormap_key
+        self._scalar_cmaps = {}
+        self._default_cmap = 'turbo'
         self._actors: list = []   # the colour-mapped actors now on screen
+        self._field = QComboBox(self)
+        self._field.setToolTip('Physical property or categorical labels to display')
+        self._field.currentTextChanged.connect(self._on_field_changed)
         self._colormap = cmaps.ColormapChooser(
             colormap_key, self._cmap, shared=colormaps, parent=self)
         self._colormap.colormapChanged.connect(self._on_colormap_changed)
@@ -75,7 +81,7 @@ class VTKVolumeView(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         self._info = QLabel(
-            "Build the model to inspect its 3D velocity volume here."
+            "Open a model to inspect its 3D properties here."
         )
         self._info.setWordWrap(True)
         layout.addWidget(self._info)
@@ -97,6 +103,7 @@ class VTKVolumeView(QWidget):
                 reset.clicked.connect(self._reset_camera)
                 controls.addWidget(self._clip_cb)
                 controls.addWidget(reset)
+                controls.addWidget(self._field)
                 controls.addWidget(self._colormap)
                 controls.addStretch(1)
                 layout.addLayout(controls)
@@ -105,6 +112,7 @@ class VTKVolumeView(QWidget):
                 self._plotter = None
                 err = str(exc)
         if self._plotter is None:
+            self._field.hide()
             self._colormap.hide()   # nothing here to colour
             self._notice = QLabel(
                 "Interactive 3D view is unavailable in this session.<br>"
@@ -136,6 +144,7 @@ class VTKVolumeView(QWidget):
         scalar_candidates: Sequence[str] = ("Velocity", "velocity"),
         cmap: str = "turbo",
         opacity: float = 0.65,
+        scalar_cmaps: Optional[dict] = None,
     ) -> bool:
         """Load and display a VTK dataset, returning whether it was rendered.
 
@@ -154,15 +163,21 @@ class VTKVolumeView(QWidget):
             return False
         try:
             self._mesh = self._pv.read(str(vtk_path))
-            self._scalar = next(
-                (
-                    name for name in scalar_candidates
-                    if name in getattr(self._mesh, "point_data", {})
-                    or name in getattr(self._mesh, "cell_data", {})
-                ),
-                None,
-            )
-            self._cmap = self._colormap.set_target(self._colormap.key(), str(cmap))
+            self._source_name = vtk_path.name
+            fields = list(dict.fromkeys(
+                name for data in (self._mesh.point_data, self._mesh.cell_data)
+                for name in data if np.asarray(data[name]).ndim == 1
+                and np.issubdtype(np.asarray(data[name]).dtype, np.number)))
+            self._scalar = next((name for name in scalar_candidates if name in fields),
+                                fields[0] if fields else None)
+            self._field.blockSignals(True)
+            self._field.clear()
+            self._field.addItems(fields)
+            self._field.setCurrentText(self._scalar or '')
+            self._field.blockSignals(False)
+            self._scalar_cmaps = dict(scalar_cmaps or {})
+            self._default_cmap = str(cmap)
+            self._choose_field_colormap()
             self._opacity = float(opacity)
             self._info.setText(
                 f"<b>{vtk_path.name}</b>  ·  "
@@ -196,6 +211,17 @@ class VTKVolumeView(QWidget):
             "show_edges": False,
             "show_scalar_bar": bool(self._scalar),
         }
+        categorical = bool(self._scalar and self._scalar.lower().endswith(' id'))
+        self._colormap.setEnabled(not categorical)
+        if categorical:
+            # Map sparse IDs to compact colour positions on a plotting array;
+            # the dataset and its original IDs remain unchanged.
+            values = np.asarray(self._mesh[self._scalar])
+            labels, indices = np.unique(values, return_inverse=True)
+            kwargs.update(scalars=indices, cmap='tab20', n_colors=max(1, len(labels)),
+                          clim=(-0.5, len(labels) - 0.5),
+                          annotations={float(i): str(v) for i, v in enumerate(labels)},
+                          scalar_bar_args={'title': self._scalar, 'n_labels': 0})
         try:
             if self._clip_cb.isChecked():
                 actor = self._plotter.add_mesh_clip_plane(self._mesh, **kwargs)
@@ -212,6 +238,25 @@ class VTKVolumeView(QWidget):
         self._plotter.reset_camera()
         self._refresh()
         QTimer.singleShot(0, self._refresh)
+
+    def _on_field_changed(self, name: str) -> None:
+        if not name or self._mesh is None:
+            return
+        self._scalar = name
+        self._info.setText(f'<b>{self._source_name}</b> · scalar: {name} · drag to rotate, wheel to zoom')
+        self._choose_field_colormap()
+        camera = self._plotter.camera_position if self._plotter is not None else None
+        self._redraw()
+        if camera is not None:
+            self._plotter.camera_position = camera
+            self._refresh()
+
+    def _choose_field_colormap(self) -> None:
+        default = self._scalar_cmaps.get(self._scalar, self._default_cmap)
+        key = self._base_colormap_key
+        if self._scalar_cmaps and self._scalar:
+            key = f'{key}:{self._scalar}'
+        self._cmap = self._colormap.set_target(key, default)
 
     def _refresh(self) -> None:
         if self._plotter is None:

@@ -45,5 +45,6 @@ The agent stack includes dedicated support for SRT, FDEM, and joint ERT+SRT inve
    workflows
    agent_reference
    adding_an_assistant
+   geosage
    troubleshooting
    overview

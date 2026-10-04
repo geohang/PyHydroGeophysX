@@ -84,7 +84,7 @@ def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Optional[Sequence[str]] = None, *, assistant: Optional[str] = None) -> int:
     args = _parse_args(argv)
 
     # This is a PySide6 app; tell qtpy-based libraries (e.g. pyvistaqt) to use
@@ -109,6 +109,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         context_path=args.context,
         initial_module=("em" if args.em_data else (args.module or "home")),
     )
+    # A domain launcher can explicitly choose its assistant without relying on
+    # writable QSettings or replacing the user's defaults before construction.
+    if assistant:
+        window.set_assistant(assistant)
     window.setWindowIcon(theme.window_icon())
     if not getattr(window, "_geometry_restored", False):
         window.resize(1500, 900)

@@ -141,6 +141,9 @@ class Assistant:
         Shown when it is not available.
     providers : tuple of str
         Model providers its workflow supports.
+    offline_workflow : bool
+        Whether the workflow can produce useful results without model access.
+        Enables an explicit "Run without AI" action in the Workflow page.
     """
 
     key: str
@@ -161,6 +164,7 @@ class Assistant:
     status: str = "ready"
     status_note: str = ""
     providers: Tuple[str, ...] = ("openai", "anthropic")
+    offline_workflow: bool = False
     _cache: Dict[str, Any] = field(default_factory=dict, compare=False, repr=False)
 
     def availability(self) -> Tuple[bool, str]:

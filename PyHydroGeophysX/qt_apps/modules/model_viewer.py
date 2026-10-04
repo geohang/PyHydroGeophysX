@@ -58,6 +58,7 @@ _STATUS_DISPLAY = {
     "cancelled": ("⊘", "#ff9500", "Cancelled"),
     "interrupted": ("⚠", "#ff9500", "Interrupted"),
     "incomplete": ("◐", "#ff9500", "Incomplete"),
+    "needs_review": ("⚠", "#ff9500", "Needs review"),
     "running": ("●", "#0a84ff", "Running"),
     "unknown": ("?", "#616161", "Unknown"),
 }
@@ -286,7 +287,7 @@ class ModelViewerModule(BaseModule):
         self._search.textChanged.connect(self._apply_filter)
         self._status = QComboBox()
         self._status.addItems([
-            "All statuses", "success", "incomplete", "failed", "cancelled", "interrupted",
+            "All statuses", "success", "needs_review", "incomplete", "failed", "cancelled", "interrupted",
             "running", "unknown"
         ])
         self._status.currentTextChanged.connect(self._apply_filter)
@@ -934,7 +935,8 @@ class ModelViewerModule(BaseModule):
                 self._replace_visual(view)
             elif renderer == "vtk":
                 from PyHydroGeophysX.qt_apps.widgets.model3d_view import VTKVolumeView
-                view = VTKVolumeView(colormaps=self._colormaps()); view.show_file(path)
+                view = VTKVolumeView(colormaps=self._colormaps())
+                view.show_file(path, scalar_cmaps=(artifact.get('metadata') or {}).get('scalar_cmaps'))
                 self._replace_visual(view)
             elif renderer == "mesh":
                 self._render_mesh_file(path)

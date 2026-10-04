@@ -93,7 +93,7 @@ def normalize_status(value: Any) -> str:
     # "incomplete": the run ended short of what it was asked for - no step ran,
     # it was cut off before its report, or a requested product is missing. Kept
     # as its own status because an unknown one is filed as a success.
-    if raw in {"running", "interrupted", "incomplete"}:
+    if raw in {"running", "interrupted", "incomplete", "needs_review"}:
         return raw
     return "unknown"
 

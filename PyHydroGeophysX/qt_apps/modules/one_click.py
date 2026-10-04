@@ -393,8 +393,9 @@ class OneClickModule(BaseModule):
         self.pause_box.setVisible(False)
         layout.addWidget(self.pause_box)
         actions = QHBoxLayout()
-        self.run = QPushButton('Run through to report')
-        self.run.clicked.connect(self._start)
+        self.run = QPushButton('Run without AI')
+        self.run.setToolTip('Run numerical processing and inspect the evidence without contacting an AI provider.')
+        self.run.clicked.connect(self._start_offline)
         self.stop = QPushButton('Stop')
         self.stop.setEnabled(False)
         self.stop.clicked.connect(self._cancel)
@@ -406,7 +407,7 @@ class OneClickModule(BaseModule):
                                       'in its output folder. Nothing is recomputed.')
         self.replay_button.clicked.connect(self._choose_replay)
         self.run.hide()
-        for button in (self.stop, self.folder, self.replay_button):
+        for button in (self.run, self.stop, self.folder, self.replay_button):
             actions.addWidget(button)
         layout.addLayout(actions)
         self._setup = setup
@@ -450,6 +451,7 @@ class OneClickModule(BaseModule):
         if self._worker is not None:
             return False
         self._assistant = assistant
+        self.run.setVisible(getattr(assistant, 'offline_workflow', False))
         name = assistant.name
         self._title_label.setText(
             f'<h2>Workflow</h2>Data, progress, results and report · {name} '
@@ -658,7 +660,15 @@ class OneClickModule(BaseModule):
                 if self.step_through.isChecked() else
                 'Workflow started. Progress and the report appear in the center; use Stop there to cancel.')
 
-    def _start(self, step_mode=False):
+    def _start_offline(self):
+        if not getattr(self._assistant, 'offline_workflow', False):
+            return
+        if not self._request_text:
+            self._request_text = 'Process the supplied configuration or results and summarize the numerical evidence without AI.'
+            self.goal.setText(self._request_text)
+        self._start(step_mode=self.step_through.isChecked(), offline=True)
+
+    def _start(self, step_mode=False, *, offline=False):
         if self._worker is not None:
             return
         request = self._request_text
@@ -670,9 +680,10 @@ class OneClickModule(BaseModule):
                 if not Path(path).exists():
                     self.status.setText(f'Data no longer exists: {path}')
                     return
-        provider = self._ai_settings.get('provider', 'openai')
-        key = self._ai_settings.get('api_key')
-        if not key:
+        settings = {} if offline else self._ai_settings
+        provider = settings.get('provider', 'openai')
+        key = settings.get('api_key')
+        if not key and not (offline and getattr(self._assistant, 'offline_workflow', False)):
             self.status.setText('Enter an API key or set the provider environment variable before running.')
             return
         try:
@@ -680,8 +691,8 @@ class OneClickModule(BaseModule):
             self._output = str(handle.outputs_dir)
             payload = dict(assistant=self._assistant.key,
                            request=request, inputs=dict(self._inputs), provider=provider,
-                           model=self._ai_settings.get('model'), api_key=key, output_dir=self._output)
-            payload.update({k: self._ai_settings.get(k) for k in ('reasoning_effort', 'use_rag', 'use_mcp')})
+                           model=settings.get('model'), api_key=key, output_dir=self._output)
+            payload.update({k: settings.get(k) for k in ('reasoning_effort', 'use_rag', 'use_mcp')})
             payload['step_mode'] = bool(step_mode)
             if (self._data_folder and self._catalog is None
                     and self._assistant.folder_classifier):

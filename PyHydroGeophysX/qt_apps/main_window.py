@@ -502,6 +502,8 @@ class PyHydroGeophysXStudio(QMainWindow):
             self._header_subtitle.setText(self._assistant_subtitle())
         if workflow is not None and hasattr(workflow, "set_assistant"):
             workflow.set_assistant(agent)
+        if hasattr(self, '_chat'):
+            self._chat.sync_assistant()
         self.log(f"Assistant: {agent.name} ({agent.domain}).", "info")
 
     def set_agent_presence(self, state: str) -> None:
