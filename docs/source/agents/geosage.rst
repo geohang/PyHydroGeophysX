@@ -119,3 +119,16 @@ VTK artifacts may set ``metadata.linked_sections=True`` and
 Shared limits and category colours apply to 3D and linked orthogonal sections.
 Run results may supply ``completion`` with ``numerical``, ``interpretation`` and
 ``review`` states; the workflow displays them separately from run status.
+
+An optional setup method ``prepare_continuation(result)`` may return a new input
+role dictionary and select the next task. A result with a nonempty
+``continuation`` then exposes **Interpret these models…**. The host applies the
+inputs and opens task setup; it never starts a worker or contacts an AI provider
+from this action. Errors remain inline, and the action is disabled when the
+original run is absent from the current Project. Assistants without the method
+retain their existing behavior.
+
+GeoSAGE writes a local ``studio_checkpoint.json`` after each completed stage and
+a ``continue_config.json`` when completed numerical models are reusable. These
+support continuing interpretation in a fresh run without repeating inversion;
+they are not solver-iteration checkpoints.

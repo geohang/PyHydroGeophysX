@@ -447,6 +447,19 @@ class OneClickModule(BaseModule):
         self._result_layout.insertWidget(2, self.result_state)
         self._current_run_id = None
         self._result_capabilities = {}
+        self._continuation_result = None
+        self._continuation_assistant = None
+        self.next_step = QWidget()
+        next_layout = QHBoxLayout(self.next_step)
+        next_layout.setContentsMargins(0, 0, 0, 0)
+        self.continue_result = QPushButton('Interpret these models…')
+        self.continue_result.clicked.connect(self._prepare_continuation)
+        next_layout.addWidget(self.continue_result)
+        next_note = QLabel('Reuse the completed numerical models. Review the next task before starting.')
+        next_note.setWordWrap(True)
+        next_layout.addWidget(next_note, 1)
+        self.next_step.hide()
+        self._result_layout.insertWidget(3, self.next_step)
         self._setup = setup
         self.set_assistant(self._assistant)
         # Everything the Live views are told is recorded, with its time, so the
@@ -488,6 +501,7 @@ class OneClickModule(BaseModule):
         if self._worker is not None:
             return False
         self._assistant = assistant
+        self.next_step.hide()
         self._request_text = ''
         if self._workflow_setup is not None:
             self._setup_layout.removeWidget(self._workflow_setup)
@@ -563,6 +577,35 @@ class OneClickModule(BaseModule):
         self.report.verticalScrollBar().setValue(0)
         self.report.setFocus()
 
+    def _prepare_continuation(self):
+        if self._worker is not None or self._continuation_assistant is not self._assistant:
+            return
+        self._sync_result_storage()
+        if not self.continue_result.isEnabled():
+            return
+        prepare = getattr(self._workflow_setup, 'prepare_continuation', None)
+        if not callable(prepare) or not self._continuation_result:
+            return
+        try:
+            inputs = prepare(self._continuation_result)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            self.result_state.setText(f'Could not prepare the next task: {exc}')
+            return
+        self._inputs = dict(inputs)
+        self._catalog_inputs = {}
+        self._request_text = ''
+        self._refresh_inputs()
+        self.tabs.setCurrentWidget(self._data_tab)
+        self.status.setText('Existing models selected · Check the inputs and AI settings, then start when ready.')
+        self._presence(presence.IDLE, 'Next task ready to configure',
+                       'Completed models are selected. Nothing new has started.')
+        self.header.set_clock(0, 0, running=False)
+        self.header.clear_usage()
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
+        self.elapsed_label.clear()
+        self.live_detail.setText('The previous run remains available in Results and Project history.')
+
     def _sync_result_storage(self):
         if not self._current_run_id:
             return
@@ -572,11 +615,15 @@ class OneClickModule(BaseModule):
             self.result_state.setText('This run is not in the current Project. Reopen its Project to view or save it.')
             for button in self._result_buttons:
                 button.setEnabled(False)
+            self.continue_result.setEnabled(False)
             return
         pending = store.is_unsaved(self._current_run_id)
         for button, available in self._result_capabilities.items():
             button.setEnabled(available)
         self.save_result.setEnabled(pending and record.status != 'running')
+        self.continue_result.setEnabled(bool(self._continuation_result) and
+                                        self._continuation_assistant is self._assistant and
+                                        record.status != 'running')
         self.result_state.setText('Files are local · Not saved to Project history yet' if pending else
                                   'Saved locally in Project history')
 
@@ -866,6 +913,8 @@ class OneClickModule(BaseModule):
             self.progress.setRange(0, 0) if self._workflow_setup is not None else self.progress.setRange(0, 100)
             for widget in (*self._result_buttons, self.result_state, self.result_summary):
                 widget.hide()
+            self.next_step.hide()
+            self._continuation_result = None
             self.status.setText('Starting · You can continue using other Studio modules.')
             classify = payload.get('mode') == 'classify'
             self._end_replay()
@@ -1597,6 +1646,8 @@ class OneClickModule(BaseModule):
             self.live_detail.setText(text.strip()[-220:])
 
     def _succeeded(self, result):
+        self.next_step.hide()
+        self._continuation_result = None
         if result.get('status') == 'classified':
             self.finish_persisted_run(result, 'unified')
             self._show_catalog(result['catalog'])
@@ -1672,6 +1723,10 @@ class OneClickModule(BaseModule):
                                          (self.view_result, self.view_fit, self.read_report)}
             self.read_report.setText('Read interpretation' if completion.get('interpretation') == 'generated'
                                     else 'Read numerical summary')
+            if result.get('continuation') and callable(getattr(self._workflow_setup, 'prepare_continuation', None)):
+                self._continuation_result = result
+                self._continuation_assistant = self._assistant
+                self.next_step.show()
             self._sync_result_storage()
             for widget in (*self._result_buttons, self.result_state, self.result_summary):
                 widget.show()
