@@ -108,7 +108,7 @@ class PyHydroGeophysXStudio(QMainWindow):
         # Adds directly to the window's minimum width, so it is a floor for
         # comfort rather than for function: the chat panel itself needs 273, and
         # the dock is resizable for anyone who wants it wider.
-        right_tabs.setMinimumWidth(360)
+        right_tabs.setMinimumWidth(300)
         self._properties_dock = self._make_dock("Assistant", right_tabs, Qt.RightDockWidgetArea)
 
         # Off unless PHGX_STALL_WATCH_MS is set; see stall_watch for the contract.
@@ -142,6 +142,7 @@ class PyHydroGeophysXStudio(QMainWindow):
         if self.state.context_path and not self.state.context:
             self.log("Context file missing or unreadable; running with defaults.", "warn")
         self.show_module(self.state.selected_module or "home")
+        self._focus_workspace()
         # The first run's workflow process, started once the window is up (see
         # workers._Standby) so that run does not wait for one either.
         QTimer.singleShot(2000, prepare_workflow_process)
@@ -344,6 +345,8 @@ class PyHydroGeophysXStudio(QMainWindow):
         view_menu.addAction(self._tree_dock.toggleViewAction())
         view_menu.addAction(self._properties_dock.toggleViewAction())
         view_menu.addAction(self._log_dock.toggleViewAction())
+        self._all_tools_action = self._add_action(view_menu, "Show all processing tools", self._toggle_all_tools, checkable=True)
+        self._all_tools_action.setChecked(True)
 
         tools_menu = menubar.addMenu("&Tools")
         self._add_action(tools_menu, "Model Viewer", lambda: self.show_module("model_viewer"))
@@ -366,6 +369,7 @@ class PyHydroGeophysXStudio(QMainWindow):
         toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         toolbar.setIconSize(QSize(16, 16))
         self.addToolBar(toolbar)
+        toolbar.addAction(self._properties_dock.toggleViewAction())
         # The toolbar carries the two commands a session actually repeats. The
         # bridge "Save" that used to sit here wrote a JSON manifest for the
         # Streamlit app, which read as the button that saved your results.
@@ -446,6 +450,10 @@ class PyHydroGeophysXStudio(QMainWindow):
             page.resultsUpdated.connect(self._refresh_properties)
             page.viewMeshRequested.connect(self._view_mesh_in_3d)
             page.navigateRequested.connect(self.show_module)
+            if hasattr(page, 'startAIRequested'):
+                page.startAIRequested.connect(self._start_task_ai)
+            if hasattr(page, 'viewRunRequested'):
+                page.viewRunRequested.connect(self._view_workflow_run)
             self._stack.addWidget(page)
             self._pages[key] = page
         self._stack.setCurrentWidget(self._pages[key])
@@ -504,7 +512,38 @@ class PyHydroGeophysXStudio(QMainWindow):
             workflow.set_assistant(agent)
         if hasattr(self, '_chat'):
             self._chat.sync_assistant()
+        self._focus_workspace()
         self.log(f"Assistant: {agent.name} ({agent.domain}).", "info")
+
+    def _start_task_ai(self, text):
+        self._properties_dock.show()
+        self._chat.start_workflow(text)
+
+    def _view_workflow_run(self, run_id):
+        self.show_module('model_viewer')
+        viewer = self._pages['model_viewer']
+        viewer.refresh()
+        if run_id:
+            viewer._agent_select(run_id)
+            record = viewer._records.get(run_id)
+            if record is not None:
+                artifact = next((a for a in viewer._virtual_artifacts(record)
+                                 if (a.get('metadata') or {}).get('linked_sections')), None)
+                if artifact:
+                    viewer._agent_show_artifact(Path(artifact.get('path', '')).name)
+
+    def _toggle_all_tools(self, checked):
+        self._tree.focus_modules(() if checked else assistant_registry.active().studio_modules)
+
+    def _focus_workspace(self):
+        focused = getattr(assistant_registry.active(), 'focused_workspace', False)
+        self._all_tools_action.setChecked(not focused)
+        self._toggle_all_tools(not focused)
+        if focused:
+            self._log_dock.hide()
+            self._properties_dock.hide()
+        else:
+            self._properties_dock.show()
 
     def set_agent_presence(self, state: str) -> None:
         """Light the central area's edge while the assistant is doing the work.

@@ -157,6 +157,8 @@ def _without_clock(details):
 
 
 class OneClickModule(BaseModule):
+    startAIRequested = Signal(str)
+    viewRunRequested = Signal(str)
     module_key = 'one_click'
     module_title = 'Workflow'
     workflowFinished = Signal(str)
@@ -215,6 +217,8 @@ class OneClickModule(BaseModule):
         self.tabs = QTabWidget()
         setup = QWidget()
         form = QVBoxLayout(setup)
+        self._setup_layout = form
+        self._workflow_setup = None
         self._request_text = ''
         self._ai_settings = {}
         self.goal = QLabel()
@@ -262,14 +266,17 @@ class OneClickModule(BaseModule):
         self.inputs = QListWidget()
         form.addWidget(self.inputs)
         order = QHBoxLayout()
+        self._ordered_buttons = []
         for label, offset in [('Move survey up', -1), ('Move survey down', 1)]:
             button = QPushButton(label)
+            self._ordered_buttons.append(button)
             button.clicked.connect(lambda checked=False, delta=offset: self._move_survey(delta))
             order.addWidget(button)
         form.addLayout(order)
         note = QLabel('Time-lapse surveys run in the displayed order; select a survey and move it up or down to reorder. Your request and workflow context are sent to the selected AI provider.')
         note.setWordWrap(True)
         form.addWidget(note)
+        self._generic_intro = [choose_folder, self.folder_label, self._folder_note, manual, note]
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(setup)
@@ -410,6 +417,18 @@ class OneClickModule(BaseModule):
         for button in (self.run, self.stop, self.folder, self.replay_button):
             actions.addWidget(button)
         layout.addLayout(actions)
+        result_actions = QHBoxLayout()
+        self.save_result = QPushButton('Save this run to Project')
+        self.save_result.clicked.connect(self._save_current_run)
+        self.view_result = QPushButton('View models && compare runs')
+        self.view_result.clicked.connect(lambda: self.viewRunRequested.emit(self._current_run_id or ''))
+        self.result_state = QLabel()
+        self.result_state.setWordWrap(True)
+        for widget in (self.save_result, self.view_result, self.result_state):
+            widget.hide()
+            result_actions.addWidget(widget)
+        layout.addLayout(result_actions)
+        self._current_run_id = None
         self._setup = setup
         self.set_assistant(self._assistant)
         # Everything the Live views are told is recorded, with its time, so the
@@ -451,6 +470,20 @@ class OneClickModule(BaseModule):
         if self._worker is not None:
             return False
         self._assistant = assistant
+        if self._workflow_setup is not None:
+            self._setup_layout.removeWidget(self._workflow_setup)
+            self._workflow_setup.deleteLater()
+            self._workflow_setup = None
+        if getattr(assistant, 'workflow_setup', ''):
+            factory = assistant_registry._load(assistant.workflow_setup)
+            self._workflow_setup = factory(self)
+            self._setup_layout.insertWidget(0, self._workflow_setup)
+            self._workflow_setup.changed.connect(self._sync_setup_task)
+            self._workflow_setup.update_inputs(self._inputs)
+        for widget in self._generic_intro:
+            widget.setVisible(self._workflow_setup is None)
+        for widget in self._ordered_buttons:
+            widget.setVisible(bool(assistant.ordered_roles))
         self.run.setVisible(getattr(assistant, 'offline_workflow', False))
         name = assistant.name
         self._title_label.setText(
@@ -478,7 +511,41 @@ class OneClickModule(BaseModule):
             f'{name} does not sort a folder for you: add each file below with its role.')
         self.header.headline.setText(name)
         self.steer.set_name(name)
+        self._sync_setup_task()
         return True
+
+    def _sync_setup_task(self):
+        setup = self._workflow_setup
+        if setup is None:
+            self.run.setText('Run without AI')
+            self.goal.show()
+            return
+        self.role.clear()
+        for label, key in self._assistant.input_roles:
+            if key in setup.allowed_roles():
+                self.role.addItem(label, key)
+        # An existing-results task starts with its primary input, not a JSON file.
+        index = self.role.findData(getattr(setup, 'primary_role', ''))
+        if index >= 0:
+            self.role.setCurrentIndex(index)
+        self.run.setText(setup.action_label)
+        self.run.setToolTip('Use the provider configured in Assistant settings to interpret these results.'
+                            if setup.needs_ai else 'Process locally without contacting an AI provider.')
+        if self._worker is None:
+            self.status.setText('Ready · Add the inputs, check the configuration, then start.')
+        self.goal.hide()
+        self._title_label.setText(f'<h2>{self._name()}</h2>Choose a task, check the inputs, then explore the results.')
+
+    def _save_current_run(self):
+        if self._current_run_id:
+            try:
+                self.state.results_store.save_run(self._current_run_id)
+                self.result_state.setText('Saved locally in Project history')
+                self.save_result.setEnabled(False)
+                if self.state.on_runs_changed:
+                    self.state.on_runs_changed()
+            except OSError as exc:
+                self.result_state.setText(f'Could not save: {exc}. Your output files remain available.')
 
     def _choose_folder(self):
         folder = QFileDialog.getExistingDirectory(self, 'Select the folder containing survey data and supporting files')
@@ -582,6 +649,8 @@ class OneClickModule(BaseModule):
 
     def _refresh_inputs(self):
         self.inputs.clear()
+        if self._workflow_setup is not None:
+            self._workflow_setup.update_inputs(self._inputs)
         for role, value in self._inputs.items():
             for index, path in enumerate(value if isinstance(value, list) else [value], 1):
                 item = QListWidgetItem(f'{role} · {index} · {path}')
@@ -663,6 +732,11 @@ class OneClickModule(BaseModule):
     def _start_offline(self):
         if not getattr(self._assistant, 'offline_workflow', False):
             return
+        if self._workflow_setup is not None:
+            self._request_text = self._workflow_setup.request()
+            if self._workflow_setup.needs_ai:
+                self.startAIRequested.emit(self._request_text)
+                return
         if not self._request_text:
             self._request_text = 'Process the supplied configuration or results and summarize the numerical evidence without AI.'
             self.goal.setText(self._request_text)
@@ -687,13 +761,30 @@ class OneClickModule(BaseModule):
             self.status.setText('Enter an API key or set the provider environment variable before running.')
             return
         try:
-            handle = self.begin_persisted_run('unified', label=request[:120])
+            run_label = request[:120]
+            if self._workflow_setup is not None:
+                try:
+                    prepared = self._workflow_setup.prepare_payload(dict(
+                        request=request, inputs=dict(self._inputs), api_key=key,
+                        output_dir=str(Path(self.state.output_dir) / 'runs' / '_preflight')))
+                    run_label = str(prepared.get('run_label') or run_label)
+                except (ValueError, KeyError, OSError) as exc:
+                    self.status.setText(f'Action needed · {exc}')
+                    show_error = getattr(self._workflow_setup, 'show_error', None)
+                    if callable(show_error):
+                        show_error(str(exc))
+                    self.tabs.setCurrentWidget(self._data_tab)
+                    return
+            handle = self.begin_persisted_run('unified', label=run_label)
+            self._current_run_id = handle.run_id
             self._output = str(handle.outputs_dir)
             payload = dict(assistant=self._assistant.key,
                            request=request, inputs=dict(self._inputs), provider=provider,
                            model=settings.get('model'), api_key=key, output_dir=self._output)
             payload.update({k: settings.get(k) for k in ('reasoning_effort', 'use_rag', 'use_mcp')})
             payload['step_mode'] = bool(step_mode)
+            if self._workflow_setup is not None:
+                payload = self._workflow_setup.prepare_payload(payload)
             if (self._data_folder and self._catalog is None
                     and self._assistant.folder_classifier):
                 payload.update(mode='classify', data_folder=self._data_folder)
@@ -717,6 +808,9 @@ class OneClickModule(BaseModule):
             self.files.clear()
             self.report.setPlainText('Workflow running. Follow it in the Live tab, or the raw events in Raw log.')
             self.progress.setValue(0)
+            self.progress.setRange(0, 0) if self._workflow_setup is not None else self.progress.setRange(0, 100)
+            for widget in (self.save_result, self.view_result, self.result_state):
+                widget.hide()
             self.status.setText('Starting · You can continue using other Studio modules.')
             classify = payload.get('mode') == 'classify'
             self._end_replay()
@@ -753,7 +847,8 @@ class OneClickModule(BaseModule):
             self._finished()
 
     def _on_progress(self, step, fraction, details, module=''):
-        self.progress.setValue(max(self.progress.value(), min(99, int(fraction * 100))))
+        if self.progress.maximum():
+            self.progress.setValue(max(self.progress.value(), min(99, int(fraction * 100))))
         self.status.setText(f'{step} · {details}')
         self.details.appendPlainText(f'{step}: {details}')
         self._latest_step, self._latest_detail = step, details
@@ -1118,6 +1213,8 @@ class OneClickModule(BaseModule):
             gaps = ['The run was stopped before it finished; partial files remain in the output folder.']
         elif result.get('status') == 'incomplete':
             state, title = presence.FAILED, f'{self._name()} could not finish the run'
+        elif result.get('completion', {}).get('interpretation') == 'not_run':
+            state, title = presence.WAITING, 'Numerical results ready · AI interpretation not run'
         elif warnings:
             state, title = presence.WAITING, ('Report ready · needs your review' if reports
                                               else 'Finished · needs your review')
@@ -1464,6 +1561,7 @@ class OneClickModule(BaseModule):
             return
         self.finish_persisted_run(result, 'unified')
         self.report_result(result)
+        self.progress.setRange(0, 100)
         self.progress.setValue(100)
         reports = result.get('report_files') or {}
         markdown = reports.get('report_markdown')
@@ -1488,7 +1586,7 @@ class OneClickModule(BaseModule):
             self.status.setText('Complete · Needs review: ' + '; '.join(result['warnings']))
         self.timeline.finish()
         incomplete = result.get('status') == 'incomplete'
-        self._presence(presence.FAILED if incomplete else presence.DONE,
+        self._presence(presence.FAILED if incomplete else presence.WAITING if result.get('warnings') else presence.DONE,
                        f'{self._name()} could not finish the run' if incomplete else
                        (f'{self._name()} finished · needs your review' if result.get('warnings')
                         else f'{self._name()} finished the report'),
@@ -1496,10 +1594,24 @@ class OneClickModule(BaseModule):
         # The outcome is shown where the run was watched, with the report one
         # click away, rather than swapping the Live tab out from under the user.
         self._show_finish(result)
+        if result.get('completion'):
+            completion = result['completion']
+            self.live_detail.setText('Source files preserved · Explore the models or save this run to Project history.'
+                                     if result.get('source_files_unchanged') is True else
+                                     'Explore the available outputs or save this run to Project history.')
+            wording = {'complete': 'Complete', 'incomplete': 'Incomplete', 'generated': 'Generated',
+                       'not_run': 'Not run', 'NOT_REVIEWED': 'Not run', 'ACCEPT': 'Accepted',
+                       'REVISE_REPORT': 'Changes required', 'INSUFFICIENT_EVIDENCE': 'Insufficient evidence'}
+            self.status.setText(' · '.join(f'{name.title()}: {wording.get(value, value)}' for name, value in completion.items()))
+            self.result_state.setText('Files are local · Save to retain this run in Project history')
+            self.save_result.setEnabled(True)
+            for widget in (self.save_result, self.view_result, self.result_state):
+                widget.show()
         summary = str(result.get('interpretation') or '')[:1500]
         self.workflowFinished.emit(self.status.text() + ('\n\n' + summary if summary else ''))
 
     def _failed(self, error):
+        self.progress.setRange(0, 100)
         self.fail_persisted_run(error, 'unified')
         self.status.setText(f'Could not complete · {error}')
         self.timeline.finish()
@@ -1517,6 +1629,7 @@ class OneClickModule(BaseModule):
             self._worker.cancel()
 
     def _finished(self):
+        self.progress.setRange(0, 100)
         self._clock.stop()
         # Nothing is left to answer once the child is gone; a prompt bar that
         # outlives its run would send a decision nowhere, and a module still

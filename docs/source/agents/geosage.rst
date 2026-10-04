@@ -35,21 +35,29 @@ GeoSAGE input schema and does not infer region, magnetic field or mesh settings
 from a free-text goal. The independent geophysical module forms do not change
 the GeoSAGE configuration.
 
-**Run without AI** executes the numerical workflow without provider credentials.
+Choose **Inspect existing results · local**, **Run a new inversion · local**, or
+**Interpret existing results · with AI**. Check the inputs and effective configuration
+before starting. The two local tasks execute without provider credentials.
 Its result is explicitly **Needs review**, not an accepted AI interpretation.
 For interpretation and report review, configure a provider in the assistant
-panel and use **Auto to report**. Enable per-step approval to inspect each of
+panel and select **Generate interpretation** in the workflow page. Enable per-step approval to inspect each of
 the six stages before it runs. The existing process cancellation and between-step
 pause mechanisms apply.
 
 Inspect exported figures and the VTK volume in **Saved Results → Visualization**.
 The property selector switches between density contrast, susceptibility and
 categorical geological identifiers. The clipping plane exposes the interior.
+The linked sections use physical coordinates and show values at the selected
+cell. Clicking a section updates all crosshairs; property changes preserve the
+selection, camera and clipping plane. Select two runs with Ctrl-click and choose
+**Compare two models** for shared colour scales and a B − A map. Only identical
+rectilinear coordinates are accepted; no resampling is performed.
 Source mesh coordinates use metres and z elevation, positive up. They must not
 be read as depth below ground. Use **Save to Project** to keep the run in history.
 
 Without a compatible 3D renderer the exported sections and data-fit figures
-remain viewable. Original source files and model arrays are preserved; new
+remain viewable. Interactive coordinate-based sections also work without OpenGL
+when PyVista can read the exported grid. Original source files and model arrays are preserved; new
 products go only into the run's directory.
 
 Extension points
@@ -76,3 +84,31 @@ an unfinished workflow.
 
 See the GeoSAGE checkout's ``docs/studio.md`` for input schemas, installation
 constraints, scientific display conventions and the optional regression suite.
+
+Optional task setup and focused workspace
+-----------------------------------------
+
+``Assistant.workflow_setup`` is an optional lazy ``module:factory`` reference.
+It is loaded only by the Qt workflow page, so discovery and headless execution
+remain independent of Qt. The factory receives a parent widget and returns a
+QWidget with:
+
+* a ``changed`` signal and ``needs_ai``, ``action_label`` and ``primary_role`` properties;
+* ``allowed_roles()`` and ``update_inputs(inputs)`` for task-specific inputs;
+* ``request()`` for the task objective;
+* ``prepare_payload(payload)`` returning a validated payload without writing files.
+  It is called before allocating a run, then again with the actual destination;
+* optional ``show_error(message)`` for an inline validation message.
+
+``Assistant.retrieval`` defaults to ``("rag", "mcp")``; unsupported controls are
+hidden and cannot enter a payload. ``focused_workspace=True`` starts with the
+assistant and log docks hidden and navigation limited to ``studio_modules``.
+Toolbar **Assistant** and **View → Show all processing tools** restore those controls. All three
+capabilities are optional, preserving the existing AQUAH experience.
+
+VTK artifacts may set ``metadata.linked_sections=True`` and
+``metadata.field_metadata`` keyed by cell-field name. Fields may supply numeric
+``limits`` and ``units``, or category ``colors`` / ``names`` keyed by string IDs.
+Shared limits and category colours apply to 3D and linked orthogonal sections.
+Run results may supply ``completion`` with ``numerical``, ``interpretation`` and
+``review`` states; the workflow displays them separately from run status.

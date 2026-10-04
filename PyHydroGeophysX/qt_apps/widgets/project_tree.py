@@ -131,3 +131,16 @@ class ProjectTree(QTreeWidget):
         item = self._key_to_item.get(module_key)
         if item is not None:
             self.setCurrentItem(item)
+
+    def focus_modules(self, keys=()):
+        """A reversible domain focus; the View menu can restore every tool."""
+        allowed = set(keys)
+        for index in range(self.topLevelItemCount()):
+            group = self.topLevelItem(index)
+            visible = 0
+            for j in range(group.childCount()):
+                child = group.child(j)
+                show = not allowed or child.data(0, _MODULE_ROLE) in allowed
+                child.setHidden(not show)
+                visible += show
+            group.setHidden(not visible)

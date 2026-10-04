@@ -165,6 +165,10 @@ class Assistant:
     status_note: str = ""
     providers: Tuple[str, ...] = ("openai", "anthropic")
     offline_workflow: bool = False
+    # Optional desktop extensions; headless discovery never imports their UI.
+    workflow_setup: str = ""
+    retrieval: Tuple[str, ...] = ("rag", "mcp")
+    focused_workspace: bool = False
     _cache: Dict[str, Any] = field(default_factory=dict, compare=False, repr=False)
 
     def availability(self) -> Tuple[bool, str]:

@@ -15,6 +15,7 @@ from PySide6.QtCore import QEvent, Qt, QUrl
 from PySide6.QtGui import QColor, QDesktopServices
 from PySide6.QtWidgets import (
     QComboBox,
+    QCheckBox,
     QApplication,
     QFileDialog,
     QHBoxLayout,
@@ -338,6 +339,10 @@ class ModelViewerModule(BaseModule):
         self._notes = QTextEdit()
         self._notes.setPlaceholderText("Notes")
         self._notes.setMaximumHeight(75)
+        self._notes_toggle = QCheckBox('Notes')
+        self._notes_toggle.toggled.connect(self._notes.setVisible)
+        self._notes.hide()
+        right_layout.addWidget(self._notes_toggle)
         right_layout.addWidget(self._notes)
 
         self._tabs = QTabWidget()
@@ -356,6 +361,11 @@ class ModelViewerModule(BaseModule):
         self._artifact.currentIndexChanged.connect(self._render_selected_artifact)
         visual_bar.addWidget(QLabel("Artifact:"))
         visual_bar.addWidget(self._artifact, stretch=1)
+        self._compare_models = QPushButton('Compare two models')
+        self._compare_models.setToolTip('Select two runs with Ctrl-click, then compare aligned model grids.')
+        self._compare_models.setEnabled(False)
+        self._compare_models.clicked.connect(self._compare_selected_models)
+        visual_bar.addWidget(self._compare_models)
         visual_layout.addLayout(visual_bar)
         self._visual_host = QWidget()
         self._visual_layout = QVBoxLayout(self._visual_host)
@@ -640,12 +650,14 @@ class ModelViewerModule(BaseModule):
 
     def _selection_changed(self) -> None:
         selected = self._selected_records()
+        self._compare_models.setEnabled(len(selected) == 2)
         if not selected:
             return
         self._current = selected[0]
         record = self._current
         self._label.setText(record.label)
         self._notes.setPlainText(record.notes)
+        self._notes_toggle.setChecked(bool(record.notes))
         editable = bool(
             self._store is self.state.results_store
             and self._store is not None and not self._store.read_only
@@ -894,6 +906,9 @@ class ModelViewerModule(BaseModule):
             item = self._visual_layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
+                # Removed widgets can paint over their replacement until Qt
+                # processes DeferredDelete, particularly native VTK children.
+                widget.hide()
                 widget.deleteLater()
                 retired.append(widget)
         for resource in self._visual_resources:
@@ -936,7 +951,9 @@ class ModelViewerModule(BaseModule):
             elif renderer == "vtk":
                 from PyHydroGeophysX.qt_apps.widgets.model3d_view import VTKVolumeView
                 view = VTKVolumeView(colormaps=self._colormaps())
-                view.show_file(path, scalar_cmaps=(artifact.get('metadata') or {}).get('scalar_cmaps'))
+                meta = artifact.get('metadata') or {}
+                view.show_file(path, scalar_cmaps=meta.get('scalar_cmaps'),
+                               field_metadata=meta.get('field_metadata'), linked_sections=meta.get('linked_sections', False))
                 self._replace_visual(view)
             elif renderer == "mesh":
                 self._render_mesh_file(path)
@@ -967,6 +984,27 @@ class ModelViewerModule(BaseModule):
         self._clear_visual()
         self._visual_resources.extend(resources or [])
         self._visual_layout.addWidget(widget)
+
+    def _compare_selected_models(self):
+        records = self._selected_records()
+        if len(records) != 2:
+            self._clear_visual('Select exactly two runs with Ctrl-click to compare their models.')
+            return
+        try:
+            import pyvista as pv
+            from ..widgets.scientific_sections import ModelComparison
+            models = []
+            for record in records:
+                candidates = [a for a in self._virtual_artifacts(record) if select_renderer(a) == 'vtk']
+                if not candidates:
+                    raise ValueError(f'{record.label} has no VTK model.')
+                artifact = next((a for a in candidates if (a.get('metadata') or {}).get('linked_sections')), candidates[0])
+                models.append(pv.read(self._store.locate_run_artifact(record, artifact)))
+            view = ModelComparison(*models, names=tuple(r.label for r in records))
+            self._replace_visual(view)
+            self._tabs.setCurrentWidget(self._visual_page)
+        except Exception as exc:
+            self._clear_visual(f'Could not compare these models: {exc}')
 
     def _render_numpy(
         self,
