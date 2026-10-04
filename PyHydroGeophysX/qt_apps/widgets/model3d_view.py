@@ -210,6 +210,12 @@ class VTKVolumeView(QWidget):
             "opacity": self._opacity,
             "show_edges": False,
             "show_scalar_bar": bool(self._scalar),
+            "scalar_bar_args": {
+                "title": self._scalar or "",
+                "title_font_size": 14,
+                "label_font_size": 12,
+                "fmt": "%.3g",
+            },
         }
         categorical = bool(self._scalar and self._scalar.lower().endswith(' id'))
         self._colormap.setEnabled(not categorical)
@@ -220,8 +226,8 @@ class VTKVolumeView(QWidget):
             labels, indices = np.unique(values, return_inverse=True)
             kwargs.update(scalars=indices, cmap='tab20', n_colors=max(1, len(labels)),
                           clim=(-0.5, len(labels) - 0.5),
-                          annotations={float(i): str(v) for i, v in enumerate(labels)},
-                          scalar_bar_args={'title': self._scalar, 'n_labels': 0})
+                          annotations={float(i): str(v) for i, v in enumerate(labels)})
+            kwargs['scalar_bar_args']['n_labels'] = 0
         try:
             if self._clip_cb.isChecked():
                 actor = self._plotter.add_mesh_clip_plane(self._mesh, **kwargs)
