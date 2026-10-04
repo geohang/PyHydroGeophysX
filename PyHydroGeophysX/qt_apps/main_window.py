@@ -79,6 +79,11 @@ class PyHydroGeophysXStudio(QMainWindow):
         outer.setSpacing(0)
         self._header = self._build_header()
         outer.addWidget(self._header)
+        self._independent_tool_note = QLabel()
+        self._independent_tool_note.setWordWrap(True)
+        self._independent_tool_note.setContentsMargins(12, 8, 12, 8)
+        self._independent_tool_note.hide()
+        outer.addWidget(self._independent_tool_note)
         # The margin round the modules is where the agent's glow is drawn while
         # an automatic run is in control, so it never covers a control.
         content = AgentGlowFrame(margin=8)
@@ -454,6 +459,8 @@ class PyHydroGeophysXStudio(QMainWindow):
                 page.startAIRequested.connect(self._start_task_ai)
             if hasattr(page, 'viewRunRequested'):
                 page.viewRunRequested.connect(self._view_workflow_run)
+            if hasattr(page, 'viewArtifactRequested'):
+                page.viewArtifactRequested.connect(self._view_workflow_run)
             self._stack.addWidget(page)
             self._pages[key] = page
         self._stack.setCurrentWidget(self._pages[key])
@@ -461,6 +468,7 @@ class PyHydroGeophysXStudio(QMainWindow):
         if key == "project_map" and hasattr(self._pages[key], "refresh"):
             self._pages[key].refresh()
         self.state.selected_module = key
+        self._sync_independent_tool_note()
         self._tree.select_module(key)
         if self._pick_action.isChecked():
             self._pick_action.setChecked(False)
@@ -513,13 +521,22 @@ class PyHydroGeophysXStudio(QMainWindow):
         if hasattr(self, '_chat'):
             self._chat.sync_assistant()
         self._focus_workspace()
+        self._sync_independent_tool_note()
         self.log(f"Assistant: {agent.name} ({agent.domain}).", "info")
 
     def _start_task_ai(self, text):
         self._properties_dock.show()
         self._chat.start_workflow(text)
 
-    def _view_workflow_run(self, run_id):
+    def _sync_independent_tool_note(self):
+        agent = assistant_registry.active()
+        independent = bool(getattr(agent, 'workflow_setup', '')) and self.state.selected_module in {'mesh3d', 'gravmag', 'joint_inversion'}
+        self._independent_tool_note.setVisible(independent)
+        self._independent_tool_note.setText(
+            f'Independent processing tool · These settings do not change the {agent.name} workflow. '
+            'Use Data & reports → Data to edit and check its run configuration.')
+
+    def _view_workflow_run(self, run_id, kind='model'):
         self.show_module('model_viewer')
         viewer = self._pages['model_viewer']
         viewer.refresh()
@@ -528,7 +545,8 @@ class PyHydroGeophysXStudio(QMainWindow):
             record = viewer._records.get(run_id)
             if record is not None:
                 artifact = next((a for a in viewer._virtual_artifacts(record)
-                                 if (a.get('metadata') or {}).get('linked_sections')), None)
+                                 if ('_data_fit.' in str(a.get('path', '')) if kind == 'fit' else
+                                     a.get('kind') == 'model')), None)
                 if artifact:
                     viewer._agent_show_artifact(Path(artifact.get('path', '')).name)
 
@@ -653,6 +671,9 @@ class PyHydroGeophysXStudio(QMainWindow):
     # -- saving runs ---------------------------------------------------------
     def _refresh_unsaved_state(self) -> None:
         """Show how many finished runs are still outside the Project."""
+        workflow = self._pages.get('one_click')
+        if workflow is not None:
+            workflow._sync_result_storage()
         runs = self.state.unsaved_runs()
         pending = [record for record in runs if record.status != "running"]
         for action in (getattr(self, "_save_action", None),

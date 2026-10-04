@@ -149,3 +149,35 @@ def test_clipping_plane_survives_property_switch(app, tmp_path, monkeypatch):
     assert view._plotter.clip['origin'] == (104, 203, -7)
     assert view._plotter.camera_position == 'camera'
     view.close()
+
+def test_unsigned_physical_models_have_signed_differences(app):
+    a, b = grid(), grid()
+    a.cell_data['Density contrast (g/cm3)'] = np.full(8, 1000, dtype=np.uint16)
+    b.cell_data['Density contrast (g/cm3)'] = np.full(8, 900, dtype=np.uint16)
+    view = ModelComparison(a, b)
+    np.testing.assert_array_equal(view.sections.axes[2].collections[0].get_array(), -100)
+    assert 'Δ: -100' in view.sections.readout.text()
+    np.testing.assert_array_equal(a['Density contrast (g/cm3)'], 1000)
+    view.close()
+
+def test_loading_another_volume_replaces_old_sections(app, tmp_path, monkeypatch):
+    from PyHydroGeophysX.qt_apps.widgets import model3d_view as views
+    monkeypatch.setattr(views, 'try_import_pyvista', lambda: (False, None, None, 'No GL context'))
+    a, b = grid(), grid()
+    b.clear_data()
+    b.cell_data['Velocity (m/s)'] = np.arange(8, dtype=float) + 1500
+    first, second = tmp_path / 'first.vtk', tmp_path / 'second.vtk'
+    a.save(first)
+    b.save(second)
+    view = views.VTKVolumeView()
+    assert view.show_file(str(first), linked_sections=True)
+    old = view._sections
+    assert view.show_file(str(second), linked_sections=True)
+    assert old.isHidden()
+    assert view._sections.mesh is view._mesh
+    assert view._sections.field == 'Velocity (m/s)'
+    assert view._field.count() == 1
+    assert not view.show_file(str(tmp_path / 'missing.vtk'), linked_sections=True)
+    assert view._sections is None
+    assert view._mesh is None
+    view.close()

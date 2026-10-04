@@ -158,6 +158,27 @@ class VTKVolumeView(QWidget):
         ``cmap`` is the volume's default colour map: what it is drawn with until
         a map is chosen for this view's quantity.
         """
+        if self._sections is not None:
+            self._sections.hide()
+            if self._tabs is not None and self._tabs.count() > 1:
+                self._tabs.removeTab(1)
+            else:
+                self.layout().removeWidget(self._sections)
+            self._sections.deleteLater()
+            self._sections = None
+            if self._plotter is not None:
+                self._plotter.disable_picking()
+        self._mesh = None
+        self._scalar = None
+        self._field.blockSignals(True)
+        self._field.clear()
+        self._field.blockSignals(False)
+        if self._plotter is not None:
+            self._plotter.clear_plane_widgets()
+            self._plotter.clear()
+        elif self._notice is not None:
+            self._notice.show()
+            self._field.hide()
         vtk_path = Path(path)
         if not vtk_path.is_file():
             self._info.setText(f"3D volume file not found: <code>{vtk_path}</code>")

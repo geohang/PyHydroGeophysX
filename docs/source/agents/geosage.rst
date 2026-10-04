@@ -33,7 +33,7 @@ Choose a Project outside the source data folders. In **Data & reports**, add an
 configuration (JSON)** for a configured inversion. The adapter requires the
 GeoSAGE input schema and does not infer region, magnetic field or mesh settings
 from a free-text goal. The independent geophysical module forms do not change
-the GeoSAGE configuration.
+the GeoSAGE configuration; a notice on those pages makes the separation explicit.
 
 Choose **Inspect existing results · local**, **Run a new inversion · local**, or
 **Interpret existing results · with AI**. Check the inputs and effective configuration
@@ -43,6 +43,11 @@ For interpretation and report review, configure a provider in the assistant
 panel and select **Generate interpretation** in the workflow page. Enable per-step approval to inspect each of
 the six stages before it runs. The existing process cancellation and between-step
 pause mechanisms apply.
+
+Completed task workflows open the result page with model, data-fit and report
+actions, plus the local save state. Unavailable artifacts have disabled actions.
+Saving through Ctrl+S or Saved Results updates that state; switching Project
+disables actions for a run absent from the newly selected Project.
 
 Inspect exported figures and the VTK volume in **Saved Results → Visualization**.
 The property selector switches between density contrast, susceptibility and
@@ -98,7 +103,9 @@ QWidget with:
 * ``request()`` for the task objective;
 * ``prepare_payload(payload)`` returning a validated payload without writing files.
   It is called before allocating a run, then again with the actual destination;
-* optional ``show_error(message)`` for an inline validation message.
+* optional ``show_error(message)`` for an inline validation message;
+* optional ``show_configuration(payload)`` to display the inputs and settings
+  passed at launch. A prepared payload may provide ``run_label`` for history.
 
 ``Assistant.retrieval`` defaults to ``("rag", "mcp")``; unsupported controls are
 hidden and cannot enter a payload. ``focused_workspace=True`` starts with the

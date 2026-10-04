@@ -125,13 +125,15 @@ class ScientificSections(QWidget):
             other = np.asarray(self.comparison.cell_data[self.field]).reshape(shape, order='F')
             if not np.isfinite(other).all():
                 raise ValueError(f'{self.field} contains nonfinite comparison values.')
-            bound = max(float(np.abs(other - values).max()), 1e-12)
+            # Unsigned/integer storage must not wrap a negative physical change.
+            difference = other.astype(np.float64) - values.astype(np.float64)
+            bound = max(float(np.abs(difference).max()), 1e-12)
             common.update(vmin=float(min(values.min(), other.min())), vmax=float(max(values.max(), other.max())))
             if 'Density' in self.field:
                 total = max(abs(common['vmin']), abs(common['vmax']), 1e-12)
                 common.update(vmin=-total, vmax=total)
-            panels = [(values[:, :, z].T, 0, 1, 'A'), (other[:, :, z].T, 0, 1, 'B'), ((other-values)[:, :, z].T, 0, 1, 'B − A')]
-            self.readout.setText(self.readout.text() + f' · B: {other[x,y,z]:.6g} · Δ: {other[x,y,z]-value:.6g}')
+            panels = [(values[:, :, z].T, 0, 1, 'A'), (other[:, :, z].T, 0, 1, 'B'), (difference[:, :, z].T, 0, 1, 'B − A')]
+            self.readout.setText(self.readout.text() + f' · B: {other[x,y,z]:.6g} · Δ: {difference[x,y,z]:.6g}')
         artists = []
         for n, (ax, (plane, i, j, title)) in enumerate(zip(self.axes, panels)):
             style = dict(common)
