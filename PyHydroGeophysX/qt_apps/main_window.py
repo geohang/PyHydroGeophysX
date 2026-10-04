@@ -374,6 +374,7 @@ class PyHydroGeophysXStudio(QMainWindow):
         toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         toolbar.setIconSize(QSize(16, 16))
         self.addToolBar(toolbar)
+        self._main_toolbar = toolbar
         toolbar.addAction(self._properties_dock.toggleViewAction())
         # The toolbar carries the two commands a session actually repeats. The
         # bridge "Save" that used to sit here wrote a JSON manifest for the
@@ -551,12 +552,21 @@ class PyHydroGeophysXStudio(QMainWindow):
                     viewer._agent_show_artifact(Path(artifact.get('path', '')).name)
 
     def _toggle_all_tools(self, checked):
-        self._tree.focus_modules(() if checked else assistant_registry.active().studio_modules)
+        assistant = assistant_registry.active()
+        modules = ('one_click', 'model_viewer') if getattr(assistant, 'focused_workspace', False) else assistant.studio_modules
+        self._tree.focus_modules(() if checked else modules)
 
     def _focus_workspace(self):
         focused = getattr(assistant_registry.active(), 'focused_workspace', False)
         self._all_tools_action.setChecked(not focused)
         self._toggle_all_tools(not focused)
+        for action in self._main_toolbar.actions():
+            if action.text() in {'Export', 'Select', 'Pan', 'Zoom', 'Pick', 'Delete'} or action.isSeparator():
+                action.setVisible(not focused)
+        for page in self._pages.values():
+            compact = getattr(page, 'set_compact', None)
+            if callable(compact):
+                compact(focused)
         if focused:
             self._log_dock.hide()
             self._properties_dock.hide()
@@ -572,7 +582,7 @@ class PyHydroGeophysXStudio(QMainWindow):
         """
         glow = getattr(self, "_agent_glow", None)
         if glow is not None:
-            glow.set_state(state)
+            glow.set_state('idle' if getattr(assistant_registry.active(), 'focused_workspace', False) else state)
 
     def _view_mesh_in_3d(self, path: str) -> None:
         """Open the Mesh 3D module and load ``path`` (e.g. a seismic 3D volume)."""
@@ -642,15 +652,25 @@ class PyHydroGeophysXStudio(QMainWindow):
         return True
 
     def _reset_pages(self, *, clear_session: bool = False) -> None:
+        # The model browser's OpenGL child belongs to the window lifetime.
+        # Replacing it after a Windows native file dialog can invalidate the
+        # compositor for the entire top-level window. Reset its project data
+        # in place, while other modules retain their normal fresh-session path.
+        viewer = self._pages.get('model_viewer')
         for page in self._pages.values():
             page.stop_workers()
         self._pages.clear()
-        while self._stack.count():
-            widget = self._stack.widget(0)
+        for index in reversed(range(self._stack.count())):
+            widget = self._stack.widget(index)
+            if widget is viewer:
+                continue
             self._stack.removeWidget(widget)
             widget.deleteLater()
         if clear_session:
             self.state.clear_project_session()
+        if viewer is not None:
+            self._pages['model_viewer'] = viewer
+            viewer.reset_project()
 
     def _new_project(self) -> None:
         chosen = QFileDialog.getExistingDirectory(

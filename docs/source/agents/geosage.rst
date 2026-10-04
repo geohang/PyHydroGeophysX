@@ -35,8 +35,8 @@ GeoSAGE input schema and does not infer region, magnetic field or mesh settings
 from a free-text goal. The independent geophysical module forms do not change
 the GeoSAGE configuration; a notice on those pages makes the separation explicit.
 
-Choose **Inspect existing results · local**, **Run a new inversion · local**, or
-**Interpret existing results · with AI**. Check the inputs and effective configuration
+Choose **View results**, **New inversion**, or **AI interpretation**.
+Check the inputs and effective configuration
 before starting. The two local tasks execute without provider credentials.
 Its result is explicitly **Needs review**, not an accepted AI interpretation.
 For interpretation and report review, configure a provider in the assistant
@@ -50,6 +50,11 @@ Saving through Ctrl+S or Saved Results updates that state; switching Project
 disables actions for a run absent from the newly selected Project.
 
 Inspect exported figures and the VTK volume in **Saved Results → Visualization**.
+The compact view lists models and figures; **Details** reveals metadata and file
+management. **Report** displays the saved Markdown report, including its figures.
+An offline inspection contains a numerical evidence summary and is not presented
+as an AI interpretation. Model sections and data-fit figures share GeoSAGE's
+notebook plotting implementation, with scales derived from each dataset.
 The property selector switches between density contrast, susceptibility and
 categorical geological identifiers. The clipping plane exposes the interior.
 The linked sections use physical coordinates and show values at the selected
@@ -109,7 +114,7 @@ QWidget with:
 
 ``Assistant.retrieval`` defaults to ``("rag", "mcp")``; unsupported controls are
 hidden and cannot enter a payload. ``focused_workspace=True`` starts with the
-assistant and log docks hidden and navigation limited to ``studio_modules``.
+assistant and log docks hidden and navigation focused on tasks and saved results.
 Toolbar **Assistant** and **View → Show all processing tools** restore those controls. All three
 capabilities are optional, preserving the existing AQUAH experience.
 
@@ -132,3 +137,17 @@ GeoSAGE writes a local ``studio_checkpoint.json`` after each completed stage and
 a ``continue_config.json`` when completed numerical models are reusable. These
 support continuing interpretation in a fresh run without repeating inversion;
 they are not solver-iteration checkpoints.
+
+Desktop regression checks
+-------------------------
+
+With desktop dependencies and the GeoSAGE plugin installed, run::
+
+   python -m pytest tests/test_agents.py tests/test_geosage_plugin.py tests/test_assistant_desktop_extensions.py tests/test_scientific_sections.py tests/test_saved_result_previews.py tests/test_studio_diagnostics.py
+
+The widget tests use Qt's offscreen platform and synthetic temporary inputs.
+Windows native folder dialogs and GPU composition also require an interactive
+check: open a model, switch between figures and reports, accept and cancel a
+Project folder dialog, and return to the model. The model viewer retains its
+OpenGL widget across these transitions. An offscreen render alone cannot detect
+a black top-level window caused by native composition.

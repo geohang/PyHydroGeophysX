@@ -142,7 +142,7 @@ def _pretty_kind(kind: str) -> str:
 
 
 def _artifact_label(artifact: Dict[str, Any], *, missing: bool = False) -> str:
-    """Name an artifact by its file, not by its internal id.
+    """Prefer an explicit display label, falling back to the filename.
 
     ``artifact_id`` values like ``output:outputs/qc.png`` are how the record
     addresses a file; a chooser should show what the file is.
@@ -151,7 +151,7 @@ def _artifact_label(artifact: Dict[str, Any], *, missing: bool = False) -> str:
     kind = _pretty_kind(artifact.get("kind", ""))
     if not path_value:
         return f"{artifact.get('label') or kind} (in record)"
-    label = f"{Path(path_value).name} — {kind}"
+    label = str(artifact.get('label') or f"{Path(path_value).name} — {kind}")
     return f"{label} (missing)" if missing else label
 
 
@@ -257,13 +257,20 @@ class ModelViewerModule(BaseModule):
         self._temperature_panel = None  # the correction panel beside it
         self._size_cache: Dict[str, int] = {}
         self._visual_resources: List[Any] = []
+        # Keep the OpenGL child alive while displaying ordinary Qt images.
+        # Destroying the last GL child during an artifact switch can invalidate
+        # the top-level compositor on Windows (the entire window turns black).
+        self._vtk_view = None
+        self._vtk_cache_key = None
         self._quality_ok = False
+        self._compact = False
 
         root = QVBoxLayout(self)
         top = QHBoxLayout()
         self._path = QLabel("Project: (not available)")
         self._path.setTextInteractionFlags(Qt.TextSelectableByMouse)
         top.addWidget(self._path, stretch=1)
+        self._project_buttons = []
         for text, slot, tip in (
             ("Current Project", self.use_current_store,
              "Show the Project that new computations are written to."),
@@ -277,6 +284,11 @@ class ModelViewerModule(BaseModule):
             button.setToolTip(tip)
             button.clicked.connect(slot)
             top.addWidget(button)
+            self._project_buttons.append(button)
+        self._details_button = QPushButton('Details')
+        self._details_button.setCheckable(True)
+        self._details_button.toggled.connect(self._toggle_details)
+        top.addWidget(self._details_button)
         root.addLayout(top)
 
         splitter = QSplitter(Qt.Horizontal)
@@ -310,6 +322,10 @@ class ModelViewerModule(BaseModule):
 
         right = QWidget()
         right_layout = QVBoxLayout(right)
+        self._metadata_panel = QWidget()
+        metadata_layout = QVBoxLayout(self._metadata_panel)
+        metadata_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.addWidget(self._metadata_panel)
         edit_row = QHBoxLayout()
         self._label = QLineEdit()
         self._label.setPlaceholderText("Run label")
@@ -335,18 +351,21 @@ class ModelViewerModule(BaseModule):
         edit_row.addWidget(self._save_run)
         edit_row.addWidget(self._open_run)
         edit_row.addWidget(self._delete)
-        right_layout.addLayout(edit_row)
+        metadata_layout.addLayout(edit_row)
         self._notes = QTextEdit()
         self._notes.setPlaceholderText("Notes")
         self._notes.setMaximumHeight(75)
         self._notes_toggle = QCheckBox('Notes')
         self._notes_toggle.toggled.connect(self._notes.setVisible)
         self._notes.hide()
-        right_layout.addWidget(self._notes_toggle)
-        right_layout.addWidget(self._notes)
+        metadata_layout.addWidget(self._notes_toggle)
+        metadata_layout.addWidget(self._notes)
 
         self._tabs = QTabWidget()
         self._overview = QTextEdit(); self._overview.setReadOnly(True)
+        from .one_click import _FittedReportBrowser
+        self._report = _FittedReportBrowser()
+        self._report.setOpenExternalLinks(True)
         self._metrics_page = QWidget()
         metrics_layout = QVBoxLayout(self._metrics_page)
         self._metrics = QTableWidget(0, 4)
@@ -377,12 +396,59 @@ class ModelViewerModule(BaseModule):
         self._tabs.addTab(self._metrics_page, "Metrics")
         self._tabs.addTab(self._visual_page, "Visualization")
         self._tabs.addTab(self._files, "Files")
+        self._tabs.addTab(self._report, "Report")
+        self._tabs.setTabVisible(self._tabs.indexOf(self._report), False)
         right_layout.addWidget(self._tabs, stretch=1)
         splitter.addWidget(right)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 3)
         root.addWidget(splitter, stretch=1)
         self.use_current_store()
+        from PyHydroGeophysX.agents import assistants
+        self.set_compact(getattr(assistants.active(), 'focused_workspace', False))
+
+    def set_compact(self, compact):
+        changed = self._compact != compact
+        self._compact = compact
+        self._details_button.setVisible(compact)
+        self._toggle_details(self._details_button.isChecked())
+        if self._store is not None:
+            self._path.setText(self._store.root.name if compact else f'Project: {self._store.root}')
+            self._path.setToolTip(str(self._store.root))
+        if changed:
+            self.refresh()
+
+    def _toggle_details(self, expanded):
+        detailed = not self._compact or expanded
+        selected_artifact = self._artifact.currentData()
+        self._artifact.blockSignals(True)
+        self._artifact.clear()
+        for row, artifact in enumerate(self._current_artifacts):
+            if detailed or select_renderer(artifact) not in {'json', 'file'}:
+                self._artifact.addItem(_artifact_label(artifact), row)
+        restored = self._artifact.findData(selected_artifact)
+        if restored >= 0:
+            self._artifact.setCurrentIndex(restored)
+        self._artifact.blockSignals(False)
+        if selected_artifact is not None and restored < 0:
+            self._render_selected_artifact(self._artifact.currentIndex())
+        self._metadata_panel.setVisible(detailed)
+        self._status.setVisible(detailed)
+        for button in self._project_buttons:
+            button.setVisible(detailed or button.text() == 'Refresh')
+        for widget in (self._metrics_page, self._files):
+            self._tabs.setTabVisible(self._tabs.indexOf(widget), detailed)
+        for index in range(self._visual_layout.count()):
+            widget = self._visual_layout.itemAt(index).widget()
+            compact = getattr(widget, 'set_compact', None)
+            if callable(compact):
+                compact(not detailed)
+        if self._compact:
+            self._tree.setColumnHidden(2, True)
+            self._tree.setColumnHidden(3, True)
+        else:
+            self._tree.setColumnHidden(2, False)
+            self._tree.setColumnHidden(3, False)
 
     def _colormaps(self) -> Optional[Dict[str, str]]:
         """The session's colormap choices, which every page's views share."""
@@ -419,6 +485,17 @@ class ModelViewerModule(BaseModule):
             return
         self.refresh()
 
+    def reset_project(self) -> None:
+        """Forget prior project state without tearing down the GL compositor."""
+        self._reset_details()
+        self._vtk_cache_key = None
+        self._records.clear()
+        self._unsaved_ids.clear()
+        self._size_cache.clear()
+        self._search.clear()
+        self._status.setCurrentIndex(0)
+        self.use_current_store()
+
     def browse_store(self) -> None:
         chosen = QFileDialog.getExistingDirectory(
             self, "Browse Result Store", str(self.state.results_store_root or Path.cwd())
@@ -436,7 +513,7 @@ class ModelViewerModule(BaseModule):
         if self._store is None:
             return
         read_only = " — read-only" if self._store.read_only else ""
-        self._path.setText(f"Project: {self._store.root}{read_only}")
+        self._path.setText(self._store.root.name if self._compact else f"Project: {self._store.root}{read_only}")
         self._path.setToolTip(
             "Runs are browsed read-only; new computations still go to the active Project."
             if self._store.read_only
@@ -470,7 +547,7 @@ class ModelViewerModule(BaseModule):
                 (group_key, operation_name, date_name),
             ]
             for depth, (key, name) in enumerate(
-                zip(path, (module_name, operation_name, date_name))
+                [] if self._compact else zip(path, (module_name, operation_name, date_name))
             ):
                 if key not in groups:
                     groups[key] = self._group_item(name)
@@ -507,9 +584,12 @@ class ModelViewerModule(BaseModule):
                     "Not saved to the Project. Use “Save to Project” to keep it."
                 )
             item.setToolTip(0, "\n".join(tooltip))
-            groups[path[2]].addChild(item)
-            for key in path:
-                groups[key].setExpanded(True)
+            if self._compact:
+                self._tree.addTopLevelItem(item)
+            else:
+                groups[path[2]].addChild(item)
+                for key in path:
+                    groups[key].setExpanded(True)
 
         for key, group in groups.items():
             total = counts.get(key, 0)
@@ -522,6 +602,8 @@ class ModelViewerModule(BaseModule):
 
     def _reset_details(self) -> None:
         """Leave no stale run on screen when the list becomes empty."""
+        self._report.clear()
+        self._tabs.setTabVisible(self._tabs.indexOf(self._report), False)
         self._current = None
         self._label.clear()
         self._notes.clear()
@@ -545,12 +627,24 @@ class ModelViewerModule(BaseModule):
     def _update_hint(self) -> None:
         """Explain an empty list rather than leaving the user with blank space."""
         if not self._records:
-            self._hint.setText(
+            message = (
                 "No runs in this Project yet. Run a computation from any module; it "
                 "appears here under “Unsaved” until you save it to the Project."
             )
+            root = self._store.root if self._store is not None else None
+            if root is not None and all((root / name).is_file() for name in (
+                    'mesh/mesh_core.msh', 'inversion_result/joint_density_core.npy',
+                    'inversion_result/joint_susceptibility_core.npy')):
+                message = (
+                    'This folder contains GeoSAGE models. To view them, choose View results in Data & reports. '
+                    'Use a separate Project to save your work.'
+                )
+            self._hint.setText(message)
+            self._overview.setHtml('<h3>No saved Studio runs</h3><p>' + escape(message) + '</p>')
             self._hint.setVisible(True)
             return
+        if self._current is None:
+            self._overview.setHtml('<p>Select a run on the left to see its results.</p>')
         visible = any(
             not self._tree.topLevelItem(index).isHidden()
             for index in range(self._tree.topLevelItemCount())
@@ -651,6 +745,7 @@ class ModelViewerModule(BaseModule):
     def _selection_changed(self) -> None:
         selected = self._selected_records()
         self._compare_models.setEnabled(len(selected) == 2)
+        self._compare_models.setVisible(not self._compact or len(selected) == 2)
         if not selected:
             return
         self._current = selected[0]
@@ -697,6 +792,8 @@ class ModelViewerModule(BaseModule):
         self._show_overview(record)
         self._show_metrics(selected[:2])
         self._populate_artifacts(record)
+        if self._compact and self._current_artifacts:
+            self._tabs.setCurrentWidget(self._visual_page)
 
     def _show_run_size(self, run_id: str, size: Optional[int]) -> None:
         if size is not None:
@@ -825,6 +922,21 @@ class ModelViewerModule(BaseModule):
             seen_paths.add(key)
             artifacts.append(dict(item))
         registered = {str(item.get("path") or "") for item in artifacts}
+        # Reports are persisted in the result envelope, but older runs did not
+        # register them as artifacts. Recover that explicit reference on read.
+        if record.result_path and self._store is not None:
+            try:
+                result_file = self._store.locate_run_artifact(record, {"path": record.result_path})
+                result = json.loads(result_file.read_text(encoding="utf-8"))
+                reports = result.get("report_files") or {}
+                if isinstance(reports, dict):
+                    for key, value in reports.items():
+                        if isinstance(value, str) and value not in registered:
+                            artifacts.append({"artifact_id": f"report:{key}", "kind": "report",
+                                              "format": Path(value).suffix.lstrip("."), "path": value})
+                            registered.add(value)
+            except (OSError, ValueError, TypeError, AttributeError):
+                pass
         for path_value, kind in (
             ("run.json", "run_metadata"),
             (record.recipe_path, "workflow_recipe"),
@@ -862,6 +974,7 @@ class ModelViewerModule(BaseModule):
     def _populate_artifacts(self, record: RunRecord) -> None:
         assert self._store is not None
         self._current_artifacts = self._virtual_artifacts(record)
+        self._show_report(record)
         self._artifact.blockSignals(True)
         self._artifact.clear()
         self._files.setRowCount(len(self._current_artifacts))
@@ -874,7 +987,9 @@ class ModelViewerModule(BaseModule):
                 except ValueError:
                     pass
             missing = bool(path_value) and not (path and path.exists())
-            self._artifact.addItem(_artifact_label(artifact, missing=missing), row)
+            if (not self._compact or self._details_button.isChecked()
+                    or select_renderer(artifact) not in {"json", "file"}):
+                self._artifact.addItem(_artifact_label(artifact, missing=missing), row)
             values = [
                 _pretty_kind(artifact.get("kind", "")),
                 str(artifact.get("format", "")),
@@ -889,17 +1004,33 @@ class ModelViewerModule(BaseModule):
                 self._files.setItem(row, col, cell)
         self._files.resizeColumnsToContents()
         self._artifact.blockSignals(False)
-        if self._current_artifacts:
+        if self._artifact.count():
             self._artifact.setCurrentIndex(0)
             self._render_selected_artifact(0)
         else:
             self._clear_visual("This run has no registered artifacts.")
 
+    def _show_report(self, record):
+        reports = [a for a in self._current_artifacts
+                   if a.get('kind') == 'report' and str(a.get('format', '')).lower() == 'md']
+        self._report.clear()
+        self._tabs.setTabVisible(self._tabs.indexOf(self._report), bool(reports))
+        if not reports:
+            return
+        try:
+            path = self._store.locate_run_artifact(record, reports[0])
+            self._report.document().setBaseUrl(QUrl.fromLocalFile(str(path.parent) + '/'))
+            self._report.setMarkdown(path.read_text(encoding='utf-8'))
+        except (OSError, ValueError) as exc:
+            self._report.setPlainText(f'Could not open the saved report: {exc}')
+
     def _clear_visual(self, message: str = "") -> List[Any]:
-        """Empty the visual pane and release what it had open.
+        """Empty the pane, retaining its single reusable OpenGL child.
 
         Returns the widgets scheduled for deletion so a caller that has to see
         them gone, rather than merely queued, can flush those and only those.
+        The VTK view holds an in-memory volume, not an open file mapping; its
+        renderer remains parented here until this page itself is destroyed.
         """
         retired: List[Any] = []
         while self._visual_layout.count():
@@ -909,6 +1040,8 @@ class ModelViewerModule(BaseModule):
                 # Removed widgets can paint over their replacement until Qt
                 # processes DeferredDelete, particularly native VTK children.
                 widget.hide()
+                if widget is self._vtk_view:
+                    continue
                 widget.deleteLater()
                 retired.append(widget)
         for resource in self._visual_resources:
@@ -950,11 +1083,18 @@ class ModelViewerModule(BaseModule):
                 self._replace_visual(view)
             elif renderer == "vtk":
                 from PyHydroGeophysX.qt_apps.widgets.model3d_view import VTKVolumeView
-                view = VTKVolumeView(colormaps=self._colormaps())
+                if self._vtk_view is None:
+                    self._vtk_view = VTKVolumeView(self._visual_host, colormaps=self._colormaps())
+                view = self._vtk_view
                 meta = artifact.get('metadata') or {}
-                view.show_file(path, scalar_cmaps=meta.get('scalar_cmaps'),
-                               field_metadata=meta.get('field_metadata'), linked_sections=meta.get('linked_sections', False))
+                stat = path.stat()
+                key = (str(path), stat.st_mtime_ns, stat.st_size, json.dumps(meta, sort_keys=True, default=str))
                 self._replace_visual(view)
+                if key != self._vtk_cache_key:
+                    self._vtk_cache_key = None
+                    if view.show_file(path, scalar_cmaps=meta.get('scalar_cmaps'),
+                                      field_metadata=meta.get('field_metadata'), linked_sections=meta.get('linked_sections', False)):
+                        self._vtk_cache_key = key
             elif renderer == "mesh":
                 self._render_mesh_file(path)
             elif renderer == "table":
@@ -984,6 +1124,10 @@ class ModelViewerModule(BaseModule):
         self._clear_visual()
         self._visual_resources.extend(resources or [])
         self._visual_layout.addWidget(widget)
+        widget.show()
+        compact = getattr(widget, 'set_compact', None)
+        if callable(compact):
+            compact(self._compact and not self._details_button.isChecked())
 
     def _compare_selected_models(self):
         records = self._selected_records()
@@ -1450,7 +1594,7 @@ class ModelViewerModule(BaseModule):
 
 
     # -- agent command interface ----------------------------------------------
-    _AGENT_TABS = ("overview", "metrics", "visualization", "files")
+    _AGENT_TABS = ("overview", "metrics", "visualization", "files", "report")
 
     def agent_describe(self) -> Dict[str, Any]:
         return {

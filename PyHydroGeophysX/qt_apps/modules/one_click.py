@@ -258,9 +258,11 @@ class OneClickModule(BaseModule):
         self.role = QComboBox()
         row.addWidget(self.role)
         add = QPushButton('Add data…')
+        self._add_input_button = add
         add.clicked.connect(self._choose_files)
         row.addWidget(add)
         remove = QPushButton('Remove selected')
+        self._remove_input_button = remove
         remove.clicked.connect(self._remove_input)
         row.addWidget(remove)
         form.addLayout(row)
@@ -274,6 +276,7 @@ class OneClickModule(BaseModule):
             button.clicked.connect(lambda checked=False, delta=offset: self._move_survey(delta))
             order.addWidget(button)
         form.addLayout(order)
+        form.addStretch(1)
         note = QLabel('Time-lapse surveys run in the displayed order; select a survey and move it up or down to reorder. Your request and workflow context are sent to the selected AI provider.')
         note.setWordWrap(True)
         form.addWidget(note)
@@ -282,6 +285,7 @@ class OneClickModule(BaseModule):
         scroll.setWidgetResizable(True)
         scroll.setWidget(setup)
         self._data_tab = scroll
+        scroll.setAlignment(Qt.AlignHCenter)
         self.tabs.addTab(scroll, '1 · Data')
         # The run as the assistant sees it: one card per step it decided on, with its
         # reason, its module, its time and what it found. This is where a run
@@ -409,6 +413,7 @@ class OneClickModule(BaseModule):
         self.pause_box.setVisible(False)
         layout.addWidget(self.pause_box)
         actions = QHBoxLayout()
+        actions.addStretch(1)
         self.run = QPushButton('Run without AI')
         self.run.setToolTip('Run numerical processing and inspect the evidence without contacting an AI provider.')
         self.run.clicked.connect(self._start_offline)
@@ -456,6 +461,7 @@ class OneClickModule(BaseModule):
         self.continue_result.clicked.connect(self._prepare_continuation)
         next_layout.addWidget(self.continue_result)
         next_note = QLabel('Reuse the completed numerical models. Review the next task before starting.')
+        self._next_note = next_note
         next_note.setWordWrap(True)
         next_layout.addWidget(next_note, 1)
         self.next_step.hide()
@@ -513,6 +519,8 @@ class OneClickModule(BaseModule):
             self._workflow_setup = factory(self)
             self._setup_layout.insertWidget(0, self._workflow_setup)
             self._workflow_setup.changed.connect(self._sync_setup_task)
+            if hasattr(self._workflow_setup, 'detailsChanged'):
+                self._workflow_setup.detailsChanged.connect(self._set_compact_details)
             self._workflow_setup.update_inputs(self._inputs)
         for widget in self._generic_intro:
             widget.setVisible(self._workflow_setup is None)
@@ -546,7 +554,46 @@ class OneClickModule(BaseModule):
         self.header.headline.setText(name)
         self.steer.set_name(name)
         self._sync_setup_task()
+        self._set_compact_details(False)
         return True
+
+    def _set_compact_details(self, expanded=False):
+        compact = self._workflow_setup is not None and hasattr(self._workflow_setup, 'detailsChanged')
+        detailed = not compact or expanded
+        for widget in (self.role, self._remove_input_button, self.follow, self.step_through,
+                       self.folder, self.replay_button, self.live_detail, self.elapsed_label):
+            widget.setVisible(detailed)
+        for widget in (self.files, self.details):
+            self.tabs.setTabVisible(self.tabs.indexOf(widget), detailed)
+        self._setup.setMaximumWidth(800 if compact else 16777215)
+        self.inputs.setMaximumHeight(110 if compact else 16777215)
+        self.inputs.setVisible(detailed or bool(self._inputs))
+        if compact:
+            self.header.hide()
+            self._title_label.setText('<h1>GeoSAGE</h1>')
+            self.tabs.setTabText(0, 'Start')
+            self.tabs.setTabText(1, 'Activity')
+            self.tabs.setTabText(2, 'Results')
+            self._add_input_button.setText('Add input…' if expanded else
+                                            'Choose configuration…' if self._workflow_setup.primary_role == 'config_file'
+                                            else 'Choose results folder…')
+            self._add_input_button.setMinimumHeight(44)
+            self.stop.setVisible(self._worker is not None)
+            self.run.setProperty('primary', True)
+            self.run.style().unpolish(self.run)
+            self.run.style().polish(self.run)
+            self.run.setMaximumWidth(200)
+            self.run.setMinimumHeight(42)
+            self.view_result.setText('Explore model')
+            self.view_fit.setText('Data fit')
+            self.save_result.setText('Save')
+            self._next_note.hide()
+            if not expanded:
+                self.role.setCurrentIndex(self.role.findData(self._workflow_setup.primary_role))
+        else:
+            self._add_input_button.setText('Add data…')
+            self.stop.show()
+            self.run.setMaximumWidth(16777215)
 
     def _sync_setup_task(self):
         setup = self._workflow_setup
@@ -566,11 +613,12 @@ class OneClickModule(BaseModule):
         self.run.setToolTip('Use the provider configured in Assistant settings to interpret these results.'
                             if setup.needs_ai else 'Process locally without contacting an AI provider.')
         if self._worker is None:
-            self.status.setText('Ready · Add the inputs, check the configuration, then start.')
+            self.status.setText('Choose your inputs to begin.')
         self.goal.hide()
         self._request_text = ''
         self._refresh_inputs()
         self._title_label.setText(f'<h2>{self._name()}</h2>Choose a task, check the inputs, then explore the results.')
+        self._set_compact_details(bool(getattr(setup, 'options', None) and setup.options.isChecked()))
 
     def _read_current_report(self):
         self.tabs.setCurrentWidget(self._result_page)
@@ -686,6 +734,8 @@ class OneClickModule(BaseModule):
         do: the banner keeps asking, while the edge stops pulsing.
         """
         self.header.show_state(state, headline, detail)
+        if getattr(self._assistant, 'focused_workspace', False):
+            self.header.hide()
         glow = getattr(self.window(), 'set_agent_presence', None)
         if callable(glow):
             try:
@@ -748,11 +798,15 @@ class OneClickModule(BaseModule):
         self.inputs.clear()
         if self._workflow_setup is not None:
             self._workflow_setup.update_inputs(self._inputs)
+            if hasattr(self._workflow_setup, 'detailsChanged'):
+                self.inputs.setVisible(bool(self._inputs) or self._workflow_setup.options.isChecked())
         for role, value in self._inputs.items():
             if self._workflow_setup is not None and role not in self._workflow_setup.allowed_roles():
                 continue
             for index, path in enumerate(value if isinstance(value, list) else [value], 1):
-                item = QListWidgetItem(f'{role} · {index} · {path}')
+                compact = self._workflow_setup is not None and hasattr(self._workflow_setup, 'detailsChanged')
+                item = QListWidgetItem(Path(path).name if compact else f'{role} · {index} · {path}')
+                item.setToolTip(f'{role}\n{path}')
                 item.setData(Qt.UserRole, (role, path))
                 self.inputs.addItem(item)
 
@@ -905,6 +959,7 @@ class OneClickModule(BaseModule):
             self.run.setEnabled(False)
             self.step_through.setEnabled(False)
             self.stop.setEnabled(True)
+            self.stop.show()
             self.folder.setEnabled(True)
             self.details.clear()
             self.files.clear()
@@ -1730,6 +1785,8 @@ class OneClickModule(BaseModule):
             self._sync_result_storage()
             for widget in (*self._result_buttons, self.result_state, self.result_summary):
                 widget.show()
+            if getattr(self._assistant, 'focused_workspace', False):
+                self.read_report.hide()
             if self._workflow_setup is not None:
                 self.tabs.setCurrentWidget(self._result_page)
         summary = str(result.get('interpretation') or '')[:1500]
@@ -1786,6 +1843,8 @@ class OneClickModule(BaseModule):
         self.run.setEnabled(True)
         self.step_through.setEnabled(True)
         self.stop.setEnabled(False)
+        if self._workflow_setup is not None and hasattr(self._workflow_setup, 'detailsChanged'):
+            self.stop.hide()
 
     def _open_link(self, url):
         if url.isLocalFile():

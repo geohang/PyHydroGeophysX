@@ -142,6 +142,13 @@ class VTKVolumeView(QWidget):
         """Whether the embedded PyVistaQt renderer is available."""
         return self._plotter is not None and self._pv is not None
 
+    def set_compact(self, compact):
+        """Keep the model prominent; display options remain in Details."""
+        self._info.setVisible(not compact or self._mesh is None)
+        self._colormap.setVisible(not compact and self.interactive_available)
+        self._clip_cb.setText('Slice' if compact else 'Clip plane (drag to inspect the interior)')
+        self._clip_cb.setToolTip('Drag the clipping plane to inspect the model interior.')
+
     def show_file(
         self,
         path: str,
