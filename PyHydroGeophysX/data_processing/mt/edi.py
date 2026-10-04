@@ -315,10 +315,9 @@ def _spectra_blocks(section, spectra, measurements, site, empty) -> TransferFunc
     (AVGF is not multiplied in: writers put the same count in both.)
 
     The cross powers, packed as the standard describes, give the complex
-    conjugate of the impedance in its own e^{+i omega t} convention: on every
-    spectra file of the mt_metadata test set the phases come out in the
-    quadrants of e^{-i omega t} (Zxy near -45, Zyx near +135). EMTF, from which
-    mt_metadata took its conversion, conjugates the estimate, and so does this.
+    conjugate of the impedance in its own e^{+i omega t} convention: read as
+    they are, the phases come out in the quadrants of e^{-i omega t} (Zxy near
+    -45, Zyx near +135). So the estimate is conjugated.
     """
     _, options, ids = section
     if ids is None:

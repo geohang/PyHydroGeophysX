@@ -1679,15 +1679,16 @@ class FinishCard(_Card):
             tag = _label("CHECK BEFORE YOU RELY ON IT", "agentGoalTag")
             tag.setContentsMargins(indent, 6, 0, 0)
             outer.addWidget(tag)
-            for gap in gaps[:4]:
-                line = _label("• " + html.escape(gap), "agentReason")
-                line.setWordWrap(True)
-                line.setContentsMargins(indent, 0, 0, 0)
-                outer.addWidget(line)
-            if len(gaps) > 4:
-                more = _label(f"and {len(gaps) - 4} more in the report", "agentClock")
-                more.setContentsMargins(indent, 0, 0, 0)
-                outer.addWidget(more)
+            # One line: the list is in the assistant's conversation (and in
+            # this line's tooltip), where four long warnings do not push the
+            # report button off the card.
+            line = _label(html.escape(gaps[0]) if len(gaps) == 1 and len(gaps[0]) <= 160 else
+                          f"{len(gaps)} item{'s' if len(gaps) != 1 else ''}, listed in the "
+                          "assistant panel", "agentReason")
+            line.setWordWrap(True)
+            line.setContentsMargins(indent, 0, 0, 0)
+            line.setToolTip("\n\n".join(gaps))
+            outer.addWidget(line)
         if actions:
             row = FlowLayout(spacing=8)
             row.setContentsMargins(indent, 4, 0, 0)

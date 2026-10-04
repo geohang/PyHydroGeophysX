@@ -3,7 +3,8 @@
 Renders a shot gather with time on the vertical axis (increasing downward), a
 bipolar blue-white-red amplitude image and/or a traditional variable-area wiggle
 display, and first-arrival picks drawn as markers colored by source
-(auto = red x, manual = green circle, anchor = orange star). Click-to-pick emits
+(auto = red x, picked again along the shot's curve = orange circle, manual =
+green circle, anchor = orange star). Click-to-pick emits
 ``pointPicked(trace_index, time_s, amplitude)``.
 """
 
@@ -44,9 +45,12 @@ _PICK_STYLES: Dict[str, Tuple[str, str, int]] = {
     "anchor": ("#ff9500", "star", 13),
     "learned": ("#ffcc00", "d", 10),
     "auto": ("#ff3b30", "x", 10),
+    # An automatic pick that strayed from its shot's curve and was picked again along it.
+    "repick": ("#ff9500", "o", 10),
 }
 
 _STYLES = ["Amplitude image", "Traditional wiggle", "Image + wiggle"]
+_STYLE_NAMES = {"image": _STYLES[0], "wiggle": _STYLES[1], "both": _STYLES[2]}
 
 
 def first_arrival_onsets(disp: np.ndarray, dt: Optional[float], ratio_thr: float = 5.0,
@@ -276,6 +280,14 @@ class SeismicViewer(QWidget):
             self._stride.blockSignals(True)
             self._stride.setValue(stride)
             self._stride.blockSignals(False)
+
+    def set_display_style(self, style: str) -> str:
+        """Show the gather as ``'image'``, ``'wiggle'`` or ``'both'``; returns the style's name."""
+        name = _STYLE_NAMES.get(str(style).strip().lower())
+        if name is None:
+            raise ValueError(f"Display style is one of {', '.join(_STYLE_NAMES)}, not {style!r}.")
+        self._style_combo.setCurrentText(name)
+        return name
 
     def set_pick_mode(self, enabled: bool) -> None:
         self._pick_mode = bool(enabled)

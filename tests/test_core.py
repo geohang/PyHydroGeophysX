@@ -449,6 +449,121 @@ def test_em_line_damping_honors_its_reference_with_any_start(
     np.testing.assert_allclose(result["model3d"][:, 0, 1:], 30.0, rtol=1e-3)
 
 
+def test_a_tem_line_inverts_alike_with_or_without_its_recorded_system():
+    # The data sign was read from the caller's geometry alone, while the rest
+    # of the forward geometry was completed from the station's recorded system:
+    # a TEM2Go line given only its moment was fitted with every gate's sign
+    # flipped, at chi-squared ~750 with a blank section, and no error.
+    pytest.importorskip("simpeg")
+    from PyHydroGeophysX.workflows import em1d
+
+    project = str(em1d.example_catalog()["synthetic_tem_lci"]["path"])
+    head = em1d.load_sounding(project, "TDEM", moment="LM+HM")
+    assert head["system"]["response_sign"] == -1.0
+    inversion = {**em1d.preset_inversion("ground_tem"), **head["inversion_defaults"],
+                 "parallel_workers": 1}
+    bare, full = (em1d.invert_line(project, "TDEM", geometry, inversion, max_soundings=9)
+                  for geometry in ({"tem_moment": "LM+HM"},
+                                   {**head["system"], "tem_moment": "LM+HM"}))
+    assert bare["chi2_global"] < 2.0
+    np.testing.assert_allclose(bare["chi2_global"], full["chi2_global"], rtol=1e-6)
+    np.testing.assert_allclose(bare["model3d"], full["model3d"], rtol=1e-6)
+
+
+def test_a_tem_jacobian_and_its_operators_are_what_the_line_needs():
+    pytest.importorskip("simpeg")
+    pytest.importorskip("numba")
+    from PyHydroGeophysX.inversion import em1d as inv1d
+    from PyHydroGeophysX.inversion.em1d_lci import _LANE, _map_soundings, _worker_pool
+    from PyHydroGeophysX.workflows import em1d
+
+    # The compiled response and conductivity Jacobian are SimPEG's dpred and
+    # getJ, without the thickness and permeability gradients getJ also
+    # computes and a line inversion discards.
+    project = str(em1d.example_catalog()["synthetic_tem_lci"]["path"])
+    data = em1d.load_sounding(project, "TDEM", sounding=2, moment="LM+HM")
+    inv = {**em1d.preset_inversion("ground_tem"), **data["inversion_defaults"]}
+    thick = inv1d._layer_thicknesses(int(inv["n_layers"]), float(inv["min_thickness"]),
+                                     float(inv["max_thickness"]))
+    sigma = 1.0 / np.geomspace(5.0, 2000.0, thick.size + 1)
+    for item in inv1d.tdem_moment_blocks(data, {"tem_moment": "LM+HM"}, inv, thick):
+        modeler = inv1d._block_modeler(item)
+        weights = modeler._gate_weights
+        for fast, slow in ((modeler.forward, modeler.simulation.dpred),
+                           (modeler.sensitivity, modeler.simulation.getJ)):
+            reference = np.asarray(slow(sigma))
+            reference = reference if weights is None else weights @ reference
+            np.testing.assert_allclose(fast(sigma), reference,
+                                       atol=1e-8 * np.abs(reference).max())
+
+    # A chunk of soundings keeps its operator cache from one pass to the next;
+    # a cache per thread was rebuilt by every thread for nearly every station.
+    with _worker_pool(4) as pool:
+        passes = [_map_soundings(pool, lambda s: id(_LANE.cache), 12) for _ in range(3)]
+    assert passes[0] == passes[1] == passes[2] and len(set(passes[0])) == 4
+
+
+def test_a_survey_is_mapped_between_its_lines_and_no_further(tmp_path):
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    from PyHydroGeophysX.visualization.basemap import local_basemap_image
+    from PyHydroGeophysX.visualization.em_maps import resistivity_depth_slices
+
+    # Three lines 20 m apart, a sounding every 2 m, a conductor under the
+    # middle line at 5-10 m, the third line not reaching 10-20 m, and nothing
+    # resolved below 20 m.
+    x, y = np.repeat([0.0, 20.0, 40.0], 26), np.tile(np.arange(0.0, 52.0, 2.0), 3)
+    lines = np.repeat([1, 2, 3], 26)
+    edges = np.array([0.0, 2.0, 5.0, 10.0, 20.0, 40.0])
+    models = np.full((x.size, 5), 100.0)
+    models[lines == 2, 2] = 10.0
+    models[:, 3] = 100.0 * 10 ** (0.2 * np.sin(y / 6.0))
+    models[lines == 3, 3] = np.nan
+    models[:, 4] = np.nan
+    grids = resistivity_depth_slices(x, y, models, edges, depths=[7.5, 15.0, 30.0], lines=lines)
+    gx, gy = np.meshgrid(grids["x"], grids["y"])
+
+    def at(px, py, k=0, key="slices", source=None):
+        return (source or grids)[key][k][np.unravel_index(
+            np.argmin((gx - px) ** 2 + (gy - py) ** 2), gx.shape)]
+
+    assert at(20, 25) == pytest.approx(10.0, rel=0.05)
+    assert 10.0 < at(10, 25) < 100.0                         # between lines: kriged
+    assert np.isnan(at(60, 25))                              # 20 m past the outer line
+    assert np.isnan(grids["slices"][2]).all() and grids["soundings_used"][2] == 0
+    # Filled where the third line does not reach 15 m, and less sure there.
+    assert np.isfinite(at(38, 25, k=1))
+    assert at(38, 25, k=1, key="std") > 2 * at(2, 25, k=1, key="std")
+    # The kriging error is small beside a sounding and larger between lines.
+    assert at(20, 24, key="std") < 0.1 < at(10, 25, key="std")
+    assert grids["variograms"][0]["fitted"] and grids["variograms"][2] is None
+    # Asked to, the maps stop short of the gaps between lines.
+    near = resistivity_depth_slices(x, y, models, edges, depths=[7.5], lines=lines,
+                                    max_distance=5.0)
+    assert np.isnan(at(10, 25, source=near)) and np.isfinite(at(20, 25, source=near))
+    # What the agent and the EM page both draw from a line inversion.
+    from PyHydroGeophysX.visualization.em_maps import draw_survey_plan_maps, survey_plan_grids
+    section = {"model3d": models[:, ::-1][:, None, :], "x": x, "y": y, "depth_edges": edges,
+               "line_numbers": lines}
+    drawn = draw_survey_plan_maps(survey_plan_grids(section, basemap="none"), tmp_path,
+                                  unit="ft")
+    assert Path(drawn["map_figure"]).exists() and Path(drawn["map_uncertainty_figure"]).exists()
+    assert any(p.endswith("_std.asc") for p in drawn["map_grids"])
+    with pytest.raises(ValueError, match="one line"):
+        resistivity_depth_slices(np.zeros(5), np.arange(5.0), models[:5], edges)
+
+    # A world-file image in the axes' own coordinates lands where it says.
+    picture = np.zeros((20, 40, 3), dtype=np.uint8)
+    picture[:, :20, 0] = 255                                  # west half red
+    picture[:, 20:, 2] = 255                                  # east half blue
+    Image.fromarray(picture).save(tmp_path / "field.png")
+    (tmp_path / "field.pgw").write_text("2\n0\n0\n-2\n-9\n51\n")   # x -10..70, y 12..52
+    image = local_basemap_image(tmp_path / "field.png", (0.0, 60.0), (20.0, 40.0),
+                                transform=(1.0 + 0j, 0j), target_pixels=60)
+    assert image["image"][5, 5, 0] == 255 and image["image"][5, 55, 2] == 255
+
+
 # --------------------------------------------------------------------------
 # ERT zones, profiles and meshes
 # --------------------------------------------------------------------------
@@ -1078,6 +1193,75 @@ def test_a_seg2_record_keeps_one_clock(tmp_path):
     assert np.allclose(record.time, np.arange(4) * 0.000125)
 
 
+def test_the_shared_picker_keeps_the_origin_trace_and_times_traces_on_a_dc_level():
+    """pick_and_correct, as the seismic workflow and the studio page use it.
+
+    A shot over the geophone at x = 0 is a real position, not missing
+    coordinates (it was moved to x = 3 and 1, a 1.3 ms time between them, and
+    took one line's fit from chi-squared 9 to 14); and a trace that starts on a
+    DC level, where the threshold picker stops at time zero, is picked again
+    along its shot's curve instead of being lost.
+    """
+    from PyHydroGeophysX.data_processing.seismic import (
+        SeismicTraceHeader, pick_and_correct, screen_picks)
+
+    dt, n, xs = 0.0005, 400, np.arange(12.0)
+    arrival = 0.004 + 0.003 * xs
+    rng = np.random.default_rng(3)
+    t = np.arange(n) * dt
+    traces = rng.normal(0.0, 0.01, (n, xs.size))
+    for r, onset in enumerate(arrival):
+        k = int(onset / dt)
+        traces[k:, r] += np.sin(np.arange(n - k) * 0.6)
+    traces[:, [8, 9]] += 3.0 * np.exp(-t / 0.01)[:, None]
+    headers = [SeismicTraceHeader(field_record=1, trace_number=r + 1, energy_source_point=1,
+                                  source_x=0.0, source_y=0.0, source_z=0.0, receiver_x=x,
+                                  receiver_y=0.0, receiver_z=0.0, offset=x)
+               for r, x in enumerate(xs)]
+
+    picks, repicked = pick_and_correct(traces, dt=dt, headers=headers)
+    assert (picks[0].source_x, picks[0].receiver_x) == (0.0, 0.0)
+    assert {p.receiver_x for p in repicked} >= {8.0, 9.0}
+    screen = screen_picks(picks)
+    assert not screen.rejected and not screen.dropped
+    away = [p for p in screen.kept if p.receiver_x > 0]
+    assert np.allclose([p.time_s for p in away], arrival[1:], atol=2 * dt)
+
+
+def test_the_neighbour_check_corrects_the_stray_pick_and_not_its_neighbour():
+    """An off-end shot's far pick 10.5 ms early, inside its own shot's tolerance.
+
+    At the geophone it and the next shot's pick disagree by the same amount
+    either way: the curve finds the conflict, not which pick is wrong, and
+    taken by curve alone the next shot's right pick was the one changed (as
+    on a field line). The shot gathers decide it.
+    """
+    from PyHydroGeophysX.data_processing.seismic import FirstBreakPick, neighbour_shot_check
+
+    dt, n = 0.00025, 400
+    rng = np.random.default_rng(5)
+    picks, columns = [], []
+    for s in range(-4, 13, 2):
+        for r in range(12):
+            if s == r:
+                continue
+            offset = abs(s - r)
+            true = min(offset / 300, 0.008 + offset / 500)
+            k = int(round(true / dt))
+            trace = rng.normal(0.0, 0.01, n)
+            trace[k:] += np.sin(np.arange(n - k) * 0.6)
+            columns.append(trace)
+            picks.append(FirstBreakPick(1, r + 1, true - (0.0105 if (s, r) == (-4, 9) else 0.0),
+                                        float(s), 0.0, float(r), 0.0, s + 10, r + 1,
+                                        len(columns) - 1, 1.0))
+    kept, rejected, repicked = neighbour_shot_check(picks, np.column_stack(columns), dt)
+    assert [(p.source_x, p.receiver_x) for p in repicked] == [(-4.0, 9.0)]
+    assert not rejected
+    time = {(p.source_x, p.receiver_x): p.time_s for p in kept}
+    assert abs(time[(-4.0, 9.0)] - 0.034) <= 2 * dt
+    assert time[(-2.0, 9.0)] == pytest.approx(0.030)
+
+
 # --------------------------------------------------------------------------
 # Inversion inputs: data errors, smoothness, electrodes, comparisons
 # --------------------------------------------------------------------------
@@ -1153,6 +1337,8 @@ def test_adtlert_forward_releases_its_terrain_setup_without_changing_a_solve(mon
 
     ert_inversion._enable_adtlert_float64()  # before adtlert is first imported
     pytest.importorskip("adtlert")
+    if ert_inversion._resolve_ert_engine("adtlert") != "adtlert":
+        pytest.skip("Terrain forward-solve equivalence requires CUDA and cuDSS")
     x = np.linspace(0., 23., 24)
     data = ert.createData(elecs=np.column_stack([x, .6 * np.sin(x / 4.)]), schemeName="dd")
     data["k"], data["rhoa"] = ert.createGeometricFactors(data), np.full(data.size(), 100.)

@@ -25,6 +25,13 @@ Alternatively launch Studio normally and choose **GeoSAGE** in the assistant
 picker. Install the optional plugin into the same environment as Studio; a
 frozen desktop build must include the package when rebuilt.
 
+GeoSAGE uses the host's existing OpenAI/Anthropic API providers and the Codex CLI
+and Claude Code CLI login bridge. Choose the provider in **Assistant → Settings**;
+CLI providers use the same setup and sign-in controls as AQUAH and require no
+copied API key. Both guided chat and automatic interpretation use that provider.
+The CLI bridge currently carries text rather than image input. Local inspection
+and numerical tasks stay offline even if a CLI is already signed in.
+
 Using the workflow
 ------------------
 
@@ -143,7 +150,7 @@ Desktop regression checks
 
 With desktop dependencies and the GeoSAGE plugin installed, run::
 
-   python -m pytest tests/test_agents.py tests/test_geosage_plugin.py tests/test_assistant_desktop_extensions.py tests/test_scientific_sections.py tests/test_saved_result_previews.py tests/test_studio_diagnostics.py
+   python -m pytest tests/test_agents.py tests/test_geosage_plugin.py tests/test_assistant_desktop_extensions.py tests/test_scientific_sections.py tests/test_saved_result_previews.py tests/test_studio_diagnostics.py tests/test_cli_providers.py tests/test_cli_setup.py
 
 The widget tests use Qt's offscreen platform and synthetic temporary inputs.
 Windows native folder dialogs and GPU composition also require an interactive

@@ -8,6 +8,7 @@ adjusting regularization parameters to achieve optimal results.
 import os
 from typing import Any, Dict, List, Optional, Tuple
 
+from ._method_evaluation import chi2_fit_score
 from ._chi2 import chi2_history
 
 import numpy as np
@@ -257,7 +258,7 @@ optimal regularization parameter selection."""
             
             # Get LLM interpretation if available
             interpretation = None
-            if self.api_key:
+            if self.llm_enabled:
                 self._interpret_retained(best_results)
                 interpretation = self._generate_interpretation(best_results, self.history, best_evaluation)
             
@@ -453,23 +454,14 @@ optimal regularization parameter selection."""
         target_chi2 = self.quality_thresholds['chi2_target']
         acceptable_range = self.quality_thresholds['chi2_acceptable_range']
         
-        if acceptable_range[0] <= final_chi2 <= acceptable_range[1]:
-            # Within acceptable range
-            distance = abs(final_chi2 - target_chi2)
-            score = 100 - (distance * 20)  # Penalty for deviation from target
-        elif final_chi2 < acceptable_range[0]:
-            # Low misfit can indicate overfitting or overestimated errors.
-            score = 40 + (final_chi2 / acceptable_range[0]) * 20
-        else:
-            # High misfit: data are not explained within their assigned errors.
-            score = max(0, 60 - (final_chi2 - acceptable_range[1]) * 10)
+        # The rule every method's evaluation scores its fit by (_method_evaluation).
+        score, fit_status = chi2_fit_score(final_chi2, target_chi2, tuple(acceptable_range))
         
         metrics = {
             'final_chi2': float(final_chi2),
             'target_chi2': target_chi2,
             'acceptable_range': acceptable_range,
-            'status': 'good' if acceptable_range[0] <= final_chi2 <= acceptable_range[1] else 
-                     ('overfit' if final_chi2 < acceptable_range[0] else 'underfit')
+            'status': fit_status
         }
         
         return float(np.clip(score, 0, 100)), metrics
@@ -811,7 +803,7 @@ optimal regularization parameter selection."""
         is the interpretation the report prints. A result without the solver's
         own record (a structure-constrained model, say) is left as it is.
         """
-        if not self.api_key or not isinstance(results, dict) or results.get('interpretation'):
+        if not self.llm_enabled or not isinstance(results, dict) or results.get('interpretation'):
             return
         from ._method import IMPLEMENTED_SCHEME
         from .ert_inversion_agent import ERTInversionAgent
@@ -873,7 +865,7 @@ optimal regularization parameter selection."""
     def _generate_interpretation(self, results: Dict[str, Any],
                                 history: List[Dict[str, Any]], best=None) -> str:
         """Generate LLM-powered interpretation of evaluation results."""
-        if not self.api_key:
+        if not self.llm_enabled:
             return None
         
         # Interpret the retained result, which need not be the last attempt.

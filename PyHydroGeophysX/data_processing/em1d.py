@@ -935,7 +935,11 @@ _TEMCOMPANY_CACHE_LIMIT = temcompany_project.SURVEY_CACHE_LIMIT
 
 _TEMCOMPANY_DEFAULTS_CACHE: "OrderedDict[Any, Dict[str, Any]]" = OrderedDict()
 _TEMCOMPANY_SELECTION_CACHE: "OrderedDict[Any, List[Any]]" = OrderedDict()
+_STB_SURVEY_CACHE: "OrderedDict[Any, Dict[str, Any]]" = OrderedDict()
 _TEMCOMPANY_CACHE_LOCK = threading.Lock()
+#: Held while a raw stream is decoded, so the threads of a line read wait for
+#: one decode instead of each running their own.
+_STB_READ_LOCK = threading.Lock()
 
 
 def clear_temcompany_caches() -> None:
@@ -946,7 +950,30 @@ def clear_temcompany_caches() -> None:
     with _TEMCOMPANY_CACHE_LOCK:
         _TEMCOMPANY_DEFAULTS_CACHE.clear()
         _TEMCOMPANY_SELECTION_CACHE.clear()
+        _STB_SURVEY_CACHE.clear()
     temcompany_project.clear_survey_cache()
+
+
+def _stb_survey(folder: Path, settings: "temcompany_stb.ProcessingSettings") -> Dict[str, Any]:
+    """An acquisition folder's station stacks, decoded once per raw stream.
+
+    Every station of a line inversion reads the folder, and a read decoded,
+    filtered and stacked the whole stream again: 1.3 s per station on a
+    575-station TEM2Go day, so the line spent over twelve minutes reading
+    before it inverted anything. Keyed on each stream file's size and
+    modification time, so a stream rewritten between reads is decoded again.
+    """
+    streams = temcompany_stb.find_stb_files(folder)
+    key = (str(Path(folder).resolve()),
+           tuple((str(p), p.stat().st_size, p.stat().st_mtime_ns) for p in streams),
+           repr(settings))
+    with _STB_READ_LOCK:
+        with _TEMCOMPANY_CACHE_LOCK:
+            survey = _STB_SURVEY_CACHE.get(key)
+        if survey is None:
+            survey = _remember(_STB_SURVEY_CACHE, key,
+                               temcompany_stb.read_acquisition_folder(folder, settings))
+    return survey
 
 
 def _remember(cache: "OrderedDict[Any, Any]", key: Any, value: Any) -> Any:
@@ -1793,7 +1820,7 @@ def _load_temcompany_stb(folder: Path, sounding: int, moment: str,
     falls to the arguments given here.
     """
     settings = temcompany_stb.ProcessingSettings()
-    survey = temcompany_stb.read_acquisition_folder(folder, settings)
+    survey = _stb_survey(folder, settings)
     spec = temcompany_stb.legacy_spec(survey["protocol"])
     uniform_error = _temcompany_uniform_error(survey["protocol"])
     selected = _normalise_temcompany_moment(moment)

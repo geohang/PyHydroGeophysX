@@ -123,7 +123,7 @@ constraints, structural constraints, and convergence criteria."""
             self._log_execution(f"ERT data exported to: {data_file}")
             
             # Get LLM recommendations for inversion parameters if API is available
-            if self.api_key and not inversion_params:
+            if self.llm_enabled and not inversion_params:
                 self._log_execution("Requesting LLM recommendations for inversion parameters")
                 inversion_params = self._get_recommended_params(ert_data)
             
@@ -192,7 +192,7 @@ constraints, structural constraints, and convergence criteria."""
             
             # Get LLM interpretation of results
             interpretation = None
-            if self.api_key and input_data.get('interpret', True):
+            if self.llm_enabled and input_data.get('interpret', True):
                 self._log_execution("Generating interpretation of results")
                 interpretation = self._interpret_results(inversion_result, inversion_params)
             
@@ -542,7 +542,7 @@ Provide a brief interpretation (2-3 sentences) about:
             
             # Get LLM interpretation of time-lapse results
             interpretation = None
-            if self.api_key and input_data.get('interpret', True):
+            if self.llm_enabled and input_data.get('interpret', True):
                 self._log_execution("Generating interpretation of time-lapse results")
                 interpretation = self._interpret_time_lapse_results(tl_result, tl_method)
             

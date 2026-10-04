@@ -310,11 +310,114 @@ def basemap_image(x_limits: Sequence[float], y_limits: Sequence[float], *,
     }
 
 
+#: World-file suffixes by image suffix (ESRI convention, plus the generic .wld).
+_WORLD_FILES = {".png": (".pgw", ".pngw"), ".jpg": (".jgw", ".jpgw"),
+                ".jpeg": (".jgw", ".jpegw"), ".tif": (".tfw", ".tifw"),
+                ".tiff": (".tfw", ".tiffw"), ".gif": (".gfw",)}
+
+
+def world_file(image: Any) -> Optional[Path]:
+    """The world file beside ``image`` (``.pgw`` for a PNG, ``.jgw`` for a JPEG, ...), or None."""
+    image = Path(image)
+    for suffix in (*_WORLD_FILES.get(image.suffix.lower(), ()), ".wld"):
+        for candidate in (image.with_suffix(suffix), image.with_suffix(suffix.upper())):
+            if candidate.is_file():
+                return candidate
+    return None
+
+
+def find_world_file_images(*folders: Any) -> "list[Path]":
+    """Georeferenced images (an image beside its world file) in ``folders`` and their ``Maps``.
+
+    A TEM2Go controller keeps the satellite image it showed in the field under
+    the survey's ``Maps`` folder, as a PNG with a ``.pgw`` world file; that is
+    a basemap on disk, with no tile server and no network.
+    """
+    found = []
+    for folder in folders:
+        if not folder:
+            continue
+        folder = Path(folder)
+        for place in (folder, folder / "Maps", folder / "maps"):
+            if not place.is_dir():
+                continue
+            for image in sorted(place.iterdir()):
+                if (image.suffix.lower() in _WORLD_FILES and image.is_file()
+                        and world_file(image) and image not in found):
+                    found.append(image)
+    return found
+
+
+def local_basemap_image(path: Any, x_limits: Sequence[float], y_limits: Sequence[float], *,
+                        transform: "Tuple[complex, complex]",
+                        target_pixels: int = 900) -> Optional[Dict[str, Any]]:
+    """A georeferenced image on disk, warped onto a projected-metre axes like :func:`basemap_image`.
+
+    The world file's coordinates are taken as Web Mercator when they cover the
+    axes' extent carried there by ``transform`` (from :func:`fit_local_transform`),
+    and as the axes' own coordinates when they cover the extent directly. An
+    image that covers neither is not this survey's, and None is returned, as it
+    is for an unreadable file.
+    """
+    image_path = Path(path)
+    world = world_file(image_path)
+    if world is None:
+        return None
+    try:
+        a_x, d_y, b_x, e_y, c_x, f_y = (float(v) for v in world.read_text().split()[:6])
+        from PIL import Image
+
+        with Image.open(image_path) as handle:
+            rgb = np.asarray(handle.convert("RGB"))
+    except (OSError, ValueError, ImportError):
+        return None
+    if d_y or b_x or not (a_x and e_y):
+        return None                                  # a rotated world file
+    rows, cols = rgb.shape[0], rgb.shape[1]
+    # World-file coordinates are those of the first pixel's centre.
+    west, north = c_x - 0.5 * a_x, f_y - 0.5 * e_y
+    east, south = west + a_x * cols, north + e_y * rows
+    x_min, x_max = float(min(x_limits)), float(max(x_limits))
+    y_min, y_max = float(min(y_limits)), float(max(y_limits))
+    if not (x_max > x_min and y_max > y_min):
+        return None
+    a, b = transform
+    corners = np.array([x_min + 1j * y_min, x_max + 1j * y_max])
+
+    def covers(points) -> bool:
+        return bool(np.all((points.real >= min(west, east)) & (points.real <= max(west, east))
+                           & (points.imag >= min(south, north)) & (points.imag <= max(south, north))))
+
+    if covers(a * corners + b):
+        to_image = lambda grid: a * grid + b         # noqa: E731 - Web Mercator image
+    elif covers(corners):
+        to_image = lambda grid: grid                 # noqa: E731 - already in axes units
+    else:
+        return None
+    height = int(min(target_pixels, max(64, round(
+        target_pixels * (y_max - y_min) / (x_max - x_min)))))
+    xs = np.linspace(x_min, x_max, int(target_pixels))
+    ys = np.linspace(y_max, y_min, height)
+    target = to_image(xs[None, :] + 1j * ys[:, None])
+    col = np.clip(((target.real - west) / (east - west) * cols).astype(int), 0, cols - 1)
+    row = np.clip(((target.imag - north) / (south - north) * rows).astype(int), 0, rows - 1)
+    return {
+        "image": rgb[row, col],
+        "extent": (x_min, x_max, y_min, y_max),
+        "attribution": f"Basemap: {image_path.name}",
+        "zoom": None,
+        "source": str(image_path),
+    }
+
+
 __all__ = [
     "TILE_SOURCES",
     "basemap_image",
     "default_cache_dir",
     "fetch_mosaic",
+    "find_world_file_images",
+    "world_file",
     "fit_local_transform",
+    "local_basemap_image",
     "web_mercator",
 ]

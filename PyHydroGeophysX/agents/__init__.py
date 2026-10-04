@@ -28,6 +28,7 @@ _LAZY_IMPORTS = {
     "StructureConstraintAgent": ".structure_constraint_agent",
     "PetrophysicsAgent": ".petrophysics_agent",
     "TDEMAgent": ".tdem_agent",
+    "GravMagAgent": ".gravmag_agent",
     "ModelOutputAgent": ".model_output_agent",
 }
 

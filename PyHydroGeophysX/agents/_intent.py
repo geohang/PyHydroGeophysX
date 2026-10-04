@@ -38,7 +38,7 @@ import contextvars
 import re
 from concurrent.futures import ThreadPoolExecutor
 from difflib import SequenceMatcher
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 # Models wrap JSON in prose or a code fence often enough that requiring a bare
 # object would throw away good answers.
@@ -189,10 +189,78 @@ def names_tdem(text: str) -> bool:
     True
     >>> names_tdem("ERT only, not TDEM; check the system temperature")
     False
+    >>> names_tdem("处理TEM2Go数据"), names_tdem("瞬变电磁数据反演")
+    (True, True)
     """
     return (names_unnegated(text, "tdem") or names_unnegated(text, "tem")
+            # The instruments by name: "TEM2Go" is not the word "TEM".
+            or names_unnegated(text, "tem2go") or names_unnegated(text, "ttem")
+            or names_unnegated(text, "瞬变电磁")
             or names_unnegated(text, "time-domain electromagnetic", prefix=True)
             or names_unnegated(text, "transient electromagnetic", prefix=True))
+
+
+def names_gravmag(text: str) -> Optional[str]:
+    """``'gravity'``, ``'magnetics'`` or None: the potential field a request asks for.
+
+    None also when it names both, since a run takes one station file and the
+    file's own header then decides. "Magnetotelluric" and "electromagnetic" are
+    not magnetics.
+
+    Examples
+    --------
+    >>> names_gravmag("invert the Bouguer gravity anomaly in stations.csv")
+    'gravity'
+    >>> names_gravmag("process the aeromagnetic survey")
+    'magnetics'
+    >>> names_gravmag("invert the magnetotelluric sites and the electromagnetic sounding") is None
+    True
+    >>> names_gravmag("重力数据反演"), names_gravmag("航磁数据处理")
+    ('gravity', 'magnetics')
+    """
+    gravity = (any(names_unnegated(text, term, prefix=True)
+                   for term in ("gravity", "gravimetr", "bouguer"))
+               or names_unnegated(text, "重力"))
+    magnetic = (any(names_unnegated(text, term, prefix=True)
+                    for term in ("magnetic", "aeromagnetic", "magnetometer"))
+                or any(names_unnegated(text, term) for term in ("磁法", "磁测", "航磁", "磁异常")))
+    if gravity == magnetic:
+        return None
+    return "gravity" if gravity else "magnetics"
+
+
+#: Words that ask for the survey in plan view rather than along its lines.
+_SPATIAL_TERMS = ("spatial", "plan view", "plan-view", "map view", "depth slice", "depth-slice",
+                  "horizontal slice", "lateral distribution", "distribution map")
+_SPATIAL_TERMS_ZH = ("空间分布", "空间", "平面", "地图", "切片", "分布图", "展布")
+
+
+def wants_spatial_map(config: Any) -> bool:
+    """Whether the request asks for the spatial (plan-view) distribution of a property.
+
+    ``config`` is the workflow configuration, read for ``user_request`` and an
+    explicit ``spatial_maps``, or the request text itself.
+
+    Examples
+    --------
+    >>> wants_spatial_map("help me process the TEM2go data and give me spatial resistivity")
+    True
+    >>> wants_spatial_map("给出电阻率的空间分布"), wants_spatial_map("plot depth slices on a map")
+    (True, True)
+    >>> wants_spatial_map("invert the line and show the section")
+    False
+    >>> wants_spatial_map({"user_request": "invert it", "spatial_maps": True})
+    True
+    """
+    if isinstance(config, Mapping):
+        if config.get("spatial_maps") is not None:
+            return bool(config.get("spatial_maps"))
+        text = str(config.get("user_request") or config.get("request") or "")
+    else:
+        text = str(config or "")
+    return (any(names_unnegated(text, term, prefix=True) for term in _SPATIAL_TERMS)
+            or names_unnegated(text, "map") or names_unnegated(text, "maps")
+            or any(names_unnegated(text, term) for term in _SPATIAL_TERMS_ZH))
 
 
 #: "mt" or "amt" in any case but the upper one: "Mt." is a mountain, "MT" the method.
@@ -476,7 +544,8 @@ def climate_blocker(config: Dict[str, Any]) -> Optional[str]:
 
 
 #: What each product a request can name is called in a report.
-PRODUCTS = {"water_content": "Water content", "climate": "Meteorological data"}
+PRODUCTS = {"water_content": "Water content", "climate": "Meteorological data",
+            "spatial_map": "Plan-view maps"}
 
 
 def unmet_products(config: Dict[str, Any], results: Dict[str, Any],
@@ -508,6 +577,10 @@ def unmet_products(config: Dict[str, Any], results: Dict[str, Any],
             missing.append(("water_content", why.get("water_content")))
     if wants_climate(config) and not results.get("climate_data"):
         missing.append(("climate", why.get("climate") or climate_blocker(config)))
+    # Asked of a sounding survey only: an ERT line answers "spatial" with its
+    # section, and would otherwise be reported short of a map it never drew.
+    if results.get("survey") and wants_spatial_map(config) and not results.get("map_figure"):
+        missing.append(("spatial_map", why.get("spatial_map")))
     return missing
 
 
@@ -556,6 +629,9 @@ def unmet_requests(config: Dict[str, Any], results: Dict[str, Any],
         if product == "water_content":
             sentences.append("Water content was requested but this run produced none"
                              + (f": {reason}." if reason else "."))
+        elif product == "spatial_map":
+            sentences.append("Plan-view maps of the spatial distribution were requested but "
+                             "none were drawn" + (f": {reason}." if reason else "."))
         else:
             sentences.append("Meteorological data were requested but none were "
                              "retrieved" + (f" ({reason})." if reason else "."))

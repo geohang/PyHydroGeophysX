@@ -1857,7 +1857,9 @@ class ERTProcessingModule(BaseModule):
                 xs = [x_by_id.get(int(i), np.nan) for i in ids]
                 if np.isfinite(xs).all():
                     span = float(np.max(xs) - np.min(xs))
-                    pseudo.append((float(np.mean(xs)), max(span * 0.19, 0.01), float(obs.app_res)))
+                    pseudo.append((float(np.mean(xs)),
+                                   max(span * ert_load.PSEUDO_DEPTH_FACTOR, 0.01),
+                                   float(obs.app_res)))
         return elec, pseudo, len(std.observations or []), data, note, self._reader_of(std)
 
     @staticmethod
@@ -1934,30 +1936,11 @@ class ERTProcessingModule(BaseModule):
 
     @staticmethod
     def _build_pseudo_from_indices(x, a, b, m, n, rhoa) -> List[Tuple[float, float, float]]:
-        nx = len(x)
-        if len(a):
-            allidx = np.concatenate([a, b, m, n])
-            if allidx.min() >= 1 and allidx.max() >= nx:  # 1-based indices
-                a, b, m, n = a - 1, b - 1, m - 1, n - 1
-        pseudo: List[Tuple[float, float, float]] = []
-        for i in range(len(a)):
-            ids = [a[i], b[i], m[i], n[i]]
-            if min(ids) < 0 or max(ids) >= nx:
-                continue
-            xs = x[ids]
-            span = float(np.max(xs) - np.min(xs))
-            pseudo.append((float(np.mean(xs)), max(span * 0.19, 0.01), float(rhoa[i])))
-        return pseudo
+        # Placed as the workflow's raw-data figure places them (ert_io).
+        return [tuple(row) for row in ert_load.pseudosection_points(x, a, b, m, n, rhoa).tolist()]
 
     def _pseudo_from_data(self, data) -> List[Tuple[float, float, float]]:
-        pos = np.asarray(data.sensors(), dtype=float)
-        x = pos[:, 0]
-        a = np.asarray(data["a"], dtype=int)
-        b = np.asarray(data["b"], dtype=int)
-        m = np.asarray(data["m"], dtype=int)
-        nn = np.asarray(data["n"], dtype=int)
-        rhoa = np.asarray(data["rhoa"], dtype=float) if data.haveData("rhoa") else np.full(data.size(), np.nan)
-        return self._build_pseudo_from_indices(x, a, b, m, nn, rhoa)
+        return [tuple(row) for row in ert_load.container_pseudosection(data).tolist()]
 
     @staticmethod
     def _reciprocal_error(data) -> Optional[np.ndarray]:

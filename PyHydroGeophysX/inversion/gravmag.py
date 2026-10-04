@@ -203,7 +203,8 @@ def invert_gravmag(x, y, value, kind: str, *, z: Optional[np.ndarray] = None,
         return _gravmag_payload(
             kind, mesh, mrec, nx, ny, nz, ox, oy, oz, csx, csy, csz,
             m_label, m_cmap, chi2, value.size, n_input, relative_error,
-            noise_floor, convergence, beta_report, out_dir)
+            noise_floor, convergence, beta_report, out_dir,
+            fit=_station_fit(sim, mrec, x, y, value, std))
 
     invprob = inverse_problem.BaseInvProblem(dmis, reg, opt)
     # ``on_disk`` was added in newer SimPEG releases. ``save_txt=False`` keeps
@@ -225,12 +226,29 @@ def invert_gravmag(x, y, value, kind: str, *, z: Optional[np.ndarray] = None,
     return _gravmag_payload(
         kind, mesh, mrec, nx, ny, nz, ox, oy, oz, csx, csy, csz,
         m_label, m_cmap, chi2, value.size, n_input, relative_error,
-        noise_floor, convergence, beta_report, out_dir)
+        noise_floor, convergence, beta_report, out_dir,
+        fit=_station_fit(sim, mrec, x, y, value, std))
+
+
+def _station_fit(sim, model, x, y, value, std) -> Dict[str, Any]:
+    """The inverted stations, their data and the model's prediction there.
+
+    What the model was asked to explain, beside what it gives back, for an
+    evaluation of the fit: the residual anomaly after the regional trend, at
+    the stations the inversion used. Empty when the prediction fails.
+    """
+    try:
+        predicted = np.asarray(sim.dpred(model), dtype=float).ravel()
+    except Exception:  # noqa: BLE001 - the fit is a diagnostic, not the result
+        return {}
+    return {"x": np.asarray(x, float), "y": np.asarray(y, float),
+            "observed": np.asarray(value, float), "predicted": predicted,
+            "std": np.asarray(std, float)}
 
 
 def _gravmag_payload(kind, mesh, mrec, nx, ny, nz, ox, oy, oz, csx, csy, csz,
                      m_label, m_cmap, chi2, n_data, n_input, relative_error,
-                     noise_floor, convergence, beta_report, out_dir):
+                     noise_floor, convergence, beta_report, out_dir, fit=None):
     """Shared result shape for both the SimPEG and the linear solver paths."""
     model3d = mrec.reshape((nx, ny, nz), order="F")
     ex = ox + csx * np.arange(nx + 1)
@@ -244,6 +262,7 @@ def _gravmag_payload(kind, mesh, mrec, nx, ny, nz, ox, oy, oz, csx, csy, csz,
         "noise_floor": float(noise_floor), "convergence": convergence,
         "model_range": [float(np.nanmin(mrec)), float(np.nanmax(mrec))],
         "beta": beta_report,
+        "fit": dict(fit or {}),
     }
     if out_dir:
         base = table_io.ensure_dir(Path(out_dir) / "gravmag_inversion")

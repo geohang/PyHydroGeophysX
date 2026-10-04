@@ -18,6 +18,7 @@ from PyHydroGeophysX.forward.em1d import (
     _tdem_geometry,
     model_depth_profile,
 )
+from PyHydroGeophysX.inversion.em1d_lci import _LANE
 
 LogFn = Callable[[str], None]
 
@@ -190,6 +191,16 @@ INVERSION_PRESETS: Dict[str, Dict[str, Any]] = {
         # of the model, which is the metric running out rather than the data.
         "doi_threshold": 6.0,
         "auto_starting_model": True,
+        # The coupled solve stops once an accepted step lowers the objective by
+        # less than this fraction. At the general 1e-4 the last half of the
+        # iterations moved the global chi-squared from 1.045 to 1.013 on a
+        # 627-station TEM2Go survey. Measured on four TEM2Go surveys (140 to
+        # 1,013 stations), 1e-3 took 22 to 40 % less time, raised chi-squared
+        # by 0.1 to 1.8 %, left every depth of investigation where it was, and
+        # moved 0.5 to 1.4 % of cells by more than 25 %; its median difference
+        # from TEMcompany's own inversion of the same surveys stayed within
+        # 0.003 decades of what 1e-4 gives (0.13 to 0.26 decades).
+        "lci_ftol": 1e-3,
     },
 }
 
@@ -651,7 +662,10 @@ def _occam_with_optional_rejection(
 #: ``getJ`` on one instance corrupt the state it caches. Keeping the instances in
 #: thread-local storage gives one per worker rather than one per station, which
 #: is the saving without the race: on a 600-station line that is around ten
-#: warm-ups instead of twelve hundred.
+#: warm-ups instead of twelve hundred. Inside a worker pool the cache is the
+#: lane's instead (:data:`~PyHydroGeophysX.inversion.em1d_lci._LANE`), which
+#: also runs on one thread at a time and, unlike the thread, keeps the same
+#: stations from one pass to the next.
 _MODELER_CACHE = threading.local()
 
 #: How many distinct surveys one thread keeps warm. A joint LM+HM run needs two
@@ -752,7 +766,9 @@ def _thread_local_modeler(thick: np.ndarray, geometry: Dict[str, Any],
     except Exception as exc:  # noqa: BLE001
         raise BackendUnavailable(str(exc))
     config = _tdem_config(geometry, model_times)
-    cache = getattr(_MODELER_CACHE, "items", None)
+    cache = getattr(_LANE, "cache", None)
+    if cache is None:
+        cache = getattr(_MODELER_CACHE, "items", None)
     if cache is None:
         cache = _MODELER_CACHE.items = {}
     key = _modeler_key(thick, config)
@@ -786,7 +802,6 @@ def tdem_moment_blocks(data: Dict[str, Any], geom: Dict[str, Any],
     min_rel = float(inv.get("min_rel_error", 0.0))
     max_rel = inv.get("max_rel_error")
     max_rel = float(max_rel) if max_rel is not None else None
-    sign = float(geom.get("response_sign", 1.0))
     moments = dict(data.get("moments", {}))
     items = ([(name, dict(moments[name])) for name in ("LM", "HM") if name in moments]
              or [("TDEM", dict(data))])
@@ -800,6 +815,12 @@ def tdem_moment_blocks(data: Dict[str, Any], geom: Dict[str, Any],
         # The turn-off ramp and the gate windows belong to the moment, not to
         # the station, so the geometry a block needs is the moment's.
         geometry = _tdem_geometry(data, geom, item.get("transmitter"))
+        # The sign is the instrument's, like the rest of the geometry. It was
+        # read from ``geom`` alone, so a caller passing only the moment - which
+        # the forward completes from ``data["system"]`` - had every TEM2Go gate
+        # (``response_sign`` -1) fitted with the wrong sign: chi-squared in the
+        # hundreds, no depth of investigation, a blank section, no error.
+        sign = float(geometry.get("response_sign", 1.0))
         # Model every gate the instrument records, not just the ones this station
         # kept, and select afterwards. The forward operator then depends on the
         # moment and the layer grid alone, so a line re-uses one warmed-up
@@ -855,6 +876,30 @@ def _moment_forward(blocks: List[Dict[str, Any]]) -> Callable[[np.ndarray], np.n
             for item in blocks
         ])
     return forward_vec
+
+
+#: The layer grid of a half-space: no layers above it.
+_HALF_SPACE = np.zeros(0)
+
+
+def _moment_halfspace(blocks: List[Dict[str, Any]]) -> Callable[[float], np.ndarray]:
+    """Predicted response of a half-space of conductivity ``sigma``, as ``_moment_forward``.
+
+    A uniform model on the inversion's layer grid is a half-space, and the
+    starting-model scan evaluates twelve of them per station through the full
+    twenty-layer recursion. One layer gives the same response, to rounding, for
+    a twentieth of the reflection-coefficient work; on a 627-station TEM2Go
+    survey the scan took 22 s that way.
+    """
+    def forward_halfspace(sigma: float) -> np.ndarray:
+        return np.concatenate([
+            item["sign"] * np.asarray(
+                _thread_local_modeler(_HALF_SPACE, item["geometry"], item["model_times"])
+                .forward(np.array([float(sigma)])), dtype=float).ravel()[
+                    : item["model_times"].size][item["channel_indices"]]
+            for item in blocks
+        ])
+    return forward_halfspace
 
 
 def _moment_jacobian(blocks: List[Dict[str, Any]]) -> Callable[[np.ndarray], np.ndarray]:
@@ -932,6 +977,7 @@ def build_sounding_block(data: Dict[str, Any], geom: Dict[str, Any],
     from PyHydroGeophysX.inversion.em1d_lci import SoundingBlock
 
     thick = _inversion_layer_thicknesses(inv)
+    halfspace = None
     if str(method).upper() == "FDEM":
         observed, uncertainty, forward_vec, jacobian, _, _ = _fdem_pieces(
             data, geom, inv, thick)
@@ -941,12 +987,14 @@ def build_sounding_block(data: Dict[str, Any], geom: Dict[str, Any],
         uncertainty = np.concatenate([item["uncertainty"] for item in blocks])
         forward_vec = _moment_forward(blocks)
         jacobian = _moment_jacobian(blocks)
+        halfspace = _moment_halfspace(blocks)
     from .em1d_priors import shallow_prior_terms
     prior_lower, prior_weights = shallow_prior_terms(inv, thick)
     return SoundingBlock(
         forward=forward_vec, jacobian=jacobian, dobs=observed,
         uncertainty=uncertainty, position=float(position), line=int(line),
-        label=str(label), prior_lower=prior_lower, prior_weights=prior_weights)
+        label=str(label), prior_lower=prior_lower, prior_weights=prior_weights,
+        halfspace=halfspace)
 
 
 def fdem_invert(data: Dict[str, Any], geom: Dict[str, Any], inv: Dict[str, Any],

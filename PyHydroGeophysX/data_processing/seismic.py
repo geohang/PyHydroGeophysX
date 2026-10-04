@@ -15,16 +15,21 @@ import math
 import struct
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple
 
 import numpy as np
 
 
 @dataclass
 class SegyMetadata:
-    """Summary metadata from a SEG-Y file."""
+    """Summary metadata from a SEG-Y file.
 
-    sample_interval_us: int
+    ``sample_interval_us`` is the header's whole number of microseconds unless
+    a truer value was given (:func:`read_segy`'s ``sample_interval_s``), which
+    can be fractional: 31.25 for a 32 kHz record.
+    """
+
+    sample_interval_us: float
     samples_per_trace: int
     format_code: int
     trace_count: int
@@ -847,6 +852,7 @@ def read_segy(
     max_traces: Optional[int] = None,
     load_traces: bool = True,
     prefer_obspy: bool = True,
+    sample_interval_s: Optional[float] = None,
 ) -> SeismicDataset:
     """Read a SEG-Y file into traces, headers, and metadata.
 
@@ -864,6 +870,11 @@ def read_segy(
         If False, parse headers but skip sample arrays (built-in reader only).
     prefer_obspy : bool, optional
         When True (default), try ObsPy if ``segyio`` is unavailable or fails.
+    sample_interval_s : float, optional
+        The sample interval to use instead of the header's. SEG-Y keeps it in
+        whole microseconds, so a 32 kHz record is written as 31 us and every
+        time read with it is 0.8% short; :func:`record_sample_interval` finds
+        the true value in an acquisition record kept beside the file.
 
     Returns
     -------
@@ -871,18 +882,19 @@ def read_segy(
         Parsed seismic dataset.
     """
 
+    dataset = None
     if load_traces:
         # 1) segyio: broadest, most reliable coverage when installed.
         try:
-            return _read_segy_segyio(file, max_traces=max_traces)
+            dataset = _read_segy_segyio(file, max_traces=max_traces)
         except ImportError:
             pass
         except Exception:
             pass
         # 2) ObsPy: broader format support than the built-in reader.
-        if prefer_obspy:
+        if dataset is None and prefer_obspy:
             try:
-                return _read_segy_obspy(file, max_traces=max_traces)
+                dataset = _read_segy_obspy(file, max_traces=max_traces)
             except ImportError:
                 pass
             except Exception:
@@ -890,7 +902,89 @@ def read_segy(
                 # other classic big-endian SEG-Y files.
                 pass
     # 3) Built-in conservative big-endian reader (no third-party deps).
-    return _read_segy_builtin(file, max_traces=max_traces, load_traces=load_traces)
+    if dataset is None:
+        dataset = _read_segy_builtin(file, max_traces=max_traces, load_traces=load_traces)
+    if sample_interval_s:
+        set_sample_interval(dataset, sample_interval_s)
+    return dataset
+
+
+def set_sample_interval(dataset: SeismicDataset, sample_interval_s: float) -> SeismicDataset:
+    """Give ``dataset`` the sample interval ``sample_interval_s``: its time axis and metadata."""
+    dataset.time = np.arange(dataset.time.size, dtype=float) * float(sample_interval_s)
+    dataset.metadata.sample_interval_us = round(float(sample_interval_s) * 1e6, 6)
+    return dataset
+
+
+def record_sample_interval(segy_file: str) -> Optional[float]:
+    """The sample interval, in seconds, that an acquisition record beside a SEG-Y file states.
+
+    The record is ``<stem>_record.txt`` beside the file, else the one
+    ``*record*.txt`` in its folder - the shot log a seismograph writes with
+    its export. Read from a line such as ``Sample interval: 31.25 us`` (us,
+    µs or ms), else from ``Record length: 128 ms (4096 samples)``. None
+    without a record or either line.
+
+    >>> import tempfile, os
+    >>> folder = tempfile.mkdtemp()
+    >>> _ = open(os.path.join(folder, "L1_record.txt"), "w").write(
+    ...     "Record length: 128 ms (4096 samples)\\nSample interval: 31.25 us\\n")
+    >>> record_sample_interval(os.path.join(folder, "L1.sgy"))
+    3.125e-05
+    """
+    import re
+
+    path = Path(segy_file)
+    candidates = [path.with_name(f"{path.stem}_record.txt")]
+    others = sorted(p for p in path.parent.glob("*record*.txt") if p not in candidates)
+    if len(others) == 1:
+        candidates += others
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+        try:
+            text = candidate.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        match = re.search(r"sample\s*interval\s*[:=]?\s*([0-9.]+)\s*(us|µs|μs|ms)\b", text, re.I)
+        if match:
+            value = float(match.group(1))
+            return value * (1e-3 if match.group(2).lower() == "ms" else 1e-6)
+        match = re.search(r"record\s*length\s*[:=]?\s*([0-9.]+)\s*ms\s*\(\s*(\d+)\s*samples", text, re.I)
+        if match and int(match.group(2)) > 0:
+            return float(match.group(1)) * 1e-3 / int(match.group(2))
+    return None
+
+
+def apply_record_interval(dataset: SeismicDataset, segy_file: str,
+                          tolerance: float = 0.05) -> Optional[str]:
+    """Use the sample interval the acquisition record states, when the header rounded it.
+
+    SEG-Y keeps the interval in whole microseconds: a 32 kHz record's 31.25 us
+    is written 31, and every time read with it comes out 0.8% short - every
+    velocity 0.8% too high. A record beside the file
+    (:func:`record_sample_interval`) that states an interval within
+    ``tolerance`` of the header's is the truer value and is given to
+    ``dataset``; one that disagrees by more describes something else, and the
+    header's is kept.
+
+    Returns a sentence saying which was used and why, or None when there is no
+    record or the two agree.
+    """
+    stated = record_sample_interval(segy_file)
+    header = dataset.metadata.sample_interval_s
+    if not stated or header <= 0 or abs(stated - header) <= 1e-9 * stated:
+        return None
+    if abs(stated - header) / stated < tolerance:
+        set_sample_interval(dataset, stated)
+        return (f"The SEG-Y header gives the sample interval as {header * 1e6:g} us, in "
+                f"whole microseconds; the acquisition record beside it gives "
+                f"{stated * 1e6:g} us, which was used. With the header's value every time "
+                f"would be {100 * abs(stated - header) / stated:.1f}% "
+                f"{'short' if header < stated else 'long'}, and every velocity as much off.")
+    return (f"The acquisition record beside the SEG-Y file gives a sample interval of "
+            f"{stated * 1e6:g} us, the header {header * 1e6:g} us - more than rounding "
+            f"apart, so the header's value was kept.")
 
 
 def _read_u2_le(buffer: bytes, start: int) -> int:
@@ -1311,7 +1405,15 @@ def _as_dataset_and_headers(
     return arr, time, list(headers), np.arange(arr.shape[1])
 
 
-def _fallback_pick_geometry(header: SeismicTraceHeader) -> Tuple[float, float, float, float]:
+def _fallback_pick_geometry(header: SeismicTraceHeader,
+                            has_geometry: bool = False) -> Tuple[float, float, float, float]:
+    """A trace's source and receiver positions, from its header or, failing that, its ids.
+
+    Both x at zero means no coordinates were written - unless other traces of
+    the file have them (``has_geometry``): then it is a shot standing over
+    the geophone at the origin, and replacing it with the ids would move that
+    trace to another place entirely.
+    """
     source_id = header.energy_source_point or header.field_record or 1
     receiver_id = header.trace_number or 1
 
@@ -1322,13 +1424,36 @@ def _fallback_pick_geometry(header: SeismicTraceHeader) -> Tuple[float, float, f
     if not np.isfinite(receiver_x):
         receiver_x = float(receiver_id)
 
-    if source_x == 0.0 and receiver_x == 0.0:
+    if source_x == 0.0 and receiver_x == 0.0 and not has_geometry:
         source_x = float(source_id)
         receiver_x = float(receiver_id)
     elif receiver_x == source_x and header.offset:
         receiver_x = source_x + float(header.offset)
 
     return float(source_x), float(header.source_z), float(receiver_x), float(header.receiver_z)
+
+
+def _aic_minimum(segment: np.ndarray) -> int:
+    """Where ``segment`` splits best into a quiet part and a loud one (Maeda, 1985).
+
+    ``AIC(k) = k log var(x[:k]) + (n - k - 1) log var(x[k:])``, evaluated for
+    every ``k`` from running sums; its minimum is the onset.
+    """
+    x = np.asarray(segment, dtype=float)
+    n = x.size
+    if n < 6:
+        return n // 2
+    k = np.arange(2, n - 2)
+    c1, c2 = np.cumsum(x), np.cumsum(x * x)
+    left_mean, left_sq = c1[k - 1] / k, c2[k - 1] / k
+    right_n = n - k
+    right_mean = (c1[-1] - c1[k - 1]) / right_n
+    right_sq = (c2[-1] - c2[k - 1]) / right_n
+    floor = 1e-12 * max(float(np.mean(x * x)), 1e-300)
+    left_var = np.maximum(left_sq - left_mean ** 2, floor)
+    right_var = np.maximum(right_sq - right_mean ** 2, floor)
+    aic = k * np.log(left_var) + (right_n - 1) * np.log(right_var)
+    return int(k[np.argmin(aic)])
 
 
 def pick_first_breaks(
@@ -1344,7 +1469,8 @@ def pick_first_breaks(
     """Pick first arrivals using a simple amplitude/noise threshold.
 
     This assisted picker is intended as a starting point for GUI review rather
-    than a final scientific picking algorithm.
+    than a final scientific picking algorithm; :func:`repick_against_curve`
+    and :func:`monotonic_pick_check` correct and screen what it picks.
     """
 
     traces, time, trace_headers, trace_indices = _as_dataset_and_headers(data, headers=headers, dt=dt)
@@ -1359,6 +1485,10 @@ def pick_first_breaks(
     # Noise window must lie entirely before the 'start' sample so that actual
     # first arrivals do not contaminate the noise estimate.
     noise_stop = max(2, min(start, int(max(1, 0.05 * len(time)))))
+    # Whether the headers carry coordinates at all, decided over every trace.
+    has_geometry = any((np.isfinite(h.source_x) and h.source_x != 0.0)
+                       or (np.isfinite(h.receiver_x) and h.receiver_x != 0.0)
+                       for h in trace_headers)
 
     for itrace, header in enumerate(trace_headers):
         trace = np.asarray(traces[:, itrace], dtype=float) * float(polarity)
@@ -1378,7 +1508,7 @@ def pick_first_breaks(
             pick_time = float(time[idx])
             amplitude = float(trace[idx])
 
-        source_x, source_z, receiver_x, receiver_z = _fallback_pick_geometry(header)
+        source_x, source_z, receiver_x, receiver_z = _fallback_pick_geometry(header, has_geometry)
         picks.append(
             FirstBreakPick(
                 source_id=int(header.energy_source_point or header.field_record or 1),
@@ -1518,6 +1648,534 @@ def first_breaks_to_traveltime(
     return str(path)
 
 
+def _median_isotonic(values: np.ndarray) -> np.ndarray:
+    """The non-decreasing sequence closest to ``values`` in absolute deviation.
+
+    Pool-adjacent-violators with block medians, so one wild value moves the
+    fit much less than a least-squares fit would let it.
+    """
+    blocks: List[List[float]] = []
+    for value in values:
+        blocks.append([float(value)])
+        while len(blocks) > 1 and np.median(blocks[-2]) > np.median(blocks[-1]):
+            last = blocks.pop()
+            blocks[-1].extend(last)
+    return np.concatenate([np.full(len(block), np.median(block)) for block in blocks])
+
+
+def _trimmed_curve(times: np.ndarray, tolerance_s: float, relative: float):
+    """Positions kept, and the non-decreasing fit at them, of times sorted by offset.
+
+    While a time lies farther from the closest non-decreasing curve than
+    ``tolerance_s`` or ``relative`` of the curve, the one farthest out is set
+    aside and the curve fitted again - so a wild pick is not let drag a good
+    neighbour out with it. Returns ``(kept, fit)``; fewer than four times are
+    all kept as they are.
+    """
+    kept = list(range(len(times)))
+    fit = np.asarray(times, dtype=float)
+    while len(kept) >= 4:
+        fit = _median_isotonic(times[kept])
+        excess = np.abs(times[kept] - fit) / np.maximum(tolerance_s, relative * fit)
+        worst = int(np.argmax(excess))
+        if excess[worst] <= 1.0:
+            break
+        kept.pop(worst)
+    else:
+        fit = np.asarray(times, dtype=float)[kept]
+    return kept, fit
+
+
+def _shot_sides(pick_list: Sequence[FirstBreakPick], failed: bool = False):
+    """Each side of each shot: the pick indices, sorted by offset, and the offsets.
+
+    Only the picks with a positive time, unless ``failed``: then also those the
+    picker left at time zero or without a time.
+    """
+    by_shot: Dict[float, List[int]] = {}
+    for index, pick in enumerate(pick_list):
+        if failed or (np.isfinite(pick.time_s) and pick.time_s > 0):
+            by_shot.setdefault(round(float(pick.source_x), 6), []).append(index)
+    for shot, members in by_shot.items():
+        for side in (-1.0, 1.0):
+            mine = [i for i in members if np.sign(pick_list[i].receiver_x - shot) in (side, 0.0)]
+            mine.sort(key=lambda i: abs(pick_list[i].receiver_x - shot))
+            yield mine, np.array([abs(pick_list[i].receiver_x - shot) for i in mine])
+
+
+def _aic_repick(pick: FirstBreakPick, trace: np.ndarray, dt: float, expected: float,
+                window_fraction: float, window_min_s: float) -> Optional[FirstBreakPick]:
+    """``pick`` picked again on ``trace`` by AIC around ``expected``; None if the window will not do."""
+    from dataclasses import replace
+
+    half = max(window_min_s, window_fraction * expected)
+    a = max(0, int((expected - half) / dt))
+    b = min(trace.shape[0], int((expected + half) / dt) + 1)
+    if b - a < 8:
+        return None
+    x = trace - np.median(trace)
+    if not np.all(np.isfinite(x[a:b])):
+        return None
+    onset = a + _aic_minimum(x[a:b])
+    return replace(pick, time_s=float(onset * dt), amplitude=float(trace[onset]))
+
+
+def repick_against_curve(
+    picks: Iterable[FirstBreakPick | Dict[str, Any]],
+    traces: np.ndarray,
+    dt: float,
+    window_fraction: float = 0.3,
+    window_min_s: float = 0.002,
+    tolerance_s: float = 0.0015,
+    relative: float = 0.2,
+) -> Tuple[List[FirstBreakPick], List[FirstBreakPick]]:
+    """Pick again, along its shot's first-arrival curve, each pick that strays from it.
+
+    The curve is the one :func:`monotonic_pick_check` fits to each side of a
+    shot. A pick off it is picked again on its trace (``traces[:, trace_index]``,
+    samples by traces, best without gain) by the AIC picker (Maeda, 1985) in a
+    window of ``window_fraction`` of the curve's time, and at least
+    ``window_min_s``, either side of where the curve puts it - beyond the
+    curve's last pick, where its last pick puts it. A threshold picker that
+    took the noise after time zero for the arrival - on one line one pick in
+    seven, on traces whose late surface waves dwarf the first arrival - is
+    corrected rather than its trace lost; the picks on the curve are left as
+    they are, which held up better than picking every trace again.
+
+    So is a pick left at time zero, or without a time - a picker stopped at
+    the first sample of a trace that starts on a DC level - but only once the
+    curve has a timed pick nearer the shot than it: right beside the shot the
+    curve says nothing of where the arrival is, and such a pick is left
+    without a time.
+
+    Returns ``(picks, repicked)``: all the picks, corrected, and the corrected
+    ones as they now stand.
+
+    Examples
+    --------
+    >>> rng = np.random.default_rng(1)
+    >>> dt, n = 0.0005, 400
+    >>> arrival = [0.010 + 0.004 * r for r in range(8)]
+    >>> traces = rng.normal(0, 0.01, (n, 8))
+    >>> for r, t in enumerate(arrival):
+    ...     k = int(t / dt); traces[k:, r] += np.sin(np.arange(n - k) * 0.6)
+    >>> make = lambda r, t: {"source_id": 1, "receiver_id": r + 1, "time_s": t,
+    ...     "source_x": 0.0, "source_z": 0.0, "receiver_x": float(r + 1), "receiver_z": 0.0,
+    ...     "field_record": 1, "trace_number": r + 1, "trace_index": r, "amplitude": 1.0}
+    >>> picks = [make(r, {5: 0.0005, 2: 0.0}.get(r, t)) for r, t in enumerate(arrival)]
+    >>> fixed, repicked = repick_against_curve(picks, traces, dt)
+    >>> [p.receiver_x for p in repicked]
+    [3.0, 6.0]
+    >>> [abs(fixed[r].time_s - arrival[r]) <= 1.5 * dt for r in (2, 5)]
+    [True, True]
+    """
+    pick_list = [_pick_from_any(pick) for pick in picks]
+    arr = np.asarray(traces, dtype=float)
+    repicked: List[int] = []
+    for mine, offsets in _shot_sides(pick_list, failed=True):
+        timed = [k for k, i in enumerate(mine)
+                 if np.isfinite(pick_list[i].time_s) and pick_list[i].time_s > 0]
+        if len(timed) < 4:
+            continue
+        times = np.array([pick_list[mine[k]].time_s for k in timed])
+        kept_timed, fit = _trimmed_curve(times, tolerance_s, relative)
+        kept = [timed[k] for k in kept_timed]
+        for position, index in enumerate(mine):
+            if position in kept:
+                continue
+            if position not in timed and offsets[position] < offsets[kept[0]]:
+                continue
+            column = pick_list[index].trace_index
+            if not 0 <= column < arr.shape[1]:
+                continue
+            expected = float(np.interp(offsets[position], offsets[kept], fit))
+            again = _aic_repick(pick_list[index], arr[:, column], dt, expected,
+                                window_fraction, window_min_s)
+            if again is not None:
+                pick_list[index] = again
+                repicked.append(index)
+    return pick_list, [pick_list[i] for i in repicked]
+
+
+def _receiver_sides(pick_list: Sequence[FirstBreakPick]):
+    """Each side of each receiver: the indices of its timed picks, sorted by offset, and the offsets.
+
+    A common-receiver gather - one geophone's picks from every shot - which
+    by reciprocity is a shot gather with the source at the geophone. A shot
+    standing on the geophone belongs to neither side.
+    """
+    by_receiver: Dict[float, List[int]] = {}
+    for index, pick in enumerate(pick_list):
+        if np.isfinite(pick.time_s) and pick.time_s > 0:
+            by_receiver.setdefault(round(float(pick.receiver_x), 6), []).append(index)
+    for receiver, members in by_receiver.items():
+        for side in (-1.0, 1.0):
+            mine = [i for i in members if np.sign(pick_list[i].source_x - receiver) == side]
+            mine.sort(key=lambda i: abs(pick_list[i].source_x - receiver))
+            yield mine, np.array([abs(pick_list[i].source_x - receiver) for i in mine])
+
+
+def _shot_residuals(pick_list: Sequence[FirstBreakPick], tolerance_s: float,
+                    relative: float) -> Dict[int, float]:
+    """How far each timed pick lies from the line through its two nearest shot neighbours.
+
+    In units of the tolerance there, ``max(tolerance_s, relative * time)``;
+    the two nearest picks of the same side of the same shot, by offset, so a
+    pick at the end of a side is measured against the line on from the two
+    before it.
+    """
+    residuals: Dict[int, float] = {}
+    for mine, offsets in _shot_sides(pick_list):
+        times = np.array([pick_list[i].time_s for i in mine])
+        for k, index in enumerate(mine):
+            others = sorted((j for j in range(len(mine)) if j != k),
+                            key=lambda j: abs(offsets[j] - offsets[k]))[:2]
+            if len(others) < 2:
+                continue
+            (o1, t1), (o2, t2) = sorted((offsets[j], times[j]) for j in others)
+            guess = t1 + (t2 - t1) * (offsets[k] - o1) / (o2 - o1) if o2 > o1 else t1
+            residual = abs(times[k] - guess) / max(tolerance_s, relative * guess)
+            residuals[index] = max(residuals.get(index, 0.0), residual)
+    return residuals
+
+
+def _neighbour_strays(pick_list: Sequence[FirstBreakPick], tolerance_s: float, relative: float,
+                      floor: float) -> List[Tuple[int, float]]:
+    """The picks that break their receiver's curve and stray in their own shot's, with where the curve puts them."""
+    residuals = _shot_residuals(pick_list, tolerance_s, relative)
+    strays: List[Tuple[int, float]] = []
+    for mine, offsets in _receiver_sides(pick_list):
+        if len(mine) < 4:
+            continue
+        times = np.array([pick_list[i].time_s for i in mine])
+        kept = list(range(len(mine)))
+        while len(kept) >= 4:
+            fit = _median_isotonic(times[kept])
+            excess = np.abs(times[kept] - fit) / np.maximum(tolerance_s, relative * fit)
+            off = [k for k, e in zip(kept, excess) if e > 1.0]
+            if not off:
+                break
+            # The receiver's curve says two picks disagree, not which one is
+            # wrong: the one its own shot's gather also leaves out of line.
+            worst = max(off, key=lambda k: residuals.get(mine[k], 0.0))
+            if residuals.get(mine[worst], 0.0) < floor:
+                break
+            kept.remove(worst)
+            strays.append((mine[worst], float(np.interp(offsets[worst], offsets[kept],
+                                                        _median_isotonic(times[kept])))))
+    return strays
+
+
+def neighbour_shot_check(
+    picks: Iterable[FirstBreakPick | Dict[str, Any]],
+    traces: Optional[np.ndarray | Callable[[FirstBreakPick], Optional[np.ndarray]]] = None,
+    dt: Optional[float] = None,
+    tolerance_s: float = 0.0015,
+    relative: float = 0.1,
+    window_fraction: float = 0.2,
+    window_min_s: float = 0.002,
+    floor: float = 1.0,
+) -> Tuple[List[FirstBreakPick], List[FirstBreakPick], List[FirstBreakPick]]:
+    """Check each pick against the neighbouring shots' picks at the same geophone.
+
+    By reciprocity, one geophone's picks from every shot form a shot gather
+    with the source at the geophone, so along each side of it they too can
+    only come later farther away. The neighbouring shots, a few metres apart,
+    say where a pick belongs more closely than its own shot's curve can: a
+    shot off the end of the spread has no reciprocals, and far from any shot
+    the curve's own tolerance leaves room for a pick a quarter early. Each
+    side of each geophone is fitted as :func:`monotonic_pick_check` fits a
+    shot, to within ``tolerance_s`` or ``relative`` of the curve - half the
+    shot check's relative tolerance, the neighbours being that close. That
+    curve says two picks disagree, not which one is wrong: of the picks off
+    it, the one that also lies farthest from the line through its own shot
+    neighbours (:func:`_shot_residuals`) is taken, and only if that is at
+    least ``floor`` tolerances; a conflict neither shot gather explains is
+    left alone.
+
+    With ``traces`` - samples by traces indexed by ``trace_index``, or a
+    function giving a pick's trace - such a pick is picked again by the AIC
+    picker (Maeda, 1985) in a window of ``window_fraction`` of the curve's
+    time, and at least ``window_min_s``, either side of where the neighbours
+    put it, and what still strays is left out; without, it is left out.
+
+    Run it after :func:`reciprocal_shot_check`: a shot with a timing error of
+    its own breaks every geophone's curve, and is to be left out whole rather
+    than corrected pick by pick.
+
+    On one 24-geophone line it picked again 10 of 356 picks - among them two
+    of an off-end shot 7-9 ms before the next shot's at the same geophones -
+    and left out 3; chi-squared fell from 9.2 to 6.6 and the reciprocal times,
+    which it does not look at, came to agree to 1.75 ms on average instead of
+    2.4.
+
+    Returns ``(kept, rejected, repicked)``: the picks kept, those left out, and
+    those picked again as they now stand.
+
+    Examples
+    --------
+    >>> make = lambda s, r: {"source_id": 1, "receiver_id": 1, "source_x": float(s),
+    ...     "source_z": 0.0, "receiver_x": float(r), "receiver_z": 0.0, "field_record": 1,
+    ...     "trace_number": 1, "trace_index": 0, "amplitude": 1.0,
+    ...     "time_s": min(abs(s - r) / 300, 0.02 + abs(s - r) / 2000)}
+    >>> picks = [make(s, r) for s in range(-2, 13, 2) for r in range(12) if s != r]
+    >>> early = next(i for i, p in enumerate(picks) if (p["source_x"], p["receiver_x"]) == (-2, 9))
+    >>> picks[early]["time_s"] -= 0.006
+    >>> kept, rejected, repicked = neighbour_shot_check(picks)
+    >>> [(p.source_x, p.receiver_x) for p in rejected], len(kept)
+    ([(-2.0, 9.0)], 89)
+    """
+    if traces is not None and not dt:
+        raise ValueError("dt is required to pick again on the traces.")
+    pick_list = [_pick_from_any(pick) for pick in picks]
+    if traces is None or callable(traces):
+        trace_of = traces
+    else:
+        arr = np.asarray(traces, dtype=float)
+
+        def trace_of(pick: FirstBreakPick) -> Optional[np.ndarray]:
+            return arr[:, pick.trace_index] if 0 <= pick.trace_index < arr.shape[1] else None
+    repicked: List[int] = []
+    if trace_of is not None:
+        for index, expected in _neighbour_strays(pick_list, tolerance_s, relative, floor):
+            trace = trace_of(pick_list[index])
+            if trace is None:
+                continue
+            again = _aic_repick(pick_list[index], np.asarray(trace, dtype=float), float(dt),
+                                expected, window_fraction, window_min_s)
+            if again is not None:
+                pick_list[index] = again
+                repicked.append(index)
+    out = {index for index, _ in _neighbour_strays(pick_list, tolerance_s, relative, floor)}
+    return ([p for i, p in enumerate(pick_list) if i not in out],
+            [p for i, p in enumerate(pick_list) if i in out],
+            [pick_list[i] for i in repicked])
+
+
+def monotonic_pick_check(
+    picks: Iterable[FirstBreakPick | Dict[str, Any]],
+    tolerance_s: float = 0.0015,
+    relative: float = 0.2,
+) -> Tuple[List[FirstBreakPick], List[FirstBreakPick]]:
+    """Drop the picks that break a shot's first-arrival curve.
+
+    Moving away from a shot, the first arrival can only come later: each side
+    of each shot is fitted with the closest non-decreasing curve (in absolute
+    deviation), and while a pick lies farther from it than ``tolerance_s`` or
+    ``relative`` of its time, the one farthest out is dropped and the curve
+    fitted again - so a wild pick is not let drag a good neighbour out with it. It
+    catches an automatic picker that jumped to noise or to another phase - on
+    one 24-geophone line, six traces of one shot picked at 10 ms where the
+    curve stood at 23 ms - while leaving the curve's own shape, however far
+    from straight, alone. On that line dropping eight such picks of 354 took
+    the inversion from chi-squared 54 to 5. A side with fewer than four picks
+    is kept as it is.
+
+    Returns ``(kept, rejected)``.
+
+    Examples
+    --------
+    >>> make = lambda r, t: {"source_id": 1, "receiver_id": int(r), "time_s": t,
+    ...     "source_x": 0.0, "source_z": 0.0, "receiver_x": float(r), "receiver_z": 0.0,
+    ...     "field_record": 1, "trace_number": 1, "trace_index": 0, "amplitude": 1.0}
+    >>> times = [0.004, 0.008, 0.011, 0.014, 0.003, 0.019, 0.021, 0.023]
+    >>> kept, rejected = monotonic_pick_check([make(r + 1, t) for r, t in enumerate(times)])
+    >>> [p.receiver_x for p in rejected], len(kept)
+    ([5.0], 7)
+    """
+    pick_list = [_pick_from_any(pick) for pick in picks]
+    rejected_ids = set()
+    for mine, _ in _shot_sides(pick_list):
+        if len(mine) < 4:
+            continue
+        times = np.array([pick_list[i].time_s for i in mine])
+        kept, _fit = _trimmed_curve(times, tolerance_s, relative)
+        rejected_ids.update(index for position, index in enumerate(mine)
+                            if position not in kept)
+    kept = [p for i, p in enumerate(pick_list) if i not in rejected_ids]
+    rejected = [p for i, p in enumerate(pick_list) if i in rejected_ids]
+    return kept, rejected
+
+
+def reciprocal_shot_check(
+    picks: Iterable[FirstBreakPick | Dict[str, Any]],
+    factor: float = 3.0,
+    floor_s: float = 0.002,
+    tolerance_m: float = 1e-3,
+) -> Tuple[List[FirstBreakPick], List[Dict[str, Any]]]:
+    """Drop the shots whose travel times disagree with their reciprocals.
+
+    A travel time is the same whichever end of the path the source is at, so
+    where a shot stands on a geophone and another shot's receiver stands on it
+    in turn, the two times should agree to within the picking error. A shot
+    whose times differ from their reciprocals by the same amount, pair after
+    pair, has a timing error of its own - a trigger that fired early or late -
+    and every pick it contributes is wrong by that amount. For each shot, the
+    median of its reciprocal differences is compared with the survey's
+    typical difference: beyond ``factor`` times that, and at least ``floor_s``,
+    the shot is dropped. Shots with no reciprocal pair (off the end of the
+    spread) cannot be checked and are kept.
+
+    On one 24-geophone line two shots in seventeen came out 14 and 7.7 ms
+    early against every reciprocal, while the rest agreed to about 1 ms.
+
+    Returns ``(kept, dropped)``: the picks of the shots kept, and for each
+    dropped shot its ``source_x``, ``pairs`` and ``median_difference_ms``.
+
+    Examples
+    --------
+    >>> make = lambda s, r, t: {"source_id": int(s), "receiver_id": int(r), "time_s": t,
+    ...     "source_x": s, "source_z": 0.0, "receiver_x": r, "receiver_z": 0.0,
+    ...     "field_record": 1, "trace_number": 1, "trace_index": 0, "amplitude": 1.0}
+    >>> xs = range(6)
+    >>> picks = [make(s, r, 0.02 + 0.002 * abs(s - r) + 0.0004 * ((s * 7 + r * 3) % 3)
+    ...                     - (0.01 if s == 3 else 0.0))
+    ...          for s in xs for r in xs if s != r]
+    >>> kept, dropped = reciprocal_shot_check(picks)
+    >>> [d["source_x"] for d in dropped], len(kept)
+    ([3.0], 25)
+    """
+    pick_list = [_pick_from_any(pick) for pick in picks]
+
+    def key(x: float) -> float:
+        return round(float(x) / tolerance_m) * tolerance_m
+
+    times = {(key(p.source_x), key(p.receiver_x)): p.time_s
+             for p in pick_list if np.isfinite(p.time_s) and p.time_s > 0}
+    shots = sorted({key(p.source_x) for p in pick_list})
+    medians: Dict[float, Tuple[int, float, float]] = {}
+    for a in shots:
+        diffs = [times[(a, b)] - times[(b, a)] for b in shots
+                 if b != a and (a, b) in times and (b, a) in times]
+        if diffs:
+            medians[a] = (len(diffs), float(np.median(diffs)), float(np.median(np.abs(diffs))))
+    if not medians:
+        return pick_list, []
+    typical = float(np.median([spread for _, _, spread in medians.values()]))
+    limit = max(factor * typical, floor_s)
+    bad = {shot: (pairs, median) for shot, (pairs, median, _) in medians.items()
+           if abs(median) > limit}
+    kept = [p for p in pick_list if key(p.source_x) not in bad]
+    dropped = [{"source_x": float(shot), "pairs": pairs,
+                "median_difference_ms": round(1e3 * median, 2)}
+               for shot, (pairs, median) in sorted(bad.items())]
+    return kept, dropped
+
+
+def pick_and_correct(
+    data: SeismicDataset | SeismicShotGather | np.ndarray,
+    dt: Optional[float] = None,
+    headers: Optional[Sequence[SeismicTraceHeader]] = None,
+    *,
+    agc_window: float = 0.05,
+    bandpass: Optional[Sequence[float]] = None,
+    threshold: float = 0.2,
+    noise_multiplier: float = 5.0,
+    min_time: float = 0.0,
+    max_time: Optional[float] = 0.15,
+    polarity: float = 1.0,
+    place: Optional[Callable[[List[FirstBreakPick]], List[FirstBreakPick]]] = None,
+    repick: bool = True,
+) -> Tuple[List[FirstBreakPick], List[FirstBreakPick]]:
+    """First-arrival picks, with the ones that stray from their shot's curve picked again.
+
+    The automatic picking the seismic workflow and the studio's Seismic page
+    share, in three steps:
+
+    1. :func:`pick_first_breaks` on the traces with automatic gain control
+       (:func:`apply_agc`, a window of ``agc_window`` seconds; 0 for none)
+       and, given ``bandpass`` as four corner frequencies in Hz, a band-pass
+       filter;
+    2. ``place``, given, puts the picks on the survey's geometry - a
+       coordinate file, or the shot and geophone positions set by hand -
+       since the curves of step 3 are functions of offset; without it the
+       trace headers' positions are used;
+    3. :func:`repick_against_curve` on the traces as recorded, without gain
+       (``repick=False`` skips it).
+
+    ``data`` is what :func:`pick_first_breaks` takes, and each pick's
+    ``trace_index`` is what it gives: the trace's column in ``data``, or for
+    a :class:`SeismicShotGather` its index in the dataset.
+
+    Returns ``(picks, repicked)``: all the picks, and the ones picked again as
+    they now stand. :func:`screen_picks` then leaves out what still strays.
+    """
+    from dataclasses import replace
+
+    traces, time, trace_headers, trace_indices = _as_dataset_and_headers(data, headers=headers, dt=dt)
+    if traces.size == 0:
+        return [], []
+    step = float(dt) if dt else (float(time[1] - time[0]) if time.size > 1 else 0.0)
+    if step <= 0:
+        raise ValueError("Picking needs the sample interval.")
+    gained = np.asarray(traces, dtype=float)
+    if agc_window and float(agc_window) > 0:
+        gained = apply_agc(gained, dt=step, window=float(agc_window))
+    if bandpass:
+        f1, f2, f3, f4 = (float(f) for f in bandpass)
+        gained = bandpass_filter(gained, dt=step, f1=f1, f2=f2, f3=f3, f4=f4)
+    # Picked on the columns as passed, so trace_index reaches the traces below.
+    picks = pick_first_breaks(gained, dt=step, headers=trace_headers, threshold=threshold,
+                              noise_multiplier=noise_multiplier, min_time=min_time,
+                              max_time=max_time, polarity=polarity)
+    if place is not None:
+        picks = list(place(picks))
+    repicked: List[FirstBreakPick] = []
+    if repick:
+        picks, repicked = repick_against_curve(picks, traces, step)
+    if not np.array_equal(trace_indices, np.arange(len(trace_headers))):
+        def index(pick: FirstBreakPick) -> FirstBreakPick:
+            return replace(pick, trace_index=int(trace_indices[pick.trace_index]))
+        picks, repicked = [index(p) for p in picks], [index(p) for p in repicked]
+    return picks, repicked
+
+
+class PickScreen(NamedTuple):
+    """What :func:`screen_picks` kept, corrected and left out."""
+
+    kept: List[FirstBreakPick]
+    #: single picks that break their shot's first-arrival curve
+    rejected: List[FirstBreakPick]
+    #: shots with a timing error of their own, as :func:`reciprocal_shot_check` gives them
+    dropped: List[Dict[str, Any]]
+    #: picks that break their geophone's curve across the neighbouring shots, left out
+    neighbour_rejected: List[FirstBreakPick]
+    #: and picked again, as they now stand (some may then be left out)
+    neighbour_repicked: List[FirstBreakPick]
+
+
+def screen_picks(
+    picks: Iterable[FirstBreakPick | Dict[str, Any]],
+    monotonic_check: bool = True,
+    reciprocity_check: bool = True,
+    neighbour_check: bool = True,
+    traces: Optional[np.ndarray | Callable[[FirstBreakPick], Optional[np.ndarray]]] = None,
+    dt: Optional[float] = None,
+) -> PickScreen:
+    """Leave out the picks that break their shot's curve, the shots with a timing error, then check the neighbours.
+
+    :func:`monotonic_pick_check`; :func:`reciprocal_shot_check` on what it
+    keeps, so the shot check sees clean curves; then
+    :func:`neighbour_shot_check`, after the shot check so that a shot with a
+    timing error is left out whole rather than corrected pick by pick - it
+    picks again on ``traces`` (as it takes them, with ``dt``) when they are
+    given. The last two need every shot of the line: a shot whose reciprocals
+    were not picked cannot be checked, and is kept.
+    """
+    kept = [_pick_from_any(pick) for pick in picks]
+    rejected: List[FirstBreakPick] = []
+    dropped: List[Dict[str, Any]] = []
+    neighbour_rejected: List[FirstBreakPick] = []
+    neighbour_repicked: List[FirstBreakPick] = []
+    if monotonic_check:
+        kept, rejected = monotonic_pick_check(kept)
+    if reciprocity_check:
+        kept, dropped = reciprocal_shot_check(kept)
+    if neighbour_check:
+        kept, neighbour_rejected, neighbour_repicked = neighbour_shot_check(kept, traces, dt)
+    return PickScreen(kept, rejected, dropped, neighbour_rejected, neighbour_repicked)
+
+
 def export_traveltime_container(data: Any, filename: str) -> str:
     """Persist a loaded PyGIMLi travel-time container in portable BERT format."""
     path = Path(filename)
@@ -1551,12 +2209,22 @@ __all__ = [
     "SeismicDataset",
     "FirstBreakPick",
     "read_segy",
+    "record_sample_interval",
+    "apply_record_interval",
+    "set_sample_interval",
     "apply_agc",
     "normalize_traces",
     "tukey_taper",
     "bandpass_filter",
     "pick_first_breaks",
+    "pick_and_correct",
+    "screen_picks",
+    "PickScreen",
+    "neighbour_shot_check",
+    "repick_against_curve",
     "export_first_breaks",
     "export_traveltime_container",
     "first_breaks_to_traveltime",
+    "monotonic_pick_check",
+    "reciprocal_shot_check",
 ]

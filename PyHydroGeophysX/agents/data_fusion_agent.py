@@ -90,7 +90,7 @@ constraints, joint inversions, and petrophysical transformations."""
             output_dir = input_data.get('output_dir', 'results/data_fusion')
             
             # Determine fusion pattern
-            if fusion_pattern == 'auto' and self.api_key:
+            if fusion_pattern == 'auto' and self.llm_enabled:
                 self._log_execution("Requesting LLM to recommend fusion pattern")
                 fusion_pattern = self._recommend_fusion_pattern(available_methods, workflow_config)
             elif fusion_pattern == 'auto':
@@ -125,7 +125,7 @@ constraints, joint inversions, and petrophysical transformations."""
             
             # Get LLM interpretation if available
             interpretation = None
-            if self.api_key:
+            if self.llm_enabled:
                 interpretation = self._interpret_fusion_strategy(
                     fusion_pattern,
                     pattern_info,

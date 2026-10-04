@@ -52,7 +52,7 @@ from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
-from PyHydroGeophysX.qt_apps.widgets.seismic_viewer import SeismicViewer, first_arrival_onsets
+from PyHydroGeophysX.qt_apps.widgets.seismic_viewer import SeismicViewer
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker, TaskWorker
 from PyHydroGeophysX.visualization.axis_units import to_display_length
 from PyHydroGeophysX.workflows import (
@@ -66,12 +66,15 @@ try:
     from PyHydroGeophysX.data_processing.seismic import (
         FirstBreakPick,
         apply_agc,
+        apply_record_interval,
         export_first_breaks,
         export_traveltime_container,
         first_breaks_to_traveltime,
         normalize_traces,
+        pick_and_correct,
         read_geometrics_dat,
         read_segy,
+        screen_picks,
     )
     from PyHydroGeophysX.data_processing.field_formats import read_seg2_seismic
 
@@ -259,18 +262,51 @@ class SeismicProcessingModule(BaseModule):
         tip.setWordWrap(True)
         theme.set_tone(tip, "hint")
         pbox.addWidget(tip)
+        # The seismic workflow's picker (data_processing.seismic.pick_and_correct
+        # and screen_picks), so a line picked here and one picked by a run agree.
         tform = QFormLayout()
         self._threshold = QDoubleSpinBox()
-        self._threshold.setRange(2.0, 15.0)
-        self._threshold.setSingleStep(0.5)
-        self._threshold.setValue(5.0)
-        self._threshold.setToolTip("STA/LTA energy-ratio threshold for onset detection (lower = more sensitive / earlier).")
-        tform.addRow("STA/LTA ratio", self._threshold)
+        self._threshold.setRange(0.05, 0.95)
+        self._threshold.setSingleStep(0.05)
+        self._threshold.setValue(0.20)
+        self._threshold.setToolTip(
+            "A first arrival is picked where the trace, with AGC when AGC is on, first "
+            "reaches this fraction of its peak in the search window and five times the "
+            "noise before it (lower = earlier).")
+        tform.addRow("Threshold (of trace peak)", self._threshold)
+        self._pick_window = QDoubleSpinBox()
+        self._pick_window.setRange(1.0, 100000.0)
+        self._pick_window.setDecimals(0)
+        self._pick_window.setValue(150.0)
+        self._pick_window.setSuffix(" ms")
+        self._pick_window.setToolTip("The picker looks for first arrivals up to this time.")
+        tform.addRow("Latest first arrival", self._pick_window)
         pbox.addLayout(tform)
-        auto_btn = QPushButton("Auto-pick first breaks")
+        self._screen_picks = QCheckBox("Leave out stray picks and shots")
+        self._screen_picks.setChecked(True)
+        self._screen_picks.setToolTip(
+            "Leave out what still strays once the stray picks are picked again: a pick that "
+            "breaks its shot's first-arrival curve (a first arrival cannot come earlier farther "
+            "from the shot), and, with all shots picked, a shot whose times disagree with their "
+            "reciprocals and a pick that still disagrees with the neighbouring shots at its "
+            "geophone once picked again.")
+        pbox.addWidget(self._screen_picks)
+        auto_row = QHBoxLayout()
+        auto_btn = QPushButton("Auto-pick this shot")
         auto_btn.setIcon(theme.icon("fa5s.magic"))
+        auto_btn.setToolTip("Pick this record's first arrivals as the seismic workflow does; a "
+                            "pick that strays from the shot's first-arrival curve is picked again "
+                            "along it (AIC picker, Maeda 1985).")
         auto_btn.clicked.connect(self._auto_pick)
-        pbox.addWidget(auto_btn)
+        all_btn = QPushButton("All shots")
+        all_btn.setIcon(theme.icon("fa5s.layer-group"))
+        all_btn.setToolTip("Auto-pick every shot record, then check each shot against its "
+                           "reciprocals and each pick against the neighbouring shots at the same "
+                           "geophone. Manual picks are kept.")
+        all_btn.clicked.connect(self._auto_pick_all)
+        auto_row.addWidget(auto_btn)
+        auto_row.addWidget(all_btn)
+        pbox.addLayout(auto_row)
         row = QHBoxLayout()
         undo_btn = QPushButton("Undo")
         undo_btn.setIcon(theme.icon("fa5s.undo"))
@@ -389,7 +425,7 @@ class SeismicProcessingModule(BaseModule):
         """One side panel per tab: the controls for what is on screen, nothing else.
 
         Gather shows loading, display and picking. Travel-time and the two
-        result tabs show the inversion instead: gain, clip and STA/LTA decide
+        result tabs show the inversion instead: gain, clip and the picker decide
         nothing once the picks exist, and leaving them up costs the width the
         plot wants. The result tabs keep the inversion side so the settings that
         produced a model stay readable next to it and a re-run does not mean
@@ -593,7 +629,11 @@ class SeismicProcessingModule(BaseModule):
             # Every trace: this is the working dataset - its shots are picked and
             # inverted - not a preview. A 4000-trace cap dropped the later shots
             # without a word, and the metadata then reported the cut count.
-            return {"kind": "dataset", "dataset": read_segy(str(p)), "warning": ""}
+            dataset = read_segy(str(p))
+            # The header's whole microseconds against the acquisition record's
+            # interval, as the seismic workflow reads it.
+            note = apply_record_interval(dataset, str(p))
+            return {"kind": "dataset", "dataset": dataset, "warning": note or ""}
         if _SEISMIC_OK and suffix == ".dat":
             try:
                 return {"kind": "dataset", "dataset": read_geometrics_dat(str(p)), "warning": ""}
@@ -1011,32 +1051,193 @@ class SeismicProcessingModule(BaseModule):
         self._publish()
         self.log(f"Line pick: {len(points)} traces", "info")
 
-    def _auto_pick(self) -> None:
+    def _pick_record(self, record: int, traces: np.ndarray, headers, shot_x: float):
+        """One record's automatic picks on this page's geometry: ``(picks, repicked)``.
+
+        The seismic workflow's picker (``pick_and_correct``): threshold picks on
+        the traces with AGC when AGC is on, placed at the geophone positions and
+        shot x set here, and those off their shot's first-arrival curve picked
+        again along it. ``trace_index`` is the trace's column in the record.
+        """
+        import dataclasses
+
+        shot_z = self._interp_topography(shot_x)
+
+        def place(picks):
+            placed = []
+            for pick in picks:
+                trace = int(pick.trace_index)
+                receiver_x, receiver_z = self._receiver_position(trace)
+                placed.append(dataclasses.replace(
+                    pick, source_id=int(record), receiver_id=trace + 1,
+                    source_x=float(shot_x), source_z=float(shot_z),
+                    receiver_x=float(receiver_x), receiver_z=float(receiver_z),
+                    field_record=int(record), trace_number=trace + 1))
+            return placed
+
+        agc = self._agc_window.value() / 1000.0 if self._agc.isChecked() else 0.0
+        picks, repicked = pick_and_correct(
+            np.asarray(traces, dtype=float), dt=self._dt, headers=headers, agc_window=agc,
+            threshold=self._threshold.value(), max_time=self._pick_window.value() / 1000.0,
+            place=place)
+        # A trace the picker and the re-pick left at time zero has no arrival to show.
+        return [p for p in picks if np.isfinite(p.time_s) and p.time_s > 0], repicked
+
+    def _picker_label(self) -> str:
+        agc = f", AGC {self._agc_window.value():g} ms" if self._agc.isChecked() else ", no AGC"
+        return f"threshold {self._threshold.value():.2f} of each trace's peak{agc}"
+
+    def _auto_pick_ready(self) -> bool:
         if self._raw is None:
             self.log("Load seismic data first.", "warn")
+            return False
+        if not _SEISMIC_OK:
+            self.log(f"Auto-pick needs the seismic processing module ({_SEISMIC_ERR}).", "warn")
+            return False
+        if not self._dt:
+            self.log("Auto-pick needs the sample interval, and this file does not give one; "
+                     "pick the first arrivals by hand instead.", "warn")
+            return False
+        return True
+
+    def _auto_pick(self) -> None:
+        """Pick the record on screen as the seismic workflow would.
+
+        Without the other shots there are no reciprocals or neighbouring shots
+        to check against, so only the curve check leaves picks out here; "All
+        shots" adds the other two.
+        """
+        if not self._auto_pick_ready():
             return
+        record = self._current_record if self._current_record is not None else 1
         try:
-            onsets = first_arrival_onsets(self._raw, self._dt, ratio_thr=self._threshold.value())
+            picks, repicked = self._pick_record(record, self._raw, self._headers, self._shot_x.value())
+            rejected = []
+            if self._screen_picks.isChecked():
+                screen = screen_picks(picks, reciprocity_check=False, neighbour_check=False)
+                picks, rejected = screen.kept, screen.rejected
         except Exception as exc:  # noqa: BLE001
             self.log(f"Auto-pick failed: {exc}", "error")
             return
-        self._picks = {}
-        self._order = []
-        self._pick_src = {}
-        for j in range(self._raw.shape[1]):
-            sample = onsets[j] if j < onsets.size else np.nan
-            if np.isfinite(sample):
-                s = int(sample)
-                self._picks[j] = self._make_pick(j, s, float(self._raw[s, j]))
-                self._order.append(j)
-                self._pick_src[j] = "auto"
-        self.log(
-            f"Auto-picked {len(self._picks)} first breaks (STA/LTA ratio {self._threshold.value():.1f}).",
-            "success",
-        )
+        again = {int(p.trace_index) for p in repicked}
+        self._picks = {int(p.trace_index): p for p in picks}
+        self._pick_src = {t: "repick" if t in again else "auto" for t in self._picks}
+        self._order = sorted(self._picks)
+        message = (f"Auto-picked {len(self._picks) + len(rejected)} first arrivals on shot "
+                   f"{record} ({self._picker_label()})")
+        if again:
+            message += (f"; {len(again)} that strayed from the shot's first-arrival curve were "
+                        "picked again along it (AIC picker, Maeda 1985)")
+        if rejected:
+            message += (f"; {len(rejected)} left out for breaking it (trace "
+                        f"{', '.join(str(int(p.trace_index) + 1) for p in rejected)})")
+        self.log(message + ".", "success")
         self._redraw_markers()
         self._update_pick_info()
         self._publish()
+
+    def _auto_pick_all(self) -> Optional[Dict[str, Any]]:
+        """Pick every shot record as the seismic workflow does, all three checks included.
+
+        Each record is picked at its own shot x (set by hand, from a regular
+        shot layout, or from the headers). Picks made by hand are kept, in
+        place of the automatic ones on their traces; a shot left out for its
+        reciprocals loses only its automatic picks. Returns what was done, for
+        the page's agent tool.
+        """
+        records = self._agent_records()
+        if self._dataset is None or len(records) < 2:
+            self._auto_pick()
+            return None
+        if not self._auto_pick_ready():
+            return None
+        self._save_current_picks()
+        picks, repicked = [], []
+        gathers: Dict[int, np.ndarray] = {}
+        try:
+            for record in records:
+                gather = self._dataset.get_gather(int(record))
+                gathers[int(record)] = np.asarray(gather.traces, dtype=float)
+                shot_x = self._shot_pos.get(record, self._default_shot_x(record))
+                mine, again = self._pick_record(int(record), gather.traces, gather.headers, shot_x)
+                picks += mine
+                repicked += again
+            check = self._screen_picks.isChecked()
+            # trace_index is the trace's column in its own record.
+            screen = screen_picks(
+                picks, monotonic_check=check, reciprocity_check=check, neighbour_check=check,
+                traces=lambda p: gathers[int(p.field_record)][:, int(p.trace_index)], dt=self._dt)
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Auto-pick failed: {exc}", "error")
+            return None
+        kept, dropped = screen.kept, screen.dropped
+        rejected = list(screen.rejected) + list(screen.neighbour_rejected)
+        manual = {record: {trace: self._all_picks[record][trace]
+                           for trace, source in sources.items()
+                           if source == "manual" and trace in self._all_picks.get(record, {})}
+                  for record, sources in self._all_src.items()}
+        again = {(int(p.field_record), int(p.trace_index))
+                 for p in list(repicked) + list(screen.neighbour_repicked)}
+        for record in records:
+            self._all_picks[record] = {}
+            self._all_src[record] = {}
+        for pick in kept:
+            record, trace = int(pick.field_record), int(pick.trace_index)
+            self._all_picks.setdefault(record, {})[trace] = pick
+            self._all_src.setdefault(record, {})[trace] = (
+                "repick" if (record, trace) in again else "auto")
+        n_manual = 0
+        for record, by_trace in manual.items():
+            for trace, pick in by_trace.items():
+                self._all_picks.setdefault(record, {})[trace] = pick
+                self._all_src.setdefault(record, {})[trace] = "manual"
+                n_manual += 1
+        current = self._current_record
+        self._picks = dict(self._all_picks.get(current, {}))
+        self._pick_src = dict(self._all_src.get(current, {}))
+        self._order = sorted(self._picks)
+
+        # Counted as the seismic workflow counts them, so the two read alike.
+        message = (f"Auto-picked {len(picks)} first arrivals on {len(records)} shots "
+                   f"({self._picker_label()})")
+        if repicked:
+            message += (f"; {len(repicked)} that strayed from their shot's first-arrival curve "
+                        "were picked again along it (AIC picker, Maeda 1985)")
+        if screen.rejected:
+            message += (f"; {len(screen.rejected)} single picks left out for breaking their "
+                        "shot's curve")
+        if screen.neighbour_repicked:
+            message += (f"; {len(screen.neighbour_repicked)} that disagreed with the "
+                        "neighbouring shots at the same geophone were picked again where those "
+                        "put them")
+        if screen.neighbour_rejected:
+            message += (f"; {len(screen.neighbour_rejected)} left out for still disagreeing "
+                        "with them")
+        if dropped:
+            message += f"; {len(dropped)} shot{'s' if len(dropped) != 1 else ''} left out (below)"
+        if n_manual:
+            message += f"; {n_manual} picks made by hand kept"
+        self.log(f"{message}. {len(kept)} automatic picks stand.", "success")
+        records_at: Dict[float, List[int]] = {}
+        for pick in picks:
+            records_at.setdefault(round(float(pick.source_x), 3), [])
+            if int(pick.field_record) not in records_at[round(float(pick.source_x), 3)]:
+                records_at[round(float(pick.source_x), 3)].append(int(pick.field_record))
+        left_out = []
+        for shot in dropped:
+            which = records_at.get(round(float(shot["source_x"]), 3), [])
+            left_out += which
+            self.log(f"Shot {', '.join(map(str, which)) or '?'} (x = {shot['source_x']:g} m) "
+                     f"left out: its times differ from their reciprocals by a median of "
+                     f"{shot['median_difference_ms']:g} ms over {shot['pairs']} pairs, a timing "
+                     "error of its own. Pick it by hand to keep it.", "warn")
+        self._redraw_markers()
+        self._update_pick_info()
+        self._publish()
+        return {"picks": len(kept), "repicked": len(again), "rejected": len(rejected),
+                "neighbour_repicked": len(screen.neighbour_repicked),
+                "neighbour_rejected": len(screen.neighbour_rejected),
+                "manual_kept": n_manual, "shots_left_out": dropped, "records_left_out": left_out}
 
     def _redraw_markers(self) -> None:
         self._viewer.set_picks(self._viewer_picks())
@@ -1372,7 +1573,7 @@ class SeismicProcessingModule(BaseModule):
                 for source in record_sources.values()
             }
             pick_source = (
-                "mixed" if {"manual", "auto"}.issubset(source_values)
+                "mixed" if "manual" in source_values and source_values & {"auto", "repick"}
                 else "manual" if "manual" in source_values
                 else "automatic"
             )
@@ -1618,7 +1819,10 @@ class SeismicProcessingModule(BaseModule):
                           "'station distance_m elevation_m', or 'x z'). Applies real receiver x and "
                           "elevation so the SRT inversion honors topography; re-stamps existing picks.")},
                 {"name": "set_params", "args": {"params": {"<key>": "value"}},
-                 "desc": ("Set processing/pick params. Picking and display: sta_lta_ratio, "
+                 "desc": ("Set processing/pick params. Picking: pick_threshold (fraction of "
+                          "each trace's peak, 0.05-0.95), pick_max_time_ms (latest first "
+                          "arrival), screen_picks (leave out stray picks and shots). Display: "
+                          "display (image / wiggle / both), "
                           "gain (slider 1-100), clip_percentile, agc_window_ms, "
                           "flip_polarity, normalize, agc. Inversion: engine "
                           "(pyhydro/pygimli), lam, max_iterations, "
@@ -1628,7 +1832,16 @@ class SeismicProcessingModule(BaseModule):
                           "Fit assistance (in-house engine only): auto_lambda, "
                           "target_chi2, chi2_tolerance, max_lambda_trials.")},
                 {"name": "auto_pick", "args": {},
-                 "desc": "Auto-pick first breaks on the current record (STA/LTA)."},
+                 "desc": ("Auto-pick first arrivals on the current record with the seismic "
+                          "workflow's picker: threshold picks on the AGC traces, picks off the "
+                          "shot's first-arrival curve picked again along it, and what still "
+                          "breaks the curve left out.")},
+                {"name": "auto_pick_all", "args": {},
+                 "desc": ("Auto-pick every shot record at once with the same picker, leave out "
+                          "shots whose times disagree with their reciprocals, and pick again "
+                          "picks that disagree with the neighbouring shots at the same geophone. "
+                          "Set each record's shot x first (set_geometry); manual picks are kept. "
+                          "Follow with review_picks.")},
                 {"name": "pick_next_shot", "args": {},
                  "desc": ("FAST per-shot step: advance to the next shot record that still needs picking, "
                           "auto-pick it, and pause for review (returns 'awaiting_user' with records_remaining "
@@ -1670,6 +1883,7 @@ class SeismicProcessingModule(BaseModule):
             "load_geometry": lambda: self._agent_load_geometry(args.get("path")),
             "set_params": lambda: self._agent_set_params(args.get("params", args)),
             "auto_pick": lambda: self._agent_auto_pick(),
+            "auto_pick_all": lambda: self._agent_auto_pick_all(),
             "pick_next_shot": lambda: self._agent_pick_next_shot(),
             "review_picks": lambda: self._agent_review_picks(),
             "set_pick": lambda: self._agent_set_pick(args),
@@ -1828,7 +2042,10 @@ class SeismicProcessingModule(BaseModule):
         if not isinstance(params, dict):
             return {"status": "failed", "error": "Provide 'params' as a JSON object."}
         handlers = {
-            "sta_lta_ratio": lambda v: self._threshold.setValue(float(v)),
+            "pick_threshold": lambda v: self._threshold.setValue(float(v)),
+            "pick_max_time_ms": lambda v: self._pick_window.setValue(float(v)),
+            "screen_picks": lambda v: self._screen_picks.setChecked(bool(v)),
+            "display": lambda v: self._viewer.set_display_style(str(v)),
             "gain": lambda v: self._gain.setValue(int(v)),
             "clip_percentile": lambda v: self._clip.setValue(float(v)),
             "agc_window_ms": lambda v: self._agc_window.setValue(float(v)),
@@ -1852,6 +2069,10 @@ class SeismicProcessingModule(BaseModule):
         applied: Dict[str, Any] = {}
         ignored: Dict[str, str] = {}
         for key, value in params.items():
+            if key == "sta_lta_ratio":
+                ignored[key] = ("The picker no longer uses an STA/LTA ratio; set pick_threshold "
+                                "(a fraction of each trace's peak, default 0.2) instead.")
+                continue
             handler = handlers.get(key)
             if handler is None:
                 ignored[key] = "unknown parameter"
@@ -1867,7 +2088,21 @@ class SeismicProcessingModule(BaseModule):
         if self._raw is None:
             return {"status": "failed", "error": "Load data first."}
         self._auto_pick()
-        return {"status": "ok", "picks": len(self._picks)}
+        return {"status": "ok", "picks": len(self._picks),
+                "repicked": sum(1 for s in self._pick_src.values() if s == "repick")}
+
+    def _agent_auto_pick_all(self) -> Dict[str, Any]:
+        if self._raw is None:
+            return {"status": "failed", "error": "Load data first."}
+        if not self._dt:
+            return {"status": "failed", "error": "The file gives no sample interval to pick in."}
+        if len(self._agent_records()) < 2:  # a single record, picked as auto_pick does
+            return self._agent_auto_pick()
+        done = self._auto_pick_all()
+        if done is None:
+            return {"status": "failed", "error": "Auto-pick failed; see the log."}
+        return {"status": "ok", **done,
+                "next": "Call review_picks so the user can check the picks before run_srt."}
 
     def _agent_clear_picks(self) -> Dict[str, Any]:
         self._clear_picks_and_publish()
@@ -1903,7 +2138,7 @@ class SeismicProcessingModule(BaseModule):
         self._save_current_picks()
         # Turn on manual editing so the user can click / Ctrl+drag to correct traces.
         self._pick_mode.setChecked(True)
-        auto = sum(1 for s in self._pick_src.values() if s == "auto")
+        auto = sum(1 for s in self._pick_src.values() if s in ("auto", "repick"))
         manual = sum(1 for s in self._pick_src.values() if s == "manual")
         all_records = self._agent_records()
         picked = [r for r in all_records if self._all_picks.get(r)]

@@ -189,7 +189,7 @@ ERT inversions to improve layer boundary resolution and reduce artifacts."""
             
             # Step 5: Run structure-constrained ERT inversion
             # Get LLM recommendations for inversion parameters if needed
-            if self.api_key and not inversion_params:
+            if self.llm_enabled and not inversion_params:
                 self._log_execution("Requesting LLM recommendations for constrained inversion")
                 inversion_params = self._get_recommended_params(ert_data, mesh_with_interface)
             
@@ -277,7 +277,7 @@ ERT inversions to improve layer boundary resolution and reduce artifacts."""
             
             # Get LLM interpretation
             interpretation = None
-            if self.api_key:
+            if self.llm_enabled:
                 self._log_execution("Generating interpretation of constrained inversion")
                 interpretation = self._interpret_results(
                     resistivity_model,

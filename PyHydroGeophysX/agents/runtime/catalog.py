@@ -24,11 +24,11 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 import numpy as np
 
 from .._chi2 import chi2_history, chi2_summary
-from .._intent import climate_blocker, wants_climate, wants_water_content
+from .._intent import climate_blocker, wants_climate, wants_spatial_map, wants_water_content
 from .._geocode import coords_from_config, geocode_place
 from .._method import IMPLEMENTED_SCHEME
 from .context import RunContext
-from .tools import Tool, register
+from .tools import TOOLS, Tool, register
 
 
 # ---------------------------------------------------------------------------
@@ -247,8 +247,15 @@ def _load_ert(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     loader = ERTLoaderAgent(**agent_kwargs(ctx))
     declared = config.get("instrument")
 
+    from .. import _raw_data as raw
+
     loaded, files, failed, read_as = [], [], [], []
-    for path in paths:
+    # What each survey holds, and a pseudosection of it drawn as it loads: the
+    # Live tab shows each one the moment it is written, which is the only thing
+    # a user has to look at while a long series loads. A long series is sampled.
+    readings, figures = [], []
+    drawn = set(raw.chosen(len(paths)))
+    for index, path in enumerate(paths):
         resolved = resolve_path(path, project_dir)
         # A default instrument is a guess, and the loader refuses a file whose
         # header names another one - so a request that named no instrument had
@@ -269,6 +276,11 @@ def _load_ert(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         loaded.append(result["ert_data"])
         files.append(str(path))
         read_as.append((instrument, detected))
+        readings.append(raw.ert_readings(result["ert_data"]))
+        if index in drawn:
+            figure = _draw_ert_survey(ctx, readings[-1], index, len(paths), path)
+            if figure:
+                figures.append(figure)
 
     if not loaded:
         raise ValueError("No ERT survey could be loaded. " + "; ".join(failed))
@@ -284,13 +296,88 @@ def _load_ert(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
                      f"{config['instrument']}, as their headers say.")
 
     from .._intent import wants_water_content as _wwc  # noqa: F401 - documented below
-    summary = f"Loaded {len(loaded)} ERT survey(s) from {len(paths)} configured file(s)."
+    summary = _ert_load_summary(readings, files, len(paths))
     if failed:
         summary += f" {len(failed)} could not be read."
+    # For the report, the surveys side by side on one colour scale.
+    report_figure = _draw_ert_series(ctx, readings, files) if len(readings) > 1 else (
+        figures[:1] or [None])[0]
+    figures = [report_figure] if report_figure else []
     # The files that loaded, in order. The acquisition times are read from the
     # file names, so a list that still holds a file which failed to load no
     # longer lines up with the surveys, and every survey then loses its date.
-    return summary, {"ert_data": loaded, "n_surveys": len(loaded), "ert_files": files}
+    return summary, {"ert_data": loaded, "n_surveys": len(loaded), "ert_files": files,
+                     "ert_raw_figures": figures}
+
+
+def _draw_ert_survey(ctx: RunContext, readings: Mapping[str, Any], index: int, count: int,
+                     path: Any) -> Optional[Tuple[str, str]]:
+    """One loaded survey's apparent-resistivity pseudosection, and its caption."""
+    from .. import _raw_data as raw
+    from .._figstyle import style_from_config
+
+    style = style_from_config({"figure_style": _figure_style(ctx)})
+    name = Path(str(path)).name
+    which = f"Survey {index + 1} of {count} ({name})" if count > 1 else name
+    try:
+        drawn = raw.ert_pseudosection(
+            readings, raw.figure_path(ctx.output_dir, f"ert_apparent_resistivity_{index + 1:02d}"),
+            title=f"{which}: apparent resistivity, {np.size(readings.get('rhoa'))} readings",
+            unit=style.length_unit, cmap=style.cmap_for("resistivity"))
+    except Exception:  # noqa: BLE001 - a picture of the data must not fail the load
+        return None
+    if not drawn:
+        return None
+    return drawn, (f"Apparent resistivity of {which} as read, each reading at the midpoint "
+                   "of its four electrodes and a pseudo-depth of 0.19 of their spread"
+                   + ("" if readings.get("converted") else
+                      "; the values are the file's own, which may be resistances") + ".")
+
+
+def _draw_ert_series(ctx: RunContext, readings: Sequence[Mapping[str, Any]],
+                     files: Sequence[str]) -> Optional[Tuple[str, str]]:
+    """The loaded surveys' pseudosections side by side on one scale, and the caption."""
+    from .. import _raw_data as raw
+    from .._figstyle import style_from_config
+
+    style = style_from_config({"figure_style": _figure_style(ctx)})
+    picked = raw.chosen(len(readings))
+    try:
+        drawn = raw.ert_pseudosections(
+            [readings[k] for k in picked],
+            raw.figure_path(ctx.output_dir, "ert_apparent_resistivity_series"),
+            titles=[f"Survey {k + 1}: {Path(str(files[k])).name}" for k in picked],
+            unit=style.length_unit, cmap=style.cmap_for("resistivity"))
+    except Exception:  # noqa: BLE001 - a picture of the data must not fail the load
+        return None
+    if not drawn:
+        return None
+    which = (f"the {len(readings)} surveys" if len(picked) == len(readings)
+             else f"{len(picked)} of the {len(readings)} surveys, the first and last among them")
+    return drawn, (f"Apparent resistivity of {which} as read, on one colour scale, each "
+                   "reading at the midpoint of its four electrodes and a pseudo-depth of 0.19 "
+                   "of their spread: the data the inversion fitted.")
+
+
+def _ert_load_summary(readings: Sequence[Mapping[str, Any]], files: Sequence[str],
+                      configured: int) -> str:
+    """What the load step read, in a sentence: counts and the apparent resistivity."""
+    from .. import _raw_data as raw
+
+    if len(readings) == 1:
+        return f"Loaded {Path(str(files[0])).name}: {raw.describe_ert(readings[0])}."
+    counts = [int(r.get("n_readings") or 0) for r in readings]
+    electrodes = sorted({int(r.get("n_electrodes") or 0) for r in readings})
+    values = np.concatenate([np.asarray(r.get("rhoa"), dtype=float) for r in readings]
+                            + [np.zeros(0)])
+    text = (f"Loaded {len(readings)} ERT surveys from {configured} configured files: "
+            f"{'/'.join(map(str, electrodes))} electrodes, {min(counts)}"
+            + ("" if min(counts) == max(counts) else f" to {max(counts)}")
+            + " readings per survey")
+    if values.size:
+        text += (f"; apparent resistivity {values.min():.3g} to {values.max():.3g} Ω·m "
+                 f"across the series (median {np.median(values):.3g})")
+    return text + "."
 
 
 def _loader_failure(result: Mapping[str, Any]) -> str:
@@ -613,11 +700,12 @@ def _water_content_wanted(ctx: RunContext) -> bool:
 #: The tools that make each product a request can name (``_intent.PRODUCTS``).
 PRODUCERS = {"water_content": ("convert_water_content", "convert_tdem_water_content",
                                "convert_mt_water_content"),
-             "climate": ("fetch_climate",)}
+             "climate": ("fetch_climate",),
+             "spatial_map": ("map_tdem_plan_view",)}
 
 #: The steps that recover a resistivity model a conversion can start from.
-_MODEL_STEPS = ("load_ert_surveys", "invert_time_lapse", "invert_ert", "invert_tdem",
-                "invert_mt")
+_MODEL_STEPS = ("load_ert_surveys", "invert_time_lapse", "invert_ert", "load_tdem_data",
+                "invert_tdem", "load_mt_sites", "invert_mt")
 
 
 def plain_error(error: Any) -> str:
@@ -690,6 +778,10 @@ def shortfall_reasons(ctx: RunContext,
         failed = _last_failure(ctx, PRODUCERS["climate"])
         reasons["climate"] = (plain_error(failed.error) if failed is not None
                               else climate_blocker(ctx.config) or "the climate step did not run")
+    if wants_spatial_map(ctx.config) and not ctx.has("plan_maps"):
+        failed = _last_failure(ctx, PRODUCERS["spatial_map"])
+        reasons["spatial_map"] = (plain_error(failed.error) if failed is not None
+                                  else "the mapping step did not run")
     return reasons
 
 
@@ -851,6 +943,10 @@ def _convert_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         results[key] = first.get(key)
     flag = _state_prior(ctx, first)
 
+    figure = _draw_water_content(ctx, mesh, per_step)
+    if figure:
+        results["water_content_figure"] = figure
+
     layering = first.get("layering") or ""
     source = " the structure-constrained" if results.get("structure_constrained") else ""
     means = [float(np.nanmean(step.get("water_content_mean"))) for step in per_step]
@@ -862,6 +958,29 @@ def _convert_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     if layering:
         summary += f" {layering}"
     return summary, {"inversion_results": results, "water_content": per_step}
+
+
+def _draw_water_content(ctx: RunContext, mesh: Any, per_step: Sequence[Mapping[str, Any]]
+                        ) -> Optional[str]:
+    """The water content and its standard deviation, drawn as the conversion ends.
+
+    Up to three surveys - the first, the middle and the last - so the Live tab
+    shows the uncertainty the moment it exists, not only in the report.
+    """
+    from .. import _raw_data as raw
+    from .._figstyle import style_from_config
+    from .._uncertainty import draw_water_content
+
+    picked = raw.chosen(len(per_step), 3)
+    try:
+        return draw_water_content(
+            mesh, [per_step[k].get("water_content_mean") for k in picked],
+            [per_step[k].get("water_content_std") for k in picked],
+            Path(ctx.output_dir) / "petrophysics" / "water_content_mean_and_uncertainty.png",
+            titles=[f"Survey {k + 1}" if len(per_step) > 1 else "" for k in picked],
+            style=style_from_config({"figure_style": _figure_style(ctx)}))
+    except Exception:  # noqa: BLE001 - the numbers stand without the picture
+        return None
 
 
 register(Tool(
@@ -922,28 +1041,45 @@ def seismic_inversion_params(config: Mapping[str, Any]) -> Dict[str, Any]:
     return merged
 
 
-def _invert_seismic(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+_SEGY_SUFFIXES = (".sgy", ".segy")
+
+
+def _raw_seismic(config: Mapping[str, Any]) -> Optional[str]:
+    """The SEG-Y file to pick, when the run starts from traces rather than travel times."""
+    raw = config.get("raw_seismic_file")
+    given = config.get("seismic_file")
+    if not raw and given and Path(str(given)).suffix.lower() in _SEGY_SUFFIXES:
+        raw = given
+    return (resolve_path(raw, config.get("project_dir", ".")) or None) if raw else None
+
+
+def _travel_time_file(config: Mapping[str, Any]) -> Optional[str]:
+    """The travel-time file the configuration names, when it is not a SEG-Y file."""
+    given = config.get("seismic_file")
+    if given and Path(str(given)).suffix.lower() not in _SEGY_SUFFIXES:
+        return resolve_path(given, config.get("project_dir", ".")) or None
+    return None
+
+
+def _pick_first_breaks(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     from ..seismic_agent import SeismicAgent
 
     config = ctx.config
     agent = SeismicAgent(**agent_kwargs(ctx))
-    raw = config.get("raw_seismic_file")
     inputs = {
-        "seismic_file": resolve_path(config.get("seismic_file"),
-                                     config.get("project_dir", ".")) or None,
-        # SEG-Y needs first-break picking before tomography, which the agent
-        # does itself when given the raw file under its own key.
-        "raw_seismic_file": resolve_path(raw, config.get("project_dir", ".")) or None,
+        "raw_seismic_file": _raw_seismic(config),
         "geophone_file": config.get("geophone_file"),
         "topography_file": config.get("topography_file"),
-        "velocity_threshold": config.get("velocity_threshold", 1200.0),
-        "inversion_params": seismic_inversion_params(config),
+        "first_break_params": dict(config.get("first_break_params") or {}),
         "output_dir": str(Path(ctx.output_dir) / "seismic"),
         "align_origin": config.get("align_origin"),
+        "figure_style": _figure_style(ctx),
     }
-    results = agent.execute(inputs)
-    mismatch = results.get("origin_mismatch") if results.get("status") != "success" else None
-    if mismatch and not inputs["align_origin"]:
+    picks = agent.pick_travel_times(inputs)
+    mismatch = picks.get("origin_mismatch") if picks.get("status") != "success" else None
+    # Only a real translation is a choice to put to the user: with the two
+    # origins 0 m apart, either answer re-ran the same failing geometry.
+    if mismatch and abs(float(mismatch.get("shift") or 0.0)) > 1e-6 and not inputs["align_origin"]:
         # Not a guess this code is entitled to make: the coordinate file and
         # the SEG-Y headers describe the same line from two different origins,
         # and only somebody who knows the survey can say which one to report.
@@ -952,9 +1088,8 @@ def _invert_seismic(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         # coordinates that will later be laid beside an ERT line.
         choice = ctx.ask(
             f"The coordinate file and the SEG-Y headers place this line "
-            f"{abs(mismatch.get('shift', 0.0)):g} m apart along x, so the shots "
-            f"fall outside the elevation profile. The survey geometry is the "
-            f"same either way; which origin should the results carry?",
+            f"{abs(mismatch.get('shift', 0.0)):g} m apart along x. The survey "
+            f"geometry is the same either way; which origin should the results carry?",
             [{"id": "profile",
               "label": "Use the coordinate file's origin",
               "detail": "Shift the SEG-Y shot and receiver positions to match "
@@ -974,34 +1109,413 @@ def _invert_seismic(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
             raise ValueError(
                 "Seismic processing stopped: the coordinate file and the SEG-Y "
                 "headers disagree about the origin of the line, and the choice "
-                "was left open. " + str(results.get("error") or ""))
+                "was left open. " + str(picks.get("error") or ""))
         inputs["align_origin"] = choice
         ctx.note(f"Seismic geometry was reconciled onto the "
                  f"{'coordinate file' if choice == 'profile' else 'SEG-Y header'} "
                  f"origin, a shift of {abs(mismatch.get('shift', 0.0)):g} m, "
                  f"chosen during the run. The velocity model is unaffected; the "
                  f"x coordinates it is reported against are not.")
-        results = agent.execute(inputs)
+        picks = agent.pick_travel_times(inputs)
+    if picks.get("status") != "success":
+        raise ValueError(str(picks.get("error") or "First arrivals could not be picked."))
+    for note in (picks.get("geometry_warnings") or []) + (picks.get("pick_warnings") or []):
+        ctx.note(str(note))
+    dropped = picks.get("dropped_shots") or []
+    positions = ", ".join(f"{float(shot['source_x']):g}" for shot in dropped)
+    left_out = (f"; {len(dropped)} shot{'s' if len(dropped) != 1 else ''} left out "
+                f"(x = {positions} m) for times that disagree with their reciprocals"
+                if dropped else "")
+    if picks.get("repicked_picks"):
+        left_out += (f"; {picks['repicked_picks']} picks that strayed from their shot's "
+                     "first-arrival curve picked again along it")
+    if picks.get("rejected_picks"):
+        left_out += (f"; {picks['rejected_picks']} single picks left out for breaking their "
+                     "shot's first-arrival curve")
+    if picks.get("neighbour_repicked") or picks.get("neighbour_rejected"):
+        left_out += (f"; against the neighbouring shots at the same geophone, "
+                     f"{picks.get('neighbour_repicked', 0)} picked again and "
+                     f"{picks.get('neighbour_rejected', 0)} left out")
+    return (f"Picked {picks.get('n_picks', '?')} first arrivals on "
+            f"{picks.get('picked_shots', '?')} shots{left_out}.", {"seismic_picks": picks})
+
+
+register(Tool(
+    name="pick_first_breaks",
+    description="Pick the first-arrival travel times in a raw SEG-Y file, place them on "
+                "the survey geometry, and leave out shots whose times disagree with "
+                "their reciprocals.",
+    handler=_pick_first_breaks,
+    produces=("seismic_picks",),
+    agent="SeismicAgent",
+    label="Pick first-arrival travel times",
+    module="seismic",
+    when=lambda ctx: bool(_raw_seismic(ctx.config)) and not _travel_time_file(ctx.config),
+))
+
+
+def _load_seismic_traveltimes(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    from pygimli.physics import traveltime as tt
+
+    from .. import _raw_data as raw
+    from .._figstyle import style_from_config
+
+    path = _travel_time_file(ctx.config)
+    if not path or not Path(str(path)).exists():
+        raise ValueError(f"Seismic travel-time file not found: {ctx.config.get('seismic_file')}")
+    data = tt.load(str(path))
+    if not data.size():
+        raise ValueError(f"{Path(str(path)).name} holds no travel times.")
+    table = raw.traveltime_table(data)
+    times = table["time_s"]
+    shots = int(np.unique(table["shot"]).size)
+    geophones = int(np.unique(np.asarray(data["g"], dtype=int)).size)
+    name = Path(str(path)).name
+    try:
+        figure = raw.traveltime_curves(
+            table, raw.figure_path(ctx.output_dir, "seismic_traveltimes"),
+            title=f"{name}: {data.size()} travel times from {shots} shots",
+            unit=style_from_config({"figure_style": _figure_style(ctx)}).length_unit)
+    except Exception:  # noqa: BLE001 - a picture of the data must not fail the load
+        figure = None
+    return (f"Read {data.size()} first-arrival travel times from {name}: {shots} shots into "
+            f"{geophones} geophones, {times.min() * 1e3:.1f} to {times.max() * 1e3:.1f} ms.",
+            {"seismic_traveltimes": {"file": str(path), "n_data": int(data.size()),
+                                     "n_shots": shots, "n_geophones": geophones,
+                                     "time_range_s": [float(times.min()), float(times.max())],
+                                     "figure": figure}})
+
+
+register(Tool(
+    name="load_seismic_traveltimes",
+    description="Read the first-arrival travel-time file the configuration names and draw "
+                "its travel-time curves. Run before the seismic inversion.",
+    handler=_load_seismic_traveltimes,
+    produces=("seismic_traveltimes",),
+    agent="SeismicAgent",
+    label="Load seismic travel times",
+    module="seismic",
+    when=lambda ctx: bool(_travel_time_file(ctx.config)),
+))
+
+
+#: What the picking step found that the report of the inversion describes.
+_PICK_KEYS = ("raw_seismic_file", "traveltime_file", "first_break_picks_file", "picks_figure",
+              "gathers_figure", "n_picks", "picked_shots", "dropped_shots", "rejected_picks", "repicked_picks",
+              "neighbour_rejected", "neighbour_repicked", "segy_metadata")
+
+
+def _run_seismic(ctx: RunContext, params: Optional[Mapping[str, Any]] = None,
+                 folder: Optional[Path] = None) -> Dict[str, Any]:
+    """Invert the run's travel times; ``params`` replace the configured settings."""
+    from ..seismic_agent import SeismicAgent
+
+    config = ctx.config
+    agent = SeismicAgent(**agent_kwargs(ctx))
+    picks = dict(ctx.get("seismic_picks") or {})
+    loaded = dict(ctx.get("seismic_traveltimes") or {})
+    inputs = {
+        "seismic_file": (picks.get("traveltime_file") or loaded.get("file")
+                         or _travel_time_file(config)),
+        "velocity_threshold": config.get("velocity_threshold", 1200.0),
+        "inversion_params": (seismic_inversion_params(config) if params is None
+                             else dict(params)),
+        "output_dir": str(folder or Path(ctx.output_dir) / "seismic"),
+        # Traced as a step of its own, after the model exists.
+        "extract_interfaces": False,
+        "figure_style": _figure_style(ctx),
+    }
+    results = agent.execute(inputs)
     if results.get("status") != "success":
         raise ValueError(str(results.get("error") or "Seismic inversion failed."))
-    for note in results.get("geometry_warnings") or []:
-        ctx.note(str(note))
+    results.update({key: picks[key] for key in _PICK_KEYS if picks.get(key) is not None})
+    results["geometry_warnings"] = list(picks.get("geometry_warnings") or []) + list(
+        results.get("geometry_warnings") or [])
+    results["pick_warnings"] = list(picks.get("pick_warnings") or [])
+    if loaded.get("figure"):
+        results["raw_figures"] = [(loaded["figure"], "First-arrival travel times as read, "
+                                                     "against geophone position, one curve "
+                                                     "per shot; triangles mark the shots.")]
+    return results
+
+
+def _invert_seismic(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    results = _run_seismic(ctx)
     span = results.get("velocity_range")
     detail = f" Velocity {span[0]:.0f} to {span[1]:.0f} m/s." if span else ""
+    fit = (f" Relative RMS misfit {float(results['rrms']):.3g}%."
+           if results.get("rrms") is not None else "")
     return (f"Recovered a seismic velocity model from {results.get('n_data', '?')} "
-            f"travel times.{detail}", {"seismic_results": results})
+            f"travel times.{detail}{fit}", {"seismic_results": results})
 
 
 register(Tool(
     name="invert_seismic",
-    description="Invert seismic refraction travel times for a velocity model, "
-                "and pick the interface depths it implies.",
+    description="Invert first-arrival travel times for a P-wave velocity model by "
+                "refraction tomography.",
     handler=_invert_seismic,
     produces=("seismic_results",),
     agent="SeismicAgent",
     label="Run seismic refraction inversion",
     module="seismic",
-    when=_configured("seismic_file", "raw_seismic_file"),
+    # On travel times that were read, or picked: the loading step draws them
+    # first, as the ERT loader draws its surveys.
+    when=lambda ctx: ctx.has("seismic_picks") or ctx.has("seismic_traveltimes"),
+))
+
+
+def _attempt_row(attempt: int, results: Mapping[str, Any],
+                 evaluation: Mapping[str, Any]) -> Dict[str, Any]:
+    return {"attempt": attempt, "lam": (results.get("inversion_params") or {}).get("lam"),
+            "chi2": results.get("chi2"), "quality_score": evaluation.get("quality_score")}
+
+
+def _quality_threshold(ctx: RunContext) -> float:
+    from .._method_evaluation import QUALITY_THRESHOLD
+
+    try:
+        return float(ctx.config.get("quality_threshold", QUALITY_THRESHOLD))
+    except (TypeError, ValueError):
+        return QUALITY_THRESHOLD
+
+
+def _needs_review(ctx: RunContext, what: str, evaluation: Mapping[str, Any]) -> None:
+    """One short warning when an evaluation falls short; the report says why."""
+    if evaluation.get("status") != "success":
+        ctx.note(f"{what} quality needs review ({float(evaluation['quality_score']):.0f}/100); "
+                 "the report's Inversion Quality section says why.")
+
+
+def _evaluate_seismic(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    """Score the velocity model, and re-invert with lambda changed while the fit is off.
+
+    As ``evaluate_inversion`` does for ERT: a fit below the target (errors
+    overstated) doubles lambda, one above it halves it, up to
+    ``max_attempts`` inversions in all, stopping once the score passes or the
+    fit crosses the target. The best-scoring model is the one the run keeps.
+    """
+    from .. import _method_evaluation as quality
+    from .._figstyle import style_from_config
+
+    config = ctx.config
+    first = dict(ctx.get("seismic_results") or {})
+    unit = style_from_config({"figure_style": _figure_style(ctx)}).length_unit
+    threshold = _quality_threshold(ctx)
+    folder = Path(first.get("output_dir") or Path(ctx.output_dir) / "seismic")
+
+    def score(results: Mapping[str, Any], attempt: int) -> Dict[str, Any]:
+        name = ("seismic_data_fit.png" if attempt == 1
+                else f"seismic_data_fit_attempt{attempt}.png")
+        return quality.evaluate_seismic(results, figure_path=folder / name, unit=unit,
+                                        threshold=threshold)
+
+    current, evaluation = first, score(first, 1)
+    best, best_score, adopted = first, evaluation, 1
+    history = [_attempt_row(1, first, evaluation)]
+    attempts, limit = 1, int(config.get("max_attempts", 3))
+    while config.get("auto_adjust", True) and attempts < limit and best_score["status"] != "success":
+        direction = evaluation["metrics"]["data_fit"].get("status")
+        lam = (current.get("inversion_params") or {}).get("lam")
+        if direction not in ("underfit", "overfit") or lam is None:
+            break
+        params = {**current["inversion_params"],
+                  "lam": float(lam) * (0.5 if direction == "underfit" else 2.0)}
+        attempts += 1
+        try:
+            retry = _run_seismic(ctx, params, Path(ctx.output_dir) / "seismic" / f"attempt_{attempts}")
+        except ValueError as exc:
+            ctx.note(f"Re-inverting the seismic data with lambda {params['lam']:g} failed "
+                     f"({plain_error(exc)}); the earlier model is kept.")
+            break
+        current, evaluation = retry, score(retry, attempts)
+        history.append(_attempt_row(attempts, retry, evaluation))
+        if evaluation["quality_score"] > best_score["quality_score"]:
+            best, best_score, adopted = retry, evaluation, attempts
+        if evaluation["metrics"]["data_fit"].get("status") != direction:
+            break  # the target lies between the two lambdas tried
+    best_score = {**best_score, "attempts": attempts, "adopted_attempt": adopted,
+                  "evaluation_history": history}
+    if adopted > 1:
+        best_score["adjusted_params"] = {"lam": best["inversion_params"]["lam"]}
+    _needs_review(ctx, "Seismic inversion", best_score)
+    return (quality.describe(best_score),
+            {"seismic_results": {**best, "evaluation": best_score},
+             "seismic_evaluation": best_score})
+
+
+register(Tool(
+    name="evaluate_seismic_inversion",
+    description="Judge how well the velocity model fits the travel times, how much of it "
+                "the rays cover and whether velocities sit at the inversion's bounds; "
+                "re-invert with lambda changed while the fit is off. Run after the seismic "
+                "inversion, before anything is built on the model.",
+    handler=_evaluate_seismic,
+    requires=("seismic_results",),
+    produces=("seismic_evaluation",),
+    agent="SeismicAgent",
+    label="Evaluate seismic inversion",
+    module="seismic",
+))
+
+
+def _velocity_thresholds(config: Mapping[str, Any]) -> List[float]:
+    """The velocities to trace as interfaces: ``velocity_thresholds``, else the one threshold."""
+    listed = config.get("velocity_thresholds")
+    if isinstance(listed, (list, tuple)) and listed:
+        return [float(v) for v in listed]
+    return [float(config.get("velocity_threshold", 1200.0))]
+
+
+def _extract_seismic_interfaces(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    from ..seismic_agent import SeismicAgent
+    from .._figstyle import style_from_config
+
+    seismic = dict(ctx.get("seismic_results") or {})
+    if seismic.get("mesh") is None or seismic.get("velocity_model") is None:
+        raise ValueError("The seismic inversion returned no velocity model to trace "
+                         "interfaces in.")
+    thresholds = _velocity_thresholds(ctx.config)
+    folder = str(seismic.get("output_dir") or Path(ctx.output_dir) / "seismic")
+    agent = SeismicAgent(**agent_kwargs(ctx))
+    velocity = np.asarray(seismic["velocity_model"], dtype=float)
+    interfaces = agent.interfaces_from_model(seismic["mesh"], velocity, thresholds, folder)
+    figure = agent._generate_velocity_plot(
+        None, seismic["mesh"], velocity, seismic.get("coverage"),
+        seismic.get("sensors") if seismic.get("sensors") is not None else [], interfaces,
+        thresholds, folder,
+        length_unit=style_from_config({"figure_style": _figure_style(ctx)}).length_unit,
+        filename="seismic_structure.png",
+        title="Seismic Refraction Tomography - Layer Interfaces")
+    seismic.update({
+        "interfaces": interfaces, "velocity_thresholds": thresholds,
+        "structure_figure": figure,
+        "data_paths": list(seismic.get("data_paths") or []) + [
+            str(Path(folder) / f"interface_{threshold}ms.txt") for threshold in interfaces],
+    })
+    missing = [t for t in thresholds if t not in interfaces]
+    if missing:
+        # A velocity the model never reaches is a finding, not a failure: no
+        # layer that fast lies within the depth the rays reach.
+        ctx.note(f"No interface was traced at {', '.join(f'{t:g}' for t in missing)} m/s: "
+                 f"the velocity model runs from {velocity.min():.0f} to {velocity.max():.0f} "
+                 "m/s, and the contour does not cross the line.")
+    traced = ", ".join(f"{t:g} m/s" for t in thresholds if t in interfaces)
+    return ((f"Traced the {traced} interface{'s' if len(interfaces) > 1 else ''} through the "
+             "velocity model." if interfaces else
+             "No threshold velocity is crossed in the model, so no interface was traced."),
+            {"seismic_results": seismic,
+             "seismic_structure": {"thresholds": thresholds,
+                                   "traced": [float(t) for t in interfaces]}})
+
+
+register(Tool(
+    name="extract_seismic_interfaces",
+    description="Trace layer interfaces through the seismic velocity model at the "
+                "threshold velocities (velocity_threshold, 1200 m/s by default), and draw "
+                "the model with them.",
+    handler=_extract_seismic_interfaces,
+    # On the model the evaluation kept, which may be a retry's.
+    requires=("seismic_results", "seismic_evaluation"),
+    produces=("seismic_structure",),
+    agent="SeismicAgent",
+    label="Extract layer interfaces",
+    module="seismic",
+))
+
+
+def _seismic_structure_pending(ctx: RunContext) -> bool:
+    """A seismic model exists whose interfaces are still to be traced."""
+    tool = TOOLS.get("extract_seismic_interfaces")
+    return bool(ctx.has("seismic_results") and tool is not None and tool.available(ctx))
+
+
+def _figure_style(ctx: RunContext) -> Optional[Dict[str, Any]]:
+    """The figure style for a step that draws before any report is written.
+
+    "In feet" in the request has to reach the figures now, and is recorded in
+    the configuration so the report's tables agree with them.
+    """
+    from .._figures import length_unit_from_text
+
+    style = dict(ctx.config.get("figure_style") or {})
+    if not style.get("length_unit"):
+        unit = length_unit_from_text(str(ctx.config.get("user_request") or ""))
+        if unit:
+            style["length_unit"] = unit
+            ctx.config["figure_style"] = style
+    return style or None
+
+
+def _load_tdem(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    """Read the TDEM data the inversion will read, and draw a few soundings' decays."""
+    from PyHydroGeophysX.data_processing.em1d import load_sounding
+
+    from .. import _raw_data as raw
+    from .._figstyle import style_from_config
+    from ..tdem_agent import TDEMAgent
+
+    config = ctx.config
+    given = config.get("tdem_file") or config.get("em_file")
+    path = resolve_path(given, config.get("project_dir", "."))
+    if not path or not Path(str(path)).exists():
+        raise ValueError(f"TDEM data not found: {given}")
+    path, name = str(path), Path(str(path)).name
+    if TDEMAgent._is_instrument_survey(path):
+        # The moment the inversion reads: LM+HM, else HM for a one-moment survey.
+        requested = config.get("tem_moment")
+        moment = str(requested or "LM+HM")
+        try:
+            head = load_sounding(path, "TDEM", sounding=0, moment=moment)
+        except ValueError:
+            if requested:
+                raise
+            moment = "HM"
+            head = load_sounding(path, "TDEM", sounding=0, moment=moment)
+        total = int(head.get("n_soundings", 1))
+        drawn = raw.chosen(total)
+        soundings = [head if k == 0 else load_sounding(path, "TDEM", sounding=k, moment=moment)
+                     for k in drawn]
+        ids = list(np.asarray(head.get("station_ids", []), dtype=object).ravel())
+        labels = [f"Station {ids[k]}" if k < len(ids) else f"Sounding {k + 1}" for k in drawn]
+        layout = {"x": head.get("x", []), "y": head.get("y", []),
+                  "line_numbers": head.get("line_numbers", []), "drawn": drawn}
+        what = f"{total} soundings ({head.get('source_format') or 'TEM survey'}, moment {moment})"
+    else:
+        sounding = int((config.get("tdem_params") or {}).get("sounding", 0))
+        times, observed, errors = TDEMAgent(**agent_kwargs(ctx))._load_tdem_data(path, sounding)
+        relative = np.abs(errors) / np.maximum(np.abs(observed), 1e-30)
+        soundings = [{"times": times, "response": observed, "relative_std": relative}]
+        labels, layout, total, moment, drawn = [f"Sounding {sounding + 1}"], None, 1, None, [0]
+        what = "one sounding"
+    curves = [curve for sounding in soundings for curve in raw.decays(sounding)]
+    if not curves:
+        raise ValueError(f"{name} holds no TDEM decay to invert.")
+    times = np.concatenate([curve[1] for curve in curves])
+    try:
+        figure = raw.tdem_decays(
+            soundings, raw.figure_path(ctx.output_dir, "tdem_decays"),
+            title=f"{name}: " + (f"{len(drawn)} of {total} soundings" if total > 1 else "decay"),
+            labels=labels, layout=layout,
+            unit=style_from_config({"figure_style": _figure_style(ctx)}).length_unit)
+    except Exception:  # noqa: BLE001 - a picture of the data must not fail the load
+        figure = None
+    return (f"Read {what} from {name}; gates from {times.min() * 1e3:.3g} to "
+            f"{times.max() * 1e3:.3g} ms" + (f", the decays of {len(drawn)} drawn"
+                                             if total > 1 else "") + ".",
+            {"tdem_data": {"source_file": path, "n_soundings": total, "moment": moment,
+                           "figure": figure, "survey": layout is not None}})
+
+
+register(Tool(
+    name="load_tdem_data",
+    description="Read the TDEM sounding or survey the configuration names and draw the "
+                "decay curves of a few soundings. Run before the TDEM inversion.",
+    handler=_load_tdem,
+    produces=("tdem_data",),
+    agent="TDEMAgent",
+    label="Load TDEM data",
+    module="em",
+    when=_configured("tdem_file", "em_file"),
 ))
 
 
@@ -1010,6 +1524,7 @@ def _invert_tdem(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
 
     config = ctx.config
     agent = TDEMAgent(**agent_kwargs(ctx))
+    style = _figure_style(ctx)
     # TDEMAgent takes its settings flat, under 'data_file' - not an
     # 'inversion_params' dict and not 'tdem_file'. Passing the names this
     # workflow uses elsewhere silently gave it no data file at all.
@@ -1018,13 +1533,39 @@ def _invert_tdem(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         "data_file": resolve_path(config.get("tdem_file") or config.get("em_file"),
                                   config.get("project_dir", ".")),
         "output_dir": str(Path(ctx.output_dir) / "tdem"),
+        "figure_style": style,
     }
+    if config.get("tem_moment"):
+        payload["tem_moment"] = config["tem_moment"]
     payload.update({k: v for k, v in (config.get("tdem_params") or {}).items()})
     results = agent.execute(payload)
     if results.get("status") != "success":
         raise ValueError(str(results.get("error") or "TDEM inversion failed."))
+    loaded = ctx.get("tdem_data") or {}
+    if loaded.get("figure"):
+        results["raw_figures"] = [(loaded["figure"], (
+            "TDEM decays as read, |response| against time after turn-off on log axes; "
+            "shading is the stated error"
+            + (", beside the station layout with the drawn soundings ringed"
+               if loaded.get("survey") else "") + "."))]
     span = results.get("resistivity_range")
     detail = f" Resistivity {span[0]:.1f} to {span[1]:.1f} ohm-m." if span else ""
+    if results.get("survey"):
+        lines = results.get("lines") or []
+        failed = int(results.get("failed_soundings") or 0)
+        if failed:
+            ctx.note(f"{failed} of {results['n_soundings']} TDEM soundings could not be "
+                     "inverted and are blank in the section.")
+        unresolved = int(results.get("unresolved_soundings") or 0)
+        if unresolved:
+            ctx.note(f"{unresolved} of {results['n_soundings']} TDEM soundings resolved no "
+                     "layer above their depth of investigation and are blank in the section.")
+        return (f"Inverted {results['n_soundings']} {results.get('instrument') or 'TEM'} "
+                f"soundings on {len(lines)} line{'s' if len(lines) != 1 else ''} "
+                f"({results.get('tem_moment')}, {results.get('lci_mode')} LCI) for a "
+                f"{results.get('n_layers', '?')}-layer resistivity section; median sounding "
+                f"chi-squared {results['chi2_sounding_median']:.2f}.{detail}",
+                {"tdem_results": results})
     return (f"Recovered a {results.get('n_layers', '?')}-layer resistivity model "
             f"from the TDEM sounding.{detail}", {"tdem_results": results})
 
@@ -1034,11 +1575,104 @@ register(Tool(
     description="Invert a time-domain electromagnetic sounding for a layered "
                 "resistivity model.",
     handler=_invert_tdem,
+    requires=("tdem_data",),
     produces=("tdem_results",),
     agent="TDEMAgent",
     label="Run TDEM inversion",
     module="em",
     when=_configured("tdem_file", "em_file"),
+))
+
+
+def _evaluate_tdem(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    """Score the TDEM model on its data fit, what it resolved, and its resistivities."""
+    from .. import _method_evaluation as quality
+    from .._figstyle import style_from_config
+
+    tdem = dict(ctx.get("tdem_results") or {})
+    folder = Path(tdem.get("output_dir") or Path(ctx.output_dir) / "tdem")
+    evaluation = quality.evaluate_tdem(
+        tdem, figure_path=folder / "tdem_data_fit.png",
+        unit=style_from_config({"figure_style": _figure_style(ctx)}).length_unit,
+        threshold=_quality_threshold(ctx))
+    evaluation["attempts"] = 1
+    _needs_review(ctx, "TDEM inversion", evaluation)
+    return (quality.describe(evaluation),
+            {"tdem_results": {**tdem, "evaluation": evaluation}, "tdem_evaluation": evaluation})
+
+
+register(Tool(
+    name="evaluate_tdem_inversion",
+    description="Judge how well the TDEM model fits each sounding's decay, how many "
+                "soundings resolved a model above their depth of investigation, and "
+                "whether its resistivities are physical. Run after the TDEM inversion, "
+                "before anything is built on the model.",
+    handler=_evaluate_tdem,
+    requires=("tdem_results",),
+    produces=("tdem_evaluation",),
+    agent="TDEMAgent",
+    label="Evaluate TDEM inversion",
+    module="em",
+))
+
+
+def _plan_maps_wanted(ctx: RunContext) -> bool:
+    """The request asks where things are, and the TDEM result is a survey to map.
+
+    A single sounding has no plan view. Before the inversion has run there is
+    no result to look in, so on a projected route the step is shown whenever
+    the request asks for the spatial distribution.
+    """
+    if not wants_spatial_map(ctx.config):
+        return False
+    if ctx.projected("tdem_results"):
+        return True
+    tdem = ctx.get("tdem_results") or {}
+    return bool(tdem.get("survey")) and not tdem.get("map_figure")
+
+
+def _map_tdem_plan_view(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    from .._figstyle import style_from_config
+    from ...visualization.axis_units import length_factor, normalize_length_unit
+    from ...visualization.em_maps import draw_survey_plan_maps, survey_plan_grids
+
+    config = ctx.config
+    tdem = dict(ctx.get("tdem_results") or {})
+    source = tdem.get("source_file") or resolve_path(
+        config.get("tdem_file") or config.get("em_file"), config.get("project_dir", "."))
+    # The basemap is the image the inputs name, else the georeferenced one the
+    # survey folder keeps (a TEM2Go controller saves it under Maps), else tiles.
+    maps = survey_plan_grids(tdem, source=source, basemap_file=config.get("basemap_file"),
+                             basemap=str(config.get("basemap") or "auto"))
+    style = style_from_config({"figure_style": _figure_style(ctx)})
+    unit = normalize_length_unit(style.length_unit)
+    drawn = draw_survey_plan_maps(maps, Path(ctx.output_dir) / "tdem", unit=unit,
+                                  cmap=style.cmap_for("resistivity"),
+                                  name=Path(str(source)).name if source else "")
+    tdem.update(drawn)
+    summary = drawn["depth_slices"]
+    spread = [s["median"] for s in summary["std_decades"] if s]
+    depths = ", ".join(f"{d * length_factor(unit):.3g}" for d in summary["depths"])
+    return (f"Kriged resistivity at {len(summary['depths'])} depths ({depths} {unit}) across "
+            "the survey outline, with a map of the kriging uncertainty for each"
+            + (f"; median standard deviation {min(spread):.2f} to {max(spread):.2f} decade"
+               if spread else "") + ".",
+            {"tdem_results": tdem, "plan_maps": summary})
+
+
+register(Tool(
+    name="map_tdem_plan_view",
+    description="Krige the TDEM survey's resistivity onto plan-view maps at several "
+                "depths, filled across the survey outline, with a map of the kriging "
+                "uncertainty for each, over the survey's basemap. Required when the "
+                "request asks for the spatial distribution of a TEM survey.",
+    handler=_map_tdem_plan_view,
+    requires=("tdem_results", "tdem_evaluation"),
+    produces=("plan_maps",),
+    agent="TDEMAgent",
+    label="Interpolate plan-view maps",
+    module="em",
+    when=_plan_maps_wanted,
 ))
 
 
@@ -1053,18 +1687,29 @@ def _tdem_water_content_wanted(ctx: RunContext) -> bool:
 
 
 def _layered_water_content(ctx: RunContext, resistivity: Any, thicknesses: Any, *,
-                           label: str, folder: Path):
+                           label: str, folder: Path, positions: Any = None,
+                           max_depth: Optional[float] = None):
     """Water content of a layered resistivity model, layer by layer, by Monte Carlo.
 
     Shared by the TDEM sounding and the MT sites. Returns ``(mean, std, step,
     table)``: the per-layer mean and spread, the petrophysics step's result
     with the layering stated, and the CSV written (or None).
+
+    A ``(n_stations, n_layers)`` resistivity is a section of 1D models on one
+    layer grid - a TEM survey - and comes back in that shape, one table row per
+    station and layer. Cells without a resistivity (NaN below a station's depth
+    of investigation) are not converted and stay NaN.
     """
     from ..petrophysics_agent import PetrophysicsAgent
 
     config = ctx.config
-    resistivity = np.asarray(resistivity, dtype=float).ravel()
-    n_layers = resistivity.size
+    resistivity = np.asarray(resistivity, dtype=float)
+    shape = resistivity.shape
+    cells = resistivity.reshape(-1, shape[-1]) if resistivity.ndim == 2 else resistivity.reshape(1, -1)
+    n_layers = cells.shape[1]
+    usable = np.isfinite(cells) & (cells > 0)
+    if not usable.any():
+        raise ValueError(f"The {label} model has no resolved resistivity to convert.")
     thicknesses = np.asarray(thicknesses if thicknesses is not None else [], dtype=float).ravel()
     if thicknesses.size == n_layers - 1:
         # The last layer of a 1D model is the half-space below the others.
@@ -1081,8 +1726,8 @@ def _layered_water_content(ctx: RunContext, resistivity: Any, thicknesses: Any, 
     # The model's layers are one unit: a smooth 1D model draws no interface
     # between them, so there is no layer boundary to hang a second set on.
     step = PetrophysicsAgent(**agent_kwargs(ctx)).execute({
-        "resistivity_model": resistivity,
-        "cell_markers": np.zeros(n_layers, dtype=int),
+        "resistivity_model": cells[usable],
+        "cell_markers": np.zeros(int(usable.sum()), dtype=int),
         "petrophysical_params": config.get("petrophysical_params", {}),
         "n_realizations": config.get("n_realizations", 100),
         "geological_context": config.get("geological_context", "generic watershed"),
@@ -1091,23 +1736,51 @@ def _layered_water_content(ctx: RunContext, resistivity: Any, thicknesses: Any, 
     if step.get("status") != "success":
         raise ValueError(str(step.get("error") or f"The {label} water-content conversion failed."))
     step = {**step, "prior_flag": _state_prior(ctx, step)}
-    mean = np.asarray(step.get("water_content_mean"), dtype=float).ravel()
-    std = np.asarray(step.get("water_content_std"), dtype=float).ravel()
+    mean_cells = np.full(cells.shape, np.nan)
+    std_cells = np.full(cells.shape, np.nan)
+    mean_cells[usable] = np.asarray(step.get("water_content_mean"), dtype=float).ravel()
+    std_cells[usable] = np.asarray(step.get("water_content_std"), dtype=float).ravel()
+    mean, std = mean_cells.reshape(shape), std_cells.reshape(shape)
     table: Optional[Path] = folder / "water_content_by_layer.csv"
+    header = ("depth_top_m,depth_bottom_m,resistivity_ohm_m,"
+              "water_content_mean,water_content_std")
+    columns = [np.tile(top, len(cells)), np.tile(bottom, len(cells)), cells.ravel(),
+               mean_cells.ravel(), std_cells.ravel()]
+    if resistivity.ndim == 2:
+        header = "station_index," + header
+        columns.insert(0, np.repeat(np.arange(len(cells)), n_layers))
     try:
         table.parent.mkdir(parents=True, exist_ok=True)
-        np.savetxt(table, np.column_stack([top, bottom, resistivity, mean, std]),
-                   delimiter=",", fmt="%.6g", comments="",
-                   header="depth_top_m,depth_bottom_m,resistivity_ohm_m,"
-                          "water_content_mean,water_content_std")
+        np.savetxt(table, np.column_stack(columns), delimiter=",", fmt="%.6g",
+                   comments="", header=header)
     except Exception as exc:  # noqa: BLE001 - a table is not the result
         ctx.note(f"The {label} water-content table could not be written ({exc}).")
         table = None
-    step = {**step, "layering": (
-        f"The {n_layers}-layer {label} model was converted as one unit with one "
+    model = (f"{len(cells)}-station, {n_layers}-layer {label} section"
+             if resistivity.ndim == 2 else f"{n_layers}-layer {label} model")
+    try:
+        from .._figstyle import style_from_config
+        from .._uncertainty import draw_layered_water_content
+
+        figure = draw_layered_water_content(
+            mean, std, top, bottom, folder / "water_content_mean_and_uncertainty.png",
+            title=f"{label} water content", positions=positions, max_depth=max_depth,
+            unit=style_from_config({"figure_style": _figure_style(ctx)}).length_unit)
+    except Exception:  # noqa: BLE001 - the numbers stand without the picture
+        figure = None
+    step = {**step, "figure": figure, "layering": (
+        f"The {model} was converted as one unit with one "
         f"petrophysical parameter set; no interface divides its layers into "
         f"geological units."), "depth_top_m": top, "depth_bottom_m": bottom}
     return mean, std, step, table
+
+
+def _layered_caption(section: bool) -> str:
+    return ("Water content of each station's layered model (top) and its Monte Carlo "
+            "standard deviation (bottom); blank below a station's depth of investigation."
+            if section else
+            "Water content of the layered model against depth, with bands of one and two "
+            "Monte Carlo standard deviations; the last layer is the half-space.")
 
 
 def _convert_tdem_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
@@ -1121,17 +1794,21 @@ def _convert_tdem_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     if resistivity is None:
         raise ValueError("The TDEM inversion returned no layered resistivity model "
                          "to convert.")
-    n_layers = np.asarray(resistivity).size
+    shape = np.shape(resistivity)
+    model = (f"{shape[0]}-station, {shape[1]}-layer TDEM resistivity section"
+             if len(shape) == 2 else f"{np.size(resistivity)}-layer TDEM resistivity model")
     mean, std, step, table = _layered_water_content(
         ctx, resistivity, tdem.get("thicknesses"), label="TDEM",
-        folder=Path(ctx.output_dir) / "tdem")
+        folder=Path(ctx.output_dir) / "tdem", positions=tdem.get("positions"))
     tdem.update({"water_content_mean": mean, "water_content_std": std,
                  "water_content_table": str(table) if table else None})
+    if step.get("figure"):
+        tdem["water_content_figures"] = [(step["figure"], _layered_caption(len(shape) == 2))]
     for caveat in result_caveats(config, tdem):
         ctx.note(caveat)
     tdem.update({key: step.get(key) for key in ("petrophysical_relationship",
                                                  "prior_statement", "prior_ranges_text")})
-    return (f"Converted the {n_layers}-layer TDEM resistivity model to water content by "
+    return (f"Converted the {model} to water content by "
             f"Monte Carlo petrophysics: {float(np.nanmin(mean)):.3f} to "
             f"{float(np.nanmax(mean)):.3f} (mean uncertainty ± {float(np.nanmean(std)):.3f})."
             f"{step.get('prior_flag', '')}",
@@ -1145,7 +1822,7 @@ register(Tool(
                 "uncertainty by Monte Carlo. Required when the request asks about "
                 "water content and the sounding is the run's only resistivity model.",
     handler=_convert_tdem_water_content,
-    requires=("tdem_results",),
+    requires=("tdem_results", "tdem_evaluation"),
     produces=("water_content",),
     agent="PetrophysicsAgent",
     label="Convert TDEM model to water content",
@@ -1214,6 +1891,53 @@ def _site_folder(index: int, path: Path) -> str:
     return f"{index:02d}_" + "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in path.stem)
 
 
+def _load_mt(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    """Read every MT site the configuration names, and draw their soundings."""
+    from PyHydroGeophysX.data_processing.mt import read_transfer_function
+
+    from .. import _raw_data as raw
+
+    sites = _mt_sites(ctx)
+    tfs = [read_transfer_function(path) for path in sites]
+    names = [str(tf.station or path.stem) for tf, path in zip(tfs, sites)]
+    drawn = raw.chosen(len(tfs))
+    try:
+        figure = raw.mt_soundings(
+            [tfs[k] for k in drawn], raw.figure_path(ctx.output_dir, "mt_sites"),
+            title=(f"{len(drawn)} of {len(tfs)} MT sites" if len(tfs) > len(drawn)
+                   else "MT site" + ("s" if len(tfs) > 1 else "")) + ": apparent resistivity and phase")
+    except Exception:  # noqa: BLE001 - a picture of the data must not fail the load
+        figure = None
+    periods = np.concatenate([np.asarray(tf.period, dtype=float).ravel() for tf in tfs])
+
+    def located(tf: Any) -> bool:
+        try:
+            return bool(np.isfinite([float(tf.latitude), float(tf.longitude)]).all())
+        except (TypeError, ValueError):
+            return False
+
+    where = sum(located(tf) for tf in tfs)
+    return (f"Read {len(tfs)} MT site{'s' if len(tfs) != 1 else ''} ("
+            + ", ".join(names[:6]) + (", ..." if len(names) > 6 else "")
+            + f"); periods {periods.min():.3g} to {periods.max():.3g} s"
+            + (f", {where} with coordinates" if len(tfs) > 1 else "") + ".",
+            {"mt_data": {"sites": [str(path) for path in sites], "stations": names,
+                         "figure": figure}})
+
+
+register(Tool(
+    name="load_mt_sites",
+    description="Read the MT transfer functions the configuration names and draw each "
+                "site's apparent resistivity and phase. Run before the MT inversion.",
+    handler=_load_mt,
+    produces=("mt_data",),
+    agent="MT inversion (Occam 1D, SimPEG 2D)",
+    label="Load MT sites",
+    module="mt",
+    when=_configured("mt_files", "mt_file"),
+))
+
+
 def _invert_mt(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     from PyHydroGeophysX.workflows import ArtifactRef, WorkflowSpec, run_workflow
     from PyHydroGeophysX.workflows import RunContext as WorkflowContext
@@ -1250,6 +1974,11 @@ def _invert_mt(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         })
     results: Dict[str, Any] = {"sites": entries, "output_dir": str(out),
                                "figures": [entry["figure"] for entry in entries]}
+    loaded = ctx.get("mt_data") or {}
+    if loaded.get("figure"):
+        results["raw_figures"] = [(loaded["figure"], "Apparent resistivity and phase of the "
+                                                     "MT sites as read, against period; the "
+                                                     "Zyx phase is folded by 180 degrees.")]
     rms = [entry["rms"] for entry in entries]
     summary = (f"Inverted {len(entries)} MT site{'s' if len(entries) > 1 else ''} in 1D (Occam), "
                f"RMS {min(rms):.2f}" + (f" to {max(rms):.2f}" if len(rms) > 1 else "") + ".")
@@ -1295,6 +2024,7 @@ register(Tool(
                 "layered resistivity by Occam 1D, and a line of three or more "
                 "located sites for a 2D TE/TM section.",
     handler=_invert_mt,
+    requires=("mt_data",),
     produces=("mt_results",),
     agent="MT inversion (Occam 1D, SimPEG 2D)",
     label="Run MT inversion",
@@ -1303,11 +2033,49 @@ register(Tool(
 ))
 
 
+def _evaluate_mt(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    """Score the MT models on each site's fit, the static shifts and their resistivities."""
+    from .. import _method_evaluation as quality
+
+    mt_results = dict(ctx.get("mt_results") or {})
+    folder = Path(mt_results.get("output_dir") or Path(ctx.output_dir) / "mt")
+    evaluation = quality.evaluate_mt(mt_results, figure_path=folder / "mt_data_fit.png",
+                                     threshold=_quality_threshold(ctx))
+    evaluation["attempts"] = 1
+    _needs_review(ctx, "MT inversion", evaluation)
+    return (quality.describe(evaluation),
+            {"mt_results": {**mt_results, "evaluation": evaluation}, "mt_evaluation": evaluation})
+
+
+register(Tool(
+    name="evaluate_mt_inversion",
+    description="Judge how well each MT site's model fits its data against Occam's target "
+                "RMS, how large the static shifts are, and whether the resistivities are "
+                "physical. Run after the MT inversion, before anything is built on it.",
+    handler=_evaluate_mt,
+    requires=("mt_results",),
+    produces=("mt_evaluation",),
+    agent="MT inversion (Occam 1D, SimPEG 2D)",
+    label="Evaluate MT inversion",
+    module="mt",
+))
+
+
 def _mt_water_content_wanted(ctx: RunContext) -> bool:
     """Water content is asked for, and the MT sites hold the run's resistivity models."""
     config = ctx.config
     return (_water_content_wanted(ctx) and not survey_files(config)
             and not (config.get("tdem_file") or config.get("em_file")))
+
+
+def _mt_sensitivity_depth(entry: Mapping[str, Any]) -> Optional[float]:
+    """How deep a site's model is worth drawing: the MT report's sensitivity depth."""
+    from .._mt_report import sensitivity_depth
+
+    try:
+        return sensitivity_depth(entry)
+    except Exception:  # noqa: BLE001 - without it the whole model is drawn
+        return None
 
 
 def _convert_mt_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
@@ -1319,9 +2087,13 @@ def _convert_mt_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     for entry in entries:
         mean, std, step, table = _layered_water_content(
             ctx, entry["resistivity_ohm_m"], entry["thicknesses"],
-            label=f"MT ({entry['station']})", folder=Path(entry["model_csv"]).parent)
+            label=f"MT ({entry['station']})", folder=Path(entry["model_csv"]).parent,
+            max_depth=_mt_sensitivity_depth(entry))
         entry.update({"water_content_mean": mean, "water_content_std": std,
                       "water_content_table": str(table) if table else None})
+        if step.get("figure"):
+            mt_results.setdefault("water_content_figures", []).append(
+                (step["figure"], f"{entry['station']}: " + _layered_caption(False)))
         steps.append(step)
         ranges.append(f"{entry['station']} {float(np.nanmin(mean)):.3f}-{float(np.nanmax(mean)):.3f}"
                       f" (± {float(np.nanmean(std)):.3f})")
@@ -1340,12 +2112,154 @@ register(Tool(
                 "Monte Carlo. Required when the request asks about water content and "
                 "the MT sites are the run's only resistivity models.",
     handler=_convert_mt_water_content,
-    requires=("mt_results",),
+    requires=("mt_results", "mt_evaluation"),
     produces=("water_content",),
     agent="PetrophysicsAgent",
     label="Convert MT models to water content",
     module="mt",
     when=_mt_water_content_wanted,
+))
+
+
+def _load_gravmag(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    """Read the station table, say which field it holds, and map the stations."""
+    from PyHydroGeophysX.data_processing import table_io
+
+    from .. import _raw_data as raw
+    from .._figstyle import style_from_config
+    from ..gravmag_agent import resolve_kind
+
+    config = ctx.config
+    path = resolve_path(config.get("gravmag_file"), config.get("project_dir", "."))
+    if not path or not Path(str(path)).is_file():
+        raise ValueError(f"Gravity / magnetic station file not found: {config.get('gravmag_file')}")
+    table = table_io.load_xyz_table(str(path), min_cols=3)
+    header = table_io.table_header(str(path)) or []
+    kind = resolve_kind(path, header, config.get("gravmag_kind"),
+                        str(config.get("user_request") or ""))
+    unit = "mGal" if kind == "gravity" else "nT"
+    x, y, value = (np.asarray(table[:, i], dtype=float) for i in range(3))
+    name = Path(str(path)).name
+    field = "gravity" if kind == "gravity" else "magnetic"
+    try:
+        figure = raw.gravmag_stations(
+            x, y, value, raw.figure_path(ctx.output_dir, "gravmag_stations"),
+            title=f"{name}: {x.size} {field} stations as read", label=f"Observed ({unit})",
+            unit=style_from_config({"figure_style": _figure_style(ctx)}).length_unit)
+    except Exception:  # noqa: BLE001 - a picture of the data must not fail the load
+        figure = None
+    return (f"Read {x.size} {field} stations from {name}: {np.nanmin(value):.4g} to "
+            f"{np.nanmax(value):.4g} {unit} over {np.ptp(x):.0f} x {np.ptp(y):.0f} m"
+            + ("" if table.shape[1] >= 4 else "; the table gives no station elevations") + ".",
+            {"gravmag_data": {"file": str(path), "kind": kind, "unit": unit,
+                              "n_stations": int(x.size), "figure": figure}})
+
+
+register(Tool(
+    name="load_gravmag_data",
+    description="Read the gravity or magnetic station table the configuration names, say "
+                "which field it holds, and map the stations' values. Run before the "
+                "gravity / magnetic processing.",
+    handler=_load_gravmag,
+    produces=("gravmag_data",),
+    agent="GravMagAgent",
+    label="Load gravity / magnetic data",
+    module="gravmag",
+    when=_configured("gravmag_file"),
+))
+
+
+def _invert_gravmag(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    from ..gravmag_agent import GravMagAgent
+
+    config = ctx.config
+    results = GravMagAgent(**agent_kwargs(ctx)).execute({
+        "data_file": resolve_path(config.get("gravmag_file"), config.get("project_dir", ".")),
+        "output_dir": str(Path(ctx.output_dir) / "gravmag"),
+        "kind": config.get("gravmag_kind"),
+        "field": config.get("magnetic_field"),
+        "user_request": config.get("user_request", ""),
+        "figure_style": _figure_style(ctx),
+        **dict(config.get("gravmag_params") or {}),
+    })
+    if results.get("status") != "success":
+        raise ValueError(str(results.get("error") or "Gravity / magnetic processing failed."))
+    for note in results.get("assumptions") or []:
+        ctx.note(note)
+    loaded = ctx.get("gravmag_data") or {}
+    if loaded.get("figure"):
+        results["raw_figures"] = [(loaded["figure"], "The station values as read, before the "
+                                                     "regional trend was removed.")]
+    field = "gravity" if results["kind"] == "gravity" else "magnetic"
+    summary = (f"Separated the regional trend from the {field} anomaly at "
+               f"{results['n_stations']} stations")
+    inversion = results.get("inversion")
+    if inversion:
+        quantity = "density contrast" if field == "gravity" else "susceptibility"
+        low, high = inversion["model_range"]
+        summary += (f" and inverted the residual for a 3D {quantity} model "
+                    f"({low:.3g} to {high:.3g}; chi-squared {inversion['chi2']:.3g}).")
+    else:
+        ctx.note(f"The 3D {field} inversion did not run ({results.get('inversion_error')}); "
+                 "the report gives the QC maps only.")
+        summary += "; the 3D inversion did not run."
+    return summary, {"gravmag_results": results}
+
+
+register(Tool(
+    name="invert_gravmag",
+    description="Process gravity or magnetic station data: separate the regional trend "
+                "from the residual anomaly, map both, and invert the residual for a 3D "
+                "density-contrast or susceptibility model.",
+    handler=_invert_gravmag,
+    requires=("gravmag_data",),
+    produces=("gravmag_results",),
+    agent="GravMagAgent",
+    label="Run gravity / magnetic inversion",
+    module="gravmag",
+    when=_configured("gravmag_file"),
+))
+
+
+def _gravmag_inverted(ctx: RunContext) -> bool:
+    """A 3D model exists to evaluate (or, on a projected route, is coming)."""
+    if ctx.projected("gravmag_results"):
+        return True
+    return bool((ctx.get("gravmag_results") or {}).get("inversion"))
+
+
+def _evaluate_gravmag(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    """Score the 3D model on its fit, its bounds and the beta search."""
+    from .. import _method_evaluation as quality
+    from .._figstyle import style_from_config
+
+    results = dict(ctx.get("gravmag_results") or {})
+    folder = Path(results.get("output_dir") or Path(ctx.output_dir) / "gravmag")
+    evaluation = quality.evaluate_gravmag(
+        results, figure_path=folder / "gravmag_data_fit.png",
+        unit=style_from_config({"figure_style": _figure_style(ctx)}).length_unit,
+        threshold=_quality_threshold(ctx))
+    evaluation["attempts"] = 1
+    field = "Gravity" if results.get("kind") == "gravity" else "Magnetic"
+    _needs_review(ctx, f"{field} inversion", evaluation)
+    return (quality.describe(evaluation),
+            {"gravmag_results": {**results, "evaluation": evaluation},
+             "gravmag_evaluation": evaluation})
+
+
+register(Tool(
+    name="evaluate_gravmag_inversion",
+    description="Judge how well the 3D density-contrast or susceptibility model explains "
+                "the residual anomaly, whether it reaches the solver's bounds, and whether "
+                "the beta search landed on its target. Run after the gravity / magnetic "
+                "inversion.",
+    handler=_evaluate_gravmag,
+    requires=("gravmag_results",),
+    produces=("gravmag_evaluation",),
+    agent="GravMagAgent",
+    label="Evaluate gravity / magnetic inversion",
+    module="gravmag",
+    when=_gravmag_inverted,
 ))
 
 
@@ -1598,7 +2512,7 @@ register(Tool(
     # After the unconstrained inversion, not only after the seismic one: the
     # constrained model replaces it, and an inversion run afterwards would
     # replace the constrained model in turn.
-    requires=("seismic_results", "ert_data", "inversion_results"),
+    requires=("seismic_results", "seismic_structure", "ert_data", "inversion_results"),
     produces=("structure_results",),
     agent="StructureConstraintAgent",
     label="Extract structural constraints",
@@ -1757,9 +2671,12 @@ def fusion_account(ctx: RunContext) -> Tuple[List[str], List[str]]:
         layering = str((steps[0] or {}).get("layering") or "").strip()
         combined.append(f"water content was converted from {source}"
                         + (f" ({layering.rstrip('.')})" if layering else ""))
-    if ctx.has("tdem_results"):
-        apart.append("the TDEM sounding was inverted on its own and not combined "
-                     "with the other methods")
+    for key, clause in (("tdem_results", "the TDEM sounding was inverted on its own"),
+                        ("mt_results", "the MT sites were inverted on their own"),
+                        ("gravmag_results", "the gravity / magnetic survey was inverted on "
+                                            "its own")):
+        if ctx.has(key):
+            apart.append(f"{clause} and not combined with the other methods")
     return combined, apart
 
 
@@ -1777,7 +2694,8 @@ register(Tool(
     # never shown a step that can only fail - and not while a structural
     # constraint is still to come, since it reports what was combined.
     when=lambda ctx: (fusion_pattern(available_methods(ctx)) is not None
-                      and not _structure_pending(ctx)),
+                      and not _structure_pending(ctx)
+                      and not _seismic_structure_pending(ctx)),
 ))
 
 
@@ -1799,6 +2717,7 @@ def _survey_report_input(ctx: RunContext, results: Dict[str, Any]) -> Dict[str, 
     workflow_data: Dict[str, Any] = {
         "inversion_results": results,
         "evaluation_results": ctx.get("evaluation_results") or {},
+        "raw_figures": ctx.get("ert_raw_figures") or [],
         # "Not requested" only when it was not: a conversion that was asked for
         # and failed used to be reported as never requested.
         "skip_petrophysics": (results.get("water_content_mean") is None
@@ -1846,6 +2765,10 @@ def _survey_report_input(ctx: RunContext, results: Dict[str, Any]) -> Dict[str, 
             "velocity_threshold": structure.get("velocity_threshold"),
             "interpretation": (ctx.get("seismic_results") or {}).get("interpretation"),
         }
+    # The other methods of the run, each given its own section.
+    for key in _SURVEY_RESULTS:
+        if ctx.has(key):
+            workflow_data[key] = ctx.get(key)
     delivered = {**results, "climate_data": ctx.get("climate_data")}
     workflow_data["not_delivered"] = not_delivered_items(ctx, delivered)
     return {"workflow_data": workflow_data, "config": config,
@@ -1875,9 +2798,11 @@ def _write_report(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         "climate_data": ctx.get("climate_data"),
         "site_info": site_info,
         "comparison_data": ctx.get("comparison_data"),
+        "raw_figures": ctx.get("ert_raw_figures") or [],
         "evaluation_results": ctx.get("evaluation_results"),
         "workflow_config": config,
         "time_lapse_method": config.get("time_lapse_method"),
+        **{key: ctx.get(key) for key in _SURVEY_RESULTS if ctx.has(key)},
         "output_dir": str(ctx.output_dir),
     }
     report = (agent.generate_timelapse_report(payload) if time_lapse
@@ -1912,6 +2837,88 @@ register(Tool(
     agent="ReportAgent",
     label="Generate report",
     module="one_click",
+))
+
+
+#: The ERT steps whose model, when it comes, makes ``write_report`` the run's report.
+_ERT_MODEL_STEPS = ("load_ert_surveys", "invert_ert", "invert_time_lapse")
+
+
+#: The artifacts of the methods a survey report covers, as the report modules name them.
+_SURVEY_RESULTS = ("tdem_results", "seismic_results", "mt_results", "gravmag_results")
+
+#: Steps whose products the survey report describes, so it waits for them.
+_SURVEY_STEPS = ("load_tdem_data", "invert_tdem", "evaluate_tdem_inversion",
+                 "map_tdem_plan_view", "pick_first_breaks", "load_seismic_traveltimes",
+                 "invert_seismic", "evaluate_seismic_inversion", "extract_seismic_interfaces",
+                 "load_mt_sites", "invert_mt", "evaluate_mt_inversion", "load_gravmag_data",
+                 "invert_gravmag", "evaluate_gravmag_inversion",
+                 "convert_tdem_water_content", "convert_mt_water_content", "fetch_climate")
+
+
+def _survey_report_due(ctx: RunContext) -> bool:
+    """The survey report is this run's report, and what it describes exists.
+
+    A run whose models came only from TDEM, seismic refraction, MT or gravity
+    and magnetics used to end without a report, "success" and all, because
+    ``write_report`` needs an ERT inversion. This report takes its place when
+    no ERT model exists or is still coming - an ERT step that failed leaves the
+    other surveys to be reported - once every method step and water-content
+    conversion the run can still take has been tried.
+    """
+    if ctx.has("inversion_results") or ctx.has("report_files"):
+        return False
+    if not any(ctx.has(key) for key in _SURVEY_RESULTS):
+        return False
+    return not any(TOOLS[name].available(ctx) for name in _ERT_MODEL_STEPS + _SURVEY_STEPS
+                   if name in TOOLS)
+
+
+def _write_survey_report(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    from ..report_agent import ReportAgent
+    from .._intent import unmet_requests
+    from .._uncertainty import result_caveats
+
+    config = ctx.config
+    results = {key: dict(ctx.get(key)) for key in _SURVEY_RESULTS if ctx.get(key)}
+    steps = ctx.get("water_content") or []
+    delivered = {**(results.get("tdem_results") or {}),
+                 "water_content": steps or None, "climate_data": ctx.get("climate_data")}
+    report = ReportAgent(**agent_kwargs(ctx)).generate_survey_report({
+        **results,
+        "water_content": steps,
+        "water_content_failed": _water_content_failure(ctx, delivered),
+        "not_delivered": not_delivered_items(ctx, delivered),
+        "site_info": dict(config.get("site_info") or {}),
+        "workflow_config": config,
+        "output_dir": str(ctx.output_dir),
+    })
+    if report.get("status") == "failed":
+        raise ValueError(str(report.get("error") or "Survey report generation failed."))
+    for warning in unmet_requests(config, delivered, shortfall_reasons(ctx, delivered)):
+        ctx.note(warning)
+    if results.get("tdem_results"):
+        for warning in result_caveats(config, results["tdem_results"]):
+            ctx.note(warning)
+    files = {"report_markdown": report.get("report_file"), "report_pdf": report.get("pdf_file")}
+    for name, path in (report.get("visualization_files") or {}).items():
+        files[f"visualization_{name}"] = path
+    return (f"Wrote the report ({Path(report['report_file']).name}) and its figures.",
+            {"report_files": {k: v for k, v in files.items() if v},
+             "interpretation": report.get("executive_summary")})
+
+
+register(Tool(
+    name="write_survey_report",
+    description="Write the final report of a run without ERT, from the TDEM, seismic, MT "
+                "and gravity/magnetic results it produced: data, method, fit, the models, "
+                "water content if converted, figures, recommendations. Run this last.",
+    handler=_write_survey_report,
+    produces=("report_files",),
+    agent="ReportAgent",
+    label="Generate report",
+    module="one_click",
+    when=_survey_report_due,
 ))
 
 

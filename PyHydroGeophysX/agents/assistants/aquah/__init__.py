@@ -47,12 +47,17 @@ ASSISTANT = Assistant(
         ("Seismic travel times", "seismic_file"),
         ("Raw seismic SEG-Y", "raw_seismic_file"),
         ("TDEM survey", "tdem_file"),
+        ("MT sites (EDI / EMTF)", "mt_files"),
+        ("Gravity / magnetic stations", "gravmag_file"),
         ("Terrain / topography", "topography_file"),
+        ("Map background (georeferenced image)", "basemap_file"),
         ("Geophone coordinates", "geophone_file"),
         ("Reference document", "reference_file"),
         ("MODFLOW folder", "modflow_dir"),
         ("ParFlow folder", "parflow_dir"),
     ),
-    ordered_roles=("time_lapse_files",),
+    # Roles that take several files: time-lapse surveys in order, MT sites.
+    ordered_roles=("time_lapse_files", "mt_files"),
     folder_classifier=True,
+    providers=("openai", "anthropic", "codex_cli", "claude_code"),
 )

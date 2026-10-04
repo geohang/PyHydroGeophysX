@@ -79,7 +79,7 @@ different geological layers, and quantify uncertainties."""
             cell_markers = np.array(mesh.cellMarkers())
             
             # Get LLM recommendations for petrophysical parameters if needed
-            if self.api_key and not petro_params:
+            if self.llm_enabled and not petro_params:
                 self._log_execution("Requesting LLM recommendations for petrophysical parameters")
                 petro_params = self._get_recommended_petro_params(resistivity, cell_markers)
             
@@ -129,7 +129,7 @@ different geological layers, and quantify uncertainties."""
             
             # Get LLM interpretation
             interpretation = None
-            if self.api_key:
+            if self.llm_enabled:
                 self._log_execution("Generating interpretation of water content results")
                 interpretation = self._interpret_wc_results(stats, layer_distributions)
             

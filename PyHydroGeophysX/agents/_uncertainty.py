@@ -381,3 +381,156 @@ def describe_prior(params_used: Dict[Any, Dict[str, Any]],
         statement = (f"The petrophysical relationship given was used: {ranges_text}{draws}.")
     return {"relationship": relationship, "ranges": ranges, "ranges_text": ranges_text,
             "statement": statement}
+
+
+# ---------------------------------------------------------------------------
+# Pictures of the uncertainty
+# ---------------------------------------------------------------------------
+#: The colour map of a standard deviation, light where the estimate is tight.
+SIGMA_CMAP = "Reds"
+
+
+def _shared_limits(arrays: Sequence[Any], low_percentile: float = 2.0,
+                   from_zero: bool = False) -> tuple:
+    """One colour range for every panel, from the 2nd to 98th percentile of all of them."""
+    stacked = np.concatenate([np.asarray(a, dtype=float).ravel() for a in arrays])
+    stacked = stacked[np.isfinite(stacked)]
+    if not stacked.size:
+        return 0.0, 1.0
+    low, high = np.percentile(stacked, [low_percentile, 98.0])
+    if from_zero:
+        low = 0.0
+    if not high > low:
+        low, high = float(stacked.min()), float(stacked.max()) + 1e-6
+    return float(low), float(high)
+
+
+def draw_water_content(mesh: Any, means: Optional[Sequence[Any]], sigmas: Optional[Sequence[Any]],
+                       path: Any, *, titles: Optional[Sequence[str]] = None,
+                       style: Any = None) -> Optional[str]:
+    """Water content and its standard deviation on the model mesh, survey by survey.
+
+    One row of means and one of Monte Carlo standard deviations, each on a
+    colour scale shared by every survey: a difference between surveys smaller
+    than the standard deviation beside it is not resolved, and the two rows
+    together are what lets a reader see that. Either row may be omitted
+    (``None``). A value per region rather than per cell is spread over the
+    region's cells, as the report's figures do.
+
+    Returns the path written, or None when there is nothing to draw.
+    """
+    from pathlib import Path
+
+    from . import _figstyle as figstyle
+
+    rows = [(values, label, cmap, zero) for values, label, cmap, zero in (
+        (means, "Water content (-)", None, False),
+        (sigmas, "Standard deviation (-)", SIGMA_CMAP, True)) if values]
+    if mesh is None or not rows:
+        return None
+    style = style or figstyle.FigureStyle()
+    markers = np.asarray(mesh.cellMarkers())
+    count = len(rows[0][0])
+    fig, axes = figstyle.panels(count, style, rows=len(rows))
+    for row, (values, label, cmap, zero) in enumerate(rows):
+        arrays = [np.asarray(v, dtype=float).ravel() for v in values]
+        low, high = _shared_limits(arrays, from_zero=zero)
+        for column, data in enumerate(arrays):
+            if data.size > markers.size:
+                data = data[markers]
+            ax = axes[row * count + column]
+            figstyle.pg_show(mesh, data, ax=ax, fig=fig,
+                             cMap=cmap or style.cmap_for("water_content"),
+                             cMin=low, cMax=high, logScale=False, label=label, pad=0.3,
+                             orientation=style.colorbar_orientation)
+            title = titles[column] if titles and column < len(titles) else ""
+            figstyle.apply(ax, style, (title + (" - mean" if row == 0 and len(rows) > 1 else
+                                                " - std. dev." if len(rows) > 1 else "")).strip(" -"),
+                           ylabel=None if column == 0 else "", mesh=mesh)
+    fig.tight_layout()
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    return figstyle.save(fig, str(path), style)
+
+
+def draw_layered_water_content(mean: Any, std: Any, top: Any, bottom: Any, path: Any, *,
+                               title: str, unit: Optional[str] = None,
+                               positions: Optional[Any] = None,
+                               max_depth: Optional[float] = None) -> Optional[str]:
+    """Water content of a layered model with its standard deviation, as a PNG.
+
+    One 1D model (a sounding, an MT site) is drawn against depth with the
+    ±1 and ±2 standard-deviation bands, clipped to 0-1; a section of them (a
+    TEM survey) as two panels, the mean and the standard deviation, each on
+    its own scale. ``max_depth`` ends the drawing where the data stop
+    constraining the model - an MT site's Occam layers run to hundreds of
+    kilometres - and a 1D model spanning more than two decades of depth is
+    drawn on a logarithmic depth axis.
+    """
+    from pathlib import Path
+
+    from matplotlib.colors import Normalize
+
+    from PyHydroGeophysX.visualization.axis_units import set_length_axis
+
+    from ._figstyle import detached_figure
+
+    mean, std = np.asarray(mean, dtype=float), np.asarray(std, dtype=float)
+    top, bottom = np.asarray(top, dtype=float), np.asarray(bottom, dtype=float)
+    if not np.isfinite(top).all() or not np.isfinite(mean).any():
+        return None
+    # The half-space below the last interface is drawn to a quarter of the
+    # layered depth again, so it shows without dwarfing the layers.
+    floor = float(top[-1]) + max(0.25 * float(top[-1]), 1.0)
+    if max_depth is not None and np.isfinite(max_depth) and 0 < max_depth < floor:
+        floor = float(max_depth)
+    edges = np.minimum(np.concatenate([top, [floor]]), floor)
+    if mean.ndim == 1:
+        fig = detached_figure((4.6, 5.2))
+        ax = fig.add_subplot(111)
+        depth = np.repeat(edges, 2)[1:-1]
+        centre, spread = np.repeat(mean, 2), np.repeat(std, 2)
+        for width, alpha, label in ((2, 0.18, "±2 std. dev."), (1, 0.35, "±1 std. dev.")):
+            ax.fill_betweenx(depth, np.clip(centre - width * spread, 0.0, 1.0),
+                             np.clip(centre + width * spread, 0.0, 1.0), color="#d08770",
+                             alpha=alpha, lw=0, label=label)
+        ax.plot(centre, depth, color="#2e3440", lw=1.6, label="Mean")
+        shallowest = float(top[1]) if top.size > 1 and top[1] > 0 else 1.0
+        if floor / shallowest > 100.0:
+            ax.set_yscale("log")
+            ax.set_ylim(floor, shallowest / 2.0)
+        else:
+            ax.set_ylim(floor, 0.0)
+        ax.set_xlim(0.0, min(1.0, float(np.nanmax(np.clip(mean + 2 * std, 0, 1))) + 0.05))
+        ax.set_xlabel("Volumetric water content (-)")
+        set_length_axis(ax, "y", "Depth", unit=unit)
+        ax.grid(True, alpha=0.25)
+        ax.legend(fontsize=8, loc="lower right")
+        ax.set_title(title, fontsize=10)
+    else:
+        x = (np.asarray(positions, dtype=float) if positions is not None
+             and np.size(positions) == mean.shape[0] else np.arange(mean.shape[0], dtype=float))
+        order = np.argsort(x)
+        x = x[order]
+        step = np.diff(x).mean() if x.size > 1 else 1.0
+        x_edges = np.concatenate([[x[0] - step / 2], (x[:-1] + x[1:]) / 2, [x[-1] + step / 2]])
+        fig = detached_figure((10.5, 6.0))
+        for row, (values, label, cmap, zero) in enumerate((
+                (mean[order], "Water content (-)", "viridis", False),
+                (std[order], "Standard deviation (-)", SIGMA_CMAP, True))):
+            ax = fig.add_subplot(2, 1, row + 1)
+            low, high = _shared_limits([values], from_zero=zero)
+            shown = ax.pcolormesh(x_edges, edges, np.ma.masked_invalid(values).T, cmap=cmap,
+                                  norm=Normalize(low, high), shading="flat")
+            fig.colorbar(shown, ax=ax, label=label, pad=0.015)
+            ax.set_ylim(floor, 0.0)
+            set_length_axis(ax, "y", "Depth", unit=unit)
+            if positions is not None and np.size(positions) == mean.shape[0]:
+                set_length_axis(ax, "x", "Position along line", unit=unit)
+            else:
+                ax.set_xlabel("Station")
+            ax.set_title(title + (" - mean" if row == 0 else " - standard deviation"),
+                         fontsize=10)
+        fig.tight_layout()
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    return str(path)

@@ -36,7 +36,8 @@ _ERT_KEYS = ("time_lapse_files", "timelapse_files", "data_file", "ert_file")
 
 #: What else a request can state that a run takes, when the caller did not.
 _STATED_KEYS = ("electrode_file", "seismic_file", "raw_seismic_file", "tdem_file",
-                "mt_files", "instrument", "petrophysical_params")
+                "mt_files", "gravmag_file", "gravmag_kind", "instrument",
+                "petrophysical_params")
 
 
 def adopt_request_inputs(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
@@ -49,7 +50,8 @@ def adopt_request_inputs(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[s
     ``AgentCoordinator._resolve_config``: only what the request itself states
     is taken (:meth:`ContextInputAgent.request_inputs`, never the parser's
     defaults), the ERT files only when the configuration names no ERT data,
-    and nothing the caller set is replaced.
+    and nothing the caller set is replaced - except that a file another method
+    takes is not also ERT data (:func:`~..context_input_agent.drop_borrowed_ert_files`).
 
     Parameters
     ----------
@@ -75,12 +77,16 @@ def adopt_request_inputs(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[s
     The configuration names no ERT data, so the run uses the file the request names: a.ohm.
     >>> adopt_request_inputs({'data_file': 'b.ohm', 'user_request': 'invert b.ohm'})[1]
     []
+    >>> adopt_request_inputs({'data_file': 'p.tiw', 'tdem_file': 'p.tiw'})[0]
+    {'tdem_file': 'p.tiw'}
     """
+    from ..context_input_agent import ContextInputAgent, _same_file, drop_borrowed_ert_files
+
+    config = drop_borrowed_ert_files(config)
     request = str(config.get("user_request") or config.get("request") or "")
     resolved = dict(config)
     if not request.strip():
         return resolved, []
-    from ..context_input_agent import ContextInputAgent, _same_file
 
     listed = config.get("time_lapse_files") or config.get("timelapse_files") or []
     given = [str(f) for f in (config.get("data_file"), config.get("ert_file"), *listed) if f]
@@ -114,7 +120,7 @@ def adopt_request_inputs(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[s
         elif resolved[key] != stated[key]:
             notes.append(f"The request gives {key} {stated[key]!r}, but the run uses "
                          f"the configuration's {resolved[key]!r}.")
-    return resolved, notes
+    return drop_borrowed_ert_files(resolved), notes
 
 
 def _make_ask(api_key: Optional[str], model: Optional[str], provider: str
@@ -124,7 +130,7 @@ def _make_ask(api_key: Optional[str], model: Optional[str], provider: str
     Returning None is what makes the controller fall back to its deterministic
     policy, so an unconfigured run still executes rather than failing.
     """
-    if not api_key:
+    if not api_key and provider not in ("codex_cli", "claude_code"):
         return None
 
     from ..base_agent import BaseAgent

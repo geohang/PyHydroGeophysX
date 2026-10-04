@@ -333,7 +333,7 @@ different geological materials and quantify uncertainties."""
             
             # Get LLM interpretation
             interpretation = None
-            if self.api_key:
+            if self.llm_enabled:
                 self._log_execution("Generating interpretation of petrophysical results")
                 interpretation = self._interpret_results(
                     water_content_mean,

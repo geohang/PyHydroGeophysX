@@ -47,6 +47,56 @@ classified does not imply every workflow can consume it.
 Model and reasoning
 --------------------------------------------------------------------------------
 
+Local CLI login (no API key)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Qt assistant starts with **Codex CLI (ChatGPT login)** by default. You can
+choose **Claude Code CLI (local login)** or an API provider in settings.
+Setup runs automatically in the background:
+the studio finds an existing installation (including common installations not
+on PATH) or downloads the official native CLI into its own user data directory.
+Downloads are verified against the publisher's SHA-256 checksum before use.
+No administrator privileges, Node.js installation or PATH edits are needed.
+
+If you are already signed in with a subscription, chat becomes ready. Otherwise,
+click **Log In** and complete the official sign-in in your browser; the studio
+checks the saved login and enables chat when you return. **Log In** remains
+visible after sign-in so you can sign in again or use another account. It is
+temporarily disabled during setup, sign-in and active chat or workflow runs.
+**Cancel login** lets
+you stop an unfinished sign-in, and **Retry setup** retries a failed download
+or installation check. The API key and Apply controls are hidden. Your
+account must include access to that CLI; subscription usage limits still apply.
+The studio does not copy login tokens or turn a subscription into an API key.
+
+Advanced configuration is optional: ``PHGX_CODEX_CLI`` or ``PHGX_CLAUDE_CLI``
+can point at a custom executable, and ``PHGX_CLI_DIR`` can change the managed
+installation directory. Standard npm launchers on Windows are supported when
+Node.js and the package's JavaScript entry point are installed together.
+On Windows the default managed directory is
+``%LOCALAPPDATA%/PyHydroGeophysX/cli``; macOS uses Application Support and Linux
+uses XDG_DATA_HOME (or ``~/.local/share``).
+
+The model value ``default`` leaves selection to the CLI; enter a model ID to
+override it. ``PHGX_CODEX_MODEL`` and ``PHGX_CLAUDE_MODEL`` can set the initial
+model. Codex receives the Reasoning setting; Claude Code uses its own defaults.
+
+Both step-by-step assistance and AQUAH's **Auto to report** support CLI access,
+including folder classification. Proposed studio actions follow the existing
+approval and execution mode. This initial bridge supports text and structured
+studio state; screenshot analysis is available with the API providers.
+Each call sends the current bounded conversation to the CLI through stdin, and
+the CLI contacts its model service. A missing login, exhausted quota or invalid
+model is reported by the CLI. ``PHGX_LLM_TIMEOUT_S`` controls the request timeout
+(120 seconds by default).
+
+See `Codex non-interactive mode
+<https://developers.openai.com/codex/noninteractive/>`_ and `Claude Code CLI
+reference <https://code.claude.com/docs/en/cli-reference>`_.
+
+API models
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 The default OpenAI model is ``gpt-5.6-luna`` (an explicit ``OPENAI_MODEL`` environment
 setting still overrides the default). The Reasoning selector defaults to
 ``medium`` and offers ``none``, ``low``, ``medium``, ``high``, ``xhigh`` and ``max``.

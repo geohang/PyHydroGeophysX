@@ -102,12 +102,14 @@ and can interpret conductivity structures in terms of geological and hydrologica
     
     def _run_inversion(self, input_data: Dict[str, Any], output_dir: str) -> Dict[str, Any]:
         """Run TDEM inversion workflow."""
-        from PyHydroGeophysX.inversion.tdem_inversion import TDEMInversion, TDEMInversionResult
-        
         self._log_execution("Running TDEM inversion")
-        
-        # Load data
         data_file = input_data.get('data_file')
+        if data_file and self._is_instrument_survey(data_file):
+            return self._run_survey_inversion(input_data, output_dir)
+
+        from PyHydroGeophysX.inversion.tdem_inversion import TDEMInversion, TDEMInversionResult
+
+        # Load data
         validation_error = self.validate_input_file(
             data_file,
             supported_extensions=[".dat", ".txt", ".csv"],
@@ -169,7 +171,7 @@ and can interpret conductivity structures in terms of geological and hydrologica
         
         # Generate interpretation
         interpretation = None
-        if self.api_key:
+        if self.llm_enabled:
             interpretation = self._interpret_results(result, times)
         
         self.results = {
@@ -189,14 +191,286 @@ and can interpret conductivity structures in terms of geological and hydrologica
             'recovered_resistivity': 1.0 / result.recovered_conductivity,
             'thicknesses': result.thicknesses,
             'predicted_data': result.predicted_data,
+            # The data the prediction is compared with, for the evaluation step.
+            'times': np.asarray(times, dtype=float),
+            'observed_data': np.asarray(dobs, dtype=float),
+            'uncertainties': np.asarray(uncertainties, dtype=float),
             'l2_conductivity': result.l2_conductivity,
             'visualization_file': vis_file,
             'interpretation': interpretation,
-            'output_dir': output_dir
+            'output_dir': output_dir,
+            # What the report's method section states.
+            'source_file': str(data_file),
+            'n_data': int(len(times)),
+            'time_range': [float(np.min(times)), float(np.max(times))],
+            'source_radius': float(source_radius),
+            'use_irls': bool(use_irls),
         }
-        
+
         return self.results
-    
+
+    @staticmethod
+    def _is_instrument_survey(path: Any) -> bool:
+        """Whether ``path`` is a survey the EM reader opens with its own system description.
+
+        TEMcompany/TEM2Go projects (``project.tiw``/``project.db``, or the
+        folder holding one), raw ``.stb`` acquisition folders,
+        ``*_StationData.xyz`` exports, tTEM ``.skb`` acquisitions and stored
+        sounding containers. Any folder goes there too: the reader's refusal
+        says what a TEM folder lacks, where the text reader could only name an
+        extension.
+        """
+        from PyHydroGeophysX.data_processing import run_inputs
+        from PyHydroGeophysX.data_processing.em1d import is_temcompany_source, is_ttem_source
+
+        source = str(path)
+        return (Path(source).is_dir() or is_temcompany_source(source)
+                or is_ttem_source(source) or run_inputs.is_container(source))
+
+    def _run_survey_inversion(self, input_data: Dict[str, Any], output_dir: str) -> Dict[str, Any]:
+        """Invert an instrument survey with the package's laterally constrained EM inversion.
+
+        The text-sounding path models a 10 m circular loop with a step-off
+        waveform and reads one column of one file, so it could neither open a
+        TEM2Go project nor model one: the loop is 0.63 m square with four
+        turns, the receiver sits about 15 m away, and the gates, ramps and
+        filters are in the project. This reads the survey with
+        :func:`~PyHydroGeophysX.workflows.em1d.load_sounding`, models every
+        station with the system the file records, and inverts all of them
+        together with :func:`~PyHydroGeophysX.workflows.em1d.invert_line`. Those
+        are the settings the EM Processing page starts from for this data (the
+        ``ground_tem`` preset under the project's stored inversion settings) and
+        the pattern of ``examples/Ex_TEM_LMHM_LCI.py``.
+
+        ``tem_moment`` (``'LM+HM'`` by default, ``'HM'`` for a single-moment
+        survey), ``lines`` and ``max_soundings`` choose the data; any key of
+        :data:`~PyHydroGeophysX.workflows.em1d.DEFAULT_INVERSION` given in
+        ``input_data`` replaces the project's value.
+        """
+        from PyHydroGeophysX.workflows import em1d
+
+        path = str(input_data['data_file'])
+        requested = input_data.get('tem_moment')
+        moment = str(requested or 'LM+HM')
+        try:
+            head = em1d.load_sounding(path, 'TDEM', sounding=0, moment=moment)
+        except ValueError:
+            if requested:
+                raise
+            # A single-moment survey has no LM+HM to read jointly.
+            moment = 'HM'
+            head = em1d.load_sounding(path, 'TDEM', sounding=0, moment=moment)
+        system = dict(head.get('system') or {})
+        # The recorded system is the geometry, as in Ex_TEM_LMHM_LCI; the
+        # forward would complete it from each station's own record anyway.
+        geometry = {**system, 'tem_moment': moment}
+        inversion = {**em1d.preset_inversion('ground_tem'),
+                     **dict(head.get('inversion_defaults') or {})}
+        uniform = (head.get('protocol') or {}).get('uniform_std')
+        if uniform is not None:
+            inversion['rel_error'] = float(uniform)
+        overrides = {key: input_data[key] for key in em1d.DEFAULT_INVERSION if key in input_data}
+        if input_data.get('starting_conductivity') and 'starting_resistivity' not in overrides:
+            overrides.update(starting_resistivity=1.0 / float(input_data['starting_conductivity']),
+                             auto_starting_model=False)
+        inversion.update(overrides)
+
+        n_total = int(head.get('n_soundings', 1))
+        lines = input_data.get('lines')
+        lines = [int(value) for value in (lines if isinstance(lines, (list, tuple)) else [lines])] \
+            if lines not in (None, '', []) else None
+        self._log_execution(
+            f"{Path(path).name}: {head.get('source_format') or 'TDEM survey'}, {n_total} "
+            f"sounding(s), moment {moment}"
+            + (f", {system['instrument']}" if system.get('instrument') else "")
+            + (f"; request overrides {sorted(overrides)}" if overrides else ""))
+        result = em1d.invert_line(
+            path, 'TDEM', geometry, inversion,
+            max_soundings=int(input_data.get('max_soundings') or n_total), lines=lines,
+            out_dir=Path(output_dir), log=lambda message: self._log_execution(str(message)))
+
+        # Surface first, NaN below each sounding's depth of investigation.
+        model = np.asarray(result['model3d'], dtype=float)[:, 0, ::-1]
+        resolved = model[np.isfinite(model) & (model > 0)]
+        if not resolved.size:
+            raise ValueError(f"The inversion of {Path(path).name} resolved no cell above the "
+                             "depth of investigation at any station.")
+        counts = np.asarray(result.get('data_count_list', []), dtype=int)
+        # invert_line wrote the section, its tables and the LCI reports there.
+        data_paths = list(result.get('saved') or [])
+        vis_file = self._generate_survey_sections(result, input_data, output_dir, Path(path).name)
+        self.results = {
+            'status': 'success',
+            'mode': 'inversion',
+            'survey': True,
+            'source_file': self._project_read(path),
+            'source_format': str(head.get('source_format') or ''),
+            'instrument': system.get('instrument'),
+            'tem_moment': moment,
+            'n_soundings': int(result['n_soundings']),
+            'n_soundings_total': n_total,
+            'failed_soundings': int(np.count_nonzero(counts == 0)),
+            # Inverted, but with no cell above the depth of investigation.
+            'unresolved_soundings': int(np.count_nonzero(
+                ~np.isfinite(model).any(axis=1) & (counts > 0)))
+            if counts.size == model.shape[0] else 0,
+            'lines': sorted({int(v) for v in np.asarray(result['line_numbers']).ravel()}),
+            'lci_mode': result.get('lci_mode'),
+            'chi2': float(result['chi2_global']),
+            'chi2_sounding_median': float(result['chi2_sounding_median']),
+            'n_layers': int(result['n_layers']),
+            'thicknesses': np.asarray(result['thickness'], dtype=float),
+            'recovered_resistivity': model,
+            'recovered_conductivity': 1.0 / model,
+            'resistivity_range': [float(resolved.min()), float(resolved.max())],
+            'conductivity_range': [float(1.0 / resolved.max()), float(1.0 / resolved.min())],
+            'doi': np.asarray(result['doi'], dtype=float),
+            'positions': np.asarray(result['positions'], dtype=float),
+            'line_numbers': np.asarray(result['line_numbers'], dtype=int),
+            'x': np.asarray(result.get('x', []), dtype=float),
+            'y': np.asarray(result.get('y', []), dtype=float),
+            # What places the survey on a basemap (em_maps.survey_plan_grids).
+            'coordinate_system': str(result.get('coordinate_system') or ''),
+            'longitude': np.asarray(result.get('longitude', []), dtype=float),
+            'latitude': np.asarray(result.get('latitude', []), dtype=float),
+            'station_ids': np.asarray(result.get('station_ids', []), dtype=object),
+            'surface_elevation': np.asarray(result.get('surface_elevation', []), dtype=float),
+            'depth_edges': np.asarray(result['depth_edges'], dtype=float),
+            'chi2_list': np.asarray(result.get('chi2_list', []), dtype=float),
+            'data_count_list': counts,
+            # What the report's method section states: the system the file
+            # records, the protocol it ran, and the settings the inversion used.
+            'system': {key: system[key] for key in (
+                'instrument', 'loop_area', 'loop_turns', 'tx_rx_sep_nominal',
+                'receiver_type', 'waveform') if system.get(key) is not None},
+            'tx_rx_distances': np.asarray(head.get('rx_tx_distances', []), dtype=float),
+            'protocol': {key: value for key, value in (head.get('protocol') or {}).items()
+                         if isinstance(value, (int, float, str))},
+            'inversion_settings': {key: inversion[key] for key in (
+                'n_layers', 'min_thickness', 'max_thickness', 'smoothness',
+                'lateral_smoothness', 'rel_error', 'auto_starting_model',
+                'starting_resistivity', 'robust_errors', 'robust_target_chi2',
+                'max_iterations', 'auto_lambda') if key in inversion},
+            'settings_source': ('project' if head.get('inversion_defaults')
+                                else 'ground_tem preset'),
+            'overrides': sorted(overrides),
+            'robust': {key: (result.get('robust') or {}).get(key) for key in (
+                'enabled', 'downweighted', 'n_start', 'chi2_effective')},
+            'visualization_file': vis_file,
+            'data_paths': data_paths,
+            'output_dir': output_dir,
+        }
+        # Plan-view maps are a step of their own in a workflow run
+        # (map_tdem_plan_view), drawn from these results.
+        self.results['interpretation'] = (self._interpret_survey(self.results)
+                                          if self.llm_enabled else None)
+        return self.results
+
+    @staticmethod
+    def _project_read(path: str) -> str:
+        """The project file a TEMcompany folder is read from, or ``path`` itself.
+
+        The reader takes the standard name when a folder holds several
+        (``project.tiw`` before ``project2.tiw``), and a report naming only
+        the folder would not say which of them it describes.
+        """
+        from PyHydroGeophysX.data_processing import temcompany_project
+
+        if Path(path).is_dir():
+            try:
+                return str(temcompany_project.project_file(path))
+            except (OSError, ValueError):
+                pass
+        return path
+
+    def _generate_survey_sections(self, result: Dict[str, Any], input_data: Dict[str, Any],
+                                  output_dir: str, source_name: str) -> str:
+        """One resistivity section per survey line, on one colour scale.
+
+        Drawn against elevation where the stations carry one and against depth
+        otherwise, in the unit ``input_data['figure_style']`` asks for. Cells
+        below a station's depth of investigation are left blank.
+        """
+        import matplotlib.colors as mcolors
+
+        from . import _figstyle as figstyle
+        from PyHydroGeophysX.visualization.axis_units import set_section_axes
+
+        style = figstyle.style_from_config(input_data)
+        model = np.asarray(result['model3d'], dtype=float)[:, 0, ::-1]
+        depth_edges = np.asarray(result['depth_edges'], dtype=float).ravel()[:model.shape[1] + 1]
+        positions = np.asarray(result['positions'], dtype=float).ravel()
+        lines = np.asarray(result['line_numbers'], dtype=int).ravel()
+        ground = np.asarray(result.get('surface_elevation', []), dtype=float).ravel()
+        if ground.size != positions.size:
+            ground = np.full(positions.size, np.nan)
+        resolved = model[np.isfinite(model) & (model > 0)]
+        norm = mcolors.LogNorm(vmin=float(resolved.min()), vmax=float(resolved.max()))
+        names = list(dict.fromkeys(lines.tolist()))
+        cols = min(3, len(names))
+        rows = int(np.ceil(len(names) / cols))
+        fig = figstyle.detached_figure((
+            min(style.panel_width * 1.5 * cols, figstyle.MAX_FIGURE_WIDTH_IN),
+            0.6 * style.panel_height * rows + 0.8))
+        fig.set_layout_engine('constrained')
+        axes = np.atleast_1d(fig.subplots(rows, cols, squeeze=False)).ravel()
+        image = None
+        for ax, line in zip(axes, names):
+            index = np.flatnonzero(lines == line)
+            index = index[np.argsort(positions[index], kind='stable')]
+            x = positions[index]
+            if x.size > 1:
+                middle = 0.5 * (x[:-1] + x[1:])
+                edges = np.concatenate([[2 * x[0] - middle[0]], middle, [2 * x[-1] - middle[-1]]])
+            else:
+                edges = np.array([x[0] - 2.5, x[0] + 2.5])
+            surface = ground[index]
+            elevated = bool(np.all(np.isfinite(surface)) and np.any(np.abs(surface) > 1e-6))
+            top = np.interp(edges, x, surface) if elevated else np.zeros_like(edges)
+            depth_y = top[None, :] - depth_edges[:, None]
+            image = ax.pcolormesh(np.broadcast_to(edges[None, :], depth_y.shape), depth_y,
+                                  np.ma.masked_invalid(model[index].T), shading='flat',
+                                  cmap=style.cmap_for('resistivity'), norm=norm)
+            # The survey's own path distance, which runs on from line to line.
+            set_section_axes(ax, surface=surface if elevated else np.zeros(1),
+                             unit=style.length_unit, xlabel='Distance along survey path',
+                             fontsize=style.label_size)
+            blank = '' if np.isfinite(model[index]).any() else ', nothing resolved'
+            ax.set_title(f"Line {line} ({index.size} sounding{'s' if index.size != 1 else ''}"
+                         f"{blank})", fontsize=style.title_size)
+            ax.tick_params(labelsize=style.tick_size)
+        for ax in axes[len(names):]:
+            ax.set_visible(False)
+        fig.colorbar(image, ax=axes[:len(names)].tolist(), label='Resistivity (ohm-m)')
+        fig.suptitle(f"{source_name}: TEM resistivity, {result.get('lci_mode', 'off')} LCI, "
+                     f"median sounding chi-squared {float(result['chi2_sounding_median']):.2f}",
+                     fontsize=style.title_size)
+        vis_file = figstyle.save(fig, os.path.join(output_dir, 'tdem_sections.png'), style)
+        self._log_execution(f"Saved visualization to {vis_file}")
+        return vis_file
+
+    def _interpret_survey(self, results: Dict[str, Any]) -> Optional[str]:
+        """A short LLM reading of a survey inversion, from its numbers only."""
+        thickness = np.asarray(results['thicknesses'], dtype=float)
+        doi = np.asarray(results['doi'], dtype=float)
+        prompt = f"""Interpret this ground TEM survey inversion for a geophysics report:
+
+- Data: {results['source_format']} ({results.get('instrument') or 'TEM'}), moment {results['tem_moment']}
+- {results['n_soundings']} soundings on {len(results['lines'])} line(s), {results['lci_mode']} laterally constrained inversion
+- {results['n_layers']} layers, top layer {thickness[0]:.1f} m, layered to {thickness.sum():.0f} m
+- Median depth of investigation: {np.nanmedian(doi):.0f} m
+- Chi-squared: median per sounding {results['chi2_sounding_median']:.2f}, global {results['chi2']:.2f}
+- Resolved resistivity range: {results['resistivity_range'][0]:.1f} - {results['resistivity_range'][1]:.1f} ohm-m
+
+Provide a brief interpretation (3-4 sentences) covering the data fit (a global chi-squared
+far above the median means a few soundings fit poorly), what the resistivity range suggests,
+and where the model is reliable given the depth of investigation."""
+        try:
+            return self.query_llm(prompt, self.system_message, temperature=0.5, max_tokens=300)
+        except Exception as exc:  # noqa: BLE001 - the inversion stands without it
+            self._log_execution(f"Could not generate interpretation: {exc}", level='WARNING')
+            return None
+
     def _run_forward(self, input_data: Dict[str, Any], output_dir: str) -> Dict[str, Any]:
         """Run TDEM forward modeling."""
         from PyHydroGeophysX.forward.tdem_forward import TDEMForwardModeling, TDEMSurveyConfig

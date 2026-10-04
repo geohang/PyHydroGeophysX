@@ -36,3 +36,34 @@ class LlmCallWorker(QThread):
             self.succeeded.emit(out)
         except Exception as exc:  # noqa: BLE001
             self.failed.emit(f"{type(exc).__name__}: {exc}")
+
+
+class CliSetupWorker(QThread):
+    """Download / validate a local CLI and check login without blocking Qt."""
+
+    progress = Signal(str)
+    succeeded = Signal(dict)
+    failed = Signal(str)
+
+    def __init__(self, provider, check_only=False, parent=None):
+        super().__init__(parent)
+        self.provider = provider
+        self.check_only = check_only
+
+    def _progress(self, message):
+        if self.isInterruptionRequested():
+            raise RuntimeError("Setup cancelled.")
+        self.progress.emit(message)
+
+    def cancel_and_wait(self):
+        self.requestInterruption()
+        self.wait(35000)
+
+    def run(self):
+        from PyHydroGeophysX.llm.cli_setup import prepare_cli, check_login
+        try:
+            result = (check_login(self.provider) if self.check_only
+                      else prepare_cli(self.provider, self._progress))
+            self.succeeded.emit(result)
+        except Exception as exc:
+            self.failed.emit(str(exc))

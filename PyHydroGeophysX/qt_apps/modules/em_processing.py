@@ -147,6 +147,22 @@ def _modelled_gates(result: Dict[str, Any]) -> Optional[Dict[str, Dict[str, Any]
     return None
 
 
+def _plan_map_job(result: Dict[str, Any], folder: Path, source: Optional[Path], unit: str,
+                  cmap: Any, name: str, maps: Optional[Dict[str, Any]] = None):
+    """Krige a line section's soundings in plan (unless ``maps`` holds them) and draw both maps.
+
+    Runs on a worker thread; returns ``(maps, drawn)`` - the grids, kept for a
+    redraw in another length unit, and what
+    :func:`~PyHydroGeophysX.visualization.em_maps.draw_survey_plan_maps` wrote.
+    """
+    from PyHydroGeophysX.visualization import em_maps
+
+    if maps is None:
+        maps = em_maps.survey_plan_grids(result, source=source)
+    return maps, em_maps.draw_survey_plan_maps(maps, folder, unit=unit, cmap=cmap,
+                                               name=name, stem="em_line")
+
+
 class EMProcessingModule(BaseModule):
     module_key = "em_processing"
     module_title = "EM Processing"
@@ -189,10 +205,19 @@ class EMProcessingModule(BaseModule):
         shared = cmaps.colormap_settings(self.state)
         self._overview_view = EMOverviewView(section_only=True, colormaps=shared)
         self._section_view = Model3DView(colormaps=shared, colormap_key=cmaps.EM_SECTION)
+        # The survey in plan: resistivity kriged at several depths, and how firm
+        # each cell of it is - the two figures a workflow report carries.
+        self._plan_view = ZoomableImageView()
+        self._plan_std_view = ZoomableImageView()
+        self._plan_maps: Optional[Dict[str, Any]] = None   # the kriged grids, for redraws
+        self._plan_job: Optional[Tuple[Any, int]] = None
+        self._plan_token = 0
         self._model_stack = QStackedWidget()
         self._model_stack.addWidget(self._inv_view)
         self._model_stack.addWidget(self._overview_view)
         self._model_stack.addWidget(self._section_view)
+        self._model_stack.addWidget(self._plan_view)
+        self._model_stack.addWidget(self._plan_std_view)
         self._model_tab = QWidget()
         mlay = QVBoxLayout(self._model_tab); mlay.setContentsMargins(0, 0, 0, 0)
         self._view_row = QWidget()
@@ -202,8 +227,10 @@ class EMProcessingModule(BaseModule):
         self._view_mode.addItems(
             ["Section", "Volume view"])
         self._view_mode.setToolTip(
-            "View the recovered section or volume. Use Add to Map for survey "
-            "locations and depth slices in Project Map.")
+            "View the recovered section or volume, and - for a survey of several "
+            "lines - resistivity kriged in plan view at several depths with its "
+            "kriging uncertainty. Use Add to Map for interactive depth slices in "
+            "Project Map.")
         self._view_mode.currentIndexChanged.connect(self._on_view_mode)
         vr.addWidget(self._view_mode); vr.addStretch(1)
         self._view_row.setVisible(False)
@@ -253,8 +280,12 @@ class EMProcessingModule(BaseModule):
         # quality panel's DOI is text, so both are redrawn from the result.
         length_units.notifier().changed.connect(self._on_length_unit_changed)
 
+    #: View entries after the section and the volume, while a survey's maps are drawn.
+    _PLAN_VIEWS = ("Plan view", "Plan-view uncertainty")
+
     def _on_view_mode(self, idx: int) -> None:
-        pages = {0: self._overview_view, 1: self._section_view}
+        pages = {0: self._overview_view, 1: self._section_view,
+                 2: self._plan_view, 3: self._plan_std_view}
         self._model_stack.setCurrentWidget(pages.get(idx, self._section_view))
 
     def _on_length_unit_changed(self, _unit: str) -> None:
@@ -266,6 +297,86 @@ class EMProcessingModule(BaseModule):
                 self._inv_view.set_image_file(png)
         elif self._last_section is not None:
             self._show_line_quality(self._last_section)
+            if self._plan_maps is not None:
+                # The kriging stands; only the axes and scale bar change unit.
+                self._start_plan_maps(self._last_section, maps=self._plan_maps)
+
+    # -- plan-view maps ---------------------------------------------------------
+    def _line_outputs_dir(self) -> Path:
+        """Where a line inversion's figures go: its run's outputs, or scratch."""
+        active = self.state.active_run(self.module_key, "em.line_inversion")
+        return (active.outputs_dir if active is not None
+                else self.state.ensure_results_store().scratch_dir(self.module_key))
+
+    def _clear_plan_maps(self) -> None:
+        """Forget the last survey's maps: a new result is not drawn over an old map."""
+        if self._plan_job is not None:
+            self._plan_job[0].cancel()
+            self._plan_job = None
+        self._plan_token += 1
+        self._plan_maps = None
+        self._plan_view.clear()
+        self._plan_std_view.clear()
+        if self._model_stack.currentWidget() in (self._plan_view, self._plan_std_view):
+            self._model_stack.setCurrentWidget(self._overview_view)
+        self._view_mode.blockSignals(True)
+        while self._view_mode.count() > 2:
+            self._view_mode.removeItem(self._view_mode.count() - 1)
+        self._view_mode.blockSignals(False)
+
+    def _start_plan_maps(self, result: dict, *, maps: Optional[Dict[str, Any]] = None) -> None:
+        """Krige the section's soundings in plan, or redraw ``maps``, off the UI thread.
+
+        The same code a workflow report's maps come from
+        (:func:`PyHydroGeophysX.visualization.em_maps.survey_plan_grids`), on
+        the section's colour map and the studio's length unit, over the
+        survey's own georeferenced image when its folder keeps one.
+        """
+        from PyHydroGeophysX.qt_apps.workers import TaskWorker
+
+        if self._plan_job is not None:
+            self._plan_job[0].cancel()
+        self._plan_token += 1
+        token = self._plan_token
+        worker = TaskWorker(
+            _plan_map_job, result, self._line_outputs_dir(), self._source_path,
+            length_units.current(),
+            cmaps.to_matplotlib(self._overview_view.colormap_chooser.colormap()),
+            f"{result.get('method', 'EM')} survey", maps)
+        self._plan_job = (worker, token)
+        worker.succeeded.connect(lambda payload: self._plan_maps_ready(token, payload))
+        worker.failed.connect(lambda message: self._plan_maps_failed(token, message))
+        if maps is None:
+            self.log("Kriging the survey in plan view...", "info")
+        self.register_worker(worker)
+        worker.start()
+
+    def _plan_maps_ready(self, token: int, payload) -> None:
+        if self._plan_job is None or token != self._plan_token:
+            return
+        self._plan_job = None
+        maps, drawn = payload
+        fresh = self._plan_maps is None
+        self._plan_maps = maps
+        self._plan_view.set_image_file(drawn["map_figure"])
+        self._plan_std_view.set_image_file(drawn["map_uncertainty_figure"])
+        if self._view_mode.count() == 2:
+            self._view_mode.addItems(list(self._PLAN_VIEWS))
+        if fresh:
+            depths = ", ".join(f"{to_display_length(d):.3g}"
+                               for d in drawn["depth_slices"]["depths"])
+            self.log(f"Plan-view maps ready at {depths} {length_units.current()}: "
+                     "View > Plan view, and Plan-view uncertainty for how firm each "
+                     "cell is.", "success")
+            for path in (drawn["map_figure"], drawn["map_uncertainty_figure"]):
+                self.log(f"Saved {Path(path).name} to {path}", "info")
+
+    def _plan_maps_failed(self, token: int, message: str) -> None:
+        if self._plan_job is None or token != self._plan_token:
+            return
+        self._plan_job = None
+        # One line, or a file without map coordinates, is an ordinary survey.
+        self.log(f"No plan-view maps: {message}", "info")
 
     # -- helpers -------------------------------------------------------------
     @staticmethod
@@ -972,7 +1083,9 @@ class EMProcessingModule(BaseModule):
         self._trf_ftol.setToolTip(
             "TRF relative full-objective stopping tolerance. The 1e-4 default "
             "completed the full trailcreek robust run; 1e-6 exhausted 90 "
-            "evaluations before robust reweighting.")
+            "evaluations before robust reweighting. The Ground TEM preset uses "
+            "1e-3: 22-40 % faster on four TEM2Go surveys, chi-squared within "
+            "2 %, and as close to TEMcompany's own inversion as 1e-4.")
         import os as _os
 
         cores = getattr(_os, "process_cpu_count", None)
@@ -2216,6 +2329,7 @@ class EMProcessingModule(BaseModule):
         self._refresh_backend_state()
 
     def _on_inversion_ok(self, result: dict) -> None:
+        self._clear_plan_maps()
         self._last_result = result
         self._gate_view.set_model(_modelled_gates(result))
         self._last_section = None   # the export button now writes this profile
@@ -2322,6 +2436,7 @@ class EMProcessingModule(BaseModule):
                  f"({n} stations).", "info")
 
     def _on_line_ok(self, result: dict) -> None:
+        self._clear_plan_maps()
         self._attach_line_xy(result)
         self._last_section = result
         self._last_result = None    # the export button now writes the section
@@ -2377,6 +2492,7 @@ class EMProcessingModule(BaseModule):
                             "sounding_median_chi2": result.get("chi2_sounding_median"),
                             "section_npz": saved[0] if saved else None})
         self.offer_map_export()
+        self._start_plan_maps(result)
 
     def _show_line_quality(self, result: dict) -> None:
         """Show a line inversion's misfit, per sounding along the survey."""
@@ -2505,9 +2621,7 @@ class EMProcessingModule(BaseModule):
     def _populate_overview(self, result: dict) -> None:
         """Render and save the result section; Project Map owns result maps."""
         self._overview_view.show_result(result)
-        active = self.state.active_run(self.module_key, "em.line_inversion")
-        out = active.outputs_dir if active is not None else self.state.ensure_results_store().scratch_dir(self.module_key)
-        saved = self._overview_view.save_figure(out / "em_line_section.png")
+        saved = self._overview_view.save_figure(self._line_outputs_dir() / "em_line_section.png")
         if saved:
             result.setdefault("saved", []).append(saved)
 
@@ -2752,7 +2866,8 @@ class EMProcessingModule(BaseModule):
         if self._agent_status().get("data_loaded"):
             return ""
         path = inputs.get("tdem_file") or inputs.get("em_file")
-        if not path or not Path(str(path)).is_file():
+        # A TEM2Go survey is often its folder, which _agent_load reads as well.
+        if not path or not Path(str(path)).exists():
             return ""
         method = inputs.get("em_method")
         if method:

@@ -1330,7 +1330,10 @@ class MTProcessingModule(BaseModule):
         return f"MT sites {', '.join(added)}" if added else ""
 
     def show_run_stage(self, tool: str) -> str:
-        if tool == "invert_mt":
+        if tool == "load_mt_sites":
+            self._go_to(self._sounding_pane)
+            return "Sounding"
+        if tool in ("invert_mt", "evaluate_mt_inversion"):
             self._go_to(self._model_pane)
             return "1D model"
         if tool == "convert_mt_water_content":

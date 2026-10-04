@@ -12,8 +12,8 @@ from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple
 
 from PyHydroGeophysX._internal.utils import parse_json_object
 
-from ._intent import (MAX_CONCURRENT_STAGES, ask_concurrently, infer_instrument, names_mt, names_tdem,
-                      names_unnegated, read_request, stage_enabled)
+from ._intent import (MAX_CONCURRENT_STAGES, ask_concurrently, infer_instrument, names_gravmag,
+                      names_mt, names_tdem, names_unnegated, read_request, stage_enabled)
 from ._method import IMPLEMENTED_SCHEME
 from .base_agent import AgentResult, BaseAgent
 
@@ -139,6 +139,180 @@ def _same_file(a: str, b: str) -> bool:
     """Whether two names from a request are the same file, one maybe with its folder."""
     a, b = str(a).replace("\\", "/"), str(b).replace("\\", "/")
     return a == b or a.endswith("/" + b) or b.endswith("/" + a)
+
+
+#: Where a path written into a request can begin: a drive letter, a UNC share,
+#: or a slash opening a word ("LM/HM" is not a path).
+_PATH_START = re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:[\\/]|\\\\[^\\\s]|(?<![\w.:/\\])/(?=\w)")
+#: What a TEM survey folder holds at its top level, looked for before the
+#: readers' own checks, some of which search the whole tree below a folder.
+_TEM_FOLDER_MARKS = ("*.tiw", "*.db", "*.sts", "*.stb", "*_StationData.xyz",
+                     "*_RawData.xyz", "*.skb")
+
+
+def _written_paths(text: str) -> Iterator[str]:
+    """Each path a request writes out, read to the longest prefix that exists.
+
+    The suffix readers stop at the first space, and field folders have spaces
+    in them ("C:\\...\\APLL data\\TEM\\Sep06"). A path stops at the first
+    candidate end, longest first, that names something on disk; only that is
+    yielded, never the folders above it.
+    """
+    breaks = re.compile(rf"[{_NAME_BREAKS}\"'<>|]|{_CJK.pattern}")
+    for start in _PATH_START.finditer(text):
+        line = text[start.start():].split("\n", 1)[0]
+        for end in sorted({m.start() for m in breaks.finditer(line)} | {len(line)}, reverse=True):
+            candidate = line[:end].rstrip(".")
+            try:
+                if candidate and Path(candidate).exists():
+                    yield candidate
+                    break
+            except OSError:
+                continue
+
+
+def _named_tem_survey(text: str) -> Optional[str]:
+    """The TEMcompany/TEM2Go or tTEM survey a request names by its path, if any.
+
+    The suffix readers cannot see one: a TEM2Go survey is a folder or a
+    ``project.tiw``, not a ``.csv``. A path the request writes is kept when its
+    content is a TEM survey, whatever the request calls the method, as an EDI
+    file is MT whatever it is called.
+
+    Examples
+    --------
+    >>> _named_tem_survey("invert line 3 of project.tiw")
+    'project.tiw'
+    >>> _named_tem_survey("Invert C:/no/such/folder") is None
+    True
+    """
+    from PyHydroGeophysX.data_processing.em1d import is_temcompany_source, is_ttem_source
+
+    for candidate in _written_paths(text):
+        path = Path(candidate)
+        # A cheap look first: some of the readers' checks search the whole
+        # tree below a folder.
+        if path.is_dir() and not any(next(path.glob(mark), None) is not None
+                                     for mark in _TEM_FOLDER_MARKS):
+            continue
+        if is_temcompany_source(candidate) or is_ttem_source(candidate):
+            return candidate
+    return next((name for name, _, _ in _file_names(text, [".tiw", ".skb"])), None)
+
+
+#: The keys that name another method's input. A file under one of them is
+#: that method's data, not also an ERT survey.
+_OTHER_METHOD_KEYS = ("tdem_file", "em_file", "seismic_file", "raw_seismic_file",
+                      "mt_files", "mt_file", "gravmag_file")
+#: The keys that name ERT data.
+_ERT_FILE_KEYS = ("data_file", "ert_file", "time_lapse_files", "timelapse_files")
+#: TEMcompany / TEM2Go project files, which no ERT reader takes.
+_TEM_PROJECT_SUFFIXES = (".tiw", ".skb")
+
+
+def drop_borrowed_ert_files(config: Dict[str, Any],
+                            roles: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """``config`` without ERT data that is another method's input.
+
+    The parser's ERT stage is told its data file is required, so a request to
+    process TEM2Go data came back with the project the user had selected as
+    TDEM data given as ``data_file`` too. The run's route then showed Load ERT
+    data, Run ERT inversion and Evaluate inversion quality after the TDEM
+    inversion, and its report waited for the ERT loader to be offered a .tiw
+    file. A file given to another method - the same file, or one inside the
+    survey folder another method names - is that method's data only, and a
+    TEMcompany project is TDEM data whatever key it came under.
+
+    Parameters
+    ----------
+    config : dict
+        The workflow configuration.
+    roles : dict, optional
+        Inputs the caller selected by role and has not merged into ``config``
+        yet; they decide which files are taken, and are not added.
+
+    Returns
+    -------
+    dict
+        A new configuration. A TEM project dropped from the ERT keys becomes
+        ``tdem_file`` when no TDEM data is named.
+
+    Examples
+    --------
+    >>> drop_borrowed_ert_files({'data_file': 'p.tiw', 'ert_file': 'p.tiw',
+    ...                          'tdem_file': 'p.tiw'})
+    {'tdem_file': 'p.tiw'}
+    >>> drop_borrowed_ert_files({'data_file': 'Sep06/project.tiw'}, {'tdem_file': 'Sep06'})
+    {}
+    >>> drop_borrowed_ert_files({'data_file': 'p.tiw'})
+    {'tdem_file': 'p.tiw'}
+    >>> drop_borrowed_ert_files({'data_file': 'a.ohm', 'tdem_file': 'Sep06'})
+    {'data_file': 'a.ohm', 'tdem_file': 'Sep06'}
+    """
+    known = {**(roles or {}), **config}
+    taken: List[str] = []
+    for key in _OTHER_METHOD_KEYS:
+        value = known.get(key)
+        taken.extend(str(v) for v in (value if isinstance(value, (list, tuple)) else [value]) if v)
+
+    def borrowed(name: Any) -> bool:
+        path = str(name).replace("\\", "/")
+        return (path.lower().endswith(_TEM_PROJECT_SUFFIXES)
+                or any(_same_file(path, other)
+                       or path.startswith(str(other).replace("\\", "/").rstrip("/") + "/")
+                       for other in taken))
+
+    resolved = dict(config)
+    tem_project = None
+    for key in _ERT_FILE_KEYS:
+        value = resolved.get(key)
+        if not value:
+            continue
+        names = list(value) if isinstance(value, (list, tuple)) else [value]
+        kept = [name for name in names if not borrowed(name)]
+        tem_project = tem_project or next(
+            (n for n in names if str(n).lower().endswith(_TEM_PROJECT_SUFFIXES)), None)
+        if len(kept) == len(names):
+            continue
+        if isinstance(value, (list, tuple)) and kept:
+            resolved[key] = kept
+        else:
+            resolved.pop(key)
+    if tem_project and not (known.get("tdem_file") or known.get("em_file")):
+        resolved["tdem_file"] = tem_project
+    return resolved
+
+
+def _prose(text: str) -> str:
+    """The request without the paths and file names written in it.
+
+    What a request asks for is read from its words: a folder called
+    ``Gravity_Magnetics`` names both fields, and a file called
+    ``britain_aeromagnetic_anomaly.csv`` is not the request saying "magnetic".
+
+    >>> _prose("invert the gravity data in data/Gravity_Magnetics/bushveld.csv")
+    'invert the gravity data in  '
+    """
+    for path in sorted(set(_written_paths(text)), key=len, reverse=True):
+        text = text.replace(path, " ")
+    return re.sub(r"\S*[\\/]\S*|\S+\.[A-Za-z][A-Za-z0-9]{0,4}\b", " ", text)
+
+
+#: What a gravity or magnetic station table is written as.
+_STATION_SUFFIXES = (".csv", ".txt", ".dat", ".xyz")
+
+
+def _named_station_file(text: str, exclude: Sequence[Any] = ()) -> Optional[str]:
+    """The station table a request naming gravity or magnetics points at, if any."""
+    skip = [str(f) for f in exclude if f]
+    for candidate in _written_paths(text):
+        if (Path(candidate).is_file() and Path(candidate).suffix.lower() in _STATION_SUFFIXES
+                and not any(_same_file(candidate, other) for other in skip)):
+            return candidate
+    for name, _, _ in _file_names(text, list(_STATION_SUFFIXES)):
+        if not any(_same_file(name, other) for other in skip):
+            return name
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -326,12 +500,26 @@ class ContextInputAgent(BaseAgent):
                 config["seismic_file"] = seismic_file
             config["seismic_only"] = "ert" not in lower and "resistivity" not in lower
 
-        tdem_file = self._extract_file_by_extension(
+        # A TEM survey named by its path is TDEM data whatever the request calls it.
+        tem_survey = _named_tem_survey(text)
+        tdem_file = tem_survey or self._extract_file_by_extension(
             text, [".csv", ".txt", ".dat"], exclude=[*taken, config.get("seismic_file")])
         # "not TDEM" names TDEM only to rule it out; a substring test read it as
         # a request and took the ERT .dat file for a TDEM sounding.
-        if names_tdem(text) and tdem_file:
+        if tem_survey or (names_tdem(text) and tdem_file):
             config["tdem_file"] = tdem_file
+
+        # A gravity or magnetic survey: a station table, when the request
+        # names the field. The file's header decides the field when the
+        # request names both.
+        field = names_gravmag(_prose(text))
+        if field or names_unnegated(_prose(text), "gravmag"):
+            station_file = _named_station_file(
+                text, exclude=[*taken, config.get("seismic_file"), config.get("tdem_file")])
+            if station_file:
+                config["gravmag_file"] = station_file
+                if field:
+                    config["gravmag_kind"] = field
 
         # Magnetotelluric sites: EDI and EMTF Z-files are MT whatever the
         # request calls them; an XML or J-file only when the request says MT.
@@ -496,7 +684,7 @@ class ContextInputAgent(BaseAgent):
         Returns:
             Dict containing workflow_config ready for AgentCoordinator
         """
-        if not self.api_key:
+        if not self.llm_enabled:
             return self._parse_offline(user_request, available_data,
                                        f"no {self.llm_provider} API key is configured")
         try:
@@ -569,7 +757,8 @@ class ContextInputAgent(BaseAgent):
         tdem_keywords = ['tdem', 'tem ', 'time-domain electromagnetic', 'electromagnetic sounding',
                         'loop source', 'transient electromagnetic', 'simpeg']
         if stage_enabled(aspects, 'tdem',
-                         any(names_unnegated(user_request, kw.strip()) for kw in tdem_keywords)):
+                         names_tdem(user_request)
+                         or any(names_unnegated(user_request, kw.strip()) for kw in tdem_keywords)):
             stages.append(('tdem', "  Stage 5: Extracting TDEM configuration...",
                            self._create_tdem_prompt(user_request)))
 
@@ -600,6 +789,9 @@ class ContextInputAgent(BaseAgent):
 
         # Merge configurations
         workflow_config = {**inversion_config, **fusion_config, **climate_config, **hydro_config, **tdem_config, **seismic_config}
+        # The ERT stage runs on every request and takes a data file wherever
+        # it finds one, the TDEM project the user selected included.
+        workflow_config = drop_borrowed_ert_files(workflow_config, available_data)
 
         # What stage 0 read from the request wins over the per-topic extractions.
         if deliverables:
@@ -1062,7 +1254,10 @@ Available Context:
 Extract ONLY ERT inversion configuration in JSON format:
 
 1. **Data source**:
-   - data_file: Path to ERT data file (REQUIRED - extract from text)
+   - data_file: Path to the ERT data file, when the request has ERT data (extract
+     from text). Leave it out when it has none: a file selected for another
+     method (tdem_file, seismic_file, mt_files, gravmag_file) is that method's
+     data, never data_file.
    - project_dir: Project directory path (extract folder path, e.g., "data/ERT/E4D")
    - instrument: One of ['DAS-1', 'Syscal', 'ABEM-Lund', 'Protocol DC', 'BERT', 'Sting', 'ARES', 'E4D', 'Subsurface Insights', 'Custom']
      * Match EXACT instrument name from request
@@ -1351,8 +1546,13 @@ Extract ONLY TDEM parameters in JSON format:
    - tdem_mode: 'inversion', 'forward', or 'hydro_to_tdem'
    
 2. **Data source** (for inversion mode):
-   - tdem_file: Path to TDEM data file (.txt format with columns: TIME BZ UNCERTAINTY)
-   
+   - tdem_file: Path to the TDEM data, exactly as the request writes it. Either a
+     sounding table (.txt/.csv/.dat with columns TIME BZ UNCERTAINTY), or an
+     instrument survey: a TEMcompany/TEM2Go project folder or its project.tiw /
+     project.db file, a TEM2Go acquisition folder with a raw .stb stream, a
+     *_StationData.xyz export, or a tTEM .skb file.
+   - tem_moment: 'LM+HM', 'HM' or 'LM', only if the request names the moment(s)
+
 3. **Survey parameters**:
    - source_radius: Loop radius in meters (extract if mentioned, default: 10)
    - times: Time channels array (if specified, e.g., "10µs to 10ms")
@@ -1648,7 +1848,7 @@ Provide a concise explanation covering:
 
 Keep it brief (3-5 sentences) and avoid technical jargon where possible."""
 
-        if self.api_key:
+        if self.llm_enabled:
             try:
                 return self.query_llm(prompt)
             except Exception as exc:  # noqa: BLE001 - the configuration is still explained
