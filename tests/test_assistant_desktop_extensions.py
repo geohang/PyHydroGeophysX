@@ -122,10 +122,10 @@ def test_normal_studio_start_always_uses_native_aquah():
     assert [agent.key for agent in applied] == ['aquah']
 
 
-def test_focused_assistant_keeps_chat_dock_open():
+def test_focused_assistant_keeps_chat_dock_open(monkeypatch):
     pytest.importorskip('PySide6')
     from types import SimpleNamespace
-    from PyHydroGeophysX.agents.assistants import get_assistant, set_active
+    from PyHydroGeophysX.agents import assistants as assistant_registry
     from PyHydroGeophysX.qt_apps.main_window import PyHydroGeophysXStudio
 
     class Dock:
@@ -138,19 +138,19 @@ def test_focused_assistant_keeps_chat_dock_open():
         def hide(self):
             self.visible = False
 
-    previous = get_assistant().key
-    try:
-        set_active('geosage')
-        window = PyHydroGeophysXStudio.__new__(PyHydroGeophysXStudio)
-        window._all_tools_action = SimpleNamespace(setChecked=lambda _value: None)
-        window._toggle_all_tools = lambda _value: None
-        window._main_toolbar = SimpleNamespace(actions=lambda: [])
-        window._pages = {}
-        window._log_dock = Dock()
-        window._properties_dock = Dock()
-        window._focus_workspace()
-    finally:
-        set_active(previous)
+    monkeypatch.setattr(
+        assistant_registry,
+        'active',
+        lambda: SimpleNamespace(focused_workspace=True),
+    )
+    window = PyHydroGeophysXStudio.__new__(PyHydroGeophysXStudio)
+    window._all_tools_action = SimpleNamespace(setChecked=lambda _value: None)
+    window._toggle_all_tools = lambda _value: None
+    window._main_toolbar = SimpleNamespace(actions=lambda: [])
+    window._pages = {}
+    window._log_dock = Dock()
+    window._properties_dock = Dock()
+    window._focus_workspace()
     assert window._log_dock.visible is False
     assert window._properties_dock.visible is True
 
