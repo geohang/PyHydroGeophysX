@@ -8,12 +8,10 @@ from typing import Callable, Dict, Optional
 
 import pyqtgraph as pg
 from PySide6.QtCore import QSettings, QTimer, Qt
-from PySide6.QtGui import QAction, QActionGroup, QPixmap
+from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import (
     QDockWidget,
     QFileDialog,
-    QFrame,
-    QHBoxLayout,
     QInputDialog,
     QLabel,
     QMainWindow,
@@ -33,7 +31,7 @@ from PyHydroGeophysX.agents import assistants as assistant_registry
 from PyHydroGeophysX.qt_apps.agent.chat_panel import AssistantChatPanel
 from PyHydroGeophysX.qt_apps.agent.controller import StudioController
 from PyHydroGeophysX.qt_apps import stall_watch
-from PyHydroGeophysX.qt_apps.layout_fit import elide_label, relax_minimum_width
+from PyHydroGeophysX.qt_apps.layout_fit import relax_minimum_width
 from PyHydroGeophysX.qt_apps.modules import build_module
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule
 from PyHydroGeophysX.qt_apps.state import StudioState
@@ -71,14 +69,12 @@ class PyHydroGeophysXStudio(QMainWindow):
         self._log_panel = LogPanel()
         self._log_dock = self._make_dock("Log", self._log_panel, Qt.BottomDockWidgetArea)
 
-        # The home banner yields its space to results on processing pages.
+        # Home owns its welcome area; other pages use the full central space.
         self._stack = QStackedWidget()
         container = QWidget()
         outer = QVBoxLayout(container)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
-        self._header = self._build_header()
-        outer.addWidget(self._header)
         self._independent_tool_note = QLabel()
         self._independent_tool_note.setWordWrap(True)
         self._independent_tool_note.setContentsMargins(12, 8, 12, 8)
@@ -247,38 +243,6 @@ class PyHydroGeophysXStudio(QMainWindow):
         dock.setObjectName(f"dock_{title.lower()}")
         self.addDockWidget(area, dock)
         return dock
-
-    def _build_header(self) -> QFrame:
-        header = QFrame()
-        header.setObjectName("HeaderBar")
-        header.setFixedHeight(60)
-        layout = QHBoxLayout(header)
-        layout.setContentsMargins(16, 8, 16, 8)
-        layout.setSpacing(12)
-
-        logo_path = theme._logo_path()
-        pixmap = QPixmap(str(logo_path)) if logo_path is not None else QPixmap()
-        # No logo, or one Qt cannot decode: the header simply goes without.
-        if not pixmap.isNull():
-            logo = QLabel()
-            logo.setPixmap(pixmap.scaledToHeight(42, Qt.SmoothTransformation))
-            layout.addWidget(logo)
-
-        text_box = QVBoxLayout()
-        text_box.setSpacing(0)
-        title = QLabel("Professional Studio")
-        title.setObjectName("HeaderTitle")
-        subtitle = QLabel(self._assistant_subtitle())
-        self._header_subtitle = subtitle
-        subtitle.setObjectName("HeaderSubtitle")
-        # The header has a fixed height, so this line cannot wrap; without this it
-        # sets a 635 px floor under every module page.
-        elide_label(subtitle)
-        text_box.addWidget(title)
-        text_box.addWidget(subtitle)
-        layout.addLayout(text_box)
-        layout.addStretch(1)
-        return header
 
     def _build_menus(self) -> None:
         menubar = self.menuBar()
@@ -462,25 +426,22 @@ class PyHydroGeophysXStudio(QMainWindow):
                 page.viewRunRequested.connect(self._view_workflow_run)
             if hasattr(page, 'viewArtifactRequested'):
                 page.viewArtifactRequested.connect(self._view_workflow_run)
+            if key == "home":
+                page.newProjectRequested.connect(self._new_project)
+                page.openProjectRequested.connect(self._open_project)
             self._stack.addWidget(page)
             self._pages[key] = page
         self._stack.setCurrentWidget(self._pages[key])
-        self._header.setVisible(key == "home")
-        if key == "project_map" and hasattr(self._pages[key], "refresh"):
-            self._pages[key].refresh()
         self.state.selected_module = key
         self._sync_independent_tool_note()
+        if key in ("home", "project_map") and hasattr(self._pages[key], "refresh"):
+            self._pages[key].refresh()
         self._tree.select_module(key)
         if self._pick_action.isChecked():
             self._pick_action.setChecked(False)
         self._refresh_properties()
         title = getattr(self._pages[key], "module_title", key)
         self._status_label.setText(f"Module: {title}    ·    Ready")
-
-    @staticmethod
-    def _assistant_subtitle() -> str:
-        agent = assistant_registry.active()
-        return f"{agent.name} — {agent.title}"
 
     def _restore_assistant(self) -> None:
         """Start with the assistant used last, if it can still run here."""
@@ -496,6 +457,10 @@ class PyHydroGeophysXStudio(QMainWindow):
     def _apply_assistant(self, agent) -> None:
         assistant_registry.set_active(agent.key)
         theme.set_ai_colors(agent.colors)
+        # Home names the assistant's domain and draws its mark in its colours.
+        home = self._pages.get("home")
+        if home is not None:
+            home.refresh()
 
     def set_assistant(self, key: str) -> None:
         """Work with the assistant ``key``: its chat, its Workflow page, its glow.
@@ -515,8 +480,6 @@ class PyHydroGeophysXStudio(QMainWindow):
             return
         self._apply_assistant(agent)
         QSettings("PyHydroGeophysX", "Studio").setValue("assistant/key", agent.key)
-        if hasattr(self, "_header_subtitle"):
-            self._header_subtitle.setText(self._assistant_subtitle())
         if workflow is not None and hasattr(workflow, "set_assistant"):
             workflow.set_assistant(agent)
         if hasattr(self, '_chat'):

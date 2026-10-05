@@ -9,6 +9,13 @@ minor release can change the API.
 
 ### Added
 
+- Redesigned the desktop Home screen: the active Project with its saved
+  results, map and New / Open actions; an Agentic AI entrance that names the
+  active assistant; and research task cards that follow the model-data loop
+  (forward: simulate a survey; inverse: invert field data, estimate
+  hydrology). The cards are built from the navigator's groups, so every
+  navigator page appears on Home once. Session context is a collapsible detail.
+
 - Seismic refraction, TDEM and MT runs now go the way ERT runs do: the data
   are read and drawn, inverted, and the inversion is evaluated before anything
   is built on it. New workflow steps `load_seismic_traveltimes`,

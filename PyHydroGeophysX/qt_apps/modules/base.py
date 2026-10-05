@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import html
-import json
 import os
 from collections import OrderedDict
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -11,7 +10,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from PySide6.QtCore import QEvent, QObject, Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices, QPixmap
 from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QPlainTextEdit,
-                               QTextEdit, QVBoxLayout, QWidget)
+                               QVBoxLayout, QWidget)
 
 LogFn = Callable[..., None]
 #: One offer in a module's export menu: what it writes, and how to write it.
@@ -620,47 +619,27 @@ class BaseModule(QWidget):
 
 
 class HomePage(BaseModule):
-    """Landing page shown when no specific module is selected."""
+    """Welcome page with direct entrances into the studio's research tasks."""
 
     module_key = "home"
     module_title = "Home"
+    newProjectRequested = Signal()
+    openProjectRequested = Signal()
 
     def __init__(self, state: Any, log: LogFn, parent=None) -> None:
         super().__init__(state, log, parent)
+        from PyHydroGeophysX.qt_apps.home_screen import StudioHome
+
         layout = QVBoxLayout(self)
-        title = QLabel("<h2>PyHydroGeophysX Professional Studio</h2>")
-        intro = QLabel(
-            "Select a module from the project tree on the left.<br><br>"
-            "<b>Geophysical Data Processing</b>: Seismic, ERT, Mesh 3D, EM, "
-            "Gravity / Magnetics, Magnetotellurics, and Joint Inversion.<br>"
-            "<b>Hydro → Geophysics</b>: load hydrologic model outputs, pick a "
-            "profile, set survey geometry, and run forward modeling.<br>"
-            "<b>Geophy → Hydrology</b>: derive subsurface structure and "
-            "hydrology from geophysics. <b>Seismic → Structure</b> builds a 3D "
-            "structure (bedrock interface + velocity volume) from velocity "
-            "sections; that structure can be handed to <b>ERT → Water Content</b>, "
-            "which estimates water content and porosity per layer with Monte "
-            "Carlo uncertainty."
-        )
-        intro.setWordWrap(True)
-        self._summary = QTextEdit()
-        self._summary.setReadOnly(True)
-        layout.addWidget(title)
-        from PySide6.QtWidgets import QPushButton
-        one_click = QPushButton("Open Workflow · Data, progress and reports")
-        one_click.clicked.connect(lambda: self.navigateRequested.emit("one_click"))
-        layout.addWidget(one_click)
-        layout.addWidget(intro)
-        layout.addWidget(QLabel("<b>Session context</b>"))
-        layout.addWidget(self._summary, stretch=1)
-        self.refresh()
+        layout.setContentsMargins(0, 0, 0, 0)
+        self._home = StudioHome(state, self)
+        self._home.navigateRequested.connect(self.navigateRequested.emit)
+        self._home.newProjectRequested.connect(self.newProjectRequested.emit)
+        self._home.openProjectRequested.connect(self.openProjectRequested.emit)
+        layout.addWidget(self._home)
 
     def refresh(self) -> None:
-        try:
-            summary = self.state.context_summary()
-        except Exception:
-            summary = {}
-        self._summary.setPlainText(json.dumps(summary, indent=2, default=str))
+        self._home.refresh()
 
 
 class PlaceholderModule(BaseModule):

@@ -342,10 +342,42 @@ def build_qss() -> str:
     }}
     QMainWindow, QDialog {{ background-color: {p['bg']}; }}
 
-    /* Header banner on the home page */
-    QFrame#HeaderBar {{ background-color: {p['card']}; border: none; border-bottom: 1px solid {p['border']}; }}
-    QLabel#HeaderTitle {{ color: {p['text']}; font-size: 17pt; font-weight: 600; background: transparent; }}
-    QLabel#HeaderSubtitle {{ color: {p['muted']}; font-size: 9pt; background: transparent; }}
+    /* Welcome page: quiet surfaces, readable hierarchy and one main action.
+       Blue is what can be clicked; the agent's colours are its mark alone. */
+    QWidget#StudioHome QWidget {{ font-family: "{UI_FONT_FAMILY}"; }}
+    QWidget#HomeContent, QScrollArea#HomeScroll {{ background: {p['bg']}; border: none; }}
+    QFrame#HomeHero {{ background: {p['card']}; border: 1px solid {p['border']}; border-radius: 20px; }}
+    QFrame#HomeTaskCard, QFrame#HomeWorkspace {{
+        background: {p['card']}; border: 1px solid {p['border']}; border-radius: 14px;
+    }}
+    QFrame#HomeHero QWidget, QFrame#HomeTaskCard QWidget, QFrame#HomeWorkspace QWidget {{ background: transparent; }}
+    QLabel#HomeBrand {{ font-size: 16px; font-weight: 600; }}
+    QLabel#HomeEyebrow {{ color: {p['muted']}; font-size: 11px; font-weight: 500; }}
+    QLabel#HomeAccent {{ color: {p['muted']}; font-size: 11px; font-weight: 600; }}
+    QLabel#HomeAIStages {{ color: {p['muted']}; font-size: 12px; }}
+    QLabel#HomeTitle {{ color: {p['text']}; font-size: 34px; font-weight: 600; }}
+    QLabel#HomeTitle[compact="true"] {{ font-size: 28px; }}
+    QLabel#HomeDescription {{ color: {p['muted']}; font-size: 13px; }}
+    QLabel#HomeSection {{ font-size: 16px; font-weight: 600; }}
+    QLabel#HomeCardTitle {{ font-size: 16px; font-weight: 600; }}
+    QLabel#HomeDirection {{ color: {p['muted']}; font-size: 11px; font-weight: 600; }}
+    QWidget#StudioHome QPushButton {{ font-size: 13px; padding: 8px 14px; }}
+    QWidget#StudioHome QPushButton[primary="true"] {{
+        background: {p['primary']}; color: {p['on_primary']}; border-color: {p['primary']};
+    }}
+    QWidget#StudioHome QPushButton[primary="true"]:hover {{ background: {p['accent']}; }}
+    QWidget#StudioHome QPushButton[homeRole="chip"] {{
+        background: transparent; color: {p['primary']}; border: 1px solid {p['border']};
+        border-radius: 13px; padding: 4px 10px; font-size: 12px;
+    }}
+    QWidget#StudioHome QPushButton[homeRole="quiet"] {{
+        background: transparent; color: {p['primary']}; border: none; padding: 5px 8px;
+    }}
+    QWidget#StudioHome QPushButton[homeRole="chip"]:hover,
+    QWidget#StudioHome QPushButton[homeRole="quiet"]:hover {{ background: {p['hover']}; }}
+    QToolButton#HomeDetails {{ background: transparent; color: {p['muted']}; border: none; padding: 4px 0; }}
+    QToolButton#HomeDetails:hover {{ color: {p['primary']}; }}
+    QTextEdit#HomeSummary {{ font-family: "{MONO_FONT_FAMILY}"; font-size: 12px; border-color: {p['border']}; }}
 
     /* Cards / group boxes */
     QGroupBox {{

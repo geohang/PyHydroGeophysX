@@ -20,6 +20,24 @@ the browser and finish the interactive work on the desktop.
 Studio at a Glance
 --------------------------------------------------------------------------------
 
+Start from Home
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Home opens with the active Project: its folder, **Saved Results**, **Map**,
+**New Project** and **Open Project**. Below it, the active assistant's
+**Agentic AI** workflow: plan, process, evaluate, and report. Choose **Start an
+AI workflow** to open Workflow, where you add data, and describe the goal in
+the assistant panel. The assistant offers step-by-step approval or execution
+through to a report.
+
+The research task cards follow the model–data loop. **Forward**: simulate a
+survey from a hydrologic model (Hydro → Geophysics). **Inverse**: invert field
+data with any processing module, then estimate structure and water content
+with uncertainty (Seismic → Structure, ERT → Water Content). Each card lists
+the same pages as its group in the navigator. Technical context remains
+available under **Session details**. Cards reflow as the window narrows and
+follow the studio's Light, Dark or System appearance.
+
 AQUAH: one assistant, two execution modes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

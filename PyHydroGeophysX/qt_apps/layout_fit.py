@@ -16,7 +16,8 @@ shrinkable, choosing per widget rather than uniformly:
   tooltip.
 
 Nothing here changes what a widget displays at a comfortable width. It only
-removes the claim that the widget can never be narrower.
+removes the claim that the widget can never be narrower. A label whose width a
+page settled itself carries the ``fitted`` property and is left as it is.
 """
 
 from __future__ import annotations
@@ -122,15 +123,17 @@ def _elide(widget: QWidget, floor: int = 0) -> None:
 def elide_label(label: QLabel) -> QLabel:
     """Make one label paint elided and stop claiming its full text width.
 
-    For a label outside a module page (the header, a fixed-height bar) where the
-    generic pass does not reach. A rich-text label is only relaxed, never
-    elided, since the filter would draw its markup verbatim.
+    For a label that must stay on one line - a path readout, a fixed-height bar.
+    It is marked fitted, so the generic pass does not mistake a long path for
+    prose and wrap it. A rich-text label is only relaxed, never elided, since
+    the filter would draw its markup verbatim.
     """
     if not label.toolTip():
         label.setToolTip(label.text())
     if not _is_rich(label):
         label.installEventFilter(_ELIDE_FILTER)
     _elide(label)
+    label.setProperty("fitted", True)
     return label
 
 
@@ -170,7 +173,7 @@ def relax_minimum_width(page: QWidget) -> Dict[str, int]:
     page.ensurePolished()
 
     for label in page.findChildren(QLabel):
-        if label.wordWrap():
+        if label.wordWrap() or label.property("fitted"):
             continue
         text = label.text()
         if not text:

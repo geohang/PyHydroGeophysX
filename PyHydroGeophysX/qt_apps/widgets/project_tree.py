@@ -89,6 +89,13 @@ TREE_STRUCTURE: List[Tuple[str, List[Tuple[str, str]]]] = [
 ]
 
 
+def item_icon(label: str) -> str:
+    """The qtawesome name the navigator draws beside the group or item ``label``."""
+    if label in _GROUP_ICONS:
+        return _GROUP_ICONS[label]
+    return _CHILD_ICONS.get(label, "fa5s.circle")
+
+
 class ProjectTree(QTreeWidget):
     """A two-group navigator. Emits ``moduleSelected(module_key)`` on click."""
 
