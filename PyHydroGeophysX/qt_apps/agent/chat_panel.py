@@ -193,8 +193,9 @@ class AssistantChatPanel(QWidget):
         self._sync_settings_widgets()
         # Start open only when there is nothing to send with: otherwise a first
         # run would report "no API key" with no visible way to supply one.
-        if not self._provider.available()[0]:
+        if not self._provider.available()[0] and not assistant_registry.active().offline_workflow:
             self._settings_btn.setChecked(True)
+        self._sync_assistant_options()
         self._reset_conversation()
 
     # -- model capabilities --------------------------------------------------
@@ -490,6 +491,30 @@ class AssistantChatPanel(QWidget):
             self._assistant_combo.blockSignals(False)
             self._refresh_capabilities()
             self._reset_conversation()
+        self._sync_assistant_options()
+
+    def _sync_assistant_options(self):
+        agent = assistant_registry.active()
+        for key, widget in (('rag', self._rag), ('mcp', self._mcp)):
+            available = key in getattr(agent, 'retrieval', ('rag', 'mcp'))
+            widget.setVisible(available)
+            widget.setEnabled(available)
+        if agent.offline_workflow:
+            self._settings_btn.setChecked(False)
+        self._refresh_ready_state()
+
+    def start_workflow(self, text):
+        """Start from the task page using the same provider and chat contract."""
+        ready = self._provider.available()[0]
+        if self._provider_id in CLI_PROVIDER_IDS:
+            ready = ready and self._cli_states.get(self._provider_id, {}).get('state') == 'ready'
+        if not ready:
+            self._settings_btn.setChecked(True)
+            self._render_note('Configure the AI provider, apply the settings, then start the task again.')
+            return
+        self._execution_mode.setCurrentIndex(self._execution_mode.findData('auto'))
+        self._input.setPlainText(text)
+        self._on_send()
 
     # -- settings handling ---------------------------------------------------
     def _on_settings_toggled(self, shown: bool) -> None:
@@ -832,7 +857,9 @@ class AssistantChatPanel(QWidget):
                 f"{level}{html.escape(label)} · {html.escape(self._provider.model)}"
                 f" — ready{cost}{eye}")
         else:
-            self._status_label.setText(f"{html.escape(label)}: {html.escape(reason)}")
+            self._status_label.setText('Local numerical tasks are ready · Configure AI only for interpretation'
+                                       if assistant_registry.active().offline_workflow else
+                                       f"{html.escape(label)}: {html.escape(reason)}")
 
     # -- sending / receiving -------------------------------------------------
     def _on_send(self) -> None:
@@ -872,7 +899,8 @@ class AssistantChatPanel(QWidget):
                         "model": self._provider.model,
                         "api_key": self._provider._api_key,
                         "reasoning_effort": self._reasoning.currentText(),
-                        "use_rag": self._rag.isChecked(), "use_mcp": self._mcp.isChecked()}
+                        "use_rag": self._rag.isEnabled() and self._rag.isChecked(),
+                        "use_mcp": self._mcp.isEnabled() and self._mcp.isChecked()}
             try:
                 message = self._controller.run_to_report(
                     text, settings, self._on_workflow_finished,

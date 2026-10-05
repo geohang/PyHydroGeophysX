@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import numpy as np
 import pyqtgraph as pg
+from PySide6.QtCore import QEvent, QTimer
+from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 
@@ -20,6 +22,7 @@ class ZoomableImageView(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         self._glw = pg.GraphicsLayoutWidget()
+        self._glw.setBackground(self.palette().color(QPalette.Base))
         layout.addWidget(self._glw)
         self._vb = self._glw.addViewBox()
         self._vb.setAspectLocked(True)
@@ -42,6 +45,18 @@ class ZoomableImageView(QWidget):
         self._img.setImage(arr, levels=levels)
         self._vb.autoRange()
         return True
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # Images can be loaded before this widget joins the visible layout.
+        # Fit once Qt has assigned its actual viewport size.
+        QTimer.singleShot(0, self._vb.autoRange)
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        if event.type() in (QEvent.PaletteChange, QEvent.ApplicationPaletteChange):
+            if hasattr(self, '_glw'):
+                self._glw.setBackground(self.palette().color(QPalette.Base))
 
     def clear(self) -> None:
         """Remove the current image when a result panel has no matching output."""

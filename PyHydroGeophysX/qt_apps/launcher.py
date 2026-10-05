@@ -15,6 +15,43 @@ import argparse
 import sys
 from typing import Optional, Sequence
 
+_DIAGNOSTIC_STREAM = None
+
+
+def _install_native_diagnostics():
+    """Retain native crash traces even when pythonw has no console streams."""
+    global _DIAGNOSTIC_STREAM
+    if _DIAGNOSTIC_STREAM is not None:
+        return
+    import faulthandler
+    import os
+    from datetime import datetime
+    from pathlib import Path
+    import tempfile
+
+    try:
+        root = Path(tempfile.gettempdir()) / 'PyHydroGeophysX' / 'diagnostics'
+        root.mkdir(parents=True, exist_ok=True)
+        path = root / f'studio-{datetime.now():%Y%m%d-%H%M%S}-{os.getpid()}.log'
+        stream = path.open('a', encoding='utf-8', buffering=1)
+        _DIAGNOSTIC_STREAM = stream
+        stream.write(f'Studio process {os.getpid()} started\nPython: {sys.version}\n')
+        # Keep the stream open for the lifetime of the process, including
+        # native-library teardown after the Qt event loop has stopped.
+        faulthandler.enable(file=stream, all_threads=True)
+    except (OSError, RuntimeError, ValueError):
+        pass  # Diagnostics must never prevent starting the application.
+
+
+def _write_diagnostic(text):
+    for stream in (sys.stderr, _DIAGNOSTIC_STREAM):
+        if stream is not None:
+            try:
+                stream.write(text)
+                stream.flush()
+            except (OSError, ValueError, AttributeError):
+                pass
+
 
 def _install_excepthook(show_dialog: bool) -> None:
     """Route uncaught exceptions to stderr plus an error dialog.
@@ -26,7 +63,7 @@ def _install_excepthook(show_dialog: bool) -> None:
 
     def _hook(exc_type, exc_value, exc_tb):
         text = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
-        sys.stderr.write(text)
+        _write_diagnostic(text)
         if show_dialog:
             try:
                 from PySide6.QtWidgets import QApplication, QMessageBox
@@ -84,8 +121,9 @@ def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Optional[Sequence[str]] = None, *, assistant: Optional[str] = None) -> int:
     args = _parse_args(argv)
+    _install_native_diagnostics()
 
     # This is a PySide6 app; tell qtpy-based libraries (e.g. pyvistaqt) to use
     # PySide6 too, so they do not bind to a PyQt5 install and clash with our
@@ -109,10 +147,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         context_path=args.context,
         initial_module=("em" if args.em_data else (args.module or "home")),
     )
+    # A domain launcher can explicitly choose its assistant without relying on
+    # writable QSettings or replacing the user's defaults before construction.
+    if assistant:
+        window.set_assistant(assistant)
     window.setWindowIcon(theme.window_icon())
     if not getattr(window, "_geometry_restored", False):
         window.resize(1500, 900)
     window.show()
+    _write_diagnostic('Studio window shown\n')
 
     if args.em_data:
         from PySide6.QtCore import QTimer
@@ -138,6 +181,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         QTimer.singleShot(300, app.quit)
 
     code = int(app.exec())
+    _write_diagnostic(f'Qt event loop exited: {code}\n')
     _close_pyplot_figures()
     return code
 

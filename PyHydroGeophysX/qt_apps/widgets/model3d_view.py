@@ -24,7 +24,7 @@ import numpy as np
 
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import (
-    QCheckBox, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget,
+    QCheckBox, QComboBox, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget, QTabWidget,
 )
 
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
@@ -67,7 +67,18 @@ class VTKVolumeView(QWidget):
         self._scalar: Optional[str] = None
         self._cmap = "turbo"
         self._opacity = 0.65
+        self._base_colormap_key = colormap_key
+        self._scalar_cmaps = {}
+        self._default_cmap = 'turbo'
+        self._field_metadata = {}
+        self._sections = None
+        self._tabs = None
+        self._clip_state = None
+        self._has_view = False
         self._actors: list = []   # the colour-mapped actors now on screen
+        self._field = QComboBox(self)
+        self._field.setToolTip('Physical property or categorical labels to display')
+        self._field.currentTextChanged.connect(self._on_field_changed)
         self._colormap = cmaps.ColormapChooser(
             colormap_key, self._cmap, shared=colormaps, parent=self)
         self._colormap.colormapChanged.connect(self._on_colormap_changed)
@@ -75,7 +86,7 @@ class VTKVolumeView(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         self._info = QLabel(
-            "Build the model to inspect its 3D velocity volume here."
+            "Open a model to inspect its 3D properties here."
         )
         self._info.setWordWrap(True)
         layout.addWidget(self._info)
@@ -97,6 +108,7 @@ class VTKVolumeView(QWidget):
                 reset.clicked.connect(self._reset_camera)
                 controls.addWidget(self._clip_cb)
                 controls.addWidget(reset)
+                controls.addWidget(self._field)
                 controls.addWidget(self._colormap)
                 controls.addStretch(1)
                 layout.addLayout(controls)
@@ -105,6 +117,7 @@ class VTKVolumeView(QWidget):
                 self._plotter = None
                 err = str(exc)
         if self._plotter is None:
+            self._field.hide()
             self._colormap.hide()   # nothing here to colour
             self._notice = QLabel(
                 "Interactive 3D view is unavailable in this session.<br>"
@@ -129,6 +142,13 @@ class VTKVolumeView(QWidget):
         """Whether the embedded PyVistaQt renderer is available."""
         return self._plotter is not None and self._pv is not None
 
+    def set_compact(self, compact):
+        """Keep the model prominent; display options remain in Details."""
+        self._info.setVisible(not compact or self._mesh is None)
+        self._colormap.setVisible(not compact and self.interactive_available)
+        self._clip_cb.setText('Slice' if compact else 'Clip plane (drag to inspect the interior)')
+        self._clip_cb.setToolTip('Drag the clipping plane to inspect the model interior.')
+
     def show_file(
         self,
         path: str,
@@ -136,33 +156,70 @@ class VTKVolumeView(QWidget):
         scalar_candidates: Sequence[str] = ("Velocity", "velocity"),
         cmap: str = "turbo",
         opacity: float = 0.65,
+        scalar_cmaps: Optional[dict] = None,
+        field_metadata: Optional[dict] = None,
+        linked_sections: bool = False,
     ) -> bool:
         """Load and display a VTK dataset, returning whether it was rendered.
 
         ``cmap`` is the volume's default colour map: what it is drawn with until
         a map is chosen for this view's quantity.
         """
+        if self._sections is not None:
+            self._sections.hide()
+            if self._tabs is not None and self._tabs.count() > 1:
+                self._tabs.removeTab(1)
+            else:
+                self.layout().removeWidget(self._sections)
+            self._sections.deleteLater()
+            self._sections = None
+            if self._plotter is not None:
+                self._plotter.disable_picking()
+        self._mesh = None
+        self._scalar = None
+        self._field.blockSignals(True)
+        self._field.clear()
+        self._field.blockSignals(False)
+        if self._plotter is not None:
+            self._plotter.clear_plane_widgets()
+            self._plotter.clear()
+        elif self._notice is not None:
+            self._notice.show()
+            self._field.hide()
         vtk_path = Path(path)
         if not vtk_path.is_file():
             self._info.setText(f"3D volume file not found: <code>{vtk_path}</code>")
             return False
-        if not self.interactive_available:
+        if not self.interactive_available and not linked_sections:
             self._info.setText(
                 f"3D volume saved at <code>{vtk_path}</code>. "
                 "Use the Figures & files tab in this session."
             )
             return False
         try:
+            if self._pv is None and linked_sections:
+                import pyvista
+                self._pv = pyvista
             self._mesh = self._pv.read(str(vtk_path))
-            self._scalar = next(
-                (
-                    name for name in scalar_candidates
-                    if name in getattr(self._mesh, "point_data", {})
-                    or name in getattr(self._mesh, "cell_data", {})
-                ),
-                None,
-            )
-            self._cmap = self._colormap.set_target(self._colormap.key(), str(cmap))
+            self._has_view = False
+            self._clip_state = None
+            self._field_metadata = dict(field_metadata or {})
+            self._source_name = vtk_path.name
+            data_sources = (self._mesh.cell_data,) if linked_sections else (self._mesh.point_data, self._mesh.cell_data)
+            fields = list(dict.fromkeys(
+                name for data in data_sources
+                for name in data if np.asarray(data[name]).ndim == 1
+                and np.issubdtype(np.asarray(data[name]).dtype, np.number)))
+            self._scalar = next((name for name in scalar_candidates if name in fields),
+                                fields[0] if fields else None)
+            self._field.blockSignals(True)
+            self._field.clear()
+            self._field.addItems(fields)
+            self._field.setCurrentText(self._scalar or '')
+            self._field.blockSignals(False)
+            self._scalar_cmaps = dict(scalar_cmaps or {})
+            self._default_cmap = str(cmap)
+            self._choose_field_colormap()
             self._opacity = float(opacity)
             self._info.setText(
                 f"<b>{vtk_path.name}</b>  ·  "
@@ -171,6 +228,8 @@ class VTKVolumeView(QWidget):
                 + "  ·  drag to rotate, wheel to zoom"
             )
             self._redraw()
+            if linked_sections and all(hasattr(self._mesh, axis) for axis in ('x', 'y', 'z')) and self._scalar in self._mesh.cell_data:
+                self._add_sections()
             return True
         except Exception as exc:  # noqa: BLE001 - VTK backend-specific failures
             self._info.setText(f"Could not display <code>{vtk_path.name}</code>: {exc}")
@@ -184,7 +243,11 @@ class VTKVolumeView(QWidget):
     def _redraw(self, *_) -> None:
         if not self.interactive_available or self._mesh is None:
             return
+        camera = self._plotter.camera_position if self._has_view else None
         try:
+            planes = self._plotter.plane_widgets
+            if planes:
+                self._clip_state = (tuple(planes[0].GetNormal()), tuple(planes[0].GetOrigin()))
             self._plotter.clear_plane_widgets()
         except Exception:  # noqa: BLE001 - absent on older PyVista releases
             pass
@@ -195,10 +258,34 @@ class VTKVolumeView(QWidget):
             "opacity": self._opacity,
             "show_edges": False,
             "show_scalar_bar": bool(self._scalar),
+            "scalar_bar_args": {
+                "title": self._scalar or "",
+                "title_font_size": 14,
+                "label_font_size": 12,
+                "fmt": "%.3g",
+            },
         }
+        categorical = bool(self._scalar and self._scalar.lower().endswith(' id'))
+        metadata = self._field_metadata.get(self._scalar, {})
+        if metadata.get('limits'):
+            kwargs['clim'] = tuple(metadata['limits'])
+        self._colormap.setEnabled(not categorical)
+        if categorical:
+            # Map sparse IDs to compact colour positions on a plotting array;
+            # the dataset and its original IDs remain unchanged.
+            values = np.asarray(self._mesh[self._scalar])
+            labels, indices = np.unique(values, return_inverse=True)
+            kwargs.update(scalars=indices, cmap='tab20', n_colors=max(1, len(labels)),
+                          clim=(-0.5, len(labels) - 0.5),
+                          annotations={float(i): str(v) for i, v in enumerate(labels)})
+            kwargs['scalar_bar_args']['n_labels'] = 0
+            if metadata.get('colors'):
+                from matplotlib.colors import ListedColormap
+                kwargs['cmap'] = ListedColormap([metadata['colors'][str(int(v))] for v in labels])
         try:
             if self._clip_cb.isChecked():
-                actor = self._plotter.add_mesh_clip_plane(self._mesh, **kwargs)
+                clip = dict(normal=self._clip_state[0], origin=self._clip_state[1]) if self._clip_state else {}
+                actor = self._plotter.add_mesh_clip_plane(self._mesh, **clip, **kwargs)
             else:
                 actor = self._plotter.add_mesh(self._mesh, **kwargs)
         except Exception:  # noqa: BLE001 - clip widgets can fail on some VTK builds
@@ -210,8 +297,68 @@ class VTKVolumeView(QWidget):
             pass
         self._plotter.add_axes()
         self._plotter.reset_camera()
+        if camera is not None:
+            self._plotter.camera_position = camera
+        self._has_view = True
         self._refresh()
         QTimer.singleShot(0, self._refresh)
+
+    def _on_field_changed(self, name: str) -> None:
+        if not name or self._mesh is None:
+            return
+        self._scalar = name
+        self._info.setText(f'<b>{self._source_name}</b> · scalar: {name} · drag to rotate, wheel to zoom')
+        self._choose_field_colormap()
+        camera = self._plotter.camera_position if self._plotter is not None else None
+        self._redraw()
+        if camera is not None:
+            self._plotter.camera_position = camera
+            self._refresh()
+        if self._sections is not None:
+            self._sections.set_field(name, self._field_metadata.get(name), self._cmap)
+            self._mark_point([float(c[i]) for c, i in zip(self._sections.centers, self._sections.indices)])
+
+    def _add_sections(self):
+        from .scientific_sections import ScientificSections
+        if self._sections is not None:
+            self._sections.deleteLater()
+        self._sections = ScientificSections(self._mesh, self._scalar, self._field_metadata.get(self._scalar), self._cmap)
+        if self.interactive_available:
+            if self._tabs is None:
+                self.layout().removeWidget(self._plotter.interactor)
+                self._tabs = QTabWidget()
+                self._tabs.addTab(self._plotter.interactor, '3D model')
+                self.layout().addWidget(self._tabs, 1)
+            elif self._tabs.count() > 1:
+                self._tabs.removeTab(1)
+            self._tabs.addTab(self._sections, 'Linked sections && values')
+            self._sections.pointChanged.connect(self._mark_point)
+            try:
+                self._plotter.disable_picking()
+                self._plotter.enable_point_picking(callback=self._sections.select_point,
+                    show_message=False, show_point=False, left_clicking=False)
+                self._info.setText(self._info.text() + ' · right-click a mesh point to inspect values')
+            except Exception:
+                pass
+        else:
+            if self._notice:
+                self._notice.hide()
+            self._field.show()
+            self.layout().addWidget(self._field)
+            self.layout().addWidget(self._sections, 1)
+            self._info.setText('Interactive 3D is unavailable · physical-coordinate sections remain available')
+
+    def _mark_point(self, coordinates):
+        if self._plotter is not None:
+            self._plotter.add_points(np.asarray([coordinates]), name='selected-cell', color='black', point_size=12, render_points_as_spheres=True)
+            self._refresh()
+
+    def _choose_field_colormap(self) -> None:
+        default = self._scalar_cmaps.get(self._scalar, self._default_cmap)
+        key = self._base_colormap_key
+        if self._scalar_cmaps and self._scalar:
+            key = f'{key}:{self._scalar}'
+        self._cmap = self._colormap.set_target(key, default)
 
     def _refresh(self) -> None:
         if self._plotter is None:
@@ -240,6 +387,8 @@ class VTKVolumeView(QWidget):
         self._cmap = name
         if _recolour_actors(self._actors, name):
             self._refresh()
+        if self._sections is not None:
+            self._sections.set_field(self._scalar, self._field_metadata.get(self._scalar), name)
 
 
 class Model3DView(QWidget):

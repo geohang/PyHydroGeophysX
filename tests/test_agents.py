@@ -869,7 +869,7 @@ def test_each_assistant_registers_with_its_own_tools_and_workflow():
     assert callable(aquah.load_workflow())
     # GeoSAGE is listed while it is ported, but cannot be chosen, and its tools
     # never mix with AQUAH's, even where a name is the same.
-    geosage = get_assistant("geosage")
+    from PyHydroGeophysX.agents.assistants.geosage import ASSISTANT as geosage
     ready, why = geosage.availability()
     assert not ready and "ported" in why
     own = geosage.load_tools()

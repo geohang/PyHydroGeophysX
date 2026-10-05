@@ -179,6 +179,9 @@ def _without_clock(details):
 
 
 class OneClickModule(BaseModule):
+    startAIRequested = Signal(str)
+    viewRunRequested = Signal(str)
+    viewArtifactRequested = Signal(str, str)
     module_key = 'one_click'
     module_title = 'Workflow'
     workflowFinished = Signal(str)
@@ -237,6 +240,8 @@ class OneClickModule(BaseModule):
         self.tabs = QTabWidget()
         setup = QWidget()
         form = QVBoxLayout(setup)
+        self._setup_layout = form
+        self._workflow_setup = None
         self._request_text = ''
         self._ai_settings = {}
         self.goal = QLabel()
@@ -275,27 +280,34 @@ class OneClickModule(BaseModule):
         self.role = QComboBox()
         row.addWidget(self.role)
         add = QPushButton('Add data…')
+        self._add_input_button = add
         add.clicked.connect(self._choose_files)
         row.addWidget(add)
         remove = QPushButton('Remove selected')
+        self._remove_input_button = remove
         remove.clicked.connect(self._remove_input)
         row.addWidget(remove)
         form.addLayout(row)
         self.inputs = QListWidget()
         form.addWidget(self.inputs)
         order = QHBoxLayout()
+        self._ordered_buttons = []
         for label, offset in [('Move survey up', -1), ('Move survey down', 1)]:
             button = QPushButton(label)
+            self._ordered_buttons.append(button)
             button.clicked.connect(lambda checked=False, delta=offset: self._move_survey(delta))
             order.addWidget(button)
         form.addLayout(order)
+        form.addStretch(1)
         note = QLabel('Time-lapse surveys run in the displayed order; select a survey and move it up or down to reorder. Your request and workflow context are sent to the selected AI provider.')
         note.setWordWrap(True)
         form.addWidget(note)
+        self._generic_intro = [choose_folder, self.folder_label, self._folder_note, manual, note]
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(setup)
         self._data_tab = scroll
+        scroll.setAlignment(Qt.AlignHCenter)
         self.tabs.addTab(scroll, '1 · Data')
         # The run as the assistant sees it: one card per step it decided on, with its
         # reason, its module, its time and what it found. This is where a run
@@ -349,7 +361,15 @@ class OneClickModule(BaseModule):
         self.report.setPlainText('Your interpretation and report will appear here after the workflow finishes.')
         # '&&': a single ampersand is a Qt mnemonic, which rendered the tab as
         # "Results _report".
-        self.tabs.addTab(self.report, '3 · Results && report')
+        self._result_page = QWidget()
+        self._result_layout = QVBoxLayout(self._result_page)
+        self._result_layout.setContentsMargins(0, 0, 0, 0)
+        self.result_summary = QLabel()
+        self.result_summary.setWordWrap(True)
+        self.result_summary.hide()
+        self._result_layout.addWidget(self.result_summary)
+        self._result_layout.addWidget(self.report, 1)
+        self.tabs.addTab(self._result_page, '3 · Results && report')
         self.files = QListWidget()
         self.files.itemDoubleClicked.connect(lambda item: self._preview(item.data(Qt.UserRole)))
         self.tabs.addTab(self.files, 'Output files')
@@ -415,8 +435,10 @@ class OneClickModule(BaseModule):
         self.pause_box.setVisible(False)
         layout.addWidget(self.pause_box)
         actions = QHBoxLayout()
-        self.run = QPushButton('Run through to report')
-        self.run.clicked.connect(self._start)
+        actions.addStretch(1)
+        self.run = QPushButton('Run without AI')
+        self.run.setToolTip('Run numerical processing and inspect the evidence without contacting an AI provider.')
+        self.run.clicked.connect(self._start_offline)
         self.stop = QPushButton('Stop')
         self.stop.setEnabled(False)
         self.stop.clicked.connect(self._cancel)
@@ -428,9 +450,44 @@ class OneClickModule(BaseModule):
                                       'in its output folder. Nothing is recomputed.')
         self.replay_button.clicked.connect(self._choose_replay)
         self.run.hide()
-        for button in (self.stop, self.folder, self.replay_button):
+        for button in (self.run, self.stop, self.folder, self.replay_button):
             actions.addWidget(button)
         layout.addLayout(actions)
+        result_actions = QHBoxLayout()
+        self.save_result = QPushButton('Save this run to Project')
+        self.save_result.clicked.connect(self._save_current_run)
+        self.view_result = QPushButton('View models && compare runs')
+        self.view_result.clicked.connect(lambda: self.viewRunRequested.emit(self._current_run_id or ''))
+        self.view_fit = QPushButton('View data fit')
+        self.view_fit.clicked.connect(lambda: self.viewArtifactRequested.emit(self._current_run_id or '', 'fit'))
+        self.read_report = QPushButton('Read interpretation')
+        self.read_report.clicked.connect(self._read_current_report)
+        self.view_result.setProperty('primary', True)
+        self.result_state = QLabel()
+        self.result_state.setWordWrap(True)
+        self._result_buttons = (self.view_result, self.view_fit, self.read_report, self.save_result)
+        for widget in self._result_buttons:
+            widget.hide()
+            result_actions.addWidget(widget)
+        self.result_state.hide()
+        self._result_layout.insertLayout(1, result_actions)
+        self._result_layout.insertWidget(2, self.result_state)
+        self._current_run_id = None
+        self._result_capabilities = {}
+        self._continuation_result = None
+        self._continuation_assistant = None
+        self.next_step = QWidget()
+        next_layout = QHBoxLayout(self.next_step)
+        next_layout.setContentsMargins(0, 0, 0, 0)
+        self.continue_result = QPushButton('Interpret these models…')
+        self.continue_result.clicked.connect(self._prepare_continuation)
+        next_layout.addWidget(self.continue_result)
+        next_note = QLabel('Reuse the completed numerical models. Review the next task before starting.')
+        self._next_note = next_note
+        next_note.setWordWrap(True)
+        next_layout.addWidget(next_note, 1)
+        self.next_step.hide()
+        self._result_layout.insertWidget(3, self.next_step)
         self._setup = setup
         self.set_assistant(self._assistant)
         # Everything the Live views are told is recorded, with its time, so the
@@ -472,6 +529,26 @@ class OneClickModule(BaseModule):
         if self._worker is not None:
             return False
         self._assistant = assistant
+        self.next_step.hide()
+        self._request_text = ''
+        if self._workflow_setup is not None:
+            self._setup_layout.removeWidget(self._workflow_setup)
+            self._workflow_setup.hide()
+            self._workflow_setup.deleteLater()
+            self._workflow_setup = None
+        if getattr(assistant, 'workflow_setup', ''):
+            factory = assistant_registry._load(assistant.workflow_setup)
+            self._workflow_setup = factory(self)
+            self._setup_layout.insertWidget(0, self._workflow_setup)
+            self._workflow_setup.changed.connect(self._sync_setup_task)
+            if hasattr(self._workflow_setup, 'detailsChanged'):
+                self._workflow_setup.detailsChanged.connect(self._set_compact_details)
+            self._workflow_setup.update_inputs(self._inputs)
+        for widget in self._generic_intro:
+            widget.setVisible(self._workflow_setup is None)
+        for widget in self._ordered_buttons:
+            widget.setVisible(bool(assistant.ordered_roles))
+        self.run.setVisible(getattr(assistant, 'offline_workflow', False))
         name = assistant.name
         self._title_label.setText(
             f'<h2>Workflow</h2>Data, progress, results and report · {name} '
@@ -498,7 +575,144 @@ class OneClickModule(BaseModule):
             f'{name} does not sort a folder for you: add each file below with its role.')
         self.header.headline.setText(name)
         self.steer.set_name(name)
+        self._sync_setup_task()
+        self._set_compact_details(False)
         return True
+
+    def _set_compact_details(self, expanded=False):
+        compact = self._workflow_setup is not None and hasattr(self._workflow_setup, 'detailsChanged')
+        detailed = not compact or expanded
+        for widget in (self.role, self._remove_input_button, self.follow, self.step_through,
+                       self.folder, self.replay_button, self.live_detail, self.elapsed_label):
+            widget.setVisible(detailed)
+        for widget in (self.files, self.details):
+            self.tabs.setTabVisible(self.tabs.indexOf(widget), detailed)
+        self._setup.setMaximumWidth(800 if compact else 16777215)
+        self.inputs.setMaximumHeight(110 if compact else 16777215)
+        self.inputs.setVisible(detailed or bool(self._inputs))
+        if compact:
+            self.header.hide()
+            self._title_label.setText('<h1>GeoSAGE</h1>')
+            self.tabs.setTabText(0, 'Start')
+            self.tabs.setTabText(1, 'Activity')
+            self.tabs.setTabText(2, 'Results')
+            self._add_input_button.setText('Add input…' if expanded else
+                                            'Choose configuration…' if self._workflow_setup.primary_role == 'config_file'
+                                            else 'Choose results folder…')
+            self._add_input_button.setMinimumHeight(44)
+            self.stop.setVisible(self._worker is not None)
+            self.run.setProperty('primary', True)
+            self.run.style().unpolish(self.run)
+            self.run.style().polish(self.run)
+            self.run.setMaximumWidth(200)
+            self.run.setMinimumHeight(42)
+            self.view_result.setText('Explore model')
+            self.view_fit.setText('Data fit')
+            self.save_result.setText('Save')
+            self._next_note.hide()
+            if not expanded:
+                self.role.setCurrentIndex(self.role.findData(self._workflow_setup.primary_role))
+        else:
+            self._add_input_button.setText('Add data…')
+            self.stop.show()
+            self.run.setMaximumWidth(16777215)
+
+    def _sync_setup_task(self):
+        setup = self._workflow_setup
+        if setup is None:
+            self.run.setText('Run without AI')
+            self.goal.show()
+            return
+        self.role.clear()
+        for label, key in self._assistant.input_roles:
+            if key in setup.allowed_roles():
+                self.role.addItem(label, key)
+        # An existing-results task starts with its primary input, not a JSON file.
+        index = self.role.findData(getattr(setup, 'primary_role', ''))
+        if index >= 0:
+            self.role.setCurrentIndex(index)
+        self.run.setText(setup.action_label)
+        self.run.setToolTip('Use the provider configured in Assistant settings to interpret these results.'
+                            if setup.needs_ai else 'Process locally without contacting an AI provider.')
+        if self._worker is None:
+            self.status.setText('Choose your inputs to begin.')
+        self.goal.hide()
+        self._request_text = ''
+        self._refresh_inputs()
+        self._title_label.setText(f'<h2>{self._name()}</h2>Choose a task, check the inputs, then explore the results.')
+        self._set_compact_details(bool(getattr(setup, 'options', None) and setup.options.isChecked()))
+
+    def _read_current_report(self):
+        self.tabs.setCurrentWidget(self._result_page)
+        self.report.verticalScrollBar().setValue(0)
+        self.report.setFocus()
+
+    def _prepare_continuation(self):
+        if self._worker is not None or self._continuation_assistant is not self._assistant:
+            return
+        self._sync_result_storage()
+        if not self.continue_result.isEnabled():
+            return
+        prepare = getattr(self._workflow_setup, 'prepare_continuation', None)
+        if not callable(prepare) or not self._continuation_result:
+            return
+        try:
+            inputs = prepare(self._continuation_result)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            self.result_state.setText(f'Could not prepare the next task: {exc}')
+            return
+        self._inputs = dict(inputs)
+        self._catalog_inputs = {}
+        self._request_text = ''
+        self._refresh_inputs()
+        self.tabs.setCurrentWidget(self._data_tab)
+        self.status.setText('Existing models selected · Check the inputs and AI settings, then start when ready.')
+        self._presence(presence.IDLE, 'Next task ready to configure',
+                       'Completed models are selected. Nothing new has started.')
+        self.header.set_clock(0, 0, running=False)
+        self.header.clear_usage()
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
+        self.elapsed_label.clear()
+        self.live_detail.setText('The previous run remains available in Results and Project history.')
+
+    def _sync_result_storage(self):
+        if not self._current_run_id:
+            return
+        store = self.state.results_store
+        record = store.get_run(self._current_run_id) if store else None
+        if record is None:
+            self.result_state.setText('This run is not in the current Project. Reopen its Project to view or save it.')
+            for button in self._result_buttons:
+                button.setEnabled(False)
+            self.continue_result.setEnabled(False)
+            return
+        pending = store.is_unsaved(self._current_run_id)
+        for button, available in self._result_capabilities.items():
+            button.setEnabled(available)
+        self.save_result.setEnabled(pending and record.status != 'running')
+        self.continue_result.setEnabled(bool(self._continuation_result) and
+                                        self._continuation_assistant is self._assistant and
+                                        record.status != 'running')
+        self.result_state.setText('Files are local · Not saved to Project history yet' if pending else
+                                  'Saved locally in Project history')
+
+    def showEvent(self, event):  # noqa: N802 - Qt override
+        super().showEvent(event)
+        self._sync_result_storage()
+
+    def _save_current_run(self):
+        if self._current_run_id:
+            self._sync_result_storage()
+            if not self.save_result.isEnabled():
+                return
+            try:
+                self.state.results_store.save_run(self._current_run_id)
+                self._sync_result_storage()
+                if self.state.on_runs_changed:
+                    self.state.on_runs_changed()
+            except (OSError, KeyError, RuntimeError, ValueError, TypeError) as exc:
+                self.result_state.setText(f'Could not save: {exc}. Your output files remain available.')
 
     def _choose_folder(self):
         folder = QFileDialog.getExistingDirectory(self, 'Select the folder containing survey data and supporting files')
@@ -542,6 +756,8 @@ class OneClickModule(BaseModule):
         do: the banner keeps asking, while the edge stops pulsing.
         """
         self.header.show_state(state, headline, detail)
+        if getattr(self._assistant, 'focused_workspace', False):
+            self.header.hide()
         glow = getattr(self.window(), 'set_agent_presence', None)
         if callable(glow):
             try:
@@ -602,9 +818,17 @@ class OneClickModule(BaseModule):
 
     def _refresh_inputs(self):
         self.inputs.clear()
+        if self._workflow_setup is not None:
+            self._workflow_setup.update_inputs(self._inputs)
+            if hasattr(self._workflow_setup, 'detailsChanged'):
+                self.inputs.setVisible(bool(self._inputs) or self._workflow_setup.options.isChecked())
         for role, value in self._inputs.items():
+            if self._workflow_setup is not None and role not in self._workflow_setup.allowed_roles():
+                continue
             for index, path in enumerate(value if isinstance(value, list) else [value], 1):
-                item = QListWidgetItem(f'{role} · {index} · {path}')
+                compact = self._workflow_setup is not None and hasattr(self._workflow_setup, 'detailsChanged')
+                item = QListWidgetItem(Path(path).name if compact else f'{role} · {index} · {path}')
+                item.setToolTip(f'{role}\n{path}')
                 item.setData(Qt.UserRole, (role, path))
                 self.inputs.addItem(item)
 
@@ -645,7 +869,7 @@ class OneClickModule(BaseModule):
     def submit_request(self, text, settings):
         if self._worker is not None:
             return 'A workflow is already running. Follow its progress in the center or use Stop.'
-        if text.strip().lower() not in {'continue', 'run', '继续', '开始'} or not self._request_text:
+        if text.strip() != self._request_text and (text.strip().lower() not in {'continue', 'run', '继续', '开始'} or not self._request_text):
             self._request_text = (self._request_text + '\n\nUser clarification (overrides earlier details):\n'
                                   + text.strip()) if self._request_text else text.strip()
         self._ai_settings = dict(settings)
@@ -680,31 +904,67 @@ class OneClickModule(BaseModule):
                 if self.step_through.isChecked() else
                 'Workflow started. Progress and the report appear in the center; use Stop there to cancel.')
 
-    def _start(self, step_mode=False):
+    def _start_offline(self):
+        if not getattr(self._assistant, 'offline_workflow', False):
+            return
+        if self._workflow_setup is not None:
+            self._request_text = self._workflow_setup.request()
+            if self._workflow_setup.needs_ai:
+                self.startAIRequested.emit(self._request_text)
+                return
+        if not self._request_text:
+            self._request_text = 'Process the supplied configuration or results and summarize the numerical evidence without AI.'
+            self.goal.setText(self._request_text)
+        self._start(step_mode=self.step_through.isChecked(), offline=True)
+
+    def _start(self, step_mode=False, *, offline=False):
         if self._worker is not None:
             return
         request = self._request_text
         if not request or (not self._inputs and not self._data_folder):
             self.status.setText('Describe your goal and add the data to analyze first.')
             return
-        for value in self._inputs.values():
+        for value in (self._inputs.values() if self._workflow_setup is None else ()):
             for path in value if isinstance(value, list) else [value]:
                 if not Path(path).exists():
                     self.status.setText(f'Data no longer exists: {path}')
                     return
-        provider = self._ai_settings.get('provider', 'openai')
-        key = self._ai_settings.get('api_key')
-        if not key and provider not in ('codex_cli', 'claude_code'):
-            self.status.setText('Enter an API key or set the provider environment variable before running.')
+        settings = {} if offline else self._ai_settings
+        provider = settings.get('provider', 'openai')
+        key = settings.get('api_key')
+        from PyHydroGeophysX.llm.providers import CLI_PROVIDER_IDS
+        if not key and provider not in CLI_PROVIDER_IDS and not (offline and getattr(self._assistant, 'offline_workflow', False)):
+            self.status.setText('Configure an API provider or sign in with a CLI provider in Assistant settings.')
             return
         try:
-            handle = self.begin_persisted_run('unified', label=request[:120])
+            run_label = request[:120]
+            if self._workflow_setup is not None:
+                try:
+                    prepared = self._workflow_setup.prepare_payload(dict(
+                        request=request, inputs=dict(self._inputs), api_key=key,
+                        provider=provider, model=settings.get('model'),
+                        output_dir=str(Path(self.state.output_dir) / 'runs' / '_preflight')))
+                    run_label = str(prepared.get('run_label') or run_label)
+                except (ValueError, KeyError, OSError) as exc:
+                    self.status.setText(f'Action needed · {exc}')
+                    show_error = getattr(self._workflow_setup, 'show_error', None)
+                    if callable(show_error):
+                        show_error(str(exc))
+                    self.tabs.setCurrentWidget(self._data_tab)
+                    return
+            handle = self.begin_persisted_run('unified', label=run_label)
+            self._current_run_id = handle.run_id
             self._output = str(handle.outputs_dir)
             payload = dict(assistant=self._assistant.key,
                            request=request, inputs=dict(self._inputs), provider=provider,
-                           model=self._ai_settings.get('model'), api_key=key, output_dir=self._output)
-            payload.update({k: self._ai_settings.get(k) for k in ('reasoning_effort', 'use_rag', 'use_mcp')})
+                           model=settings.get('model'), api_key=key, output_dir=self._output)
+            payload.update({k: settings.get(k) for k in ('reasoning_effort', 'use_rag', 'use_mcp')})
             payload['step_mode'] = bool(step_mode)
+            if self._workflow_setup is not None:
+                payload = self._workflow_setup.prepare_payload(payload)
+                show_configuration = getattr(self._workflow_setup, 'show_configuration', None)
+                if callable(show_configuration):
+                    show_configuration(payload)
             if (self._data_folder and self._catalog is None
                     and self._assistant.folder_classifier):
                 payload.update(mode='classify', data_folder=self._data_folder)
@@ -723,11 +983,17 @@ class OneClickModule(BaseModule):
             self.run.setEnabled(False)
             self.step_through.setEnabled(False)
             self.stop.setEnabled(True)
+            self.stop.show()
             self.folder.setEnabled(True)
             self.details.clear()
             self.files.clear()
             self.report.setPlainText('Workflow running. Follow it in the Live tab, or the raw events in Raw log.')
             self.progress.setValue(0)
+            self.progress.setRange(0, 0) if self._workflow_setup is not None else self.progress.setRange(0, 100)
+            for widget in (*self._result_buttons, self.result_state, self.result_summary):
+                widget.hide()
+            self.next_step.hide()
+            self._continuation_result = None
             self.status.setText('Starting · You can continue using other Studio modules.')
             classify = payload.get('mode') == 'classify'
             self._end_replay()
@@ -764,7 +1030,8 @@ class OneClickModule(BaseModule):
             self._finished()
 
     def _on_progress(self, step, fraction, details, module=''):
-        self.progress.setValue(max(self.progress.value(), min(99, int(fraction * 100))))
+        if self.progress.maximum():
+            self.progress.setValue(max(self.progress.value(), min(99, int(fraction * 100))))
         self.status.setText(f'{step} · {details}')
         self.details.appendPlainText(f'{step}: {details}')
         self._latest_step, self._latest_detail = step, details
@@ -1129,6 +1396,8 @@ class OneClickModule(BaseModule):
             gaps = ['The run was stopped before it finished; partial files remain in the output folder.']
         elif result.get('status') == 'incomplete':
             state, title = presence.FAILED, f'{self._name()} could not finish the run'
+        elif result.get('completion', {}).get('interpretation') == 'not_run':
+            state, title = presence.WAITING, 'Numerical results ready · AI interpretation not run'
         elif warnings:
             state, title = presence.WAITING, ('Report ready · needs your review' if reports
                                               else 'Finished · needs your review')
@@ -1461,6 +1730,8 @@ class OneClickModule(BaseModule):
             self.live_detail.setText(text.strip()[-220:])
 
     def _succeeded(self, result):
+        self.next_step.hide()
+        self._continuation_result = None
         if result.get('status') == 'classified':
             self.finish_persisted_run(result, 'unified')
             self._show_catalog(result['catalog'])
@@ -1480,6 +1751,7 @@ class OneClickModule(BaseModule):
             return
         self.finish_persisted_run(result, 'unified')
         self.report_result(result)
+        self.progress.setRange(0, 100)
         self.progress.setValue(100)
         reports = result.get('report_files') or {}
         markdown = reports.get('report_markdown')
@@ -1505,7 +1777,7 @@ class OneClickModule(BaseModule):
             self.status.setText(f'Complete · {_count(len(warnings), "thing")} to check before '
                                 f'relying on the results, {where}.')
         self.timeline.finish()
-        self._presence(presence.FAILED if incomplete else presence.DONE,
+        self._presence(presence.FAILED if incomplete else presence.WAITING if warnings else presence.DONE,
                        f'{self._name()} could not finish the run' if incomplete else
                        (f'{self._name()} finished · needs your review' if warnings
                         else f'{self._name()} finished the report'),
@@ -1513,11 +1785,46 @@ class OneClickModule(BaseModule):
         # The outcome is shown where the run was watched, with the report one
         # click away, rather than swapping the Live tab out from under the user.
         self._show_finish(result)
+        if result.get('completion'):
+            completion = result['completion']
+            self.live_detail.setText('Source files preserved · Explore the models or save this run to Project history.'
+                                     if result.get('source_files_unchanged') is True else
+                                     'Explore the available outputs or save this run to Project history.')
+            wording = {'complete': 'Complete', 'incomplete': 'Incomplete', 'generated': 'Generated',
+                       'not_run': 'Not run', 'NOT_REVIEWED': 'Not run', 'ACCEPT': 'Accepted',
+                       'REVISE_REPORT': 'Changes required', 'INSUFFICIENT_EVIDENCE': 'Insufficient evidence'}
+            self.status.setText(' · '.join(f'{name.title()}: {wording.get(value, value)}' for name, value in completion.items()))
+            if incomplete:
+                self.status.setText('Workflow incomplete · ' + self.status.text())
+            self.result_summary.setText(self.status.text())
+            exports = result.get('exports') or {}
+            figures = exports.get('figures') or {}
+            self.view_result.setEnabled(bool(exports.get('model')))
+            self.view_fit.setEnabled(any('data fit' in str(k).lower() for k in figures))
+            self.view_fit.setToolTip('Open the observation, prediction and residual maps.' if self.view_fit.isEnabled()
+                                     else 'No observation/prediction files are available for this run.')
+            self.read_report.setEnabled(bool(markdown))
+            self._result_capabilities = {button: button.isEnabled() for button in
+                                         (self.view_result, self.view_fit, self.read_report)}
+            self.read_report.setText('Read interpretation' if completion.get('interpretation') == 'generated'
+                                    else 'Read numerical summary')
+            if result.get('continuation') and callable(getattr(self._workflow_setup, 'prepare_continuation', None)):
+                self._continuation_result = result
+                self._continuation_assistant = self._assistant
+                self.next_step.show()
+            self._sync_result_storage()
+            for widget in (*self._result_buttons, self.result_state, self.result_summary):
+                widget.show()
+            if getattr(self._assistant, 'focused_workspace', False):
+                self.read_report.hide()
+            if self._workflow_setup is not None:
+                self.tabs.setCurrentWidget(self._result_page)
         summary = str(result.get('interpretation') or '')[:1500]
         self.workflowFinished.emit(_finish_message(self.status.text(), warnings, incomplete)
                                    + ('\n\n' + summary if summary else ''))
 
     def _failed(self, error):
+        self.progress.setRange(0, 100)
         self.fail_persisted_run(error, 'unified')
         self.status.setText(f'Could not complete · {error}')
         self.timeline.finish()
@@ -1535,6 +1842,7 @@ class OneClickModule(BaseModule):
             self._worker.cancel()
 
     def _finished(self):
+        self.progress.setRange(0, 100)
         self._clock.stop()
         # Nothing is left to answer once the child is gone; a prompt bar that
         # outlives its run would send a decision nowhere, and a module still
@@ -1566,6 +1874,8 @@ class OneClickModule(BaseModule):
         self.run.setEnabled(True)
         self.step_through.setEnabled(True)
         self.stop.setEnabled(False)
+        if self._workflow_setup is not None and hasattr(self._workflow_setup, 'detailsChanged'):
+            self.stop.hide()
 
     #: Files the page shows itself rather than handing to another program.
     _REPORT_SUFFIXES = {'.md', '.markdown'}
@@ -1585,7 +1895,7 @@ class OneClickModule(BaseModule):
                     QUrl.fromLocalFile(str(report.resolve().parent) + '/'))
                 self.report.setMarkdown(text)
         if switch:
-            self.tabs.setCurrentWidget(self.report)
+            self.tabs.setCurrentWidget(self._result_page)
 
     def _show_image(self, path):
         """A figure in a window of the studio's own, scaled to fit the screen."""
@@ -1719,7 +2029,7 @@ class OneClickModule(BaseModule):
             'inputs': {role: (list(value) if isinstance(value, list) else value)
                        for role, value in self._inputs.items()},
             'output_dir': str(self._output or ''),
-            'progress_percent': self.progress.value(),
+            'progress_percent': self.progress.value() if self.progress.maximum() else None,
             'status_line': self.status.text(),
             'steps': [{'label': card.label, 'status': card.status,
                        'seconds': round(card.elapsed(), 1)} for card in self.timeline.steps()],
@@ -1736,7 +2046,7 @@ class OneClickModule(BaseModule):
 
     def _agent_tab_name(self):
         current = self.tabs.currentWidget()
-        widgets = (self._data_tab, self._live_tab, self.report, self.files, self.details)
+        widgets = (self._data_tab, self._live_tab, self._result_page, self.files, self.details)
         return next((name for name, widget in zip(self._AGENT_TABS, widgets)
                      if widget is current), '')
 
@@ -1809,7 +2119,7 @@ class OneClickModule(BaseModule):
         return {'status': 'ok', 'options': changed}
 
     def _agent_show_tab(self, tab):
-        widgets = dict(zip(self._AGENT_TABS, (self._data_tab, self._live_tab, self.report,
+        widgets = dict(zip(self._AGENT_TABS, (self._data_tab, self._live_tab, self._result_page,
                                               self.files, self.details)))
         widget = widgets.get(str(tab or '').lower())
         if widget is None:

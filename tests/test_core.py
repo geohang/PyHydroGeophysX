@@ -1337,6 +1337,8 @@ def test_adtlert_forward_releases_its_terrain_setup_without_changing_a_solve(mon
 
     ert_inversion._enable_adtlert_float64()  # before adtlert is first imported
     pytest.importorskip("adtlert")
+    if ert_inversion._resolve_ert_engine("adtlert") != "adtlert":
+        pytest.skip("Terrain forward-solve equivalence requires CUDA and cuDSS")
     x = np.linspace(0., 23., 24)
     data = ert.createData(elecs=np.column_stack([x, .6 * np.sin(x / 4.)]), schemeName="dd")
     data["k"], data["rhoa"] = ert.createGeometricFactors(data), np.full(data.size(), 100.)
