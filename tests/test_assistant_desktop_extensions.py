@@ -105,6 +105,56 @@ def test_domain_launcher_overrides_restored_assistant(tmp_path, monkeypatch):
     assert shown == [True]
 
 
+def test_normal_studio_start_always_uses_native_aquah():
+    pytest.importorskip('PySide6')
+    from PyHydroGeophysX.agents.assistants import get_assistant, set_active
+    from PyHydroGeophysX.qt_apps.main_window import PyHydroGeophysXStudio
+
+    previous = get_assistant().key
+    applied = []
+    try:
+        set_active('geosage')
+        window = PyHydroGeophysXStudio.__new__(PyHydroGeophysXStudio)
+        window._apply_assistant = applied.append
+        window._restore_assistant()
+    finally:
+        set_active(previous)
+    assert [agent.key for agent in applied] == ['aquah']
+
+
+def test_focused_assistant_keeps_chat_dock_open():
+    pytest.importorskip('PySide6')
+    from types import SimpleNamespace
+    from PyHydroGeophysX.agents.assistants import get_assistant, set_active
+    from PyHydroGeophysX.qt_apps.main_window import PyHydroGeophysXStudio
+
+    class Dock:
+        def __init__(self):
+            self.visible = None
+
+        def show(self):
+            self.visible = True
+
+        def hide(self):
+            self.visible = False
+
+    previous = get_assistant().key
+    try:
+        set_active('geosage')
+        window = PyHydroGeophysXStudio.__new__(PyHydroGeophysXStudio)
+        window._all_tools_action = SimpleNamespace(setChecked=lambda _value: None)
+        window._toggle_all_tools = lambda _value: None
+        window._main_toolbar = SimpleNamespace(actions=lambda: [])
+        window._pages = {}
+        window._log_dock = Dock()
+        window._properties_dock = Dock()
+        window._focus_workspace()
+    finally:
+        set_active(previous)
+    assert window._log_dock.visible is False
+    assert window._properties_dock.visible is True
+
+
 def test_output_environment_override_beats_remembered_project(tmp_path, monkeypatch):
     pytest.importorskip('PySide6')
     from PyHydroGeophysX.qt_apps.main_window import PyHydroGeophysXStudio
