@@ -103,3 +103,43 @@ def test_domain_launcher_overrides_restored_assistant(tmp_path, monkeypatch):
     finally:
         set_active(previous)
     assert shown == [True]
+
+
+def test_output_environment_override_beats_remembered_project(tmp_path, monkeypatch):
+    pytest.importorskip('PySide6')
+    from PyHydroGeophysX.qt_apps.main_window import PyHydroGeophysXStudio
+    from PyHydroGeophysX.qt_apps.state import StudioState
+
+    chosen = tmp_path / 'automatic-runs'
+    monkeypatch.setenv('PYHYDROGEOPHYSX_OUTPUT_DIR', str(chosen))
+    window = PyHydroGeophysXStudio.__new__(PyHydroGeophysXStudio)
+    window.state = StudioState(output_dir=tmp_path / 'default')
+    window.state.context = {}
+    window._refresh_output_label = lambda: None
+    window._restore_output_dir()
+    assert window.state.output_dir == chosen
+
+
+def test_tool_requested_workflow_waits_for_paired_result(monkeypatch):
+    pytest.importorskip('PySide6')
+    from PySide6.QtWidgets import QApplication
+    from PyHydroGeophysX.qt_apps.agent.chat_panel import AssistantChatPanel
+    from PyHydroGeophysX.qt_apps.agent.controller import StudioController
+    from PyHydroGeophysX.llm.providers import make_provider
+
+    app = QApplication.instance() or QApplication([])
+    provider = make_provider('openai')
+    monkeypatch.setattr(provider, 'available', lambda: (True, ''))
+    panel = AssistantChatPanel(StudioController(None), provider=provider)
+    started = []
+    panel._busy = True
+    panel.start_workflow('Run the confirmed inversion')
+    assert panel._pending_workflow_text == 'Run the confirmed inversion'
+    monkeypatch.setattr(panel, 'start_workflow', started.append)
+    panel._tool_queue = []
+    panel._executed_in_turn = True
+    panel._process_next_tool()
+    assert started == ['Run the confirmed inversion']
+    assert panel._pending_workflow_text is None
+    panel.close()
+    app.processEvents()

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
@@ -176,7 +177,10 @@ class PyHydroGeophysXStudio(QMainWindow):
         A bridge context is the launcher telling us where this run's results go,
         so it outranks a remembered preference.
         """
-        if not self.state.context:
+        override = os.environ.get("PYHYDROGEOPHYSX_OUTPUT_DIR")
+        if override and not self.state.context:
+            self.state.output_dir = Path(override).expanduser()
+        elif not self.state.context:
             saved = QSettings("PyHydroGeophysX", "Studio").value("main/outputDir")
             if saved:
                 self.state.output_dir = Path(str(saved))
