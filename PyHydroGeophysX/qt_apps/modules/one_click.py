@@ -943,6 +943,7 @@ class OneClickModule(BaseModule):
                     prepared = self._workflow_setup.prepare_payload(dict(
                         request=request, inputs=dict(self._inputs), api_key=key,
                         provider=provider, model=settings.get('model'),
+                        use_ai=not offline,
                         output_dir=str(Path(self.state.output_dir) / 'runs' / '_preflight')))
                     run_label = str(prepared.get('run_label') or run_label)
                 except (ValueError, KeyError, OSError) as exc:
@@ -957,7 +958,8 @@ class OneClickModule(BaseModule):
             self._output = str(handle.outputs_dir)
             payload = dict(assistant=self._assistant.key,
                            request=request, inputs=dict(self._inputs), provider=provider,
-                           model=settings.get('model'), api_key=key, output_dir=self._output)
+                           model=settings.get('model'), api_key=key, use_ai=not offline,
+                           output_dir=self._output)
             payload.update({k: settings.get(k) for k in ('reasoning_effort', 'use_rag', 'use_mcp')})
             payload['step_mode'] = bool(step_mode)
             if self._workflow_setup is not None:
@@ -1950,6 +1952,11 @@ class OneClickModule(BaseModule):
         roles = [{'role': key, 'label': label,
                   'takes_several_in_order': key in self._assistant.ordered_roles}
                  for label, key in self._assistant.input_roles]
+        setup_actions = []
+        if self._workflow_setup is not None:
+            describe = getattr(self._workflow_setup, 'agent_actions', None)
+            if callable(describe):
+                setup_actions = list(describe() or [])
         return {
             'module': self.module_key,
             'title': self.module_title,
@@ -1987,7 +1994,7 @@ class OneClickModule(BaseModule):
                  'desc': 'Stop the running workflow. Inputs and partial files are kept.'},
                 {'name': 'replay_run', 'args': {'path': 'str (optional live_replay.json)'},
                  'desc': 'Play a finished run back in the Live tab; the last run by default.'},
-            ],
+            ] + setup_actions,
             'note': ('Runs are started from the assistant panel (Auto to report, or '
                      'Step-by-step); this page holds their inputs, follows them live and '
                      'shows the report.'),
@@ -2011,10 +2018,26 @@ class OneClickModule(BaseModule):
             'replay_run': lambda: self._agent_replay(args.get('path')),
         }
         handler = handlers.get(action)
-        if handler is None:
+        if handler is not None:
+            return handler()
+        extension = getattr(self._workflow_setup, 'agent_apply', None)
+        if not callable(extension):
             return {'status': 'failed', 'error': f"Unknown action '{action}'.",
                     'valid_actions': list(handlers)}
-        return handler()
+        result = extension(action, args)
+        if not isinstance(result, dict):
+            result = {'status': 'ok', 'result': result}
+        supplied = result.get('inputs')
+        if isinstance(supplied, dict):
+            self._inputs = dict(supplied)
+            self._refresh_inputs()
+        if result.pop('start_workflow', False):
+            request = str(result.get('request') or self._workflow_setup.request()).strip()
+            self._request_text = request
+            self.goal.setText('Goal: ' + request)
+            self.startAIRequested.emit(request)
+            result['launch_requested'] = True
+        return result
 
     def _agent_status(self):
         usage = self._usage_total or {}

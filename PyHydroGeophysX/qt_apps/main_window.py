@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
@@ -96,8 +97,8 @@ class PyHydroGeophysXStudio(QMainWindow):
         self._tree_dock = self._make_dock("Project", self._tree, Qt.LeftDockWidgetArea)
 
         # Right: the assistant's chat + properties summary, in a tabbed dock.
-        # The assistant chosen last time is restored before anything that shows
-        # its name is built.
+        # A normal PyHydroGeophysX launch always starts in its native AQUAH
+        # experience. Domain launchers may explicitly switch after construction.
         self._restore_assistant()
         self._properties = QTextEdit()
         self._properties.setReadOnly(True)
@@ -176,7 +177,10 @@ class PyHydroGeophysXStudio(QMainWindow):
         A bridge context is the launcher telling us where this run's results go,
         so it outranks a remembered preference.
         """
-        if not self.state.context:
+        override = os.environ.get("PYHYDROGEOPHYSX_OUTPUT_DIR")
+        if override and not self.state.context:
+            self.state.output_dir = Path(override).expanduser()
+        elif not self.state.context:
             saved = QSettings("PyHydroGeophysX", "Studio").value("main/outputDir")
             if saved:
                 self.state.output_dir = Path(str(saved))
@@ -444,15 +448,10 @@ class PyHydroGeophysXStudio(QMainWindow):
         self._status_label.setText(f"Module: {title}    ·    Ready")
 
     def _restore_assistant(self) -> None:
-        """Start with the assistant used last, if it can still run here."""
-        saved = QSettings("PyHydroGeophysX", "Studio").value("assistant/key")
-        try:
-            agent = assistant_registry.get_assistant(str(saved)) if saved else None
-        except KeyError:
-            agent = None
-        if agent is None or not agent.availability()[0]:
-            agent = assistant_registry.get_assistant(assistant_registry.DEFAULT_KEY)
-        self._apply_assistant(agent)
+        """Start an ordinary Studio session with its native default assistant."""
+        self._apply_assistant(
+            assistant_registry.get_assistant(assistant_registry.DEFAULT_KEY)
+        )
 
     def _apply_assistant(self, agent) -> None:
         assistant_registry.set_active(agent.key)
@@ -479,7 +478,6 @@ class PyHydroGeophysXStudio(QMainWindow):
             self.log(why, "warn")
             return
         self._apply_assistant(agent)
-        QSettings("PyHydroGeophysX", "Studio").setValue("assistant/key", agent.key)
         if workflow is not None and hasattr(workflow, "set_assistant"):
             workflow.set_assistant(agent)
         if hasattr(self, '_chat'):
@@ -532,7 +530,9 @@ class PyHydroGeophysXStudio(QMainWindow):
                 compact(focused)
         if focused:
             self._log_dock.hide()
-            self._properties_dock.hide()
+            # Focus the processing workspace without dismissing the chat the
+            # user just used to choose this assistant.
+            self._properties_dock.show()
         else:
             self._properties_dock.show()
 

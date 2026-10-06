@@ -165,6 +165,7 @@ class AssistantChatPanel(QWidget):
 
         self._messages: List[Dict[str, Any]] = []
         self._tool_queue: List[Dict[str, Any]] = []
+        self._pending_workflow_text: Optional[str] = None
         self._current_call: Optional[Dict[str, Any]] = None
         self._executed_in_turn = False
         self._awaiting_user = False
@@ -505,6 +506,11 @@ class AssistantChatPanel(QWidget):
 
     def start_workflow(self, text):
         """Start from the task page using the same provider and chat contract."""
+        if self._busy:
+            # A module action can request an automatic run from inside the tool
+            # loop. Finish pairing that call with its result before switching.
+            self._pending_workflow_text = str(text)
+            return
         ready = self._provider.available()[0]
         if self._provider_id in CLI_PROVIDER_IDS:
             ready = ready and self._cli_states.get(self._provider_id, {}).get('state') == 'ready'
@@ -812,6 +818,7 @@ class AssistantChatPanel(QWidget):
             self._controller.reset_workflow_request()
         self._messages = []
         self._tool_queue = []
+        self._pending_workflow_text = None
         self._current_call = None
         self._executed_in_turn = False
         self._pending_images = []
@@ -1102,7 +1109,12 @@ class AssistantChatPanel(QWidget):
             # Every tool entry for this batch is now recorded, so a user message
             # carrying the captures can be appended without splitting the pairs.
             self._flush_pending_images()
-            if self._awaiting_user:
+            if self._pending_workflow_text:
+                text = self._pending_workflow_text
+                self._pending_workflow_text = None
+                self._set_busy(False)
+                self.start_workflow(text)
+            elif self._awaiting_user:
                 self._awaiting_user = False
                 self._set_busy(False)  # hand control to the user; resume on "continue"
             elif self._executed_in_turn:
