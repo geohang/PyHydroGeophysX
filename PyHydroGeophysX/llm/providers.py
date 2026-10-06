@@ -44,10 +44,13 @@ import os
 import threading
 from typing import Any, Dict, List, Optional, Tuple
 
-#: Per-request timeout in seconds for LLM calls. The SDK defaults (about ten
-#: minutes) leave a chat UI hanging when a provider stalls; override with the
-#: PHGX_LLM_TIMEOUT_S environment variable when longer calls are expected.
-REQUEST_TIMEOUT_S = float(os.getenv("PHGX_LLM_TIMEOUT_S", "120"))
+#: Per-request timeout in seconds for LLM calls. Report generation and review
+#: can legitimately take several minutes, especially through a local CLI
+#: provider. Override with PHGX_LLM_TIMEOUT_S when a different limit is needed.
+DEFAULT_REQUEST_TIMEOUT_S = 600.0
+REQUEST_TIMEOUT_S = float(
+    os.getenv("PHGX_LLM_TIMEOUT_S", str(DEFAULT_REQUEST_TIMEOUT_S))
+)
 
 #: How long an idle connection to the provider is kept for the next request, in
 #: seconds. The SDKs drop one after 5 s, which is less time than a person takes

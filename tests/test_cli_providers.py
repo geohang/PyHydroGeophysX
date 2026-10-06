@@ -8,12 +8,21 @@ import pytest
 
 from PyHydroGeophysX.llm import cli_providers as cli
 from PyHydroGeophysX.llm import cli_setup as setup
-from PyHydroGeophysX.llm.providers import make_provider, PROVIDER_ORDER, DESKTOP_PROVIDER_ORDER
+from PyHydroGeophysX.llm.providers import (
+    DEFAULT_REQUEST_TIMEOUT_S,
+    DESKTOP_PROVIDER_ORDER,
+    PROVIDER_ORDER,
+    make_provider,
+)
 
 
 SPEC = [{"name": "navigate", "description": "Open module", "parameters": {
     "type": "object", "properties": {"module": {"type": "string"}},
     "required": ["module"]}}]
+
+
+def test_default_timeout_allows_ten_minute_reports():
+    assert DEFAULT_REQUEST_TIMEOUT_S == 600.0
 
 
 @pytest.mark.parametrize("provider_id", ["codex_cli", "claude_code"])
