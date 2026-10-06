@@ -1,4 +1,11 @@
-"""Qt-free, project-owned survey snapshots and coordinate placement."""
+"""Qt-free, project-owned survey snapshots and coordinate placement.
+
+Besides the surveys, the map holds wells (kind ``'wells'``): the Boreholes
+page's data, saved with the project, so a well can be compared with every survey
+around it. :func:`profile_at` reads any survey snapshot down the vertical at a
+map point - a section's cells, the nearest sounding, a grid column - which is
+what that comparison draws.
+"""
 from __future__ import annotations
 
 import hashlib
@@ -144,6 +151,230 @@ def point_snapshot(xy, values, method, units, label=None):
             {'survey_xy': xy, 'values': values, 'distance': np.arange(len(values), dtype=float)})
 
 
+def section_snapshot(x_edges, depth_edges, values, method, units, label=None):
+    """A section on a regular grid - a stacked reflection section in depth, say.
+
+    ``values`` is ``(n_depth, n_x)``; each value becomes a rectangle cell, so the
+    map reads it like any inverted section (kind ``'mesh'``), its top at z = 0.
+    """
+    x_edges = np.asarray(x_edges, dtype=float).ravel()
+    z_edges = np.asarray(depth_edges, dtype=float).ravel()
+    values = np.asarray(values, dtype=float)
+    if values.shape != (z_edges.size - 1, x_edges.size - 1):
+        raise ValueError('Section values must be (depth cells, x cells).')
+    if not np.isfinite(values).any():
+        raise ValueError('The section has no values.')
+    vertices, offsets, flat = [], [0], []
+    for i in range(z_edges.size - 1):
+        top, bottom = -z_edges[i], -z_edges[i + 1]
+        for j in range(x_edges.size - 1):
+            a, b = x_edges[j], x_edges[j + 1]
+            vertices.extend([[a, top], [b, top], [b, bottom], [a, bottom]])
+            offsets.append(len(vertices))
+            flat.append(values[i, j])
+    arrays = {'vertices': np.asarray(vertices), 'offsets': np.asarray(offsets, dtype=int),
+              'values': np.asarray(flat, dtype=float),
+              'distance': np.linspace(x_edges.min(), x_edges.max(), 100)}
+    return {'kind': 'mesh', 'method': method, 'label': label or method, 'units': units}, arrays
+
+
+# ---------------------------------------------------------------------------
+# Wells
+# ---------------------------------------------------------------------------
+
+def _clean(values):
+    return [None if not np.isfinite(v) else float(v) for v in np.asarray(values, dtype=float)]
+
+
+def wells_snapshot(data, label='Wells'):
+    """The Boreholes page's data as a map layer: one point per well with a location.
+
+    The logs, water levels and legend travel with the points as JSON (stored as
+    bytes, since a snapshot holds numeric arrays only). The CRS the wells give
+    is offered as the layer's; wells in more than one CRS are refused.
+    """
+    import json
+
+    wells = [w for w in data.wells.values() if np.isfinite(w.easting) and np.isfinite(w.northing)]
+    if not wells:
+        raise ValueError('No well has a location yet: load the wells (easting, northing) first.')
+    systems = sorted({w.crs.strip() for w in wells if w.crs.strip()})
+    if len(systems) > 1:
+        raise ValueError(f"The wells are in more than one coordinate system ({', '.join(systems)}); "
+                         'give them one before adding them to the map.')
+    payload = {
+        'wells': [dict(well_id=w.well_id, easting=w.easting, northing=w.northing,
+                       ground_elevation=_clean([w.ground_elevation])[0], crs=w.crs,
+                       datum_offset=w.datum_offset, source=w.source) for w in wells],
+        'lithology': [dict(well_id=i.well_id, top=i.top, bottom=i.bottom, unit=i.unit,
+                           description=i.description) for i in data.lithology],
+        'water_levels': [dict(well_id=w.well_id, time=w.time.isoformat() if w.time else None,
+                              depth=_clean([w.depth])[0], head=_clean([w.head])[0],
+                              reference=w.reference) for w in data.water_levels],
+        'logs': [dict(well_id=g.well_id, name=g.name, unit=g.unit, depth=_clean(g.depth),
+                      values=_clean(g.values), source=g.source) for g in data.logs],
+        'legend': {unit: list(entry) for unit, entry in data.legend.items()},
+    }
+    raw = json.dumps(payload, sort_keys=True).encode('utf8')
+    xy = np.array([(w.easting, w.northing) for w in wells], dtype=float)
+    meta = {'kind': 'wells', 'method': 'Boreholes', 'label': label, 'units': '',
+            'suggested_crs': systems[0] if systems else 'LOCAL'}
+    return meta, {'survey_xy': xy, 'distance': np.arange(len(wells), dtype=float),
+                  'boreholes_json': np.frombuffer(raw, dtype=np.uint8).copy()}
+
+
+def wells_data(arrays):
+    """The :class:`~PyHydroGeophysX.data_processing.boreholes.BoreholeData` of a wells layer,
+    and its well ids in the order of the layer's points."""
+    import datetime as dt
+    import json
+
+    from PyHydroGeophysX.data_processing import boreholes as bh
+
+    payload = json.loads(bytes(np.asarray(arrays['boreholes_json'], dtype=np.uint8)).decode('utf8'))
+
+    def number(value):
+        return float('nan') if value is None else float(value)
+
+    data = bh.BoreholeData()
+    order = []
+    for w in payload['wells']:
+        data.wells[w['well_id']] = bh.Well(w['well_id'], w['easting'], w['northing'],
+                                           number(w['ground_elevation']), w['crs'],
+                                           w['datum_offset'], w['source'])
+        order.append(w['well_id'])
+    data.lithology = [bh.LithologyInterval(**i) for i in payload['lithology']]
+    data.water_levels = [bh.WaterLevel(w['well_id'],
+                                       dt.datetime.fromisoformat(w['time']) if w['time'] else None,
+                                       number(w['depth']), number(w['head']), w['reference'])
+                         for w in payload['water_levels']]
+    data.logs = [bh.GeophysicalLog(g['well_id'], g['name'], g['unit'],
+                                   [number(v) for v in g['depth']],
+                                   [number(v) for v in g['values']], g['source'])
+                 for g in payload['logs']]
+    data.legend = {unit: tuple(entry) for unit, entry in payload['legend'].items()}
+    return data, order
+
+
+# ---------------------------------------------------------------------------
+# Reading a survey down the vertical at a map point
+# ---------------------------------------------------------------------------
+
+def ground_distance(map_distance, map_y, frame):
+    """A distance measured in the map frame, in ground metres.
+
+    Web Mercator stretches lengths by 1/cos(latitude); a local frame is metres.
+    """
+    if frame != 'geographic':
+        return float(map_distance)
+    latitude = np.arctan(np.sinh(float(map_y) / 6378137.0))
+    return float(map_distance) * float(np.cos(latitude))
+
+
+def _cut(polygon, x):
+    """The vertical extent of ``polygon`` along the line x = ``x``, or None."""
+    ys = []
+    p = np.asarray(polygon, dtype=float)
+    for (x0, y0), (x1, y1) in zip(p, np.roll(p, -1, axis=0)):
+        if (x0 - x) * (x1 - x) <= 0:
+            if x1 == x0:
+                ys.extend([y0, y1])
+            else:
+                ys.append(y0 + (x - x0) * (y1 - y0) / (x1 - x0))
+    return (min(ys), max(ys)) if len(ys) >= 2 else None
+
+
+def profile_at(entry, arrays, point, frame):
+    """A survey read down the vertical at map point ``point``.
+
+    Returns ``{'top', 'bottom', 'values'}`` (depth intervals in metres below the
+    survey's surface, positive down), ``'faded'`` (below the depth of
+    investigation, where the survey has one), ``'distance'`` (ground metres
+    from ``point`` to where the survey was read), ``'where'`` (a short
+    description of that place), or a single ``'value'`` for a point product;
+    None for a kind with no values here.
+
+    * section (``'mesh'``): the point is projected onto the section's trace and
+      the cells the vertical crosses at that distance are read; depth is below
+      the section's top there.
+    * soundings (``'em'``): the nearest sounding's layers.
+    * grid: the nearest column; ``Model Z`` read as depth when it is all of
+      one sign.
+    * points: the nearest station's value.
+    """
+    point = np.asarray(point, dtype=float)
+    xy = np.asarray(arrays['map_xy'], dtype=float)
+    kind = entry['kind']
+    out = {'faded': None}
+    if kind == 'mesh':
+        from PyHydroGeophysX.data_processing.boreholes import ProfileLine
+
+        try:
+            line = ProfileLine(xy)
+        except ValueError:
+            return None
+        geo = line.project([point[0]], [point[1]])
+        along, off = float(geo['along'][0]), float(geo['distance'][0])
+        lengths = np.r_[0.0, np.cumsum(np.hypot(*np.diff(xy, axis=0).T))]
+        distance = np.asarray(arrays['distance'], dtype=float)
+        if along < 0 or along > lengths[-1]:
+            return None
+        d = float(np.interp(along, lengths, distance))
+        vertices = np.asarray(arrays['vertices'], dtype=float)
+        offsets = np.asarray(arrays['offsets'], dtype=int)
+        values = np.asarray(arrays['values'], dtype=float)
+        cells = []
+        for k, (a, b) in enumerate(zip(offsets[:-1], offsets[1:])):
+            polygon = vertices[a:b]
+            if polygon[:, 0].min() <= d <= polygon[:, 0].max():
+                cut = _cut(polygon, d)
+                if cut is not None and cut[1] > cut[0]:
+                    cells.append((cut[0], cut[1], values[k]))
+        if not cells:
+            return None
+        surface = max(c[1] for c in cells)
+        cells.sort(key=lambda c: -c[1])
+        out.update(top=np.array([surface - c[1] for c in cells]),
+                   bottom=np.array([surface - c[0] for c in cells]),
+                   values=np.array([c[2] for c in cells]),
+                   distance=ground_distance(off, point[1], frame),
+                   where=f'{d:.1f} m along the section')
+        return out
+    nearest = int(np.argmin(np.hypot(*(xy - point).T)))
+    gap = ground_distance(float(np.hypot(*(xy[nearest] - point))), point[1], frame)
+    if kind == 'em':
+        edges = np.asarray(arrays['depth_edges'], dtype=float)
+        rho = np.asarray(arrays['model3d'], dtype=float)[nearest, 0, ::-1]
+        out.update(top=edges[:-1], bottom=edges[1:], values=rho, distance=gap,
+                   where=f'sounding {nearest + 1}')
+        sensitivity = arrays.get('sensitivity')
+        if sensitivity is not None and np.shape(sensitivity)[:1] == (xy.shape[0],):
+            out['faded'] = (np.asarray(sensitivity, dtype=float)[nearest]
+                            < entry.get('doi_threshold', DOI_SENSITIVITY_THRESHOLD))
+        return out
+    if kind == 'grid':
+        model = np.asarray(arrays['model3d'], dtype=float)
+        z = np.asarray(arrays['z_edges'], dtype=float)
+        if np.all(z <= 0):
+            depth = -z
+        elif np.all(z >= 0):
+            depth = z
+        else:
+            return None
+        i, j = divmod(nearest, model.shape[1])
+        column = model[i, j, :]
+        order = np.argsort(depth[:-1])
+        top, bottom = np.minimum(depth[:-1], depth[1:]), np.maximum(depth[:-1], depth[1:])
+        out.update(top=top[order], bottom=bottom[order], values=column[order], distance=gap,
+                   where='nearest grid column')
+        return out
+    if kind == 'points':
+        out.update(value=float(np.asarray(arrays['values'], dtype=float)[nearest]), distance=gap,
+                   where='nearest station')
+        return out
+    return None
+
+
 def em_result(meta, arrays):
     result = dict(arrays)
     result.update(label='Resistivity (Ω·m)', cmap=meta.get('cmap', 'turbo'),
@@ -168,7 +399,8 @@ class ProjectMapStore:
         for entry in payload['surveys']:
             if (not isinstance(entry, dict) or not all(k in entry for k in (
                     'id', 'name', 'method', 'kind', 'frame', 'data', 'crs', 'created_at', 'fingerprint'))
-                    or entry['kind'] not in ('mesh', 'em', 'grid', 'points') or entry['frame'] not in ('local', 'geographic')):
+                    or entry['kind'] not in ('mesh', 'em', 'grid', 'points', 'wells')
+                    or entry['frame'] not in ('local', 'geographic')):
                 raise ValueError('Invalid survey entry in the project map index.')
         return payload['surveys']
 

@@ -62,6 +62,10 @@ class StudioState:
     #: picked is stored; a view with no entry keeps its own default. Plain
     #: names; in-session only and not written to the bridge file.
     colormap_settings: Dict[str, str] = field(default_factory=dict)
+    #: The Boreholes page's wells, logs, water levels and geophysical logs, kept
+    #: by ``qt_apps/widgets/borehole_panel.py`` under ``"store"``. In-session
+    #: only; adding the wells to the Project Map saves them with the project.
+    borehole_settings: Dict[str, Any] = field(default_factory=dict)
     _active_run_handles: Dict[Tuple[str, str], RunHandle] = field(
         default_factory=dict, repr=False
     )

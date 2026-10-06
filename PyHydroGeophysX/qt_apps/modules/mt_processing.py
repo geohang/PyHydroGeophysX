@@ -65,6 +65,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
 )
 from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.readout import navigation_toolbar
+from PyHydroGeophysX.qt_apps.widgets.run_controls import StopButton, progress_with_stop
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker, TaskWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
@@ -350,7 +351,8 @@ class MTProcessingModule(BaseModule):
         self._process_btn = self._primary("Process time series", "fa5s.wave-square", self._run_processing)
         rv.addWidget(self._process_btn)
         self._process_progress = self._progress_bar()
-        rv.addWidget(self._process_progress)
+        self._process_stop = self.stop_button("The processing")
+        rv.addWidget(progress_with_stop(self._process_progress, self._process_stop))
         rv.addWidget(self._hint("The processed site is added to the sites and opens on the "
                                 "Sounding tab."))
 
@@ -465,7 +467,8 @@ class MTProcessingModule(BaseModule):
         self._run_1d_btn = self._primary("Run 1D inversion", "fa5s.layer-group", self._run_1d)
         rv.addWidget(self._run_1d_btn)
         self._progress_1d = self._progress_bar()
-        rv.addWidget(self._progress_1d)
+        self._stop_1d = self.stop_button("The 1D inversion")
+        rv.addWidget(progress_with_stop(self._progress_1d, self._stop_1d))
         self._result_1d_info = QLabel("No 1D model yet."); self._result_1d_info.setWordWrap(True)
         rv.addWidget(self._result_1d_info)
         row = QHBoxLayout()
@@ -530,7 +533,8 @@ class MTProcessingModule(BaseModule):
         self._run_2d_btn = self._primary("Run 2D inversion", "fa5s.th", self._run_2d)
         rv.addWidget(self._run_2d_btn)
         self._progress_2d = self._progress_bar()
-        rv.addWidget(self._progress_2d)
+        self._stop_2d = self.stop_button("The 2D inversion")
+        rv.addWidget(progress_with_stop(self._progress_2d, self._stop_2d))
         self._result_2d_info = QLabel("No 2D section yet."); self._result_2d_info.setWordWrap(True)
         rv.addWidget(self._result_2d_info)
         row = QHBoxLayout()
@@ -964,7 +968,7 @@ class MTProcessingModule(BaseModule):
 
     def _start(self, spec: WorkflowSpec, run: Any, stem: str, objects: Sequence[str],
                on_ok: Callable[[WorkflowRunResult, Any], None], message: str,
-               progress: QProgressBar) -> None:
+               progress: QProgressBar, stop: StopButton) -> None:
         recipe_path, script_path = export_workflow_bundle(spec, run.run_dir, stem=stem)
         self._reproduce.set_bundle(recipe_path, script_path)
         self._recipe_path = str(recipe_path)
@@ -997,6 +1001,7 @@ class MTProcessingModule(BaseModule):
         worker.finished.connect(self._run_finished)
         self._worker = self.register_worker(worker)
         worker.start()
+        stop.attach(worker, workflow_id)
 
     def _run_finished(self) -> None:
         if self._busy is not None:
@@ -1051,7 +1056,7 @@ class MTProcessingModule(BaseModule):
             self._start(spec, run, "mt_process", ("transfer_function",), self._on_processed,
                         f"Processing {len(runs)} run(s) at {rates}"
                         + (" with a remote reference" if self._remote_runs else "") + " …",
-                        self._process_progress)
+                        self._process_progress, self._process_stop)
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not start the processing: {exc}", "error")
             return {"status": "failed", "error": str(exc)}
@@ -1111,7 +1116,7 @@ class MTProcessingModule(BaseModule):
                         lambda result, _run: self._on_1d(result, site),
                         f"Occam 1D of {site['tf'].station or 'the site'}"
                         + (" jointly with a TEM sounding" if tem else "") + " …",
-                        self._progress_1d)
+                        self._progress_1d, self._stop_1d)
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not start the 1D inversion: {exc}", "error")
             return {"status": "failed", "error": str(exc)}
@@ -1178,7 +1183,7 @@ class MTProcessingModule(BaseModule):
             self._start(spec, run, "mt_invert_profile", ("result",),
                         lambda result, _run: self._on_2d(result, sites),
                         f"2D inversion of {len(sites)} sites over {np.ptp(positions):.0f} m, strike "
-                        f"{parameters['strike']:.0f}° …", self._progress_2d)
+                        f"{parameters['strike']:.0f}° …", self._progress_2d, self._stop_2d)
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not start the 2D inversion: {exc}", "error")
             return {"status": "failed", "error": str(exc)}

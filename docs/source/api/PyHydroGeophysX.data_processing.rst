@@ -4,6 +4,14 @@ PyHydroGeophysX.data\_processing package
 Submodules
 ----------
 
+PyHydroGeophysX.data\_processing.boreholes module
+-------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.boreholes
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 PyHydroGeophysX.data\_processing.em1d module
 --------------------------------------------
 
@@ -80,6 +88,14 @@ PyHydroGeophysX.data\_processing.seismic module
 -----------------------------------------------
 
 .. automodule:: PyHydroGeophysX.data_processing.seismic
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.seismic\_shallow module
+--------------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.seismic_shallow
    :members:
    :show-inheritance:
    :undoc-members:

@@ -621,7 +621,17 @@ def _parse_trace_header(header: bytes) -> SeismicTraceHeader:
     receiver_y = _read_i4(header, 84) * coord_scale
     source_z = _read_i4(header, 44) * elev_scale
     receiver_z = _read_i4(header, 40) * elev_scale
-    offset = _read_i4(header, 36) * coord_scale
+    raw_offset = _read_i4(header, 36)
+    offset = raw_offset * coord_scale
+    # The standard applies the coordinate scalar to bytes 73-88 and 181-188
+    # only, so bytes 37-40 hold the offset unscaled; some writers scale it
+    # anyway. Where the coordinates give the distance, take whichever reading
+    # agrees with it: a Geode line written with scalar -100 otherwise reads its
+    # 2 m offset as 0.02 m.
+    distance = math.hypot(receiver_x - source_x, receiver_y - source_y)
+    if raw_offset and distance > 0 and coord_scale != 1.0:
+        if abs(abs(raw_offset) - distance) < abs(abs(offset) - distance):
+            offset = float(raw_offset)
 
     if not np.isfinite(offset) or offset == 0.0:
         dx = receiver_x - source_x
@@ -874,7 +884,9 @@ def read_segy(
         The sample interval to use instead of the header's. SEG-Y keeps it in
         whole microseconds, so a 32 kHz record is written as 31 us and every
         time read with it is 0.8% short; :func:`record_sample_interval` finds
-        the true value in an acquisition record kept beside the file.
+        the true value in an acquisition record kept beside the file. Without
+        it, a SEG-Y rev 2 file's extended sample interval
+        (:func:`segy_extended_sample_interval`) is used when it is set.
 
     Returns
     -------
@@ -906,7 +918,41 @@ def read_segy(
         dataset = _read_segy_builtin(file, max_traces=max_traces, load_traces=load_traces)
     if sample_interval_s:
         set_sample_interval(dataset, sample_interval_s)
+    else:
+        extended = segy_extended_sample_interval(file)
+        header = float(dataset.metadata.sample_interval_us)
+        if extended is not None and abs(extended - header) > 1e-9 and (
+                header <= 0 or abs(extended - header) < 1.0):
+            set_sample_interval(dataset, extended * 1e-6)
     return dataset
+
+
+def segy_extended_sample_interval(file: str) -> Optional[float]:
+    """The SEG-Y rev 2 extended sample interval (us), or None.
+
+    Rev 2 files may store the interval as an IEEE double in binary-header bytes
+    3273-3280, which then overrides the whole microseconds of bytes 3217-3218:
+    a 32 kHz Geode record keeps 31.25 there and 31 in the integer field, so
+    reading only the latter makes every time 0.8 % short. None for an earlier
+    revision, a zero or unreadable value, or a file too short to hold it.
+    """
+    try:
+        with open(file, "rb") as fh:
+            fh.seek(3200)
+            binary = fh.read(400)
+    except OSError:
+        return None
+    if len(binary) < 302:
+        return None
+    if binary[300] < 2:          # major revision, byte 3501
+        return None
+    # Byte-order marker 3297-3300: 0x01020304 read in the file's order.
+    marker = binary[96:100]
+    order = "<" if marker == b"\x04\x03\x02\x01" else ">"
+    value = struct.unpack(order + "d", binary[72:80])[0]
+    if not math.isfinite(value) or value <= 0 or value > 1e7:
+        return None
+    return float(value)
 
 
 def set_sample_interval(dataset: SeismicDataset, sample_interval_s: float) -> SeismicDataset:

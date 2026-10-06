@@ -1262,6 +1262,184 @@ def test_the_neighbour_check_corrects_the_stray_pick_and_not_its_neighbour():
     assert time[(-2.0, 9.0)] == pytest.approx(0.030)
 
 
+def _ricker(u, f):
+    a = (np.pi * f * u) ** 2
+    return (1.0 - 2.0 * a) * np.exp(-a)
+
+
+def _hammer_line(trace, shots):
+    """A 24-channel, 0.5 m line at 32 kHz, one record per shot: ``trace(t, record, |x|)``."""
+    from PyHydroGeophysX.data_processing.seismic_shallow import LineGeometry
+
+    dt = 31.25e-6
+    t = np.arange(1600) * dt
+    rng = np.random.default_rng(0)
+    rec, chan, sx, gx, data = [], [], [], [], []
+    for r, s in enumerate(shots):
+        for k, g in enumerate(np.arange(24) * 0.5):
+            data.append(trace(t, r, abs(g - s)) + 0.01 * rng.standard_normal(t.size))
+            rec.append(r + 1); chan.append(k + 1); sx.append(s); gx.append(g)
+    return np.array(data).T, dt, LineGeometry(rec, chan, sx, gx, 0.0, 0.0)
+
+
+def test_a_shallow_stack_puts_a_flat_reflection_at_its_t0_and_fails_a_linear_event():
+    """NMO + CMP stack, semblance and the supergather's flatness test on one line.
+
+    A reflection at t0 = 20 ms (600 m/s) and a linear event of the same strength
+    (250 m/s) - the stack must put the reflection at 20 ms and keep the linear
+    event well under it, semblance must peak on the reflection's (t0, V), and
+    the flatness test must pass the reflection and nothing else.
+    """
+    from PyHydroGeophysX.data_processing.seismic_shallow import (
+        VelocityFunction, cmp_stack, nmo_supergather, semblance, semblance_peaks,
+        velocity_from_section)
+
+    traces, dt, geometry = _hammer_line(
+        lambda t, r, x: _ricker(t - np.hypot(0.02, x / 600.0), 150.0)
+        + _ricker(t - 0.004 - x / 250.0, 150.0), np.arange(-1.0, 12.5, 0.5))
+    velocity = VelocityFunction.layered(600.0)
+    stack = cmp_stack(traces, dt, geometry, velocity, bin_width=0.5, offset_range=(1.0, 8.0),
+                      tmax=0.045)
+    full = stack.stack[:, stack.traces_per_bin >= 0.6 * stack.traces_per_bin.max()]
+    assert np.allclose(stack.t0[np.argmax(np.abs(full), axis=0)], 0.02, atol=1.5e-4)
+    near = np.abs(stack.t0 - 0.02) <= 1.5e-3
+    assert np.abs(full[~near]).max() < 0.6 * np.abs(full[near]).max()
+
+    used = (geometry.abs_offset >= 1.0) & (geometry.abs_offset <= 8.0)
+    t0s, speeds = np.arange(0.004, 0.045, 0.00025), np.linspace(150.0, 800.0, 66)
+    panel = semblance(traces[:, used], dt, geometry.abs_offset[used], t0s, speeds)
+    best_t0, best_v, _ = semblance_peaks(panel, t0s, speeds, count=1)[0]
+    assert abs(best_t0 - 0.02) <= 5e-4 and abs(best_v - 600.0) <= 30.0
+
+    gather = nmo_supergather(traces, dt, geometry, velocity, offset_range=(1.0, 8.0), tmax=0.045)
+    assert [round(e["t0"], 3) for e in gather.passing] == [0.02]
+
+    # Live only at 7-9 m offset (what the mutes leave on a short line), even a true
+    # reflection is flat after NMO without that proving anything: too little span.
+    alone, _, _ = _hammer_line(lambda t, r, x: _ricker(t - np.hypot(0.02, x / 600.0), 150.0),
+                               np.arange(-1.0, 12.5, 0.5))
+    narrow = dict(offset_range=(6.75, 9.25), tmax=0.045)
+    assert not nmo_supergather(alone, dt, geometry, velocity, **narrow).passing
+    assert nmo_supergather(alone, dt, geometry, velocity, min_offset_span=0.0, min_moveout=0.0,
+                           **narrow).passing
+
+    # Depth from a layered model: 300 m/s for 10 ms, then 1200 m/s.
+    layered = VelocityFunction.layered(300.0, 0.010, 1200.0)
+    assert layered.depth(0.02) == pytest.approx(0.5 * (300.0 * 0.01 + 1200.0 * 0.01))
+    assert layered.rms(0.02) == pytest.approx(np.sqrt((300.0 ** 2 + 1200.0 ** 2) / 2.0))
+    # The same model read off a 2-D section (a refraction model): only the cells
+    # within the stacked range count, and the two-way times come out the same.
+    x, z = np.meshgrid(np.linspace(0.0, 10.0, 21), np.arange(0.05, 8.0, 0.1))
+    v = np.where(z < 1.5, 300.0, 1200.0)
+    v[:, x[0] < 1.0] = 30.0
+    from_section = velocity_from_section(x.ravel(), z.ravel(), v.ravel(), (2.0, 8.0), dz=0.1)
+    assert from_section.depth(0.02) == pytest.approx(layered.depth(0.02))
+
+
+def test_air_wave_statics_recover_each_records_time_zero_with_or_without_a_precursor():
+    """Record time-zero errors from the air wave, ``t = tau + |x| / 343``.
+
+    Every other record carries weak energy 1.4 ms ahead of its air wave, which
+    the AIC picker alone splits on in some records and not others; the statics
+    must still come out consistent (and close to the truth), with c = 343 m/s.
+    """
+    from PyHydroGeophysX.data_processing.seismic_shallow import airwave_statics
+
+    taus = np.array([-2.2, -1.1, 0.4, 1.5, -0.3, 0.9, -1.7, 0.0]) * 1e-3
+
+    def trace(t, r, x):
+        u = t - taus[r] - x / 343.0
+        air = np.where(u >= 0, 5.0 * np.sin(2 * np.pi * 700 * u) * (u / 4e-4) * np.exp(-u / 4e-4), 0.0)
+        if r % 2 == 0:
+            v = u + 1.4e-3
+            air += np.where(v >= 0, 0.6 * np.sin(2 * np.pi * 900 * v) * np.exp(-v / 3e-4), 0.0)
+        return air + 3.0 * _ricker(t - taus[r] - x / 200.0 - 0.01, 40.0)
+
+    traces, dt, geometry = _hammer_line(trace, np.arange(len(taus)) - 1.0)
+    found = airwave_statics(traces, dt, geometry)
+    error = np.array([found.statics[r + 1] for r in range(len(taus))]) - taus
+    assert np.ptp(error) < 1e-4
+    assert abs(error.mean()) < 4e-4
+    assert found.velocity == pytest.approx(343.0, rel=0.005)
+    shifted = found.shifts(geometry)
+    assert np.allclose(shifted, -np.repeat([found.statics[r + 1] for r in range(len(taus))], 24))
+
+
+@pytest.mark.parametrize("bearing", [99.0, 279.0])
+def test_wells_project_onto_a_bent_profile_with_their_distance_and_side(bearing):
+    from PyHydroGeophysX.data_processing.boreholes import ProfileLine, Well, project_wells
+
+    # A line from (1000, 2000) on ``bearing`` for 10 m, then 10 m due north.
+    b = np.radians(bearing)
+    corner = np.array([1000.0 + 10 * np.sin(b), 2000.0 + 10 * np.cos(b)])
+    line = ProfileLine(np.array([[1000.0, 2000.0], corner, corner + [0.0, 10.0]]), start_distance=-2.0)
+    right = np.array([np.cos(b), -np.sin(b)])      # 90 degrees clockwise of the bearing
+    wells = [Well("A", *(np.array([1000.0, 2000.0]) + 4.0 * np.array([np.sin(b), np.cos(b)])
+                         + 3.0 * right)),
+             Well("B", *(corner + [0.0, 5.0] + [-2.5, 0.0])),
+             Well("C", *(corner + [0.0, 40.0])),
+             Well("D", 1000.0 + 500.0, 2000.0)]
+    placed = {p.well.well_id: p for p in project_wells(wells, line, max_distance=31.0)}
+    assert set(placed) == {"A", "B", "C"}
+    assert placed["A"].along == pytest.approx(2.0) and placed["A"].offset == pytest.approx(3.0)
+    assert placed["B"].along == pytest.approx(13.0) and placed["B"].offset == pytest.approx(-2.5)
+    assert placed["B"].side == "W"
+    # Past the end: placed along the line extended, 30 m beyond it.
+    assert placed["C"].along == pytest.approx(48.0) and placed["C"].distance == pytest.approx(30.0)
+
+
+def test_borehole_logs_read_in_metres_and_meet_a_section_on_the_map(tmp_path):
+    from PyHydroGeophysX.data_processing.boreholes import (
+        BoreholeData, LithologyInterval, Well, read_geophysical_logs)
+
+    las = tmp_path / "mw7s.las"
+    las.write_text("~Version\n VERS. 2.0 :\n WRAP. NO :\n~Well\n NULL. -999.25 :\n"
+                   " WELL. MW-7S : well\n~Curve\n DEPT.F : depth\n GR.API : gamma\n"
+                   " COND.MS/M : conductivity\n~A\n 1.0 40.0 12.0\n 2.0 -999.25 15.0\n"
+                   " 3.0 55.0 20.0\n")
+    gamma, cond = read_geophysical_logs(las)
+    assert (gamma.well_id, gamma.name, gamma.unit, cond.unit) == ("MW-7S", "GR", "API", "MS/M")
+    np.testing.assert_allclose(gamma.depth, [0.3048, 0.6096, 0.9144])
+    assert np.isnan(gamma.values[1]) and cond.values[1] == 15.0
+
+    table = tmp_path / "logs.csv"
+    table.write_text("well_id,depth,length_unit,gamma [API],EC (mS/m)\n"
+                     "MW-2D,2,ft,30,5\nMW-2D,1,ft,20,4\n")
+    logs = {log.name: log for log in read_geophysical_logs(table)}
+    assert logs["EC"].unit == "mS/m" and logs["gamma"].unit == "API"
+    np.testing.assert_allclose(logs["gamma"].depth, [0.3048, 0.6096])
+    np.testing.assert_allclose(logs["gamma"].values, [20.0, 30.0])
+
+    # On the Project Map a well keeps its logs and lithology, and a section
+    # beside it is read down the vertical where the well projects onto it.
+    from PyHydroGeophysX.qt_apps.project_map import (
+        ProjectMapStore, place_profile, profile_at, section_snapshot, wells_data, wells_snapshot)
+
+    data = BoreholeData()
+    data.wells["MW-7S"] = Well("MW-7S", 495.0, 1003.0)
+    data.lithology = [LithologyInterval(well_id="MW-7S", top=0.0, bottom=2.0, unit="loess",
+                                        description="")]
+    data.logs = [gamma, cond]
+    store = ProjectMapStore(tmp_path / "project")
+    meta, arrays = wells_snapshot(data)
+    entry = store.add(meta, arrays, arrays["survey_xy"], meta["suggested_crs"], "Wells")
+    back, order = wells_data(store.load(entry))
+    assert order == ["MW-7S"] and back.intervals("MW-7S")[0].unit == "loess"
+    np.testing.assert_allclose(back.well_logs("MW-7S")[0].depth, gamma.depth)
+    assert np.isnan(back.well_logs("MW-7S")[0].values[1])
+
+    values = np.array([[0.0, 1.0, 2.0], [10.0, 11.0, 12.0]])     # (depth, x) cells
+    meta, arrays = section_snapshot([0, 2, 4, 6], [0, 1, 3], values, "Seismic", "m/s")
+    xy = place_profile(arrays["distance"], (490.0, 1000.0), 90.0)   # due east from x = 490
+    section = store.add(meta, arrays, xy, "LOCAL", "Line")
+    read = profile_at(section, store.load(section), (495.0, 1003.0), section["frame"])
+    np.testing.assert_allclose(read["top"], [0, 1])
+    np.testing.assert_allclose(read["bottom"], [1, 3])
+    np.testing.assert_allclose(read["values"], [2, 12])
+    assert read["distance"] == pytest.approx(3.0) and read["where"] == "5.0 m along the section"
+    assert profile_at(section, store.load(section), (500.0, 1000.0), "local") is None
+
+
 # --------------------------------------------------------------------------
 # Inversion inputs: data errors, smoothness, electrodes, comparisons
 # --------------------------------------------------------------------------

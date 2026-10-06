@@ -929,6 +929,69 @@ SimPEG (above). The example site NMX20 is from the USMTArray (IRIS SPUD, CC BY 4
 }
 ```
 
+**Shallow seismic processing (`data_processing.seismic_shallow`):** air-wave
+onsets are picked with Maeda's (1985) AIC; traces are stacked by common midpoint (Mayne
+1962) after NMO with Dix (1955) interval velocities; velocity analysis uses
+semblance (Neidell & Taner 1971); the trace QC, mutes and the
+flat-event test follow the pitfalls listed by Steeples & Miller (1998).
+```bibtex
+@article{maeda1985method,
+  author  = {Maeda, Naoki},
+  title   = {A method for reading and checking phase time in auto-processing
+             system of seismic wave data},
+  journal = {Zisin (Journal of the Seismological Society of Japan. 2nd ser.)},
+  volume  = {38},
+  number  = {3},
+  pages   = {365--379},
+  year    = {1985},
+  doi     = {10.4294/zisin1948.38.3_365}
+}
+
+@article{dix1955seismic,
+  author  = {Dix, C. Hewitt},
+  title   = {Seismic velocities from surface measurements},
+  journal = {Geophysics},
+  volume  = {20},
+  number  = {1},
+  pages   = {68--86},
+  year    = {1955},
+  doi     = {10.1190/1.1438126}
+}
+
+@article{mayne1962common,
+  author  = {Mayne, W. Harry},
+  title   = {Common reflection point horizontal data stacking techniques},
+  journal = {Geophysics},
+  volume  = {27},
+  number  = {6},
+  pages   = {927--938},
+  year    = {1962},
+  doi     = {10.1190/1.1439118}
+}
+
+@article{neidell1971semblance,
+  author  = {Neidell, N. S. and Taner, M. Turhan},
+  title   = {Semblance and other coherency measures for multichannel data},
+  journal = {Geophysics},
+  volume  = {36},
+  number  = {3},
+  pages   = {482--497},
+  year    = {1971},
+  doi     = {10.1190/1.1440186}
+}
+
+@article{steeples1998avoiding,
+  author  = {Steeples, Don W. and Miller, Richard D.},
+  title   = {Avoiding pitfalls in shallow seismic reflection surveys},
+  journal = {Geophysics},
+  volume  = {63},
+  number  = {4},
+  pages   = {1213--1224},
+  year    = {1998},
+  doi     = {10.1190/1.1444422}
+}
+```
+
 **Hydrological modeling (FloPy / MODFLOW):**
 ```bibtex
 @article{bakker2016flopy,

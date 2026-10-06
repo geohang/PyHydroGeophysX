@@ -1,4 +1,9 @@
-"""Project-wide map membership and linked scientific result inspection."""
+"""Project-wide map membership and linked scientific result inspection.
+
+A wells layer (added from the Boreholes page) is drawn as labelled wells; clicking
+one sets the well's lithology, logs and water level beside every survey on the map
+that reaches it, each read down the vertical there (``project_map.profile_at``).
+"""
 from __future__ import annotations
 
 from collections import Counter
@@ -10,7 +15,9 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDoubleSpinBox, QF
     QStackedWidget, QTreeWidget, QHeaderView, QTreeWidgetItem, QVBoxLayout, QWidget)
 
 from .base import BaseModule
-from PyHydroGeophysX.qt_apps.project_map import ProjectMapStore, em_result
+from PyHydroGeophysX.data_processing import boreholes as bh
+from PyHydroGeophysX.qt_apps.project_map import (
+    ProjectMapStore, em_result, profile_at, wells_data)
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets.flow_layout import FlowLayout, group as control_group
 from PyHydroGeophysX.qt_apps.widgets import length_units
@@ -22,7 +29,7 @@ from PyHydroGeophysX.qt_apps import theme
 
 
 COLORS = {'ERT': '#ff9500', 'EM': '#30b0c7', 'Seismic': '#af52de',
-          'Gravity': '#ff2d55', 'Magnetics': '#34c759'}
+          'Gravity': '#ff2d55', 'Magnetics': '#34c759', 'Boreholes': '#3a3a3c'}
 
 # Plan interpolation offered for any slice that carries one value per map
 # position: TEM/AEM depth slices, recovered grid layers and imported point
@@ -335,6 +342,7 @@ class ProjectMapModule(BaseModule):
         sl.addWidget(self._section_canvas)
         self._mesh_view = section
         self._result_stack.addWidget(section)
+        self._result_stack.addWidget(self._build_compare())
         right.addWidget(self._result_stack)
         split.setSizes([240, 950])
         right.setSizes([430, 340])
@@ -495,7 +503,8 @@ class ProjectMapModule(BaseModule):
         self._details.setText('')
         if entry:
             kind = {'em': 'Soundings / section', 'mesh': 'Section model',
-                    'grid': 'Model grid footprint', 'points': 'Point product'}.get(entry['kind'], '')
+                    'grid': 'Model grid footprint', 'points': 'Point product',
+                    'wells': 'Wells, logs and water levels'}.get(entry['kind'], '')
             self._details.setText(f"{entry['name']}\n{kind} · {entry['units']}\n"
                                   f"CRS: {entry['crs']}\nAdded: {entry['created_at']}")
         self._depth.blockSignals(True)
@@ -526,6 +535,10 @@ class ProjectMapModule(BaseModule):
                 elif entry['kind'] == 'points':
                     self._draw_points(entry, arrays)
                     self._result_stack.setCurrentWidget(self._mesh_view)
+                elif entry['kind'] == 'wells':
+                    self._fill_wells(entry, arrays)
+                    self._result_stack.setCurrentWidget(self._compare)
+                    self._draw_compare()
                 else:
                     self._draw_section(entry, arrays)
                     self._result_stack.setCurrentWidget(self._mesh_view)
@@ -728,6 +741,8 @@ class ProjectMapModule(BaseModule):
         if not entry.get('visible', True):
             return (f"“{entry['name']}” is hidden on the map. Tick it in the survey list "
                     "to show its slices and interpolate them.")
+        if entry['kind'] == 'wells':
+            return 'Wells have no plan slice; click one to compare it with the surveys around it.'
         if entry['kind'] not in ('em', 'grid', 'points'):
             return 'A section model has no plan slice to interpolate.'
         if entry['kind'] in ('em', 'grid') and self._depth.currentData() is None:
@@ -780,6 +795,9 @@ class ProjectMapModule(BaseModule):
         """Redraw the selected survey's section in the chosen colours."""
         entry = self._entry()
         if entry is None or entry['kind'] == 'em':
+            return
+        if entry['kind'] == 'wells':
+            self._draw_compare()
             return
         try:
             arrays = self._data(entry)
@@ -874,6 +892,9 @@ class ProjectMapModule(BaseModule):
                 xy = arrays['map_xy']
                 all_xy.append(xy)
                 chosen = entry['id'] == self._selected
+                if entry['kind'] == 'wells':
+                    self._draw_wells(entry, arrays, chosen)
+                    continue
                 color = COLORS.get(entry['method'], '#586774')
                 groups = arrays.get('line_numbers', np.zeros(len(xy)))
                 is_em = entry['kind'] == 'em'
@@ -1007,7 +1028,163 @@ class ProjectMapModule(BaseModule):
                     index = self._em._line.findData(int(group))
                     if index >= 0:
                         self._em._line.setCurrentIndex(index)
+                elif group is not None and self._entry()['kind'] == 'wells':
+                    self._well_pick.setCurrentIndex(int(group))
                 break
+
+    # -- wells: a well beside the surveys around it ------------------------------
+    def _build_compare(self):
+        """The wells layer's view: one well beside every survey that reaches it."""
+        view = QWidget()
+        layout = QVBoxLayout(view)
+        layout.setContentsMargins(0, 0, 0, 0)
+        bar = QHBoxLayout()
+        self._well_pick = QComboBox()
+        self._well_pick.setToolTip('The well to compare; click a well on the map to choose it.')
+        self._well_pick.currentIndexChanged.connect(self._on_well_changed)
+        bar.addWidget(QLabel('Well'))
+        bar.addWidget(self._well_pick)
+        self._compare_within = DistanceSpinBox()
+        self._compare_within.setRange(1, 1e5)
+        self._compare_within.setDecimals(0)
+        self._compare_within.setValue(50)
+        self._compare_within.setSuffix(' m')
+        self._compare_within.setKeyboardTracking(False)
+        self._compare_within.setToolTip('Surveys read farther than this from the well are '
+                                        'listed below the plot, not drawn.')
+        self._compare_within.valueChanged.connect(self._draw_compare)
+        bar.addWidget(QLabel('Surveys within'))
+        bar.addWidget(self._compare_within)
+        self._compare_depth = DistanceSpinBox()
+        self._compare_depth.setRange(0, 1e4)
+        self._compare_depth.setDecimals(1)
+        self._compare_depth.setSuffix(' m')
+        self._compare_depth.setSpecialValueText('auto')
+        self._compare_depth.setKeyboardTracking(False)
+        self._compare_depth.valueChanged.connect(self._draw_compare)
+        bar.addWidget(QLabel('Down to'))
+        bar.addWidget(self._compare_depth)
+        bar.addStretch(1)
+        layout.addLayout(bar)
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+        from matplotlib.figure import Figure
+        self._compare_fig = Figure(figsize=(9, 3.4))
+        self._compare_canvas = FigureCanvasQTAgg(self._compare_fig)
+        layout.addWidget(self._compare_canvas, 1)
+        self._compare_note = QLabel('')
+        self._compare_note.setWordWrap(True)
+        theme.set_tone(self._compare_note, 'hint')
+        layout.addWidget(self._compare_note)
+        self._compare = view
+        return view
+
+    def _fill_wells(self, entry, arrays):
+        _data, order = wells_data(arrays)
+        keep = self._well_pick.currentText()
+        self._well_pick.blockSignals(True)
+        self._well_pick.clear()
+        self._well_pick.addItems(order)
+        index = order.index(keep) if keep in order else 0
+        self._well_pick.setCurrentIndex(index)
+        self._well_pick.blockSignals(False)
+
+    def _on_well_changed(self, *_):
+        self._draw_compare()
+        self._draw_map()
+
+    def _draw_wells(self, entry, arrays, chosen):
+        """A wells layer on the map: hollow circles, one label per nest of wells."""
+        xy = np.asarray(arrays['map_xy'], dtype=float)
+        try:
+            _data, order = wells_data(arrays)
+        except Exception:  # noqa: BLE001 - an unreadable payload still shows the wells
+            order = [str(k + 1) for k in range(len(xy))]
+        ink = COLORS['Boreholes']
+        points = self._ax.scatter(xy[:, 0], xy[:, 1], s=44 if chosen else 30, marker='o',
+                                  facecolors='white', edgecolors=ink, linewidths=1.6, zorder=6,
+                                  picker=6, label=f"{entry['name']} · wells")
+        self._artists[points] = (entry['id'], np.arange(len(xy)))
+        current = self._well_pick.currentIndex() if chosen else -1
+        if 0 <= current < len(xy):
+            self._ax.scatter([xy[current, 0]], [xy[current, 1]], s=70, color=ink, zorder=7)
+        for group in bh.nearby_groups(xy):
+            names = sorted(order[k] for k in group)
+            at = xy[group].max(axis=0)
+            self._ax.annotate('\n'.join(names), (at[0], at[1]), xytext=(6, 2),
+                              textcoords='offset points', fontsize=7, va='top', color=ink,
+                              fontweight='bold' if current in group else 'normal', zorder=7)
+
+    def _compare_surveys(self, entry, point):
+        """Every other visible survey of the frame read at ``point``, sorted into what
+        is drawn, what is too far, and point values."""
+        drawn, far, values = [], [], []
+        within = float(self._compare_within.value())
+        unit = length_units.current()
+
+        def away(metres):
+            return f'{to_display_length(metres, unit):.1f} {unit}'
+
+        for other in self._entries:
+            if (other['id'] == entry['id'] or other['frame'] != entry['frame']
+                    or other['kind'] == 'wells' or not other.get('visible', True)):
+                continue
+            try:
+                profile = profile_at(other, self._data(other), point, entry['frame'])
+            except Exception as exc:  # noqa: BLE001 - one bad survey never hides the rest
+                far.append(f"{other['name']} (could not be read: {exc})")
+                continue
+            if profile is None:
+                far.append(f"{other['name']} (does not reach the well)")
+            elif profile['distance'] > within:
+                far.append(f"{other['name']} ({away(profile['distance'])} away)")
+            elif 'value' in profile:
+                values.append(f"{other['name']}: {profile['value']:.4g} {other.get('units', '')} "
+                              f"at the {profile['where']}, {away(profile['distance'])} away")
+            else:
+                drawn.append(dict(
+                    name=other['name'], units=other.get('units', ''),
+                    log_scale=other.get('units') == 'Ω·m',
+                    trace='amplitude' in str(other.get('units', '')), top=profile['top'],
+                    bottom=profile['bottom'], values=profile['values'], faded=profile['faded'],
+                    distance=profile['distance'], where=profile['where'],
+                    color=COLORS.get(other['method'], '#586774')))
+        return drawn, far, values
+
+    def _draw_compare(self, *_):
+        entry = self._entry()
+        if entry is None or entry['kind'] != 'wells' or self._well_pick.currentIndex() < 0:
+            return
+        try:
+            arrays = self._data(entry)
+            data, order = wells_data(arrays)
+        except Exception as exc:  # noqa: BLE001
+            self._compare_note.setText(f"Cannot read the wells of {entry['name']}: {exc}")
+            return
+        index = self._well_pick.currentIndex()
+        well_id = order[index]
+        point = np.asarray(arrays['map_xy'], dtype=float)[index]
+        drawn, far, values = self._compare_surveys(entry, point)
+        unit = length_units.current()
+        bh.draw_well_comparison(self._compare_fig, data, well_id, drawn, length_unit=unit,
+                                max_depth=float(self._compare_depth.value()) or None,
+                                water_color=theme.DATA_COLOR, edge_color='#1d1d1f')
+        self._compare_fig.subplots_adjust(left=0.07, right=0.98, top=0.82, bottom=0.2)
+        if not drawn:
+            self._compare_fig.text(0.6, 0.5, 'No survey on the map reaches this well within '
+                                   f'{to_display_length(self._compare_within.value(), unit):.0f} '
+                                   f'{unit}.', ha='center', va='center', color='#8e8e93')
+        self._compare_canvas.draw_idle()
+        lines = []
+        if drawn:
+            lines.append('Read at: ' + ' · '.join(
+                f"{s['name']} ({s['where']}, {to_display_length(s['distance'], unit):.1f} {unit} "
+                'from the well)' for s in drawn) + '. Depths are below each survey\'s own '
+                'surface there, and below ground in the well.')
+        if values:
+            lines.append('Point values: ' + ' · '.join(values) + '.')
+        if far:
+            lines.append('Not drawn: ' + ' · '.join(far) + '.')
+        self._compare_note.setText('\n'.join(lines))
 
     def _visibility(self, item, column):
         if column != 0 or self._store is None:
@@ -1184,6 +1361,12 @@ class ProjectMapModule(BaseModule):
                           'name': 'str (optional)'},
                  'desc': ('Add a point product (gravity, magnetics...) to the map at the x,y '
                           'the file gives, in the CRS named.')},
+                {'name': 'compare_well',
+                 'args': {'well': 'well id', 'within_m': 'number (optional, default 50)'},
+                 'desc': ("Select the wells layer and one of its wells: its lithology, logs and "
+                          "water level are set beside every visible survey within within_m, "
+                          "each read down the vertical there. Returns what each survey reads "
+                          "and how far from the well; capture_view 'page' to see it.")},
                 {'name': 'refresh', 'args': {}, 'desc': 'Re-read the project map from disk.'},
             ],
             'note': 'Removing a survey from the map is left to the user (the Remove button).',
@@ -1208,6 +1391,8 @@ class ProjectMapModule(BaseModule):
             'import_points': lambda: self._agent_import_points(
                 args.get('path'), args.get('method'), args.get('units'),
                 args.get('crs') or 'LOCAL', args.get('name')),
+            'compare_well': lambda: self._agent_compare_well(args.get('well'),
+                                                             args.get('within_m')),
             'refresh': lambda: (self.refresh(), self._agent_status())[1],
         }
         handler = handlers.get(action)
@@ -1239,6 +1424,49 @@ class ProjectMapModule(BaseModule):
             'message': self._interpolation_status.text(),
             'note': self._note.text(),
         }
+
+    def _agent_compare_well(self, well, within=None):
+        """Select the wells layer holding ``well`` and compare it; report in numbers."""
+        for entry in self._entries:
+            if entry['kind'] != 'wells':
+                continue
+            try:
+                data, order = wells_data(self._data(entry))
+            except Exception:  # noqa: BLE001
+                continue
+            if str(well) not in order:
+                continue
+            if within is not None:
+                self._compare_within.setValue(float(within))
+            self._frame.setCurrentIndex(self._frame.findData(entry['frame']))
+            self._agent_select(entry['id'])
+            self._well_pick.setCurrentIndex(order.index(str(well)))
+            index = order.index(str(well))
+            point = np.asarray(self._data(entry)['map_xy'], dtype=float)[index]
+            drawn, far, values = self._compare_surveys(entry, point)
+            water = data.water_range(str(well))
+            return {
+                'status': 'ok', 'well': str(well),
+                'lithology': [(i.top, i.bottom, i.unit) for i in data.intervals(str(well))],
+                'water_level_range_m': list(water[:2]) if water else None,
+                'surveys': [{'name': d['name'], 'units': d['units'],
+                             'distance_m': round(float(d['distance']), 2), 'read_at': d['where'],
+                             'profile': [(round(float(t), 2), round(float(b), 2), float(v))
+                                         for t, b, v in zip(d['top'], d['bottom'], d['values'])
+                                         if np.isfinite(v)][:40]} for d in drawn],
+                'point_values': values, 'not_drawn': far,
+                'note': ('Depths are metres below ground in the well and below each survey\'s '
+                         'surface where it was read.'),
+            }
+        wells = []
+        for entry in self._entries:
+            if entry['kind'] == 'wells':
+                try:
+                    wells += wells_data(self._data(entry))[1]
+                except Exception:  # noqa: BLE001
+                    pass
+        return {'status': 'failed', 'error': f'No well {well!r} on the map.', 'wells': wells,
+                'hint': 'Add wells from the Boreholes page (Add wells to the Map).'}
 
     def _agent_find(self, survey):
         """The map entry ``survey`` names - by id, by exact name, or by a unique part of one."""

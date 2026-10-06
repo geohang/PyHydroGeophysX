@@ -136,6 +136,21 @@ Cite the engines you used
        Research Institutions for Seismology (2011). Data Services Products:
        EMTF, The Magnetotelluric Transfer Functions.
        https://doi.org/10.17611/DP/EMTF.1 (CC BY 4.0)
+   * - Shallow seismic air-wave statics, CMP stacking and velocity analysis
+       (``data_processing.seismic_shallow``)
+     - Maeda, N. (1985). A method for reading and checking phase time in
+       auto-processing system of seismic wave data. *Zisin (Journal of the
+       Seismological Society of Japan, 2nd ser.)*, 38(3), 365-379.
+       https://doi.org/10.4294/zisin1948.38.3_365; Mayne, W. H. (1962).
+       Common reflection point horizontal data stacking techniques.
+       *Geophysics*, 27(6), 927-938. https://doi.org/10.1190/1.1439118; Dix,
+       C. H. (1955). Seismic velocities from surface measurements.
+       *Geophysics*, 20(1), 68-86. https://doi.org/10.1190/1.1438126;
+       Neidell, N. S. and Taner, M. T. (1971). Semblance and other coherency
+       measures for multichannel data. *Geophysics*, 36(3), 482-497.
+       https://doi.org/10.1190/1.1440186; Steeples, D. W. and Miller, R. D.
+       (1998). Avoiding pitfalls in shallow seismic reflection surveys.
+       *Geophysics*, 63(4), 1213-1224. https://doi.org/10.1190/1.1444422
    * - MODFLOW, read or written through FloPy
      - Bakker, M., Post, V., Langevin, C. D., Hughes, J. D., White, J. T.,
        Starn, J. J., and Fienen, M. N. (2016). *Groundwater*, 54(5), 733-739.

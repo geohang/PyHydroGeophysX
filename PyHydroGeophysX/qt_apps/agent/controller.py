@@ -28,7 +28,11 @@ MODULE_PURPOSES: Dict[str, str] = {
     "one_click": "Workflow workspace for data, progress and reports. To run end-to-end, the user selects Auto to report in the assistant panel and sends their goal there.",
     "home": "Landing page / overview.",
     "seismic": "Process seismic shot gathers, pick first breaks, and run SRT travel-time "
-               "tomography to get a velocity model from field data.",
+               "tomography to get a velocity model from field data; or stack the shots into "
+               "a CMP reflection section and check whether any event is a reflection.",
+    "boreholes": "Load wells, lithology logs, water levels and borehole geophysical logs "
+                 "(LAS or tables); view them on a map, as logs side by side and as water "
+                 "levels through time; add them to the Project Map to compare with surveys.",
     "ert": "Load FIELD ERT resistivity data and run ERT inversion (single-time or time-lapse). "
            "This INVERTS measured data; it does not forward-model synthetic data.",
     "mesh3d": "Build a 3D finite-element mesh with sensor/electrode geometry, then run 3D ERT "

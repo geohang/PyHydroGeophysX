@@ -54,6 +54,7 @@ from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import Model3DView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
+from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
@@ -325,7 +326,8 @@ class GravMagProcessingModule(BaseModule):
         self._backend_label.setStyleSheet("font-size:8pt;")
         form.addRow("Backend", self._backend_label)
         self._inv_progress = QProgressBar(); self._inv_progress.setVisible(False)
-        form.addRow(self._inv_progress)
+        self._inv_stop = self.stop_button("The 3D inversion")
+        form.addRow(progress_with_stop(self._inv_progress, self._inv_stop))
         return box
 
     def _export_model(self) -> None:
@@ -771,6 +773,7 @@ class GravMagProcessingModule(BaseModule):
         worker.finished.connect(self._reset_inv_button)
         self._inv_worker = self.register_worker(worker)
         worker.start()
+        self._inv_stop.attach(worker, "gravmag.invert")
 
     def _on_gravmag_workflow_ok(self, result: WorkflowRunResult) -> None:
         payload = dict(result.summary)

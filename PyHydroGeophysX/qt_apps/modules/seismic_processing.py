@@ -5,6 +5,10 @@ Loads real field formats (SEG-Y, Geometrics DAT, SEG-2) by reusing
 lets the user browse shot gathers, apply display/QC processing (gain, clip,
 polarity, trace normalization, AGC), pick first arrivals (manual + assisted),
 and export picks to CSV and a PyGIMLi travel-time ``.dat`` file.
+
+The Reflection tab stacks the same shots into a CMP section with
+``PyHydroGeophysX.data_processing.seismic_shallow`` (trace QC, air-wave timing
+and removal, causal filters, NMO and stack), on the geometry set for picking.
 """
 
 from __future__ import annotations
@@ -24,6 +28,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QProgressBar,
     QPushButton,
     QScrollArea,
@@ -32,7 +37,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QCoreApplication, QEventLoop, Qt, QTimer
 
 from PyHydroGeophysX._internal.utils import velocity_of
 from PyHydroGeophysX.inversion.lambda_search import LAMBDA_BOUNDS as _LAMBDA_BOUNDS
@@ -40,6 +45,7 @@ from PyHydroGeophysX.qt_apps import io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.qt_utils import (
     BusyStateController,
+    ContentWidthScrollArea,
     Debouncer,
     ReproduceBar,
     make_double_spinbox,
@@ -47,11 +53,14 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     merged_row,
     select_directory,
     set_rows_enabled,
+    set_rows_visible,
 )
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
+from PyHydroGeophysX.qt_apps.widgets.reflection_view import ReflectionView
+from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
 from PyHydroGeophysX.qt_apps.widgets.seismic_viewer import SeismicViewer
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker, TaskWorker
 from PyHydroGeophysX.visualization.axis_units import to_display_length
@@ -77,6 +86,7 @@ try:
         screen_picks,
     )
     from PyHydroGeophysX.data_processing.field_formats import read_seg2_seismic
+    from PyHydroGeophysX.data_processing import seismic_shallow as shallow
 
     _SEISMIC_OK = True
     _SEISMIC_ERR = ""
@@ -89,6 +99,40 @@ _FILE_FILTER = (
     "SEG-Y (*.sgy *.segy);;Geometrics DAT (*.dat);;SEG-2 (*.sg2 *.seg2);;"
     "Array (*.npy *.npz *.csv *.txt);;All files (*)"
 )
+
+
+def parse_shot_list(text: str) -> List[int]:
+    """``"1, 5-7 12"`` -> ``[1, 5, 6, 7, 12]``; raises ValueError on anything else."""
+    shots: List[int] = []
+    for part in str(text).replace(";", ",").replace(",", " ").split():
+        if "-" in part[1:]:
+            first, last = part.split("-", 1)
+            shots.extend(range(int(first), int(last) + 1))
+        else:
+            shots.append(int(part))
+    return sorted(set(shots))
+
+
+def _stack_reflections(traces: np.ndarray, dt: float, geometry: Any, params: Dict[str, Any],
+                       prepared: Any = None) -> Dict[str, Any]:
+    """The Reflection tab's run, off the window's thread: prepare the line, then stack it.
+
+    ``prepared`` is the line from an earlier run with the same traces and
+    clean-up, so a change of velocity or stack setting re-stacks without
+    re-timing every shot.
+    """
+    if prepared is None:
+        qc = shallow.trace_qc(traces, dt, geometry, exclude_records=params["skip_shots"])
+        if not params["drop_clipped"]:
+            qc.clipped = np.zeros_like(qc.clipped)
+        if not params["drop_early"]:
+            qc.early_energy = np.zeros_like(qc.early_energy)
+        remove_air = params["remove_air"]
+        prepared = shallow.prepare_line(
+            traces, dt, geometry, qc=qc, statics=params["align"], suppress=remove_air,
+            band=params["band"], mute=(0.75e-3, 5.0e-3) if remove_air else None)
+    result = shallow.stack_line(prepared, params["velocity"], **params["stack"])
+    return {"prepared": prepared, "result": result, "ray_limit": params.get("ray_limit")}
 
 
 class SeismicProcessingModule(BaseModule):
@@ -123,6 +167,12 @@ class SeismicProcessingModule(BaseModule):
         self._load_busy: Optional[BusyStateController] = None
         self._proc_cache: Optional[np.ndarray] = None
         self._proc_key: Optional[tuple] = None
+        self._spacing_from_headers = False
+        self._refl_worker: Optional[TaskWorker] = None
+        self._refl_busy: Optional[BusyStateController] = None
+        self._refl_prepared = None           # (key, PreparedLine) of the last run
+        self._refl_result = None
+        self._refl_error = ""
         self._recompute_debounced = Debouncer(self._recompute, 80)
         # Typing "0.5" passes through 0 and 0.: the picks move once, at the end.
         self._geometry_debounced = Debouncer(self._on_geometry_changed, 250)
@@ -150,6 +200,8 @@ class SeismicProcessingModule(BaseModule):
         self._center_tabs.addTab(self._vel_view, "Velocity model")
         self._quality_view = InversionQualityView()
         self._center_tabs.addTab(self._quality_view, "Inversion quality")
+        self._refl_view = ReflectionView(colormaps=cmaps.colormap_settings(self.state))
+        self._center_tabs.addTab(self._refl_view, "Reflection")
         self._reproduce = ReproduceBar()
         center = QWidget()
         center_layout = QVBoxLayout(center)
@@ -161,8 +213,11 @@ class SeismicProcessingModule(BaseModule):
         root.addWidget(self._processing_panel)
         self._inversion_panel = self._build_inversion_panel()
         root.addWidget(self._inversion_panel)
+        self._reflection_panel = self._build_reflection_panel()
+        root.addWidget(self._reflection_panel)
         self._center_tabs.currentChanged.connect(self._on_center_tab_changed)
         self._on_center_tab_changed()
+        self._refresh_reflection_source()
         if not _SEISMIC_OK:
             self.log(f"Field-format readers unavailable ({_SEISMIC_ERR}); array files only.", "warn")
 
@@ -398,7 +453,8 @@ class SeismicProcessingModule(BaseModule):
         runbox.addWidget(self._srt_btn)
         self._srt_progress = QProgressBar()
         self._srt_progress.setVisible(False)
-        runbox.addWidget(self._srt_progress)
+        self._srt_stop = self.stop_button("The SRT inversion")
+        runbox.addWidget(progress_with_stop(self._srt_progress, self._srt_stop))
         self._srt_export_btn = QPushButton("Export velocity model…")
         self._srt_export_btn.setIcon(theme.icon("fa5s.cube"))
         self._srt_export_btn.setToolTip(
@@ -421,6 +477,207 @@ class SeismicProcessingModule(BaseModule):
         scroll.setVisible(False)
         return scroll
 
+    # -- reflection ------------------------------------------------------------
+    # One column in the order the work is done: which traces, how they are
+    # cleaned, the velocity, the stack, then Run. Every control is named by what
+    # it does to the data; the numbers behind each step stay in the library
+    # (data_processing.seismic_shallow) with its defaults, which suit a hammer
+    # line of a few tens of metres.
+    def _build_reflection_panel(self) -> QScrollArea:
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
+
+        self._refl_source = QLabel()
+        self._refl_source.setWordWrap(True)
+        theme.set_tone(self._refl_source, "hint")
+        layout.addWidget(self._refl_source)
+
+        traces = QGroupBox("Traces")
+        tbox = QVBoxLayout(traces)
+        tform = QFormLayout()
+        tbox.addLayout(tform)
+        self._refl_skip = QLineEdit()
+        self._refl_skip.setPlaceholderText("none, or e.g. 1, 5, 12")
+        self._refl_skip.setToolTip(
+            "Shots to leave out of the stack, by record number: a mistimed trigger, a "
+            "missed blow, wind or traffic. Look through the shots on the Gather tab first.")
+        tform.addRow("Leave out shots", self._refl_skip)
+        self._refl_drop_clipped = QCheckBox("Leave out clipped traces")
+        self._refl_drop_clipped.setChecked(True)
+        self._refl_drop_clipped.setToolTip(
+            "A trace whose recorder saturated - usually the geophones next to the hammer - "
+            "has its peaks cut flat, which distorts every wave on it.")
+        tform.addRow(self._refl_drop_clipped)
+        self._refl_drop_early = QCheckBox("Leave out traces with signal before the first arrival")
+        self._refl_drop_early.setChecked(True)
+        self._refl_drop_early.setToolTip(
+            "Nothing can reach a geophone two metres from the hammer in the first "
+            "1.5 ms, so a trace with signal there has a trigger or wiring fault.")
+        tform.addRow(self._refl_drop_early)
+        # Notes sit under the form, not in a row of it: a wrapped label spanning a
+        # form row is given one line's height and cut off.
+        self._refl_traces_note = self._reflection_note()
+        tbox.addWidget(self._refl_traces_note)
+        layout.addWidget(traces)
+
+        clean = QGroupBox("Clean-up")
+        cbox = QVBoxLayout(clean)
+        cform = QFormLayout()
+        cbox.addLayout(cform)
+        self._refl_align = QCheckBox("Line up shot timing on the air wave")
+        self._refl_align.setChecked(True)
+        self._refl_align.setToolTip(
+            "A hammer trigger fires a little early or late on each blow. The sound of the "
+            "blow crosses the line at the speed of sound, so where it arrives tells each "
+            "shot's timing error, which is then taken out.")
+        cform.addRow(self._refl_align)
+        self._refl_remove_air = QCheckBox("Remove the air wave")
+        self._refl_remove_air.setChecked(True)
+        self._refl_remove_air.setToolTip(
+            "Subtract the sound of the blow and mute what is left of it, so it cannot "
+            "stack into something that looks like a reflection.")
+        cform.addRow(self._refl_remove_air)
+        self._refl_low = make_double_spinbox(50.0, 1.0, 5000.0, 10.0, decimals=0, suffix=" Hz")
+        self._refl_high = make_double_spinbox(250.0, 10.0, 20000.0, 10.0, decimals=0, suffix=" Hz")
+        band = merged_row(self._refl_low, "to", self._refl_high)
+        band.setToolTip(
+            "The frequencies kept. The filter only looks back in time, so it cannot smear "
+            "later energy such as ground roll into earlier times.")
+        cform.addRow("Keep frequencies", band)
+        self._refl_clean_note = self._reflection_note()
+        cbox.addWidget(self._refl_clean_note)
+        layout.addWidget(clean)
+
+        vel = QGroupBox("Velocity")
+        vbox = QVBoxLayout(vel)
+        # The form on a widget of its own: set_rows_visible finds a row's label
+        # through the field's parent widget's layout, which must be the form.
+        form_holder = QWidget()
+        vform = QFormLayout(form_holder)
+        vform.setContentsMargins(0, 0, 0, 0)
+        vbox.addWidget(form_holder)
+        self._refl_vsource = QComboBox()
+        self._refl_vsource.addItem("Values set here", "values")
+        self._refl_vsource.addItem("The refraction model", "model")
+        self._refl_vsource.setToolTip(
+            "The refraction model is the Velocity model tab's result, averaged along the "
+            "stacked part of the line. Only the part the rays reached is used.")
+        self._refl_vsource.currentIndexChanged.connect(self._sync_reflection_velocity)
+        vform.addRow("Velocity from", self._refl_vsource)
+        self._refl_v1 = make_double_spinbox(300.0, 50.0, 6000.0, decimals=0, step=10.0,
+                                            suffix=" m/s")
+        self._refl_v1.setToolTip("How fast the waves travel in the ground below the line.")
+        vform.addRow("Velocity", self._refl_v1)
+        self._refl_layer = QCheckBox("Faster below a certain time")
+        self._refl_layer.setToolTip(
+            "Use a second, faster velocity below a two-way time - for example below the "
+            "water table, where the refraction on the Travel-time tab shows a faster layer.")
+        vform.addRow(self._refl_layer)
+        self._refl_t2 = make_double_spinbox(12.0, 0.5, 1000.0, decimals=1, step=0.5, suffix=" ms")
+        vform.addRow("From", self._refl_t2)
+        self._refl_v2 = make_double_spinbox(900.0, 50.0, 6000.0, decimals=0, step=10.0,
+                                            suffix=" m/s")
+        vform.addRow("Velocity there", self._refl_v2)
+        self._refl_layer.toggled.connect(self._sync_reflection_velocity)
+        self._refl_model_note = self._reflection_note()
+        vbox.addWidget(self._refl_model_note)
+        check = self._reflection_note("Check it with Show ▸ Velocity check: the blue line "
+                                      "should run through the dark patches.")
+        vbox.addWidget(check)
+        layout.addWidget(vel)
+        self._sync_reflection_velocity()
+
+        stack = QGroupBox("Stack")
+        sform = QFormLayout(stack)
+        self._refl_off_lo = make_double_spinbox(2.0, 0.0, 10000.0, decimals=1, step=0.5,
+                                                suffix=" m")
+        self._refl_off_hi = make_double_spinbox(10.0, 0.5, 10000.0, decimals=1, step=0.5,
+                                                suffix=" m")
+        offsets = merged_row(self._refl_off_lo, "to", self._refl_off_hi)
+        offsets.setToolTip(
+            "Shot-to-geophone distances that go into the stack. The nearest are clipped "
+            "or swamped by the blow; the farthest mostly carry ground roll.")
+        sform.addRow("Offsets", offsets)
+        self._refl_bin = make_double_spinbox(0.5, 0.05, 100.0, decimals=2, step=0.25, suffix=" m")
+        self._refl_bin.setToolTip("Spacing of the stacked section's traces. The geophone "
+                                  "spacing is a good choice.")
+        sform.addRow("Trace spacing", self._refl_bin)
+        self._refl_tmax = make_double_spinbox(50.0, 5.0, 5000.0, decimals=0, step=5.0, suffix=" ms")
+        sform.addRow("Down to", self._refl_tmax)
+
+        self._refl_more = QCheckBox("More settings")
+        sform.addRow(self._refl_more)
+        mform = sform
+        self._refl_stretch = make_double_spinbox(30.0, 5.0, 100.0, decimals=0, step=5.0, suffix=" %")
+        self._refl_stretch.setToolTip(
+            "The velocity correction stretches the far traces' wavelets; past this much "
+            "stretch they are muted rather than stacked.")
+        mform.addRow("Stretch limit", self._refl_stretch)
+        self._refl_min_fold = make_spinbox(3, 1, 100)
+        self._refl_min_fold.setToolTip("A point of the section with fewer traces than this "
+                                       "is left blank.")
+        mform.addRow("Traces per point, at least", self._refl_min_fold)
+        self._refl_ground_roll = make_double_spinbox(220.0, 20.0, 3000.0, decimals=0, step=10.0,
+                                                     suffix=" m/s")
+        self._refl_ground_roll.setToolTip(
+            "Everything that travels slower than this - ground roll - is muted before "
+            "stacking.")
+        mform.addRow("Ground roll slower than", self._refl_ground_roll)
+        more = (self._refl_stretch, self._refl_min_fold, self._refl_ground_roll)
+        self._refl_more.toggled.connect(lambda on: set_rows_visible(more, on))
+        set_rows_visible(more, False)
+        layout.addWidget(stack)
+
+        run = QGroupBox("Run")
+        runbox = QVBoxLayout(run)
+        self._refl_btn = QPushButton("Stack the line")
+        self._refl_btn.setProperty("primary", True)
+        self._refl_btn.setIcon(theme.icon("fa5s.layer-group", color="#ffffff"))
+        self._refl_btn.clicked.connect(self._run_reflection)
+        runbox.addWidget(self._refl_btn)
+        self._refl_progress = QProgressBar()
+        self._refl_progress.setRange(0, 0)
+        self._refl_progress.setVisible(False)
+        runbox.addWidget(self._refl_progress)
+        self._refl_summary = QLabel()
+        self._refl_summary.setWordWrap(True)
+        self._refl_summary.setTextFormat(Qt.RichText)
+        runbox.addWidget(self._refl_summary)
+        self._refl_export_btn = QPushButton("Export section…")
+        self._refl_export_btn.setIcon(theme.icon("fa5s.file-export"))
+        self._refl_export_btn.setToolTip("Save the section as a picture (PNG) or as numbers "
+                                         "(NumPy .npz, with the velocity and fold).")
+        self._refl_export_btn.setEnabled(False)
+        self._refl_export_btn.clicked.connect(self._export_reflection)
+        runbox.addWidget(self._refl_export_btn)
+        self._refl_map_btn = self.map_export_button()
+        self._refl_map_btn.setToolTip("Save the stacked section, in depth, as a survey in the "
+                                      "Project Map, where it can be read beside the wells.")
+        self._refl_map_btn.setEnabled(False)
+        runbox.addWidget(self._refl_map_btn)
+        layout.addWidget(run)
+        layout.addStretch(1)
+
+        scroll = ContentWidthScrollArea(minimum=450, maximum=500)
+        scroll.setWidget(panel)
+        scroll.setVisible(False)
+        return scroll
+
+    @staticmethod
+    def _reflection_note(text: str = "") -> QLabel:
+        """A hint line under a group's settings; hidden while it has nothing to say."""
+        note = QLabel(text)
+        note.setTextFormat(Qt.RichText)
+        note.setWordWrap(True)
+        theme.set_tone(note, "hint")
+        note.setVisible(bool(text))
+        return note
+
+    @staticmethod
+    def _set_note(note: QLabel, text: str) -> None:
+        note.setText(text)
+        note.setVisible(bool(text))
+
     def _on_center_tab_changed(self, _index: int = 0) -> None:
         """One side panel per tab: the controls for what is on screen, nothing else.
 
@@ -429,11 +686,17 @@ class SeismicProcessingModule(BaseModule):
         nothing once the picks exist, and leaving them up costs the width the
         plot wants. The result tabs keep the inversion side so the settings that
         produced a model stay readable next to it and a re-run does not mean
-        navigating back.
+        navigating back. Reflection has its own column: stacking shares the
+        shots and their geometry with picking, and nothing else.
         """
-        on_gather = self._center_tabs.currentWidget() is self._viewer
+        current = self._center_tabs.currentWidget()
+        on_gather = current is self._viewer
+        on_reflection = current is self._refl_view
         self._processing_panel.setVisible(on_gather)
-        self._inversion_panel.setVisible(not on_gather)
+        self._reflection_panel.setVisible(on_reflection)
+        self._inversion_panel.setVisible(not on_gather and not on_reflection)
+        if on_reflection:
+            self._refresh_reflection_source()
 
     def _has_traveltimes(self) -> bool:
         return self._tt_data is not None or any(self._all_picks.values()) \
@@ -656,6 +919,7 @@ class SeismicProcessingModule(BaseModule):
         self._clear_picks()
         self._recompute()
         self._update_info()
+        self._reset_reflection()
         self.log(f"Loaded {Path(path).name}", "success")
 
     def _on_seismic_load_failed(self, message: str) -> None:
@@ -671,6 +935,7 @@ class SeismicProcessingModule(BaseModule):
     def _set_dataset(self, dataset) -> None:
         self._dataset = dataset
         self._dt = float(dataset.metadata.sample_interval_s)
+        self._geometry_from_headers(dataset)
         records = list(dataset.field_records)
         self._shot_combo.blockSignals(True)
         self._shot_combo.clear()
@@ -735,6 +1000,7 @@ class SeismicProcessingModule(BaseModule):
         self._raw = arr
         self._proc_cache = None
         self._dt = dt
+        self._spacing_from_headers = False
         self._dataset = None
         self._current_gather = None
         self._headers = None
@@ -906,6 +1172,7 @@ class SeismicProcessingModule(BaseModule):
         the default 1 m stayed 1 m apart after the spacing was set to 0.5 m -
         offsets twice too long, and velocities twice too high.
         """
+        self._spacing_from_headers = False   # set by hand now, whatever the file said
         if self._geo_positions:
             # A position file places every geophone; these boxes only show its
             # first position and step, so they go back to saying that.
@@ -1282,8 +1549,10 @@ class SeismicProcessingModule(BaseModule):
             self._tt_plot.plot(geophones, [0.0] * len(geophones), pen=None, symbol="t1",
                                symbolSize=7, symbolBrush="#7a8794", symbolPen=None)
             if not self._geo_positions:
+                origin = ("from the file headers" if self._spacing_from_headers
+                          else "(no position file)")
                 self._geo_info.setText(
-                    f"Even spacing (no position file): {len(geophones)} geophones, "
+                    f"Even spacing {origin}: {len(geophones)} geophones, "
                     f"x {min(geophones):g} to {max(geophones):g} m.")
         picks = self._all_first_breaks()
         if not picks:
@@ -1512,6 +1781,7 @@ class SeismicProcessingModule(BaseModule):
     def _on_length_unit_changed(self, _unit: str) -> None:
         """Retick the travel-time plot and redraw it, so the legend follows."""
         length_units.pyqtgraph_axis(self._tt_plot, "bottom", "geophone position x")
+        self._sync_reflection_velocity()       # its note gives depths in the unit
         if self._tt_shows_container and self._tt_data is not None:
             self._plot_tt_container(self._tt_data)
         else:
@@ -1636,6 +1906,7 @@ class SeismicProcessingModule(BaseModule):
         self._srt_worker.finished.connect(self._reset_srt_button)
         self.register_worker(self._srt_worker)
         self._srt_worker.start()
+        self._srt_stop.attach(self._srt_worker, "seismic.srt_inversion")
 
     def _on_srt_workflow_ok(self, result: WorkflowRunResult) -> None:
         vtk_ref = next(
@@ -1672,6 +1943,7 @@ class SeismicProcessingModule(BaseModule):
     def _on_srt_ok(self, result: dict) -> None:
         mgr = result.get("mgr")
         self._srt_mgr = mgr
+        self._sync_reflection_velocity()      # the Reflection tab can stack with it now
         if mgr is not None:
             self._vel_view.show_model(mgr, kind="srt")
             self._center_tabs.setCurrentWidget(self._vel_view)
@@ -1759,6 +2031,405 @@ class SeismicProcessingModule(BaseModule):
             self._srt_busy = None
         self._srt_btn.setText("Run SRT inversion")
         self._srt_progress.setVisible(False)
+
+    # -- reflection: run -------------------------------------------------------
+    def _refresh_reflection_source(self) -> None:
+        """Say in one line what the Stack button would stack."""
+        if not hasattr(self, "_refl_source"):
+            return  # still building
+        ready = self._dataset is not None and bool(self._dt) and _SEISMIC_OK
+        self._refl_btn.setEnabled(ready and self._refl_busy is None)
+        if not ready:
+            self._refl_source.setText(
+                "Load a shot file on the Gather tab first: stacking needs several shots "
+                "recorded along one line (SEG-Y or Geometrics DAT).")
+            return
+        self._geometry_debounced.flush()
+        records = self._agent_records()
+        xs = self._geophone_xs()
+        step = abs(xs[1] - xs[0]) if len(xs) > 1 else 0.0
+        self._refl_source.setText(
+            f"Stacks the {len(records)} shots loaded on the Gather tab, with the geophones "
+            f"and shot positions set there (geophones every {step:g} m).")
+
+    def _reflection_line(self) -> Tuple[np.ndarray, Any]:
+        """Every shot's traces side by side, and where each was recorded.
+
+        From the Gather tab's geometry, the same positions the picks are stamped
+        with, so the stack and the travel times describe one line.
+        """
+        self._geometry_debounced.flush()
+        blocks, record, channel, sx, gx, sz, gz = [], [], [], [], [], [], []
+        for rec in self._agent_records():
+            gather = self._dataset.get_gather(int(rec))
+            arr = np.asarray(gather.traces, dtype=float)
+            if rec == self._current_record:
+                shot = float(self._shot_x.value())
+            else:
+                shot = float(self._shot_pos.get(rec, self._default_shot_x(rec)))
+            shot_z = self._interp_topography(shot)
+            for i in range(arr.shape[1]):
+                x, z = self._receiver_position(i)
+                header = gather.headers[i] if i < len(gather.headers) else None
+                record.append(int(rec))
+                channel.append(int(header.trace_number) if header is not None else i + 1)
+                sx.append(shot); sz.append(shot_z); gx.append(x); gz.append(z)
+            blocks.append(arr)
+        traces = np.concatenate(blocks, axis=1)
+        geometry = shallow.LineGeometry(record, channel, sx, gx, sz, gz, origin="Gather tab")
+        return traces, geometry
+
+    # -- reflection: velocity ----------------------------------------------------
+    def _sync_reflection_velocity(self, *_args) -> None:
+        """Show the rows of the velocity source chosen, and what the model would give."""
+        if not hasattr(self, "_refl_model_note"):
+            return  # still building
+        from_model = self._refl_vsource.currentData() == "model"
+        set_rows_visible((self._refl_v1, self._refl_layer), not from_model)
+        set_rows_visible((self._refl_t2, self._refl_v2),
+                         not from_model and self._refl_layer.isChecked())
+        if not from_model:
+            self._set_note(self._refl_model_note, "")
+            return
+        try:
+            velocity, covered = self._model_velocity()
+        except ValueError as exc:
+            self._set_note(self._refl_model_note, str(exc))
+            return
+        self._set_note(self._refl_model_note, self._describe_model_velocity(velocity, covered))
+
+    def _stack_x_range(self, geometry: Any = None) -> Tuple[float, float]:
+        """Where along the line the stack's points fall: the midpoints of its offsets."""
+        if geometry is None:
+            geometry = self._reflection_line()[1]
+        near, far = self._refl_off_lo.value(), self._refl_off_hi.value()
+        off = geometry.abs_offset
+        mid = geometry.midpoint[(off >= near) & (off <= far)]
+        if mid.size == 0:
+            raise ValueError("No trace has an offset in the range set under Stack.")
+        return float(mid.min()), float(mid.max())
+
+    def _model_velocity(self, geometry: Any = None) -> Tuple[Any, float]:
+        """The refraction model as a stacking velocity, and the deepest depth the rays reach.
+
+        Averaged along the stacked part of the line, over the cells the rays
+        crossed: below them a travel-time model is the inversion's starting
+        guess, not a measurement.
+        """
+        mgr = getattr(self, "_srt_mgr", None)
+        if mgr is None:
+            raise ValueError("No refraction model yet: pick the first arrivals and run the "
+                             "inversion on the Travel-time tab, or set the values here.")
+        if self._dataset is None:
+            raise ValueError("Load the shots on the Gather tab first.")
+        from PyHydroGeophysX.core.section_geometry import cell_centers, cell_depths
+
+        mesh = mgr.paraDomain
+        values = np.asarray(velocity_of(mgr), dtype=float)
+        x = cell_centers(mesh)[:, 0]
+        depth = cell_depths(mesh)
+        keep = np.ones(values.size, dtype=bool)
+        for method, threshold in (("standardizedCoverage", 0.5), ("coverage", 0.0)):
+            try:
+                cov = np.asarray(getattr(mgr, method)(), dtype=float)
+            except Exception:  # noqa: BLE001 - the engine may not report coverage
+                continue
+            if cov.size == values.size and (cov > threshold).any():
+                keep = cov > threshold
+                break
+        x_range = self._stack_x_range(geometry)
+        inside = keep & (x >= x_range[0]) & (x <= x_range[1])
+        if not inside.any():
+            raise ValueError(f"The refraction model has no ray-covered cells between "
+                             f"x = {x_range[0]:g} and {x_range[1]:g} m, where the stack lies.")
+        velocity = shallow.velocity_from_section(
+            x[keep], depth[keep], values[keep], x_range,
+            label=f"the refraction model, x = {x_range[0]:g}-{x_range[1]:g} m")
+        return velocity, float(depth[inside].max())
+
+    @staticmethod
+    def _describe_model_velocity(velocity: Any, covered: float) -> str:
+        unit = length_units.current()
+        depths = [0.0, covered / 2.0, covered]
+        times = np.interp(depths, velocity.depth(velocity.times), velocity.times)
+        values = velocity.interval(times)
+        # One short line per depth: a long sentence wraps "m/s" after its slash.
+        lines = [f"{values[0]:,.0f} m/s at the surface",
+                 f"{values[1]:,.0f} m/s at {to_display_length(depths[1], unit):.1f} {unit}",
+                 f"{values[2]:,.0f} m/s at {to_display_length(depths[2], unit):.1f} {unit}, "
+                 "as deep as the rays reach"]
+        return ("From the refraction model, averaged along the stacked part of the line:<br>"
+                + "<br>".join(f"&nbsp;&nbsp;{line}" for line in lines)
+                + "<br>Deeper, the last velocity is kept.")
+
+    def _reflection_params(self, geometry: Any = None) -> Dict[str, Any]:
+        try:
+            skip = parse_shot_list(self._refl_skip.text())
+        except ValueError:
+            raise ValueError("Write the shots to leave out as numbers, e.g. 1, 5, 12 "
+                             "or 3-6.") from None
+        unknown = sorted(set(skip) - set(self._agent_records()))
+        if unknown:
+            raise ValueError(f"There is no shot {', '.join(map(str, unknown))} in this file.")
+        low, high = self._refl_low.value(), self._refl_high.value()
+        if high <= low:
+            raise ValueError("The upper frequency has to be above the lower one.")
+        if self._dt and high >= 0.5 / self._dt:
+            raise ValueError(f"The upper frequency has to stay below {0.5 / self._dt:.0f} Hz, "
+                             "half the sampling rate.")
+        near, far = self._refl_off_lo.value(), self._refl_off_hi.value()
+        if far <= near:
+            raise ValueError("The farthest offset has to be beyond the nearest.")
+        ray_limit = None
+        if self._refl_vsource.currentData() == "model":
+            velocity, ray_limit = self._model_velocity(geometry)
+        elif self._refl_layer.isChecked():
+            velocity = shallow.VelocityFunction.layered(
+                self._refl_v1.value(), self._refl_t2.value() * 1e-3, self._refl_v2.value())
+        else:
+            velocity = shallow.VelocityFunction.layered(self._refl_v1.value())
+        return {
+            "skip_shots": skip,
+            "drop_clipped": self._refl_drop_clipped.isChecked(),
+            "drop_early": self._refl_drop_early.isChecked(),
+            "align": self._refl_align.isChecked(),
+            "remove_air": self._refl_remove_air.isChecked(),
+            "band": (low, high),
+            "velocity": velocity,
+            "ray_limit": ray_limit,
+            "stack": {"offset_range": (near, far), "bin_width": self._refl_bin.value(),
+                      "tmax": self._refl_tmax.value() * 1e-3,
+                      "stretch": self._refl_stretch.value() / 100.0,
+                      "min_fold": int(self._refl_min_fold.value()),
+                      "surface_wave_velocity": self._refl_ground_roll.value()},
+        }
+
+    def _say_reflection(self, html: str) -> None:
+        self._refl_summary.setText(html)
+
+    def _run_reflection(self) -> Optional[str]:
+        """Start the stack; returns why it could not start, or None."""
+        self._refl_error = ""
+        if self._dataset is None or not self._dt or not _SEISMIC_OK:
+            self._refresh_reflection_source()
+            return self._refl_source.text()
+        if self._refl_worker is not None:
+            return "A stack is already running."
+        try:
+            traces, geometry = self._reflection_line()
+            params = self._reflection_params(geometry)
+        except ValueError as exc:
+            self._say_reflection(f"<span style='color:{theme.color('red')}'>{exc}</span>")
+            return str(exc)
+        key = (id(self._dataset), geometry.source_x.tobytes(), geometry.receiver_x.tobytes(),
+               tuple(params["skip_shots"]), params["drop_clipped"], params["drop_early"],
+               params["align"], params["remove_air"], params["band"])
+        prepared = (self._refl_prepared[1]
+                    if self._refl_prepared is not None and self._refl_prepared[0] == key else None)
+        self._refl_busy = BusyStateController([self._refl_btn])
+        self._refl_busy.start()
+        self._refl_btn.setText("Stacking…")
+        self._refl_progress.setVisible(True)
+        self._say_reflection("Stacking with the new settings…" if prepared is not None else
+                             "Checking the traces, timing and cleaning every shot, then "
+                             "stacking…")
+        worker = TaskWorker(_stack_reflections, traces, float(self._dt), geometry, params, prepared)
+        worker.succeeded.connect(lambda out: self._on_reflection_done(key, out))
+        worker.failed.connect(self._on_reflection_failed)
+        worker.finished.connect(self._reset_reflection_btn)
+        self._refl_worker = self.register_worker(worker)
+        worker.start()
+        return None
+
+    def _on_reflection_done(self, key: tuple, out: Dict[str, Any]) -> None:
+        prepared, result = out["prepared"], out["result"]
+        self._refl_prepared = (key, prepared)
+        self._refl_result = result
+        self._refl_ray_limit = out.get("ray_limit")
+        self._refl_view.set_ray_limit(self._refl_ray_limit)
+        self._refl_view.show_result(result)
+        self._refl_export_btn.setEnabled(True)
+        self._refl_map_btn.setEnabled(True)
+
+        counts = prepared.qc.counts()
+        left_out = [f"{counts[k]} {label}" for k, label in (
+            ("excluded record", "in the shots left out"), ("clipped", "clipped"),
+            ("early energy", "with early signal"), ("dead", "dead")) if counts[k]]
+        self._set_note(self._refl_traces_note,
+                       f"Using {counts['kept']} of {counts['total']} traces."
+                       + (" Left out: " + ", ".join(left_out) + "." if left_out else ""))
+        st = prepared.statics
+        if st is not None:
+            shifts = [abs(v) for r, v in st.statics.items() if r not in st.median_records]
+            # The speed first: at the end of a line QLabel breaks "m/s" after its slash.
+            clean = (f"Air wave at {st.velocity:.0f} m/s; shot timing corrected by up to "
+                     f"{max(shifts) * 1e3:.1f} ms.")
+        else:
+            clean = "Shot timing left as recorded."
+        self._set_note(self._refl_clean_note, clean)
+
+        stack = result.stack
+        lines = [f"Stacked {result.traces_used} traces into {stack.cmp_x.size} points along "
+                 f"the line, up to {stack.max_fold} traces per point."]
+        sg = result.supergather
+        unit = length_units.current()
+        if sg is None:
+            lines.append("<b>Not checked.</b> Too few traces in the middle of the line to test "
+                         "whether an event stays flat across offsets.")
+        elif not sg.passing:
+            lines.append(f"<b style='color:{theme.color('amber')}'>No reflection confirmed.</b> "
+                         "No event stays flat across the offsets, so the bands in the section "
+                         "are most likely left over from the air-wave and ground-roll mutes.")
+        else:
+            found = []
+            for event in sg.passing:
+                depth = float(result.velocity.depth(np.array([event["t0"]]))[0])
+                found.append(f"{event['t0'] * 1e3:.1f} ms (about "
+                             f"{to_display_length(depth, unit):.1f} {unit} deep)")
+            plural = len(found) > 1
+            lines.append(f"<b style='color:{theme.color('green')}'>Possible reflection"
+                         f"{'s' if plural else ''}</b> at {' and '.join(found)}: "
+                         f"{'they stay' if plural else 'it stays'} flat across the offsets. "
+                         "Add it to the Map and compare it with a well there before "
+                         "reading it as a layer.")
+        if (result.peaks_linear and result.peaks_hyperbolic
+                and result.peaks_linear[0][2] > result.peaks_hyperbolic[0][2]):
+            lines.append("The strongest energy lines up straight rather than curved: ground "
+                         "roll or refractions, not reflections.")
+        self._say_reflection("<br><br>".join(lines))
+        self._refl_view.set_verdict(self._reflection_verdict(result))
+        # Once the new summary is laid out, or it scrolls to where the old one ended.
+        QTimer.singleShot(0, lambda: self._reflection_panel.ensureWidgetVisible(
+            self._refl_summary))
+        for note in prepared.notes + result.notes:
+            self.log(f"Reflection: {note}", "info")
+        for warning in prepared.warnings + result.warnings:
+            self.log(f"Reflection: {warning}", "warn")
+        self.log("Reflection stack finished.", "success")
+
+    @staticmethod
+    def _reflection_verdict(result: Any) -> str:
+        """The section's title: what the flat-event check found, in a few words."""
+        sg = result.supergather
+        if sg is None:
+            return "Not checked: too few traces to test for flat events"
+        if not sg.passing:
+            return "No reflection confirmed: no event stays flat across the offsets"
+        times = ", ".join(f"{e['t0'] * 1e3:.1f} ms" for e in sg.passing)
+        return f"Possible reflection at {times}: flat across the offsets"
+
+    def _on_reflection_failed(self, message: str) -> None:
+        self._refl_error = message
+        self._say_reflection(f"<span style='color:{theme.color('red')}'>Could not stack: "
+                             f"{message}</span>")
+        self.log(f"Reflection stack failed: {message}", "error")
+
+    def _reset_reflection_btn(self) -> None:
+        if self._refl_busy is not None:
+            self._refl_busy.finish()
+            self._refl_busy = None
+        self._refl_btn.setText("Stack the line")
+        self._refl_progress.setVisible(False)
+        self._refl_worker = None
+
+    def _reset_reflection(self) -> None:
+        """A new file: nothing stacked, and settings that suit its geometry."""
+        self._refl_prepared = None
+        self._refl_result = None
+        self._refl_view.clear()
+        self._refl_export_btn.setEnabled(False)
+        self._refl_map_btn.setEnabled(False)
+        for note in (self._refl_traces_note, self._refl_clean_note):
+            self._set_note(note, "")
+        self._refl_summary.setText("")
+        self._refl_skip.clear()
+        if self._dataset is not None:
+            xs = self._geophone_xs()
+            shots = [self._default_shot_x(r) for r in self._agent_records()]
+            if xs and shots:
+                farthest = max(abs(g - s) for g in xs for s in shots)
+                step = abs(xs[1] - xs[0]) if len(xs) > 1 else self._spacing.value()
+                self._refl_bin.setValue(step)
+                self._refl_off_lo.setValue(min(2.0, 0.25 * farthest))
+                self._refl_off_hi.setValue(round(min(farthest, max(10.0, 0.5 * farthest)), 1))
+        self._refresh_reflection_source()
+        self._sync_reflection_velocity()
+
+    def map_snapshot(self):
+        """What Add to Map saves from this page: the tab on screen decides.
+
+        On the Reflection tab, the stacked section in depth at its stacking
+        velocity (``project_map.section_snapshot``); elsewhere the refraction
+        velocity model, as before.
+        """
+        from PyHydroGeophysX.qt_apps.project_map import mesh_snapshot, section_snapshot
+
+        if self._center_tabs.currentWidget() is self._refl_view:
+            result = self._refl_result
+            if result is None:
+                raise ValueError("Stack the line on the Reflection tab first.")
+            st = result.stack
+            z_of_t = np.asarray(result.velocity.depth(st.t0), dtype=float)
+            depth_edges = np.linspace(0.0, float(z_of_t[-1]), 151)
+            centres = 0.5 * (depth_edges[:-1] + depth_edges[1:])
+            section = np.where(st.fold >= st.min_fold, st.stack, np.nan)
+            values = np.array([np.interp(centres, z_of_t, column, left=np.nan, right=np.nan)
+                               for column in section.T]).T
+            return section_snapshot(st.bin_edges, depth_edges, values, "Seismic",
+                                    "stack amplitude", "Reflection stack")
+        manager = getattr(self, "_srt_mgr", None)
+        if manager is None:
+            raise ValueError("Run a seismic inversion first.")
+        if getattr(manager, "paraDomain", None) is None:
+            # The inversion ran in its own process and its mesh did not come
+            # back (the run's warnings say why - a path too long, say).
+            raise ValueError("The velocity model's mesh did not come back from the inversion; "
+                             "run it again, from a project folder with a shorter path.")
+        return mesh_snapshot(manager.paraDomain, velocity_of(manager), "Seismic")
+
+    def _export_reflection(self) -> None:
+        result = self._refl_result
+        if result is None:
+            return
+        path, chosen = QFileDialog.getSaveFileName(
+            self, "Export reflection section", "reflection_section.png",
+            "PNG image (*.png);;NumPy archive (*.npz)")
+        if not path:
+            return
+        if path.lower().endswith(".npz") or ("npz" in chosen and not path.lower().endswith(".png")):
+            st = result.stack
+            np.savez(path, position_m=st.cmp_x, time_s=st.t0,
+                     depth_m=result.velocity.depth(st.t0), section=st.stack, traces=st.fold,
+                     velocity_times_s=result.velocity.times,
+                     velocity_m_s=result.velocity.velocities)
+        else:
+            self._refl_view.export_png(path)
+        self.log(f"Exported the reflection section to {path}.", "success")
+
+    def _geometry_from_headers(self, dataset) -> None:
+        """Take the geophone spacing and first position from the file, when it has them.
+
+        A SEG-Y line laid out along x carries each geophone's position. Left at
+        the 1 m default, a 0.5 m line was picked and stacked at twice its offsets.
+        Map coordinates are left alone: projecting them is a choice for the user.
+        """
+        self._spacing_from_headers = False
+        if not _SEISMIC_OK or not shallow.headers_have_positions(dataset):
+            return
+        headers = dataset.headers
+        if any(abs(float(h.receiver_y) - float(headers[0].receiver_y)) > 1e-6
+               or abs(float(h.source_y) - float(headers[0].receiver_y)) > 1e-6 for h in headers):
+            return
+        first = dataset.get_gather(int(list(dataset.field_records)[0])).headers
+        xs = np.array([float(h.receiver_x) for h in first])
+        steps = np.diff(xs)
+        if xs.size < 2 or steps[0] <= 0 or not np.allclose(steps, steps[0], atol=1e-3):
+            return
+        for box, value in ((self._spacing, float(steps[0])), (self._geo_start, float(xs[0]))):
+            box.blockSignals(True)
+            box.setValue(value)
+            box.blockSignals(False)
+        self._spacing_from_headers = True
 
     def export_actions(self):
         actions = []
@@ -1868,6 +2539,35 @@ class SeismicProcessingModule(BaseModule):
                 {"name": "run_srt", "args": {},
                  "desc": ("Run SRT travel-time tomography. Inverts uploaded travel times if any were loaded, "
                           "otherwise the picked shots (needs >=8 picks total).")},
+                {"name": "set_reflection",
+                 "args": {"skip_shots": "list[int] or '1, 5, 12'", "leave_out_clipped": "bool",
+                          "leave_out_early_signal": "bool", "align_timing": "bool",
+                          "remove_air_wave": "bool", "band_hz": "[low, high]",
+                          "velocity_source": "values | refraction_model",
+                          "velocity_m_s": "float", "deeper_from_ms": "float or null",
+                          "deeper_velocity_m_s": "float", "offsets_m": "[near, far]",
+                          "trace_spacing_m": "float", "down_to_ms": "float",
+                          "stretch_percent": "float", "min_traces": "int",
+                          "ground_roll_m_s": "float"},
+                 "desc": ("Set the Reflection tab's settings (only the keys given change); returns "
+                          "them all. skip_shots leaves whole shot records out (a bad trigger, "
+                          "wind). velocity_source 'refraction_model' stacks with the SRT model "
+                          "from run_srt, averaged along the line over the ray-covered cells; "
+                          "'values' uses velocity_m_s, and below deeper_from_ms (two-way time) "
+                          "deeper_velocity_m_s (null turns the deeper layer off).")},
+                {"name": "stack_reflection", "args": {},
+                 "desc": ("Stack every loaded shot into a CMP reflection section with the "
+                          "Reflection tab's settings and the Gather tab's geometry, and wait for "
+                          "it (seconds). Returns the traces used, the timing correction and the "
+                          "flat-event check: an event is a reflection CANDIDATE only when "
+                          "flat_across_offsets is true, and even then it must be compared with a "
+                          "well (Add to Map, then the Project Map's compare_well); with none "
+                          "flat, say no reflection was confirmed.")},
+                {"name": "show_reflection",
+                 "args": {"view": "section | velocity_check | flat_event_check",
+                          "vertical": "time | depth"},
+                 "desc": ("Open the Reflection tab on one view, e.g. before capture_view "
+                          "'reflection'.")},
                 {"name": "get_status", "args": {},
                  "desc": "Report loaded data, current record, pick counts, and last result."},
             ],
@@ -1893,6 +2593,9 @@ class SeismicProcessingModule(BaseModule):
             "load_traveltime": lambda: self._agent_load_traveltime(args.get("path")),
             "clear_traveltime": lambda: self._agent_clear_traveltime(),
             "run_srt": lambda: self._agent_run_srt(),
+            "set_reflection": lambda: self._agent_set_reflection(args),
+            "stack_reflection": lambda: self._agent_stack_reflection(),
+            "show_reflection": lambda: self._agent_show_reflection(args),
             "get_status": lambda: self._agent_status(),
         }
         handler = handlers.get(action)
@@ -1949,6 +2652,8 @@ class SeismicProcessingModule(BaseModule):
                 "shot_x": self._shot_x.value(),
             },
             "has_velocity_model": getattr(self, "_srt_mgr", None) is not None,
+            "reflection": (self._reflection_report() if self._refl_result is not None
+                           else {"stacked": False}),
             "last_result_keys": sorted(last.keys()),
         }
 
@@ -2247,6 +2952,159 @@ class SeismicProcessingModule(BaseModule):
                 "count": len(picks), "picks": picks,
                 "suspect_traces": self._suspect_pick_traces()}
 
+    # -- reflection: the assistant's actions ------------------------------------------
+    def _reflection_settings(self) -> Dict[str, Any]:
+        return {
+            "skip_shots": self._refl_skip.text().strip(),
+            "leave_out_clipped": self._refl_drop_clipped.isChecked(),
+            "leave_out_early_signal": self._refl_drop_early.isChecked(),
+            "align_timing": self._refl_align.isChecked(),
+            "remove_air_wave": self._refl_remove_air.isChecked(),
+            "band_hz": [self._refl_low.value(), self._refl_high.value()],
+            "velocity_source": ("refraction_model" if self._refl_vsource.currentData() == "model"
+                                else "values"),
+            "velocity_m_s": self._refl_v1.value(),
+            "deeper_from_ms": self._refl_t2.value() if self._refl_layer.isChecked() else None,
+            "deeper_velocity_m_s": self._refl_v2.value(),
+            "offsets_m": [self._refl_off_lo.value(), self._refl_off_hi.value()],
+            "trace_spacing_m": self._refl_bin.value(),
+            "down_to_ms": self._refl_tmax.value(),
+            "stretch_percent": self._refl_stretch.value(),
+            "min_traces": int(self._refl_min_fold.value()),
+            "ground_roll_m_s": self._refl_ground_roll.value(),
+        }
+
+    def _agent_set_reflection(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Set the Reflection tab's controls by name, the way a user would."""
+        args = dict(args or {})
+        args.pop("params", None)
+        try:
+            if "skip_shots" in args:
+                shots = args.pop("skip_shots")
+                text = (", ".join(str(int(v)) for v in shots)
+                        if isinstance(shots, (list, tuple)) else str(shots or ""))
+                try:
+                    parse_shot_list(text)
+                except ValueError:
+                    raise ValueError("skip_shots takes record numbers, e.g. [1, 5, 12] or "
+                                     "'1, 5, 12' or '3-6'.") from None
+                self._refl_skip.setText(text)
+            for key, box in (("leave_out_clipped", self._refl_drop_clipped),
+                             ("leave_out_early_signal", self._refl_drop_early),
+                             ("align_timing", self._refl_align),
+                             ("remove_air_wave", self._refl_remove_air)):
+                if key in args:
+                    box.setChecked(bool(args.pop(key)))
+            for key, (low, high) in (("band_hz", (self._refl_low, self._refl_high)),
+                                     ("offsets_m", (self._refl_off_lo, self._refl_off_hi))):
+                if key in args:
+                    a, b = (float(v) for v in args.pop(key))
+                    low.setValue(a)
+                    high.setValue(b)
+            if "velocity_source" in args:
+                source = str(args.pop("velocity_source")).strip().lower()
+                if source not in ("values", "refraction_model", "model"):
+                    raise ValueError("velocity_source is 'values' or 'refraction_model'.")
+                self._refl_vsource.setCurrentIndex(self._refl_vsource.findData(
+                    "values" if source == "values" else "model"))
+            if "deeper_from_ms" in args:
+                value = args.pop("deeper_from_ms")
+                self._refl_layer.setChecked(value is not None)
+                if value is not None:
+                    self._refl_t2.setValue(float(value))
+            for key, box in (("velocity_m_s", self._refl_v1),
+                             ("deeper_velocity_m_s", self._refl_v2),
+                             ("trace_spacing_m", self._refl_bin),
+                             ("down_to_ms", self._refl_tmax),
+                             ("stretch_percent", self._refl_stretch),
+                             ("min_traces", self._refl_min_fold),
+                             ("ground_roll_m_s", self._refl_ground_roll)):
+                if key in args:
+                    value = args.pop(key)
+                    box.setValue(int(value) if box is self._refl_min_fold else float(value))
+        except (TypeError, ValueError) as exc:
+            return {"status": "failed", "error": str(exc)}
+        out: Dict[str, Any] = {"status": "ok", "reflection_settings": self._reflection_settings()}
+        if args:
+            out["ignored"] = sorted(args)
+        return out
+
+    def _agent_stack_reflection(self) -> Dict[str, Any]:
+        """Stack, and wait for it: the result is what the assistant needs to answer."""
+        self._center_tabs.setCurrentWidget(self._refl_view)
+        error = self._run_reflection()
+        if error:
+            return {"status": "failed", "error": error}
+        worker = self._refl_worker
+        if worker is not None:
+            # The stack runs on its worker while a local loop keeps the window
+            # painting; connected before the check, so a finish cannot slip by.
+            loop = QEventLoop()
+            worker.finished.connect(loop.quit)
+            if not worker.isFinished():
+                loop.exec()
+            QCoreApplication.processEvents()   # a stack that ended first still delivers
+        if self._refl_error:
+            return {"status": "failed", "error": self._refl_error}
+        if self._refl_result is None:
+            return {"status": "failed", "error": "The stack produced no result."}
+        return {"status": "ok", **self._reflection_report()}
+
+    def _agent_show_reflection(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        from PyHydroGeophysX.qt_apps.widgets import reflection_view as rv
+
+        views = {"section": rv.SECTION, "velocity_check": rv.VELOCITY,
+                 "flat_event_check": rv.FLATNESS}
+        view = str(args.get("view") or "section").strip().lower()
+        if view not in views:
+            return {"status": "failed", "error": f"view is one of {', '.join(views)}."}
+        vertical = str(args.get("vertical") or "").strip().lower()
+        if vertical and vertical not in ("time", "depth"):
+            return {"status": "failed", "error": "vertical is 'time' or 'depth'."}
+        self._center_tabs.setCurrentWidget(self._refl_view)
+        self._refl_view.set_view(views[view])
+        if vertical:
+            self._refl_view.set_vertical(vertical)
+        return {"status": "ok", "view": view, "stacked": self._refl_result is not None}
+
+    def _reflection_report(self) -> Dict[str, Any]:
+        """The last stack in numbers: what was used, and what the flat-event check found."""
+        result = self._refl_result
+        prepared = self._refl_prepared[1] if self._refl_prepared is not None else None
+        stack = result.stack
+        sg = result.supergather
+        events = []
+        for event in (sg.events if sg is not None else []):
+            depth = float(result.velocity.depth(np.array([event["t0"]]))[0])
+            events.append({"t0_ms": round(event["t0"] * 1e3, 2), "depth_m": round(depth, 2),
+                           "flat_across_offsets": bool(event["passes"]),
+                           "why": event["reason"]})
+        report: Dict[str, Any] = {
+            "stacked": True,
+            "verdict": self._reflection_verdict(result),
+            "traces_stacked": int(result.traces_used),
+            "positions": int(stack.cmp_x.size),
+            "position_range_m": [round(float(stack.cmp_x[0]), 2),
+                                 round(float(stack.cmp_x[-1]), 2)],
+            "max_traces_per_position": int(stack.max_fold),
+            "velocity": result.velocity.describe(),
+            "events": events,
+            "linear_energy_dominates": bool(
+                result.peaks_linear and result.peaks_hyperbolic
+                and result.peaks_linear[0][2] > result.peaks_hyperbolic[0][2]),
+        }
+        if getattr(self, "_refl_ray_limit", None) is not None:
+            # Depths below this come from a velocity carried down, not measured.
+            report["velocity_measured_to_m"] = round(float(self._refl_ray_limit), 2)
+        if prepared is not None:
+            report["traces"] = prepared.qc.counts()
+            st = prepared.statics
+            if st is not None:
+                shifts = [abs(v) for r, v in st.statics.items() if r not in st.median_records]
+                report["timing_correction_max_ms"] = round(max(shifts) * 1e3, 2)
+                report["air_wave_m_s"] = round(float(st.velocity), 1)
+        return report
+
     def agent_view_context(self, view: str) -> Optional[Dict[str, Any]]:
         """Ship the pick table with a captured gather.
 
@@ -2255,6 +3113,18 @@ class SeismicProcessingModule(BaseModule):
         tick label. Sending the picks as numbers leaves the picture to do what it
         is actually good for, judging whether a pick sits on the first arrival.
         """
+        if view == "reflection":
+            if self._refl_result is None:
+                return None
+            report = self._reflection_report()
+            return {
+                "showing": self._refl_view.view(),
+                "verdict": report["verdict"],
+                "events": report["events"],
+                "note": ("Event times and the flat-event outcome are exact. Only an event with "
+                         "flat_across_offsets true is a reflection candidate; bands that are not "
+                         "flat are left over from the mutes or ground roll."),
+            }
         if view != "gather" or self._raw is None:
             return None
         picks = {int(tr): round(float(ts) * 1000.0, 2)

@@ -68,6 +68,7 @@ from PyHydroGeophysX.qt_apps.widgets.em_survey_view import (
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import Model3DView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
+from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
 from PyHydroGeophysX.visualization.axis_units import set_length_axis, to_display_length
 from PyHydroGeophysX.workflows import (
@@ -1300,7 +1301,8 @@ class EMProcessingModule(BaseModule):
         self._backend_label.setStyleSheet("font-size:8pt;")
         form.addRow("Backend", self._backend_label)
         self._inv_progress = QProgressBar(); self._inv_progress.setVisible(False)
-        form.addRow(self._inv_progress)
+        self._inv_stop = self.stop_button()
+        form.addRow(progress_with_stop(self._inv_progress, self._inv_stop))
         self._inv_export = QPushButton("Export recovered model (csv)…")
         self._inv_export.setIcon(theme.icon("fa5s.file-export"))
         self._inv_export.setEnabled(False)
@@ -2177,6 +2179,7 @@ class EMProcessingModule(BaseModule):
         self._inv_worker.finished.connect(self._reset_inv_button)
         self.register_worker(self._inv_worker)
         self._inv_worker.start()
+        self._inv_stop.attach(self._inv_worker, "em.inversion")
 
     def _on_workflow_ok(self, result: WorkflowRunResult) -> None:
         try:
@@ -2278,6 +2281,7 @@ class EMProcessingModule(BaseModule):
         worker.finished.connect(self._reset_inv_button)
         self._line_worker = self.register_worker(worker)
         worker.start()
+        self._inv_stop.attach(worker, "em.line_inversion", what="The line inversion")
 
     def _persist_source(self, inputs_dir: Path, method: str) -> Path:
         """Store the imported soundings so a recorded EM run is self-contained.

@@ -148,9 +148,12 @@ class MapExportDialog(QDialog):
         self.mode.addItem('Straight line: start + bearing', 'straight')
         self.mode.addItem('CSV control points: distance,x,y', 'controls')
         self.mode.addItem('CSV positions: x,y (one row per sample)', 'rows')
-        if meta['kind'] in ('grid', 'points'):
+        if meta['kind'] in ('grid', 'points', 'wells'):
             self.mode.removeItem(self.mode.findData('straight'))
             self.mode.removeItem(self.mode.findData('controls'))
+        if meta['kind'] == 'wells':
+            # Wells are placed where their own coordinates say, nowhere else.
+            self.mode.removeItem(self.mode.findData('rows'))
         form.addRow('Location', self.mode)
         self.crs = QComboBox()
         self.crs.setEditable(True)
@@ -177,7 +180,9 @@ class MapExportDialog(QDialog):
         browse = QPushButton('Choose location CSV…')
         browse.clicked.connect(self._browse)
         form.addRow(browse, self.csv)
-        sample_text = (f'{distance.size} horizontal model cells / stations. CSV rows follow stored result order.'
+        sample_text = (f'{distance.size} wells, placed at their own easting and northing in the '
+                       'coordinate system above.' if meta['kind'] == 'wells' else
+                       f'{distance.size} horizontal model cells / stations. CSV rows follow stored result order.'
                        if meta['kind'] in ('grid', 'points') else
                        f'{distance.size} samples; distance {distance.min():g}–{distance.max():g} m. '
                        'CSV rows must follow result order. Control points must span this distance range.')

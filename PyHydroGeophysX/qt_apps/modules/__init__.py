@@ -31,6 +31,7 @@ MODULE_SPECS = {
     "em": ("em_processing", "EMProcessingModule", "EM Processing"),
     "gravmag": ("gravmag_processing", "GravMagProcessingModule", "Gravity / Magnetics"),
     "mt": ("mt_processing", "MTProcessingModule", "Magnetotellurics"),
+    "boreholes": ("boreholes", "BoreholesModule", "Boreholes"),
     "joint_inversion": ("joint_inversion", "JointInversionModule", "Joint Inversion"),
     "hydro_geophysics": ("hydro_geophysics", "HydroGeophysicsModule", "Hydro → Geophysics"),
     "geo_hydrology": ("geo_hydrology", "GeoHydrologyModule", "ERT → Water Content"),
@@ -39,7 +40,7 @@ MODULE_SPECS = {
 }
 
 #: Order used to populate the central stack. ``home`` is always first.
-MODULE_ORDER: List[str] = ["home", "one_click", "seismic", "ert", "mesh3d", "em", "gravmag", "mt", "joint_inversion", "hydro_geophysics", "geo_hydrology", "seismic3d", "project_map", "model_viewer"]
+MODULE_ORDER: List[str] = ["home", "one_click", "seismic", "ert", "mesh3d", "em", "gravmag", "mt", "boreholes", "joint_inversion", "hydro_geophysics", "geo_hydrology", "seismic3d", "project_map", "model_viewer"]
 
 #: Install commands for optional packages a module import may be missing.
 _INSTALL_HINTS = INSTALL_HINTS

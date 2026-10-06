@@ -22,7 +22,7 @@ import sys
 import time
 
 # Modules safe to construct on a headless/offscreen display (no GL viewer).
-_NAV_SAFE = ["seismic", "ert", "em", "gravmag", "mt", "hydro_geophysics", "geo_hydrology", "seismic3d"]
+_NAV_SAFE = ["seismic", "ert", "em", "gravmag", "mt", "boreholes", "hydro_geophysics", "geo_hydrology", "seismic3d"]
 
 
 def _build_app():

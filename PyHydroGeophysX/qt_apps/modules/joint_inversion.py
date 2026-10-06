@@ -57,6 +57,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
 )
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets import length_units
+from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
 from PyHydroGeophysX.visualization.axis_units import set_length_axis, set_section_axes
 from PyHydroGeophysX.workflows import (
@@ -918,13 +919,13 @@ class JointInversionModule(BaseModule):
         self._run_status = QLabel("Ready."); self._run_status.setWordWrap(True)
         layout.addWidget(self._run_status)
         self._progress = QProgressBar(); self._progress.setVisible(False)
-        layout.addWidget(self._progress)
+        self._stop = self.stop_button("The joint inversion")
+        self._stop.clicked.connect(lambda: self._run_status.setText("Stopped by user."))
+        layout.addWidget(progress_with_stop(self._progress, self._stop))
         row = QHBoxLayout()
         self._run_button = QPushButton("Run joint inversion")
         self._run_button.setProperty("primary", True); self._run_button.clicked.connect(self._run)
-        self._cancel_button = QPushButton("Cancel"); self._cancel_button.setEnabled(False)
-        self._cancel_button.clicked.connect(self._cancel)
-        row.addWidget(self._run_button); row.addWidget(self._cancel_button); row.addStretch(1)
+        row.addWidget(self._run_button); row.addStretch(1)
         layout.addLayout(row)
         return page
 
@@ -1004,10 +1005,8 @@ class JointInversionModule(BaseModule):
         )
         self._reproduce.set_bundle(recipe_path, script_path)
         self._workflow_recipe_path = str(recipe_path)
-        self._run_busy = BusyStateController(
-            [self._run_button, self._cancel_button]
-        )
-        self._run_busy.start(enabled_while_busy=[self._cancel_button])
+        self._run_busy = BusyStateController([self._run_button])
+        self._run_busy.start()
         self._progress.setVisible(True); self._progress.setRange(0, 0)
         self._run_status.setText("Starting joint inversion…")
         # In a process of its own, so the window keeps painting through both
@@ -1019,6 +1018,7 @@ class JointInversionModule(BaseModule):
         worker.failed.connect(self._on_failure)
         worker.finished.connect(self._on_finished)
         self._worker = self.register_worker(worker); worker.start()
+        self._stop.attach(worker, "joint_inversion.run")
 
     def _on_workflow_progress(self, message: str) -> None:
         try:
@@ -1041,12 +1041,6 @@ class JointInversionModule(BaseModule):
                 recipe_path=self._workflow_recipe_path,
             )
         self._on_success(domain_result)
-
-    def _cancel(self) -> None:
-        if self._worker is not None:
-            # The run's process is stopped where it stands, not at a step's end.
-            self._worker.cancel(); self._run_status.setText("Stopping the run…")
-            self.cancel_persisted_run("Cancelled by user", "joint_inversion.run")
 
     def _on_progress(self, record: Dict[str, Any]) -> None:
         if "message" in record:
@@ -1088,7 +1082,6 @@ class JointInversionModule(BaseModule):
         if self._run_busy is not None:
             self._run_busy.finish()
             self._run_busy = None
-        self._cancel_button.setEnabled(False)
         self._run_button.setEnabled(self._validated)
 
     # -- Step 6 -------------------------------------------------------------

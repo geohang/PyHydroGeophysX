@@ -63,7 +63,7 @@ from PyHydroGeophysX.qt_apps.widgets import temperature_panel
 from PyHydroGeophysX.qt_apps.widgets.mesh_preview import MeshPreviewView
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
-from PyHydroGeophysX.qt_apps.widgets.run_controls import PauseButton, progress_with_pause
+from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
 from PyHydroGeophysX.qt_apps.workers import (
     ProcessProbeWorker,
     ProcessWorkflowWorker,
@@ -869,9 +869,8 @@ class ERTProcessingModule(BaseModule):
         iform.addRow(self._invert_btn)
         self._inv_progress = QProgressBar()
         self._inv_progress.setVisible(False)
-        self._inv_pause = PauseButton(progress=self._inv_progress,
-                                      log=lambda text: self.log(text, "info"))
-        iform.addRow(progress_with_pause(self._inv_progress, self._inv_pause))
+        self._inv_stop = self.stop_button()
+        iform.addRow(progress_with_stop(self._inv_progress, self._inv_stop))
 
         iform.addRow(self._build_timelapse_panel())
         # Reflect the initial checkbox states; setChecked() above emitted nothing.
@@ -982,10 +981,8 @@ class ERTProcessingModule(BaseModule):
         self._tl_btn.clicked.connect(self._run_timelapse)
         tlform.addRow(self._tl_btn)
         self._tl_progress = QProgressBar(); self._tl_progress.setVisible(False)
-        self._tl_pause = PauseButton(progress=self._tl_progress,
-                                     log=lambda text: self.log(text, "info"),
-                                     what="The time-lapse inversion")
-        tlform.addRow(progress_with_pause(self._tl_progress, self._tl_pause))
+        self._tl_stop = self.stop_button("The time-lapse inversion")
+        tlform.addRow(progress_with_stop(self._tl_progress, self._tl_stop))
         self._tl_export_btn = QPushButton("Export results (VTK + npy + mesh)…")
         self._tl_export_btn.setIcon(theme.icon("fa5s.cube"))
         self._tl_export_btn.setToolTip("Saves the time-lapse models to a chosen folder: a combined VTK, "
@@ -2579,7 +2576,7 @@ class ERTProcessingModule(BaseModule):
         self._inv_worker.finished.connect(self._reset_invert_button)
         self.register_worker(self._inv_worker)
         self._inv_worker.start()
-        self._inv_pause.attach(self._inv_worker)
+        self._inv_stop.attach(self._inv_worker, "ert.single_inversion")
 
     def _abs_path(self, value: Any) -> str:
         """Resolve a workflow-relative output path against the recipe directory."""
@@ -3927,7 +3924,7 @@ class ERTProcessingModule(BaseModule):
         self._tl_worker.finished.connect(self._reset_tl_button)
         self.register_worker(self._tl_worker)
         self._tl_worker.start()
-        self._tl_pause.attach(self._tl_worker)
+        self._tl_stop.attach(self._tl_worker, "ert.timelapse_inversion")
 
     def _on_tl_progress(self, current: int, total: int, label: str) -> None:
         """Show completed ADTLERT windows while retaining the text log."""

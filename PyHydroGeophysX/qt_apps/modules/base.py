@@ -550,6 +550,20 @@ class BaseModule(QWidget):
     def cancel_persisted_run(self, error: str = "", operation_id: str = "") -> None:
         self.state.cancel_run(self.module_key, error, operation_id)
 
+    def stop_button(self, what: str = "The inversion"):
+        """A Stop button for this page's runs, to sit beside the run's progress bar.
+
+        ``attach(worker, operation_id)`` it to each run as the run starts;
+        pressing it ends the run's process and records the run as stopped by
+        the user, not as failed.
+        """
+        from PyHydroGeophysX.qt_apps.widgets.run_controls import StopButton
+
+        return StopButton(
+            log=lambda text: self.log(text, "warn"),
+            on_stop=lambda operation: self.cancel_persisted_run("Stopped by user", operation),
+            what=what)
+
     # -- agent command interface --------------------------------------------
     def agent_describe(self) -> Dict[str, Any]:
         """Describe this module for the AQUAH assistant.

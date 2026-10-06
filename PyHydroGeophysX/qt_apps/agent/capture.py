@@ -43,6 +43,7 @@ _VIEWER_NAMES: Dict[str, str] = {
     "MeshResultView": "section",
     "InversionQualityView": "quality",
     "SeismicViewer": "gather",
+    "ReflectionView": "reflection",
     "Model3DView": "model3d",
     "VTKVolumeView": "volume3d",
     "PlanSliceView": "plan_slice",
