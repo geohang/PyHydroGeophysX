@@ -50,6 +50,36 @@ Open the App
 
    Launch PyHydroGeophysX Agent Web App
 
+To run it locally from a source checkout:
+
+.. code-block:: bash
+
+   streamlit run examples/app_geophysics_workflow.py
+
+On Windows, double-click ``PyHydroGeophysX\start_webapp.bat`` instead
+(``PyHydroGeophysX/start_webapp.sh`` on macOS and Linux). The launcher finds a
+compatible Python or conda environment, opens the browser, and installs the
+web-app dependencies into a local ``.venv-webapp`` environment when needed.
+
+Or hand the setup to Claude Code or Codex:
+
+.. code-block:: text
+
+   Set up and run the PyHydroGeophysX Streamlit app from this repository at
+   http://localhost:8501.
+
+   Check `conda list numpy` first: `pypi` in the channel column means install with
+   pip, a conda channel means install with conda. Install the `webapp` extra, and
+   `geophysics` as well if pygimli is missing. Show me a dry run before you change
+   my environment.
+
+   Then run:
+     streamlit run examples/app_geophysics_workflow.py
+
+   Leave it running, tell me the URL, and report any error from the first page load
+   rather than only that the server started. If port 8501 is busy, use the next
+   free port and tell me which one.
+
 What It Does
 ^^^^^^^^^^^^
 

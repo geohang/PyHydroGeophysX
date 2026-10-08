@@ -473,6 +473,14 @@ minor release can change the API.
 
 ### Changed
 
+- The README keeps to the essentials - features, installation, a quick start,
+  the apps, examples and citations - and points to the website for the rest.
+  E4D, R2 and R3t setup moved to the ERT method page (`methods/ert.rst`), the
+  ADTLERT time-lapse example to the installation page, the local web-app
+  launcher and its setup prompt to the web-app page. The coding-agent install
+  prompt now lives only on the website (`_static/install-agent-prompt.txt`),
+  so the docs build no longer compares it with the README. The underlying
+  libraries' BibTeX stays in the README, folded under one heading per library.
 - ERT page: the Electrodes tab is gone. It was a plot of electrode dots that
   also held the loading controls, so once a file loaded and the page moved on
   to the pseudosection the file list went with it, and a time-lapse series was

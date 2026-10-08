@@ -53,6 +53,11 @@ ADERT speed comparison
 
 Watch the speed comparison, then see the ADTLERT backend setup below.
 Runtime depends on the hardware, dataset and solver settings.
+`Yang et al. (2026) <https://arxiv.org/abs/2608.14661>`_ measured the CUDA
+engine against pyGIMLi and report an approximately 51-fold speedup under their
+tested configuration, with forward responses, gradients and recovered
+resistivity models in close agreement. The engine is aimed at larger lines and
+time-lapse windows.
 
 .. raw:: html
 
@@ -113,6 +118,23 @@ same electrode positions and ABMN ordering; process-level window parallelism
 is disabled for ADTLERT to avoid duplicating GPU memory. The default ``cgls``
 method selects CuPy CGLS on the CUDA-backed ADTLERT path.
 
+.. code-block:: python
+
+   from PyHydroGeophysX.inversion.time_lapse import run_timelapse_ert
+
+   result = run_timelapse_ert(
+       ["survey_0.dat", "survey_1.dat", "survey_2.dat"],
+       [0.0, 1.0, 2.0],
+       {"engine": "adtlert", "windowed": True, "window_size": 3},
+       "output",
+   )
+
+Measurements are aligned by their ABMN union; missing rows receive 100%
+relative error and an apparent-resistivity placeholder from the available
+timesteps. This reduces their weight; it does not exclude them from fitting.
+Native PyHydro time-lapse keeps each survey's own measurement count and
+ordering.
+
 The ``adtlert`` and ``gpu`` extras share ``cupy-cuda12x``. Do not install a
 second CuPy package such as ``cupy-cuda11x`` in the same environment.
 
@@ -148,6 +170,17 @@ Optional Dependencies
 
    pip install pygimli simpeg resipy joblib
    pip install "cupy-cuda12x[ctk]"
+
+TetGen builds the E4D-style 3-D meshes. It is AGPL-licensed, so it is not
+installed with the package; without it, Gmsh stands in:
+
+.. code-block:: bash
+
+   pip install tetgen
+
+E4D, R2 and R3t are external inversion programs, not Python packages; see
+:ref:`ert-e4d` and :ref:`ert-r2-r3t` for where they run and how
+PyHydroGeophysX reaches them.
 
 Desktop App (Qt Studio)
 --------------------------
