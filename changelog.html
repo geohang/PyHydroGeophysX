@@ -1,0 +1,2209 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Changelog &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="_static/documentation_options.js?v=1dd76d02"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'changelog';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/changelog.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Citation" href="citation.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="_static/searchtools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script src="searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="agents/index.html">
+    Agentic AI
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class=" current active">
+  <a class="nav-link dropdown-item nav-internal" href="#">
+    Changelog
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="agents/index.html">
+    Agentic AI
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    Changelog
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"></div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Changelog</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="changelog">
+<h1>Changelog<a class="headerlink" href="#changelog" title="Link to this heading">#</a></h1>
+<p>All notable changes to PyHydroGeophysX are recorded in this file. The format
+follows <a class="reference external" href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>, and the project
+uses <a class="reference external" href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>; before 1.0, a
+minor release can change the API.</p>
+<section id="unreleased">
+<h2>[Unreleased]<a class="headerlink" href="#unreleased" title="Link to this heading">#</a></h2>
+<section id="added">
+<h3>Added<a class="headerlink" href="#added" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Every plot in the studio has the navigation toolbar the ERT Mesh tab had -
+Home, Back, Forward, Pan, Zoom, subplot and axis settings, Save - and every
+colour scale a “Lock range” with typed lower and upper limits
+(<code class="docutils literal notranslate"><span class="pre">qt_apps/widgets/color_range.py</span></code>, <code class="docutils literal notranslate"><span class="pre">readout.toolbar_row</span></code>): the ERT Data tab,
+Reciprocal errors and Inversion quality, EM sections and plan slices, the 3-D
+model views, the hydro and model-viewer arrays, seismic gathers and stacks,
+gravity and magnetics maps, EM station maps, the scientific sections, joint
+inversion, boreholes and the Project Map. Locked limits hold while stepping
+through surveys, steps, lines, slices or shots of one quantity, and are let go
+when the quantity changes. The seismic Clip control greys out while its
+gather’s range is locked.</p></li>
+<li><p>Every studio run keeps <code class="docutils literal notranslate"><span class="pre">run_settings.txt</span></code>, its recipe - inputs, parameters,
+software versions and, once it ends, the outcome - as text, so Run records
+offers settings on every page and not only ERT’s <code class="docutils literal notranslate"><span class="pre">inversion_settings.txt</span></code>.
+The assistant’s Workflow runs write it from <code class="docutils literal notranslate"><span class="pre">workflow_config.json</span></code>, leaving
+out credentials, list <code class="docutils literal notranslate"><span class="pre">outputs/activity.log</span></code> among their records, and log
+their start and finish into their run log.</p></li>
+<li><p>The assistant’s report ends with an appendix, “Data and Processing Records”:
+the settings, QC reports and logs of the run that wrote it and of every
+earlier studio run whose files it read, by path, with the earlier runs’
+recorded figures from <code class="docutils literal notranslate"><span class="pre">run.json</span></code> (<code class="docutils literal notranslate"><span class="pre">agents/workflow_audit.records_section</span></code>).</p></li>
+<li><p>Every studio run keeps its own records, for reviewing and reproducing it.
+<code class="docutils literal notranslate"><span class="pre">logs/run_log.txt</span></code> holds every line the page logged for the run, as the Log
+window showed it - the preparation, all of the workflow process’s output and
+the summary logged once the result is in - however long the run, and
+<code class="docutils literal notranslate"><span class="pre">logs/workflow_output.log</span></code> now keeps all of the process’s output (it kept the
+last 2000 lines), written as it arrives so a crash or a Stop leaves it too.
+The warnings a page logged during a run are kept with the run, so Saved
+Results shows them. ERT single and time-lapse runs also write
+<code class="docutils literal notranslate"><span class="pre">inversion_settings.txt</span></code> at the top of the run folder: software versions, the
+data files in order with their acquisition times, electrodes, reader, the QC
+thresholds, the error model, the mesh and every inversion parameter (the
+ones left at the code’s default marked), with the engine, fit and lambda
+the run reported added when it ends. With QC applied they write
+<code class="docutils literal notranslate"><span class="pre">qc_report.txt</span></code> and, for a series, one QC log per survey in <code class="docutils literal notranslate"><span class="pre">qc/</span></code>: how the
+readings pair with their reciprocals, each check with its threshold and what
+it kept, and a reciprocal error model <code class="docutils literal notranslate"><span class="pre">dR</span> <span class="pre">=</span> <span class="pre">10^b</span> <span class="pre">R^m</span></code> fitted over all
+surveys and per survey, for reference. Saved Results and the ERT page’s new
+Run records button list and open them; a Files-tab row opens on double-click.</p></li>
+<li><p>ERT page: a survey written as two files - a forward file and, minutes later,
+its reciprocal file (<code class="docutils literal notranslate"><span class="pre">..._recip_...</span></code>) - is one survey. With “Pair reciprocal
+files with their forward file” (shown, ticked, when the list holds such
+names) the two make one row and one time step at the forward file’s time,
+their readings merged on the forward file’s electrodes before any QC, so
+reciprocal errors, the reciprocal-error check and the error model work
+across the pair. Unpaired forward files stay surveys of their own; a
+reciprocal file with no forward file is left out and named. Sorting, moving,
+removing and the assistant’s list actions keep pairs together. The run’s
+<code class="docutils literal notranslate"><span class="pre">qc_report.txt</span></code> and per-survey QC logs list each step’s files and readings.</p></li>
+<li><p>ERT Data QC: “Average each reading with its reciprocal” (check 0, off by
+default) makes each pair one reading with the mean resistance and the pair’s
+difference as its error.</p></li>
+<li><p>ERT Data errors: “From the reciprocal error model” gives every reading the
+error of <code class="docutils literal notranslate"><span class="pre">dR</span> <span class="pre">=</span> <span class="pre">10^b</span> <span class="pre">R^m</span></code> fitted to the reciprocal pairs - the survey’s own
+for a single inversion, one fit over the series for time-lapse - never below
+“Minimum” (1 %). The inversion applies it (<code class="docutils literal notranslate"><span class="pre">error_source=&quot;reciprocal&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">error_model</span></code>; time-lapse <code class="docutils literal notranslate"><span class="pre">error_model</span></code>), and the settings file and QC
+report state m, b and R²; a time-lapse run reports what each engine did
+with the errors (the in-house engine takes 1-50 %, ADTLERT at least 1 %).
+The Data errors group now sits before the Inversion group.</p></li>
+<li><p>ERT page: a Reciprocal errors tab beside the Data tab draws every
+reciprocal pair - its error |dR| against its mean resistance |R|, on log
+axes - with the mean error of each group of pairs and the fitted model
+<code class="docutils literal notranslate"><span class="pre">dR</span> <span class="pre">=</span> <span class="pre">10^b</span> <span class="pre">R^m</span></code>, its result stated in the title. In time-lapse mode it shows
+the whole series, coloured first survey to last, with one global fit; the
+surveys are read in the background with progress in the status bar, once
+per file and filter, and the time-lapse QC reuses what was read (with no
+filter and no reciprocal files to merge, the run fits the pairs already read
+instead of reading the series again). Its “Fit to” chooser fits the model to
+all pairs before filtering (the default) or only to the pairs the applied
+Data QC filter kept, the others drawn in grey; the data errors, the QC
+report, the settings file (“Error model fitted to”) and the run’s
+<code class="docutils literal notranslate"><span class="pre">reciprocal_error_model.png</span></code> follow it. A run also keeps the pairs
+(<code class="docutils literal notranslate"><span class="pre">reciprocal_error_pairs.npz</span></code>), so Saved Results shows the same view. The
+assistant sets it as <code class="docutils literal notranslate"><span class="pre">error_model_fit</span></code> (“all” or “kept”).</p></li>
+<li><p>The time-lapse data QC shows its progress per survey and can be stopped.</p></li>
+<li><p>A run that finished before the studio closed without saving it can be
+recovered the next time the Project is opened, instead of only deleted.</p></li>
+<li><p>Saved Results no longer lists a time-lapse run’s working copies of its
+surveys (<code class="docutils literal notranslate"><span class="pre">normalized/</span></code>), which buried its results and, for long series, added
+a warning that files were not listed.</p></li>
+<li><p>Redesigned the desktop Home screen: the active Project with its saved
+results, map and New / Open actions; an Agentic AI entrance that names the
+active assistant; and research task cards that follow the model-data loop
+(forward: simulate a survey; inverse: invert field data, estimate
+hydrology). The cards are built from the navigator’s groups, so every
+navigator page appears on Home once. Session context is a collapsible detail.</p></li>
+<li><p>Seismic refraction, TDEM and MT runs now go the way ERT runs do: the data
+are read and drawn, inverted, and the inversion is evaluated before anything
+is built on it. New workflow steps <code class="docutils literal notranslate"><span class="pre">load_seismic_traveltimes</span></code>,
+<code class="docutils literal notranslate"><span class="pre">load_tdem_data</span></code> and <code class="docutils literal notranslate"><span class="pre">load_mt_sites</span></code> read the data and draw them (travel-time
+curves per shot; the decays of up to six soundings beside the station
+layout; each site’s apparent resistivity and phase), and
+<code class="docutils literal notranslate"><span class="pre">evaluate_seismic_inversion</span></code>, <code class="docutils literal notranslate"><span class="pre">evaluate_tdem_inversion</span></code> and
+<code class="docutils literal notranslate"><span class="pre">evaluate_mt_inversion</span></code> score the model out of 100 with the ERT evaluation’s
+chi-squared rule (<code class="docutils literal notranslate"><span class="pre">agents._method_evaluation</span></code>, which <code class="docutils literal notranslate"><span class="pre">evaluate_inversion</span></code> now
+shares): the fit of the picks, ray coverage, cells at a velocity bound and
+convergence for seismic; each sounding’s chi-squared, the soundings resolved
+and the physical range for TDEM; each site’s RMS against Occam’s target and
+the static shifts for MT. Each draws its fit and writes recommendations. The
+seismic evaluation re-inverts with lambda doubled or halved while the fit is
+off, up to <code class="docutils literal notranslate"><span class="pre">max_attempts</span></code>, and keeps the best-scoring model (on the example
+line, chi-squared 0.67 at lambda 50 became 0.89 at lambda 100). Interfaces,
+plan-view maps and water content wait for the evaluation and use the model
+it kept, and the reports gain an Inversion Quality section with the score,
+its components and any retries. Gravity and magnetic runs have the same two
+steps: <code class="docutils literal notranslate"><span class="pre">load_gravmag_data</span></code> maps the station values and settles which field
+the table holds before anything is inverted, and <code class="docutils literal notranslate"><span class="pre">evaluate_gravmag_inversion</span></code>
+scores the residual anomaly’s fit (the inversion now returns its data and
+prediction at the inverted stations), a model at the solver’s bound and the
+beta search, and draws data, model and misfit. Only the seismic evaluation
+re-inverts: Occam, the potential-field beta sweep and the TDEM line
+inversion’s <code class="docutils literal notranslate"><span class="pre">auto_lambda</span></code> search their own regularization, which the
+ground-TEM preset leaves off on purpose, as the TDEM evaluation says when
+the fit is off.</p></li>
+<li><p>Loading ERT data draws an apparent-resistivity pseudosection of each survey
+as it loads (up to six of a long series), so the studio’s Live tab shows the
+data during a load that can take a minute, and the step says what it read:
+electrodes, readings and the apparent-resistivity range. The figures are kept
+under <code class="docutils literal notranslate"><span class="pre">raw_data/</span></code> in the run folder and open each method’s figures in the
+report. Readings are placed as the ERT page places them, now in one function
+both use (<code class="docutils literal notranslate"><span class="pre">data_processing.ert_io.pseudosection_points</span></code>). The ERT reports,
+single survey and time-lapse, open their figures with the surveys’
+pseudosections side by side on one colour scale (up to six of a series), the
+data the inversion fitted, and keep it whatever figures the request narrows
+them to; report figures in a subfolder of the run are now linked by their
+relative path, not their file name alone.</p></li>
+<li><p>Water content is drawn with its standard deviation. Each conversion draws the
+mean and the Monte Carlo standard deviation as it ends (the Live tab shows
+it): the ERT section of the first, middle and last survey; a TEM survey’s
+section; an MT site or TEM sounding against depth with one- and two-sigma
+bands, an MT site down to its sensitivity depth. The time-lapse report adds
+the standard deviation of every survey on one colour scale from zero, and the
+uncertainty figures are drawn whenever water content is, whatever the request
+named.</p></li>
+<li><p>The Qt assistant can use locally authenticated Codex CLI or Claude Code CLI
+without an API key, for step-by-step studio tools, folder classification and
+AQUAH’s Auto to report. Selecting a CLI automatically discovers an existing
+installation or downloads and verifies the official native binary. A Log In
+button opens the official browser sign-in; chat becomes ready after the
+saved subscription login is checked, without manual PATH configuration.
+CLI settings hide the API key field; model replies pass through the existing
+studio approval flow. The
+initial CLI bridge supports text and structured studio state.</p></li>
+<li><p>A raw seismic line runs as the steps it is made of: “Pick first-arrival
+travel times” (<code class="docutils literal notranslate"><span class="pre">pick_first_breaks</span></code>), “Run seismic refraction inversion” and
+“Extract layer interfaces” (<code class="docutils literal notranslate"><span class="pre">extract_seismic_interfaces</span></code>), then the report,
+where it used to be one step that did all three out of sight. The picking
+step checks its own picks: each side of each shot is fitted with the closest
+non-decreasing first-arrival curve, a pick that strays from it is picked
+again along it by the AIC picker (Maeda, 1985) in a window around where the
+curve puts it (<code class="docutils literal notranslate"><span class="pre">data_processing.seismic.repick_against_curve</span></code>), what still
+strays is left out (<code class="docutils literal notranslate"><span class="pre">monotonic_pick_check</span></code>), and a shot whose times disagree
+with their reciprocals by the same amount pair after pair - a timing error
+of its own record - is left out whole (<code class="docutils literal notranslate"><span class="pre">reciprocal_shot_check</span></code>). On one
+24-geophone line two shots in seventeen came out 14 and 9.8 ms early and 17
+of 408 picks had jumped to noise; with the picks corrected and the shots
+left out the inversion went from chi-squared 49 to 5.4 and lost the
+4000 m/s artefacts 3 m under a soil. On a second line, whose far traces the
+threshold picker had taken at 0-5 ms - the noise just after time zero,
+lifted by the AGC, where the first arrival came at 30-40 ms - or at time
+zero itself, on traces that start on a DC level, 80 of 384 picks were
+corrected rather than lost, one shot 7.8 ms early was found, and
+chi-squared fell from 14.6 to 9.3. Re-picking every trace by AIC, or picking
+by energy ratio and AIC alone, fitted worse on both lines than correcting
+only the stray picks. The picks are drawn - corrected ones ringed, left-out
+ones crossed - and the report lists all three; the interfaces are drawn on
+the model in a figure of their own. The picking is two functions any caller
+can use, <code class="docutils literal notranslate"><span class="pre">data_processing.seismic.pick_and_correct</span></code> (threshold picks on the
+traces with AGC, placed on the survey’s geometry, the stray ones picked
+again) and <code class="docutils literal notranslate"><span class="pre">screen_picks</span></code> (the curve check, the reciprocity check, then the
+neighbouring shots, below), with <code class="docutils literal notranslate"><span class="pre">apply_record_interval</span></code> for the sample
+interval; the studio’s Seismic page uses the same three.</p></li>
+<li><p>The picking step also holds each pick to the neighbouring shots’ picks at
+the same geophone (<code class="docutils literal notranslate"><span class="pre">data_processing.seismic.neighbour_shot_check</span></code>, on by
+default; <code class="docutils literal notranslate"><span class="pre">first_break_params={&quot;neighbour_check&quot;:</span> <span class="pre">False}</span></code> turns it off). By
+reciprocity one geophone’s picks across the shots form a first-arrival curve
+just as a shot’s do, and the neighbouring shots, a few metres apart, place a
+pick more closely than its own shot’s curve, which far from the shot leaves
+room for a pick a quarter early and has no reciprocals to check against off
+the end of the spread. The geophone’s curve finds the conflict but not which
+pick is wrong - by the curve alone the next shot’s right pick was taken as
+often as the stray one - so the pick that also lies out of line in its own
+shot’s gather is taken, picked again by AIC where the neighbours put it, and
+left out if it still disagrees. It runs after the reciprocity check, so a
+shot with a timing error is still left out whole. On the two lines above it
+picked again 10 and 1 picks and left out 3 and 1: chi-squared went from 9.2
+to 6.6 and from 5.4 to 4.6, and on the first the reciprocal times - which it
+never looks at - came to agree to 1.75 ms on average instead of 2.4. On the
+shipped <code class="docutils literal notranslate"><span class="pre">AP_411.sgy</span></code> it changed one pick and the fit not at all. A low-cut
+filter before picking was tried for the noisy far traces first and fitted
+worse on one line or the other at every corner tried, 2 to 20 Hz: their noise
+is at the first arrival’s own 40 Hz, and a causal filter that close to it
+moves the onset late.</p></li>
+<li><p>The seismic picking step draws its evidence: shot gathers spread along the
+line, and every shot left out, as variable-area wiggle traces at their
+receiver positions with the picker’s AGC, with the picks on them - kept,
+picked again, left out (<code class="docutils literal notranslate"><span class="pre">seismic_shot_gathers.png</span></code>). It is the report’s
+first seismic figure and appears on the studio’s Workflow page while the run
+is still going. On the second line above it shows at a glance what the
+numbers do not: the far traces of the first shot start on a DC drift, and
+their picks scatter by several milliseconds.</p></li>
+<li><p>Plan-view resistivity maps for TEM surveys. When a request asks for the
+spatial distribution (“spatial”, “map”, “plan view”, “depth slice”,
+“空间分布”, …), a step of its own after the TDEM inversion, “Interpolate
+plan-view maps” (<code class="docutils literal notranslate"><span class="pre">map_tdem_plan_view</span></code>), maps resistivity at up to six depths
+that enough soundings resolve (<code class="docutils literal notranslate"><span class="pre">visualization/em_maps.py</span></code>): log10 resistivity
+ordinary-kriged from the soundings resolving each depth with
+<code class="docutils literal notranslate"><span class="pre">core.plan_interpolation</span></code>, a variogram fitted per depth to lags out to eight
+times 0.6 of the wider gaps between lines (11 m on one TEM2Go day), and
+filled across the outline of all the soundings, the gaps between lines and
+the parts of a deep map no sounding reaches included; a sounding below its
+depth of investigation is left out at that depth, and <code class="docutils literal notranslate"><span class="pre">max_distance</span></code> blanks
+beyond a distance when asked. On the sections’ colour scale, in metres or
+feet. A second figure maps the kriging standard deviation of every cell, in
+decades with the factor it stands for, small beside the soundings and
+growing into the gaps. Kriging all six depths of a 564-sounding day takes a
+few seconds; held-out soundings at 10 m are predicted to 0.106 decade RMS,
+as linear interpolation does (0.105), with a median standard deviation of
+0.10-0.29 decade by depth on that day. The maps are drawn over the survey’s
+own georeferenced image when it has one - the satellite image a TEM2Go
+controller keeps under <code class="docutils literal notranslate"><span class="pre">Maps</span></code>, read with its world file
+(<code class="docutils literal notranslate"><span class="pre">basemap.local_basemap_image</span></code>) - and over satellite tiles otherwise. A TEM2Go project records each sounding midway between loop
+and coil but the instrument’s GPS fix as its longitude and latitude, 7 m
+apart on one survey, which kept the tile fit from registering; the sounding
+coordinates are now converted from their UTM zone instead. Each depth’s
+resistivity and kriging standard deviation are also written as ESRI ASCII
+grids for GIS, and the report gains a “Resistivity in Plan View” section with
+each depth’s variogram (model, range, nugget share) and kriging standard
+deviation (median and 90th percentile), both figures, a limitation on
+kriging between lines, and - when the soundings cannot make a map, such as a
+single line - a “Not Delivered” entry saying why. The Qt studio shows both
+maps too: the EM Processing page’s “Resistivity model” view gains “Plan view”
+and “Plan-view uncertainty” once a survey of several lines is inverted,
+kriged off the UI thread by the same code (<code class="docutils literal notranslate"><span class="pre">em_maps.survey_plan_grids</span></code>), on
+the section’s colour map and redrawn in feet or metres with the studio’s
+length unit; a workflow run’s maps appear on the Workflow page with its
+other figures.</p></li>
+<li><p>The file classifier lists the whole TEM2Go survey folder, not the project
+file alone: the instrument’s raw stream (<code class="docutils literal notranslate"><span class="pre">Data/</span></code>) as a second source of the
+same survey, one role change away, which this package stacks itself without
+anything TEMImage wrote; the protocol and line file, read with the survey;
+the controller’s field models, a quick look that is not an input; and the
+georeferenced map image, under a new “Map background” role (<code class="docutils literal notranslate"><span class="pre">basemap_file</span></code>),
+also offered when files are added by hand. The project stays the default
+because it carries the station and gate edits made in TEMImage. On one
+575-station day the raw stream gave 11 more stations than the project, the
+same response levels (median ratio 1.00 to 1.01, the same relative errors),
+but stations grouped from different records, so a model 0.22 decades apart
+at the median.</p></li>
+<li><p>Magnetotelluric data, <code class="docutils literal notranslate"><span class="pre">data_processing.mt</span></code>, on NumPy and SciPy alone - no
+new dependency. <code class="docutils literal notranslate"><span class="pre">TransferFunction</span></code> holds one site’s impedance and tipper in
+ohms and e^{+iωt}, with their errors and, where known, the full covariance,
+and rotates them; <code class="docutils literal notranslate"><span class="pre">read_transfer_function</span></code> reads EDI (impedance, apparent
+resistivity and phase, and spectra sections), EMTF XML, Egbert Z-files
+(<code class="docutils literal notranslate"><span class="pre">.zmm</span></code>, <code class="docutils literal notranslate"><span class="pre">.zrr</span></code>, <code class="docutils literal notranslate"><span class="pre">.zss</span></code>) and J-files, and <code class="docutils literal notranslate"><span class="pre">write_edi</span></code> / <code class="docutils literal notranslate"><span class="pre">write_emtf_xml</span></code>
+write them back. EDI and J-files do not state their sign convention, so it is
+decided from the phases. <code class="docutils literal notranslate"><span class="pre">read_timeseries</span></code> reads the instruments’ own files
+into <code class="docutils literal notranslate"><span class="pre">TimeSeriesRun</span></code>s of <code class="docutils literal notranslate"><span class="pre">Channel</span></code>s, each with its response chain (sensor,
+dipole, receiver filters) so that <code class="docutils literal notranslate"><span class="pre">calibrated()</span></code> gives mV/km and nT: Phoenix
+MTU-5C/5P/8A recordings (native <code class="docutils literal notranslate"><span class="pre">.bin</span></code>, decimated <code class="docutils literal notranslate"><span class="pre">.td_*</span></code>, with <code class="docutils literal notranslate"><span class="pre">rxcal.json</span></code>
+and <code class="docutils literal notranslate"><span class="pre">scal.json</span></code>), legacy Phoenix MTU-5A/V8 sites (<code class="docutils literal notranslate"><span class="pre">.TS2</span></code>-<code class="docutils literal notranslate"><span class="pre">.TS5</span></code> with <code class="docutils literal notranslate"><span class="pre">.TBL</span></code>),
+Metronix ATS (with the measurement XML’s or a text file’s coil calibration),
+Zonge Z3D (with the coil table stored in the file) and LEMI-424 text files.
+Times come out in UTC.</p></li>
+<li><p>MT processing: <code class="docutils literal notranslate"><span class="pre">mt.process_mt(runs,</span> <span class="pre">remote=...)</span></code> estimates the impedance and
+tipper from any instrument’s runs - cascade decimation, windowed and
+prewhitened Fourier coefficients in field units, Huber then redescending
+regression, remote reference, EMTF’s band set by default (or an EMTF
+band-setup file) - with EMTF’s full error covariance. The errors allow for
+the correlation the taper puts between a band’s harmonics; on synthetic data
+they are calibrated, and on EMTF’s own test sites the impedances match
+EMTF’s to about 1%. Runs at several sample rates merge into one site.
+<code class="docutils literal notranslate"><span class="pre">mt.phase_tensor</span></code>, <code class="docutils literal notranslate"><span class="pre">swift_skew</span></code>, <code class="docutils literal notranslate"><span class="pre">bahr_skew</span></code>, <code class="docutils literal notranslate"><span class="pre">swift_strike</span></code>,
+<code class="docutils literal notranslate"><span class="pre">induction_arrows</span></code> and <code class="docutils literal notranslate"><span class="pre">niblett_bostick</span></code> describe dimensionality and depth;
+<code class="docutils literal notranslate"><span class="pre">estimate_static_shift</span></code>, <code class="docutils literal notranslate"><span class="pre">static_shift_from_layers</span></code> (for instance against a
+TEM sounding’s layered model) and <code class="docutils literal notranslate"><span class="pre">apply_static_shift</span></code> remove static shift.
+<code class="docutils literal notranslate"><span class="pre">mt.impedance_1d</span></code> and <code class="docutils literal notranslate"><span class="pre">sensitivity_1d</span></code> give a layered earth’s impedance and
+its derivatives.</p></li>
+<li><p>MT inversion. <code class="docutils literal notranslate"><span class="pre">mt.occam1d</span></code> finds the smoothest layered model that fits a
+site’s apparent resistivity and phase (determinant, either mode, or both
+against one model) to a target misfit, with exact derivatives; it can solve
+a static shift per mode, and with <code class="docutils literal notranslate"><span class="pre">tem=</span></code> it fits a TDEM sounding jointly
+through the package’s TDEM forward operator, which fixes the static shift
+the MT alone cannot (on a synthetic site shifted by 0.5 it returns 0.51 and
+0.50, and the true model). <code class="docutils literal notranslate"><span class="pre">mt.water_content_profile</span></code> turns the layers into
+water content with the Waxman-Smits link the rest of the package uses.
+<code class="docutils literal notranslate"><span class="pre">mt.invert_profile</span></code> inverts a profile’s TE and TM impedances for a 2D
+section on SimPEG’s NSEM simulations (<code class="docutils literal notranslate"><span class="pre">build_profile_mesh</span></code> lays the mesh out
+from the band, <code class="docutils literal notranslate"><span class="pre">forward_profile</span></code> models a section); SimPEG is imported only
+when they run. The 1D layering starts from the apparent resistivity at the
+sounding’s highest frequency and ends at its lowest, so a resistive site
+under a conductive cover no longer gets a top layer tens of metres thick.</p></li>
+<li><p>MT across the package. Three workflows, <code class="docutils literal notranslate"><span class="pre">mt.process</span></code>, <code class="docutils literal notranslate"><span class="pre">mt.invert_1d</span></code> (with
+an optional TEM sounding and water content) and <code class="docutils literal notranslate"><span class="pre">mt.invert_profile</span></code>, run
+through <code class="docutils literal notranslate"><span class="pre">run_workflow</span></code> and export a recipe, a runner and a walkthrough like
+the others; <code class="docutils literal notranslate"><span class="pre">workflows.mt</span></code> gathers their names. The studio has a
+<strong>Magnetotellurics</strong> page laid out like the Seismic page: the Time series,
+Sounding, Dimensionality, 1D model, Phase tensors and 2D section tabs each
+bring up the side panel for their step - reading and processing (with a
+remote reference and a calibration override), the sites, the 1D inversion,
+the profile and its 2D inversion; every run is recorded in the Project, a
+model can be added to Project Map, and AQUAH can drive the page.
+The agent runtime has <code class="docutils literal notranslate"><span class="pre">invert_mt</span></code> and <code class="docutils literal notranslate"><span class="pre">convert_mt_water_content</span></code>: a request
+that names <code class="docutils literal notranslate"><span class="pre">.edi</span></code> files (or says MT and names XML or J-files), or a
+configuration with <code class="docutils literal notranslate"><span class="pre">mt_files</span></code>, inverts the sites in 1D and a located line of
+three or more in 2D; the folder classifier knows MT sites. The Streamlit app
+lists the page. <code class="docutils literal notranslate"><span class="pre">visualization.plot_mt_dimensionality</span></code> draws a site’s phase
+tensor against period. New example <code class="docutils literal notranslate"><span class="pre">Ex_MT_workflow</span></code> (a MODFLOW column to AMT
+time series and back to an EDI file, the static shift fixed by TEM, water
+content, a 2D profile, and USMTArray station NMX20, shipped in
+<code class="docutils literal notranslate"><span class="pre">examples/data/MT</span></code> under CC BY 4.0) and a methods page, with the references
+in the README and on the citation page.</p></li>
+<li><p>Figures can show lengths in feet. <code class="docutils literal notranslate"><span class="pre">visualization.axis_units</span></code> holds the
+choice: <code class="docutils literal notranslate"><span class="pre">set_length_unit(&quot;ft&quot;)</span></code> sets it for every figure, <code class="docutils literal notranslate"><span class="pre">length_unit(&quot;ft&quot;)</span></code>
+sets it for one block, and the section, map and profile functions in
+<code class="docutils literal notranslate"><span class="pre">visualization</span></code> take <code class="docutils literal notranslate"><span class="pre">length_unit=&quot;m&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;ft&quot;</span></code> for one call. Models, meshes
+and exported files stay in metres; only the axis ticks and labels change, so
+switching units cannot round anything off. The studio offers the same choice
+under View &gt; Length Units, remembered between sessions and applied to every
+page. Agent reports read it from <code class="docutils literal notranslate"><span class="pre">config[&quot;figure_style&quot;][&quot;length_unit&quot;]</span></code>, which
+the request parser fills in when a request asks for feet; without a language
+model, a request that says “feet”, “ft” or “英尺” is still honoured.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">visualization.plot_model_section</span></code>, <code class="docutils literal notranslate"><span class="pre">plot_timelapse_snapshots</span></code>,
+<code class="docutils literal notranslate"><span class="pre">plot_difference_map</span></code>, <code class="docutils literal notranslate"><span class="pre">plot_coverage</span></code>, the pseudosection plots and the
+animations take <code class="docutils literal notranslate"><span class="pre">vertical=&quot;auto&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;elevation&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;depth&quot;</span></code>.</p></li>
+<li><p>E4D as an ERT engine (<code class="docutils literal notranslate"><span class="pre">engine=&quot;e4d&quot;</span></code>, and <strong>E4D 3D (PNNL, external)</strong> on the
+studio’s ERT page). <code class="docutils literal notranslate"><span class="pre">inversion.e4d</span></code> writes the files PNNL’s E4D reads - mesh,
+survey, starting conductivity, inversion and output options, <code class="docutils literal notranslate"><span class="pre">e4d.inp</span></code> - runs
+E4D under MPI, and reads back its <code class="docutils literal notranslate"><span class="pre">sigma.N</span></code>, simulated data and <code class="docutils literal notranslate"><span class="pre">e4d.log</span></code>, so
+an E4D run goes through the same QC, error model, outlier rejection, λ search,
+viewers and exports as the other engines. A profile is inverted on a 3D mesh
+built around the line and read back as its section; a 3D survey on an
+imported tetrahedral mesh is inverted on that mesh. A time-lapse series runs
+as E4D’s own time-lapse inversion (ERT4): each survey starts from the solution
+before it and the change from it is smoothed. E4D is not bundled: it runs on
+Linux, on Windows only inside WSL 2, and on macOS when built from source; the
+<code class="docutils literal notranslate"><span class="pre">files</span></code> launcher writes the complete run folder for a cluster or another
+machine, read back with <code class="docutils literal notranslate"><span class="pre">read_e4d_run</span></code> / <code class="docutils literal notranslate"><span class="pre">read_e4d_time_lapse</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">PyHydroGeophysX.inversion.e4d</span></code> reports what the current machine
+offers. A run that cannot reach E4D stops with the folder’s path; it never
+falls back to another engine.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">core.e4d_mesh.write_e4d_mesh</span></code> writes any tetrahedral mesh as E4D’s
+<code class="docutils literal notranslate"><span class="pre">.node</span></code>/<code class="docutils literal notranslate"><span class="pre">.ele</span></code>/<code class="docutils literal notranslate"><span class="pre">.face</span></code>/<code class="docutils literal notranslate"><span class="pre">.neigh</span></code>/<code class="docutils literal notranslate"><span class="pre">.trn</span></code> files, with the boundary flags E4D’s
+own mesh build gives (2 on the outer walls and bottom, 1 on the ground);
+<code class="docutils literal notranslate"><span class="pre">e4d_config_from_electrodes</span></code> takes the fine-zone padding as an (x, y) pair.</p></li>
+<li><p>ATS and PFLOTRAN output readers (<code class="docutils literal notranslate"><span class="pre">ATSSaturation</span></code>, <code class="docutils literal notranslate"><span class="pre">ATSPorosity</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ATSWaterContent</span></code>, <code class="docutils literal notranslate"><span class="pre">PFLOTRANSaturation</span></code>, <code class="docutils literal notranslate"><span class="pre">PFLOTRANPorosity</span></code>,
+<code class="docutils literal notranslate"><span class="pre">PFLOTRANWaterContent</span></code>), with the same <code class="docutils literal notranslate"><span class="pre">load_timestep</span></code> / <code class="docutils literal notranslate"><span class="pre">load_time_range</span></code> /
+<code class="docutils literal notranslate"><span class="pre">get_timestep_info</span></code> methods as the MODFLOW and ParFlow readers. They read
+ATS visualization files (cycles in any order, plain, <code class="docutils literal notranslate"><span class="pre">.cell.0</span></code> or
+domain-prefixed names) and PFLOTRAN snapshot files (one file, or the numbered
+files of one run - not another run named alike), keep the simulator’s cell
+order, axes and time units, and give volumetric water content as porosity
+times liquid saturation. <code class="docutils literal notranslate"><span class="pre">output_cell_centers</span></code> reads the cell centres from
+the simulator’s own mesh - ATS’s <code class="docutils literal notranslate"><span class="pre">*_mesh.h5</span></code>, PFLOTRAN’s <code class="docutils literal notranslate"><span class="pre">Coordinates</span></code> or
+<code class="docutils literal notranslate"><span class="pre">Domain</span></code> group - and <code class="docutils literal notranslate"><span class="pre">interpolate_timestep</span></code> maps a state onto a geophysical
+mesh with them (<code class="docutils literal notranslate"><span class="pre">axes=&quot;xz&quot;</span></code> for a section). They need the new <code class="docutils literal notranslate"><span class="pre">hydrology</span></code>
+extra (h5py), and are Python API only: the studio, the hydro bundle and the
+agents still read MODFLOW and ParFlow alone.</p></li>
+<li><p>R2 and R3t as ERT engines (<code class="docutils literal notranslate"><span class="pre">engine=&quot;r2&quot;</span></code> / <code class="docutils literal notranslate"><span class="pre">&quot;r3t&quot;</span></code>, and <strong>R2 2D (Binley,
+external)</strong> / <strong>R3t 3D (Binley, external)</strong> on the studio’s ERT page).
+<code class="docutils literal notranslate"><span class="pre">inversion.r2</span></code> writes the files Andrew Binley’s programs read - <code class="docutils literal notranslate"><span class="pre">mesh.dat</span></code> or
+<code class="docutils literal notranslate"><span class="pre">mesh3d.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">protocol.dat</span></code>, the starting model, <code class="docutils literal notranslate"><span class="pre">R2.in</span></code> / <code class="docutils literal notranslate"><span class="pre">R3t.in</span></code> - runs
+them, and reads back <code class="docutils literal notranslate"><span class="pre">f001_res.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">f001_err.dat</span></code>, the sensitivity map and
+the <code class="docutils literal notranslate"><span class="pre">.out</span></code> log, so a run goes through the same QC, error model, outlier
+rejection, viewers and exports as the other engines. R2 inverts a profile on
+its own mesh; R3t a 3D survey on its tetrahedral mesh, or a profile on a 3D
+mesh built around the line. Both choose their smoothing weight at every
+iteration, so λ and auto-λ do not apply: the run says so and reports the
+weight they chose (<code class="docutils literal notranslate"><span class="pre">smoothing_alpha</span></code>). Fixed a-priori zones are held fixed,
+zone outlines become zones the smoothness does not cross, and a time-lapse
+series is their difference inversion against the first survey. The programs
+are not bundled: on Windows they run natively, found in an installed ResIPy
+unless named; on Linux and macOS through Wine; the <code class="docutils literal notranslate"><span class="pre">files</span></code> launcher writes
+the run folder for elsewhere, read back with <code class="docutils literal notranslate"><span class="pre">read_r2_run</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">PyHydroGeophysX.inversion.r2</span></code> reports what the machine offers.</p></li>
+<li><p>The desktop studio shows when the assistant is the one working
+(<code class="docutils literal notranslate"><span class="pre">qt_apps.widgets.ai_presence</span></code>). During an automatic run a soft glow of blue,
+purple, pink and orange flows round the central area (steady orange while it
+waits for you, a green or red flash as it ends), the Workflow page carries a
+banner with the assistant’s animated orb (breathing while it decides, a
+turning ring while a step runs), what it is doing and a clock, and a new
+<strong>Live</strong> tab lists each step as a card: the controller’s reason for choosing
+it, the module, the time taken, what it found (written out as it arrives) and
+the figures it wrote, with a card for the assistant choosing the next step in
+between.
+Approvals and questions are asked in that card. The chat reports each
+finished step. <code class="docutils literal notranslate"><span class="pre">run_workflow</span></code> takes an <code class="docutils literal notranslate"><span class="pre">on_event</span></code> hook that receives each
+step’s start and end as fields, and the desktop runner passes them across as
+<code class="docutils literal notranslate"><span class="pre">step</span></code> events.</p></li>
+<li><p>Light and dark appearances for the desktop studio, in View &gt; Appearance
+(Match System, Light, Dark) and the toolbar’s day/night switch; the choice is
+remembered, and Match System follows the operating system as it changes.</p></li>
+<li><p>AI assistants are plug-ins (<code class="docutils literal notranslate"><span class="pre">agents.assistants</span></code>), so a domain assistant can
+sit beside AQUAH: GeoSAGE, for geological modelling from gravity and
+magnetic data, is being ported this way. An <code class="docutils literal notranslate"><span class="pre">Assistant</span></code> describes one - name
+and domain, chat persona and examples, the input files it takes, its glow
+colours, the packages it needs - and names its workflow and tools, which load
+only when a run starts. Assistants are found in the package and through the
+<code class="docutils literal notranslate"><span class="pre">pyhydrogeophysx.assistants</span></code> entry point, so one can ship in its own
+package; one that fails to import is reported by <code class="docutils literal notranslate"><span class="pre">load_errors()</span></code> and left
+out. The studio’s assistant panel has a picker: choosing an assistant starts
+a new conversation with it, gives the Workflow page its input roles and the
+glow its colours, and is remembered. One that is not ready, or whose
+packages are missing, is listed greyed out with the reason. GeoSAGE is
+registered as <em>in development</em>, with its six stages laid out as tools after
+the paper’s agents (data, petrology, joint inversion, quasi-geology, report,
+review). <code class="docutils literal notranslate"><span class="pre">docs/source/agents/adding_an_assistant.rst</span></code> is the guide to adding
+one.</p></li>
+<li><p>The <strong>Live</strong> tab shows the run as a route, its newest figure, and its
+outcome. Across the top, the steps taken are drawn in the assistant’s
+colours, the running one with a turning ring and, while the assistant
+decides, a light travelling to the next stop; the steps still ahead are
+hollow stops on a dashed line. The route ahead is the run’s own projection,
+<code class="docutils literal notranslate"><span class="pre">agents.runtime.controller.route_ahead</span></code>, recomputed after every step and sent
+to the studio as <code class="docutils literal notranslate"><span class="pre">phase=&quot;route&quot;</span></code> events, so it follows the controller rather
+than promising a plan; the banner counts “about N to go” from it. Projected
+artifacts are <code class="docutils literal notranslate"><span class="pre">context.PROJECTED</span></code>, which <code class="docutils literal notranslate"><span class="pre">RunContext.projected(key)</span></code> tests,
+so the ERT gates count the configured surveys instead of guessing. Beside the
+steps, each figure the run writes is shown large the moment it appears,
+revealed behind a band of the assistant’s colours, with the earlier ones in a
+strip. A run ends with a card - how it went, how long it worked, its steps,
+figures and files, what to check before relying on it - offering <strong>Read the
+report</strong> and <strong>Open output folder</strong>; the page stays on the Live tab rather
+than switching to the report.</p></li>
+<li><p>A run’s reasoning streams as it is written. The controller’s model call
+streams its reply (<code class="docutils literal notranslate"><span class="pre">BaseAgent.query_llm(...,</span> <span class="pre">on_text=...)</span></code>, OpenAI and Claude),
+the decision prompt asks for the reasoning first, and <code class="docutils literal notranslate"><span class="pre">drive</span></code> sends it on as
+<code class="docutils literal notranslate"><span class="pre">phase=&quot;thought&quot;</span></code> events; the Live tab shows it under “choosing the next step”
+and the step card does not type it out a second time.</p></li>
+<li><p>Steering a running workflow. <strong>Pause after this step</strong> holds the run before
+its next step (the running step finishes) and <strong>Resume</strong> lets it go on; a note
+typed under the timeline is read before the next decision, added to the
+transcript (<code class="docutils literal notranslate"><span class="pre">RunContext.guidance</span></code>), and that decision may change the run’s
+adjustable settings to follow it (<code class="docutils literal notranslate"><span class="pre">recovery.ADJUSTABLE</span></code> - never a file). The
+note appears in the timeline as the user’s, then with what the assistant made
+of it and which settings changed; a run without a model says it cannot read
+notes. Notes, pause and resume travel through <code class="docutils literal notranslate"><span class="pre">steering.jsonl</span></code> in the run’s
+folder, which the run reads between steps (<code class="docutils literal notranslate"><span class="pre">agents.runtime.steering</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ControlFile</span></code>) and which records what the user told the run; answers to
+questions still go over stdin. (A thread reading stdin for them froze runs on
+Windows: a pending pipe read stalls process creation in the same process.)</p></li>
+<li><p>Token and cost counter. Every model call’s tokens and estimated cost reach a
+live total (<code class="docutils literal notranslate"><span class="pre">llm.runtime_options.add_usage_listener</span></code>), shown in the Workflow
+banner and on the finish card, priced from the provider’s list prices.</p></li>
+<li><p>Run replay. The Live tab’s views are recorded with their timing and saved
+beside the results as <code class="docutils literal notranslate"><span class="pre">live_replay.json</span></code> (<code class="docutils literal notranslate"><span class="pre">qt_apps.widgets.run_replay</span></code>);
+<strong>Replay this run</strong> and <strong>Replay a run…</strong> play it back with play, pause,
+speed and a scrub slider, long waits shortened and the run’s own clock shown,
+and <strong>Save frame</strong> writes the Live tab to a PNG. Nothing is recomputed.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">agents.runtime.entry.drive(ctx,</span> <span class="pre">tools=...,</span> <span class="pre">prompt=...,</span> <span class="pre">finish=...)</span></code> runs
+the controller loop over any set of tools with the step events, approvals
+and progress the studio uses, for an assistant’s own workflow.
+<code class="docutils literal notranslate"><span class="pre">run_controller</span></code> takes the decision prompt and the product that ends a run
+(<code class="docutils literal notranslate"><span class="pre">finish</span></code>, by default <code class="docutils literal notranslate"><span class="pre">report_files</span></code>) the same way.</p></li>
+</ul>
+</section>
+<section id="changed">
+<h3>Changed<a class="headerlink" href="#changed" title="Link to this heading">#</a></h3>
+<ul>
+<li><p>The README keeps to the essentials - features, installation, a quick start,
+the apps, examples and citations - and points to the website for the rest.
+E4D, R2 and R3t setup moved to the ERT method page (<code class="docutils literal notranslate"><span class="pre">methods/ert.rst</span></code>), the
+ADTLERT time-lapse example to the installation page, the local web-app
+launcher and its setup prompt to the web-app page. The coding-agent install
+prompt stays in the README, as its own Installation subsection. The
+underlying libraries’ BibTeX stays in the README too, folded under one
+heading per library.</p></li>
+<li><p>ERT page: the Electrodes tab is gone. It was a plot of electrode dots that
+also held the loading controls, so once a file loaded and the page moved on
+to the pseudosection the file list went with it, and a time-lapse series was
+clicked through by switching back for every survey. The first tab is now
+<strong>Data</strong>: the pseudosection, with the electrodes drawn as triangles along its
+top, beside the loading, QC, error and inversion settings. The data panel
+gives the electrode count, spacing, line length and elevations in the
+studio’s length unit; the Mesh tab draws them on the topography; the
+electrode table and survey geometry are exported from File &gt; Export Results.
+“One survey / Time-lapse series” is a two-button switch at the top of the
+loading group, the chosen one filled (it was a checkbox at the foot of the
+column; the theme’s new <code class="docutils literal notranslate"><span class="pre">QPushButton[segment]</span></code> style draws such switches), and
+the time-lapse options
+are a group of their own under the inversion settings.</p></li>
+<li><p>ERT page: the Run button is pinned under the settings column instead of at
+its end, where a series’ options pushed it out of sight, and it is enabled
+only when it can run, with the reason above it otherwise (no data, a survey
+that cannot be inverted, fewer than two surveys for a time-lapse run). The
+time-lapse export and output-folder buttons moved to the Resistivity model
+tab’s Export model group, beside the single model’s.</p></li>
+<li><p>ERT page: files - or a folder of them - can be dropped anywhere on the page
+to join the list. Changing the format by hand reads the survey on screen
+again. Number boxes show values as written (50, 0.05, 100000) rather than
+with trailing zeros, and the inversion modes are named for what they do:
+“Quick: invert only” and “Thorough: check k, search λ”.</p></li>
+<li><p>ERT time-lapse runs on the in-house engine, full or windowed, now stop on
+“Stop when χ² improves” as single runs do; the row was greyed out in
+time-lapse mode while the solver used a fixed 1 %. E4D takes it as before;
+ADTLERT (which stops on the size of its model step) and R2/R3t grey it with
+the reason on hover. The run’s <code class="docutils literal notranslate"><span class="pre">inversion_settings.txt</span></code> records it.</p></li>
+<li><p>ERT page: “Date undated files by when they were last saved” (was “Use file
+times when the names carry none”) sits under the file list and appears only
+while some files of a series carry no time, instead of among the time-lapse
+options all the time.</p></li>
+<li><p>A workflow process that fails no longer fills the Log panel with its
+traceback: the traceback goes to the run’s <code class="docutils literal notranslate"><span class="pre">logs/workflow_output.log</span></code> only,
+and the failure is one sentence - the error, in plain words for a few
+well-known causes (fewer than two electrodes, out of memory, a full disk, a
+file that cannot be written), and where the full output is.</p></li>
+<li><p>A run that ends with things to check no longer spells them out across the
+Workflow page: the banner, the line under the report and the finish card say
+how many there are, and the list goes to the assistant’s conversation, one
+line each. Four warnings had filled the banner and the status line with the
+same paragraph twice.</p></li>
+<li><p>Seismic refraction inversions scale their mesh and velocities to the survey
+for any setting the request does not give (<code class="docutils literal notranslate"><span class="pre">SeismicAgent.survey_scaled_defaults</span></code>):
+mesh depth 0.4 of the line, at most 30 m; cells of two sensor spacings, at
+most 2 m; a starting gradient from the direct wave’s velocity, at most
+500 m/s, to 1.5 times the far-offset apparent velocity, at most 5000 m/s;
+and a lower velocity bound of half the direct wave’s, at most 300 m/s. The
+fixed values - a 30 m mesh of 2 m cells over 500-5000 m/s, bounded at
+300 m/s - could not fit a soil whose surface layer carries 120 m/s, and an
+LLM’s recommendation no longer replaces the survey’s own velocities, only
+the smoothing. On the shipped <code class="docutils literal notranslate"><span class="pre">srtfieldline2.dat</span></code> chi-squared goes from 7.8
+to 0.67; a long line over fast ground keeps the fixed values.</p></li>
+<li><p>The studio’s Seismic page picks as the seismic workflow does. “Auto-pick
+this shot” takes threshold picks on the traces (with AGC when AGC is on),
+places them at the page’s geophone and shot positions, picks the stray ones
+again along the shot’s curve - drawn as orange circles - and leaves out what
+still breaks it; “All shots” picks every record at its own shot x and adds
+the reciprocity and neighbouring-shot checks, keeping picks made by hand. A line picked on the page
+and the same line picked by a run now agree pick for pick. “Threshold (of
+trace peak)” and “Latest first arrival” replace the STA/LTA ratio, and a
+SEG-Y file takes its acquisition record’s sample interval when loaded. The
+page’s assistant tools gain <code class="docutils literal notranslate"><span class="pre">auto_pick_all</span></code> and the <code class="docutils literal notranslate"><span class="pre">pick_threshold</span></code>,
+<code class="docutils literal notranslate"><span class="pre">pick_max_time_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">screen_picks</span></code> and <code class="docutils literal notranslate"><span class="pre">display</span></code> (image, wiggle or both)
+settings; <code class="docutils literal notranslate"><span class="pre">sta_lta_ratio</span></code> is ignored with a note naming <code class="docutils literal notranslate"><span class="pre">pick_threshold</span></code>.</p></li>
+<li><p>TEM line inversions run six to nine times faster: a 627-station TEM2Go
+survey in 84 s instead of about 735 s, a 140-station one in 19 s instead of
+114 s. Profiling showed a 20-thread pool using four or five cores, and the
+solver spending its last half converging on a chi-squared that had stopped
+moving. Six changes:</p>
+<ul class="simple">
+<li><p>Each chunk of soundings now keeps its forward operators for the whole
+solve (<code class="docutils literal notranslate"><span class="pre">em1d_lci._map_soundings</span></code>). The cache belonged to the thread, and a
+thread pool does not return a chunk to the same thread, so every thread
+came to build nearly every station’s operator - 1,946 builds for 280
+blocks, each holding the GIL - and a forward pass ran 2.2 times faster
+than one thread instead of 12.8.</p></li>
+<li><p>The depth of investigation is computed on the worker pool, with one
+Jacobian per station instead of two; it ran on one thread after the
+inversion, about two minutes on the 627-station survey.</p></li>
+<li><p>The starting-model scan models its uniform candidates as one-layer
+half-spaces rather than through twenty identical layers (same response
+to 3e-11, same choice at every station tested).</p></li>
+<li><p>The conductivity Jacobian and the response are computed by numba kernels
+(<code class="docutils literal notranslate"><span class="pre">forward/_tdem_kernels.py</span></code>). SimPEG’s <code class="docutils literal notranslate"><span class="pre">getJ</span></code> also computes the thickness
+and permeability gradients and discards them, and its megabytes of
+intermediates per sounding held a parallel pass to five cores; the
+kernels are the same recursions, summed through the Hankel filter as they
+go. They agree with SimPEG’s <code class="docutils literal notranslate"><span class="pre">getJ</span></code> to 2.5e-10 and its <code class="docutils literal notranslate"><span class="pre">dpred</span></code> to 4.4e-10
+of the largest entry, so the response of TEMcompany’s own models
+differs from TEMcompany’s <code class="docutils literal notranslate"><span class="pre">ForwardData</span></code> exactly as SimPEG’s does (median
+3 to 5 %). Each process compares its first compiled response and
+Jacobian with SimPEG’s and falls back to SimPEG for good if they disagree;
+without numba, or with <code class="docutils literal notranslate"><span class="pre">PHGX_TDEM_COMPILED=0</span></code>, SimPEG computes both.
+<code class="docutils literal notranslate"><span class="pre">numba</span></code> is now listed in the <code class="docutils literal notranslate"><span class="pre">geophysics</span></code> and <code class="docutils literal notranslate"><span class="pre">all</span></code> extras (it was
+installed only through pftools).</p></li>
+<li><p>The Ground TEM preset stops the coupled solve at <code class="docutils literal notranslate"><span class="pre">lci_ftol</span></code> 1e-3 instead
+of the general 1e-4. Measured on four TEM2Go surveys (140 to 1,013
+stations): 22 to 40 % less time, chi-squared 0.1 to 1.8 % higher, every
+depth of investigation unchanged, 0.5 to 1.4 % of cells more than 25 %
+from the 1e-4 model, and the median difference from TEMcompany’s own
+inversion of each survey (0.13 to 0.26 decades) within 0.003 decades of
+what 1e-4 gives.</p></li>
+</ul>
+<p>The first three changes reproduce earlier results exactly. The compiled
+kernels can move the trust-region solver onto a slightly different path:
+at the same tolerance, on the 627-station survey, it stopped after 39
+evaluations instead of 43, at chi-squared 1.014 instead of 1.013, with 99%
+of cells within 4% of the earlier model.</p>
+</li>
+<li><p>Water content from geophysics always states its uncertainty and whose
+petrophysical relationship it used. When the user gave none, the conversion
+still runs, but a warning says the result is not reliable and names every
+parameter drawn with its range - 5-95% of the actual Monte Carlo draws, for
+example “cementation exponent m 1.0-3.5, pore-fluid resistivity 20 Ω·m
+(fixed), saturation exponent n 1.0-4.0, porosity 0.01-0.9” - and asks for the
+site’s relationship; when only part of it was given, the warning names the
+parameters that took defaults. The step’s own summary carries the mean and
+its ± and the “not reliable” flag, so it is seen while the run goes, and the
+report prints the same statement (<code class="docutils literal notranslate"><span class="pre">_uncertainty.describe_prior</span></code>). This holds
+for ERT (single and time-lapse), TDEM and MT conversions.</p></li>
+<li><p>A water-content conversion uses at least 50 Monte Carlo draws, saying so when
+fewer were asked for; one draw reported a standard deviation of exactly zero.
+The CLI coordinator (<code class="docutils literal notranslate"><span class="pre">AgentCoordinator</span></code>) now always runs the uncertainty
+analysis rather than a single estimate.</p></li>
+<li><p>Parameters a user leaves out of a partly supplied relationship take the
+default with a generous spread (half its value), not the 5% a supplied value
+gets; <code class="docutils literal notranslate"><span class="pre">rho_fluid</span></code> is read when given, and a <code class="docutils literal notranslate"><span class="pre">[low,</span> <span class="pre">high]</span></code> range is accepted
+for any parameter.</p></li>
+<li><p>Petrophysical values the request parser produced that the request does not
+contain are dropped, with a warning, so a value from the parser’s own example
+is never reported as the user’s (<code class="docutils literal notranslate"><span class="pre">context_input_agent.drop_unstated_petrophysics</span></code>).</p></li>
+<li><p>AQUAH’s desktop workflow moved to <code class="docutils literal notranslate"><span class="pre">agents.assistants.aquah.workflow</span></code>; the
+studio’s run process (<code class="docutils literal notranslate"><span class="pre">qt_apps.agent.one_click_runner</span></code>) runs whichever
+assistant the request names and no longer holds AQUAH’s code. The chat
+panel is <code class="docutils literal notranslate"><span class="pre">AssistantChatPanel</span></code> (<code class="docutils literal notranslate"><span class="pre">AquahChatPanel</span></code> is kept as an alias), and its
+system prompt is assembled from the active assistant’s description.</p></li>
+<li><p>An automatic run no longer switches the studio from module to module; it is
+followed in the <strong>Live</strong> tab on the Workflow page. <strong>Also bring each module to
+the front as it runs</strong> (off by default) restores the old behaviour.</p></li>
+<li><p>The desktop studio has a new look: neutral greys and white (near-black in
+the dark appearance), one blue accent, green, orange and red for success,
+caution and failure, segmented tabs, rounded cards, thin scrollbars and
+sliders, and a log that is no longer a black console. The saturated brand
+blue is gone. Plots stay on a light canvas in either appearance, so black
+traces and colormaps keep their meaning; their default line colours match
+the accent and status colours. Status text is coloured through the stylesheet (<code class="docutils literal notranslate"><span class="pre">theme.set_tone</span></code>),
+so it follows the appearance.</p></li>
+<li><p>A section without elevations is labelled Depth, not Elevation. A survey read
+without elevations puts every electrode at z = 0, and its vertical axis now
+reads “Depth (m)”, positive downward, in the library plots, the studio and the
+agent reports; a section with topography keeps “Elevation (m)”. The reports
+used to label such a section “Elevation (m)” and print negative numbers, and
+the studio sections labelled “Elevation (m)” over pyGIMLi’s positive depth
+ticks. The pseudosection plots read “Pseudo-depth” in the same case.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">xlabel</span></code> and <code class="docutils literal notranslate"><span class="pre">ylabel</span></code> defaults of <code class="docutils literal notranslate"><span class="pre">plot_model_section</span></code>,
+<code class="docutils literal notranslate"><span class="pre">plot_apparent_resistivity_pseudosection</span></code> and <code class="docutils literal notranslate"><span class="pre">create_timelapse_gif</span></code>/<code class="docutils literal notranslate"><span class="pre">_mp4</span></code>
+are now None, meaning the labels above; a label passed explicitly is used as
+it is.</p></li>
+</ul>
+</section>
+<section id="fixed">
+<h3>Fixed<a class="headerlink" href="#fixed" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>ERT page: a file read under the wrong format is refused instead of loaded.
+A DAS-1 file read as BERT gave one electrode and one reading, the log said
+SUCCESS, and the inversion failed on it with pyGIMLi’s IndexError. A survey
+of fewer than four electrodes or no readings is now reported as unreadable
+in that format, and when the file’s first lines name another format the page
+offers it (“Read as DAS-1”); it never switches on its own.</p></li>
+<li><p>EM line inversions no longer count a sounding that failed as inverted. It was
+left holding the starting or interpolated model the solvers gave it as a
+node, drawn in the section and saved as data, with only a log line saying it
+had failed. It is now blank in the section and the saved tables, the result
+counts <code class="docutils literal notranslate"><span class="pre">n_inverted</span></code> and <code class="docutils literal notranslate"><span class="pre">n_failed</span></code>, and the run’s warnings and completion
+message name each failed sounding (“Inverted 558 of 564 soundings; 6
+failed …”). A sounding with a non-finite value no longer fails the whole
+coupled (LCI) solve; it is left out and named.</p></li>
+<li><p>The EM page no longer freezes on large generic tables. Every station click,
+and again Run, re-parsed the whole file once per sounding (38 s per click at
+3000 soundings); the table is now parsed once per file version, the survey
+is read once per load setting on a worker thread (named in the status bar),
+and station clicks, the joint page’s resource and Run are served from it. A
+run’s stored soundings read back in 1 s instead of 16 s, and a TEMcompany
+project read under one moment (HM or LM) no longer re-selects every
+station’s gates for each station asked for (60 ms to 4 ms a station on 564
+stations). A station click on a project no longer redraws the survey table
+(0.25 s to 0.04 s). The joint page
+reads an EM survey with the EM page’s moment and gate selection rather than
+the reader’s defaults.</p></li>
+<li><p>Default caps no longer invert part of a survey quietly: EM “Max soundings”
+(12 for a generic table, 200 for raw tTEM) and grav/mag “Max stations” (600)
+now default to all, and the Run group says how many of how many the next
+run inverts and what a cap leaves out; the run’s warnings record it.
+Grav/mag stations with a missing coordinate or value are counted and named
+in the warnings, on the station map no longer coloured as data, and the
+joint grav/mag inversion reports the stations it thins or drops.</p></li>
+<li><p>A 2-D MT site recorded at frequencies offset from the first site’s
+contributed no data (0 of 37 at an 8 % offset) without a word. Its impedance
+is now interpolated to the profile’s frequencies within its own band
+(<code class="docutils literal notranslate"><span class="pre">Z/sqrt(f)</span></code> linear in <code class="docutils literal notranslate"><span class="pre">ln</span> <span class="pre">f</span></code>, across gaps up to a factor of 2.25), and a
+site that gives fewer values than the profile asks for is named in the run’s
+warnings with the count it gave.</p></li>
+<li><p>A time-lapse ERT run’s <code class="docutils literal notranslate"><span class="pre">inversion_settings.txt</span></code> marked no setting as left at
+its default and could not say which settings an engine changed: the defaults
+were read from <code class="docutils literal notranslate"><span class="pre">DEFAULT_TL</span></code>, whose one entry naming a constant made the whole
+table unreadable. They are now read entry by entry.</p></li>
+<li><p>The seismic inversion recorded its velocity limits as slowness: pyGIMLi turns
+the list it is given into slowness in place, so the run’s settings read
+[1/8000, 1/86] and a re-inversion from them would have bounded the model by
+those values. The agent now passes a copy.</p></li>
+<li><p>Times read from a 32 kHz seismic record were 0.8% short, and every velocity
+0.8% too high: SEG-Y keeps the sample interval in whole microseconds, so
+31.25 us is written 31. The picking step now takes the interval from the
+acquisition record a seismograph writes beside the file (<code class="docutils literal notranslate"><span class="pre">&lt;name&gt;_record.txt</span></code>,
+“Sample interval: 31.25 us”, or the record length and sample count), when it
+is within rounding of the header’s, and says so in the run’s notes;
+<code class="docutils literal notranslate"><span class="pre">read_segy(sample_interval_s=...)</span></code> and <code class="docutils literal notranslate"><span class="pre">record_sample_interval()</span></code> do the same
+for any caller.</p></li>
+<li><p>A shot standing over the geophone at x = 0 was moved: <code class="docutils literal notranslate"><span class="pre">pick_first_breaks</span></code>
+took a trace whose source and receiver x are both zero for one without
+coordinates and placed it at its shot and trace numbers, so one line carried
+a 1.3 ms travel time between x = 3 and x = 1 m into its inversion. Zero
+coordinates now mean missing ones only when no trace of the file has
+others; on that line chi-squared fell from 13.6 to 9.3.</p></li>
+<li><p>A trace the picker stopped at time zero on was counted as a pick and then
+dropped from the travel times without a word - 24 traces of one line. It is
+now picked again along its shot’s curve wherever the curve has a timed pick
+nearer the shot; one right beside the shot, where the curve says nothing, is
+left out and counted in the run’s notes, and the pick count is that of the
+travel times inverted.</p></li>
+<li><p>A seismic line with ordinary off-end shots could not be processed: a shot
+more than one geophone spacing past the elevation profile was refused as an
+“origin mismatch”, and the run then asked which origin to use although the
+two origins were 0 m apart, re-ran the same geometry whatever the answer and
+failed. Shots may now stand up to half the spread’s length beyond its ends
+(<code class="docutils literal notranslate"><span class="pre">survey_geometry.off_end_reach</span></code>), taking the elevation of the profile’s end
+with a note; the receivers are still held to the profile exactly, and the
+origin question is asked only when the two origins actually differ. The
+velocity figure’s colour scale no longer floors at 300 m/s, and its sensor
+marks are sized to the sensor spacing rather than a fixed 0.8 m.</p></li>
+<li><p>Reading a TEM2Go acquisition straight from its raw <code class="docutils literal notranslate"><span class="pre">.stb</span></code> stream decoded,
+filtered and stacked the whole stream again for every station: 1.3 s each,
+so a 575-station day spent over twelve minutes reading before it inverted
+anything. The stacks are now decoded once per stream and kept while the
+stream file is unchanged; the same inversion took 129 s.</p></li>
+<li><p>“Read the report” on a replayed run handed the Markdown file to whatever
+program the machine associates with <code class="docutils literal notranslate"><span class="pre">.md</span></code>. It now opens in the studio’s own
+report tab for a replayed run as for a live one (finding the report beside
+the recording when the run folder has moved), and a report or figure linked
+from the report, or double-clicked under Output files, opens inside the
+studio too; other files still open in their own programs.</p></li>
+<li><p>The agents did not recognise TEM2Go data. A survey folder holds a
+<code class="docutils literal notranslate"><span class="pre">project.tiw</span></code>/<code class="docutils literal notranslate"><span class="pre">project.db</span></code> beside a <code class="docutils literal notranslate"><span class="pre">.sts</span></code> protocol and the instrument’s
+<code class="docutils literal notranslate"><span class="pre">Data/</span></code>, <code class="docutils literal notranslate"><span class="pre">Logs/</span></code>, <code class="docutils literal notranslate"><span class="pre">Maps/</span></code> and <code class="docutils literal notranslate"><span class="pre">Models/</span></code> folders, none of which the folder
+inventory listed, so a selected TEM2Go folder came back empty; a path to one
+in a request named nothing; and <code class="docutils literal notranslate"><span class="pre">TDEMAgent</span></code> read only <code class="docutils literal notranslate"><span class="pre">TIME</span> <span class="pre">BZ</span></code> text files,
+modelling a 10 m circular loop. The inventory now finds TEMcompany/TEM2Go
+projects, raw <code class="docutils literal notranslate"><span class="pre">.stb</span></code> acquisition folders, <code class="docutils literal notranslate"><span class="pre">*_StationData.xyz</span></code> exports and
+tTEM <code class="docutils literal notranslate"><span class="pre">.skb</span></code> files by their content and classifies them without the model
+(one survey per run; a sibling such as <code class="docutils literal notranslate"><span class="pre">project2.tiw</span></code> is listed as Ignore,
+saying what it holds). A request naming such a folder or file by its path
+takes it as the TDEM data, and “TEM2Go”, “tTEM” and “瞬变电磁” count as asking
+for TDEM. <code class="docutils literal notranslate"><span class="pre">TDEMAgent</span></code> inverts these surveys through <code class="docutils literal notranslate"><span class="pre">em1d.load_sounding</span></code> and
+<code class="docutils literal notranslate"><span class="pre">em1d.invert_line</span></code> with the system the project records and its stored
+inversion settings over the <code class="docutils literal notranslate"><span class="pre">ground_tem</span></code> preset - what the EM Processing page
+uses - and draws one section per line. Water content from a TDEM section
+converts cell by cell, leaving cells below the depth of investigation blank.</p></li>
+<li><p>A request to process TEM2Go data with a model parser showed Load ERT data,
+Run ERT inversion and Evaluate inversion quality after the TDEM inversion in
+the studio’s route, and its report waited for the ERT loader to be tried on
+the <code class="docutils literal notranslate"><span class="pre">.tiw</span></code> project. The parser’s ERT stage runs on every request and was
+told its data file is required, so it gave the project the user had
+selected as TDEM data as <code class="docutils literal notranslate"><span class="pre">data_file</span></code> too. A file another method takes - the
+same file, or one inside another method’s survey folder - and a TEMcompany
+project are no longer ERT data, both when the request is parsed and when the
+run starts (<code class="docutils literal notranslate"><span class="pre">drop_borrowed_ert_files</span></code>), and the ERT stage is told to leave
+<code class="docutils literal notranslate"><span class="pre">data_file</span></code> out when the request has no ERT data.</p></li>
+<li><p>A run without ERT ended “success” with no report, because the report step
+needed an ERT inversion: TDEM, seismic refraction and MT runs all did, and
+gravity / magnetic data had no agent step at all. Such a run now writes its
+own report - <code class="docutils literal notranslate"><span class="pre">tdem_report.md</span></code>, <code class="docutils literal notranslate"><span class="pre">seismic_report.md</span></code>, <code class="docutils literal notranslate"><span class="pre">mt_report.md</span></code>,
+<code class="docutils literal notranslate"><span class="pre">gravmag_report.md</span></code>, or <code class="docutils literal notranslate"><span class="pre">survey_report.md</span></code> for several methods - with
+document control, findings, data and method (the settings actually used),
+the fit, the model by depth with its coverage, water content with its
+uncertainty where converted, figures, recommendations and the output files.
+An ERT report gives every other method of the run its own section. Each
+method writes its sections in its own module (<code class="docutils literal notranslate"><span class="pre">agents/_tdem_report.py</span></code>,
+<code class="docutils literal notranslate"><span class="pre">_seismic_report.py</span></code>, <code class="docutils literal notranslate"><span class="pre">_mt_report.py</span></code>, <code class="docutils literal notranslate"><span class="pre">_gravmag_report.py</span></code>), laid out by
+<code class="docutils literal notranslate"><span class="pre">agents/_survey_report.py</span></code>; <code class="docutils literal notranslate"><span class="pre">SeismicAgent</span></code> now returns its chi-squared,
+relative RMS and the settings it used, for the report to state.</p></li>
+<li><p>Gravity and magnetic data in the agent workflow: <code class="docutils literal notranslate"><span class="pre">GravMagAgent</span></code> and the
+runtime step <code class="docutils literal notranslate"><span class="pre">invert_gravmag</span></code> do what the Gravity / Magnetics page does with
+its default settings - regional-residual separation, maps, and a SimPEG 3D
+density-contrast or susceptibility inversion - and state what they assumed
+(the field from the file’s header or the request; a flat 1 m datum without a
+z column; the page’s default inducing field when none is given). Folders
+classify station tables as <code class="docutils literal notranslate"><span class="pre">gravmag_file</span></code>, a request naming gravity or
+magnetics takes the station table it names (method words are read from the
+request’s prose, not from its file paths), and AQUAH’s Workflow page offers
+“MT sites” and “Gravity / magnetic stations” when files are added by hand.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">em1d.invert_line</span></code> fitted a TEM2Go/TEMcompany line with every gate’s sign
+flipped when the geometry carried only the moment: <code class="docutils literal notranslate"><span class="pre">tdem_moment_blocks</span></code> read
+<code class="docutils literal notranslate"><span class="pre">response_sign</span></code> from the caller’s geometry alone, while the rest of the
+forward geometry was completed from the station’s recorded system. Line 1 of
+a field survey came back at chi-squared ~750 with a blank section and no
+error; it now matches the run given the full system (chi-squared 0.54).</p></li>
+<li><p>The assistant could navigate to the Workflow page, the Project Map and the
+Model Viewer but not read or drive them: none implemented the agent
+interface, and the studio’s agent self-test failed on it. The Workflow page
+now reports the run (steps, steps ahead, tokens and cost, how the last run
+ended and its report) and takes inputs by role, options, tabs, pause,
+resume, a note, stop and replay; the Project Map selects surveys, shows or
+hides them, chooses slices and surface settings, interpolates, exports the
+map and the grid, renames, and imports point products (with the CRS given,
+without the placement dialog); the Model Viewer lists, filters, selects and
+compares runs, reads a run’s overview, shows its artifacts, labels it and
+saves it to the Project. Removing a survey or deleting a run stays with the
+user.</p></li>
+<li><p>The studio window fits a 1920 px screen again. Its minimum width had grown to
+2211 px because a row of view controls cannot be narrower than all of them
+side by side, and that sum became the page’s minimum and then the window’s.
+The section view shared by the ERT and seismic pages contributed 1125 px, the
+seismic gather bar 817, the Project Map’s surface row about 990, the EM
+section bar 784 and the sounding plot bar 757. These rows now wrap onto a
+second line in a narrow panel (<code class="docutils literal notranslate"><span class="pre">qt_apps.widgets.flow_layout.FlowLayout</span></code>),
+with a label kept on the same line as the control it names, so the window’s
+minimum is now about 1650 to 1800 px, depending on fonts. The Project Map’s
+layer panel no longer has a fixed 200 px minimum that clipped its Rename,
+Remove and Refresh buttons at that width.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PetrophysicsAgent</span></code> asked a model for parameters, discarded its reply and
+replaced the parameters the user had given with defaults whenever a
+geological context was set; that branch is gone.</p></li>
+<li><p>The single-survey report said “Default Archie parameters were used based on
+geological layer type” for what were generic guesses; it now states the
+parameters and ranges drawn, and whose they were.</p></li>
+<li><p>The Workflow page’s report tab read “Results _report”: its “&amp;” was taken as
+a keyboard mnemonic. It now reads “Results &amp; report”.</p></li>
+<li><p>The ADTLERT windowed time-lapse inversion no longer runs out of memory on a
+long series. ADTLERT’s window driver kept every survey’s dense Jacobian it
+computed, up to 84 of them, until the run ended, and its forward kept the
+solved fields of the last eight models; on the DAS-1 example (942 readings,
+6024 cells, five surveys) the two held 3 GB and were reused for 4 of 54
+Jacobians and none of 59 field solves. The windows are now inverted one at a
+time through <code class="docutils literal notranslate"><span class="pre">invert_timelapse_log_resistivity</span></code>, with the same windows,
+stitching and progress, and the forward keeps no fields: the example’s peak
+falls from 9.2 GB to 6.7 GB and stays flat however many windows follow, for
+the same models (they differ by 1e-4, as two ADTLERT runs do) and run time.</p></li>
+<li><p>An ADTLERT forward over topography no longer keeps what it needs only to set
+itself up. It solves the unit primary potentials and the numerical geometric
+factors on a P2 refinement of the mesh once, and kept both P2 meshes, their
+potentials and their solver factorizations for the rest of the run. They
+are released once their results are cached: the DAS-1 forward (5994 cells)
+holds 2.5 GB instead of 3.5 GB in the same time, with identical solves and
+Jacobians, and the windowed example above peaks at 5.6 GB. This applies to
+the single-survey ADTLERT inversion as well.</p></li>
+<li><p>The in-house time-lapse ERT inversion builds its spatial and temporal
+regularization operators sparse whatever <code class="docutils literal notranslate"><span class="pre">save_memory</span></code> says. The default mode
+stored them dense - (N C) x (N n) and (N - 1) n x N n arrays of almost only
+zeros, 5.6 GB at the 15000 unknowns below which the studio keeps that mode -
+although they only ever multiply vectors. Five DAS-1 surveys on 1181 cells
+now peak at 1.6 GB instead of 2.2 GB, with the same models to 1e-12.</p></li>
+<li><p>The in-house single-survey ERT inversion no longer makes its stacked
+Gauss-Newton system one dense array. It densified the smoothness operator
+(about 1.5 n^2 values) and, with a reference weight, an n x n identity on
+every iteration; the system is now held as its blocks
+(<code class="docutils literal notranslate"><span class="pre">solvers.linear_solvers.StackedSystem</span></code>), the Jacobian dense and the rest
+sparse, and an SPD solver’s normal matrix is summed block by block. On the
+BERT example refined to 10779 cells the run needs 1.7 GB instead of 4.4 GB
+and 120 s instead of 160 s, with the same chi2. The GPU solvers still receive
+the assembled array.</p></li>
+<li><p>An auto-lambda sweep on the pyGIMLi engine keeps the ERTManager - Jacobian,
+meshes, forward operator - only of the runs that can still be exported: the
+fixed-lambda run, the best trial, and during a cold retry the warm sweep’s
+best. Every trial used to keep its own; a five-trial sweep on the BERT
+example peaked at 4.4 GB and now at 2.9 GB, with the same lambda and chi2.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">generalized_solver</span></code> takes a <code class="docutils literal notranslate"><span class="pre">LinearOperator</span></code>, and <code class="docutils literal notranslate"><span class="pre">scipy_lsqr</span></code>,
+<code class="docutils literal notranslate"><span class="pre">scipy_lsmr</span></code> and <code class="docutils literal notranslate"><span class="pre">precond_lsmr</span></code> no longer copy a dense system into CSR, 1.5
+times its size, before solving it.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ertforandjac2</span></code> scales the Jacobian in place, rather than through two more
+full copies of it per survey and iteration.</p></li>
+<li><p>The joint ERT+SRT inversion keeps its structural operators sparse. The
+cross-gradient neighbourhood matrix and the linearized blocks <code class="docutils literal notranslate"><span class="pre">B1</span></code>, <code class="docutils literal notranslate"><span class="pre">B2</span></code>
+were dense n x n arrays, and each of <code class="docutils literal notranslate"><span class="pre">B1</span></code>’s n rows was assembled from an
+n x n weight matrix, O(n^3) per Gauss-Newton step; each row now uses only
+its neighbours. The SRT ray Jacobian stays sparse, the stacked system is
+held as its blocks, an SPD solver gets its normal matrix (it used to fall
+back to LSQR, refusing the stacked system as not square), and the chi2
+checks no longer build Jacobians they throw away. On the shipped BERT and
+refraction lines the run takes 144 s instead of 1866 s at 2661 cells and
+127 s instead of 4565 s at 5515 cells, with peak memory 1.5 GB and 2.5 GB
+instead of 1.8 GB and 3.6 GB. The matrices are the same entry for entry
+(the cross-gradient blocks to 1e-10); the models differ only as LSMR’s
+300-iteration truncation does under a change of summation order (chi2 to
+4e-4).</p></li>
+</ul>
+</section>
+</section>
+<section id="id1">
+<h2>[0.5.0] - 2026-09-28<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
+<p>0.5.0 is the first release since 0.3.0. Version 0.4.0 was never published, so
+these notes cover everything since the <code class="docutils literal notranslate"><span class="pre">v0.3.0</span></code> tag (2026-07-09) and are written
+for users upgrading from 0.3.0. Module paths below are relative to
+<code class="docutils literal notranslate"><span class="pre">PyHydroGeophysX</span></code>.</p>
+<section id="highlights">
+<h3>Highlights<a class="headerlink" href="#highlights" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>The AQUAH agent workflows run as a controller loop: it reads a shared run
+transcript, chooses one tool from a registry that wraps the existing agents,
+observes the result and chooses again, and the report names any requested
+product the run did not deliver.</p></li>
+<li><p>The desktop application is now the PyHydroGeophysX Studio, with new pages for
+request-to-report runs, joint inversion, a project map and saved results.</p></li>
+<li><p>EM line inversion can solve a whole line as one laterally constrained system,
+with a chi²-targeted regularization search, robust data errors and readers
+for TEMcompany projects, TEM2Go raw folders and tTEM acquisitions.</p></li>
+<li><p>ERT inversions accept a-priori resistivity zones and imported meshes
+(PyGIMLi, Gmsh, VTK, E4D), and an E4D-style tetrahedral mesh builder is
+included.</p></li>
+<li><p>Versioned workflow recipes run the same way from Python, the new
+<code class="docutils literal notranslate"><span class="pre">pyhydrogeophysx-workflow</span></code> command and the studio, and export as a runnable
+script plus a step-by-step walkthrough script and notebook.</p></li>
+<li><p>Time-lapse ERT, SRT and time-lapse SRT inversions solve the Gauss-Newton step
+with an exact Cholesky factorisation by default; time-lapse ERT adds
+interval-weighted temporal regularization and an optional temperature
+correction.</p></li>
+</ul>
+</section>
+<section id="upgrading-from-0-3-0">
+<h3>Upgrading from 0.3.0<a class="headerlink" href="#upgrading-from-0-3-0" title="Link to this heading">#</a></h3>
+<section id="what-breaks">
+<h4>What breaks<a class="headerlink" href="#what-breaks" title="Link to this heading">#</a></h4>
+<p>These no longer work in 0.5.0. Where Python can report it, the error names
+what to use instead.</p>
+<ul class="simple">
+<li><p>Python 3.10 or later is required. 0.3.0 declared 3.8, but the package no
+longer imports on 3.8 or 3.9, both past end of life; pip keeps those
+interpreters on 0.3.0.</p></li>
+<li><p>The desktop application is now the Studio, and nothing under the Workbench
+name remains. The launcher <code class="docutils literal notranslate"><span class="pre">pyhydrogeophysx-workbench</span></code> is now
+<code class="docutils literal notranslate"><span class="pre">pyhydrogeophysx-studio</span></code>, and upgrading removes the old command, so update
+shortcuts and scripts that start the application. In <code class="docutils literal notranslate"><span class="pre">qt_apps</span></code>,
+<code class="docutils literal notranslate"><span class="pre">main_window.PyHydroGeophysXWorkbench</span></code>, <code class="docutils literal notranslate"><span class="pre">WorkbenchController</span></code> and
+<code class="docutils literal notranslate"><span class="pre">WorkbenchState</span></code> are now <code class="docutils literal notranslate"><span class="pre">PyHydroGeophysXStudio</span></code>, <code class="docutils literal notranslate"><span class="pre">StudioController</span></code> and
+<code class="docutils literal notranslate"><span class="pre">StudioState</span></code>. The result file the web app reads is <code class="docutils literal notranslate"><span class="pre">full_studio_result.json</span></code>
+(0.3.0: <code class="docutils literal notranslate"><span class="pre">full_workbench_result.json</span></code>), and the window layout 0.3.0 saved is
+not carried over.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Geophy_modular.structure_integration.create_ert_mesh_with_structure</span></code>,
+<code class="docutils literal notranslate"><span class="pre">create_joint_inversion_mesh</span></code> and <code class="docutils literal notranslate"><span class="pre">integrate_velocity_interface</span></code> were removed,
+because none has a drop-in replacement. Importing one, through
+<code class="docutils literal notranslate"><span class="pre">Geophy_modular</span></code> or <code class="docutils literal notranslate"><span class="pre">structure_integration</span></code>, raises an <code class="docutils literal notranslate"><span class="pre">ImportError</span></code> naming
+the replacement, which is built on <code class="docutils literal notranslate"><span class="pre">core.mesh_utils.add_velocity_interface</span></code>.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">agents.fetch_climate_data</span></code> script module still imports, with a warning,
+but its <code class="docutils literal notranslate"><span class="pre">main()</span></code> raises and names <code class="docutils literal notranslate"><span class="pre">ClimateDataAgent.execute()</span></code>. Climate data
+now come from the Open-Meteo historical-weather API (ERA5), which needs
+neither a second conda environment nor a key; the <code class="docutils literal notranslate"><span class="pre">climate</span></code> extra no longer
+installs <code class="docutils literal notranslate"><span class="pre">pydaymet</span></code> or <code class="docutils literal notranslate"><span class="pre">xarray</span></code>.</p></li>
+<li><p>Without ResIPy installed, Syscal and Protocol DC/IP files no longer load. The
+built-in readers that 0.3.0 adapted from ResIPy were removed because of their
+GPL-3.0 licence, and independently written readers cover BERT/unified, E4D,
+ARES, DAS-1, Res2DInv, Sting, ABEM-Lund, Lippmann and Subsurface Insights
+files. The error says so and how to install the optional ResIPy
+(<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">resipy</span></code>, GPL-3.0).</p></li>
+</ul>
+</section>
+<section id="what-warns">
+<h4>What warns<a class="headerlink" href="#what-warns" title="Link to this heading">#</a></h4>
+<p>Everything else written for 0.3.0 keeps working in 0.5.0 and emits a
+<code class="docutils literal notranslate"><span class="pre">DeprecationWarning</span></code> naming the replacement; the old names go in 0.6.0.</p>
+<ul>
+<li><p>The MODFLOW reader’s keywords were renamed: <code class="docutils literal notranslate"><span class="pre">MODFLOWWaterContent(sim_ws=)</span></code> is
+<code class="docutils literal notranslate"><span class="pre">model_directory=</span></code>, <code class="docutils literal notranslate"><span class="pre">load_timestep()</span></code> and <code class="docutils literal notranslate"><span class="pre">load_time_range()</span></code> take <code class="docutils literal notranslate"><span class="pre">nlay=</span></code>
+instead of <code class="docutils literal notranslate"><span class="pre">nlay_uzf=</span></code>, and <code class="docutils literal notranslate"><span class="pre">model_output.water_content.binaryread()</span></code> takes
+<code class="docutils literal notranslate"><span class="pre">file=</span></code> instead of <code class="docutils literal notranslate"><span class="pre">file_obj=</span></code>. The old keywords are accepted with a warning;
+giving both is a <code class="docutils literal notranslate"><span class="pre">TypeError</span></code>. The reader’s <code class="docutils literal notranslate"><span class="pre">sim_ws</span></code> attribute is
+<code class="docutils literal notranslate"><span class="pre">model_directory</span></code>, and <code class="docutils literal notranslate"><span class="pre">binaryread</span></code> returns what it returned in 0.3.0 (one
+<code class="docutils literal notranslate"><span class="pre">numpy.void</span></code> record for a structured dtype, <code class="docutils literal notranslate"><span class="pre">EOFError</span></code> at the end of the
+file).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ClimateDataAgent.fetch_climate_data_with_conda()</span></code> passes its configuration to
+<code class="docutils literal notranslate"><span class="pre">execute()</span></code>, writes <code class="docutils literal notranslate"><span class="pre">data/climate/climate_data.csv</span></code> and returns the 0.3.0
+result dictionary; the data come from ERA5, and variables ERA5 does not have
+(<code class="docutils literal notranslate"><span class="pre">srad</span></code>, <code class="docutils literal notranslate"><span class="pre">vp</span></code>, <code class="docutils literal notranslate"><span class="pre">dayl</span></code>) are named in its message.</p></li>
+<li><p>Names that 0.3.0 modules re-exported from elsewhere are importable from them
+again: <code class="docutils literal notranslate"><span class="pre">resistivity_to_saturation</span></code> from <code class="docutils literal notranslate"><span class="pre">Geophy_modular.ERT_to_WC</span></code> (it is
+<code class="docutils literal notranslate"><span class="pre">petrophysics.resistivity_models.resistivity_to_saturation2</span></code>, as in 0.3.0),
+<code class="docutils literal notranslate"><span class="pre">HydroModelOutput</span></code> from <code class="docutils literal notranslate"><span class="pre">model_output.modflow_output</span></code>, <code class="docutils literal notranslate"><span class="pre">DEFAULT_TL</span></code>,
+<code class="docutils literal notranslate"><span class="pre">INVERSION_TYPES</span></code>, <code class="docutils literal notranslate"><span class="pre">ert_load</span></code>, <code class="docutils literal notranslate"><span class="pre">ert_plot_style</span></code> and <code class="docutils literal notranslate"><span class="pre">io_utils</span></code> from
+<code class="docutils literal notranslate"><span class="pre">qt_apps.ert_timelapse</span></code>, <code class="docutils literal notranslate"><span class="pre">io_utils</span></code> from <code class="docutils literal notranslate"><span class="pre">qt_apps.em_pipeline</span></code> and
+<code class="docutils literal notranslate"><span class="pre">qt_apps.gravmag_pipeline</span></code>, and <code class="docutils literal notranslate"><span class="pre">gpu_available</span></code> from <code class="docutils literal notranslate"><span class="pre">solvers.solver</span></code>. The
+studio page modules in <code class="docutils literal notranslate"><span class="pre">qt_apps.modules</span></code> answer to the helpers 0.3.0 pages
+imported (<code class="docutils literal notranslate"><span class="pre">metrics_from_manager</span></code>, <code class="docutils literal notranslate"><span class="pre">pick_first_breaks</span></code>, <code class="docutils literal notranslate"><span class="pre">gmp</span></code>, <code class="docutils literal notranslate"><span class="pre">em_pipeline</span></code>,
+<code class="docutils literal notranslate"><span class="pre">PlanSliceView</span></code>, <code class="docutils literal notranslate"><span class="pre">TaskWorker</span></code>). The pages’ own worker classes, such as
+<code class="docutils literal notranslate"><span class="pre">ERTInversionWorker</span></code>, were internal and are gone: runs now go through a
+separate workflow process.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">WorkflowOrchestratorAgent</span></code>, <code class="docutils literal notranslate"><span class="pre">CodeGenerationAgent</span></code> and
+<code class="docutils literal notranslate"><span class="pre">GeophysicalInversionAgent</span></code> were removed. Importing them from <code class="docutils literal notranslate"><span class="pre">agents</span></code>, or from
+their 0.3.0 modules <code class="docutils literal notranslate"><span class="pre">agents.workflow_orchestrator_agent</span></code>,
+<code class="docutils literal notranslate"><span class="pre">agents.code_generation_agent</span></code> and <code class="docutils literal notranslate"><span class="pre">agents.geophysical_inversion_agent</span></code>, still
+works and emits a <code class="docutils literal notranslate"><span class="pre">DeprecationWarning</span></code> that names the replacement; creating one
+raises <code class="docutils literal notranslate"><span class="pre">RuntimeError</span></code> with the same message. The replacements are
+<code class="docutils literal notranslate"><span class="pre">BaseAgent.run_unified_agent_workflow()</span></code> (or <code class="docutils literal notranslate"><span class="pre">AgentCoordinator</span></code> for the fixed
+ERT pipeline), <code class="docutils literal notranslate"><span class="pre">workflows.export_workflow_bundle()</span></code>, and <code class="docutils literal notranslate"><span class="pre">ERTInversionAgent</span></code>,
+<code class="docutils literal notranslate"><span class="pre">SeismicAgent</span></code> or <code class="docutils literal notranslate"><span class="pre">TDEMAgent</span></code>, or <code class="docutils literal notranslate"><span class="pre">SRTInversion</span></code>, <code class="docutils literal notranslate"><span class="pre">TimeLapseSRTInversion</span></code>,
+<code class="docutils literal notranslate"><span class="pre">FDEMInversion</span></code> and <code class="docutils literal notranslate"><span class="pre">JointERTSRTInversion</span></code> called directly.</p></li>
+<li><p>These module paths still import, emit a <code class="docutils literal notranslate"><span class="pre">DeprecationWarning</span></code>, and will be
+removed in 0.6.0:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>0.3.0 module</p></th>
+<th class="head"><p>Use instead</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">qt_apps.em_pipeline</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">workflows.em1d</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">qt_apps.gravmag_pipeline</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">workflows.gravmag</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">qt_apps.ert_timelapse</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">inversion.time_lapse</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">qt_apps.ert_load</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">data_processing.ert_io</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">qt_apps.ert3d_pipeline</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">forward.ert3d</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">qt_apps.ert_plot_style</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">visualization.ert_style</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">qt_apps.geo_pipeline</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Geophy_modular.ERT_to_WC</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">qt_apps.hydro_pipeline</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Hydro_modular.hydro_to_geophysics</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">qt_apps.mesh3d_builder</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">core.mesh_3d</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">qt_apps.raster</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">visualization.raster</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">qt_apps.seismic3d_pipeline</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Geophy_modular.structure_integration</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">model_output.modflow_output</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">model_output.water_content</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</li>
+<li><p>These functions warn when called and will be removed in 0.6.0:
+<code class="docutils literal notranslate"><span class="pre">forward.tdem_forward.hydro_to_tdem</span></code> (also reachable as
+<code class="docutils literal notranslate"><span class="pre">forward.hydro_to_tdem</span></code>), replaced by <code class="docutils literal notranslate"><span class="pre">forward.simulate_tdem_sounding_from_hydro</span></code>
+for one column or <code class="docutils literal notranslate"><span class="pre">Hydro_modular.hydro_to_tdem</span></code> for a profile; and
+<code class="docutils literal notranslate"><span class="pre">solvers.solver.generalized_solver</span></code>, replaced by
+<code class="docutils literal notranslate"><span class="pre">solvers.linear_solvers.generalized_solver</span></code>, which <code class="docutils literal notranslate"><span class="pre">solvers</span></code> exports.</p></li>
+<li><p>Paths that appeared on the development branch after 0.3.0 and moved before
+this release warn the same way until 0.6.0: the top-level modules <code class="docutils literal notranslate"><span class="pre">em1d</span></code>,
+<code class="docutils literal notranslate"><span class="pre">gravmag</span></code>, <code class="docutils literal notranslate"><span class="pre">joint_api</span></code>, <code class="docutils literal notranslate"><span class="pre">table_io</span></code>, <code class="docutils literal notranslate"><span class="pre">_utils</span></code>, <code class="docutils literal notranslate"><span class="pre">_deprecations</span></code> and
+<code class="docutils literal notranslate"><span class="pre">_optional_dependencies</span></code>, and the helper names that <code class="docutils literal notranslate"><span class="pre">agents.base_agent</span></code>
+re-exports.</p></li>
+</ul>
+</section>
+<section id="numbers-that-change">
+<h4>Numbers that change<a class="headerlink" href="#numbers-that-change" title="Link to this heading">#</a></h4>
+<p>Results computed with 0.3.0 defaults differ in these cases.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">TimeLapseERTInversion</span></code> solves each Gauss-Newton step with
+<code class="docutils literal notranslate"><span class="pre">method='spd_cholesky'</span></code> (0.3.0: <code class="docutils literal notranslate"><span class="pre">'cgls'</span></code>), no longer lowers lambda between
+iterations (<code class="docutils literal notranslate"><span class="pre">lambda_rate</span></code> 1.0, was 0.8), and stops at chi² &lt; 1.0 (was 1.5) or
+when the relative misfit change falls below 0.01 after at least 5 iterations.
+The temporal constraint is weighted by survey interval
+(<code class="docutils literal notranslate"><span class="pre">temporal_weighting='interval'</span></code>: the median interval over the pair’s
+interval, capped at 10x either way); evenly spaced series are unaffected, and
+<code class="docutils literal notranslate"><span class="pre">temporal_weighting='uniform'</span></code> restores 0.3.0. With <code class="docutils literal notranslate"><span class="pre">method='cgls'</span></code> (or
+<code class="docutils literal notranslate"><span class="pre">lsqr</span></code>, <code class="docutils literal notranslate"><span class="pre">rrlsqr</span></code>, <code class="docutils literal notranslate"><span class="pre">rrls</span></code>) the least-squares solver keeps 0.3.0’s limit of 2000
+iterations.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ERTInversion</span></code> keeps CGLS, but stops at chi² &lt; 1.0 (was 1.5) or at a relative
+misfit change below 0.005 (was 0.01), and the plateau test waits for 5
+iterations.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SRTInversion</span></code> uses <code class="docutils literal notranslate"><span class="pre">spd_cholesky</span></code> (was <code class="docutils literal notranslate"><span class="pre">cgls</span></code>) and a plateau threshold of
+0.005 (was 0.01) after at least 5 iterations. <code class="docutils literal notranslate"><span class="pre">TimeLapseSRTInversion</span></code> uses
+<code class="docutils literal notranslate"><span class="pre">spd_cholesky</span></code> and keeps its 1.5 and 0.01 thresholds, with a new 5-iteration
+minimum.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">WindowedTimeLapseERTInversion</span></code> normalises the temporal pair weights over the
+whole series and slices them into each window, and a run without a mesh builds
+one mesh from the electrodes of every survey and uses it for all windows
+(0.3.0 meshed each window from its first survey).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ESMDA</span></code> refuses inflation schedules whose sum of 1/alpha differs from 1 by
+more than 1e-3, such as <code class="docutils literal notranslate"><span class="pre">[1,</span> <span class="pre">1,</span> <span class="pre">1,</span> <span class="pre">1]</span></code>, which assimilated the data four times.
+The default schedule is unchanged.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Hydro_modular.hydro_to_gravity</span></code>: mesh cells below the lowest interface carry
+no density contrast; 0.3.0 extrapolated the deepest layer into them. On a
+synthetic test profile, gz changed by up to 9.4 %.</p></li>
+<li><p>Petrophysics: <code class="docutils literal notranslate"><span class="pre">resistivity_to_saturation</span></code> and <code class="docutils literal notranslate"><span class="pre">resistivity_to_water_content</span></code>
+clip the saturation exponent <code class="docutils literal notranslate"><span class="pre">n</span></code> to [1, 4], and <code class="docutils literal notranslate"><span class="pre">resistivity_to_saturation</span></code>
+clips the cementation exponent <code class="docutils literal notranslate"><span class="pre">m</span></code> to [1, 4]; <code class="docutils literal notranslate"><span class="pre">resistivity_to_saturation2</span></code>
+keeps the caller’s <code class="docutils literal notranslate"><span class="pre">n</span></code>. With surface conduction, n = 1 is solved exactly, and
+for 0 &lt; n &lt; 1 <code class="docutils literal notranslate"><span class="pre">resistivity_to_saturation2</span></code> returns the larger physical root,
+or NaN with a <code class="docutils literal notranslate"><span class="pre">RuntimeWarning</span></code> when no root lies in [0, 1]. The dry-end floor
+on the Archie estimate (0.001, and 0.01 in <code class="docutils literal notranslate"><span class="pre">resistivity_to_saturation2</span></code>) is
+gone. Other inputs give the 0.3.0 values.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">analysis.compute_resolution_matrix</span></code> forms the data term as (Wd J)ᵀ(Wd J),
+which differs from 0.3.0’s Jᵀ Wd Wd J when <code class="docutils literal notranslate"><span class="pre">Wd</span></code> is not symmetric.
+<code class="docutils literal notranslate"><span class="pre">analysis.compute_depth_of_investigation</span></code> starts its two inversions from
+<code class="docutils literal notranslate"><span class="pre">reference_resistivity</span></code> times <code class="docutils literal notranslate"><span class="pre">scale_low</span></code> and <code class="docutils literal notranslate"><span class="pre">scale_high</span></code> (default: the
+median apparent resistivity) rather than from 0.8 and 1.2 ohm-m.
+<code class="docutils literal notranslate"><span class="pre">uncertainty.linearized_posterior</span></code> uses Cholesky solves and returns a
+symmetric covariance.</p></li>
+<li><p>EM inversions pick their starting model from the data
+(<code class="docutils literal notranslate"><span class="pre">auto_starting_model=True</span></code>), and <code class="docutils literal notranslate"><span class="pre">invert_line</span></code> re-solves at other smoothness
+weights to reach <code class="docutils literal notranslate"><span class="pre">target_chi2</span></code> (<code class="docutils literal notranslate"><span class="pre">auto_lambda=True</span></code>); set both to False to fix
+the starting resistivity and the smoothness.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SRTInversion</span></code> applies <code class="docutils literal notranslate"><span class="pre">zWeight</span></code>. In 0.3.0 the value was set but never
+reached the constraint matrix, so every run smoothed isotropically whatever
+it was given. The default is now 1.0, which is that isotropic smoothing, so a
+default run is unchanged; a run that passes another value, such as 0.2, now
+gets anisotropic smoothing and a different model. <code class="docutils literal notranslate"><span class="pre">TimeLapseSRTInversion</span></code>
+always applied its <code class="docutils literal notranslate"><span class="pre">zWeight</span></code> and keeps its default of 0.2, and the agents’
+seismic steps, which call pyGIMLi’s <code class="docutils literal notranslate"><span class="pre">TravelTimeManager</span></code> directly, are
+unaffected. <code class="docutils literal notranslate"><span class="pre">TimeLapseSRTInversion</span></code>’s line search now
+scores the same objective as its update, including the reference-model term,
+so runs that stopped early continue (in a test case chi² went from 6.40 to
+1.88 at lambda = 500).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PetrophysicalCoupling.compare_inversions_to_hydro</span></code> converts SRT velocities
+with the configured velocity model, default Hertz–Mindlin, which needs a
+calibrated <code class="docutils literal notranslate"><span class="pre">velocity_inverse</span></code>. Without one the result’s <code class="docutils literal notranslate"><span class="pre">&quot;srt&quot;</span></code> entry is
+<code class="docutils literal notranslate"><span class="pre">{&quot;error&quot;:</span> <span class="pre">...}</span></code> with a warning, and ERT and EM are still compared. 0.3.0
+always applied a linear <code class="docutils literal notranslate"><span class="pre">v_dry</span></code>–<code class="docutils literal notranslate"><span class="pre">v_sat</span></code> mapping; pass
+<code class="docutils literal notranslate"><span class="pre">velocity_model=&quot;linear&quot;</span></code> for it. Cells outside the model’s range are now NaN
+and counted in <code class="docutils literal notranslate"><span class="pre">stats[&quot;n_masked&quot;]</span></code> instead of being clipped to dry or
+saturated.</p></li>
+<li><p>FDEM forward modelling and <code class="docutils literal notranslate"><span class="pre">FDEMInversion</span></code> with several receivers pair each
+receiver’s real and imaginary parts; 0.3.0 paired the real parts of
+neighbouring receivers, so multi-receiver data change. Single-receiver results
+are unchanged. The default receiver stays at the origin, except where 0.3.0
+gave no answer. A dipole source directly above or below the origin, as in the
+all-default survey, now puts the receiver 10 m along x (0.3.0 returned NaN),
+and a loop away from the origin puts it at the loop centre (0.3.0 raised).
+Unknown <code class="docutils literal notranslate"><span class="pre">waveform_type</span></code> names raise instead of silently meaning a dipole, and
+<code class="docutils literal notranslate"><span class="pre">CircularLoop</span></code> means a loop.</p></li>
+<li><p>In time-lapse ERT, <code class="docutils literal notranslate"><span class="pre">absoluteUError</span></code> is a voltage error in volts on both
+engines, as in pyGIMLi; the current is the file’s <code class="docutils literal notranslate"><span class="pre">i</span></code>, or the new
+<code class="docutils literal notranslate"><span class="pre">absoluteCurrent</span></code> (default 0.1 A). Numbers change only for runs that set it.</p></li>
+<li><p>Reciprocal errors pair only readings whose dipoles are exchanged; repeats in
+the same direction are averaged as stacks, so the reciprocal-error filter no
+longer drops them. QC results change for surveys with repeated readings.</p></li>
+<li><p>If you used the temperature correction from the development branch: the
+seasonal <code class="docutils literal notranslate"><span class="pre">start_day</span></code> now dates the first survey rather than the origin of the
+numeric clock, and <code class="docutils literal notranslate"><span class="pre">simulate_temperature_1d</span></code> holds the surface node at the
+record from the first time step.</p></li>
+</ul>
+</section>
+</section>
+<section id="id2">
+<h3>Added<a class="headerlink" href="#id2" title="Link to this heading">#</a></h3>
+<section id="agents-and-the-unified-runtime">
+<h4>Agents and the unified runtime<a class="headerlink" href="#agents-and-the-unified-runtime" title="Link to this heading">#</a></h4>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">agents.runtime</span></code>: a controller loop over a registry of tools that wrap the
+existing agents, a run transcript that keeps data and findings apart, recovery
+that retries a step which failed because of an unsuitable setting, and one
+loop that drives both “Auto to report” and step-by-step runs.
+<code class="docutils literal notranslate"><span class="pre">BaseAgent.run_unified_agent_workflow()</span></code> keeps its signature and its
+four-value return.</p></li>
+<li><p>The request parser asks the model which products the user wants; fuzzy
+English and Chinese phrase matching remains as the fallback when no model is
+available, and a report names any requested product that the run did not
+produce.</p></li>
+<li><p>Three-level model routing (Level 1 to 3, one model per provider at each level)
+in the studio chat settings and the Streamlit sidebar.</p></li>
+<li><p>The studio assistant can capture a live panel as an image for vision-capable
+models.</p></li>
+<li><p>Reports use one figure style and a figure set chosen from the request;
+desktop reports carry a processing record with input hashes and an
+uncertainty appendix.</p></li>
+<li><p>A read-only catalogue of selected data folders, local text retrieval over the
+package documentation and chosen folders with source paths, a generated
+reader for an unrecognised text table that runs only after approval, and a
+client for the bundled MCP server.</p></li>
+</ul>
+</section>
+<section id="desktop-studio">
+<h4>Desktop studio<a class="headerlink" href="#desktop-studio" title="Link to this heading">#</a></h4>
+<ul class="simple">
+<li><p>New pages: Data &amp; reports (request, run and report in one workspace), Joint
+Inversion (guided two-method joint inversions), Map (a project-wide survey map
+with satellite or street basemaps and kriging, inverse-distance or
+triangulation surfaces) and Saved Results (a browser for the runs the project
+keeps).</p></li>
+<li><p>Every run is recorded in the active project’s result store.</p></li>
+<li><p>Workflows run in their own process and can be paused and resumed; a
+pre-started standby process removes the interpreter start-up from each run.</p></li>
+<li><p>ERT page: a mesh tab that previews the inversion mesh and its zones before a
+run, a time-lapse series view with change from the baseline, a
+temperature-correction panel and an ADTLERT GPU check.</p></li>
+<li><p>EM page: a survey map, a gate-by-gate sounding view and a line overview. The
+3D Mesh Builder takes zones as boxes of known resistivity.</p></li>
+<li><p>ERT page: the Data QC checks start at working values instead of zero, which
+switched every one of them off: max error 20 %, and under More checks ρa ≤ 0
+dropped, |V| ≥ 10 µV, |I| ≥ 0.1 mA, contact resistance ≤ 30 kΩ, stacking
+spread ≤ 50 % and reciprocal error ≤ 5 %. The |k| cap follows each file
+loaded, at 20 times its median |k|, until it is set by hand, since |k| grows
+with the electrode spacing. None of them acts until Apply filter is pressed,
+and the log now says what each check dropped.</p></li>
+<li><p>ERT page, for data that record each reading’s stacking spread (Subsurface
+Insights exports): a Max stacking spread check under More checks, and an
+optional error model, “Stacking spread with the estimate”, which adds the
+spread to the estimate in quadrature (<code class="docutils literal notranslate"><span class="pre">error_source='stack'</span></code> in
+<code class="docutils literal notranslate"><span class="pre">run_ert_manager_inversion</span></code>). The spread within one reading usually overstates
+its uncertainty, so the default error model is unchanged. The BERT readers
+carry the spread back from the saved inversion input, so a walkthrough script
+reproduces such a run.</p></li>
+</ul>
+</section>
+<section id="em-line-inversion">
+<h4>EM line inversion<a class="headerlink" href="#em-line-inversion" title="Link to this heading">#</a></h4>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">inversion.em1d_lci</span></code>: laterally constrained inversion that solves every
+sounding on a line in one system; <code class="docutils literal notranslate"><span class="pre">invert_line</span></code> uses it when
+<code class="docutils literal notranslate"><span class="pre">lateral_smoothness</span></code> is positive (<code class="docutils literal notranslate"><span class="pre">lci_mode</span></code> selects <code class="docutils literal notranslate"><span class="pre">simultaneous</span></code>,
+<code class="docutils literal notranslate"><span class="pre">sequential</span></code> or <code class="docutils literal notranslate"><span class="pre">off</span></code>).</p></li>
+<li><p>Line inversion options: a chi²-targeted smoothness search, starting and
+reference models from neighbouring soundings, outlier rejection, bounded
+Huber reweighting of data errors (<code class="docutils literal notranslate"><span class="pre">inversion.robust_errors</span></code>), an optional
+resistive-background prior (<code class="docutils literal notranslate"><span class="pre">inversion.em1d_priors</span></code>) and blanking below the
+depth of investigation.</p></li>
+<li><p>Readers for TEMcompany projects in both project-file layouts, the reference
+inversions stored in them, TEM2Go raw <code class="docutils literal notranslate"><span class="pre">.stb</span></code> folders and tTEM <code class="docutils literal notranslate"><span class="pre">SKB</span></code>/<code class="docutils literal notranslate"><span class="pre">SPS</span></code>
+acquisitions.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">JointFDEMTDEMInversion</span></code>: one model fitted to collocated FDEM and TDEM
+soundings.</p></li>
+</ul>
+</section>
+<section id="ert-zones-and-meshes">
+<h4>ERT zones and meshes<a class="headerlink" href="#ert-zones-and-meshes" title="Link to this heading">#</a></h4>
+<ul class="simple">
+<li><p>A-priori resistivity zones (<code class="docutils literal notranslate"><span class="pre">inversion.ert_zones</span></code>): polygons with a
+resistivity and an optional fixed flag. The inversion starts from and
+regularizes toward the zone model and holds fixed zones; <code class="docutils literal notranslate"><span class="pre">conform_to_zones</span></code>
+fits the mesh to the zone outlines and <code class="docutils literal notranslate"><span class="pre">decouple_zones</span></code> drops the smoothness
+constraint across them.</p></li>
+<li><p>Imported inversion meshes (<code class="docutils literal notranslate"><span class="pre">inversion.ert_mesh.load_inversion_mesh</span></code>):
+<code class="docutils literal notranslate"><span class="pre">.bms</span></code>, <code class="docutils literal notranslate"><span class="pre">.msh</span></code>, <code class="docutils literal notranslate"><span class="pre">.vtk</span></code>, <code class="docutils literal notranslate"><span class="pre">.vtu</span></code>, <code class="docutils literal notranslate"><span class="pre">.poly</span></code>, E4D <code class="docutils literal notranslate"><span class="pre">.node</span></code>/<code class="docutils literal notranslate"><span class="pre">.ele</span></code> meshes and E4D
+<code class="docutils literal notranslate"><span class="pre">.cfg</span></code> configurations, with <code class="docutils literal notranslate"><span class="pre">mesh_preview</span></code> to inspect a mesh before a run.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">core.e4d_mesh</span></code>: reads and writes E4D mesh configuration files, builds the
+mesh the way E4D does (TetGen, or Gmsh), and reads E4D <code class="docutils literal notranslate"><span class="pre">.node</span></code>/<code class="docutils literal notranslate"><span class="pre">.ele</span></code> meshes.</p></li>
+<li><p>An optional ADTLERT backend for GPU time-lapse and windowed ERT inversion
+(<code class="docutils literal notranslate"><span class="pre">engine='adtlert'</span></code>, <code class="docutils literal notranslate"><span class="pre">adtlert</span></code> extra, CUDA 12).</p></li>
+<li><p>A chi²-targeted regularization search (<code class="docutils literal notranslate"><span class="pre">inversion.lambda_search</span></code>), switched on
+with <code class="docutils literal notranslate"><span class="pre">auto_lambda</span></code> for single and time-lapse ERT, SRT and the EM line
+inversion.</p></li>
+</ul>
+</section>
+<section id="sensitivity-resolution-assimilation-and-uncertainty">
+<h4>Sensitivity, resolution, assimilation and uncertainty<a class="headerlink" href="#sensitivity-resolution-assimilation-and-uncertainty" title="Link to this heading">#</a></h4>
+<ul class="simple">
+<li><p>Worked examples for sensitivity and resolution analysis, ensemble
+assimilation (EnKF and ES-MDA) and linearized posterior uncertainty, run on
+the Treeline catchment MODFLOW model shipped with the examples. The
+functions shipped in 0.3.0; how their results change is listed under
+Upgrading.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">analysis.compute_depth_of_investigation(reference_resistivity=...)</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ERTInversion(reference_weight=...)</span></code>: a smallness term pulling the model
+toward the reference model, weighted relative to the smoothness (default 0,
+smoothness alone). <code class="docutils literal notranslate"><span class="pre">compute_depth_of_investigation</span></code> needs it with
+<code class="docutils literal notranslate"><span class="pre">ERTInversion</span></code>: first-order smoothness ignores a homogeneous reference, so
+without it the two runs converge to one model and the index says nothing
+about the reference.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">petrophysics.run_petrophysics_monte_carlo</span></code>: a seeded Monte Carlo conversion
+of ERT models to water content.</p></li>
+</ul>
+</section>
+<section id="workflows-cli-and-code-export">
+<h4>Workflows, CLI and code export<a class="headerlink" href="#workflows-cli-and-code-export" title="Link to this heading">#</a></h4>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">workflows</span></code>: versioned JSON recipes (<code class="docutils literal notranslate"><span class="pre">WorkflowSpec</span></code>, <code class="docutils literal notranslate"><span class="pre">load_recipe</span></code>,
+<code class="docutils literal notranslate"><span class="pre">save_recipe</span></code>), <code class="docutils literal notranslate"><span class="pre">run_workflow</span></code>, and a registry of 14 workflows covering single
+and time-lapse ERT, SRT, EM sounding and line inversion, gravity and
+magnetics, joint inversion, 3D ERT forward modelling, 3D meshes,
+hydrology-to-geophysics forward modelling, ERT to water content and seismic
+structure.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pyhydrogeophysx-workflow</span></code> with the subcommands <code class="docutils literal notranslate"><span class="pre">list</span></code>, <code class="docutils literal notranslate"><span class="pre">validate</span></code>, <code class="docutils literal notranslate"><span class="pre">run</span></code> and
+<code class="docutils literal notranslate"><span class="pre">export-code</span></code>.</p></li>
+<li><p>Code export: <code class="docutils literal notranslate"><span class="pre">generate_python</span></code> for an exact rerun, <code class="docutils literal notranslate"><span class="pre">generate_walkthrough</span></code> and
+<code class="docutils literal notranslate"><span class="pre">generate_notebook</span></code> for readable step-by-step code, and
+<code class="docutils literal notranslate"><span class="pre">export_workflow_bundle</span></code>, which writes the recipe, the runner and both
+walkthrough files.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pyhydrogeophysx-mcp</span></code>: an optional local stdio MCP server over the workflow
+registry (<code class="docutils literal notranslate"><span class="pre">mcp</span></code> extra).</p></li>
+</ul>
+</section>
+<section id="hydrology-and-other-methods">
+<h4>Hydrology and other methods<a class="headerlink" href="#hydrology-and-other-methods" title="Link to this heading">#</a></h4>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">model_input</span></code>: maps inverted properties to a hydrological grid and writes
+MODFLOW 6 or ParFlow inputs without modifying the source model.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">JointGravityMagneticsInversion</span></code>: SimPEG cross-gradient joint inversion of
+gravity and magnetic data.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">run_joint_inversion</span></code> and <code class="docutils literal notranslate"><span class="pre">get_joint_capabilities</span></code> dispatch registered
+two-method joint inversions.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">petrophysics.temperature</span></code>: temperature correction of resistivity from a
+constant, a depth profile, a surface record (1D heat conduction) or a seasonal
+wave, applied to time-lapse ERT through <code class="docutils literal notranslate"><span class="pre">temperature_correction</span></code>.</p></li>
+<li><p>Plan-view gridding with ordinary kriging, inverse distance and triangulation
+(<code class="docutils literal notranslate"><span class="pre">core.plan_interpolation</span></code>); CSV export of mesh models
+(<code class="docutils literal notranslate"><span class="pre">data_processing.model_csv</span></code>); acquisition times read from file names
+(<code class="docutils literal notranslate"><span class="pre">data_processing.survey_timing</span></code>); and first-break propagation from a few
+hand picks (<code class="docutils literal notranslate"><span class="pre">data_processing.first_break_propagation</span></code>).</p></li>
+</ul>
+</section>
+<section id="examples">
+<h4>Examples<a class="headerlink" href="#examples" title="Link to this heading">#</a></h4>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Ex_EM_line_section</span></code>, <code class="docutils literal notranslate"><span class="pre">Ex_TEM_LMHM_LCI</span></code>, <code class="docutils literal notranslate"><span class="pre">Ex_gravity_magnetics_inversion</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Ex_MODFLOW_geophysics_feedback</span></code>, <code class="docutils literal notranslate"><span class="pre">Ex_sensitivity_analysis</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Ex_ensemble_assimilation</span></code> and <code class="docutils literal notranslate"><span class="pre">Ex_posterior_uncertainty</span></code>, each as a script and
+a notebook; a notebook for <code class="docutils literal notranslate"><span class="pre">Ex_FDEM_workflow</span></code> and a script for
+<code class="docutils literal notranslate"><span class="pre">Ex_TL_inversion_memory</span></code>.</p></li>
+</ul>
+</section>
+</section>
+<section id="id3">
+<h3>Changed<a class="headerlink" href="#id3" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>The desktop application is called the Studio throughout (see What breaks).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">forward.TDEMSurveyConfig</span></code> keeps 0.3.0’s fields first, in their 0.3.0 order,
+and the fields added since follow them, so 0.3.0 positional construction
+works.</p></li>
+<li><p>Qt-free code that 0.3.0 kept under <code class="docutils literal notranslate"><span class="pre">qt_apps</span></code> (the 1D EM, gravity and
+magnetics, time-lapse ERT, 3D mesh, 3D ERT forward, hydrology-to-geophysics
+and ERT-to-water-content pipelines) moved into the scientific packages, so
+scripts no longer import the desktop package; see the table under What warns.</p></li>
+<li><p>Default language models: Anthropic <code class="docutils literal notranslate"><span class="pre">claude-haiku-4-5</span></code> (0.3.0:
+<code class="docutils literal notranslate"><span class="pre">claude-sonnet-5</span></code>) and OpenAI <code class="docutils literal notranslate"><span class="pre">gpt-5.6-luna</span></code> (0.3.0: <code class="docutils literal notranslate"><span class="pre">gpt-4.1</span></code>), as Level 1 of
+the routing. Gemini uses the <code class="docutils literal notranslate"><span class="pre">google-genai</span></code> SDK; the older
+<code class="docutils literal notranslate"><span class="pre">google-generativeai</span></code> is still used where it is the only one installed.</p></li>
+<li><p>Climate data come from Open-Meteo (ERA5, 0.1 to 0.25 degrees) instead of
+Daymet (1 km, North America only), so climate values in reports differ.</p></li>
+<li><p>The DAS-1 reader was rewritten, and readers for Lippmann <code class="docutils literal notranslate"><span class="pre">.tx0</span></code>, Res2DInv,
+Sting and Subsurface Insights files were added (see What breaks for Syscal
+and Protocol files).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MeshCreator.create_from_layers</span></code> and <code class="docutils literal notranslate"><span class="pre">create_mesh_from_layers</span></code> take
+<code class="docutils literal notranslate"><span class="pre">bottom_elevation</span></code> (<code class="docutils literal notranslate"><span class="pre">bottom_depth</span></code> stays as an alias with the same elevation
+meaning) and <code class="docutils literal notranslate"><span class="pre">markers</span></code>, and reject invalid boundaries.</p></li>
+<li><p>Dependencies: <code class="docutils literal notranslate"><span class="pre">palettable</span></code> is required; the <code class="docutils literal notranslate"><span class="pre">gpu</span></code> extra installs
+<code class="docutils literal notranslate"><span class="pre">cupy-cuda12x</span></code>; <code class="docutils literal notranslate"><span class="pre">desktop</span></code> adds <code class="docutils literal notranslate"><span class="pre">pyproj</span></code> and <code class="docutils literal notranslate"><span class="pre">psutil</span></code>; new extras are <code class="docutils literal notranslate"><span class="pre">ert</span></code>
+(ResIPy), <code class="docutils literal notranslate"><span class="pre">adtlert</span></code>, <code class="docutils literal notranslate"><span class="pre">desktop-3d</span></code> (PyVista, VTK) and <code class="docutils literal notranslate"><span class="pre">mcp</span></code>.</p></li>
+</ul>
+</section>
+<section id="deprecated">
+<h3>Deprecated<a class="headerlink" href="#deprecated" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>The compatibility paths listed under What warns, to be removed in 0.6.0.</p></li>
+</ul>
+</section>
+<section id="removed">
+<h3>Removed<a class="headerlink" href="#removed" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">WorkflowOrchestratorAgent</span></code>, <code class="docutils literal notranslate"><span class="pre">CodeGenerationAgent</span></code> and
+<code class="docutils literal notranslate"><span class="pre">GeophysicalInversionAgent</span></code>; their names still import, with a warning.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">create_ert_mesh_with_structure</span></code>, <code class="docutils literal notranslate"><span class="pre">create_joint_inversion_mesh</span></code> and
+<code class="docutils literal notranslate"><span class="pre">integrate_velocity_interface</span></code> (importing one raises an <code class="docutils literal notranslate"><span class="pre">ImportError</span></code> naming
+the replacement), and the <code class="docutils literal notranslate"><span class="pre">agents.fetch_climate_data</span></code> script, whose <code class="docutils literal notranslate"><span class="pre">main()</span></code>
+now raises; <code class="docutils literal notranslate"><span class="pre">ClimateDataAgent.fetch_climate_data_with_conda()</span></code> still works,
+with a warning.</p></li>
+<li><p>The built-in Syscal and Protocol DC/IP readers adapted from ResIPy; with
+ResIPy installed those files load as before.</p></li>
+<li><p>The examples <code class="docutils literal notranslate"><span class="pre">Ex_ERT_data_process</span></code> and <code class="docutils literal notranslate"><span class="pre">Ex_cross_constraints.py</span></code> and the
+climate helper scripts <code class="docutils literal notranslate"><span class="pre">fetch_climate.bat</span></code> and <code class="docutils literal notranslate"><span class="pre">setup_climate_env.bat</span></code>. The
+launch scripts moved: <code class="docutils literal notranslate"><span class="pre">examples/start_webapp.bat</span></code>/<code class="docutils literal notranslate"><span class="pre">.sh</span></code> are now
+<code class="docutils literal notranslate"><span class="pre">PyHydroGeophysX/start_webapp.bat</span></code>/<code class="docutils literal notranslate"><span class="pre">.sh</span></code>, and <code class="docutils literal notranslate"><span class="pre">scripts/start_qt_workbench.bat</span></code>/
+<code class="docutils literal notranslate"><span class="pre">.sh</span></code> are replaced by <code class="docutils literal notranslate"><span class="pre">start_studio.bat</span></code>/<code class="docutils literal notranslate"><span class="pre">.sh</span></code> in <code class="docutils literal notranslate"><span class="pre">examples/</span></code> and the package
+folder.</p></li>
+</ul>
+</section>
+<section id="id4">
+<h3>Fixed<a class="headerlink" href="#id4" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ERTForwardModeling.create_synthetic_data</span></code> declared <code class="docutils literal notranslate"><span class="pre">cls</span></code> without
+<code class="docutils literal notranslate"><span class="pre">&#64;classmethod</span></code>, so calling it on the class needed a dummy first argument; it
+is a classmethod now.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ERTInversion</span></code> no longer erases the apparent resistivities of a file that
+stores <code class="docutils literal notranslate"><span class="pre">rhoa</span></code> without <code class="docutils literal notranslate"><span class="pre">r</span></code> when it recomputes geometric factors; such a run
+returned 1e-6 ohm-m.</p></li>
+<li><p>The Geometrics DAT (SEG-2) reader decodes samples by the trace descriptor’s
+data format code. 0.3.0 read that byte as a sample size, which decoded 16- and
+32-bit integer traces wrongly; a record whose traces disagree on sample
+interval, length or delay now raises instead of taking the last trace’s
+values.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">InversionEvaluationAgent</span></code> had its chi² ranges for “poor” and “overfit”
+swapped.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uncertainty.propagate_petro_uncertainty</span></code> always returns <code class="docutils literal notranslate"><span class="pre">&quot;cov&quot;</span></code> as a 2-D
+matrix.</p></li>
+</ul>
+<section id="fixes-from-the-0-5-0-review">
+<h4>Fixes from the 0.5.0 review<a class="headerlink" href="#fixes-from-the-0-5-0-review" title="Link to this heading">#</a></h4>
+<p>Agents and reports:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">AgentCoordinator</span></code> no longer fails after the inversion when a step’s result
+cannot be pickled (it holds a pyGIMLi mesh). Checkpoints are best-effort, and
+a truncated checkpoint is re-run rather than loaded.</p></li>
+<li><p>A failed seismic step is no longer used as a structure constraint or counted
+as done; the run warns and the report lists it.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">run_unified_agent_workflow</span></code> returns <code class="docutils literal notranslate"><span class="pre">status=&quot;incomplete&quot;</span></code> when a step failed
+and was not recovered, even after writing a report. Reports gain a “Not
+delivered” section giving the reason for each failed step and each requested
+product the run did not produce, climate data included.</p></li>
+<li><p>Reports leave out empty fields instead of printing “None” or “N/A”, give chi²
+to three significant figures, name the inversion method and solver that ran,
+compute the time-series recommendation from the actual series, and say a
+language model wrote the text only when one did.</p></li>
+<li><p>Seismic settings from the request (<code class="docutils literal notranslate"><span class="pre">seismic_params</span></code>, and the seismic stage’s
+<code class="docutils literal notranslate"><span class="pre">lam</span></code>, <code class="docutils literal notranslate"><span class="pre">z_weight</span></code> and the like) reach <code class="docutils literal notranslate"><span class="pre">SeismicAgent</span></code>.</p></li>
+<li><p>Without an API key, or when the model call fails,
+<code class="docutils literal notranslate"><span class="pre">ContextInputAgent.parse_request</span></code> falls back to the deterministic parser with
+a warning. The unified workflow runs the files a request names when the
+configuration names none.</p></li>
+<li><p>A water-content request on TDEM data alone is answered from the sounding’s
+layered model, with an uncertainty caveat; a missing water content states its
+reason.</p></li>
+<li><p>Instrument names in requests and data-file headers match as whole words, so
+“existing”, “Albert” or “Canadas” no longer select the Sting, BERT or DAS-1
+reader, and “Terrameter” is recognised.</p></li>
+<li><p>The agents no longer force <code class="docutils literal notranslate"><span class="pre">method='cgls'</span></code>; the library’s solver default
+applies unless the configuration names one. Lambda trials no longer ask the
+model for an interpretation; only the kept model is interpreted.</p></li>
+<li><p>Folder classification in the studio routes the chosen provider (Claude,
+OpenAI, OpenAI-compatible) correctly, and refuses an unsupported one clearly.</p></li>
+</ul>
+<p>Web apps:</p>
+<ul class="simple">
+<li><p>The No-LLM quick modes produce water content when the request asks for it,
+in any wording the runtime recognises, typos and Chinese included, and the
+confirm form has a checkbox for it. They no longer preset DAS-1 or E4D, so an
+instrument the request does not name is read from the file header.</p></li>
+<li><p>A failed re-run no longer leaves the previous run’s “Workflow complete.”,
+plan and downloads on the page; the closing message follows the run’s own
+status, and the results summary shows the resistivity and water-content
+ranges.</p></li>
+<li><p>Demo mode ships its cached results in <code class="docutils literal notranslate"><span class="pre">examples/demo_cache/</span></code> (rebuilt with
+<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">examples/demo_cache/make_demo_cache.py</span></code>) and reports a missing cache
+plainly.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pyhydrogeophysx-gui</span></code> and <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">PyHydroGeophysX.gui_mesh3d</span></code> explain,
+from a pip install, that the web apps ship with the source repository, and
+accept an app path as their first argument.</p></li>
+</ul>
+<p>Desktop studio:</p>
+<ul class="simple">
+<li><p>Saved Results opens ERT results in a project whose path the Windows codepage
+cannot represent, such as a Chinese folder name; <code class="docutils literal notranslate"><span class="pre">InversionResult</span></code> and
+<code class="docutils literal notranslate"><span class="pre">TimeLapseInversionResult</span></code> save and reload their mesh in such folders, and the
+seismic structure helpers read their meshes there.</p></li>
+<li><p>A moved or renamed project reopens its runs: records store run-relative
+paths, and older records are rebased onto the run’s current folder.</p></li>
+<li><p>The ERT page’s reciprocal error uses the library’s sign-aware pairing; a pair
+written as (M,N,B,A) no longer scores 200 %.</p></li>
+<li><p>Geophone files with a station column are ordered by station, so the first
+position and the spacing are right when rows are out of order.</p></li>
+<li><p>The seismic page’s geophone spacing and geophone-0 x now move the picks
+already made, and the Travel-time plot follows. A pick kept the position
+stamped when it was made, so a spacing set afterwards reached neither the
+plot, the exported travel times nor the SRT inversion: picks taken at the
+default 1 m stayed 1 m apart after the spacing was set to 0.5 m. The plot also
+marks the geophones, so it shows the line before there are any picks.</p></li>
+<li><p>The Seismic → Structure example lines are no longer mirrored; the interface
+had been placed 3 to 12 m from the 3-D truth.</p></li>
+<li><p>A TDEM line section keeps the map coordinates of its geometry file, so Add to
+Map offers “Coordinates carried by this result”.</p></li>
+<li><p>A workflow process that crashes natively or runs out of memory (for example
+in CHOLMOD) is reported in plain words with what to try, and the last lines
+of each run’s output are kept in <code class="docutils literal notranslate"><span class="pre">logs/workflow_output.log</span></code>.</p></li>
+<li><p>When example data is absent, “Use example” says it ships with the source
+repository; the studio also finds a clone it was started from, or one named
+by the new <code class="docutils literal notranslate"><span class="pre">PHGX_EXAMPLES_DIR</span></code> environment variable.</p></li>
+<li><p>Saved Results lists each file once and names a single inversion as the ERT
+page does. The window icon is included in the wheel.</p></li>
+<li><p>An electrode file now places the electrodes of a time-lapse run. The run
+read each survey’s own header while the page previewed the electrode file’s
+positions; the file is now kept with the run, and the walkthrough script
+passes it on. The time-lapse walkthrough also defines the survey files and
+times it uses, which it never did for a studio run, so it stopped at a
+NameError.</p></li>
+<li><p>An electrode file loaded after the data reads the data again through the same
+reader as loading it first, and a filter already applied is applied again. Laid
+over the loaded data, a file one row short silently dropped that electrode and
+every reading on it; it is now refused, as the readers refuse it.</p></li>
+<li><p>Discarding a run no longer fails with WinError 32. The next run’s standby
+process waited in the folder of the run that started it, which Windows will
+not delete; it now waits in the package’s own folder. A discard that Windows
+refuses part way no longer leaves the run to be saved without its files: the
+run is discarded, and what is left of its folder is offered for removal when
+the project next opens.</p></li>
+</ul>
+<p>Library:</p>
+<ul class="simple">
+<li><p>An electrode table with two electrodes at one position no longer shifts the
+later electrodes onto wrong positions with wrong geometric factors; a reading
+that uses both is refused with a clear error.</p></li>
+<li><p>Electrodes moved by an electrode file, or in the studio’s electrode table,
+keep each reading’s measured transfer resistance: k and the apparent
+resistivity follow the electrodes. A file that reports apparent resistivity
+kept the values formed on its header’s positions, so doubling the spacing
+doubled k and halved the resistance the data implied. <code class="docutils literal notranslate"><span class="pre">load_ert_container</span></code>
+places the electrodes from <code class="docutils literal notranslate"><span class="pre">electrode_file</span></code> when PyGIMLi’s own reader reads the
+file, and refuses a file listing a different number of electrodes; it used to
+return the header’s positions. <code class="docutils literal notranslate"><span class="pre">normalize_for_timelapse</span></code> and
+<code class="docutils literal notranslate"><span class="pre">run_timelapse_ert</span></code> take <code class="docutils literal notranslate"><span class="pre">electrode_file</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">interpolate_to_mesh</span></code> accepts any number of layers, not only 14.</p></li>
+<li><p>The Waxman–Smits inverses reject a negative <code class="docutils literal notranslate"><span class="pre">sigma_sur</span></code> instead of returning
+a number, and <code class="docutils literal notranslate"><span class="pre">resistivity_to_saturation</span></code> accepts 2-D input.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">hydro_to_ert(save_path=...)</span></code> writes the synthetic data it documents, and
+<code class="docutils literal notranslate"><span class="pre">hydro_to_ert</span></code> and <code class="docutils literal notranslate"><span class="pre">hydro_to_srt</span></code> no longer print the whole layer-ID array on
+every call; with <code class="docutils literal notranslate"><span class="pre">verbose=True</span></code> they print the layer markers.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Hydro_modular</span></code> imports without PyGIMLi; <code class="docutils literal notranslate"><span class="pre">hydro_to_ert</span></code> and <code class="docutils literal notranslate"><span class="pre">hydro_to_srt</span></code>
+load it on first use.</p></li>
+<li><p>An import error caused by a missing module of the package itself names that
+module instead of suggesting <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">PyHydroGeophysX</span></code>.</p></li>
+<li><p>ERT instrument detection, the removed agents’ 0.3.0 module paths and the
+deprecation messages were brought in line with this release (see Upgrading).</p></li>
+</ul>
+<p>Examples and documentation:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">EX_SRT_forward</span></code> writes to <code class="docutils literal notranslate"><span class="pre">examples/results/srt_example/</span></code> and no longer
+overwrites the shipped <code class="docutils literal notranslate"><span class="pre">data/Seismic/synthetic_seismic_data.dat</span></code>, which was
+refreshed to match the current code (its travel times had drifted by a median
+6 %, up to 58 %).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ex_3D_ERT_forward</span></code> renders its 3-D views off screen, so it runs with PyVista
+installed; <code class="docutils literal notranslate"><span class="pre">Ex_model_output.ipynb</span></code> loads a timestep that exists; the
+<code class="docutils literal notranslate"><span class="pre">Ex_TL_inversion</span></code>, <code class="docutils literal notranslate"><span class="pre">Ex_structure_TLresinv</span></code>, <code class="docutils literal notranslate"><span class="pre">Ex_Time_lapse_measurement</span></code> and
+<code class="docutils literal notranslate"><span class="pre">Ex_MC_Hydro</span></code> notebooks read the same files as their scripts; and the seismic
+part of <code class="docutils literal notranslate"><span class="pre">Ex_multi_agent_workflow.ipynb</span></code> runs on the shipped line.</p></li>
+<li><p>Examples that need another example’s output, or long run times or much
+memory, say so in their header and in the gallery index.</p></li>
+<li><p>The README, installation page and agent guides no longer point to examples
+and scripts that do not exist, say that examples, their data and the web apps
+come with the source repository rather than the pip package, and describe
+demo mode as it is. The API snippets for the 3D mesh builder,
+<code class="docutils literal notranslate"><span class="pre">qc_and_visualize</span></code>, <code class="docutils literal notranslate"><span class="pre">export_for_inversion</span></code> and <code class="docutils literal notranslate"><span class="pre">TDEMSurveyConfig</span></code> match the
+code, and the new examples’ gallery pages show their figures.</p></li>
+</ul>
+</section>
+</section>
+</section>
+<section id="id5">
+<h2>[0.3.0] - 2026-07-09<a class="headerlink" href="#id5" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Desktop Workbench downloads for Windows and macOS, in light and full builds,
+and automatic deployment of the documentation site.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="citation.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Citation</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#unreleased">[Unreleased]</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#added">Added</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#changed">Changed</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fixed">Fixed</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">[0.5.0] - 2026-09-28</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#highlights">Highlights</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#upgrading-from-0-3-0">Upgrading from 0.3.0</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#what-breaks">What breaks</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#what-warns">What warns</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#numbers-that-change">Numbers that change</a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Added</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#agents-and-the-unified-runtime">Agents and the unified runtime</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#desktop-studio">Desktop studio</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#em-line-inversion">EM line inversion</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#ert-zones-and-meshes">ERT zones and meshes</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#sensitivity-resolution-assimilation-and-uncertainty">Sensitivity, resolution, assimilation and uncertainty</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#workflows-cli-and-code-export">Workflows, CLI and code export</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#hydrology-and-other-methods">Hydrology and other methods</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Changed</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#deprecated">Deprecated</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#removed">Removed</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Fixed</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#fixes-from-the-0-5-0-review">Fixes from the 0.5.0 review</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">[0.3.0] - 2026-07-09</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/changelog.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="_sources/changelog.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,1011 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>ERT &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=1dd76d02"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'methods/ert';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/methods/ert.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Seismic refraction" href="seismic.html" />
+    <link rel="prev" title="Methods" href="index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    Agentic AI
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../changelog.html">
+    Changelog
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    Agentic AI
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../changelog.html">
+    Changelog
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">ERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="seismic.html">Seismic refraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="em.html">TDEM and FDEM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="potential_fields.html">Gravity and magnetics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mt.html">Magnetotellurics (MT and AMT)</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="hydrological_models.html">MODFLOW, ParFlow, ATS and PFLOTRAN</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/ats_pflotran_outputs.html">ATS and PFLOTRAN outputs to geophysics</a></li>
+</ul>
+</details></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Methods</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">ERT</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="ert">
+<h1>ERT<a class="headerlink" href="#ert" title="Link to this heading">#</a></h1>
+<p>Electrical resistivity tomography. Of the methods here it is the one most
+directly tied to water content, which is why most of the hydrological workflows
+run through it.</p>
+<section id="what-you-can-do">
+<h2>What you can do<a class="headerlink" href="#what-you-can-do" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Forward modelling from a resistivity model, in 2D and 3D, with topography.</p></li>
+<li><p>Single-survey inversion.</p></li>
+<li><p>Time-lapse inversion of a monitoring series, including a windowed variant for
+series too long to invert at once.</p></li>
+<li><p>Structure-constrained inversion, where seismic structure guides the result.</p></li>
+<li><p>Joint ERT and seismic inversion against a shared structure.</p></li>
+<li><p>Field-data quality control with reciprocal error estimates.</p></li>
+</ul>
+</section>
+<section id="required-inputs">
+<h2>Required inputs<a class="headerlink" href="#required-inputs" title="Link to this heading">#</a></h2>
+<p>Either a resistivity model on a mesh together with an electrode layout, for
+forward modelling, or a measured dataset in one of the formats below. For
+hydrology-driven work you supply water content and porosity instead, and the
+petrophysical relationship produces the resistivity model.</p>
+<p>The readers return an electrode array alongside a table of measurements, so
+nothing downstream depends on which instrument wrote the file.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 70.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Format</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>DAS-1 <code class="docutils literal notranslate"><span class="pre">.Data</span></code></p></td>
+<td><p>Self-describing; the column map is read from each file’s own header.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">.tx0</span></code></p></td>
+<td><p>Lippmann 4-Point Light and GeoTest exports, with the electrode table.</p></td>
+</tr>
+<tr class="row-even"><td><p>Res2DInv <code class="docutils literal notranslate"><span class="pre">.dat</span></code></p></td>
+<td><p>General-array format.</p></td>
+</tr>
+<tr class="row-odd"><td><p>AGI SuperSting <code class="docutils literal notranslate"><span class="pre">.stg</span></code></p></td>
+<td><p>SuperSting and Sting R1. The electrode table is rebuilt from the records,
+and the instrument’s own geometric factor is carried alongside so a
+nominal-versus-surveyed geometry mismatch becomes visible.</p></td>
+</tr>
+<tr class="row-even"><td><p>Subsurface Insights <code class="docutils literal notranslate"><span class="pre">.csv</span></code></p></td>
+<td><p>The <code class="docutils literal notranslate"><span class="pre">results_processed_*</span></code> export, read by column name across firmware
+versions. Electrode positions are rebuilt from the instrument’s own
+geometric factors when they describe a straight, evenly spaced line;
+otherwise the surveyed electrode file supplies them.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">.ohm</span></code>, <code class="docutils literal notranslate"><span class="pre">.dat</span></code></p></td>
+<td><p>E4D and pyGIMLi/BERT files. ResIPy adds further instrument formats when
+it is installed.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><a class="reference internal" href="../data_and_processing.html"><span class="doc">Data and processing</span></a> covers the readers and the
+quality-control tests in full.</p>
+</section>
+<section id="typical-outputs">
+<h2>Typical outputs<a class="headerlink" href="#typical-outputs" title="Link to this heading">#</a></h2>
+<p>A resistivity model on the inversion mesh, the data fit that produced it, and
+for a monitoring series one model per acquisition time. Estimated water content
+follows from the recovered resistivity through the petrophysical relationship,
+with the parameter uncertainty propagated alongside it.</p>
+</section>
+<section id="choose-a-workflow">
+<h2>Choose a workflow<a class="headerlink" href="#choose-a-workflow" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 46.0%" />
+<col style="width: 54.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Your goal</p></th>
+<th class="head"><p>Start here</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Predict ERT data from a hydrological model</p></td>
+<td><p><a class="reference internal" href="../tutorials/hydrology_to_ert.html"><span class="doc">Hydrology to ERT</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>Check and prepare field measurements</p></td>
+<td><p><a class="reference internal" href="../tutorials/field_ert_data_qc.html"><span class="doc">Field ERT Data QC</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>Invert one survey</p></td>
+<td><p><a class="reference internal" href="../auto_examples/Ex_ERT_single_inversion.html"><span class="doc">Ex. Single ERT File Inversion (No Time-Lapse)</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>Analyse repeated surveys</p></td>
+<td><p><a class="reference internal" href="../tutorials/time_lapse_monitoring.html"><span class="doc">Time-Lapse Monitoring</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>Add structural constraints</p></td>
+<td><p><a class="reference internal" href="../tutorials/seismic_structure_constraints.html"><span class="doc">Seismic Structure Constraints</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>Combine ERT and seismic</p></td>
+<td><p><a class="reference internal" href="../tutorials/joint_inversion.html"><span class="doc">Joint ERT + SRT Inversion</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>Estimate water content from a recovered section</p></td>
+<td><p><a class="reference internal" href="../auto_examples/Ex_MC_Hydro.html"><span class="doc">Ex. Monte Carlo Uncertainty Quantification for Hydrologic Properties Estimation</span></a></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="desktop-support">
+<h2>Desktop support<a class="headerlink" href="#desktop-support" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="../agents/desktop_studio.html"><span class="doc">Desktop Studio</span></a> has an ERT module covering
+import, quality control, mesh generation, inversion and display, including the
+time-lapse series.</p>
+</section>
+<section id="python-examples">
+<h2>Python examples<a class="headerlink" href="#python-examples" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../auto_examples/Ex_ERT_workflow.html"><span class="doc">Ex. ERT Workflow: From Hydrological Models to ERT responses and Inversion</span></a>: hydrology to a resistivity model to a
+simulated survey.</p></li>
+<li><p><a class="reference internal" href="../auto_examples/Ex_ERT_single_inversion.html"><span class="doc">Ex. Single ERT File Inversion (No Time-Lapse)</span></a>: recover a section from field
+data.</p></li>
+<li><p><a class="reference internal" href="../auto_examples/Ex_3D_ERT_forward.html"><span class="doc">Ex. 3D ERT Forward Modeling with MODFLOW Integration</span></a>: forward modelling on a 3D mesh with
+topography.</p></li>
+<li><p><a class="reference internal" href="../auto_examples/Ex_Time_lapse_measurement.html"><span class="doc">Ex. Creating Synthetic Time-Lapse ERT Measurements</span></a> and
+<a class="reference internal" href="../auto_examples/Ex_TL_inversion.html"><span class="doc">Ex. Time-Lapse ERT Inversion Techniques</span></a>: generate and invert a monitoring
+series.</p></li>
+<li><p><a class="reference internal" href="../auto_examples/Ex_TL_inversion_memory.html"><span class="doc">Ex. Memory-Optimized Time-Lapse ERT Inversion</span></a>: the windowed variant for long
+series.</p></li>
+<li><p><a class="reference internal" href="../auto_examples/Ex_Structure_resinv.html"><span class="doc">Ex. Structure-Constrained Resistivity Inversion</span></a> and
+<a class="reference internal" href="../auto_examples/Ex_structure_TLresinv.html"><span class="doc">Ex. Structure-Constrained Time-Lapse Resistivity Inversion</span></a>: structural constraints, single
+and time-lapse.</p></li>
+<li><p><a class="reference internal" href="../auto_examples/Ex_joint_inversion.html"><span class="doc">Ex. Joint ERT-SRT Inversion: Cross-Gradient and Geostatistical Coupling</span></a>: joint ERT and seismic.</p></li>
+</ul>
+<p>A single inversion, in the shortest form it takes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion</span><span class="w"> </span><span class="kn">import</span> <span class="n">ERTInversion</span>
+
+<span class="n">inv</span> <span class="o">=</span> <span class="n">ERTInversion</span><span class="p">(</span><span class="n">data_file</span><span class="o">=</span><span class="s2">"examples/data/ERT/Bert/fielddataline2.dat"</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">inv</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"cells:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">final_model</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="s2">"final chi2:"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">iteration_chi2</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+</pre></div>
+</div>
+</section>
+<section id="relevant-api">
+<h2>Relevant API<a class="headerlink" href="#relevant-api" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../api/forward.html"><span class="doc">Forward Module</span></a> for <code class="docutils literal notranslate"><span class="pre">ERTForwardModeling</span></code>.</p></li>
+<li><p><a class="reference internal" href="../api/inversion.html"><span class="doc">Inversion Module</span></a> for <code class="docutils literal notranslate"><span class="pre">ERTInversion</span></code>, <code class="docutils literal notranslate"><span class="pre">TimeLapseERTInversion</span></code>,
+<code class="docutils literal notranslate"><span class="pre">WindowedTimeLapseERTInversion</span></code>, <code class="docutils literal notranslate"><span class="pre">StructuralConstraint</span></code> and
+<code class="docutils literal notranslate"><span class="pre">JointERTSRTInversion</span></code>.</p></li>
+<li><p><a class="reference internal" href="../api/data_processing.html"><span class="doc">Data Processing Module</span></a> for the readers and quality-control functions.</p></li>
+<li><p><a class="reference internal" href="../api/petrophysics.html"><span class="doc">petrophysics package</span></a> for the resistivity relationships.</p></li>
+</ul>
+</section>
+<section id="limitations-and-optional-dependencies">
+<h2>Limitations and optional dependencies<a class="headerlink" href="#limitations-and-optional-dependencies" title="Link to this heading">#</a></h2>
+<p>Forward modelling and inversion run on pyGIMLi, which the <code class="docutils literal notranslate"><span class="pre">geophysics</span></code> extra
+installs:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"pyhydrogeophysx[geophysics]"</span>
+</pre></div>
+</div>
+<p>ResIPy is a separate optional install that widens the set of readable
+instrument formats. A differentiable 2.5D backend, selected with
+<code class="docutils literal notranslate"><span class="pre">engine=&quot;adtlert&quot;</span></code>, runs on the GPU and needs Python 3.11 or newer; it falls
+back to the built-in engine when CUDA is unavailable, and the engine that
+actually ran is reported. See <a class="reference internal" href="../installation.html"><span class="doc">Installation</span></a> for both.</p>
+</section>
+<section id="external-engines-e4d-r2-and-r3t">
+<h2>External engines: E4D, R2 and R3t<a class="headerlink" href="#external-engines-e4d-r2-and-r3t" title="Link to this heading">#</a></h2>
+<p>These programs are not installed with PyHydroGeophysX. Their engines write the
+files each program reads, run it, and read its results back, so QC, the error
+model, the geometric-factor check, outlier rejection and every viewer and
+export work as with the other engines.</p>
+<section id="e4d">
+<span id="ert-e4d"></span><h3>E4D<a class="headerlink" href="#e4d" title="Link to this heading">#</a></h3>
+<p>E4D, PNNL’s parallel 3-D ERT code (BSD-style licence), is an external engine
+(<code class="docutils literal notranslate"><span class="pre">engine=&quot;e4d&quot;</span></code>), for single surveys and for time-lapse series in E4D’s own
+time-lapse mode. It is a Fortran/MPI program built from source
+(<a class="github reference external" href="https://github.com/pnnl/E4D">pnnl/E4D</a>) with gfortran, PETSc and MPI. Where it runs:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 28.0%" />
+<col style="width: 32.0%" />
+<col style="width: 40.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Platform</p></th>
+<th class="head"><p>E4D</p></th>
+<th class="head"><p>How PyHydroGeophysX reaches it</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Linux (workstation, cluster node)</p></td>
+<td><p>Supported; E4D’s own platform</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">e4d</span></code> and <code class="docutils literal notranslate"><span class="pre">mpirun</span></code> on PATH, <code class="docutils literal notranslate"><span class="pre">PYHYDRO_E4D</span></code> / <code class="docutils literal notranslate"><span class="pre">PYHYDRO_MPIRUN</span></code>, or
+paths in the settings (<code class="docutils literal notranslate"><span class="pre">launcher=&quot;local&quot;</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Windows</p></td>
+<td><p>Only inside WSL 2; there is no Windows build</p></td>
+<td><p>E4D built in the WSL Linux, <code class="docutils literal notranslate"><span class="pre">launcher=&quot;wsl&quot;</span></code>; PyHydroGeophysX stays on
+Windows</p></td>
+</tr>
+<tr class="row-even"><td><p>macOS</p></td>
+<td><p>When built from source (not in E4D’s instructions; untested)</p></td>
+<td><p>As on Linux</p></td>
+</tr>
+<tr class="row-odd"><td><p>Anywhere else, or a cluster with a scheduler</p></td>
+<td><p>Elsewhere</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">launcher=&quot;files&quot;</span></code> writes the complete run folder; run
+<code class="docutils literal notranslate"><span class="pre">mpirun</span> <span class="pre">-np</span> <span class="pre">N</span> <span class="pre">e4d</span></code> in it, then read it back with
+<code class="docutils literal notranslate"><span class="pre">inversion.e4d.read_e4d_run</span></code> or <code class="docutils literal notranslate"><span class="pre">read_e4d_time_lapse</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>E4D needs at least two MPI processes (one master, one or more workers) and no
+more workers than electrodes. <code class="docutils literal notranslate"><span class="pre">PYHYDRO_E4D_COMMAND</span></code> replaces
+<code class="docutils literal notranslate"><span class="pre">mpirun</span> <span class="pre">-np</span> <span class="pre">N</span> <span class="pre">e4d</span></code> with any command line (<code class="docutils literal notranslate"><span class="pre">{processes}</span></code> is filled in), for
+<code class="docutils literal notranslate"><span class="pre">srun</span></code> or a container. When E4D cannot run, the run writes its folder and
+stops with a message giving the path; it never falls back to another engine.
+To see what the current machine offers:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>PyHydroGeophysX.inversion.e4d
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.inversion.ert_inversion</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_ert_manager_inversion</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">run_ert_manager_inversion</span><span class="p">(</span>
+    <span class="s2">"survey.dat"</span><span class="p">,</span> <span class="s2">"output"</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">"e4d"</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+    <span class="n">e4d</span><span class="o">=</span><span class="p">{</span><span class="s2">"launcher"</span><span class="p">:</span> <span class="s2">"auto"</span><span class="p">,</span> <span class="s2">"processes"</span><span class="p">:</span> <span class="mi">8</span><span class="p">},</span>   <span class="c1"># or "local", "wsl", "files"</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">"e4d"</span><span class="p">][</span><span class="s2">"run_dir"</span><span class="p">])</span>   <span class="c1"># E4D's e4d.log, sigma.N and resistivity_3d.vtk</span>
+</pre></div>
+</div>
+<p>E4D models in 3-D. A 3-D survey on an imported tetrahedral mesh is inverted on
+that mesh. A 2-D profile is inverted on a 3-D mesh built around the line the
+way E4D users build one (a fine zone under the electrodes, reaching half the
+inverted depth to either side, inside an outer zone reaching four electrode
+spreads beyond it; the ground along the line carried across it), and the
+section along the line is read back onto the profile’s own mesh. Each run is
+E4D’s mode ERT3 at a fixed λ (E4D’s β), which the λ search can choose:
+nearest-neighbour smoothness, update option 3 so it stops once the objective
+stops falling, and stopped after the iteration limit, since E4D has none of its
+own. E4D’s χ² is that of the transfer resistances, with a standard deviation of
+<code class="docutils literal notranslate"><span class="pre">err·|R|</span></code>.</p>
+<p>A time-lapse series runs as E4D’s own time-lapse inversion (ERT4) through
+<code class="docutils literal notranslate"><span class="pre">run_timelapse_ert(...,</span> <span class="pre">{&quot;engine&quot;:</span> <span class="pre">&quot;e4d&quot;,</span> <span class="pre">...})</span></code> or the Time-lapse panel: the
+first survey is the baseline, each later one starts from the solution before
+it, and the smoothness acts on the change from it. The measurements common to
+every survey are inverted, as E4D requires the same ones in each. The temporal
+weight α, the interval weighting and auto-λ belong to the in-house joint
+inversion and are not used; the log says so.</p>
+</section>
+<section id="r2-and-r3t">
+<span id="ert-r2-r3t"></span><h3>R2 and R3t<a class="headerlink" href="#r2-and-r3t" title="Link to this heading">#</a></h3>
+<p>R2 (2-D profiles) and R3t (3-D surveys) are Andrew Binley’s finite-element
+inversion programs (Lancaster University) and the ones ResIPy runs. They are
+external engines too (<code class="docutils literal notranslate"><span class="pre">engine=&quot;r2&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">engine=&quot;r3t&quot;</span></code>), for single surveys
+and for time-lapse series (their difference inversion against the first
+survey). They are free for non-commercial use, and commercial use needs the
+author’s permission (<a class="reference external" href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a>).
+Where they run:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<colgroup>
+<col style="width: 28.0%" />
+<col style="width: 32.0%" />
+<col style="width: 40.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Platform</p></th>
+<th class="head"><p>R2 / R3t</p></th>
+<th class="head"><p>How PyHydroGeophysX reaches them</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Windows</p></td>
+<td><p>Supported natively (<code class="docutils literal notranslate"><span class="pre">R2.exe</span></code>, <code class="docutils literal notranslate"><span class="pre">R3t.exe</span></code>)</p></td>
+<td><p>An installed ResIPy’s copy, found without importing ResIPy; or the
+program in the settings, <code class="docutils literal notranslate"><span class="pre">PYHYDRO_R2</span></code> / <code class="docutils literal notranslate"><span class="pre">PYHYDRO_R3T</span></code>, or PATH</p></td>
+</tr>
+<tr class="row-odd"><td><p>Linux</p></td>
+<td><p>Through Wine, as their manuals and ResIPy run them</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">wine</span></code> or <code class="docutils literal notranslate"><span class="pre">wine64</span></code> on PATH and the same <code class="docutils literal notranslate"><span class="pre">.exe</span></code> files</p></td>
+</tr>
+<tr class="row-even"><td><p>macOS</p></td>
+<td><p>Through Wine (untested here)</p></td>
+<td><p>As on Linux</p></td>
+</tr>
+<tr class="row-odd"><td><p>Anywhere else</p></td>
+<td><p>Elsewhere</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">launcher=&quot;files&quot;</span></code> writes the complete run folder; run the program in
+it, then read it back with <code class="docutils literal notranslate"><span class="pre">inversion.r2.read_r2_run</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>To see what the current machine offers:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>PyHydroGeophysX.inversion.r2<span class="w"> </span>--program<span class="w"> </span>r2<span class="w">    </span><span class="c1"># or r3t</span>
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">run_ert_manager_inversion</span><span class="p">(</span>
+    <span class="s2">"survey.dat"</span><span class="p">,</span> <span class="s2">"output"</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">"r2"</span><span class="p">,</span>          <span class="c1"># or "r3t"</span>
+    <span class="n">r2</span><span class="o">=</span><span class="p">{</span><span class="s2">"launcher"</span><span class="p">:</span> <span class="s2">"auto"</span><span class="p">},</span>                       <span class="c1"># or {"executable": r"C:\R2\R2.exe"}</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">"r2"</span><span class="p">][</span><span class="s2">"run_dir"</span><span class="p">],</span> <span class="n">result</span><span class="p">[</span><span class="s2">"r2"</span><span class="p">][</span><span class="s2">"alpha"</span><span class="p">])</span>   <span class="c1"># R2.out, f001_res.dat; its alpha</span>
+</pre></div>
+</div>
+<p>R2 inverts a profile on the profile’s own mesh, every element a parameter. R3t
+inverts a 3-D survey on its tetrahedral mesh, and a profile on a 3-D mesh built
+around the line as for E4D, read back as the section along it. That is far
+slower than R2 (the 72-electrode BERT example took about 16 minutes for ten
+iterations on 44 000 elements, R2 seconds), and the ground off the line is held
+only by the smoothness, so R2 is the engine for profiles. R3t leaves out of its
+fit any reading it cannot use (no signal over uniform ground, with M and N
+symmetric about A and B, or a polarity its model does not reproduce); the log
+says how many, χ² is over the readings it fitted, and a forward run gives the
+others’ predictions.</p>
+<p>Both are Occam inversions that search their smoothing weight α at every
+iteration themselves, so <code class="docutils literal notranslate"><span class="pre">lam</span></code> and <code class="docutils literal notranslate"><span class="pre">auto_lambda</span></code> do not apply: the run
+reports the α it settled on instead. They stop at an RMS misfit of
+<code class="docutils literal notranslate"><span class="pre">sqrt(target_chi2)</span></code>, when the misfit stops improving, or at the iteration
+limit. The data are transfer resistances with their own standard deviations
+<code class="docutils literal notranslate"><span class="pre">err·|R|</span></code>, inverted as logarithms, so their RMS² is the same χ² the other
+engines report; their own reweighting is off because the pipeline rejects
+outliers itself. A fixed a-priori zone is held at its value (R2’s
+<code class="docutils literal notranslate"><span class="pre">param</span> <span class="pre">=</span> <span class="pre">0</span></code>), the zone outlines become R2/R3t zones that the smoothness does
+not cross, and a remote electrode is placed on the mesh node farthest from the
+array.</p>
+<p>A time-lapse series is their difference inversion (LaBrecque and Yang, 2001):
+the first survey is inverted, then every later one from that model with the
+smoothness on the change from it, using the readings it shares with the first.
+R2 forms the difference data <code class="docutils literal notranslate"><span class="pre">d</span> <span class="pre">−</span> <span class="pre">d0</span> <span class="pre">+</span> <span class="pre">f(m0)</span></code> itself; for R3t they are
+written from the baseline’s predicted data, as its manual describes.</p>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Methods</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="seismic.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Seismic refraction</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-you-can-do">What you can do</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#required-inputs">Required inputs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#typical-outputs">Typical outputs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#choose-a-workflow">Choose a workflow</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#desktop-support">Desktop support</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#python-examples">Python examples</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#relevant-api">Relevant API</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#limitations-and-optional-dependencies">Limitations and optional dependencies</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#external-engines-e4d-r2-and-r3t">External engines: E4D, R2 and R3t</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#e4d">E4D</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#r2-and-r3t">R2 and R3t</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/methods/ert.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/methods/ert.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
