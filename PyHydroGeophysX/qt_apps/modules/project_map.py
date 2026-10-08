@@ -19,8 +19,10 @@ from PyHydroGeophysX.data_processing import boreholes as bh
 from PyHydroGeophysX.qt_apps.project_map import (
     ProjectMapStore, em_result, profile_at, wells_data)
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets.color_range import ColorRange
 from PyHydroGeophysX.qt_apps.widgets.flow_layout import FlowLayout, group as control_group
 from PyHydroGeophysX.qt_apps.widgets import length_units
+from PyHydroGeophysX.qt_apps.widgets.readout import toolbar_row
 from PyHydroGeophysX.qt_apps.workers import TaskWorker
 from PyHydroGeophysX.visualization.axis_units import (
     set_length_axis, set_section_axes, to_display_length)
@@ -94,6 +96,8 @@ class VariogramDialog(QDialog):
         layout = QVBoxLayout(self)
         figure = Figure(figsize=(5.5, 3.4), layout='constrained')
         canvas = FigureCanvasQTAgg(figure)
+        bar, _toolbar = toolbar_row(canvas, self)
+        layout.addWidget(bar)
         layout.addWidget(canvas, 1)
         axes = figure.add_subplot(111)
         lags, gamma = np.asarray(fit['lags']), np.asarray(fit['gamma'])
@@ -127,10 +131,9 @@ class ProjectMapModule(BaseModule):
 
     def __init__(self, state, log, parent=None):
         super().__init__(state, log, parent)
-        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
         from matplotlib.figure import Figure
         from PyHydroGeophysX.qt_apps.widgets.em_overview_view import EMOverviewView
-        from PyHydroGeophysX.qt_apps.widgets.readout import navigation_toolbar
         self._entries, self._arrays, self._artists = [], {}, {}
         self._store = None
         self._selected = None
@@ -220,9 +223,9 @@ class ProjectMapModule(BaseModule):
         save.clicked.connect(self._export_png)
         toolbar.addWidget(save)
         ml.addLayout(toolbar)
-        slices = QHBoxLayout()
-        slices.addWidget(QLabel('Slice:'))
-        slices.addWidget(self._depth)
+        # Wraps in a narrow panel instead of widening the page (widgets.flow_layout).
+        slices = FlowLayout(spacing=6)
+        slices.addWidget(control_group('Slice:', self._depth))
         # The colour map of the slice on the map, beside the slice it colours:
         # turbo for a resistivity slice and coolwarm for other layers until one
         # is chosen for the map. Off while no slice is drawn.
@@ -231,7 +234,13 @@ class ProjectMapModule(BaseModule):
         self._map_colormap.colormapChanged.connect(self._draw_map)
         self._map_colormap.setEnabled(False)
         slices.addWidget(self._map_colormap)
-        slices.addStretch(1)
+        # And its colour limits. Locked, they hold through the slices and across
+        # surveys of the same quantity, so two depths read on one scale.
+        self._map_range = ColorRange(decimals=6, what="the slice's colours")
+        self._map_range.changed.connect(self._draw_map)
+        self._map_range.setEnabled(False)
+        self._map_quantity = None       # what the map's range was set for
+        slices.addWidget(self._map_range)
         # Wraps in a narrow panel instead of widening the page (widgets.flow_layout).
         surface = FlowLayout(spacing=6)
         self._interp = QComboBox()
@@ -288,9 +297,6 @@ class ProjectMapModule(BaseModule):
         surface.addWidget(self._export_grid)
         self._fig = Figure(figsize=(9, 4), layout='constrained')
         self._canvas = FigureCanvasQTAgg(self._fig)
-        navigation = NavigationToolbar2QT(self._canvas, self, coordinates=False)
-        navigation.setContentsMargins(0, 0, 0, 0)
-        slices.insertWidget(0, navigation)
         ml.addLayout(slices)
         ml.addLayout(surface)
         progress_row = QHBoxLayout()
@@ -308,6 +314,10 @@ class ProjectMapModule(BaseModule):
         self._cancel_interpolation.setVisible(False)
         progress_row.addWidget(self._cancel_interpolation)
         ml.addLayout(progress_row)
+        # Zoom, pan, Home and Save directly above the map, with the cursor
+        # position in a readout of its own (see widgets.readout).
+        map_bar, self._map_toolbar = toolbar_row(self._canvas, self)
+        ml.addWidget(map_bar)
         ml.addWidget(self._canvas, 1)
         self._canvas.mpl_connect('pick_event', self._pick)
         self._canvas.mpl_connect('scroll_event', self._zoom_map)
@@ -330,15 +340,20 @@ class ProjectMapModule(BaseModule):
         # a grid or point product shares the map layer's.
         self._section_colormap = cmaps.ColormapChooser(cmaps.MAP_LAYER, 'coolwarm', shared=shared)
         self._section_colormap.colormapChanged.connect(self._redraw_section)
-        section_bar = QHBoxLayout()
-        section_bar.setContentsMargins(0, 0, 0, 0)
+        # And its colour limits, held while locked through the depths and the
+        # surveys of one quantity. A row of their own, so the toolbar below
+        # keeps its width in a narrow panel.
+        self._section_range = ColorRange(decimals=6, what="the section's colours")
+        self._section_range.changed.connect(self._redraw_section)
+        self._section_quantity = None   # what the section's range was set for
+        colours = FlowLayout(spacing=6)
+        colours.addWidget(self._section_colormap)
+        colours.addWidget(self._section_range)
+        sl.addLayout(colours)
         # Its cursor position in a readout of its own: the toolbar's label would
         # re-lay out the page on every mouse move (see widgets.readout).
-        section_toolbar, section_coords = navigation_toolbar(self._section_canvas, self)
-        section_bar.addWidget(section_toolbar)
-        section_bar.addWidget(section_coords, 1)
-        section_bar.addWidget(self._section_colormap)
-        sl.addLayout(section_bar)
+        section_bar, self._section_toolbar = toolbar_row(self._section_canvas, self)
+        sl.addWidget(section_bar)
         sl.addWidget(self._section_canvas)
         self._mesh_view = section
         self._result_stack.addWidget(section)
@@ -605,6 +620,16 @@ class ProjectMapModule(BaseModule):
         low, high = float(values[valid].min()), float(values[valid].max())
         if low == high:
             low, high = (low * .99, high * 1.01) if log_scale else (low - 1, high + 1)
+        # Locked limits hold through the slices and across surveys of the same
+        # quantity; a slice in other units starts on its own scale.
+        if (units, log_scale) != self._map_quantity:
+            self._map_quantity = (units, log_scale)
+            self._map_range.blockSignals(True)      # this drawing uses the new range
+            self._map_range.unlock()
+            self._map_range.blockSignals(False)
+        locked = self._map_range.limits(low, high)
+        if not (log_scale and locked[0] <= 0):      # no colour for it on a log scale
+            low, high = locked
         norm = LogNorm(low, high) if log_scale else Normalize(low, high)
         # The map layer's chosen colour map, or what this kind of slice has
         # always been drawn with: turbo for resistivity, coolwarm otherwise.
@@ -791,6 +816,27 @@ class ProjectMapModule(BaseModule):
         return cmaps.to_matplotlib(
             self._section_colormap.set_target(self._section_key(entry), default))
 
+    def _section_limits(self, entry, low, high, log_scale=False):
+        """The section's colour limits: the ones typed in while locked, or ``(low, high)``.
+
+        A lock holds for another survey of the same quantity and is let go for
+        one in other units. On a log scale a lower limit of zero or below has
+        no colour, so typed limits like that leave the section on its own.
+        """
+        quantity = (self._section_key(entry), entry.get('units'))
+        if quantity != self._section_quantity:
+            self._section_quantity = quantity
+            self._section_range.blockSignals(True)      # the caller is drawing already
+            self._section_range.unlock()
+            self._section_range.blockSignals(False)
+        locked = self._section_range.limits(low, high)
+        return (low, high) if log_scale and locked[0] <= 0 else locked
+
+    def _section_drawn(self):
+        """Show the section just drawn from scratch; Home and Back go to it."""
+        self._section_canvas.draw_idle()
+        self._section_toolbar.update()
+
     def _redraw_section(self, *_):
         """Redraw the selected survey's section in the chosen colours."""
         entry = self._entry()
@@ -821,6 +867,8 @@ class ProjectMapModule(BaseModule):
         low, high = (float(finite.min()), float(finite.max())) if finite.size else (0., 1.)
         if low == high:
             low, high = low - 1, high + 1
+        # One range for both panels: they share the colour bar.
+        low, high = self._section_limits(entry, low, high)
         cmap = self._section_cmap(entry, 'coolwarm')
         image = plan.pcolormesh(x, y, model[:, :, index].T, cmap=cmap, vmin=low, vmax=high)
         set_length_axis(plan, 'x', 'Source X')
@@ -832,18 +880,24 @@ class ProjectMapModule(BaseModule):
         set_length_axis(section, 'y', 'Model Z')
         section.set_title('Central Y section')
         self._section_fig.colorbar(image, ax=[plan, section], label=entry['units'])
-        self._section_canvas.draw_idle()
+        self._section_drawn()
 
     def _draw_points(self, entry, arrays):
         self._section_fig.clear()
         ax = self._section_fig.add_subplot(111)
         xy = arrays['source_xy']
-        points = ax.scatter(xy[:, 0], xy[:, 1], c=np.ma.masked_invalid(arrays['values']),
+        values = np.ma.masked_invalid(np.asarray(arrays['values'], dtype=float))
+        # The points' own range, as the scatter would scale itself, unless locked.
+        low, high = ((float(values.min()), float(values.max())) if values.count()
+                     else (None, None))
+        if low is not None:
+            low, high = self._section_limits(entry, low, high)
+        points = ax.scatter(xy[:, 0], xy[:, 1], c=values, vmin=low, vmax=high,
                             cmap=self._section_cmap(entry, 'coolwarm'), s=20)
         ax.set(xlabel=f"Source X ({entry['crs']})", ylabel='Source Y', title=entry['name'])
         ax.set_aspect('equal', adjustable='box')
         self._section_fig.colorbar(points, ax=ax, label=entry['units'])
-        self._section_canvas.draw_idle()
+        self._section_drawn()
 
     def _draw_section(self, entry, arrays):
         from matplotlib.collections import PolyCollection
@@ -860,6 +914,7 @@ class ProjectMapModule(BaseModule):
         low, high = float(valid.min()), float(valid.max())
         if low == high:
             low, high = (low * 0.99, high * 1.01) if low > 0 else (low - 1, high + 1)
+        low, high = self._section_limits(entry, low, high, log_scale=entry['method'] == 'ERT')
         norm = LogNorm(low, high) if entry['method'] == 'ERT' else Normalize(low, high)
         collection = PolyCollection(polygons, array=valid, cmap=self._section_cmap(entry, 'turbo'),
                                     norm=norm, edgecolors='none')
@@ -871,7 +926,7 @@ class ProjectMapModule(BaseModule):
                          elevation_name='Section elevation')
         ax.set_title(entry['name'])
         self._section_fig.colorbar(collection, ax=ax, label=entry['units'])
-        self._section_canvas.draw_idle()
+        self._section_drawn()
 
     def _draw_map(self, *_, fit=False):
         old = (self._ax.get_xlim(), self._ax.get_ylim()) if self._ax and self._last_frame == self._frame.currentData() and not fit else None
@@ -984,6 +1039,7 @@ class ProjectMapModule(BaseModule):
             spine.set_color('#bacbd7')
         self._load_tiles.setEnabled(geographic and bool(all_xy) and self._tile_worker is None)
         self._map_colormap.setEnabled(self._map_coloured)
+        self._map_range.setEnabled(self._map_coloured)
         self._export_grid.setEnabled(self._surface is not None)
         self._variogram_button.setEnabled(
             self._surface is not None and bool(self._surface[1].get('variogram')))
@@ -996,6 +1052,8 @@ class ProjectMapModule(BaseModule):
         elif self._surface_note:
             self._note.setText(self._surface_note)
         self._canvas.draw_idle()
+        # New axes: Home and Back start from this view, not from axes cleared.
+        self._map_toolbar.update()
 
     def _zoom_map(self, event):
         """Zoom around the cursor without rebuilding survey artists or results."""
@@ -1013,6 +1071,8 @@ class ProjectMapModule(BaseModule):
         self._canvas.draw_idle()
 
     def _pick(self, event):
+        if self._map_toolbar.mode:      # the click pans or zooms; picking would redraw
+            return
         selected = self._artists.get(event.artist)
         if selected is None:
             return
@@ -1070,6 +1130,8 @@ class ProjectMapModule(BaseModule):
         from matplotlib.figure import Figure
         self._compare_fig = Figure(figsize=(9, 3.4))
         self._compare_canvas = FigureCanvasQTAgg(self._compare_fig)
+        compare_bar, self._compare_toolbar = toolbar_row(self._compare_canvas, view)
+        layout.addWidget(compare_bar)
         layout.addWidget(self._compare_canvas, 1)
         self._compare_note = QLabel('')
         self._compare_note.setWordWrap(True)
@@ -1174,6 +1236,7 @@ class ProjectMapModule(BaseModule):
                                    f'{to_display_length(self._compare_within.value(), unit):.0f} '
                                    f'{unit}.', ha='center', va='center', color='#8e8e93')
         self._compare_canvas.draw_idle()
+        self._compare_toolbar.update()      # Home and Back go to the new axes
         lines = []
         if drawn:
             lines.append('Read at: ' + ' · '.join(

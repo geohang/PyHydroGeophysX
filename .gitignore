@@ -47,6 +47,8 @@ coverage.xml
 .pytest_tmp_*/
 # Local scratch: GUI reproductions of field datasets, review scripts and logs.
 tmp/
+# ResIPy writes this into the working directory when it cannot parse a file.
+invalid.data
 
 # Local release plans that must never be committed or uploaded.
 local_plans/v0.5.0_ert_ui_rendering_plan.md

@@ -32,8 +32,10 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX.inversion.em1d_lci import DOI_SENSITIVITY_THRESHOLD
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets.color_range import ColorRange
 from PyHydroGeophysX.qt_apps.widgets.flow_layout import FlowLayout, group
 from PyHydroGeophysX.qt_apps.widgets import length_units
+from PyHydroGeophysX.qt_apps.widgets.readout import toolbar_row
 from PyHydroGeophysX.visualization.axis_units import set_length_axis, to_display_length
 from PyHydroGeophysX.visualization.basemap import (
     TILE_SOURCES,
@@ -192,14 +194,26 @@ class EMOverviewView(QWidget):
         # The section's colour map: the result's own (turbo) until one is chosen.
         self._colormap = cmaps.ColormapChooser(cmaps.EM_SECTION, "turbo", shared=colormaps)
         self._colormap.colormapChanged.connect(self._redraw)
+        # The colour limits beside the colour map. Locked, they hold while the
+        # reader steps through the lines and across surveys of the same
+        # quantity, so two sections are compared on one scale.
+        self._range = ColorRange(positive=True, what="the section's colours")
+        self._range.changed.connect(self._redraw)
+        self._quantity: Optional[tuple] = None   # what the range was set for
         row.addWidget(self._style)
         row.addWidget(self._vertical)
         row.addWidget(group(self._below_doi, self._doi_threshold))
         row.addWidget(self._colormap)
+        row.addWidget(self._range)
         self._row = QWidget()
         self._row.setLayout(row)
         layout.addWidget(self._row)
+        # Zoom, pan, Home and Save, as on every plot in the studio, with the
+        # cursor position beside them (see widgets.readout).
+        bar, self._toolbar = toolbar_row(self._canvas, self)
+        layout.addWidget(bar)
         layout.addWidget(self._canvas, stretch=1)
+        self._map_before = None     # the map's view when a toolbar drag began
 
         self._result: Optional[Dict[str, Any]] = None
         self._res: Optional[np.ndarray] = None      # (n_pos, n_layers) surface-ordered
@@ -230,6 +244,14 @@ class EMOverviewView(QWidget):
         ``lon`` / ``lat`` for the same soundings enable the tile basemap; without
         them the basemap control is disabled and the map is drawn on its grid.
         """
+        # A locked range carries over to another survey of the same quantity,
+        # which is what it is for; one in other units starts on its own scale.
+        quantity = (str(result.get("label", "")), bool(result.get("log_scale", True)))
+        if quantity != self._quantity:
+            self._quantity = quantity
+            self._range.blockSignals(True)      # drawn once, below
+            self._range.unlock()
+            self._range.blockSignals(False)
         self._result = dict(result)
         model = np.asarray(result["model3d"], dtype=float)[:, 0, :]
         self._res = model[:, ::-1]                  # surface-ordered in depth
@@ -430,6 +452,11 @@ class EMOverviewView(QWidget):
         self._view_moved(ax)
 
     def _on_press(self, event) -> None:
+        if self._toolbar.mode:
+            # The toolbar's pan or zoom has the mouse; a drag here as well would
+            # move the axes twice. Note the map's view, to see if it moves.
+            self._map_before = self._map_view()
+            return
         if event.inaxes is None or event.button != 1:
             return
         if event.dblclick:
@@ -453,10 +480,24 @@ class EMOverviewView(QWidget):
         self._canvas.draw_idle()
 
     def _on_release(self, event) -> None:
+        if self._toolbar.mode:
+            # The toolbar applies its pan or zoom after this handler has run.
+            QTimer.singleShot(0, self._after_toolbar_move)
+            return
         if self._drag is None:
             return
         ax, self._drag = self._drag[0], None
         self._view_moved(ax)
+
+    def _map_view(self) -> Optional[tuple]:
+        ax = self._map_ax
+        return None if ax is None else (tuple(ax.get_xlim()), tuple(ax.get_ylim()))
+
+    def _after_toolbar_move(self) -> None:
+        """Keep a map view set with the toolbar, and fetch imagery for it."""
+        before, self._map_before = self._map_before, None
+        if before is not None and self._map_ax is not None and self._map_view() != before:
+            self._view_moved(self._map_ax)
 
     def _view_moved(self, ax) -> None:
         """Keep a map view the reader set, and get imagery for it."""
@@ -503,7 +544,8 @@ class EMOverviewView(QWidget):
         has_map = not self._section_only and self._x is not None and self._y is not None
 
         log_scale = bool(result.get("log_scale", True))
-        vmin, vmax = self._colour_range(log_scale)
+        # The limits typed in while "Lock range" is ticked, or the survey's own.
+        vmin, vmax = self._range.limits(*self._colour_range(log_scale))
         norm = LogNorm(vmin, vmax) if log_scale else Normalize(vmin, vmax)
 
         self._fig.clear()
@@ -587,6 +629,8 @@ class EMOverviewView(QWidget):
         self._draw_footer(selected, chi2, attribution, left, right)
 
         self._canvas.draw_idle()
+        # New axes: Home and Back go to this drawing, not to the one replaced.
+        self._toolbar.update()
 
     def _draw_footer(self, selected: np.ndarray, chi2, attribution: str,
                      left: float, right: float) -> None:

@@ -22,14 +22,13 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import uuid
 
 import numpy as np
-import pyqtgraph as pg
 from PySide6.QtCore import QEventLoop, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QAbstractSpinBox,
+    QButtonGroup,
     QCheckBox,
     QComboBox,
-    QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
     QFrame,
@@ -57,12 +56,15 @@ from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.qt_utils import (
     BusyStateController,
     ContentWidthScrollArea,
+    PlainDoubleSpinBox,
     ReproduceBar,
     merged_row,
     select_directory,
 )
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets import length_units
+from PyHydroGeophysX.qt_apps.widgets.color_range import ColorRange
+from PyHydroGeophysX.qt_apps.widgets.readout import toolbar_row
 from PyHydroGeophysX.qt_apps.widgets import temperature_panel
 from PyHydroGeophysX.qt_apps.widgets.mesh_preview import MeshPreviewView
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
@@ -75,7 +77,7 @@ from PyHydroGeophysX.qt_apps.workers import (
     TaskWorker,
 )
 from PyHydroGeophysX.data_processing.ert_io import save_edited_ert_container
-from PyHydroGeophysX.visualization.axis_units import set_length_axis
+from PyHydroGeophysX.visualization.axis_units import length_factor, set_length_axis
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
     WorkflowRunResult,
@@ -133,6 +135,19 @@ def _value_name(correction: Optional[Dict[str, Any]]) -> str:
 
 _ELEC_FILTER = "Electrodes (*.csv *.txt *.dat);;All files (*)"
 _DATA_FILTER = "ERT data (*.dat *.ohm *.txt *.csv *.Data *.bin *.stg *.amp *.udf);;All files (*)"
+#: The files of a folder dropped on the page that join the list: the data
+#: filter's extensions, matched without regard to case.
+_DATA_SUFFIXES = (".dat", ".ohm", ".txt", ".csv", ".data", ".bin", ".stg", ".amp", ".udf")
+#: The χ² stopping rule's tooltip, while the engine and mode use it.
+_PLATEAU_TIP = ("The inversion is done when one more iteration lowers χ² by less than "
+                "this. Larger stops sooner; smaller makes sure the fit has really run "
+                "out of room. A time-lapse run judges χ² over all its surveys.")
+#: What the Data tab says before anything is loaded.
+#: The electrodes drawn along the top of the pseudosection: the canvas text
+#: colour (theme PALETTE["canvas_text"]); the canvas is white in either theme.
+_ELECTRODE_MARK = "#1d1d1f"
+_EMPTY_DATA_MESSAGE = ("Drop ERT data files or a folder here,\n"
+                       "or choose the format and use Add files… on the right.")
 
 #: How the file list finds each survey's time, on hover over its summary line.
 #: survey_timing reads every form listed; ert_input_format.md says the same.
@@ -178,7 +193,6 @@ class ERTProcessingModule(BaseModule):
         self._z: List[float] = []
         self._labels: List[str] = []
         self._electrode_origins: List[Optional[int]] = []
-        self._selected: Optional[int] = None
         self._electrode_path: Optional[Path] = None
         # The electrodes as chosen from that file, as plain x y z columns: what
         # the instrument readers are handed on the next load.
@@ -276,20 +290,12 @@ class ERTProcessingModule(BaseModule):
 
         root = QHBoxLayout(self)
         self._tabs = QTabWidget()
-        self._plot_widget = pg.PlotWidget()
-        self._plot_widget.setBackground("w")
-        self._plot_widget.showGrid(x=True, y=True, alpha=0.3)
-        self._plot = self._plot_widget.getPlotItem()
-        self._electrode_axes: Optional[Tuple[str, str]] = None
-        self._label_electrode_axes()
-        # View > Length Units: both plots here relabel and retick; the data stay
-        # in metres.
+        # View > Length Units: the pseudosection and the electrode line of the
+        # data panel relabel in the new unit; the data stay in metres.
         length_units.notifier().changed.connect(self._on_length_unit_changed)
-        self._scatter = pg.ScatterPlotItem(size=12, pen=pg.mkPen("#007aff", width=1), brush=pg.mkBrush(0, 122, 255, 170))
-        self._sel_scatter = pg.ScatterPlotItem(size=18, pen=pg.mkPen("#ff8c00", width=2), brush=pg.mkBrush(255, 140, 0, 120))
-        self._plot.addItem(self._scatter)
-        self._plot.addItem(self._sel_scatter)
-        self._plot.scene().sigMouseClicked.connect(self._on_click)
+        # Files dropped anywhere on the page join the list, as Add files… does:
+        # a series of hundreds of surveys is dragged in from a folder.
+        self.setAcceptDrops(True)
 
         # Render the apparent-resistivity section with Matplotlib rather than a
         # pyqtgraph ScatterPlotItem.  On some Windows Qt/pyqtgraph combinations
@@ -307,6 +313,10 @@ class ERTProcessingModule(BaseModule):
         self._pseudo_figure = Figure(facecolor="white", constrained_layout=True)
         self._pseudo_canvas = FigureCanvasQTAgg(self._pseudo_figure)
         self._pseudo_ax = self._pseudo_figure.add_subplot(111)
+        # Zoom, pan and Save as on every plot. The colour limits are typed in
+        # under it, beside the colour scale they set.
+        pseudo_bar, self._pseudo_toolbar = toolbar_row(self._pseudo_canvas, self._pseudo_widget)
+        pseudo_layout.addWidget(pseudo_bar)
         pseudo_layout.addWidget(self._pseudo_canvas, stretch=1)
 
         self._pseudo_legend = QWidget()
@@ -322,6 +332,10 @@ class ERTProcessingModule(BaseModule):
         legend_title = QHBoxLayout()
         legend_title.setContentsMargins(0, 0, 0, 0)
         legend_title.addWidget(QLabel("Apparent resistivity (Ω·m)"), 1)
+        # Locked, every survey of a series previews on one scale.
+        self._pseudo_range = ColorRange(positive=True, what="the apparent resistivity")
+        self._pseudo_range.changed.connect(self._draw_pseudosection)
+        legend_title.addWidget(self._pseudo_range)
         legend_title.addWidget(self._pseudo_colormap)
         legend_layout.addLayout(legend_title)
         self._pseudo_scale_bar = QFrame()
@@ -345,8 +359,7 @@ class ERTProcessingModule(BaseModule):
         # Until data arrive the tab says what to do. Left as built it showed an
         # empty 0-1 axis over a colour bar of "—" placeholders, which read as a
         # bar whose numbers had been covered.
-        self._show_pseudosection_message(
-            "Add ERT data files on the right to see their pseudosection.")
+        self._show_pseudosection_message(_EMPTY_DATA_MESSAGE)
 
         # The studio state's colormap choices, shared with Saved Results: a
         # section recoloured on either page is recoloured on both.
@@ -454,8 +467,13 @@ class ERTProcessingModule(BaseModule):
         self._recip_timer.setInterval(500)
         self._recip_timer.timeout.connect(self._refresh_recip_view)
 
-        self._tabs.addTab(self._plot_widget, "Electrodes")
-        self._tabs.addTab(self._pseudo_widget, "Pseudosection")
+        # The data come first, loaded beside their pseudosection. The electrodes
+        # had a tab of their own, a plot of dots that held the loading controls:
+        # once a file loaded the page moved on to the pseudosection and the list
+        # went with the tab, so a series was clicked through by switching back
+        # for every survey. The electrodes are now drawn along the top of the
+        # pseudosection and on the Mesh tab, and summed up in the data panel.
+        self._tabs.addTab(self._pseudo_widget, "Data")
         self._tabs.addTab(self._recip_view, "Reciprocal errors")
         self._tabs.addTab(self._mesh_tab, "Mesh")
         self._tabs.addTab(model_tab, "Resistivity model")
@@ -488,6 +506,39 @@ class ERTProcessingModule(BaseModule):
         loader = QGroupBox("Load resistivity data")
         self._load_group = loader
         lform = QFormLayout(loader)
+
+        # One survey or a series is the first thing settled, as in ResIPy's
+        # import page: it decides what the list below is for and which Run
+        # button the column ends with. It sat in the Run group at the bottom,
+        # a page away from the list it applies to.
+        # Two joined buttons, the chosen one filled (theme: QPushButton[segment]);
+        # as radio buttons the choice showed as a lone dot, easy to misread.
+        self._single_mode = QPushButton("One survey")
+        self._single_mode.setIcon(theme.icon("fa5s.file-alt"))
+        self._single_mode.setToolTip(
+            "Invert the survey selected in the list - the one on the Data tab.")
+        self._tl_mode = QPushButton("Time-lapse series")
+        self._tl_mode.setIcon(theme.icon("fa5s.layer-group"))
+        self._tl_mode.setToolTip(
+            "Invert every survey in the list together, in list order: the first is "
+            "the baseline, and each later one is compared with the one before it. "
+            "The time-lapse options appear below the inversion settings.")
+        self._run_kind = QButtonGroup(self)      # exclusive: one is always chosen
+        for place, button in (("first", self._single_mode), ("last", self._tl_mode)):
+            button.setCheckable(True)
+            button.setProperty("segment", place)
+            button.setCursor(Qt.PointingHandCursor)
+            self._run_kind.addButton(button)
+        self._single_mode.setChecked(True)
+        self._tl_mode.toggled.connect(self._on_tl_mode)
+        kind_row = QHBoxLayout()
+        kind_row.setContentsMargins(0, 0, 0, 0)
+        kind_row.setSpacing(0)
+        kind_row.addWidget(self._single_mode)
+        kind_row.addWidget(self._tl_mode)
+        kind_row.addStretch(1)
+        lform.addRow("Invert as", kind_row)
+
         self._instrument = QComboBox()
         for label, value in _INSTRUMENTS:
             self._instrument.addItem(label, value)
@@ -516,6 +567,28 @@ class ERTProcessingModule(BaseModule):
         self._reader_status.setWordWrap(True)
         lform.addRow("", self._reader_status)
         self._show_reader_status()
+
+        # A file whose first lines name another format than the one chosen,
+        # said beside the chooser with the switch one click away. Never made
+        # on its own: the guess reads a few header lines, and pygimli's own
+        # reader shows what an automatic choice costs - it read a DAS-1 file
+        # as one electrode and one reading without a word.
+        self._format_guess: Optional[Tuple[str, str]] = None   # (format, file)
+        self._format_hint = QWidget()
+        hint_row = QHBoxLayout(self._format_hint)
+        hint_row.setContentsMargins(0, 0, 0, 0)
+        self._format_hint_text = QLabel()
+        self._format_hint_text.setWordWrap(True)
+        theme.set_tone(self._format_hint_text, "warn")
+        self._format_hint_btn = QPushButton()
+        self._format_hint_btn.clicked.connect(self._take_format_hint)
+        hint_row.addWidget(self._format_hint_text, 1)
+        hint_row.addWidget(self._format_hint_btn)
+        self._format_hint.setVisible(False)
+        lform.addRow(self._format_hint)
+        # Changing the format by hand reads the survey on screen again with it;
+        # it used to wait for the file to be clicked once more.
+        self._instrument.activated.connect(self._reload_with_format)
 
         self._tl_list = QListWidget()
         self._tl_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -563,6 +636,19 @@ class ERTProcessingModule(BaseModule):
         # The accepted time formats on hover, so the line itself stays short.
         self._tl_info.setToolTip(_TIME_FORMATS_TIP)
         lform.addRow(self._tl_info)
+
+        # The escape hatch for files whose names and headers carry no time, under
+        # the line that says which files those are, and only while there are
+        # some. It sat among the time-lapse options, always on screen, with
+        # nothing near it saying what it was for.
+        self._tl_use_mtime = QCheckBox("Date undated files by when they were last saved")
+        self._tl_use_mtime.setToolTip(
+            "Use each file's last-modified time as its acquisition time when neither "
+            "its name nor its header gives one. Off by default: a file that was copied "
+            "or re-exported carries the time of the copy, not of the survey.")
+        self._tl_use_mtime.toggled.connect(self._on_tl_time_source_changed)
+        self._tl_use_mtime.setVisible(False)
+        lform.addRow(self._tl_use_mtime)
 
         # Shown only when names in the list look like forward/reciprocal halves,
         # and on then: the detection goes by name and time, so it can be wrong,
@@ -616,9 +702,9 @@ class ERTProcessingModule(BaseModule):
         self._qc_average.setToolTip("Load ERT data first.")
         self._qc_average.toggled.connect(self._sync_error_rows)
         qform.addRow(self._qc_average)
-        self._rmin = QDoubleSpinBox(); self._rmin.setRange(0.0, 1e6); self._rmin.setValue(0.0); self._rmin.setSuffix(" Ω·m")
-        self._rmax = QDoubleSpinBox(); self._rmax.setRange(1.0, 1e7); self._rmax.setValue(100000.0); self._rmax.setSuffix(" Ω·m")
-        self._max_err = QDoubleSpinBox(); self._max_err.setRange(0.0, 100.0)
+        self._rmin = PlainDoubleSpinBox(); self._rmin.setRange(0.0, 1e6); self._rmin.setValue(0.0); self._rmin.setSuffix(" Ω·m")
+        self._rmax = PlainDoubleSpinBox(); self._rmax.setRange(1.0, 1e7); self._rmax.setValue(100000.0); self._rmax.setSuffix(" Ω·m")
+        self._max_err = PlainDoubleSpinBox(); self._max_err.setRange(0.0, 100.0)
         self._max_err.setValue(_QC_DEFAULTS["max_error"]); self._max_err.setSuffix(" %")
         self._max_err.setToolTip(
             "Drop measurements with relative error above this (0 = off). 20 % drops "
@@ -659,11 +745,11 @@ class ERTProcessingModule(BaseModule):
         # Six decimals, because files that report volts and amperes need floors
         # of a tenth of a millivolt or milliampere; three decimals silently turned
         # 0.0001 into 0, which switches the check off.
-        self._qc_min_v = QDoubleSpinBox(); self._qc_min_v.setRange(0.0, 1e6)
+        self._qc_min_v = PlainDoubleSpinBox(); self._qc_min_v.setRange(0.0, 1e6)
         self._qc_min_v.setDecimals(6); self._qc_min_v.setValue(_QC_DEFAULTS["min_voltage"])
         mform.addRow("Min |V|", self._qc_min_v)
 
-        self._qc_min_i = QDoubleSpinBox(); self._qc_min_i.setRange(0.0, 1e6)
+        self._qc_min_i = PlainDoubleSpinBox(); self._qc_min_i.setRange(0.0, 1e6)
         self._qc_min_i.setDecimals(6); self._qc_min_i.setValue(_QC_DEFAULTS["min_current"])
         mform.addRow("Min |I|", self._qc_min_i)
 
@@ -672,7 +758,7 @@ class ERTProcessingModule(BaseModule):
         # suits every survey. Until it is set by hand the cap follows each file
         # loaded, at a multiple of its median (_refresh_qc_availability).
         self._qc_max_k_follows_file = True
-        self._qc_max_k = QDoubleSpinBox(); self._qc_max_k.setRange(0.0, 1e9)
+        self._qc_max_k = PlainDoubleSpinBox(); self._qc_max_k.setRange(0.0, 1e9)
         self._qc_max_k.setDecimals(0); self._qc_max_k.setValue(0.0)
         self._qc_max_k.setToolTip(
             "Drop configurations whose geometric factor exceeds this (0 = off). A large "
@@ -682,14 +768,14 @@ class ERTProcessingModule(BaseModule):
         self._qc_max_k.valueChanged.connect(self._max_k_set_by_hand)
         mform.addRow("Max |k|", self._qc_max_k)
 
-        self._qc_max_rc = QDoubleSpinBox(); self._qc_max_rc.setRange(0.0, 1e9)
+        self._qc_max_rc = PlainDoubleSpinBox(); self._qc_max_rc.setRange(0.0, 1e9)
         self._qc_max_rc.setDecimals(0); self._qc_max_rc.setValue(_QC_DEFAULTS["max_contact_r"])
         self._qc_max_rc.setSuffix(" Ω")
         mform.addRow("Max contact R", self._qc_max_rc)
 
         # Percent, like the reciprocal error below it, though the spread can run
         # to thousands of percent on a failing electrode.
-        self._qc_max_stack = QDoubleSpinBox(); self._qc_max_stack.setRange(0.0, 1e6)
+        self._qc_max_stack = PlainDoubleSpinBox(); self._qc_max_stack.setRange(0.0, 1e6)
         self._qc_max_stack.setDecimals(1); self._qc_max_stack.setValue(_QC_DEFAULTS["max_stack"])
         self._qc_max_stack.setSuffix(" %")
         self._qc_max_stack.setToolTip(
@@ -699,7 +785,7 @@ class ERTProcessingModule(BaseModule):
             "or a contact failing.")
         mform.addRow("Max stacking spread", self._qc_max_stack)
 
-        self._qc_max_recip = QDoubleSpinBox(); self._qc_max_recip.setRange(0.0, 100.0)
+        self._qc_max_recip = PlainDoubleSpinBox(); self._qc_max_recip.setRange(0.0, 100.0)
         self._qc_max_recip.setDecimals(2); self._qc_max_recip.setValue(_QC_DEFAULTS["max_reciprocal"])
         self._qc_max_recip.setSuffix(" %")
         mform.addRow("Max recip. error", self._qc_max_recip)
@@ -729,8 +815,8 @@ class ERTProcessingModule(BaseModule):
         # the data are weighted, and what the software is allowed to change on its
         # own. Everything configurable comes before the Run button at the bottom.
         # λ / iterations / errors / mesh quality are shared by single and
-        # time-lapse inversion; ticking "Time-lapse" reveals the time-lapse-only
-        # options and swaps the Run button.
+        # time-lapse inversion; choosing "Time-lapse series" reveals the
+        # time-lapse-only options and swaps the Run button.
         inv = QGroupBox("Inversion")
         self._inversion_group = inv
         iform = QFormLayout(inv)
@@ -741,18 +827,19 @@ class ERTProcessingModule(BaseModule):
         # and the auto-λ search is a full inversion per trial. On a 3647-point
         # field survey they were 13 s and 189 s of a 247 s run.
         self._inv_mode = QComboBox()
-        for label, value in (("Quick (no pre-checks)", "quick"),
-                             ("Full (validate k, search λ)", "full")):
+        # Named for what each does: "no pre-checks" left the checks unnamed.
+        for label, value in (("Quick: invert only", "quick"),
+                             ("Thorough: check k, search λ", "full")):
             self._inv_mode.addItem(label, value)
         self._inv_mode.setToolTip(
             "Quick runs the inversion and nothing else, which is the shorter run "
             "while λ and the mesh are still being settled.\n\n"
-            "Full adds the two stages Quick drops. It validates the geometric factors "
-            "against the mesh, repairing them when they disagree, and it searches λ "
-            "for the target χ².\n\n"
+            "Thorough adds the two stages Quick drops. It checks the geometric factors "
+            "(k) against the mesh, repairing them when they disagree, and it searches "
+            "λ for the target χ².\n\n"
             "The k check is the one with the most evidence behind it: a wrong k scales "
             "the whole section by a constant and χ² never notices, so a Quick result "
-            "that looks perfect can still be uniformly wrong. Re-run in Full whenever "
+            "that looks perfect can still be uniformly wrong. Re-run Thorough whenever "
             "the resistivities themselves look off, not only when the fit looks bad.")
         self._inv_mode.currentIndexChanged.connect(self._on_inv_mode_changed)
         iform.addRow("Mode", self._inv_mode)
@@ -798,7 +885,7 @@ class ERTProcessingModule(BaseModule):
         self._build_e4d_rows(iform)
         self._build_r2_rows(iform)
 
-        self._lam = QDoubleSpinBox()
+        self._lam = PlainDoubleSpinBox()
         self._lam.setDecimals(3)
         self._lam.setRange(*_LAMBDA_BOUNDS); self._lam.setValue(50.0)
         self._lam.setStepType(QAbstractSpinBox.StepType.AdaptiveDecimalStepType)
@@ -833,15 +920,12 @@ class ERTProcessingModule(BaseModule):
             "each window.")
         iform.addRow("Max iterations", self._iter)
 
-        self._plateau = QDoubleSpinBox()
+        self._plateau = PlainDoubleSpinBox()
         self._plateau.setRange(0.01, 10.0); self._plateau.setDecimals(2)
         self._plateau.setSingleStep(0.1); self._plateau.setValue(0.5)
         self._plateau.setPrefix("< ")
         self._plateau.setSuffix(" % per iteration")
-        self._plateau.setToolTip(
-            "The inversion is done when one more iteration lowers χ² by less than "
-            "this. Larger stops sooner; smaller makes sure the fit has really run "
-            "out of room.")
+        self._plateau.setToolTip(_PLATEAU_TIP)
         iform.addRow("Stop when χ² improves", self._plateau)
 
         # The mesh settings live on the Mesh tab, next to the mesh they build;
@@ -883,12 +967,12 @@ class ERTProcessingModule(BaseModule):
         self._err_source.currentIndexChanged.connect(self._sync_recip_use)
         eform.addRow("Taken from", self._err_source)
 
-        self._relerr = QDoubleSpinBox(); self._relerr.setRange(0.005, 1.0)
+        self._relerr = PlainDoubleSpinBox(); self._relerr.setRange(0.005, 1.0)
         self._relerr.setDecimals(3); self._relerr.setSingleStep(0.01); self._relerr.setValue(0.05)
         self._relerr.setToolTip(
             "Assumed relative data error, used when estimating and as the fallback where "
             "the file has no usable value.")
-        self._abserr = QDoubleSpinBox(); self._abserr.setRange(0.0, 100.0)
+        self._abserr = PlainDoubleSpinBox(); self._abserr.setRange(0.0, 100.0)
         self._abserr.setDecimals(4); self._abserr.setSingleStep(0.001); self._abserr.setValue(0.0)
         self._abserr.setSuffix(" Ω")
         self._abserr.setToolTip(
@@ -912,7 +996,7 @@ class ERTProcessingModule(BaseModule):
         # the errors recorded are the errors used; and a pair that agrees to a
         # tenth of a percent still shares every error that cannot differ
         # between its two directions.
-        self._recip_floor = QDoubleSpinBox()
+        self._recip_floor = PlainDoubleSpinBox()
         self._recip_floor.setRange(0.1, 20.0); self._recip_floor.setDecimals(1)
         self._recip_floor.setSingleStep(0.5); self._recip_floor.setValue(1.0)
         self._recip_floor.setSuffix(" %")
@@ -950,14 +1034,14 @@ class ERTProcessingModule(BaseModule):
         self._auto_lam.toggled.connect(self._on_auto_lambda)
         aform.addRow(self._auto_lam)
 
-        self._target_chi2 = QDoubleSpinBox()
+        self._target_chi2 = PlainDoubleSpinBox()
         self._target_chi2.setRange(0.1, 100.0); self._target_chi2.setDecimals(2)
         self._target_chi2.setSingleStep(0.1); self._target_chi2.setValue(1.0)
         self._target_chi2.setToolTip(
             "χ² = 1 means the model explains the data to within the assumed relative "
             "error. A larger target accepts a looser fit, matching data noisier than "
             "the error estimate describes.")
-        self._chi2_tol = QDoubleSpinBox()
+        self._chi2_tol = PlainDoubleSpinBox()
         self._chi2_tol.setRange(0.01, 10.0); self._chi2_tol.setDecimals(2)
         self._chi2_tol.setSingleStep(0.05); self._chi2_tol.setValue(0.2)
         self._chi2_tol.setToolTip(
@@ -990,7 +1074,7 @@ class ERTProcessingModule(BaseModule):
         self._reject.toggled.connect(self._on_reject_outliers)
         aform.addRow(self._reject)
 
-        self._reject_sigma = QDoubleSpinBox()
+        self._reject_sigma = PlainDoubleSpinBox()
         self._reject_sigma.setRange(1.5, 20.0); self._reject_sigma.setDecimals(1)
         self._reject_sigma.setSingleStep(0.5); self._reject_sigma.setValue(3.0)
         self._reject_sigma.setToolTip(
@@ -1008,7 +1092,7 @@ class ERTProcessingModule(BaseModule):
         self._reject_row = QWidget(); self._reject_row.setLayout(rej_row)
         aform.addRow("Cut beyond", self._reject_row)
 
-        self._min_keep = QDoubleSpinBox()
+        self._min_keep = PlainDoubleSpinBox()
         self._min_keep.setRange(10.0, 100.0); self._min_keep.setDecimals(0)
         self._min_keep.setSingleStep(5.0); self._min_keep.setValue(50.0)
         self._min_keep.setSuffix(" %")
@@ -1018,85 +1102,114 @@ class ERTProcessingModule(BaseModule):
         aform.addRow("Keep at least", self._min_keep)
         layout.addWidget(assist)
 
-        # -- run -------------------------------------------------------------
-        runbox = QGroupBox("Run")
-        self._run_group = runbox
-        rform = QFormLayout(runbox)
-        iform = rform  # the time-lapse panel and Run button live here
-
-        self._tl_mode = QCheckBox("Time-lapse (multiple ERT files)")
-        self._tl_mode.setToolTip("Off: invert the single loaded dataset.  On: jointly invert an "
-                                 "ordered sequence of ERT files with temporal regularization "
-                                 "(the time-lapse options appear below).")
-        self._tl_mode.toggled.connect(self._on_tl_mode)
-        iform.addRow(self._tl_mode)
+        # The time-lapse options, after the settings they add to; shown in
+        # time-lapse mode on the tabs that show the inversion settings.
+        layout.addWidget(self._build_timelapse_panel())
         self._sync_iteration_rows()
-
-        self._invert_btn = QPushButton("Run inversion")
-        self._invert_btn.setProperty("primary", True)
-        self._invert_btn.setIcon(theme.icon("fa5s.play", color="#ffffff"))
-        self._invert_btn.clicked.connect(self._run_inversion)
-        iform.addRow(self._invert_btn)
-        self._inv_progress = QProgressBar()
-        self._inv_progress.setVisible(False)
-        self._inv_stop = self.stop_button()
-        iform.addRow(progress_with_stop(self._inv_progress, self._inv_stop))
-
-        iform.addRow(self._build_timelapse_panel())
         # Reflect the initial checkbox states; setChecked() above emitted nothing.
         self._on_inv_mode_changed()
         self._on_auto_lambda(self._auto_lam.isChecked())
         self._on_reject_outliers(self._reject.isChecked())
-        layout.addWidget(runbox)
 
         # Electrode editing has no panel: placing and dragging electrodes by mouse
         # was fiddly and rarely the right way to fix a geometry. The operations
         # live on as agent actions (add/move/delete/label/clear/list electrodes),
-        # which is both more precise and reproducible. Clicking the plot still
-        # selects an electrode so its position can be read off.
+        # which is both more precise and reproducible. The electrode file and the
+        # survey geometry are exported from the toolbar's Export menu.
 
-        exp = QGroupBox("Export")
-        self._geometry_export_group = exp
-        ebox = QVBoxLayout(exp)
-        exp_e = QPushButton("Export electrode file…")
-        exp_e.setIcon(theme.icon("fa5s.file-csv"))
-        exp_e.clicked.connect(self._export_electrodes)
-        exp_g = QPushButton("Export survey geometry JSON…")
-        exp_g.setIcon(theme.icon("fa5s.file-export"))
-        exp_g.clicked.connect(self._export_geometry)
+        # Result exports belong beside the result, where model post-processing
+        # remains available without retaining the entire preparation column -
+        # the single model's or the series', whichever the tab shows.
         self._model_export_btn = QPushButton("Export resistivity model…")
         self._model_export_btn.setIcon(theme.icon("fa5s.cube"))
         self._model_export_btn.setToolTip("Export the inverted model as npy + pygimli mesh (.bms) + VTK.")
         self._model_export_btn.setEnabled(False)
         self._model_export_btn.clicked.connect(self._export_resistivity_model)
-        ebox.addWidget(exp_e)
-        ebox.addWidget(exp_g)
-        layout.addWidget(exp)
-
-        # Result exports belong beside the result, where model post-processing
-        # remains available without retaining the entire preparation column.
+        self._tl_export_btn = QPushButton("Export time-lapse results…")
+        self._tl_export_btn.setIcon(theme.icon("fa5s.cube"))
+        self._tl_export_btn.setToolTip("Saves the time-lapse models to a chosen folder: a combined VTK, "
+                                       "per-step VTKs, final_models.npy, the mesh (.bms), times CSV, and the figure.")
+        self._tl_export_btn.setEnabled(False)
+        self._tl_export_btn.clicked.connect(self._export_tl_results)
+        self._tl_open = QPushButton("Open output folder")
+        self._tl_open.setIcon(theme.icon("fa5s.folder-open"))
+        self._tl_open.setEnabled(False)
+        self._tl_open.clicked.connect(self._open_tl_output)
         self._model_export_group = QGroupBox("Export model")
         model_exports = QVBoxLayout(self._model_export_group)
         model_exports.addWidget(self._model_export_btn)
+        model_exports.addWidget(self._tl_export_btn)
+        model_exports.addWidget(self._tl_open)
         model_exports.addWidget(self.map_export_button())
         self._postprocess_layout.addWidget(self._model_export_group)
         self._postprocess_layout.addStretch(1)
+        self._sync_model_exports()
         self._postprocess_scroll.fit_to_content()
 
         layout.addStretch(1)
         scroll.fit_to_content()
-        return scroll
+        self._controls_scroll = scroll
+
+        # -- run: pinned under the column ------------------------------------
+        # The column is longer than a screen once a series and its options are
+        # in it, and the Run button at its end was scrolled out of sight. It
+        # stays put below the settings now, with what still stops it from
+        # running said above it.
+        footer = QWidget()
+        self._run_group = footer
+        flayout = QVBoxLayout(footer)
+        flayout.setContentsMargins(6, 4, 6, 6)
+        flayout.setSpacing(6)
+        rule = QFrame()
+        rule.setFrameShape(QFrame.HLine)
+        rule.setFrameShadow(QFrame.Plain)
+        flayout.addWidget(rule)
+        self._run_reason = QLabel()
+        self._run_reason.setWordWrap(True)
+        theme.set_tone(self._run_reason, "hint")
+        flayout.addWidget(self._run_reason)
+
+        self._invert_btn = QPushButton("Run inversion")
+        self._invert_btn.setProperty("primary", True)
+        self._invert_btn.setIcon(theme.icon("fa5s.play", color="#ffffff"))
+        self._invert_btn.clicked.connect(self._run_inversion)
+        flayout.addWidget(self._invert_btn)
+        self._inv_progress = QProgressBar()
+        self._inv_progress.setVisible(False)
+        self._inv_stop = self.stop_button()
+        self._inv_progress_row = progress_with_stop(self._inv_progress, self._inv_stop)
+        flayout.addWidget(self._inv_progress_row)
+
+        self._tl_btn = QPushButton("Run time-lapse inversion")
+        self._tl_btn.setProperty("primary", True)
+        self._tl_btn.setIcon(theme.icon("fa5s.history", color="#ffffff"))
+        self._tl_btn.clicked.connect(self._run_timelapse)
+        flayout.addWidget(self._tl_btn)
+        self._tl_progress = QProgressBar(); self._tl_progress.setVisible(False)
+        self._tl_stop = self.stop_button("The time-lapse inversion")
+        self._tl_progress_row = progress_with_stop(self._tl_progress, self._tl_stop)
+        flayout.addWidget(self._tl_progress_row)
+
+        column = QWidget()
+        column_layout = QVBoxLayout(column)
+        column_layout.setContentsMargins(0, 0, 0, 0)
+        column_layout.setSpacing(0)
+        column_layout.addWidget(scroll, 1)
+        column_layout.addWidget(footer)
+        self._show_run_buttons(False)
+        self._sync_run_ready()
+        return column
 
     def _build_timelapse_panel(self) -> QWidget:
-        """The time-lapse-only options, shown only when "Time-lapse" is ticked. The
-        ERT file list (which doubles as the single-file loader) lives in the Load
-        group at the top; shared λ / iterations / relative error / mesh quality live
-        in the Inversion group above. Only the temporal controls are here."""
-        panel = QWidget()
+        """The time-lapse-only options, shown only in time-lapse mode. The ERT file
+        list (which doubles as the single-file loader) lives in the Load group at
+        the top; shared λ / iterations / relative error / mesh quality live in the
+        Inversion group above; the Run button is pinned under the column. Only the
+        temporal controls are here."""
+        panel = QGroupBox("Time-lapse")
         self._tl_panel = panel
         tlform = QFormLayout(panel)
-        tlform.setContentsMargins(0, 6, 0, 0)
-        self._tl_alpha = QDoubleSpinBox(); self._tl_alpha.setRange(0.0, 1000.0); self._tl_alpha.setValue(10.0)
+        self._tl_alpha = PlainDoubleSpinBox(); self._tl_alpha.setRange(0.0, 1000.0); self._tl_alpha.setValue(10.0)
         self._tl_alpha.setToolTip("Temporal regularization strength (couples consecutive time steps).")
         tlform.addRow("Alpha (temporal)", self._tl_alpha)
         self._tl_type = QComboBox(); self._tl_type.addItems(["L2", "L1", "L1L2"])
@@ -1126,39 +1239,6 @@ class ERTProcessingModule(BaseModule):
                                    "(for many files / large meshes). Auto-enabled for "
                                    "large problems; check to force it on.")
         tlform.addRow(self._tl_lowmem)
-
-        # Acquisition times. The file list above shows what was read and the gap
-        # between surveys; this is the escape hatch for a set whose names carry no
-        # time at all.
-        self._tl_use_mtime = QCheckBox("Use file times when the names carry none")
-        self._tl_use_mtime.setToolTip(
-            "Fall back to each file's modification time when neither its name nor "
-            "its header gives an acquisition time. Off by default: a file that was "
-            "copied or re-exported carries the time of the copy, not of the survey.")
-        self._tl_use_mtime.toggled.connect(self._on_tl_time_source_changed)
-        tlform.addRow(self._tl_use_mtime)
-
-        self._tl_btn = QPushButton("Run time-lapse inversion")
-        self._tl_btn.setProperty("primary", True)
-        self._tl_btn.setIcon(theme.icon("fa5s.history", color="#ffffff"))
-        self._tl_btn.clicked.connect(self._run_timelapse)
-        tlform.addRow(self._tl_btn)
-        self._tl_progress = QProgressBar(); self._tl_progress.setVisible(False)
-        self._tl_stop = self.stop_button("The time-lapse inversion")
-        tlform.addRow(progress_with_stop(self._tl_progress, self._tl_stop))
-        self._tl_export_btn = QPushButton("Export results (VTK + npy + mesh)…")
-        self._tl_export_btn.setIcon(theme.icon("fa5s.cube"))
-        self._tl_export_btn.setToolTip("Saves the time-lapse models to a chosen folder: a combined VTK, "
-                                       "per-step VTKs, final_models.npy, the mesh (.bms), times CSV, and the figure.")
-        self._tl_export_btn.setEnabled(False)
-        self._tl_export_btn.clicked.connect(self._export_tl_results)
-        tlform.addRow(self._tl_export_btn)
-        tlform.addRow(self.map_export_button())
-        self._tl_open = QPushButton("Open output folder")
-        self._tl_open.setIcon(theme.icon("fa5s.folder-open"))
-        self._tl_open.setEnabled(False)
-        self._tl_open.clicked.connect(self._open_tl_output)
-        tlform.addRow(self._tl_open)
 
         panel.setVisible(False)
         return panel
@@ -1383,10 +1463,63 @@ class ERTProcessingModule(BaseModule):
         if self._tl_all:
             self._set_tl_files(self._tl_all)
 
+    def _set_timelapse(self, on: bool) -> None:
+        """Choose time-lapse (True) or one survey (False), as the two buttons do.
+
+        ``setChecked(False)`` on the checked button of an exclusive pair does
+        nothing, so a script turning time-lapse off checks "One survey" instead.
+        """
+        (self._tl_mode if on else self._single_mode).setChecked(True)
+
+    def _show_run_buttons(self, timelapse: bool) -> None:
+        """The Run button of the mode chosen, and its progress row.
+
+        A run still going keeps its progress row whatever the mode shows now.
+        """
+        self._invert_btn.setVisible(not timelapse)
+        self._tl_btn.setVisible(timelapse)
+        self._inv_progress_row.setVisible(not timelapse or self._inv_progress.isVisible())
+        self._tl_progress_row.setVisible(timelapse or self._tl_progress.isVisible())
+
+    def _run_blocker(self) -> str:
+        """Why the Run button of the mode chosen cannot run now; "" when it can."""
+        if self._tl_mode.isChecked():
+            if len(self._tl_files) < 2:
+                return ("Add at least two surveys to the list for a time-lapse run "
+                        "- one file per survey, or drop a folder of them on the page.")
+            if self._data_note and self._data_path is not None:
+                return (f"{self._data_path.name} cannot be read for inversion as "
+                        f"{self._instrument.currentText()}: {self._data_note} Every "
+                        "survey is read with that format.")
+            return ""
+        if self._ert_data is None:
+            if self._data_note:
+                return f"This survey cannot be inverted: {self._data_note}"
+            return "Add an ERT data file to run an inversion."
+        return ""
+
+    def _sync_run_ready(self) -> None:
+        """Enable the Run button only when it can run, and say why it cannot.
+
+        It was always enabled: a file read under the wrong format let the run
+        start, and it failed a minute later with pyGIMLi's IndexError.
+        """
+        if not hasattr(self, "_run_reason"):
+            return
+        reason = self._run_blocker()
+        self._run_reason.setText(reason)
+        self._run_reason.setVisible(bool(reason))
+        # A run in progress keeps its busy state; it is settled again after.
+        if self._inv_busy is None:
+            self._invert_btn.setEnabled(not reason or self._tl_mode.isChecked())
+        if self._tl_busy is None:
+            self._tl_btn.setEnabled(not reason or not self._tl_mode.isChecked())
+
     def _on_tl_mode(self, checked: bool) -> None:
         """Toggle between single-file and time-lapse inversion."""
-        self._tl_panel.setVisible(bool(checked))
-        self._invert_btn.setVisible(not checked)
+        self._show_run_buttons(bool(checked))
+        self._sync_tab_controls()
+        self._sync_run_ready()
         # A time-lapse run builds its mesh from the first survey of the series.
         self._sync_mesh_engine()
         self._mesh_inputs_changed()
@@ -1398,9 +1531,11 @@ class ERTProcessingModule(BaseModule):
         """Show the iteration limits the next run obeys, and only those.
 
         A single run stops at "Max iterations" or once χ² stops improving, on
-        every engine. A time-lapse run on the in-house or ADTLERT engine has
-        one limit, its own iteration count; E4D runs each survey until χ²
-        stops improving and takes no count; R2 and R3t decide both themselves.
+        every engine. A time-lapse run on the in-house engine obeys both, its
+        own iteration count and the χ² rule; ADTLERT takes the count and stops
+        on the size of its model step instead of χ²; E4D runs each survey until
+        χ² stops improving and takes no count; R2 and R3t decide both
+        themselves. A greyed row says why on hover.
         """
         from PyHydroGeophysX.qt_apps.qt_utils import set_rows_enabled
 
@@ -1411,7 +1546,13 @@ class ERTProcessingModule(BaseModule):
         self._set_rows_visible([self._iter_ceiling], not timelapse)
         self._set_rows_visible([self._iter], timelapse)
         set_rows_enabled([self._iter], engine not in ("e4d", "r2", "r3t"))
-        set_rows_enabled([self._plateau], not timelapse or engine == "e4d")
+        plateau_applies = not timelapse or engine in ("pyhydro", "e4d")
+        set_rows_enabled([self._plateau], plateau_applies)
+        self._plateau.setToolTip(_PLATEAU_TIP if plateau_applies else (
+            "Not used by this engine's time-lapse inversion: ADTLERT stops when its "
+            "model step gets small, or at Max iterations."
+            if engine == "adtlert" else
+            "Not used: R2 and R3t decide for themselves when the inversion is done."))
 
     def _on_engine_changed(self, _index: int = -1) -> None:
         """Probe the selected CUDA backend without changing user parameters."""
@@ -1819,6 +1960,7 @@ class ERTProcessingModule(BaseModule):
                 if done is not None:
                     done("superseded", None)
                 return
+            res.setdefault("instrument", instrument)   # the format it was read as
             if done is None:
                 self._on_ert_loaded(path, res)
                 return
@@ -1831,7 +1973,7 @@ class ERTProcessingModule(BaseModule):
 
         def refused(message, w=worker):
             if w is self._load_worker:
-                self._on_ert_load_failed(message)
+                self._on_ert_load_failed(message, path)
                 if done is not None:
                     done("failed", message)
             elif done is not None:
@@ -2055,11 +2197,19 @@ class ERTProcessingModule(BaseModule):
         self._show_reader_status(str(res.get("reader", "")),
                                  str(res.get("reader_reason", "")))
         elec, pseudo, nmeas, data = res["elec"], res["pseudo"], res["nmeas"], res["data"]
+        self._loaded_format = res.get("instrument")
+        # A file read under the wrong format can come back "loaded": a DAS-1
+        # file read as BERT gave one electrode and one reading, the log said
+        # SUCCESS, and the inversion failed on it a minute later. A survey no
+        # instrument could have measured is refused here instead.
+        from PyHydroGeophysX.data_processing.ert_formats import implausible_survey
+        implausible = implausible_survey(len(elec), int(nmeas or 0))
+        if implausible:
+            data, pseudo = None, []
         self._x = [float(e[0]) for e in elec]
         self._z = [float(e[1]) for e in elec]
         self._labels = [str(i + 1) for i in range(len(self._x))]
         self._electrode_origins = list(range(len(self._x)))
-        self._selected = None
         self._data_path = Path(path)
         pair = res.get("pair")
         self._pair_info = dict(pair) if pair else None
@@ -2077,7 +2227,18 @@ class ERTProcessingModule(BaseModule):
         self._qc_report = None       # these data are unfiltered until Apply filter
         self._loaded_pairing = res.get("pairing")
         self._data_note = ""
-        if data is None:
+        # Whether the file's first lines name another format; offered beside
+        # the format chooser either way, loaded or not.
+        self._show_format_hint(path)
+        if implausible:
+            self._data_note = implausible
+            suggestion = (f" It looks like a {self._format_guess[2]} file: press “Read as "
+                          f"{self._format_guess[2]}” under the format."
+                          if self._format_guess else
+                          " Choose the instrument / format the file was written by.")
+            self.log(f"Could not read {Path(path).name} as "
+                     f"{self._instrument.currentText()}: {implausible}{suggestion}", "error")
+        elif data is None:
             cause = str(res.get("data_note") or
                         "this file could not be converted for inversion.")
             self._data_note = cause  # _refresh puts it on the panel as well
@@ -2098,7 +2259,6 @@ class ERTProcessingModule(BaseModule):
                 resource_id="ert:observed_data:active",
             )
         self._refresh()
-        self._draw_pseudosection()
         self._recip_inputs_changed()
         # The Reciprocal errors tab stays up when it is the one being looked at:
         # clicking through the list compares the surveys' pairs there.
@@ -2135,13 +2295,60 @@ class ERTProcessingModule(BaseModule):
             return str(message).replace(Path(table).name, source.name)
         return str(message)
 
-    def _on_ert_load_failed(self, message: str) -> None:
+    def _on_ert_load_failed(self, message: str, path: Optional[str] = None) -> None:
         message = self._name_electrode_file(message)
         self.log(f"Could not load ERT data: {message}", "error")
         self._info.setText(f"Load failed: {message}")
         # Neither reader got there, so the line goes back to what is installed
         # rather than keeping the last file's answer.
         self._show_reader_status()
+        # A refusal is most often the wrong format; offer the one the file names.
+        self._show_format_hint(path)
+
+    def _show_format_hint(self, path: Optional[Any]) -> None:
+        """Offer the format ``path``'s first lines name, when it is not the one chosen."""
+        from PyHydroGeophysX.data_processing.ert_formats import guess_ert_format
+
+        guess = guess_ert_format(path) if path else None
+        index = self._instrument.findData(guess) if guess else -1
+        if index < 0 or index == self._instrument.currentIndex():
+            self._format_guess = None
+            self._format_hint.setVisible(False)
+            return
+        name = self._instrument.itemText(index)
+        self._format_guess = (str(guess), str(path), name)
+        self._format_hint_text.setText(
+            f"{Path(str(path)).name} looks like a {name} file, but is read as "
+            f"{self._instrument.currentText()}.")
+        self._format_hint_btn.setText(f"Read as {name}")
+        self._format_hint.setVisible(True)
+
+    def _take_format_hint(self) -> None:
+        """Switch to the format the file looks like, and read it again with it."""
+        if self._format_guess is None:
+            return
+        guess, path, _name = self._format_guess
+        index = self._instrument.findData(guess)
+        if index < 0:
+            return
+        self._instrument.setCurrentIndex(index)
+        self._format_guess = None
+        self._format_hint.setVisible(False)
+        self.log(f"Reading {Path(path).name} again as {self._instrument.currentText()}.",
+                 "info")
+        self._start_load(path)
+
+    def _reload_with_format(self, _index: int = -1) -> None:
+        """Read the survey on screen again in the format just chosen by hand."""
+        path = self._data_path
+        if (path is None or not Path(path).exists()
+                or self._instrument.currentData() == getattr(self, "_loaded_format", None)):
+            return
+        self._format_guess = None
+        self._format_hint.setVisible(False)
+        self.log(f"Reading {Path(path).name} again as {self._instrument.currentText()}.",
+                 "info")
+        self._start_load(str(path))
 
     def _load_pygimli(self, path: str, electrode_file: Optional[str] = None):
         import pygimli.physics.ert as ert
@@ -2794,7 +3001,6 @@ class ERTProcessingModule(BaseModule):
         self._qc_report = report
         self._pseudo = self._pseudo_from_data(data)
         self._n_meas = int(data.size())
-        self._draw_pseudosection()
         self._refresh()
         self._recip_inputs_changed()
         # On the Reciprocal errors tab the filter's effect on the pairs is what
@@ -2826,7 +3032,6 @@ class ERTProcessingModule(BaseModule):
         self._qc_mask = [True] * int(self._ert_data_full.size())
         self._pseudo = self._pseudo_from_data(self._ert_data)
         self._n_meas = int(self._ert_data.size())
-        self._draw_pseudosection()
         self._refresh()
         self.log("Filter reset.", "info")
 
@@ -3114,7 +3319,6 @@ class ERTProcessingModule(BaseModule):
             self._z = [float(v) for v in z]
             self._labels = [str(i + 1) for i in range(len(self._x))]
             self._electrode_origins = [None] * len(self._x)
-            self._selected = None
             self._electrode_table = table
             self._electrode_path = Path(path)
             self._refresh()
@@ -3885,6 +4089,7 @@ class ERTProcessingModule(BaseModule):
             return
         choice = self._inv_choices[index]
         self._map_result_kind = 'single'
+        self._sync_model_exports()
         self._inv_mgr = choice["mgr"]
         if self._inv_mgr is not None:
             if self._inv_correction:
@@ -3967,7 +4172,7 @@ class ERTProcessingModule(BaseModule):
         section("Inverted region",
                 "The cells the inversion solves for, under the electrodes "
                 "(PyGIMLi's parameter domain, E4D's fine zone).")
-        self._para_depth = QDoubleSpinBox()
+        self._para_depth = PlainDoubleSpinBox()
         self._para_depth.setRange(0.0, 10000.0); self._para_depth.setDecimals(1)
         self._para_depth.setSingleStep(5.0); self._para_depth.setValue(0.0)
         self._para_depth.setSuffix(" m")
@@ -3980,7 +4185,7 @@ class ERTProcessingModule(BaseModule):
             "the bottom of the section is empty. Auto is 0.4 times the electrode "
             "spread (PyGIMLi's paraDepth).")
         form.addRow("Depth", self._para_depth)
-        self._para_boundary = QDoubleSpinBox()
+        self._para_boundary = PlainDoubleSpinBox()
         self._para_boundary.setRange(0.5, 20.0); self._para_boundary.setDecimals(1)
         self._para_boundary.setSingleStep(0.5); self._para_boundary.setValue(2.0)
         self._para_boundary.setSuffix(" spacings")
@@ -4000,7 +4205,7 @@ class ERTProcessingModule(BaseModule):
             "most, and more unknowns. PyGIMLi's addNodes; 1, a node halfway "
             "between electrodes, by default.")
         form.addRow("Surface nodes", self._surface_nodes)
-        self._para_max_cell = QDoubleSpinBox()
+        self._para_max_cell = PlainDoubleSpinBox()
         self._para_max_cell.setRange(0.0, 1e6); self._para_max_cell.setDecimals(2)
         self._para_max_cell.setStepType(QAbstractSpinBox.StepType.AdaptiveDecimalStepType)
         self._para_max_cell.setSuffix(" m²")
@@ -4012,7 +4217,7 @@ class ERTProcessingModule(BaseModule):
             "shown. PyGIMLi's paraMaxCellSize; the maximum volume of E4D's fine "
             "zone.")
         form.addRow("Largest cell", self._para_max_cell)
-        self._quality = QDoubleSpinBox()
+        self._quality = PlainDoubleSpinBox()
         self._quality.setRange(20.0, _MAX_MESH_QUALITY); self._quality.setDecimals(1)
         self._quality.setValue(34.0)
         self._quality.setSuffix("°")
@@ -4026,7 +4231,7 @@ class ERTProcessingModule(BaseModule):
                 "Coarse cells that carry the boundary condition far from the "
                 "electrodes; never inverted. Tick Outer region above the plot to "
                 "see them.")
-        self._outer_width = QDoubleSpinBox()
+        self._outer_width = PlainDoubleSpinBox()
         self._outer_width.setRange(0.0, 50.0); self._outer_width.setDecimals(1)
         self._outer_width.setSingleStep(0.5); self._outer_width.setValue(0.0)
         self._outer_width.setSuffix(" × spread")
@@ -4038,7 +4243,7 @@ class ERTProcessingModule(BaseModule):
             "its cells are large. PyGIMLi's boundary, 4 by default; E4D's outer "
             "boundary distance.")
         form.addRow("Width", self._outer_width)
-        self._outer_max_cell = QDoubleSpinBox()
+        self._outer_max_cell = PlainDoubleSpinBox()
         self._outer_max_cell.setRange(0.0, 1e8); self._outer_max_cell.setDecimals(1)
         self._outer_max_cell.setStepType(QAbstractSpinBox.StepType.AdaptiveDecimalStepType)
         self._outer_max_cell.setSuffix(" m²")
@@ -4259,24 +4464,24 @@ class ERTProcessingModule(BaseModule):
         if not hasattr(self, "_controls"):
             return
         current = self._tabs.currentWidget()
-        electrodes = current is self._plot_widget
         data = current is self._pseudo_widget
         quality = current is self._quality_view
+        timelapse = self._tl_mode.isChecked()
         # Mesh and model views already have their own tools beside the plot.
         # Hiding this whole column gives their plot and tools the full width.
-        self._controls.setVisible(electrodes or data or quality)
+        self._controls.setVisible(data or quality)
         for widget, visible in (
-            (self._load_group, electrodes),
-            (self._info, electrodes or data),
+            (self._load_group, data),
+            (self._info, data),
             (self._qc_group, data),
             (self._errors_group, data),
             (self._inversion_group, data or quality),
             (self._fit_group, data or quality),
+            (self._tl_panel, (data or quality) and timelapse),
             (self._run_group, data or quality),
-            (self._geometry_export_group, electrodes),
         ):
             widget.setVisible(visible)
-        self._controls.fit_to_content()
+        self._controls_scroll.fit_to_content()
 
     def _mesh_inputs_changed(self, *_args: Any) -> None:
         """Something the mesh depends on changed; rebuild it if it is on screen.
@@ -4468,6 +4673,8 @@ class ERTProcessingModule(BaseModule):
             self._inv_busy = None
         self._invert_btn.setText("Run inversion")
         self._inv_progress.setVisible(False)
+        self._show_run_buttons(self._tl_mode.isChecked())
+        self._sync_run_ready()
 
     # -- time-lapse inversion ------------------------------------------------
     def _set_tl_files(self, paths: List[str]) -> None:
@@ -4477,6 +4684,7 @@ class ERTProcessingModule(BaseModule):
         self._group_tl_surveys()
         self._read_tl_times()
         self._refresh_tl_list()
+        self._sync_run_ready()
 
     def _group_tl_surveys(self) -> None:
         """Make each forward file and its reciprocal file one survey.
@@ -4599,13 +4807,17 @@ class ERTProcessingModule(BaseModule):
         n = len(self._tl_files)
         if n == 0:
             self._tl_info.setText("No files added.")
+        # The format is not repeated here: it is chosen two rows up, and a copy
+        # of it went stale the moment the format was changed.
         elif n == 1:
-            self._tl_info.setText(f"<b>1</b> survey. Tick “Time-lapse” and add more for a "
-                                  f"time sequence. Instrument: {self._instrument.currentText()}."
+            self._tl_info.setText("<b>1</b> survey; add more for a time-lapse series."
                                   + self._tl_pairs_text(timing))
         else:
-            self._tl_info.setText(f"{self._tl_timing_text(timing)} "
-                                  f"Instrument: {self._instrument.currentText()}.")
+            self._tl_info.setText(self._tl_timing_text(timing))
+        # Offered while some files of a series carry no time - one survey needs
+        # none - and kept on screen once ticked.
+        undated = bool(timing is not None and n >= 2 and timing.undated_files())
+        self._tl_use_mtime.setVisible(undated or self._tl_use_mtime.isChecked())
         # A time-lapse mesh is built from whichever survey is now first, and
         # the Reciprocal errors tab draws the series as the list now holds it.
         self._mesh_inputs_changed()
@@ -4624,7 +4836,7 @@ class ERTProcessingModule(BaseModule):
         how = ("  Put the time in each file name, year first (e.g. "
                "<code>site_2026-01-12_05-50-38.dat</code>), add a line "
                "<code># date: 2026-01-12 05:50:38</code> at the top of each file, "
-               "or tick “Use file times” below.")
+               "or tick “Date undated files” below.")
         # The summary names the files that keep an undated list from being dated
         # (no time, or a time another file has too); hovering a row says why.
         text = timing.summary()
@@ -4689,8 +4901,50 @@ class ERTProcessingModule(BaseModule):
             return
         paths, _ = QFileDialog.getOpenFileNames(
             self, "Add ERT data file(s)", "", _DATA_FILTER)
+        if paths:
+            self._add_files(paths)
+
+    # -- files dropped on the page -------------------------------------------
+    @staticmethod
+    def _dropped_files(mime: Any) -> List[str]:
+        """The data files of a drop: files as they are, a folder's data files by name."""
+        if mime is None or not mime.hasUrls():
+            return []
+        found: List[str] = []
+        for url in mime.urls():
+            if not url.isLocalFile():
+                continue
+            path = Path(url.toLocalFile())
+            if path.is_dir():
+                found.extend(str(p) for p in sorted(path.iterdir())
+                             if p.is_file() and p.suffix.lower() in _DATA_SUFFIXES)
+            elif path.is_file():
+                found.append(str(path))
+        return found
+
+    def dragEnterEvent(self, event) -> None:  # noqa: N802 - Qt override
+        if event.mimeData() is not None and event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event) -> None:  # noqa: N802 - Qt override
+        self.dragEnterEvent(event)
+
+    def dropEvent(self, event) -> None:  # noqa: N802 - Qt override
+        paths = self._dropped_files(event.mimeData())
         if not paths:
+            self.log("Nothing in the drop is an ERT data file or a folder holding some.",
+                     "warn")
+            event.ignore()
             return
+        event.acceptProposedAction()
+        from PyHydroGeophysX.qt_apps.widgets.project_dialogs import confirm_project_for_data
+        if confirm_project_for_data(self):
+            self._add_files(paths)
+
+    def _add_files(self, paths: List[str]) -> None:
+        """Add data files to the list - chosen in the dialog or dropped on the page."""
         # Append new files, preserving order and dropping duplicates.
         old_n = len(self._tl_files)
         merged = list(self._tl_all)
@@ -4835,10 +5089,11 @@ class ERTProcessingModule(BaseModule):
         }
         if self._tl_lowmem.isChecked():
             params["save_memory"] = True
+        # The same stopping rule as a single run: the in-house engine (full or
+        # windowed) and E4D end once chi2 stops improving by this much.
+        params["plateau_tolerance"] = float(self._plateau.value()) / 100.0
         if self._engine.currentData() == "e4d":
-            # E4D runs each survey to a plateau, judged by the same stopping rule.
             params["e4d"] = self._e4d_settings()
-            params["plateau_tolerance"] = float(self._plateau.value()) / 100.0
         if self._r2_program_name() is not None:
             params["r2"] = self._r2_settings()
         # The exported panels are trimmed the way the Resistivity model view trims
@@ -5642,6 +5897,7 @@ class ERTProcessingModule(BaseModule):
         if idx < 0 or idx >= models.shape[1]:
             return
         self._map_result_kind = 'timelapse'
+        self._sync_model_exports()
         cov = None
         if self._tl_coverage is not None:
             cov_all = np.asarray(self._tl_coverage, dtype=float)
@@ -5676,6 +5932,8 @@ class ERTProcessingModule(BaseModule):
             self._tl_busy = None
         self._tl_btn.setText("Run time-lapse inversion")
         self._tl_progress.setVisible(False)
+        self._show_run_buttons(self._tl_mode.isChecked())
+        self._sync_run_ready()
 
     def _tl_result_files(self) -> List[str]:
         """All result files worth exporting (figure + data + config), de-duplicated."""
@@ -5851,6 +6109,13 @@ class ERTProcessingModule(BaseModule):
         return {"dest": str(dest), "files": copied + written, "warnings": warnings,
                 "correction": correction}
 
+    def _sync_model_exports(self) -> None:
+        """Offer the export of the result the model tab shows: one model or a series."""
+        series = getattr(self, "_map_result_kind", "") == "timelapse"
+        self._model_export_btn.setVisible(not series)
+        self._tl_export_btn.setVisible(series)
+        self._tl_open.setVisible(series)
+
     def _open_tl_output(self) -> None:
         out = self._tl_out or str(self.state.output_dir or "")
         if out and Path(out).exists():
@@ -5885,27 +6150,35 @@ class ERTProcessingModule(BaseModule):
         if self._pseudo:
             self._draw_pseudosection()
 
-    def _label_electrode_axes(self) -> None:
-        """Label the electrode plot's axes in the studio's length unit.
+    def _electrode_summary(self) -> str:
+        """The electrode line in words: how many, how far apart, how long, how high.
 
-        A line read without elevations puts every electrode at z = 0, and
-        calling that axis an elevation would present a made-up datum as a
-        measured one.
+        In the studio's length unit. A line read without elevations puts every
+        electrode at z = 0, and an elevation range then would present a made-up
+        datum as a measured one, so it is said only for elevations read.
         """
+        count = len(self._x)
+        if not count:
+            return "No electrodes"
+        unit = length_units.current()
+        factor = length_factor(unit)
+        x = np.asarray(self._x, dtype=float)
         z = np.asarray(self._z, dtype=float)
-        name = "Elevation" if z.size and np.any(np.abs(z) > 1.0e-6) else "z"
-        key = (length_units.current(), name)
-        if key == self._electrode_axes:
-            return
-        length_units.pyqtgraph_axis(self._plot, "bottom", "x")
-        length_units.pyqtgraph_axis(self._plot, "left", name)
-        self._electrode_axes = key
+        parts = [f"{count} electrode{'s' if count != 1 else ''}"]
+        gaps = np.diff(np.unique(x[np.isfinite(x)]))
+        gaps = gaps[gaps > 1.0e-9]
+        if gaps.size:
+            parts.append(f"{np.median(gaps) * factor:.3g} {unit} apart")
+            parts.append(f"along {(gaps.sum()) * factor:.4g} {unit}")
+        if np.any(np.abs(z[np.isfinite(z)]) > 1.0e-6):
+            parts.append(f"elevation {np.nanmin(z) * factor:.4g} to "
+                         f"{np.nanmax(z) * factor:.4g} {unit}")
+        return ", ".join(parts)
 
     def _on_length_unit_changed(self, _unit: str) -> None:
-        """Relabel the electrode plot and redraw the pseudosection in the new unit."""
-        self._label_electrode_axes()
-        if self._pseudo:
-            self._draw_pseudosection()
+        """Say the electrode line and redraw the pseudosection in the new unit."""
+        self._update_info()
+        self._draw_pseudosection()
 
     def _show_pseudosection_message(self, message: str) -> None:
         """Show a stable empty-state message on the static section canvas."""
@@ -5913,23 +6186,65 @@ class ERTProcessingModule(BaseModule):
         self._pseudo_ax.set_axis_off()
         if message:
             self._pseudo_ax.text(
-                0.5, 0.5, message,
+                0.5, 0.5, message, wrap=True,
                 ha="center", va="center", transform=self._pseudo_ax.transAxes,
             )
         self._pseudo_legend.setVisible(False)
         self._pseudo_canvas.draw_idle()
+        self._pseudo_toolbar.update()   # Home and Back belong to the new plot
+
+    def _pseudosection_problem(self) -> str:
+        """What the Data tab says when the file loaded gives no section to draw.
+
+        In words a user can act on; it read "All x/depth values are invalid, or
+        apparent resistivity is missing, non-finite, or non-positive."
+        """
+        name = self._data_path.name if self._data_path is not None else ""
+        if name and self._data_note:
+            return (f"{name} could not be read as {self._instrument.currentText()}.\n"
+                    f"{self._data_note}\n"
+                    "Choose the instrument / format the file was written by, on the right.")
+        if name:
+            return (f"No usable apparent resistivity was read from {name}.\n"
+                    "Check the instrument / format setting on the right.")
+        return _EMPTY_DATA_MESSAGE
+
+    def _draw_electrode_marks(self, x: np.ndarray) -> None:
+        """The electrodes as small triangles along the top of the section."""
+        x = x[np.isfinite(x)]
+        if x.size:
+            self._pseudo_ax.scatter(
+                x, np.zeros_like(x), marker="v", s=24, color=_ELECTRODE_MARK,
+                linewidths=0, clip_on=False, zorder=5)
+
+    def _draw_electrodes_only(self) -> None:
+        """Electrodes and no data yet - an electrode file read before the data."""
+        x = np.asarray(self._x, dtype=float)
+        x = x[np.isfinite(x)]
+        ax = self._pseudo_ax
+        ax.clear()
+        ax.set_axis_on()
+        self._draw_electrode_marks(x)
+        pad = 0.03 * max(float(np.ptp(x)) if x.size else 0.0, 1.0)
+        ax.set_xlim(float(x.min()) - pad, float(x.max()) + pad)
+        ax.set_ylim(1.0, 0.0)
+        ax.set_yticks([])
+        set_length_axis(ax, "x", "x")
+        ax.set_title(f"{self._electrode_summary()}. Add data files to see the pseudosection.")
+        self._pseudo_legend.setVisible(False)
+        self._pseudo_canvas.draw_idle()
+        self._pseudo_toolbar.update()
 
     def _draw_pseudosection(self) -> None:
         if not self._pseudo:
-            self._show_pseudosection_message(
-                "No apparent-resistivity measurements loaded."
-            )
+            if self._x and not self._data_note:
+                self._draw_electrodes_only()
+            else:
+                self._show_pseudosection_message(self._pseudosection_problem())
             return
         arr = np.asarray(self._pseudo, dtype=float)
         if arr.ndim != 2 or arr.shape[1] < 3:
-            self._show_pseudosection_message(
-                "The loaded pseudosection does not contain x, depth, and rhoa columns."
-            )
+            self._show_pseudosection_message(self._pseudosection_problem())
             return
         mid, depth, rhoa = arr[:, 0], arr[:, 1], arr[:, 2]
         valid = (
@@ -5941,19 +6256,25 @@ class ERTProcessingModule(BaseModule):
         )
         mid, depth, rhoa = mid[valid], depth[valid], rhoa[valid]
         if rhoa.size == 0:
-            self._show_pseudosection_message(
-                "All x/depth values are invalid, or apparent resistivity is missing, "
-                "non-finite, or non-positive."
-            )
+            self._show_pseudosection_message(self._pseudosection_problem())
             return
         log_rhoa = np.log10(rhoa)
         lo, hi = np.percentile(log_rhoa, [3, 97])
         if hi <= lo:
             lo, hi = float(lo) - 0.5, float(hi) + 0.5
+        # The limits typed in while "Lock range" is ticked, or these, which
+        # the boxes then show; in Ω·m, the scale itself is logarithmic.
+        low, high = self._pseudo_range.limits(10.0 ** float(lo), 10.0 ** float(hi))
+        lo, hi = np.log10(low), np.log10(high)
         rng = hi - lo
         norm = np.clip((log_rhoa - lo) / rng, 0.0, 1.0)
         lut = self._cmap.map(norm, mode="byte")
-        x_min, x_max = float(np.min(mid)), float(np.max(mid))
+        # The section spans the electrodes, which reach past the outermost
+        # measurement midpoints.
+        electrodes = np.asarray(self._x, dtype=float)
+        electrodes = electrodes[np.isfinite(electrodes)]
+        x_all = np.concatenate([mid, electrodes])
+        x_min, x_max = float(np.min(x_all)), float(np.max(x_all))
         x_span = x_max - x_min
         if x_span <= 1e-9:
             x_center = 0.5 * (x_min + x_max)
@@ -5976,6 +6297,7 @@ class ERTProcessingModule(BaseModule):
             edgecolors="#394b59",
             linewidths=0.35,
         )
+        self._draw_electrode_marks(electrodes)
         self._pseudo_ax.set_xlim(x_min, x_max)
         self._pseudo_ax.set_ylim(depth_max, 0.0)
         # The y values are already depths below the surface, so only the unit
@@ -5986,55 +6308,32 @@ class ERTProcessingModule(BaseModule):
         self._pseudo_ax.minorticks_on()
         self._pseudo_ax.grid(True, which="minor", alpha=0.10)
         self._pseudo_ax.set_title(
-            f"Apparent resistivity: {rhoa.min():.3g} – {rhoa.max():.3g} Ω·m "
-            f"(n={rhoa.size})"
+            # Short enough for a narrow plot; the scale below names the quantity.
+            f"{rhoa.size:,} readings, {rhoa.min():.3g}–{rhoa.max():.3g} Ω·m   ▼ electrodes"
         )
         self._pseudo_canvas.draw_idle()
+        self._pseudo_toolbar.update()
         legend_values = np.power(10.0, np.linspace(float(lo), float(hi), 5))
         for label, value in zip(self._pseudo_scale_labels, legend_values):
             label.setText(f"{float(value):.4g}")
         self._pseudo_legend.setVisible(True)
 
-    # -- interaction ---------------------------------------------------------
-    def _nearest(self, x: float, z: float) -> Optional[int]:
-        if not self._x:
-            return None
-        dx = np.asarray(self._x) - x
-        dz = np.asarray(self._z) - z
-        return int(np.argmin(dx * dx + dz * dz))
-
-    def _on_click(self, event) -> None:
-        """Left-click selects the nearest electrode so its position can be read.
-
-        Editing is deliberately not bound to the mouse; see the agent actions.
-        """
-        if event.button() != Qt.LeftButton:
-            return
-        if not self._plot.sceneBoundingRect().contains(event.scenePos()):
-            return
-        vp = self._plot.vb.mapSceneToView(event.scenePos())
-        self._selected = self._nearest(float(vp.x()), float(vp.y()))
-        self._refresh()
-
+    # -- electrodes ----------------------------------------------------------
     def _delete(self, idx: int) -> None:
         for seq in (self._x, self._z, self._labels, self._electrode_origins):
             del seq[idx]
-        self._selected = None
         self._refresh()
 
     def _clear(self) -> None:
         self._x, self._z, self._labels, self._electrode_origins = [], [], [], []
-        self._selected = None
         self._refresh()
 
     # -- rendering / publish -------------------------------------------------
-    def _refresh(self) -> None:
-        self._scatter.setData(self._x, self._z)
-        self._label_electrode_axes()
-        if self._selected is not None and 0 <= self._selected < len(self._x):
-            self._sel_scatter.setData([self._x[self._selected]], [self._z[self._selected]])
-        else:
-            self._sel_scatter.setData([], [])
+    def _update_info(self) -> None:
+        """The data panel: the electrodes, the readings, the file and its time."""
+        if not self._x and self._data_path is None:
+            self._info.setText("No data loaded.")
+            return
         rhoa_txt = ""
         if self._pseudo:
             vals = np.asarray([p[2] for p in self._pseudo], dtype=float)
@@ -6057,10 +6356,15 @@ class ERTProcessingModule(BaseModule):
         partner_txt = (f"<br>+ reciprocal file: {self._data_partner.name}"
                        if self._data_partner is not None else "")
         self._info.setText(
-            f"Electrodes: {len(self._x)} &nbsp; Measurements: {self._n_meas}"
+            f"{self._electrode_summary()}<br>Measurements: {int(self._n_meas or 0):,}"
             f"<br>Data: {self._data_path.name if self._data_path else '—'}{partner_txt}"
             f"{when_txt}{rhoa_txt}{note_txt}"
         )
+
+    def _refresh(self) -> None:
+        self._update_info()
+        self._draw_pseudosection()
+        self._sync_run_ready()
         self._publish()
         # Every change of data or electrodes passes through here, and the mesh
         # is built around the electrodes.
@@ -6245,12 +6549,12 @@ class ERTProcessingModule(BaseModule):
     def show_run_stage(self, tool: str) -> str:
         """Follow the run through this page's own tabs.
 
-        Loading belongs on the pseudosection, a finished inversion on the model,
+        Loading belongs on the Data tab, a finished inversion on the model,
         and the quality check on the quality view. Without this the page stayed
         on whichever tab it opened with while the run moved on underneath it.
         """
         views = {
-            "load_ert_surveys": (self._pseudo_widget, "Pseudosection"),
+            "load_ert_surveys": (self._pseudo_widget, "Data"),
             "invert_ert": (self._model_tab, "Resistivity model"),
             "invert_time_lapse": (self._model_tab, "Resistivity model"),
             "evaluate_inversion": (self._quality_view, "Inversion quality"),
@@ -6835,7 +7139,7 @@ class ERTProcessingModule(BaseModule):
             "zones": lambda v: (self._mesh_tab.set_zones(v), self._mesh_inputs_changed()),
             "conform_to_zones": lambda v: self._mesh_tab.set_conform_to_zones(bool(v)),
             "decouple_zones": lambda v: self._mesh_tab.set_decouple_zones(bool(v)),
-            "time_lapse": lambda v: self._tl_mode.setChecked(bool(v)),
+            "time_lapse": lambda v: self._set_timelapse(bool(v)),
             # single-inversion fit assistance
             "engine": lambda v: set_combo_data(self._engine, v),
             "inversion_mode": lambda v: set_inv_mode(v),

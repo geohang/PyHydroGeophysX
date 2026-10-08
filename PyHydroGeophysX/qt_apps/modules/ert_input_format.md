@@ -141,8 +141,10 @@ a single inversion. It is read from the first of these that has one:
    between the electrode count and the `# x z` line pyGIMLi reads it as the
    column list. Some instruments (DAS-1, Subsurface Insights) already write a
    date in their header, and it is found the same way.
-3. **The file's modified time**, only when **Use file times** is ticked. A
-   copied or edited file carries the time of the copy, so this is off by default.
+3. **The file's modified time**, only when **Date undated files by when they
+   were last saved** is ticked; it appears under the file list while some files
+   carry no time. A copied or edited file carries the time of the copy, so this
+   is off by default.
 
 **Avoid month-first or day-first dates** such as `01-12-2026`: the same name is
 also 1 December 2026. For a list, the reading that keeps the files in time

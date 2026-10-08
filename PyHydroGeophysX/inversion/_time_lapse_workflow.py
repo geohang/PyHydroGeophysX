@@ -66,6 +66,11 @@ DEFAULT_TL = {
     # Lambda relaxation. A trial here is a full joint inversion over every time
     # step, so the default budget is smaller than the single-inversion search.
     "auto_lambda": False, "target_chi2": 1.0, "chi2_tolerance": 0.2,
+    # The run ends once an iteration lowers chi2 by less than this fraction:
+    # the in-house engine (full or windowed) and E4D take it; None leaves each
+    # its own default (1 % in-house, 0.5 % for E4D). ADTLERT stops on the size
+    # of its model step, and R2 and R3t decide for themselves.
+    "plateau_tolerance": None,
     "max_lambda_trials": 4, "lambda_warm_start": True,
     # Distribute the temporal constraint by the interval between surveys, so it
     # penalizes the rate of change rather than the raw difference. Normalized by
@@ -717,7 +722,8 @@ def build_timelapse_config(data_files: Sequence[str], measurement_times: Sequenc
             "para_max_cell_size", "para_boundary", "surface_nodes", "outer_width",
             "outer_max_cell_size", "mesh_file", "zones", "conform_to_zones",
             "decouple_zones",
-            "max_error", "error_model", "temporal_weighting", "temporal_weight_limit")},
+            "max_error", "error_model", "temporal_weighting", "temporal_weight_limit",
+            "plateau_tolerance")},
         # Post-processing that changes what the sections show has to travel with
         # the configuration, or a re-run reproduces different pictures.
         "temperature_correction": p.get("temperature_correction"),
@@ -930,6 +936,11 @@ def run_timelapse_ert(
     )
     if zones:
         inv_kwargs["zones"] = zones
+    # The in-house solver's plateau, TimeLapseERTInversion's convergence
+    # tolerance. Not handed on to ADTLERT, which reads that name as the size of
+    # a model step below which it stops - a different measure altogether.
+    if engine == "pyhydro" and p.get("plateau_tolerance"):
+        inv_kwargs["convergence_tolerance"] = float(p["plateau_tolerance"])
     lambda_report: Dict[str, Any] = {"enabled": False}
     # The GPU backend builds its own temporal operator and does not take these,
     # so say that rather than let the setting look as if it applied.

@@ -40,6 +40,8 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets import length_units
+from PyHydroGeophysX.qt_apps.widgets.color_range import ColorRange
+from PyHydroGeophysX.qt_apps.widgets.flow_layout import FlowLayout, group
 from PyHydroGeophysX.visualization.axis_units import length_factor, to_display_length
 
 #: Columns of the station table, as (heading, row key, format).
@@ -148,26 +150,29 @@ class EMSurveyView(QWidget):
         self._filling = False
 
         controls = QWidget()
-        row = QHBoxLayout(controls)
+        # Wraps in a narrow panel instead of widening the page (widgets.flow_layout).
+        row = FlowLayout(controls, spacing=6)
         row.setContentsMargins(6, 4, 6, 2)
-        row.addWidget(QLabel("Colour by:"))
         self._colour_by = QComboBox()
         for label, key in _COLOUR_FIELDS:
             self._colour_by.addItem(label, key)
-        self._colour_by.currentIndexChanged.connect(lambda _i: self._draw_map())
-        row.addWidget(self._colour_by)
+        self._colour_by.currentIndexChanged.connect(lambda _i: self._on_colour_by_changed())
         # ... and in which colours: viridis until another map is chosen.
         self._colormap = cmaps.ColormapChooser(cmaps.EM_STATIONS, "viridis", shared=colormaps)
         self._colormap.colormapChanged.connect(lambda _name: self._draw_map())
-        row.addWidget(self._colormap)
-        row.addSpacing(12)
+        row.addWidget(group("Colour by:", self._colour_by, self._colormap))
+        # ... between which values: the field's own extremes, or typed and locked.
+        # A length is typed in the studio's length unit, as the title gives it.
+        self._range = ColorRange(what="the station colours")
+        self._range.changed.connect(self._draw_map)
+        self._range_factor = 1.0        # display unit per stored unit of the boxes
+        row.addWidget(self._range)
         self._totals = QLabel("")
         self._totals.setToolTip(
             "What the gate selection above the plot keeps, over the whole "
             "survey. A station whose every gate is dropped disappears from the "
             "inversion entirely, so it is counted separately.")
         row.addWidget(self._totals)
-        row.addStretch(1)
 
         self._plot = pg.PlotWidget()
         self._label_axes()
@@ -214,9 +219,30 @@ class EMSurveyView(QWidget):
         length_units.pyqtgraph_axis(self._plot, "left", "Northing")
 
     def _on_length_unit_changed(self, _unit: str) -> None:
-        """Retick the map in the studio's new length unit."""
+        """Retick the map in the studio's new length unit; typed lengths follow it."""
         self._label_axes()
+        factor = self._display_factor()
+        if self._range.is_locked() and factor != self._range_factor:
+            low, high = self._range.limits(0.0, 1.0)    # the typed limits, while locked
+            scale = factor / self._range_factor
+            self._range.set_range(low * scale, high * scale, lock=True)   # redraws
+            return
         self._draw_map()
+
+    @property
+    def color_range(self) -> ColorRange:
+        """The "Lock range" control and its typed colour limits."""
+        return self._range
+
+    def _display_factor(self) -> float:
+        """Display units per stored unit of the field the map is coloured by."""
+        return length_factor() if str(self._colour_by.currentData()) in _LENGTH_FIELDS else 1.0
+
+    def _on_colour_by_changed(self) -> None:
+        if self._range.is_locked():
+            self._range.unlock()        # another quantity: its own scale (redraws)
+        else:
+            self._draw_map()
 
     # -- population ----------------------------------------------------------
     def set_summary(self, summary: Optional[Dict[str, Any]]) -> None:
@@ -278,13 +304,18 @@ class EMSurveyView(QWidget):
         finite = values[np.isfinite(values)]
         low = float(finite.min()) if finite.size else 0.0
         high = float(finite.max()) if finite.size else 1.0
-        span = (high - low) or 1.0
+        # The colours run between the typed limits while they are locked, and
+        # between the field's own extremes otherwise (shown in the boxes).
+        factor = self._range_factor = self._display_factor()
+        c_low, c_high = (v / factor for v in self._range.limits(low * factor, high * factor))
+        span = (c_high - c_low) or 1.0
         colormap = cmaps.to_pyqtgraph(self._colormap.colormap())
         spots = []
         for index in np.flatnonzero(good):
             value = values[index]
+            fraction = min(max(float((value - c_low) / span), 0.0), 1.0)
             colour = (QColor("#bbbbbb") if not np.isfinite(value)
-                      else colormap.map(float((value - low) / span), mode="qcolor"))
+                      else colormap.map(fraction, mode="qcolor"))
             spots.append({
                 "pos": (x[index], y[index]), "brush": pg.mkBrush(colour),
                 "data": int(index), "size": 8,

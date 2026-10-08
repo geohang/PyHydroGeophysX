@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets.color_range import ColorRange
 from PyHydroGeophysX.qt_apps.widgets.flow_layout import FlowLayout, group
 from PyHydroGeophysX.qt_apps.widgets.readout import ReadoutLabel
 
@@ -141,6 +142,11 @@ class SeismicViewer(QWidget):
 
     ``colormaps`` is the studio state's shared colormap dict; the gather's
     colour map is kept there for the session, next to every other view's.
+
+    The amplitude image is coloured between minus and plus the clip
+    percentile of the gather's amplitudes, unless the amplitude limits typed
+    beside the colour map are locked (:attr:`color_range`); then every shot
+    is drawn on those, so shots can be compared on one scale.
     """
 
     pointPicked = Signal(int, float, float)  # trace_index, time_s, amplitude
@@ -174,6 +180,11 @@ class SeismicViewer(QWidget):
             cmaps.SEISMIC_GATHER, cmaps.GATHER, shared=colormaps)
         self._colormap.colormapChanged.connect(self._apply_colormap)
         bar.addWidget(group("Display", self._style_combo, self._colormap))
+        # The amplitude image's limits, beside its colour map. A wiggle has no
+        # colour scale, so they are hidden while only wiggles are drawn.
+        self._range = ColorRange(decimals=4, what="the amplitude colours")
+        self._range.changed.connect(self._on_range_changed)
+        bar.addWidget(self._range)
         self._stride = QSpinBox()
         self._stride.setRange(1, 64)
         self._stride.setValue(1)
@@ -377,19 +388,23 @@ class SeismicViewer(QWidget):
         clip = float(np.percentile(finite, self._clip_pct)) if finite.size else 1.0
         return clip if clip > 0 else 1.0
 
+    def _shows_image(self) -> bool:
+        return self._style_combo.currentText() in ("Amplitude image", "Image + wiggle")
+
+    @property
+    def color_range(self) -> ColorRange:
+        """The "Lock range" control and its typed amplitude limits."""
+        return self._range
+
     def _render(self) -> None:
+        self._range.setVisible(self._shows_image())
         if self._disp is None:
             return
-        nsamples, ntraces = self._disp.shape
-        tmax = float(self._time[-1]) if self._time is not None and self._time.size else float(nsamples)
         style = self._style_combo.currentText()
         clip = self._clip()
 
-        if style in ("Amplitude image", "Image + wiggle"):
-            self._img.setVisible(True)
-            self._img.setImage(np.clip(self._disp, -clip, clip), autoLevels=False)
-            self._img.setLevels((-clip, clip))
-            self._img.setRect(QRectF(-0.5, 0.0, float(ntraces), tmax))
+        if self._shows_image():
+            self._draw_image(clip)
         else:
             self._img.setVisible(False)
 
@@ -399,6 +414,21 @@ class SeismicViewer(QWidget):
             self._wiggle.setData([], [])
             self._fill_item.setPath(QPainterPath())
         self._render_picks()
+
+    def _draw_image(self, clip: float) -> None:
+        """The amplitude image, on the locked limits or on +/- the percentile clip."""
+        nsamples, ntraces = self._disp.shape
+        tmax = float(self._time[-1]) if self._time is not None and self._time.size else float(nsamples)
+        lo, hi = self._range.limits(-clip, clip)
+        self._img.setVisible(True)
+        self._img.setImage(np.clip(self._disp, lo, hi), autoLevels=False)
+        self._img.setLevels((lo, hi))
+        self._img.setRect(QRectF(-0.5, 0.0, float(ntraces), tmax))
+
+    def _on_range_changed(self) -> None:
+        """Locked, unlocked or a limit typed: only the image is redrawn, not the wiggles."""
+        if self._disp is not None and self._shows_image():
+            self._draw_image(self._clip())
 
     def _draw_wiggle(self, clip: float) -> None:
         # Vectorized: build the wiggle line and its variable-area fill from whole

@@ -418,6 +418,13 @@ def build_qss() -> str:
     QPushButton[primary="true"]:hover {{ background-color: {p['accent']}; border-color: {p['accent']}; }}
     QPushButton[primary="true"]:pressed {{ background-color: {p['primary_dark']}; }}
     QPushButton[primary="true"]:disabled {{ background-color: {p['track']}; border-color: {p['track']}; color: {p['disabled_text']}; }}
+    /* A segmented choice: checkable buttons joined side by side, the chosen one
+       filled and bold, the others plain - as clear as a choice can be at a
+       glance, where a radio button's dot was not. */
+    QPushButton[segment] {{ border-radius: 0px; padding: 5px 16px; color: {p['muted']}; }}
+    QPushButton[segment="first"] {{ border-top-left-radius: 8px; border-bottom-left-radius: 8px; }}
+    QPushButton[segment="last"] {{ border-top-right-radius: 8px; border-bottom-right-radius: 8px; border-left: none; }}
+    QPushButton[segment]:checked {{ background-color: {p['select_bg']}; color: {p['select_text']}; border: 1px solid {p['primary']}; font-weight: 600; }}
 
     /* Inputs */
     QLineEdit, QPlainTextEdit, QTextEdit, QSpinBox, QDoubleSpinBox, QComboBox {{

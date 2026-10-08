@@ -158,9 +158,12 @@ Desktop regression checks
 
 With desktop dependencies and the GeoSAGE plugin installed, run::
 
-   python -m pytest tests/test_agents.py tests/test_geosage_plugin.py tests/test_assistant_desktop_extensions.py tests/test_scientific_sections.py tests/test_saved_result_previews.py tests/test_studio_diagnostics.py tests/test_cli_providers.py tests/test_cli_setup.py
+   python -m pytest tests/test_agents.py tests/test_core.py
 
-The widget tests use Qt's offscreen platform and synthetic temporary inputs.
+``test_agents.py`` runs the installed plug-in on the studio contract (skipped
+without GeoSAGE), and ``test_core.py`` checks the model comparison's differences
+(skipped without PySide6 and PyVista), on Qt's offscreen platform with synthetic
+temporary inputs.
 Windows native folder dialogs and GPU composition also require an interactive
 check: open a model, switch between figures and reports, accept and cancel a
 Project folder dialog, and return to the model. The model viewer retains its

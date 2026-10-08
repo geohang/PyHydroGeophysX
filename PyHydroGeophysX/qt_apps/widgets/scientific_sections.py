@@ -8,6 +8,10 @@ from matplotlib.figure import Figure
 from matplotlib.colors import BoundaryNorm, ListedColormap
 from matplotlib.ticker import MaxNLocator
 
+from PyHydroGeophysX.qt_apps.widgets.color_range import ColorRange
+from PyHydroGeophysX.qt_apps.widgets.flow_layout import FlowLayout, group
+from PyHydroGeophysX.qt_apps.widgets.readout import toolbar_row
+
 
 def require_aligned(a, b):
     if not all(hasattr(m, axis) for m in (a, b) for axis in ('x', 'y', 'z')):
@@ -61,14 +65,42 @@ class ScientificSections(QWidget):
         self.readout = QLabel()
         self.readout.setWordWrap(True)
         layout.addWidget(self.readout)
+        # The colour limits, one control per colour bar: the panels' shared bar,
+        # and in a comparison the difference's own. Locked, they hold while the
+        # point moves through the model, so the slices share one scale.
+        # A row that wraps in a narrow panel instead of widening the page.
+        ranges = FlowLayout(spacing=12)
+        # Six decimals: a susceptibility in SI is a few thousandths.
+        self.color_range = ColorRange(decimals=6, what='the colours of the sections' if comparison is None
+                                      else 'the colours of A and B')
+        self.color_range.changed.connect(self.draw)
+        self.difference_range = None
+        if comparison is None:
+            ranges.addWidget(self.color_range)
+        else:
+            self.difference_range = ColorRange(decimals=6, what='the colours of the difference')
+            self.difference_range.changed.connect(self.draw)
+            ranges.addWidget(group('A, B', self.color_range))
+            ranges.addWidget(group('B − A', self.difference_range))
+        layout.addLayout(ranges)
         self.figure = Figure(figsize=(10, 3.2), layout='constrained')
         self.canvas = FigureCanvasQTAgg(self.figure)
         self.canvas.setMinimumHeight(220)
+        # Zoom, pan, Home and Save, with the cursor position (widgets.readout).
+        bar, self.toolbar = toolbar_row(self.canvas, self)
+        layout.addWidget(bar)
         layout.addWidget(self.canvas, 1)
         self.canvas.mpl_connect('button_press_event', self._clicked)
         self.draw()
 
     def set_field(self, field, metadata=None, cmap='viridis'):
+        if field != self.field:
+            # Another field is another quantity: it starts on its own scale.
+            for control in (self.color_range, self.difference_range):
+                if control is not None:
+                    control.blockSignals(True)      # drawn once, below
+                    control.unlock()
+                    control.blockSignals(False)
         self.field, self.metadata, self.cmap = field, metadata or {}, cmap
         self.draw()
 
@@ -90,6 +122,8 @@ class ScientificSections(QWidget):
         self.pointChanged.emit([float(c[i]) for c, i in zip(self.centers, self.indices)])
 
     def _clicked(self, event):
+        if self.toolbar.mode:   # the click pans or zooms; moving the point would redraw
+            return
         if event.inaxes not in self.axes or event.xdata is None or event.ydata is None:
             return
         panel = self.axes.index(event.inaxes)
@@ -134,6 +168,13 @@ class ScientificSections(QWidget):
                 common.update(vmin=-total, vmax=total)
             panels = [(values[:, :, z].T, 0, 1, 'A'), (other[:, :, z].T, 0, 1, 'B'), (difference[:, :, z].T, 0, 1, 'B − A')]
             self.readout.setText(self.readout.text() + f' · B: {other[x,y,z]:.6g} · Δ: {difference[x,y,z]:.6g}')
+            # Typed limits replace the symmetric ones; unlocked, they stay symmetric.
+            difference_limits = self.difference_range.limits(-bound, bound)
+        # Group labels have no colour scale to set; any other field takes the
+        # limits typed in while "Lock range" is ticked, or the ones above.
+        self.color_range.setEnabled(not categorical)
+        if not categorical:
+            common['vmin'], common['vmax'] = self.color_range.limits(common['vmin'], common['vmax'])
         artists = []
         for n, (ax, (plane, i, j, title)) in enumerate(zip(self.axes, panels)):
             style = dict(common)
@@ -142,7 +183,7 @@ class ScientificSections(QWidget):
                 plane = np.searchsorted(labels, plane)
                 style = dict(cmap=ListedColormap([categorical[str(v)] for v in labels]), norm=BoundaryNorm(np.arange(len(labels)+1)-.5, len(labels)))
             if self.comparison is not None and n == 2:
-                style = dict(cmap='RdBu_r', vmin=-bound, vmax=bound)
+                style = dict(cmap='RdBu_r', vmin=difference_limits[0], vmax=difference_limits[1])
             artist = ax.pcolormesh(self.edges[i] / self.axis_scales[i], self.edges[j] / self.axis_scales[j], plane, shading='flat', **style)
             artists.append(artist)
             ax.axvline(xyz[i] / self.axis_scales[i], color='black', lw=.6)
@@ -162,6 +203,7 @@ class ScientificSections(QWidget):
             if categorical:
                 bar.set_ticks(range(len(labels)), labels=[str(v) for v in labels])
         self.canvas.draw_idle()
+        self.toolbar.update()   # new axes: Home and Back go to this drawing
 
 
 class ModelComparison(QWidget):

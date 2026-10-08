@@ -38,6 +38,7 @@ from PySide6.QtWidgets import (
 from PyHydroGeophysX.qt_apps import theme
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets import length_units
+from PyHydroGeophysX.qt_apps.widgets.color_range import ColorRange
 from PyHydroGeophysX.qt_apps.widgets.flow_layout import FlowLayout, group
 from PyHydroGeophysX.qt_apps.widgets.readout import ReadoutLabel
 from PyHydroGeophysX.visualization.axis_units import to_display_length
@@ -112,6 +113,15 @@ class ReflectionView(QWidget):
         self._colormap.colormapChanged.connect(lambda *_: self._render())
         self._style_group = group("Display", self._style, self._colormap)
         bar.addWidget(self._style_group)
+        # The colour limits beside the colour map: one pair for amplitudes (the
+        # stacked section and the flat-event check), shown while an amplitude
+        # image is; another for the velocity check's semblance.
+        self._amp_range = ColorRange(decimals=4, what="the amplitude colours")
+        self._amp_range.changed.connect(self._render)
+        bar.addWidget(self._amp_range)
+        self._semblance_range = ColorRange(decimals=3, what="the semblance shading")
+        self._semblance_range.changed.connect(self._render)
+        bar.addWidget(self._semblance_range)
         self._readout = ReadoutLabel("", alignment=Qt.AlignLeft | Qt.AlignVCenter,
                                      sample="position 00.00 ft, 00.0 ms (00.00 ft deep), 00 traces")
         bar.addWidget(self._readout)
@@ -205,10 +215,22 @@ class ReflectionView(QWidget):
         ImageExporter(self._plot).export(str(path))
 
     # -- drawing -------------------------------------------------------------
+    @property
+    def color_range(self) -> ColorRange:
+        """The amplitude images' "Lock range" control and typed limits."""
+        return self._amp_range
+
+    @property
+    def semblance_range(self) -> ColorRange:
+        """The velocity check's "Lock range" control and typed limits."""
+        return self._semblance_range
+
     def _sync_controls(self) -> None:
         view = self._view_combo.currentText()
         self._vertical_group.setVisible(view == SECTION)
         self._style_group.setVisible(view != VELOCITY)
+        self._amp_range.setVisible(view != VELOCITY and self._style.currentText() != "Wiggle")
+        self._semblance_range.setVisible(view == VELOCITY)
 
     def _clear_items(self) -> None:
         for mark in self._marks:
@@ -249,10 +271,11 @@ class ReflectionView(QWidget):
                       width * xpos.size, dy * y.size)
         self._backdrop.setRect(rect)
         if style != "Wiggle":
+            lo, hi = self._amp_range.limits(-clip, clip)
             self._img.setVisible(True)
             self._img.setLookupTable(cmaps.lookup_table(self._colormap.colormap(), 256))
-            self._img.setImage(np.clip(data, -clip, clip), autoLevels=False)
-            self._img.setLevels((-clip, clip))
+            self._img.setImage(np.clip(data, lo, hi), autoLevels=False)
+            self._img.setLevels((lo, hi))
             self._img.setRect(rect)
         else:
             self._img.setVisible(False)
@@ -328,7 +351,7 @@ class ReflectionView(QWidget):
         self._img.setVisible(True)
         self._img.setLookupTable(cmaps.lookup_table("Greys", 256))
         self._img.setImage(panel, autoLevels=False)
-        self._img.setLevels((0.0, max(float(panel.max()), 1e-6)))
+        self._img.setLevels(self._semblance_range.limits(0.0, max(float(panel.max()), 1e-6)))
         dv = float(vels[1] - vels[0]) if vels.size > 1 else 1.0
         dt = float(t_ms[1] - t_ms[0]) if t_ms.size > 1 else 1.0
         self._img.setRect(QRectF(float(vels[0]) - dv / 2, float(t_ms[0]) - dt / 2,

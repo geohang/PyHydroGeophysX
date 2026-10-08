@@ -78,6 +78,108 @@ _MEMORY_LINE = re.compile(
 _MISSING_BACKEND = re.compile(
     r"^(\w+\.)*\w*(BackendUnavailable|ModuleNotFoundError|ImportError)(: |$)")
 
+#: The line a Python traceback opens with; an exception group's is indented
+#: and marked ("  + Exception Group Traceback (most recent call last):").
+_TRACEBACK_START = re.compile(
+    r"^\s*(\+\s*)?(Exception Group )?Traceback \(most recent call last\):$")
+#: What Python prints between the tracebacks of chained exceptions.
+_TRACEBACK_CHAIN = (
+    "During handling of the above exception, another exception occurred:",
+    "The above exception was the direct cause of the following exception:",
+)
+#: The line a traceback ends on: the exception, with or without its module
+#: path and message - "IndexError:  1 [0..1)", "KeyboardInterrupt".
+_EXCEPTION_LINE = re.compile(r"^[A-Za-z_][\w.<>]*(:( |$)|$)")
+#: The lines that can continue an exception's message after its first: an
+#: indented line, pyGIMLi's C++ source location ("/vector.h:588  const
+#: ValueType& GIMLI::Vector<ValueType>::getVal(...)"), a caret line ("~~~^^^").
+_EXCEPTION_TAIL = re.compile(r"^(\s|\S*\.(h|hh|hpp|hxx|c|cc|cpp|cxx)(:\d+)?\b|[~^]+$)")
+
+
+class _TracebackFilter:
+    """Tell the lines of a Python traceback in a process's output from the rest.
+
+    A workflow that fails prints its traceback, a dozen lines of file names,
+    source lines and carets, and in the Log panel they buried the one line
+    that says what went wrong - which the failure message gives anyway, with
+    where the whole output is kept (``logs/workflow_output.log``, which keeps
+    every line). One filter per output stream, whose lines arrive on their
+    own. A block runs from "Traceback (most recent call last):" through the
+    exception line and the lines that continue its message (see
+    ``_EXCEPTION_TAIL``). A block that does not look like Python's ends at the
+    first line that is neither indented nor an exception, at a blank line, or
+    after ``MAX_LINES``, so it cannot hide the output that follows it.
+    """
+
+    MAX_LINES = 400       # a traceback's frames; Python folds repeated ones
+    MAX_TAIL = 20         # lines continuing an exception's message
+
+    def __init__(self) -> None:
+        self._state = ""          # "", "body" (in a traceback) or "tail" (after its exception)
+        self._count = 0
+        self._chained = False
+        #: The latest traceback's lines, chained ones together, for
+        #: :func:`_plain_cause` to tell what its exception was about.
+        self.block: list = []
+
+    def hides(self, line: str) -> bool:
+        """Whether ``line`` (its colour codes and trailing space removed) is
+        part of a traceback, and so kept from the Log panel."""
+        text = line.strip()
+        if not text:                    # the end of a block; blank lines are not shown
+            self._state = ""
+            return True
+        if _TRACEBACK_START.match(line):
+            if not self._chained:
+                self.block = []
+            self._chained = False
+            self._state, self._count = "body", 0
+            return self._keep(text)
+        if text in _TRACEBACK_CHAIN:
+            self._state, self._chained = "", True
+            return self._keep(text)
+        self._count += 1
+        if self._state == "body" and self._count <= self.MAX_LINES:
+            if line[:1].isspace():      # File "...", line n / its source / carets
+                return self._keep(text)
+            if _EXCEPTION_LINE.match(text):
+                self._state, self._count = "tail", 0
+                return self._keep(text)
+        elif self._state == "tail" and self._count <= self.MAX_TAIL \
+                and _EXCEPTION_TAIL.match(line):
+            return self._keep(text)
+        self._state, self._chained = "", False
+        return False
+
+    def _keep(self, text: str) -> bool:
+        if len(self.block) < self.MAX_LINES + self.MAX_TAIL:
+            self.block.append(text)
+        return True
+
+
+#: Well-known failures in plain words: the exception, what its traceback must
+#: mention as well (or None), and what it means. The exception follows them.
+_PLAIN_CAUSES = (
+    # pyGIMLi spaces the inversion mesh by the distance between the first two
+    # electrodes; a file read with the wrong format can yield one or none.
+    (re.compile(r"^IndexError\b"), re.compile(r"createParaMesh|sensors\[1\]"),
+     "The data have fewer than two electrodes - check the Instrument / format setting"),
+    (re.compile(r"No space left on device|\[Errno 28\]|not enough space on the disk",
+                re.IGNORECASE), None,
+     "The disk is full - free some space and run again"),
+    (re.compile(r"^PermissionError\b"), None,
+     "A file could not be opened or written - it may be open in another program, "
+     "or the folder may be read-only"),
+)
+
+
+def _plain_cause(exception: str, traceback_text: str = "") -> str:
+    """What ``exception`` most likely means, in plain words, or "" if unknown."""
+    for said, context, meaning in _PLAIN_CAUSES:
+        if said.search(exception) and (context is None or context.search(traceback_text)):
+            return meaning
+    return ""
+
 
 def _process_failure_message(
     exit_code: int,
@@ -85,19 +187,37 @@ def _process_failure_message(
     last_exception: str = "",
     memory_hint: str = "",
     log_path: Path | None = None,
+    traceback_text: str = "",
 ) -> str:
-    """Say in plain words why a workflow process ended, and what to try.
+    """Say in one plain sentence why a workflow process ended, what to try, and
+    where everything it printed is kept.
 
     A native crash is reported as one, most likely a lack of memory (the
     solvers' usual way of dying), with the line the process printed about it if
-    it printed one; an error the workflow raised is reported as that error, and
-    only a process that ended without saying why is left with its exit code.
+    it printed one; an error the workflow raised is reported as that error -
+    after what it means, when it is a well-known one (``_PLAIN_CAUSES``, which
+    may look at the ``traceback_text``) - and only a process that ended
+    without saying why is left with its exit code. The page says what failed
+    ("ERT inversion failed: ...").
     """
     code = int(exit_code)
     unsigned = code & 0xFFFFFFFF
-    where = f" Everything it printed is in {log_path}." if log_path else ""
-    advice = (" Close other programs to free memory, or use a coarser mesh or fewer "
-              "cells, and run again.")
+    where = f"; the full output is in {log_path}" if log_path else ""
+    advice = ("close other programs to free memory, or use a coarser mesh or fewer "
+              "cells, and run again")
+
+    def sentence(text: str) -> str:
+        text = text.rstrip()
+        if where:
+            return f"{text.rstrip('.')}{where}."
+        return text if text.endswith((".", "!", "?")) else f"{text}."
+
+    # The error itself: the exit code of a Python error is always 1. The module
+    # path its class is printed with, and pyGIMLi's doubled spaces, are noise.
+    said = re.sub(r"^(\w+\.)+(?=\w+(: |:?$))", "", last_exception.strip())
+    said = " ".join(said.split())
+    if len(said) > 300:
+        said = said[:299] + "…"
     native = _NATIVE_CRASHES.get(unsigned)
     if native or code in _SEGFAULT_CODES or crashed:
         how = (f"{native} (0x{unsigned:08X})" if native
@@ -105,17 +225,14 @@ def _process_failure_message(
                else f"exit code {code} (0x{unsigned:08X})")
         cause = (f"after reporting \"{memory_hint}\", so it ran out of memory" if memory_hint
                  else "most likely because it ran out of memory")
-        return f"The solver process crashed with {how}, {cause}.{advice}{where}"
-    if memory_hint:
-        said = last_exception or memory_hint
-        return f"The solver ran out of memory: {said}.{advice}{where}"
-    if last_exception:
-        # The error itself, first: the exit code of a Python error is always 1
-        # and only pushed the reason down the line. It is in the output log, as
-        # is the module path an exception class is printed with.
-        said = re.sub(r"^(\w+\.)+(?=\w+(: |$))", "", last_exception.rstrip())
-        return f"{said}{'' if said.endswith(('.', '!', '?')) else '.'}{where}"
-    return f"Workflow process exited with code {code} (0x{unsigned:08X}).{where}"
+        return sentence(f"The solver process crashed with {how}, {cause} - {advice}")
+    if memory_hint or _MEMORY_LINE.search(said):
+        return sentence(f"The computer ran out of memory ({(said or memory_hint).rstrip('.')})"
+                        f" - {advice}")
+    if said:
+        meaning = _plain_cause(said, traceback_text)
+        return sentence(f"{meaning} ({said.rstrip('.')})" if meaning else said)
+    return sentence(f"Workflow process exited with code {code} (0x{unsigned:08X})")
 
 
 def _active_console_python() -> Path:
@@ -701,6 +818,8 @@ class ProcessWorkflowWorker(QObject):
             for stream in ("stdout", "stderr")
         }
         self._output_pending = {"stdout": "", "stderr": ""}
+        #: What of each stream is a traceback, kept from the Log panel.
+        self._tracebacks = {stream: _TracebackFilter() for stream in ("stdout", "stderr")}
         #: The child's last exception line, e.g. "ValueError: 'x.dat' could not
         #: be read as DAS-1: ...". A failed run reported only its exit code, and
         #: the reason was left somewhere in the log above.
@@ -838,12 +957,20 @@ class ProcessWorkflowWorker(QObject):
             # pyGIMLi colours its log lines for a terminal; in the log panel and
             # the run's logs the codes are only noise ("[0;32;49mINFO[0m").
             rendered = _ANSI_ESCAPE.sub("", line).rstrip()
+            # A traceback goes to the output log only; the failure message
+            # names its exception and where that log is.
+            traceback_line = self._tracebacks[stream].hides(rendered)
             if not rendered.strip():
                 continue
             self._output_unwritten.append(
                 rendered if stream == "stdout" else f"[stderr] {rendered}")
             if not self._memory_hint and _MEMORY_LINE.search(rendered):
                 self._memory_hint = rendered.strip()[:300]
+            if stream == "stderr" and re.match(
+                    r"^\w+(\.\w+)*(Error|Exception|Unavailable)(: |$)", rendered.strip()):
+                self._last_exception = rendered.strip()
+            if traceback_line:
+                continue
             match = re.match(
                 r"^\[progress\s+(\d+)/(\d+)\]\s*(.*)$", rendered.strip()
             )
@@ -853,9 +980,6 @@ class ProcessWorkflowWorker(QObject):
                 if total > 0 and 0 <= current <= total:
                     self.progressed.emit(current, total, label)
                 rendered = label or rendered
-            if stream == "stderr" and re.match(
-                    r"^\w+(\.\w+)*(Error|Exception|Unavailable)(: |$)", rendered.strip()):
-                self._last_exception = rendered.strip()
             self.logged.emit(rendered)
         # As it arrives rather than at the end: a crash of the studio itself
         # still leaves everything printed so far.
@@ -940,8 +1064,10 @@ class ProcessWorkflowWorker(QObject):
             self.missing_backend = (
                 int(exit_code) == 1 and not crashed and not self._memory_hint
                 and bool(_MISSING_BACKEND.match(self._last_exception)))
+            block = self._tracebacks["stderr"].block or self._tracebacks["stdout"].block
             self._finish_with_error(_process_failure_message(
-                int(exit_code), crashed, self._last_exception, self._memory_hint, log_path))
+                int(exit_code), crashed, self._last_exception, self._memory_hint, log_path,
+                "\n".join(block)))
             return
         self.logged.emit("Loading the results…")
         loader = _ResultLoader(self.result_path, self)

@@ -56,6 +56,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
 )
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets import length_units
+from PyHydroGeophysX.qt_apps.widgets.color_range import ColorRange
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import Model3DView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
 from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
@@ -100,13 +101,14 @@ class GravMagProcessingModule(BaseModule):
         self._plot_widget.showGrid(x=True, y=True, alpha=0.3)
         self._scatter = pg.ScatterPlotItem(size=13)
         self._plot_widget.getPlotItem().addItem(self._scatter)
+        self._station_tab = self._build_station_tab()
         self._qc_tab = self._build_qc_tab()
         # Density and susceptibility each keep their own colour map; the one in
         # use is named when a model is shown.
         self._model_view = Model3DView(colormaps=cmaps.colormap_settings(self.state),
                                        colormap_key=cmaps.DENSITY)
         self._quality_view = InversionQualityView()
-        self._tabs.addTab(self._plot_widget, "Station map")
+        self._tabs.addTab(self._station_tab, "Station map")
         self._tabs.addTab(self._qc_tab, "Data QC")
         self._tabs.addTab(self._model_view, "Inversion model")
         self._tabs.addTab(self._quality_view, "Inversion quality")
@@ -421,10 +423,38 @@ class GravMagProcessingModule(BaseModule):
         self._field_box.setVisible(self._kind.currentText() == "magnetics")
         if hasattr(self, "_noise_floor"):
             self._noise_floor.setValue(2.0 if self._kind.currentText() == "magnetics" else 0.5)
+        # mGal and nT are not one scale: typed colour limits go with the field.
+        self._station_range_label.setText(f"Colour scale ({self._field_unit()})")
+        for limits in (self._station_range, self._qc_range):
+            limits.unlock()
         if hasattr(self, "_qc_field"):
             self._refresh_qc()
         if hasattr(self, "_backend_label"):
             self._refresh_backend_state()
+
+    def _field_unit(self) -> str:
+        return "mGal" if self._kind.currentText() == "gravity" else "nT"
+
+    # -- station map ---------------------------------------------------------
+    def _build_station_tab(self) -> QWidget:
+        """The station map, with the limits its colours run between under it.
+
+        The map has no colour bar; the two boxes say what its colours span and,
+        locked, keep two surveys on one scale.
+        """
+        page = QWidget(); layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self._plot_widget, stretch=1)
+        self._station_range_label = QLabel("Colour scale (mGal)")
+        self._station_range = ColorRange(what="the station colours")
+        self._station_range.changed.connect(lambda: self._refresh_scatter(show=False))
+        row = QHBoxLayout()
+        row.setContentsMargins(6, 0, 6, 4)
+        row.addStretch(1)
+        row.addWidget(self._station_range_label)
+        row.addWidget(self._station_range)
+        layout.addLayout(row)
+        return page
 
     # -- data QC -------------------------------------------------------------
     def _build_qc_tab(self) -> QWidget:
@@ -461,16 +491,26 @@ class GravMagProcessingModule(BaseModule):
         # gradient, so the map in use is set on the histogram after that.
         self._apply_qc_colormap(self._qc_colormap.colormap())
         self._qc_graphics.addItem(self._qc_hist, row=0, col=1)
+        # Set while the page moves the levels itself, so the colour bar's level
+        # signals are not read back as the user dragging them.
+        self._qc_levels_busy = False
+        self._qc_hist.sigLevelsChanged.connect(lambda *_: self._on_qc_hist_levels(False))
+        self._qc_hist.sigLevelChangeFinished.connect(lambda *_: self._on_qc_hist_levels(True))
         layout.addWidget(self._qc_graphics, stretch=3)
 
+        # The colour map and the limits it spans, together under the colour bar
+        # they change. The row above is the widest on the page, so they have a
+        # line of their own rather than joining it.
+        self._qc_range = ColorRange(what="the map's colours")
+        self._qc_range.changed.connect(self._on_qc_range_changed)
+        colour_row = QHBoxLayout()
+        colour_row.addStretch(1)
+        colour_row.addWidget(self._qc_colormap)
+        colour_row.addWidget(self._qc_range)
+        layout.addLayout(colour_row)
         self._qc_stats = QLabel("Load station data to calculate QC maps.")
         self._qc_stats.setWordWrap(True)
-        # The colour map under the colour bar it changes. The row above is the
-        # widest on the page, so the choice shares the statistics line instead.
-        stats_row = QHBoxLayout()
-        stats_row.addWidget(self._qc_stats, 1)
-        stats_row.addWidget(self._qc_colormap, 0, Qt.AlignTop)
-        layout.addLayout(stats_row)
+        layout.addWidget(self._qc_stats)
         self._profile_plot = pg.PlotWidget(); self._profile_plot.setBackground("w")
         self._profile_plot.showGrid(x=True, y=True, alpha=0.3)
         self._profile_plot.setLabel("left", "Anomaly")
@@ -545,7 +585,20 @@ class GravMagProcessingModule(BaseModule):
         field_name = self._qc_field.currentText()
         grid = self._qc["grids"][field_name]
         xx, yy, zz = grid["xx"], grid["yy"], grid["zz"]
-        self._qc_image.setImage(np.asarray(zz, dtype=float).T, autoLevels=True)
+        image = np.asarray(zz, dtype=float).T
+        finite = image[np.isfinite(image)]
+        # The grid's own extremes (what the map scaled to before it had typed
+        # limits), unless the limits are locked.
+        auto = (float(finite.min()), float(finite.max())) if finite.size else (0.0, 1.0)
+        if not auto[1] > auto[0]:
+            auto = (auto[0] - 0.5, auto[0] + 0.5)
+        lo, hi = self._qc_range.limits(*auto)
+        self._qc_levels_busy = True
+        try:
+            self._qc_image.setImage(image, autoLevels=False, levels=(lo, hi))
+            self._qc_hist.setLevels(lo, hi)
+        finally:
+            self._qc_levels_busy = False
         self._qc_image.setRect(QRectF(float(xx.min()), float(yy.min()),
                                       max(float(np.ptp(xx)), 1.0), max(float(np.ptp(yy)), 1.0)))
         self._qc_stations.setData(self._qc["x"], self._qc["y"])
@@ -559,6 +612,21 @@ class GravMagProcessingModule(BaseModule):
             f"std {stats['std']:.4g} {unit}.")
         if auto_range:
             self._qc_plot.autoRange()
+
+    def _on_qc_range_changed(self) -> None:
+        """Locked, unlocked or a limit typed: recolour the map, keeping the view."""
+        if not self._qc_levels_busy:
+            self._draw_qc()
+
+    def _on_qc_hist_levels(self, finished: bool) -> None:
+        """The user dragged the colour bar's levels: the typed limits follow."""
+        if self._qc_levels_busy or self._qc is None:
+            return
+        lo, hi = self._qc_hist.getLevels()
+        if not self._qc_range.is_locked():
+            self._qc_range.track(lo, hi)
+        elif finished:
+            self._qc_range.set_range(lo, hi, lock=True)
 
     def _apply_qc_colormap(self, name: str) -> None:
         """Colour the QC map through its histogram, which drives the image.
@@ -631,8 +699,10 @@ class GravMagProcessingModule(BaseModule):
             self._scatter.setData([])
             return
         vmin, vmax = float(np.min(vals[shown])), float(np.max(vals[shown]))
+        if vmax > vmin or self._station_range.is_locked():
+            vmin, vmax = self._station_range.limits(vmin, vmax)
         rng = vmax - vmin if vmax > vmin else 1.0
-        norm = (vals[shown] - vmin) / rng
+        norm = np.clip((vals[shown] - vmin) / rng, 0.0, 1.0)
         lut = self._cmap.map(norm, mode="byte")
         spots = [{"pos": (float(self._x[i]), float(self._y[i])),
                   "brush": pg.mkBrush(int(lut[k, 0]), int(lut[k, 1]), int(lut[k, 2])),
@@ -640,7 +710,7 @@ class GravMagProcessingModule(BaseModule):
                  for k, i in enumerate(shown)]
         self._scatter.setData(spots)
         if show:
-            self._tabs.setCurrentWidget(self._plot_widget)
+            self._tabs.setCurrentWidget(self._station_tab)
 
     # -- data ----------------------------------------------------------------
     def _load(self) -> None:

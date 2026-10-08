@@ -37,6 +37,7 @@ from PyHydroGeophysX.qt_apps import theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.qt_utils import ContentWidthScrollArea
 from PyHydroGeophysX.qt_apps.widgets import borehole_panel, length_units
+from PyHydroGeophysX.qt_apps.widgets.readout import toolbar_row
 
 MAP, LOGS, WATER = "Map", "Logs", "Water levels"
 
@@ -50,14 +51,17 @@ class _FigurePane(QWidget):
 
     def __init__(self, placeholder: str, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
-        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
         from matplotlib.figure import Figure
 
         self._fig = Figure(figsize=(7, 5))
         self.canvas = FigureCanvasQTAgg(self._fig)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(NavigationToolbar2QT(self.canvas, self))
+        # The cursor position goes to a readout of its own: the toolbar's label
+        # would re-lay out the page on every mouse move (see widgets.readout).
+        bar, self.toolbar = toolbar_row(self.canvas, self)
+        layout.addWidget(bar)
         layout.addWidget(self.canvas, stretch=1)
         self._placeholder = placeholder
 
@@ -65,11 +69,16 @@ class _FigurePane(QWidget):
     def figure(self):
         return self._fig
 
+    def drawn(self) -> None:
+        """Show the figure just drawn from scratch; Home and Back go to it."""
+        self.canvas.draw_idle()
+        self.toolbar.update()
+
     def empty(self, text: Optional[str] = None) -> None:
         self._fig.clear()
         self._fig.text(0.5, 0.5, text or self._placeholder, ha="center", va="center",
                        fontsize=11, color="#8e8e93", wrap=True)
-        self.canvas.draw_idle()
+        self.drawn()
 
 
 class BoreholesModule(BaseModule):
@@ -245,6 +254,8 @@ class BoreholesModule(BaseModule):
         self._redraw()
 
     def _on_map_click(self, event: Any) -> None:
+        if self._map.toolbar.mode:      # the click pans or zooms, it does not pick
+            return
         if event.inaxes is None or event.xdata is None:
             return
         wells = [w for w in self._store.data.wells.values()
@@ -284,7 +295,7 @@ class BoreholesModule(BaseModule):
             ax.set_title("Wells" + (f" ({', '.join(crs)})" if crs else "")
                          + " - filled: ticked on the right", fontsize=10)
             pane.figure.tight_layout()
-            pane.canvas.draw_idle()
+            pane.drawn()
         elif view == LOGS:
             pane = self._logs
             wells = [w for w in self._selected if data.intervals(w) or data.well_logs(w)
@@ -295,7 +306,7 @@ class BoreholesModule(BaseModule):
             bh.draw_well_logs(pane.figure, data, wells, when=self._when(), length_unit=unit,
                               water_color=theme.DATA_COLOR, edge_color=ink)
             pane.figure.subplots_adjust(left=0.08, right=0.98, top=0.9, bottom=0.12)
-            pane.canvas.draw_idle()
+            pane.drawn()
         else:
             pane = self._water
             wells = [w for w in self._selected if data.levels(w)]
@@ -309,7 +320,7 @@ class BoreholesModule(BaseModule):
             ax.set_title("Depth to water", fontsize=10)
             pane.figure.autofmt_xdate()
             pane.figure.tight_layout()
-            pane.canvas.draw_idle()
+            pane.drawn()
 
     # -- assistant -------------------------------------------------------------
     def agent_views(self) -> Dict[str, QWidget]:

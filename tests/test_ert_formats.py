@@ -16,6 +16,8 @@ import pytest
 from PyHydroGeophysX.data_processing.ert_formats import (
     _columns_from_mode,
     _read_directives,
+    guess_ert_format,
+    implausible_survey,
     parse_das1,
     parse_res2dinv_general,
     parse_sting,
@@ -570,6 +572,39 @@ def test_a_file_that_is_not_a_sting_export_is_refused(tmp_path) -> None:
         parse_sting(path)
 
 
+# --- which format a file is in -----------------------------------------------
+
+def test_the_format_hint_names_a_format_only_on_its_signature(tmp_path) -> None:
+    """Read as BERT, a DAS-1 file loads as 1 electrode and 1 measurement without
+    an error, so the hint has to know it; and a wrong hint is worse than none.
+
+    The E4D example ``.ohm`` files are E4D's numbered survey layout, not BERT's
+    unified one, and PyGIMLi's seismic travel times share BERT's layout under a
+    ``# s g t`` header, which must not pass for ERT.
+    """
+    examples = DAS_DIR.parents[1]
+    (tmp_path / "survey.stg").write_text(STG, encoding="utf-8")
+    (tmp_path / "survey.tx0").write_text(TX0, encoding="utf-8")
+    (tmp_path / "junk.bin").write_bytes(bytes(range(256)) * 64)
+    expected = {
+        DAS_FILES[0]: "DAS-1",
+        examples / "ERT" / "Bert" / "fielddataline2.dat": "BERT",
+        examples / "ERT" / "E4D" / "2021-10-08_1400.ohm": "E4D",
+        tmp_path / "survey.stg": "Sting",
+        tmp_path / "survey.tx0": "Lippmann",
+        DAS_DIR / "electrodes.dat": None,
+        examples / "Seismic" / "srtfieldline2.dat": None,
+        tmp_path / "junk.bin": None,
+        tmp_path / "missing.dat": None,
+    }
+    for path, name in expected.items():
+        assert guess_ert_format(path) == name, path.name
+
+    assert implausible_survey(1, 1) is not None
+    assert implausible_survey(64, 0) is not None
+    assert implausible_survey(64, 500) is None
+
+
 # --- a format with no reader must refuse, not fall through -------------------
 
 def test_a_format_with_no_reader_names_resipy() -> None:
@@ -1108,3 +1143,68 @@ def test_averaged_pairs_and_the_error_model_give_the_stated_errors(floor) -> Non
     np.testing.assert_allclose(errors[:3], np.maximum(10 ** b * np.array([0.1, 1.0, 100.0])
                                                       ** (m - 1.0), floor))
     assert np.isnan(errors[3])
+
+# -- reciprocal error model ------------------------------------------------------
+def _reciprocal_qc():
+    return dict(min_rhoa=.1, max_rhoa=10000., max_error=20., more_checks=False,
+                drop_nonpositive=True, min_voltage=0., min_current=0., max_k=0.,
+                max_contact_r=0., max_stack=0., max_reciprocal=5.)
+
+
+@pytest.mark.parametrize('R,dR', [
+    ([], []), ([1, 2], [0, np.nan]), ([1, 2, 3], [.01, .02, .03]),
+    (np.ones(30), np.linspace(.01, .03, 30)),     # no spread of resistance to fit across
+])
+def test_too_few_or_unspread_pairs_give_no_error_model(R, dR):
+    from PyHydroGeophysX.qt_apps import ert_records
+    assert ert_records.fit_error_model_binned(np.asarray(R, float), np.asarray(dR, float)) is None
+
+
+def test_fit_to_the_pairs_the_filter_kept_leaves_outliers_out(tmp_path):
+    """"Pairs kept by the filter" fits the model without the pairs a check
+    removed - a pair goes when either of its readings does - and the records
+    state that choice and the very model the inversion applied."""
+    import pandas as pd
+    from PyHydroGeophysX.data_processing.ert_formats import reciprocal_errors
+    from PyHydroGeophysX.qt_apps import ert_records
+    from PyHydroGeophysX.qt_apps.run_records import ERROR_PAIRS_NAME
+
+    n = 200
+    R = np.geomspace(.05, 50., n)
+    dR = 10 ** -2.2 * R ** .6 * np.exp(np.random.default_rng(5).normal(0, .2, n))
+    outlier = np.arange(n) % 25 == 3
+    dR[outlier] = .3 * R[outlier]
+    i = np.arange(n)
+    frame = pd.DataFrame({'a': np.r_[np.ones(n), 3 + i], 'b': np.r_[2 * np.ones(n), 4 + i],
+                          'm': np.r_[3 + i, np.ones(n)], 'n': np.r_[4 + i, 2 * np.ones(n)],
+                          'resist': np.r_[R + dR / 2, R - dR / 2]}).astype({k: int for k in 'abmn'})
+    scores = reciprocal_errors(frame, drop_failed=False)
+    keep = scores['reciprocalErrRel'].to_numpy() <= .05     # the reciprocal-error check
+    keep[7] = False                                          # another check drops one reading
+    pairing = ert_records.reciprocal_pairing(scores)
+    pairing['kept'] = ert_records.reciprocal_pair_kept(scores, keep)
+    expected = ~outlier & (i != 7)
+    np.testing.assert_array_equal(pairing['kept'], expected)
+
+    kept = ert_records.fit_series_error_model([pairing], 'kept')
+    every = ert_records.fit_series_error_model([pairing], 'all')
+    reference = ert_records.fit_error_model_binned(R[expected], dR[expected])
+    assert kept['m'] == pytest.approx(reference['m']) and kept['b'] == pytest.approx(reference['b'])
+    # The outliers lift the all-pairs model; without them the law used to make the data returns.
+    assert abs(kept['b'] + 2.2) < .05 < .2 < every['b'] - kept['b'] and abs(kept['m'] - .6) < .05
+    assert kept['left_out'] == n - expected.sum() and every['left_out'] == 0
+
+    # Writing the records leaves the pairs as they were: the figure and report
+    # describe the errors, they never change them.
+    before = (pairing['R'].copy(), pairing['dR'].copy())
+    model = dict(m=kept['m'], b=kept['b'], floor=.01)
+    report = dict(pairing=pairing, readings=2 * n, kept=int(keep.sum()), checks=[])
+    text = ert_records.write_single_qc_report(tmp_path, source='a.dat', acquired='', reader='BERT',
+        qc=_reciprocal_qc(), report=report, error_model='', applied_model=model, fit_to='kept').read_text()
+    assert 'Error model fitted to: pairs kept by the filter' in text
+    assert f"m = {kept['m']:.6f}, b = {kept['b']:.6f}" in text and f"10^{kept['b']:.4f}" in text
+    saved = ert_records.read_error_model_pairs(tmp_path / ERROR_PAIRS_NAME)
+    assert (saved['fit_to'], saved['applied'], int(saved['kept'].sum())) == ('kept', True, expected.sum())
+    assert ert_records.fit_pairs(saved, 'kept')['m'] == pytest.approx(kept['m'])
+    np.testing.assert_array_equal(pairing['R'], before[0])
+    np.testing.assert_array_equal(pairing['dR'], before[1])

@@ -1102,7 +1102,7 @@ _TIMELAPSE_LAYOUT: Tuple[Tuple[str, Tuple[Tuple[str, str], ...]], ...] = (
         ("rho_min", "Minimum resistivity (ohm-m)"),
         ("rho_max", "Maximum resistivity (ohm-m)"),
         ("save_memory", "Low-memory (sparse) mode"),
-        ("plateau_tolerance", "Stop when chi2 improves less than (E4D)"),
+        ("plateau_tolerance", "Stop when chi2 improves less than (per iteration; in-house and E4D)"),
     )),
     ("Fit assistance", (
         ("auto_lambda", "Auto-lambda"),

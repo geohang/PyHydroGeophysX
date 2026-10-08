@@ -7,6 +7,7 @@ array. That matches ``ProfileInterpolator`` which expects ``point=[col, row]``.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -22,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX.qt_apps import theme
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets.color_range import ColorRange
 from PyHydroGeophysX.qt_apps.widgets.log_scale_axis import label_axis_in_physical_units
 from PyHydroGeophysX.qt_apps.widgets.readout import ReadoutLabel
 
@@ -36,10 +38,16 @@ _DEFAULT_MAP = "viridis"
 class ArrayViewer(QWidget):
     """Display a 2D array, read out values on hover, pick points, draw a profile.
 
-    The colour map is chosen beside the other controls under the image and kept
-    in ``colormaps`` - the studio state's shared dict - under ``colormap_key``.
-    A page that offers its own chooser for several viewers passes
-    ``colormap_control=False`` and calls :meth:`set_colormap` instead.
+    The colour map is chosen under the colour bar and kept in ``colormaps`` -
+    the studio state's shared dict - under ``colormap_key``. A page that offers
+    its own chooser for several viewers passes ``colormap_control=False`` and
+    calls :meth:`set_colormap` instead.
+
+    The colour limits can be typed beside it (:attr:`color_range`). Locked,
+    they hold while the page steps through layers, slices or time steps of the
+    same quantity; a different quantity (another value label, or log against
+    linear) unlocks them. Dragging the colour bar's levels moves the typed
+    limits with it.
     """
 
     #: Emitted on a left click in pick mode: (col, row, value).
@@ -58,6 +66,14 @@ class ArrayViewer(QWidget):
         self._profile_pts: List[List[float]] = []
         self._value_label = "Value"
         self._log_display = False
+        #: (value label, log) of the array on screen: what quantity it is.
+        self._quantity: Optional[Tuple[str, bool]] = None
+        #: The levels the viewer (or the page, via set_levels) would draw with,
+        #: in display units (log10 for a log display).
+        self._auto_levels: Optional[Tuple[float, float]] = None
+        #: Set while the viewer moves the levels itself, so the colour bar's
+        #: level signals are not read back as the user dragging them.
+        self._levels_busy = False
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -81,6 +97,10 @@ class ArrayViewer(QWidget):
             pass
         self._hist.axis.setLabel(self._value_label)
         self._glw.addItem(self._hist, row=0, col=1)
+        # Dragging the colour bar's levels: the boxes follow while it moves; a
+        # locked range takes the new levels when the drag ends.
+        self._hist.sigLevelsChanged.connect(lambda *_: self._on_hist_levels(False))
+        self._hist.sigLevelChangeFinished.connect(lambda *_: self._on_hist_levels(True))
 
         self._marker_scatter = pg.ScatterPlotItem(
             size=11, pen=pg.mkPen("#ff3b30", width=2), brush=pg.mkBrush(255, 59, 48, 160), symbol="x"
@@ -100,19 +120,27 @@ class ArrayViewer(QWidget):
         if self._colormap.colormap() != _DEFAULT_MAP:
             self._apply_colormap(self._colormap.colormap())
 
+        # The colour controls together under the colour bar: the map, and the
+        # limits it spans, which can be typed and locked.
+        self._range = ColorRange(decimals=4, what="the image's colours")
+        self._range.changed.connect(self._on_range_changed)
+        colours = QHBoxLayout()
+        colours.addStretch(1)
+        colours.addWidget(self._colormap)
+        colours.addWidget(self._range)
+        if not colormap_control:
+            self._colormap.setVisible(False)
+        layout.addLayout(colours)
+
         # Readout + action buttons.
         bar = QHBoxLayout()
         # Rewritten on every mouse move: a QLabel would re-lay out the page each
         # time (see widgets.readout).
         self._readout = ReadoutLabel("x: -, y: -, value: -")
         # The readout stretches into whatever the row leaves, so this floor only
-        # matters at the narrowest; it gives up the chooser's width, so the row
-        # is no wider than it was before the chooser joined it.
-        self._readout.setMinimumWidth(125 if colormap_control else 260)
+        # matters at the narrowest.
+        self._readout.setMinimumWidth(125)
         bar.addWidget(self._readout, stretch=1)
-        bar.addWidget(self._colormap)
-        if not colormap_control:
-            self._colormap.setVisible(False)
         for label, slot, icon_name in (
             ("Clear markers", self.clear_markers, "fa5s.times-circle"),
             ("Clear profile", self.clear_profile, "fa5s.eraser"),
@@ -149,10 +177,19 @@ class ArrayViewer(QWidget):
         ``value_label`` labels both the colour scale and hover readout.  For a
         logarithmic display, colour-bar ticks are formatted back into the
         original physical values rather than exposing log10 exponents.
+
+        A locked colour range (:attr:`color_range`) replaces the automatic
+        levels; a different ``value_label`` or ``log`` from the array before
+        is another quantity, and unlocks it.
         """
         arr = np.asarray(array, dtype=float)
         if arr.ndim != 2:
             raise ValueError(f"ArrayViewer needs a 2D array, got shape {arr.shape}.")
+        quantity = (str(value_label or "Value"), bool(log))
+        if self._quantity is not None and quantity != self._quantity:
+            with self._moving_levels():
+                self._range.unlock()    # another quantity: its own scale
+        self._quantity = quantity
         self._array = arr
         self._extent = extent
         self._log_display = bool(log)
@@ -176,7 +213,8 @@ class ArrayViewer(QWidget):
         # dataset goes back to pixel coordinates, otherwise axes and hover
         # locations silently retain the previous dataset's physical extent.
         self._img.resetTransform()
-        self._img.setImage(display, autoLevels=False)
+        with self._moving_levels():     # the colour bar re-reads the old levels
+            self._img.setImage(display, autoLevels=False)
         if extent is not None:
             x0, x1, z0, z1 = (float(v) for v in extent)
             self._img.setRect(QRectF(x0, z0, x1 - x0, z1 - z0))
@@ -188,16 +226,76 @@ class ArrayViewer(QWidget):
                 if hi <= lo:
                     half_span = 0.5 if log else max(abs(float(lo)) * 0.05, 0.5)
                     lo, hi = float(lo) - half_span, float(hi) + half_span
-                self._img.setLevels((lo, hi))
-                self._hist.setLevels(lo, hi)
+                self._auto_levels = (float(lo), float(hi))
             else:
-                self._img.setLevels((0.0, 1.0))
-                self._hist.setLevels(0.0, 1.0)
+                self._auto_levels = (0.0, 1.0)
+            self._draw_levels()
             self._plot.autoRange()
+        else:
+            # The page sets the levels itself (set_levels), or keeps the ones
+            # on screen; a locked range still wins.
+            levels = self._img.getLevels()
+            if levels is not None and np.size(levels) == 2:
+                self._auto_levels = (float(levels[0]), float(levels[1]))
+                self._draw_levels()
 
     def set_levels(self, lo: float, hi: float) -> None:
-        self._img.setLevels((lo, hi))
-        self._hist.setLevels(lo, hi)
+        """Colour between ``lo`` and ``hi`` (display units) unless the range is locked."""
+        self._auto_levels = (float(lo), float(hi))
+        self._draw_levels()
+
+    # -- colour limits -------------------------------------------------------
+    @property
+    def color_range(self) -> ColorRange:
+        """The "Lock range" control and its typed colour limits."""
+        return self._range
+
+    def _to_shown(self, lo: float, hi: float) -> Tuple[float, float]:
+        """Display-unit levels as the boxes give them: physical values for a log display."""
+        if self._log_display:
+            return float(10.0 ** lo), float(10.0 ** hi)
+        return float(lo), float(hi)
+
+    @contextmanager
+    def _moving_levels(self):
+        """The viewer moves the levels itself: not the user dragging the colour bar."""
+        busy, self._levels_busy = self._levels_busy, True
+        try:
+            yield
+        finally:
+            self._levels_busy = busy
+
+    def _draw_levels(self) -> None:
+        """Colour with the locked limits, or with the automatic ones (shown in the boxes)."""
+        if self._auto_levels is None:
+            return
+        auto_lo, auto_hi = self._auto_levels
+        lo, hi = self._range.limits(*self._to_shown(auto_lo, auto_hi))
+        if self._log_display:
+            if lo > 0.0 and hi > lo:
+                lo, hi = float(np.log10(lo)), float(np.log10(hi))
+            else:               # a limit at or below zero has no log colour
+                lo, hi = auto_lo, auto_hi
+        with self._moving_levels():
+            self._img.setLevels((lo, hi))
+            self._hist.setLevels(lo, hi)
+
+    def _on_range_changed(self) -> None:
+        if not self._levels_busy:
+            self._draw_levels()
+
+    def _on_hist_levels(self, finished: bool) -> None:
+        """The user dragged the colour bar's levels: the boxes follow."""
+        if self._levels_busy or self._array is None:
+            return
+        try:
+            lo, hi = self._to_shown(*self._hist.getLevels())
+        except (TypeError, ValueError):
+            return
+        if not self._range.is_locked():
+            self._range.track(lo, hi)
+        elif finished:
+            self._range.set_range(lo, hi, lock=True)
 
     def set_colormap(self, name: str) -> None:
         """Colour the image with ``name``, a colour map the chooser offers.

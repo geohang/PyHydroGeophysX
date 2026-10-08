@@ -473,6 +473,8 @@ class OneClickModule(BaseModule):
         self._result_layout.insertLayout(1, result_actions)
         self._result_layout.insertWidget(2, self.result_state)
         self._current_run_id = None
+        # The run's folder handle, until its settings record has been written.
+        self._settings_pending = None
         self._result_capabilities = {}
         self._continuation_result = None
         self._continuation_assistant = None
@@ -962,6 +964,11 @@ class OneClickModule(BaseModule):
             handle = self.begin_persisted_run('unified', label=run_label)
             self._current_run_id = handle.run_id
             self._output = str(handle.outputs_dir)
+            # The run's records, as every module run keeps them: this line opens
+            # its run log, and its settings follow once the workflow has written
+            # the configuration it runs with (_on_progress).
+            self._settings_pending = handle
+            self.log(f'{self._name()} workflow started: {run_label}', 'info')
             payload = dict(assistant=self._assistant.key,
                            request=request, inputs=dict(self._inputs), provider=provider,
                            model=settings.get('model'), api_key=key, use_ai=not offline,
@@ -1041,6 +1048,11 @@ class OneClickModule(BaseModule):
             self._finished()
 
     def _on_progress(self, step, fraction, details, module=''):
+        if self._settings_pending is not None and self._output                 and (Path(self._output) / 'workflow_config.json').is_file():
+            # run_settings.txt, from workflow_config.json, before the workflow
+            # writes its report: the report's records appendix cites it.
+            handle, self._settings_pending = self._settings_pending, None
+            self._write_run_settings(handle)
         if self.progress.maximum():
             self.progress.setValue(max(self.progress.value(), min(99, int(fraction * 100))))
         self.status.setText(f'{step} · {details}')
@@ -1761,6 +1773,9 @@ class OneClickModule(BaseModule):
             self.workflowFinished.emit(message)
             return
         self.finish_persisted_run(result, 'unified')
+        self._settings_pending = None
+        self.log(f'{self._name()} workflow finished; results and report in {self._output}',
+                 'success')
         self.report_result(result)
         self.progress.setRange(0, 100)
         self.progress.setValue(100)
@@ -1835,6 +1850,7 @@ class OneClickModule(BaseModule):
                                    + ('\n\n' + summary if summary else ''))
 
     def _failed(self, error):
+        self._settings_pending = None
         self.progress.setRange(0, 100)
         self.fail_persisted_run(error, 'unified')
         self.status.setText(f'Could not complete · {error}')

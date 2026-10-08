@@ -9,6 +9,27 @@ minor release can change the API.
 
 ### Added
 
+- Every plot in the studio has the navigation toolbar the ERT Mesh tab had -
+  Home, Back, Forward, Pan, Zoom, subplot and axis settings, Save - and every
+  colour scale a "Lock range" with typed lower and upper limits
+  (`qt_apps/widgets/color_range.py`, `readout.toolbar_row`): the ERT Data tab,
+  Reciprocal errors and Inversion quality, EM sections and plan slices, the 3-D
+  model views, the hydro and model-viewer arrays, seismic gathers and stacks,
+  gravity and magnetics maps, EM station maps, the scientific sections, joint
+  inversion, boreholes and the Project Map. Locked limits hold while stepping
+  through surveys, steps, lines, slices or shots of one quantity, and are let go
+  when the quantity changes. The seismic Clip control greys out while its
+  gather's range is locked.
+- Every studio run keeps `run_settings.txt`, its recipe - inputs, parameters,
+  software versions and, once it ends, the outcome - as text, so Run records
+  offers settings on every page and not only ERT's `inversion_settings.txt`.
+  The assistant's Workflow runs write it from `workflow_config.json`, leaving
+  out credentials, list `outputs/activity.log` among their records, and log
+  their start and finish into their run log.
+- The assistant's report ends with an appendix, "Data and Processing Records":
+  the settings, QC reports and logs of the run that wrote it and of every
+  earlier studio run whose files it read, by path, with the earlier runs'
+  recorded figures from `run.json` (`agents/workflow_audit.records_section`).
 - Every studio run keeps its own records, for reviewing and reproducing it.
   `logs/run_log.txt` holds every line the page logged for the run, as the Log
   window showed it - the preparation, all of the workflow process's output and
@@ -48,7 +69,7 @@ minor release can change the API.
   report state m, b and R²; a time-lapse run reports what each engine did
   with the errors (the in-house engine takes 1-50 %, ADTLERT at least 1 %).
   The Data errors group now sits before the Inversion group.
-- ERT page: a Reciprocal errors tab beside Pseudosection draws every
+- ERT page: a Reciprocal errors tab beside the Data tab draws every
   reciprocal pair - its error |dR| against its mean resistance |R|, on log
   axes - with the mean error of each group of pairs and the fitted model
   `dR = 10^b R^m`, its result stated in the title. In time-lapse mode it shows
@@ -452,6 +473,45 @@ minor release can change the API.
 
 ### Changed
 
+- ERT page: the Electrodes tab is gone. It was a plot of electrode dots that
+  also held the loading controls, so once a file loaded and the page moved on
+  to the pseudosection the file list went with it, and a time-lapse series was
+  clicked through by switching back for every survey. The first tab is now
+  **Data**: the pseudosection, with the electrodes drawn as triangles along its
+  top, beside the loading, QC, error and inversion settings. The data panel
+  gives the electrode count, spacing, line length and elevations in the
+  studio's length unit; the Mesh tab draws them on the topography; the
+  electrode table and survey geometry are exported from File > Export Results.
+  "One survey / Time-lapse series" is a two-button switch at the top of the
+  loading group, the chosen one filled (it was a checkbox at the foot of the
+  column; the theme's new `QPushButton[segment]` style draws such switches), and
+  the time-lapse options
+  are a group of their own under the inversion settings.
+- ERT page: the Run button is pinned under the settings column instead of at
+  its end, where a series' options pushed it out of sight, and it is enabled
+  only when it can run, with the reason above it otherwise (no data, a survey
+  that cannot be inverted, fewer than two surveys for a time-lapse run). The
+  time-lapse export and output-folder buttons moved to the Resistivity model
+  tab's Export model group, beside the single model's.
+- ERT page: files - or a folder of them - can be dropped anywhere on the page
+  to join the list. Changing the format by hand reads the survey on screen
+  again. Number boxes show values as written (50, 0.05, 100000) rather than
+  with trailing zeros, and the inversion modes are named for what they do:
+  "Quick: invert only" and "Thorough: check k, search λ".
+- ERT time-lapse runs on the in-house engine, full or windowed, now stop on
+  "Stop when χ² improves" as single runs do; the row was greyed out in
+  time-lapse mode while the solver used a fixed 1 %. E4D takes it as before;
+  ADTLERT (which stops on the size of its model step) and R2/R3t grey it with
+  the reason on hover. The run's `inversion_settings.txt` records it.
+- ERT page: "Date undated files by when they were last saved" (was "Use file
+  times when the names carry none") sits under the file list and appears only
+  while some files of a series carry no time, instead of among the time-lapse
+  options all the time.
+- A workflow process that fails no longer fills the Log panel with its
+  traceback: the traceback goes to the run's `logs/workflow_output.log` only,
+  and the failure is one sentence - the error, in plain words for a few
+  well-known causes (fewer than two electrodes, out of memory, a full disk, a
+  file that cannot be written), and where the full output is.
 - A run that ends with things to check no longer spells them out across the
   Workflow page: the banner, the line under the report and the finish card say
   how many there are, and the list goes to the assistant's conversation, one
@@ -577,6 +637,12 @@ minor release can change the API.
 
 ### Fixed
 
+- ERT page: a file read under the wrong format is refused instead of loaded.
+  A DAS-1 file read as BERT gave one electrode and one reading, the log said
+  SUCCESS, and the inversion failed on it with pyGIMLi's IndexError. A survey
+  of fewer than four electrodes or no readings is now reported as unreadable
+  in that format, and when the file's first lines name another format the page
+  offers it ("Read as DAS-1"); it never switches on its own.
 - EM line inversions no longer count a sounding that failed as inverted. It was
   left holding the starting or interpolated model the solvers gave it as a
   node, drawn in the section and saved as data, with only a log line saying it

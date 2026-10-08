@@ -70,6 +70,24 @@ def make_double_spinbox(
     return widget
 
 
+class PlainDoubleSpinBox(QDoubleSpinBox):
+    """A number box that shows a value as one would write it: 50, 0.05, 100000.
+
+    ``setDecimals`` still sets the precision a value is kept and typed to; only
+    the trailing zeros are left off, so a λ of 50 no longer reads "50.000" and
+    a floor of 100000 Ω·m no longer reads "100000.00".
+    """
+
+    def textFromValue(self, value: float) -> str:  # noqa: N802 - Qt override
+        text = f"{value:.{self.decimals()}f}"
+        if "." in text:
+            text = text.rstrip("0").rstrip(".")
+        if text in ("", "-0"):
+            text = "0"
+        point = self.locale().decimalPoint()
+        return text.replace(".", point) if point and point != "." else text
+
+
 def make_spinbox(value: int, minimum: int, maximum: int, *,
                  suffix: str = "", tooltip: str = "") -> QSpinBox:
     widget = QSpinBox()

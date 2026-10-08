@@ -905,6 +905,64 @@ def test_an_assistant_runs_its_own_tools_to_its_own_final_product(tmp_path, monk
     assert result["interpretation"] == "Group 5 is the primary target."
 
 
+def test_the_report_cites_the_run_records_that_exist(tmp_path):
+    # Studio runs keep their settings, QC report and logs as text in the run
+    # folder (qt_apps/run_records.py). The report cites those of its own run and
+    # of an earlier run it read, by path, with the earlier run's recorded
+    # figures from its run.json - and no record that is not there.
+    import json
+
+    from PyHydroGeophysX.agents.assistants.aquah import workflow
+
+    runs = tmp_path / "project" / "runs"
+    own, earlier = runs / "20261008-101500_oneclick_ab12", runs / "20261007-090000_ert_cd34"
+    for folder in (own, earlier):
+        (folder / "logs").mkdir(parents=True)
+        (folder / "outputs").mkdir()
+    (own / "UNSAVED").write_text("unsaved")
+    (own / "logs" / "run_log.txt").write_text("log")
+    # The Workflow page's run: its activity log, and its settings written from
+    # the workflow's configuration - never with a credential in them.
+    from PyHydroGeophysX.qt_apps.run_records import write_recipe_settings
+    (own / "outputs" / "activity.log").write_text("events")
+    (own / "outputs" / "workflow_config.json").write_text(json.dumps({
+        "user_request": "Summarize the model", "api_key": "sk-secret",
+        "inversion_params": {"lambda": 15}}))
+    settings = write_recipe_settings(own, title="Settings").read_text(encoding="utf-8")
+    assert "inversion_params.lambda" in settings and "sk-secret" not in settings
+    (earlier / "run.json").write_text(json.dumps({"label": "Spring survey", "metrics": {
+        "chi2": 1.04, "lambda": 20.0, "convergence_track": [3.0, 1.04]}}))
+    (earlier / "qc").mkdir()
+    for name in ("inversion_settings.txt", "qc_report.txt", "qc/s1.txt", "qc/s2.txt"):
+        (earlier / name).write_text("record")
+    model = earlier / "outputs" / "model.npy"
+    model.write_bytes(b"0")
+
+    class Parser:
+        def __init__(self, **_):
+            pass
+
+        def parse_request(self, request, available_data):
+            return {}
+
+    result = workflow.run(
+        {"request": "Summarize the model", "inputs": {"model_file": str(model)},
+         "output_dir": str(own / "outputs")}, lambda *a: None, context_factory=Parser,
+        run_fn=lambda *a, **k: ({"status": "success"}, [], "Done.", {}))
+    report = Path(result["report_files"]["report_markdown"]).read_text(encoding="utf-8")
+    records = report.split("Data and Processing Records", 1)[1]
+    assert "`runs/20261008-101500_oneclick_ab12/logs/run_log.txt`" in records
+    for cited in ("run_settings.txt`", "outputs/activity.log`"):
+        assert "runs/20261008-101500_oneclick_ab12/" + cited in records
+    for cited in ("inversion_settings.txt`", "qc_report.txt`", "qc/`"):
+        assert "runs/20261007-090000_ert_cd34/" + cited in records
+    assert "QC log (2 files)" in records and "s1.txt" not in records
+    assert '("Spring survey")' in records and "read `model.npy`" in records
+    assert "chi2 1.04; lambda 20." in records
+    for absent in ("workflow_output.log", "cd34/run_settings.txt", "oneclick_ab12/qc_report"):
+        assert absent not in records
+
+
 def test_a_note_mid_run_is_read_at_the_next_decision_and_can_change_a_setting():
     # The user can hold a run before its next step and tell it something; the
     # controller's reasoning reaches the studio as it is written.
@@ -951,3 +1009,109 @@ def test_a_note_mid_run_is_read_at_the_next_decision_and_can_change_a_setting():
         "inversion_params: {'lambda': 10} -> {'lambda': 20}"]
     thoughts = [e["text"] for e in events if e["phase"] == "thought"]
     assert len(thoughts) > 1 and thoughts[-1] == "You asked for lambda 20."
+
+
+def test_installed_geosage_runs_on_the_studio_contract(tmp_path):
+    # A plug-in's "needs review" stays that, never saved as a success.
+    from PyHydroGeophysX.qt_apps.results_store import normalize_status
+    assert normalize_status("needs_review") == "needs_review"
+    pytest.importorskip("geosage.pyhydrogeophysx")
+    import json
+    import numpy as np
+    from discretize import TensorMesh
+    from PyHydroGeophysX.agents.assistants import get_assistant
+    from PyHydroGeophysX.qt_apps.agent.one_click_runner import execute
+
+    source = tmp_path / "source"
+    (source / "mesh").mkdir(parents=True)
+    (source / "inversion_result").mkdir()
+    (source / "geology_models").mkdir()
+    mesh = TensorMesh([[10] * 3, [10] * 3, [10] * 3], x0=[100, 200, -30])
+    mesh.write_UBC(source / "mesh/mesh_core.msh")
+    shape = (3, 3, 3)
+    np.save(source / "inversion_result/joint_density_core.npy", np.arange(27).reshape(shape) / 100)
+    np.save(source / "inversion_result/joint_susceptibility_core.npy", np.ones(shape) / 1000)
+    for name in ("unit_id_3d", "geo_id_3d"):
+        np.save(source / f"geology_models/{name}.npy", np.ones(shape, dtype=int))
+    (source / "geology_models/geo_defs.json").write_text(json.dumps({"1": "Synthetic unit"}))
+    assistant = get_assistant("geosage")
+    assert assistant.availability()[0]
+    events, approved = [], []
+
+    def approve(event):
+        approved.append(event["tool"])
+        return "proceed"
+
+    result = execute({"assistant": "geosage", "request": "Inspect the synthetic archive",
+                      "inputs": {"source_inversion_dir": str(source)},
+                      "output_dir": str(tmp_path / "output"), "step_mode": True},
+                     lambda *args: None, approve=approve, on_event=events.append)
+    assert result["status"] == "needs_review"
+    assert result["source_files_unchanged"]
+    assert approved == list(assistant.load_tools())
+    assert [e["tool"] for e in events if e["phase"] == "done"] == approved
+    assert result["report_files"]["report_markdown"].endswith("evidence_summary.md")
+
+
+@pytest.fixture
+def isolated_cli_install(monkeypatch, tmp_path):
+    from PyHydroGeophysX.llm import cli_setup as setup
+
+    monkeypatch.setenv("PHGX_CLI_DIR", str(tmp_path / "managed"))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+    monkeypatch.setenv("APPDATA", str(tmp_path / "roaming"))
+    monkeypatch.delenv("PHGX_CODEX_CLI", raising=False)
+    monkeypatch.delenv("PHGX_CLAUDE_CLI", raising=False)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path / "home"))
+    monkeypatch.setattr(setup.shutil, "which", lambda _: None)
+    return tmp_path
+
+
+@pytest.mark.parametrize("provider_id", ["codex_cli", "claude_code"])
+@pytest.mark.parametrize("valid_checksum", [True, False])
+def test_installs_only_verified_official_binary(monkeypatch, isolated_cli_install, provider_id, valid_checksum):
+    # A downloaded CLI whose checksum does not match is neither kept nor run.
+    import hashlib
+    import io
+    import json
+    from types import SimpleNamespace
+    from PyHydroGeophysX.llm import cli_setup as setup
+    from PyHydroGeophysX.llm.providers import make_provider
+
+    provider = make_provider(provider_id)
+    payload = b"verified-native-cli"
+    checksum = hashlib.sha256(payload).hexdigest() if valid_checksum else "0" * 64
+    monkeypatch.setattr(setup, "_platform_names", lambda: ("x86_64-pc-windows-msvc.exe", "win32-x64"))
+    monkeypatch.setattr(setup.platform, "system", lambda: "Windows")
+    target = setup.managed_executable(provider)
+    url = "https://github.com/openai/codex/releases/download/rust-v1/codex-x86_64-pc-windows-msvc.exe"
+
+    def read(source):
+        if source == setup.CODEX_RELEASE:
+            return json.dumps({"assets": [{"name": "codex-x86_64-pc-windows-msvc.exe",
+                                           "digest": "sha256:" + checksum,
+                                           "browser_download_url": url}]}).encode()
+        if source.endswith("/latest"):
+            return b"2.1.268"
+        return json.dumps({"platforms": {"win32-x64": {"checksum": checksum}}}).encode()
+
+    def open_download(request, **kwargs):
+        assert request.full_url.startswith(("https://github.com/openai/codex/releases/download/",
+                                           setup.CLAUDE_DOWNLOADS + "/2.1.268/"))
+        response = io.BytesIO(payload)
+        response.headers = {"Content-Length": str(len(payload))}
+        return response
+
+    monkeypatch.setattr(setup, "_read", read)
+    monkeypatch.setattr(setup, "urlopen", open_download)
+    checked = []
+    monkeypatch.setattr(setup.subprocess, "run", lambda command, **kw:
+                        checked.append(Path(command[0]).read_bytes()) or
+                        SimpleNamespace(returncode=0, stderr="", stdout="CLI 1.0"))
+    if not valid_checksum:
+        with pytest.raises(RuntimeError, match="checksum did not match"):
+            setup.install_cli(provider)
+        assert not target.exists() and not checked
+    else:
+        assert setup.install_cli(provider) == str(target)
+        assert target.read_bytes() == payload and checked == [payload]

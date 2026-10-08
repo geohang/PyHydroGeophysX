@@ -27,6 +27,7 @@ import pandas as pd
 __all__ = ["parse_das1", "parse_res2dinv_general", "looks_like_res2dinv_general",
            "parse_sting", "parse_tx0", "looks_like_tx0",
            "parse_subsurface_insights", "looks_like_subsurface_insights",
+           "guess_ert_format", "implausible_survey",
            "reciprocal_errors"]
 
 
@@ -1046,6 +1047,321 @@ def parse_subsurface_insights(path: str | Path) -> Tuple[np.ndarray, pd.DataFram
         "rows_skipped": skipped,
     })
     return elec, df
+
+
+# ---------------------------------------------------------------------------
+# Which format a file is in
+# ---------------------------------------------------------------------------
+
+#: The head a format guess reads. Every signature below sits in a file's first
+#: lines, and a monitoring survey can run to hundreds of megabytes.
+_GUESS_HEAD_LINES = 60
+_GUESS_HEAD_BYTES = 16 * 1024
+#: Ceiling for the count-prefixed layouts (BERT, E4D, protocol), whose second
+#: header sits below the electrode table and so below the head of any real
+#: survey. Reaching it means "unsure", never a guess.
+_GUESS_MAX_BYTES = 256 * 1024
+
+_DAS1_VERSION = re.compile(r"^#IVersion\b.*\bDAS-1\b")
+_DAS1_WRITER = re.compile(r"^!.*written\s+by\s+ERTLab\s+DACQ", re.IGNORECASE)
+#: AGI's name for itself and its meters, as the first lines of a ``.stg`` say.
+_STG_MAKER = re.compile(r"advanced\s+geosciences|super\s*sting|\bsting\s*r1\b", re.IGNORECASE)
+_ARES_ELECTRODES = ("c1[el]", "c2[el]", "p1[el]", "p2[el]")
+_SYSCAL_SPACING = re.compile(r"(?<![\w.])Spa\.([1-4])(?![\w.])")
+_SYSCAL_POSITIONS = {"xa(m)", "xb(m)", "xm(m)", "xn(m)"}
+_SYSCAL_READINGS = {"vmn(mv)", "iab(ma)"}
+_WHOLE = re.compile(r"^[-+]?\d+$")
+
+
+def _guess_text(path, limit: int) -> Optional[str]:
+    """Up to ``limit`` bytes of a file as text, whole lines only.
+
+    None for a file that cannot be opened, or that is not text: one holding a
+    NUL byte, or so many control characters that no instrument wrote it as
+    text. Any byte that is not UTF-8 is replaced rather than refused, so a
+    Latin-1 header (an ABEM ``T(°C)`` column) still reads.
+    """
+    with open(path, "rb") as handle:
+        raw = handle.read(limit)
+    truncated = len(raw) == limit
+    if raw.startswith((b"\xff\xfe", b"\xfe\xff")):
+        text = raw.decode("utf-16", errors="replace")
+    elif b"\x00" in raw:
+        return None
+    else:
+        text = raw.decode("utf-8", errors="replace").lstrip("﻿")
+    control = sum(1 for ch in text if ord(ch) < 32 and ch not in "\t\n\r\f\v\x1a")
+    if control > 0.01 * max(len(text), 1):
+        return None
+    if truncated:
+        # The last line was cut short; a file with no line break at all in its
+        # head is no text format read here.
+        text = text[:text.rfind("\n") + 1]
+    return text
+
+
+def _fields(line: str) -> List[str]:
+    """A data row's whitespace-separated fields, a trailing ``#`` comment dropped."""
+    return line.split("#", 1)[0].split()
+
+
+def _is_number(text: str) -> bool:
+    try:
+        float(text)
+    except ValueError:
+        return False
+    return True
+
+
+def _lone_count(line: str) -> Optional[int]:
+    """The count on a line of its own (``112`` or ``112 # Number of electrodes``)."""
+    fields = _fields(line)
+    if len(fields) == 1 and fields[0].isascii() and fields[0].isdigit():
+        return int(fields[0])
+    return None
+
+
+def _token_names(line: str) -> List[str]:
+    """The column names of a unified-format ``# x y z`` line, units dropped."""
+    return [token.split("/", 1)[0].lower()
+            for token in re.split(r"[\s,]+", line.lstrip("#")) if token]
+
+
+def _is_das1(lines: List[str]) -> bool:
+    """DAS-1: the version directive naming it, its acquisition software's
+    banner, or the ``#elec_start`` marker both DAS-1 readers start from."""
+    return any(_DAS1_VERSION.match(line.strip()) or _DAS1_WRITER.match(line.strip())
+               or line.strip().lower().startswith("#elec_start") for line in lines)
+
+
+def _is_sting(lines: List[str]) -> bool:
+    """A ``.stg``: AGI named in the three header lines, then a record
+    :func:`parse_sting` reads. Either alone is not enough - other AGI exports
+    carry the name, and a wide numeric CSV can pass for a record."""
+    return (any(_STG_MAKER.search(line) for line in lines[:3])
+            and any(_stg_record(line.split(",")) is not None for line in lines[3:]))
+
+
+def _is_ares(lines: List[str]) -> bool:
+    """ARES ``.2dm``: the ``C1[el] C2[el] P1[el] P2[el]`` legend ResIPy's reader needs."""
+    return any(all(name in {t.lower() for t in line.split()} for name in _ARES_ELECTRODES)
+               for line in lines)
+
+
+def _is_electra(lines: List[str]) -> bool:
+    """Electra: the electrode-count and ``#XYZ`` headings ResIPy's reader keys on."""
+    squeezed = [re.sub(r"\s+", "", line) for line in lines]
+    return (any(s.startswith(("#Totalelectrodes", "#Totalenabledelectrodes")) for s in squeezed)
+            and any(s.startswith("#XYZ") for s in squeezed))
+
+
+def _is_syscal(lines: List[str]) -> bool:
+    """A Syscal (Prosys) text export, by the column header on its first line.
+
+    Prosys writes the electrodes as ``Spa.1`` ... ``Spa.4`` (the name both
+    ResIPy's and PyGIMLi's readers look for), or, from Prosys II on, as
+    ``xA (m)`` ... ``xN (m)`` beside ``VMN (mV)`` and ``IAB (mA)``.
+    """
+    header = next((line for line in lines if line.strip()), "")
+    if set(_SYSCAL_SPACING.findall(header)) == {"1", "2", "3", "4"}:
+        return True
+    columns = {re.sub(r"\s+", "", cell).strip("\"'").lower()
+               for cell in re.split(r"[,;\t]", header)}
+    return _SYSCAL_POSITIONS <= columns and _SYSCAL_READINGS <= columns
+
+
+def _unified_layout(rows: List[str], at: int, n_electrodes: int) -> bool:
+    """BERT's unified layout from ``rows[at]``: ``# x y z``, that many electrode
+    rows, a measurement count, then a ``# a b m n ...`` line.
+
+    The second token line is what makes it ERT: PyGIMLi writes seismic
+    travel times in the same layout, under ``# s g t``.
+    """
+    names = _token_names(rows[at])
+    if "x" not in names or not set(names) <= {"x", "y", "z"}:
+        return False
+    first = at + 1
+    block = rows[first:first + n_electrodes]
+    if len(block) < n_electrodes or any(
+            line.startswith("#") or len(_fields(line)) < len(names)
+            or not all(_is_number(f) for f in _fields(line)) for line in block):
+        return False
+    rest = rows[first + n_electrodes:first + n_electrodes + 2]
+    return (len(rest) == 2 and _lone_count(rest[0]) is not None and rest[1].startswith("#")
+            and {"a", "b", "m", "n"} <= set(_token_names(rest[1])))
+
+
+def _survey_layout(rows: List[str], at: int, n_electrodes: int) -> bool:
+    """E4D's survey (``.srv``) layout from ``rows[at]``: numbered electrode rows
+    ``i x y z [flag]``, a measurement count, then numbered ``i a b m n V ...``.
+
+    The numbering, and no ``#`` token line, is what tells it from BERT's.
+    """
+    block = rows[at:at + n_electrodes]
+    if len(block) < n_electrodes:
+        return False
+    for number, line in enumerate(block, start=1):
+        fields = _fields(line)
+        if not (4 <= len(fields) <= 5 and fields[0] == str(number)
+                and all(_is_number(f) for f in fields)):
+            return False
+    rest = rows[at + n_electrodes:at + n_electrodes + 2]
+    if len(rest) < 2 or not _lone_count(rest[0]):
+        return False
+    fields = _fields(rest[1])
+    return (len(fields) >= 6 and fields[0] == "1" and _is_number(fields[5])
+            and all(_WHOLE.match(f) and 1 <= int(f) <= n_electrodes for f in fields[1:5]))
+
+
+def _protocol_layout(rows: List[str], at: int, n_measurements: int) -> Optional[str]:
+    """R2/R3t protocol, numbered ``i a b m n R ...`` rows under a count.
+
+    Only the column counts that name one reading are taken (ResIPy's protocol
+    reader lists them): 6 is DC and 9 IP with errors in 2D; 10 is DC and 13 IP
+    with errors in 3D, where each electrode is a string and a number. 7, 8, 11
+    and 12 columns are a DC file with errors or an IP file alike.
+    """
+    first = _fields(rows[at]) if at < len(rows) else []
+    width = len(first)
+    kind = {6: ("Protocol DC", 4), 9: ("Protocol IP", 4),
+            10: ("Protocol DC", 8), 13: ("Protocol IP", 8)}.get(width)
+    if kind is None:
+        return None
+    name, n_electrode_columns = kind
+    block = rows[at:at + min(n_measurements, 10)]
+    if len(block) < min(n_measurements, 10):
+        return None
+    for number, line in enumerate(block, start=1):
+        fields = _fields(line)
+        electrodes = fields[1:1 + n_electrode_columns]
+        if (len(fields) != width or fields[0] != str(number)
+                or not all(_WHOLE.match(f) and int(f) >= 1 for f in electrodes)
+                or not all(_is_number(f) for f in fields)):
+            return None
+    return name
+
+
+def _count_prefixed(path, lines: List[str]) -> Optional[str]:
+    """BERT, E4D or a protocol file: a file that opens with a count.
+
+    Their second header sits below the electrode table, so past the head of a
+    real survey; only a file whose head opens with a count is read that far,
+    and never past ``_GUESS_MAX_BYTES``.
+    """
+    rows = [line.strip() for line in lines if line.strip()]
+    start = 0
+    while start < len(rows) and rows[start].startswith("#"):
+        start += 1                              # BERT allows comments first
+    count = _lone_count(rows[start]) if start < len(rows) else None
+    if not count:
+        return None
+    text = _guess_text(path, _GUESS_MAX_BYTES)
+    if text is None:
+        return None
+    rows = [line.strip() for line in text.splitlines() if line.strip()]
+    at = start + 1
+    if at >= len(rows):
+        return None
+    if rows[at].startswith("#"):
+        return "BERT" if _unified_layout(rows, at, count) else None
+    if _survey_layout(rows, at, count):
+        return "E4D"
+    return _protocol_layout(rows, at, count)
+
+
+def guess_ert_format(path) -> Optional[str]:
+    """The instrument value whose signature the file's first lines carry, or None when unsure.
+
+    A hint for whoever picks the format ("This file looks like DAS-1. Read it as
+    DAS-1?"), never a switch: the readers are chosen, not guessed, because
+    PyGIMLi's own reader parses several of these formats without an error and
+    gets them wrong. A wrong hint is worse than none, so a name is returned
+    only for a signature that format's reader keys on, and only when exactly
+    one format claims the file.
+
+    The signatures, each the mark a reader (this package's, ResIPy's parsers
+    or PyGIMLi's importers) finds the format by:
+
+    * ``"DAS-1"`` - ``#IVersion ... DAS-1``, the ``written by ERTLab DACQ``
+      banner, or the ``#elec_start`` section marker.
+    * ``"Sting"`` - AGI or SuperSting named in the three header lines and a
+      comma-separated ``.stg`` record after them.
+    * ``"Syscal"`` - a first-line column header with ``Spa.1`` ... ``Spa.4``, or
+      ``xA (m)`` ... ``xN (m)`` with ``VMN (mV)`` and ``IAB (mA)``.
+    * ``"ARES"`` - the ``C1[el] C2[el] P1[el] P2[el]`` column legend.
+    * ``"Lippmann"`` - a ``.tx0``, by :func:`looks_like_tx0`.
+    * ``"Electra"`` - the ``#Total electrodes`` and ``#XYZ`` headings.
+    * ``"ResInv"`` - a Res2DInv general-array header, by
+      :func:`looks_like_res2dinv_general`.
+    * ``"Subsurface Insights"`` - by :func:`looks_like_subsurface_insights`.
+    * ``"BERT"`` - the unified layout: a count, ``# x ...``, that many
+      electrodes, a count, ``# a b m n ...``.
+    * ``"E4D"`` - E4D's survey layout: a count, numbered ``i x y z [flag]``
+      electrode rows, a count, numbered ``i a b m n V ...`` rows. The ``.ohm``
+      surveys under ``examples/data/ERT/E4D`` are in it, not in BERT's.
+    * ``"Protocol DC"`` / ``"Protocol IP"`` - an R2/R3t protocol file, where its
+      column count names one of them.
+
+    ABEM-Lund is never named - its ``.ohm`` and its Terrameter exports carry no
+    mark the other formats lack, and the loaders already read a file with its
+    look as one - and neither is ``"Custom"``.
+
+    Reads the first 60 lines (16 KB); a count-prefixed file is followed to its
+    second header, never past 256 KB. Never raises: a missing, unreadable or
+    binary file gives None.
+    """
+    try:
+        head = _guess_text(path, _GUESS_HEAD_BYTES)
+        if not head:
+            return None
+        lines = head.splitlines()[:_GUESS_HEAD_LINES]
+        found = set()
+        if looks_like_subsurface_insights(path):
+            found.add("Subsurface Insights")
+        if looks_like_tx0(path, max_lines=_GUESS_HEAD_LINES):
+            found.add("Lippmann")
+        if looks_like_res2dinv_general(path):
+            found.add("ResInv")
+        for name, test in (("DAS-1", _is_das1), ("Sting", _is_sting), ("ARES", _is_ares),
+                           ("Electra", _is_electra), ("Syscal", _is_syscal)):
+            if test(lines):
+                found.add(name)
+        layout = _count_prefixed(path, lines)
+        if layout:
+            found.add(layout)
+        return found.pop() if len(found) == 1 else None
+    except Exception:  # noqa: BLE001 - a hint that cannot be formed is no hint
+        return None
+
+
+#: Fewest electrodes a survey can have: one four-electrode reading needs four.
+_MIN_SURVEY_ELECTRODES = 4
+
+
+def implausible_survey(n_electrodes: int, n_measurements: int) -> Optional[str]:
+    """A plain sentence saying why a parsed survey cannot be a real one, else None.
+
+    Fewer than 4 electrodes, or no measurements, is not a survey. It is what a
+    reader returns when it was handed the wrong format: the unified
+    reader takes a DAS-1 file for one electrode and one measurement without an
+    error, and nothing complains until the inversion fails.
+    """
+    electrodes = max(int(n_electrodes), 0)
+    measurements = max(int(n_measurements), 0)
+    if electrodes >= _MIN_SURVEY_ELECTRODES and measurements > 0:
+        return None
+
+    def counted(n: int, noun: str) -> str:
+        return f"no {noun}s" if n == 0 else f"{n} {noun}" + ("" if n == 1 else "s")
+
+    read_as = (f"The file was read as {counted(electrodes, 'electrode')} "
+               f"and {counted(measurements, 'measurement')}")
+    if electrodes == 0 and measurements == 0:
+        return read_as + " — nothing in it was recognised as survey data."
+    if electrodes < _MIN_SURVEY_ELECTRODES:
+        return read_as + (" — far too few for a survey, which needs at least "
+                          f"{_MIN_SURVEY_ELECTRODES} electrodes.")
+    return read_as + " — there is nothing to invert."
 
 
 def _reciprocal_key(frame: pd.DataFrame) -> Tuple[pd.Series, np.ndarray]:

@@ -28,6 +28,7 @@ A Python package for integrating hydrological model outputs (MODFLOW, ParFlow) w
 - **E4D as an inversion engine** — PNNL's parallel 3D ERT code run from the same pipeline and Studio page as the other engines, for single surveys and time-lapse series (E4D's own time-lapse mode); a profile is inverted in 3D around the line and shown as its section. E4D is an external program: see [where it runs](#e4d-an-external-3d-engine)
 - **R2 and R3t as inversion engines** — Andrew Binley's 2D and 3D codes, the ones ResIPy runs, for single surveys and time-lapse series (their difference inversion), holding fixed zones fixed; native on Windows, through Wine on Linux and macOS: see [where they run](#r2-and-r3t-binleys-ert-codes)
 - **Inversion** — single-time, time-lapse, windowed, structure-constrained, joint ERT+SRT, TDEM, FDEM
+- **Differentiable ERT (ADTLERT)** — optional GPU engine for 2.5D ERT inversion built on automatic differentiation; in PyHydroGeophysX it inverts for resistivity. Its method paper ([Yang et al. 2026](https://arxiv.org/abs/2608.14661)) also inverts water content directly through the embedded petrophysical relationship. For the tested model, that was more accurate than converting resistivity afterwards
 - **Magnetotellurics (MT/AMT)** — time series read from Phoenix MTU-5C/5P/8A and legacy MTU-5A, Metronix ATS, Zonge Z3D and LEMI-424 recordings with their calibrations; robust remote-reference processing in the manner of EMTF (Egbert 1997); EDI, EMTF XML, Z- and J-files read and written; phase tensor, skew and strike; Occam 1D with the static shift as a parameter, fixed by a joint TEM sounding (Meju 1996), and a water-content profile; 2D TE/TM profile inversion on SimPEG. Only NumPy/SciPy for the processing and 1D, SimPEG for 2D
 - **Prior knowledge in ERT** — a-priori resistivity zones drawn on the inversion mesh (starting and reference values, optionally held fixed), a mesh rebuilt so its cell edges follow the zone outlines, and the smoothness dropped across those outlines so the model may jump there, with every engine; in 3D, zones as boxes (layers, tanks, plumes) that every 3D mesh engine — structured grid, prism, Gmsh, E4D — can mesh along and make regions of their own, and that the 3D forward model takes
 - **Monitoring** — acquisition times read from the survey files, temperature correction to a reference temperature, sections clipped to what the data resolve
@@ -57,6 +58,7 @@ pip install pyhydrogeophysx
 pip install "pyhydrogeophysx[geophysics]"
 
 # With the optional ADTLERT differentiable 2.5D ERT backend (Python 3.11+)
+# Method: Yang et al. (2026), https://arxiv.org/abs/2608.14661
 pip install "pyhydrogeophysx[adtlert]"
 
 # With AI agent support

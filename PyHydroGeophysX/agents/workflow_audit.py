@@ -15,6 +15,11 @@ returns its best matches whether or not they are relevant, and a report on a
 time-lapse ERT survey was ending with several hundred words about the desktop
 studio's gravity module and its seismic agent, under a heading that implied the
 run had used them.
+
+In the studio, the report also cites the run records the studio keeps as text
+in each run folder - settings, data QC report, logs (``qt_apps/run_records.py``)
+- of its own run and of every earlier run whose files it read
+(:func:`records_section`). Cited by path, never pasted in.
 """
 from collections import Counter
 from contextlib import contextmanager
@@ -22,7 +27,9 @@ from datetime import datetime, timezone
 import hashlib
 from importlib import metadata
 import json
-from pathlib import Path
+import math
+import os
+from pathlib import Path, PurePosixPath
 import sys
 
 from ._document import bullets, control_block, digest, facts, file_size, renumber, table
@@ -196,6 +203,141 @@ def _references_block(sources, report_text):
     return '\n'.join(lines)
 
 
+def _run_folder(path):
+    """The studio run folder ``path`` lies in, or None outside the studio.
+
+    The studio's results store keeps each run in ``<project>/runs/<run id>/``,
+    with the workflow's own outputs in its ``outputs/`` folder. A folder there
+    is a run by the record the store writes when the run is saved
+    (``run.json``) or, until then, its ``UNSAVED`` marker.
+    """
+    from PyHydroGeophysX.qt_apps.results_store import RUN_FILENAME, UNSAVED_MARKER
+
+    path = Path(path).resolve()
+    for folder in (path, *path.parents):
+        if folder.parent.name == 'runs' and (
+                (folder / RUN_FILENAME).is_file() or (folder / UNSAVED_MARKER).is_file()):
+            return folder
+    return None
+
+
+def _record_rows(folder):
+    """``(record, path in the run folder)`` of the run's records on disk.
+
+    The list is the studio's own (``run_records.run_documents``), so a record
+    type added there is cited here too. Data a studio view draws are left out -
+    their figure is the record a reader opens - and the per-survey logs of a
+    long series are one row for their folder rather than hundreds.
+    """
+    from PyHydroGeophysX.qt_apps.run_records import run_documents
+
+    rows, series = [], {}
+    for document in run_documents(folder):
+        meta = document.get('metadata') or {}
+        if meta.get('viewer_only'):
+            continue
+        if meta.get('listing_only'):
+            series.setdefault(str(PurePosixPath(document['path']).parent), []).append(document)
+            continue
+        rows.append((document['label'], document['path']))
+    for parent, documents in series.items():
+        if len(documents) == 1:
+            rows.append((documents[0]['label'], documents[0]['path']))
+        else:
+            name = str(documents[0]['label']).split(' · ')[0]
+            rows.append((f"{name} ({len(documents)} files)", parent + '/'))
+    return rows
+
+
+def _recorded_result(folder, limit=6):
+    """A saved run's name and its recorded figures, from its ``run.json``.
+
+    The figures are the run's own ``metrics`` as the studio stored them (chi2,
+    lambda, iterations...), never numbers parsed back out of a text record.
+    ``('', '')`` for a run not saved yet or a record that cannot be read.
+    """
+    from PyHydroGeophysX.qt_apps.results_store import (
+        RUN_FILENAME, RunRecord, is_placeholder_label)
+    from PyHydroGeophysX.qt_apps.run_records import plain_value
+
+    try:
+        record = RunRecord.from_dict(
+            json.loads((folder / RUN_FILENAME).read_text(encoding='utf-8')), folder)
+    except (OSError, ValueError, TypeError, AttributeError):
+        return '', ''
+    figures = []
+    for key, value in record.metrics.items():
+        if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+            continue
+        if isinstance(value, float) and not math.isfinite(value):
+            continue
+        if isinstance(value, str) and not 0 < len(value) <= 40:
+            continue
+        figures.append(f"{str(key).replace('_', ' ')} {plain_value(value)}")
+        if len(figures) == limit:
+            break
+    name = '' if is_placeholder_label(record) else str(record.label).strip()
+    return name, '; '.join(figures)
+
+
+def records_section(output, input_paths=(), heading='Appendix G - Data and Processing Records'):
+    """The report's citation of the studio's run records, or ``""`` without any.
+
+    Cites the records of the studio run that wrote ``output`` and of every
+    earlier studio run whose files the workflow read: the settings each ran
+    with, the data QC report and the logs, by path. They are not reproduced -
+    a time-lapse run's logs run to thousands of lines. Outside the studio, or
+    while no run folder holds a record yet, there is nothing to cite.
+    """
+    own = _run_folder(output)
+    runs = {own: []} if own is not None else {}
+    for path in input_paths:
+        folder = _run_folder(path)
+        if folder is None:
+            continue
+        read = runs.setdefault(folder, [])
+        if folder != own and Path(path).name not in read:
+            read.append(Path(path).name)
+    rows = {folder: _record_rows(folder) for folder in runs}
+    if not any(rows.values()):
+        return ''
+    roots = {folder.parent.parent for folder in runs}
+    root = next(iter(roots)) if len(roots) == 1 else None
+
+    def where(folder, relative):
+        # A folder of records keeps its trailing separator, which joining drops.
+        if root is not None:
+            text = (PurePosixPath(folder.relative_to(root).as_posix()) / relative).as_posix()
+            return text + ('/' if relative.endswith('/') else '')
+        return str(folder / relative) + (os.sep if relative.endswith('/') else '')
+
+    lines = [f'## {heading}', '',
+             'Each studio run keeps plain-text records in its folder: the settings it '
+             'ran with, a data QC report where its data were filtered, and its logs. '
+             'Settings and data-quality figures taken from these runs can be traced to '
+             'the files below, which are cited rather than reproduced.'
+             + (f' Paths are relative to the project folder `{root}`.' if root else ''),
+             '',
+             table(['Run', 'Record', 'File'],
+                   [[f"{folder.name} ({'this workflow' if folder == own else 'input data'})",
+                     label, f'`{where(folder, relative)}`']
+                    for folder in runs for label, relative in rows[folder]]),
+             '**Runs cited**', '']
+    described = []
+    for folder, read in runs.items():
+        if folder == own:
+            described.append(f'**{folder.name}**: the studio run that produced this report.')
+            continue
+        name, figures = _recorded_result(folder)
+        text = f'**{folder.name}**' + (f' ("{name}")' if name else '')
+        text += f": this workflow read {', '.join(f'`{item}`' for item in read)} from it."
+        if figures:
+            text += f' Its recorded result (`run.json`): {figures}.'
+        described.append(text)
+    lines.append(bullets(described))
+    return '\n'.join(lines)
+
+
 def write_report(output, config, results, plan, interpretation, reports, events, calls, sources, settings):
     output = Path(output)
     inputs = []
@@ -246,6 +388,10 @@ def write_report(output, config, results, plan, interpretation, reports, events,
         except OSError:
             pass
     body = original or _fallback_body(config, interpretation)
+    try:
+        records = records_section(output, [record['path'] for record in inputs])
+    except Exception:  # noqa: BLE001 - a citation is never a reason to lose the report
+        records = ''
     limitations = '\n\n'.join([
         '## Limitations and Uncertainty',
         _warnings_block(audit['warnings']),
@@ -304,7 +450,9 @@ def write_report(output, config, results, plan, interpretation, reports, events,
         # escaping, so the run directory rendered with segments run together.
         '## Appendix F - Output Files',
         table(['Output', 'Path'], [[k, f'`{v}`'] for k, v in reports.items()])
-        or 'No output files were recorded.']
+        or 'No output files were recorded.',
+        # Last, so that a run with no studio records simply ends at F.
+        records]
     path = output / 'detailed_report.md'
     path.write_text(renumber('\n\n'.join(s for s in sections if s and str(s).strip())),
                     encoding='utf-8')

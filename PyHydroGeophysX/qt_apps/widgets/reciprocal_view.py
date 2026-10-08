@@ -42,6 +42,7 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX.qt_apps import ert_records, theme
 from PyHydroGeophysX.qt_apps.qt_utils import ContentWidthScrollArea
+from PyHydroGeophysX.qt_apps.widgets.readout import toolbar_row
 
 _CHOICES = (("All pairs (before filtering)", ert_records.FIT_ALL),
             ("Pairs kept by the filter", ert_records.FIT_KEPT))
@@ -104,6 +105,10 @@ class ReciprocalErrorView(QWidget):
         page_layout.setSpacing(2)
         self._figure = Figure(constrained_layout=True)
         self._canvas = FigureCanvasQTAgg(self._figure)
+        # Zoom, pan and Save as on every plot. Its colour bar numbers the
+        # surveys of a series, not a measured value, so it has no colour range.
+        bar, self._toolbar = toolbar_row(self._canvas, page)
+        page_layout.addWidget(bar)
         page_layout.addWidget(self._canvas, stretch=1)
         self._status = QLabel()
         self._status.setWordWrap(True)
@@ -331,6 +336,7 @@ class ReciprocalErrorView(QWidget):
         self._status.setText(" ".join(part for part in (text, self._note) if part))
         self._sync_side()
         self._canvas.draw_idle()
+        self._toolbar.update()   # Home and Back belong to the new plot
 
     def _save_figure(self) -> None:
         """Write the figure as drawn, and the pairs beside it as a CSV table."""

@@ -10,6 +10,21 @@ import numpy as np
 from ._intent import infer_instrument
 from .base_agent import AgentResult, BaseAgent
 
+#: Picks whose reader also reads a layout the header shows, so the two
+#: disagreeing is no reason to stop a run. Checked on the shipped surveys: the
+#: unified reader behind "E4D", "ARES" and "Custom" reads a BERT file in full,
+#: and the "ARES" pick reads an E4D survey file. The loaders read a Res2DInv
+#: general-array file as one whatever was picked.
+_ALSO_READ_BY = {
+    "BERT": ("E4D", "ARES", "Custom"),
+    "E4D": ("ARES",),
+}
+
+
+def _pick_reads(declared: str, detected: str) -> bool:
+    """True when the declared reader loads a file of the detected layout."""
+    return detected == "ResInv" or declared in _ALSO_READ_BY.get(detected, ())
+
 
 class ERTLoaderAgent(BaseAgent):
     """
@@ -84,7 +99,8 @@ different data formats, coordinate systems, and common data quality issues."""
                     return electrode_validation
 
             detected_instrument = self._detect_instrument_from_header(data_file)
-            if detected_instrument and instrument and detected_instrument != instrument:
+            if (detected_instrument and instrument and detected_instrument != instrument
+                    and not _pick_reads(instrument, detected_instrument)):
                 return AgentResult(
                     status="needs_review",
                     summary="The declared ERT instrument does not match the file header.",
@@ -184,7 +200,12 @@ different data formats, coordinate systems, and common data quality issues."""
             return self.results
 
     def _detect_instrument_from_header(self, data_file: str) -> Optional[str]:
-        """Detect a likely ERT instrument from the first two text lines.
+        """Detect a likely ERT instrument from the file's own header.
+
+        The file's layout decides first, through
+        :func:`~PyHydroGeophysX.data_processing.ert_formats.guess_ert_format`,
+        which knows the marks each reader finds its format by; failing that, an
+        instrument named in the first two text lines.
 
         Parameters
         ----------
@@ -204,13 +225,13 @@ different data formats, coordinate systems, and common data quality issues."""
         --------
         >>> ERTLoaderAgent()._detect_instrument_from_header("")
         """
-        from PyHydroGeophysX.data_processing.ert_formats import (
-            looks_like_subsurface_insights,
-        )
+        from PyHydroGeophysX.data_processing.ert_formats import guess_ert_format
 
-        # Its table opens far below the first two lines, under a metadata block.
-        if looks_like_subsurface_insights(data_file):
-            return "Subsurface Insights"
+        # A layout, not a name: an E4D survey file or a BERT one names neither,
+        # and either read as the other loads wrong or empty.
+        guessed = guess_ert_format(data_file)
+        if guessed:
+            return guessed
         try:
             with open(data_file, "r", encoding="utf-8", errors="ignore") as handle:
                 header = " ".join([handle.readline(), handle.readline()])

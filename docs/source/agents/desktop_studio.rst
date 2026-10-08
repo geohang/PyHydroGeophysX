@@ -324,9 +324,10 @@ your own BERT/unified, E4D, Syscal, or other supported resistivity file instead.
    :align: center
    :width: 100%
 
-   The ERT Processing module before a file is loaded. Data and result tabs are
-   on the left; loading, filtering, inversion, editing, and export controls are
-   in the scrollable center panel.
+   The ERT Processing module with the bundled BERT survey loaded. The Data tab
+   shows its pseudosection, the electrodes along its top, the plot toolbar above
+   it and the colour range under it; loading, filtering and inversion controls
+   are in the scrollable column on the right, with the Run button pinned under it.
 
 Step 1 -- open the ERT module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -341,14 +342,22 @@ directly with:
 Step 2 -- load and inspect data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. Under **Load resistivity data**, select the matching **Instrument / format**.
+1. Under **Load resistivity data**, choose **Invert as** **One survey** (or
+   **Time-lapse series**, below) and select the matching **Instrument / format**.
    For the bundled file, choose **BERT / Unified (.ohm/.dat)**.
-2. Click **Add files...** and select one file. Loading runs in a worker thread;
-   the UI remains responsive and the Log reports the number of electrodes and
-   measurements.
-3. Use the **Electrodes** tab to check positions and elevation. Use
-   **Pseudosection** to inspect spatial coverage and apparent-resistivity
-   outliers.
+2. Click **Add files...** and select one file, or drop files - or a folder of
+   them - anywhere on the page. Loading runs in a worker thread; the UI remains
+   responsive and the Log reports the number of electrodes and measurements.
+   When a file's first lines name another format than the one chosen, a line
+   under the format says so with a **Read as ...** button; changing the format
+   reads the file on screen again. A file that reads as fewer than four
+   electrodes or no measurements is refused rather than loaded, and the Run
+   button says why it cannot run.
+3. The **Data** tab draws the pseudosection, to inspect spatial coverage and
+   apparent-resistivity outliers, with the electrodes as triangles along its top.
+   The panel above the QC settings gives their count, spacing, line length and,
+   when the file has them, elevations; the **Mesh** tab draws them on the
+   topography.
 4. If electrode positions are stored separately, click **Electrode file
    (optional)...**. The Studio accepts an ``x, z`` table.
 
@@ -365,7 +374,7 @@ Check suspicious points against acquisition notes, reciprocal error, contact
 resistance, and neighboring measurements before deleting them.
 
 For data measured both ways, the **Reciprocal errors** tab, beside
-**Pseudosection**, plots each pair's reciprocal error against its mean
+**Data**, plots each pair's reciprocal error against its mean
 resistance with the reciprocal error model fitted through the pairs - one
 survey, or in time-lapse mode every survey of the list, coloured first to last
 (the series is read in the background). Its **Fit to** choice fits the model to
@@ -377,7 +386,7 @@ Results shows the same view for the run.
 Step 4 -- check the mesh and set a-priori zones
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The **Mesh** tab, between **Pseudosection** and **Resistivity model**, shows the
+The **Mesh** tab, between **Reciprocal errors** and **Resistivity model**, shows the
 mesh the next inversion will run on before any time goes into the run. It is
 built by the same function the inversion uses, from the loaded survey as the run
 will read it (QC filter and electrode edits applied) and from the mesh settings
@@ -531,7 +540,8 @@ The defaults provide a reasonable first diagnostic run:
 - The mesh, its quality (34° by default) among its settings, is set on the
   **Mesh** tab (Step 4).
 
-Click **Run inversion**. Follow progress in the bottom Log. While it runs,
+Click **Run inversion**, pinned under the settings column; while it cannot
+run, the line above it says why. Follow progress in the bottom Log. While it runs,
 **Pause** beside the progress bar freezes the inversion where it stands - in the
 middle of a forward solve as much as between iterations - and **Resume**
 continues it from the same point, with nothing recomputed. A paused run keeps its
@@ -549,32 +559,51 @@ session for each kind of display (resistivity, % change, velocity, EM section an
 so on), so a run reopened in **Saved Results** (the Model Viewer) shows the same
 colours, and every colour-mapped view in the studio offers the same chooser.
 
+Every plot in the studio has the same toolbar above it - Home, Back, Forward,
+Pan, Zoom, subplot and axis settings, and Save - and every colour scale a
+**Lock range** with its lower and upper limit beside the colour map. Unticked,
+the plot scales itself and the two boxes show the limits in use; ticked, the
+limits typed in are kept while you step through surveys, time steps, lines,
+slices or shots of the same quantity, so they can be compared on one scale.
+
+After a run, **Run records** beside the reproduction buttons opens the run's
+records: its settings (``inversion_settings.txt`` for ERT, ``run_settings.txt``
+- the run's recipe as text - for every other page and for the assistant's
+Workflow runs), the data QC report where the data were filtered, the run log and
+the workflow process output. Saved Results lists the same files, and the
+assistant's reports cite them in an appendix, *Data and Processing Records*.
+
 Step 6 -- edit geometry and export
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Use **Add electrode (click to place)** or **Edit (click select, click move)**
-only when the geometry needs correction. Right-click an electrode to delete it
-or change its label. Then export one or more of:
+Electrodes are corrected through the assistant (``add_electrode``,
+``move_electrode``, ``delete_electrode``, ``set_electrode_label``), which is
+more precise than dragging them and is recorded with the run. The
+**Resistivity model** tab's **Export model** group writes the model shown:
 
-- **Export electrode file...** for the corrected coordinate table;
-- **Export survey geometry JSON...** for a reusable survey definition;
 - **Export resistivity model...** for ``model_cells.csv``, ``.npy``, PyGIMLi
-  ``.bms``, and VTK files.
+  ``.bms``, and VTK files;
+- for a time-lapse result, **Export time-lapse results...** and **Open output
+  folder** instead.
 
-**File > Export Results...** (``Ctrl+E``) reaches the same exports without
-hunting for the button that belongs to the tab you are on. It asks the open
-module what it can write; when there is more than one answer it offers a choice.
+**File > Export Results...** (``Ctrl+E``) reaches every export, the electrode
+table (CSV) and the survey geometry (JSON) among them, without hunting for the
+button that belongs to the tab you are on. It asks the open module what it can
+write; when there is more than one answer it offers a choice.
 
 Time-Lapse ERT
 --------------------------------------------------------------------------------
 
 The ERT loader also manages an ordered time series:
 
-1. Click **Add files...** and select two or more ERT files. Each file represents
-   one time step.
-2. Verify that the list is chronological. Use the up and down arrow buttons to
-   reorder selected rows. Clicking a row previews that time step.
-3. Check **Time-lapse (multiple ERT files)**. The temporal controls appear, and
+1. Choose **Invert as** **Time-lapse series**, then click **Add files...** and
+   select two or more ERT files, or drop them (or their folder) on the page. Each
+   file represents one time step.
+2. Verify that the list is chronological. Use **Sort by time**, or the up and
+   down arrow buttons to reorder selected rows. Clicking a row previews that time
+   step on the **Data** tab, with the list beside it.
+3. The **Time-lapse** group of temporal controls appears under the inversion
+   settings, and
    the **Mesh** tab shows the mesh of the first survey, which every time step is
    inverted on - an imported mesh included. Zones drawn there hold for every
    step.
@@ -585,7 +614,7 @@ The ERT loader also manages an ordered time series:
    automatically for sufficiently large problems.
 6. Click **Run time-lapse inversion**; **Pause** and **Resume** work as for a
    single inversion. After completion, select time steps in
-   the Resistivity model tab and click **Export results (VTK + npy + mesh)...**
+   the Resistivity model tab and click **Export time-lapse results...** there
    to save combined and per-step VTK files, ``final_models.npy``, the mesh,
    acquisition times, and the result figure.
 

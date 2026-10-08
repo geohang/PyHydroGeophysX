@@ -44,9 +44,10 @@ What this buys you:
 
 When nothing can be read, the run falls back to a sequential ``1..n`` index and
 says so in the log and in the report - it does not quietly assume an interval.
-In the Studio, *Use file times when the names carry none* opts into the
-filesystem modification time as a last resort; it is off by default because a
-copied or re-exported file carries the time of the copy.
+In the Studio, *Date undated files by when they were last saved* - shown under
+the file list while some files carry no time - opts into the filesystem
+modification time as a last resort; it is off by default because a copied or
+re-exported file carries the time of the copy.
 
 .. code-block:: python
 

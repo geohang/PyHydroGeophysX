@@ -359,6 +359,10 @@ class SeismicProcessingModule(BaseModule):
         self._clip.setSuffix(" %ile")
         self._clip.valueChanged.connect(self._recompute_debounced.trigger)
         form.addRow("Clip", self._clip)
+        # A locked colour range on the gather replaces the clip, so the clip
+        # is greyed while it is locked rather than doing nothing visibly.
+        self._viewer.color_range.changed.connect(self._sync_clip_row)
+        self._sync_clip_row()
         self._polarity = QCheckBox("Flip polarity")
         self._polarity.setChecked(True)
         self._polarity.toggled.connect(self._recompute)
@@ -1183,6 +1187,16 @@ class SeismicProcessingModule(BaseModule):
         peak = np.nanmax(np.abs(disp), axis=0, keepdims=True)
         peak[peak == 0] = 1.0
         return disp / peak
+
+    def _sync_clip_row(self) -> None:
+        """Grey the Clip row while the gather's colour range is locked, and say why."""
+        locked = self._viewer.color_range.is_locked()
+        set_rows_enabled([self._clip], not locked)
+        self._clip.setToolTip(
+            "Not used while the gather's colour range is locked: the image is drawn "
+            "between the limits typed beside “Lock range”." if locked else
+            "Amplitudes beyond this percentile are clipped, so a few strong traces "
+            "do not wash out the rest.")
 
     def _recompute(self) -> None:
         disp = self._processed()

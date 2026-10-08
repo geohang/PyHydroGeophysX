@@ -18,6 +18,9 @@ from PySide6.QtWidgets import QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.coalesce import Coalesced
+from PyHydroGeophysX.qt_apps.widgets.color_range import ColorRange
+from PyHydroGeophysX.qt_apps.widgets.flow_layout import FlowLayout
+from PyHydroGeophysX.qt_apps.widgets.readout import toolbar_row
 from PyHydroGeophysX.visualization.axis_units import set_length_axis, to_display_length
 
 
@@ -37,6 +40,9 @@ class PlanSliceView(QWidget):
         self._canvas = FigureCanvasQTAgg(self._fig)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        # Zoom, pan, Home and Save, with the cursor position (widgets.readout).
+        bar, self._toolbar = toolbar_row(self._canvas, self)
+        layout.addWidget(bar)
         layout.addWidget(self._canvas, stretch=1)
         row = QHBoxLayout()
         row.addWidget(QLabel("Depth"))
@@ -53,11 +59,20 @@ class PlanSliceView(QWidget):
         self._z_label = QLabel("—")
         self._z_label.setMinimumWidth(56)
         row.addWidget(self._z_label)
-        # The colour map, beside the depth it is read at; turbo until chosen.
+        layout.addLayout(row)
+        # The colour map, under the depth it is read at; turbo until chosen.
         self._colormap = cmaps.ColormapChooser(colormap_key, "turbo", shared=colormaps)
         self._colormap.colormapChanged.connect(lambda _name: self._request_full())
-        row.addWidget(self._colormap)
-        layout.addLayout(row)
+        # The colour limits beside it. A log scale cannot use a limit of zero
+        # or below; one typed in is ignored (see _colour_scale).
+        self._range = ColorRange(what="the map's colours")
+        self._range.changed.connect(self._request_full)
+        # A row that wraps in a narrow panel instead of widening the page and
+        # the window (widgets.flow_layout); the depth slider keeps its own.
+        colours = FlowLayout(spacing=6)
+        colours.addWidget(self._colormap)
+        colours.addWidget(self._range)
+        layout.addLayout(colours)
 
         self._xy = None       # (n_pos, 2) sounding map coordinates
         self._res = None      # (n_pos, n_depth) resistivity, surface-ordered in depth
@@ -99,6 +114,12 @@ class PlanSliceView(QWidget):
             raise ValueError("Coordinate and sounding counts do not match.")
         if self._res.shape[1] != self._depths.size or self._depths.size == 0:
             raise ValueError("Depth coordinates must match the value columns and cannot be empty.")
+        # A locked range holds for another data set of the same quantity; one in
+        # other units starts on its own scale.
+        if (label, bool(log_scale)) != (self._label, self._log):
+            self._range.blockSignals(True)      # drawn once, below
+            self._range.unlock()
+            self._range.blockSignals(False)
         self._label = label
         self._log = bool(log_scale)
         self._x_label = x_label
@@ -157,7 +178,8 @@ class PlanSliceView(QWidget):
     def _colour_scale(self):
         """A norm and the contour levels, over every depth of the data set.
 
-        The limits are computed once per data set; the norm is new each call.
+        The limits are computed once per data set, and replaced by the ones
+        typed in while "Lock range" is ticked; the norm is new each call.
         Every artist drawn with a norm listens to it, so one shared across
         drawings would keep the artists of cleared figures alive and have them
         answer its changes.
@@ -179,14 +201,16 @@ class PlanSliceView(QWidget):
                 vmin, vmax = max(vmin, 1e-6), max(vmax, vmin * 1.1 + 1e-6)
             elif not vmax > vmin:
                 vmax = vmin + 1.0
-            # Explicit levels across the range the colours cover. A level *count*
-            # under a log norm is handed to a decade locator, so a survey spanning
-            # less than two decades comes back as one or two flat bands and a
-            # colour bar labelled only in powers of ten.
-            levels = (np.geomspace(vmin, vmax, 15) if self._log
-                      else np.linspace(vmin, vmax, 15))
-            self._scale = (vmin, vmax, levels)
-        vmin, vmax, levels = self._scale
+            self._scale = (vmin, vmax)
+        vmin, vmax = self._range.limits(*self._scale)
+        if self._log and vmin <= 0:     # no colour for it on a log scale
+            vmin, vmax = self._scale
+        # Explicit levels across the range the colours cover. A level *count*
+        # under a log norm is handed to a decade locator, so a survey spanning
+        # less than two decades comes back as one or two flat bands and a
+        # colour bar labelled only in powers of ten.
+        levels = (np.geomspace(vmin, vmax, 15) if self._log
+                  else np.linspace(vmin, vmax, 15))
         return (LogNorm if self._log else Normalize)(vmin, vmax), levels
 
     def _soundings_at(self, j: int):
@@ -260,6 +284,7 @@ class PlanSliceView(QWidget):
             ax.set_title(f"Depth {self._depth_text(j)}")
             self._z_label.setText(self._depth_text(j))
             self._canvas.draw_idle()
+            self._toolbar.update()      # Home and Back go to the new axes
             return
         cmap = cmaps.to_matplotlib(self._colormap.colormap())
         mappable = None
@@ -292,6 +317,7 @@ class PlanSliceView(QWidget):
         self._z_label.setText(self._depth_text(j))
         self._drawn = {"axes": ax, "scatter": sc, "surface": surface}
         self._canvas.draw_idle()
+        self._toolbar.update()          # Home and Back go to the new axes
 
     def _triangulation(self, good):
         """The Delaunay triangulation of the soundings in ``good``, kept for reuse.

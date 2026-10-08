@@ -18,9 +18,9 @@ from typing import Any, Optional, Tuple
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QPainter
-from PySide6.QtWidgets import QSizePolicy, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QWidget
 
-__all__ = ["ReadoutLabel", "navigation_toolbar"]
+__all__ = ["ReadoutLabel", "navigation_toolbar", "toolbar_row"]
 
 
 class ReadoutLabel(QWidget):
@@ -104,3 +104,24 @@ def navigation_toolbar(canvas: Any, parent: Optional[QWidget] = None) -> Tuple[A
     toolbar.readout = ReadoutLabel("", alignment=Qt.AlignRight | Qt.AlignVCenter,
                                    sample="x=0000.00 y=-000.00 [0000.0]")
     return toolbar, toolbar.readout
+
+
+def toolbar_row(canvas: Any, parent: Optional[QWidget] = None,
+                *extras: QWidget) -> Tuple[QWidget, Any]:
+    """The navigation toolbar and its readout as one row to put above a plot.
+
+    Every matplotlib view in the studio has one, so zoom, pan, Home and Save
+    are where they are on the Mesh tab. ``extras`` follow the readout on the
+    row. Returns ``(row, toolbar)``. A view that redraws its figure from
+    scratch calls ``toolbar.update()`` afterwards, so Home and Back go to the
+    new plot and not to the axes of the one it replaced.
+    """
+    toolbar, readout = navigation_toolbar(canvas, parent)
+    row = QWidget(parent)
+    layout = QHBoxLayout(row)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.addWidget(toolbar)
+    layout.addWidget(readout, 1)
+    for widget in extras:
+        layout.addWidget(widget)
+    return row, toolbar

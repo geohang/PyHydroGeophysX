@@ -628,6 +628,38 @@ class BaseModule(QWidget):
         if isinstance(watchers, list) and self._watch_run_logs not in watchers:
             watchers.append(self._watch_run_logs)
         self._flush_run_logs_soon()
+        # The page writes the run's recipe in this same turn, right after the
+        # folder is made; its readable copy follows on the next.
+        QTimer.singleShot(0, self, lambda h=handle: self._write_run_settings(h))
+
+    def _write_run_settings(self, handle: Any, closed: bool = False) -> None:
+        """Keep ``run_settings.txt``: the run's recipe as text, for its Run records.
+
+        Only the ERT page wrote a settings file a person could read; every other
+        page's run kept its settings in the recipe's JSON alone. This one is
+        written from that recipe for every page that writes none of its own
+        (``run_records.write_recipe_settings``), and again with the outcome once
+        the run has closed. It is a record, never a reason to stop a run.
+        """
+        from PyHydroGeophysX.qt_apps.run_records import write_recipe_settings
+
+        try:
+            record = getattr(handle, "record", None)
+            outcome = []
+            if closed and record is not None:
+                outcome = [("Status", getattr(record, "status", "")),
+                           ("Finished", getattr(record, "finished_at", "") or "-")]
+                if getattr(record, "error", ""):
+                    outcome.append(("Error", record.error))
+                if getattr(record, "warnings", None):
+                    outcome.append(("Warnings", f"{len(record.warnings)}, listed in "
+                                                "logs/run_log.txt"))
+            write_recipe_settings(
+                Path(handle.run_dir),
+                title=f"Settings of run {handle.run_id} ({self.module_title})",
+                outcome=outcome)
+        except Exception:  # noqa: BLE001 - a record, never a reason to fail a run
+            pass
 
     def _keep_log_line(self, message: Any, level: str) -> None:
         """Hand a logged line to the open run logs, and to the turn's lines."""
@@ -685,6 +717,7 @@ class BaseModule(QWidget):
         self._run_logs = [other for other in self._run_logs if other is not item]
         item[2].flush()
         self._keep_run_warnings(item[0], item[2].warnings)
+        self._write_run_settings(item[0], closed=True)
         watchers = getattr(self.state, "run_watchers", None)
         if not self._run_logs and isinstance(watchers, list) \
                 and self._watch_run_logs in watchers:

@@ -18,6 +18,7 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from PyHydroGeophysX.inversion.metrics import metrics_from_manager
 from PyHydroGeophysX.qt_apps.widgets import length_units
+from PyHydroGeophysX.qt_apps.widgets.readout import toolbar_row
 from PyHydroGeophysX.visualization.axis_units import set_length_axis
 from PyHydroGeophysX.qt_apps import theme
 
@@ -36,10 +37,13 @@ class InversionQualityView(QWidget):
         self._metrics.setContentsMargins(8, 6, 8, 2)
         self._fig = Figure(figsize=(5.5, 3.0), tight_layout=True)
         self._canvas = FigureCanvasQTAgg(self._fig)
+        # Zoom, pan and Save as on every plot.
+        bar, self._toolbar = toolbar_row(self._canvas, self)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._metrics)
+        layout.addWidget(bar)
         layout.addWidget(self._canvas, stretch=1)
         self._drawn: Optional[Tuple] = None   # the arguments of the plots on screen
         self.clear()
@@ -310,6 +314,7 @@ class InversionQualityView(QWidget):
                           per_item: Optional[Dict[str, Any]] = None,
                           robust: Optional[Dict[str, Any]] = None) -> None:
         self._fig.clear()
+        self._toolbar.update()   # Home and Back belong to the plots drawn next
         robust = robust or {}
         if per_item:
             ax, ax_item = self._fig.subplots(1, 2)
@@ -372,6 +377,7 @@ class InversionQualityView(QWidget):
         self._metrics.setText("<span style='color:#8e8e93'>Run an inversion to see its "
                               "quality (χ², RMS, convergence) here.</span>")
         self._fig.clear()
+        self._toolbar.update()
         ax = self._fig.add_subplot(111)
         ax.axis("off")
         self._canvas.draw()

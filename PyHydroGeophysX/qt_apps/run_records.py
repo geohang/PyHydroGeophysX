@@ -23,8 +23,15 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 RUN_LOG_NAME = "run_log.txt"
 #: Everything the workflow process printed, with its exit code at the end.
 OUTPUT_LOG_NAME = "workflow_output.log"
+#: The assistant's Workflow page keeps its process's events here instead, and
+#: the configuration the workflow ran with beside it.
+ACTIVITY_LOG = "outputs/activity.log"
+WORKFLOW_CONFIG = "outputs/workflow_config.json"
 #: The run's settings, at the top of the run folder where they are found first.
 SETTINGS_NAME = "inversion_settings.txt"
+#: The settings of a run whose page writes no settings file of its own: its
+#: recipe - every input and parameter - as text (:func:`write_recipe_settings`).
+RUN_SETTINGS_NAME = "run_settings.txt"
 #: What the data QC kept and removed, and the reciprocal error statistics.
 QC_REPORT_NAME = "qc_report.txt"
 #: The reciprocal error model's figure, as the ERT page's Reciprocal errors
@@ -45,9 +52,11 @@ LOG_ENCODING = "utf-8-sig"
 #: order they are offered. The kinds route them to the text viewer.
 _DOCUMENTS: Tuple[Tuple[str, str, str], ...] = (
     (SETTINGS_NAME, "run_settings", "Inversion settings"),
+    (RUN_SETTINGS_NAME, "run_settings", "Run settings"),
     (QC_REPORT_NAME, "qc_report", "Data QC report"),
     (f"logs/{RUN_LOG_NAME}", "run_log", "Run log"),
     (f"logs/{OUTPUT_LOG_NAME}", "workflow_output", "Workflow process output"),
+    (ACTIVITY_LOG, "workflow_output", "Workflow activity log"),
 )
 TEXT_KINDS = frozenset(kind for _path, kind, _label in _DOCUMENTS) | {"qc_survey_log"}
 
@@ -264,6 +273,95 @@ def software_versions(extra: Sequence[str] = ()) -> List[Tuple[str, str]]:
     return rows
 
 
+def _setting_rows(value: Any, prefix: str = "") -> List[Tuple[str, Any]]:
+    """A recipe's nested settings as ``(dotted name, value)`` rows, in order."""
+    if isinstance(value, dict) and value:
+        rows: List[Tuple[str, Any]] = []
+        for key, item in value.items():
+            name = f"{prefix}.{key}" if prefix else str(key)
+            rows.extend(_setting_rows(item, name))
+        return rows
+    return [(prefix or "(value)", value)]
+
+
+def recipe_settings_text(recipe: Dict[str, Any], *, title: str,
+                         outcome: Sequence[Tuple[str, Any]] = ()) -> str:
+    """A workflow recipe as a person reads it: what ran, on what, with which settings.
+
+    The recipe (``<stem>_recipe.json``) holds every input and parameter the run
+    was given, as JSON for the program that repeats it; this is the same in the
+    aligned text of the ERT page's ``inversion_settings.txt``, with the software
+    versions and, once the run has ended, its outcome.
+    """
+    metadata = dict(recipe.get("metadata") or {})
+    run_rows: List[Row] = [("Workflow", recipe.get("workflow_id", ""))]
+    if recipe.get("seed") is not None:
+        run_rows.append(("Random seed", recipe.get("seed")))
+    run_rows.extend(_setting_rows(metadata))
+    sections: List[Section] = [
+        ("Run", run_rows),
+        ("Software", software_versions()),
+        ("Inputs", _setting_rows(dict(recipe.get("inputs") or {}))),
+        ("Parameters", _setting_rows(dict(recipe.get("parameters") or {}))),
+    ]
+    if outcome:
+        sections.append(("Outcome", list(outcome)))
+    return format_sections(title, sections)
+
+
+#: Words that mark a setting as a credential; never written into a record.
+_SECRET_WORDS = ("key", "token", "secret", "password", "credential")
+
+
+def workflow_settings_text(config: Dict[str, Any], *, title: str,
+                           outcome: Sequence[Tuple[str, Any]] = ()) -> str:
+    """The assistant workflow's configuration (``workflow_config.json``) as text.
+
+    The request it was given, then every setting it ran with; credentials are
+    left out, and the run's own output folder, which is where the file is.
+    """
+    settings = {key: value for key, value in config.items()
+                if key not in ("user_request", "output_dir")
+                and not any(word in str(key).lower() for word in _SECRET_WORDS)}
+    request = str(config.get("user_request") or "").strip()
+    sections: List[Section] = [
+        ("Request", [line for line in request.splitlines() if line.strip()] or ["(none)"]),
+        ("Software", software_versions()),
+        ("Settings", _setting_rows(settings)),
+    ]
+    if outcome:
+        sections.append(("Outcome", list(outcome)))
+    return format_sections(title, sections)
+
+
+def write_recipe_settings(run_dir: Union[str, Path], *, title: str,
+                          outcome: Sequence[Tuple[str, Any]] = ()) -> Optional[Path]:
+    """Write ``run_settings.txt`` from the run's recipe; the path, or None.
+
+    A module page's run has a workflow recipe (``<stem>_recipe.json``); the
+    assistant's Workflow page run has the configuration its workflow wrote
+    (``outputs/workflow_config.json``). Nothing is written for a run whose
+    page keeps its own settings file (``inversion_settings.txt``), nor before
+    the run has either. Rewritten with ``outcome`` when the run ends.
+    """
+    import json
+
+    base = Path(run_dir)
+    if (base / SETTINGS_NAME).is_file():
+        return None
+    recipes = sorted(base.glob("*_recipe.json"))
+    source = recipes[0] if recipes else base / WORKFLOW_CONFIG
+    try:
+        content = json.loads(source.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(content, dict):
+        return None
+    text = (recipe_settings_text(content, title=title, outcome=outcome) if recipes
+            else workflow_settings_text(content, title=title, outcome=outcome))
+    return write_text(base / RUN_SETTINGS_NAME, text)
+
+
 def write_text(path: Union[str, Path], text: str) -> Path:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -272,20 +370,25 @@ def write_text(path: Union[str, Path], text: str) -> Path:
 
 
 __all__ = [
+    "ACTIVITY_LOG",
     "ERROR_MODEL_FIGURE_NAME",
     "ERROR_PAIRS_NAME",
     "OUTPUT_LOG_NAME",
     "QC_FOLDER",
     "QC_REPORT_NAME",
     "RUN_LOG_NAME",
+    "RUN_SETTINGS_NAME",
     "RunLog",
     "SETTINGS_NAME",
     "TEXT_KINDS",
     "format_sections",
     "log_line",
     "plain_value",
+    "recipe_settings_text",
     "run_documents",
     "software_versions",
     "table",
+    "workflow_settings_text",
+    "write_recipe_settings",
     "write_text",
 ]

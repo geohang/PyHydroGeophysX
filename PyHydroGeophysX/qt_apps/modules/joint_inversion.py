@@ -57,6 +57,9 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
 )
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets import length_units
+from PyHydroGeophysX.qt_apps.widgets.color_range import ColorRange
+from PyHydroGeophysX.qt_apps.widgets.flow_layout import FlowLayout, group as control_group
+from PyHydroGeophysX.qt_apps.widgets.readout import toolbar_row
 from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
 from PyHydroGeophysX.visualization.axis_units import set_length_axis, set_section_axes
@@ -563,6 +566,9 @@ class JointInversionModule(BaseModule):
         self._pairing_group = pairing_group; layout.addWidget(pairing_group)
         self._alignment_figure = Figure(figsize=(7, 3), tight_layout=True)
         self._alignment_canvas = FigureCanvas(self._alignment_figure)
+        # Zoom, pan, Home and Save above each plot, with the cursor position.
+        bar, self._alignment_toolbar = toolbar_row(self._alignment_canvas, page)
+        layout.addWidget(bar)
         layout.addWidget(self._alignment_canvas, stretch=1)
         validate = QPushButton("Validate compatibility")
         validate.setProperty("primary", True); validate.clicked.connect(self._validate)
@@ -620,6 +626,7 @@ class JointInversionModule(BaseModule):
         else:
             axis.text(0.5, 0.5, "Load both observations first.", ha="center", va="center")
         self._alignment_canvas.draw_idle()
+        self._alignment_toolbar.update()    # Home and Back go to the new axes
 
     def _load_pairing_table(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -1112,11 +1119,18 @@ class JointInversionModule(BaseModule):
         self._models_canvas = FigureCanvas(self._models_figure)
         self._result_tabs.addTab(self._build_models_page(), "Models")
         self._fit_figure = Figure(figsize=(8, 4), tight_layout=True)
-        self._fit_canvas = FigureCanvas(self._fit_figure); self._result_tabs.addTab(self._fit_canvas, "Data Fit")
+        self._fit_canvas = FigureCanvas(self._fit_figure)
+        fit_page = QWidget(); fit_layout = QVBoxLayout(fit_page)
+        fit_layout.setContentsMargins(0, 0, 0, 0)
+        bar, self._fit_toolbar = toolbar_row(self._fit_canvas, fit_page)
+        fit_layout.addWidget(bar); fit_layout.addWidget(self._fit_canvas, stretch=1)
+        self._result_tabs.addTab(fit_page, "Data Fit")
         baseline_page = QWidget(); baseline_layout = QVBoxLayout(baseline_page)
         self._baseline_view = QTextBrowser(); baseline_layout.addWidget(self._baseline_view)
         self._baseline_figure = Figure(figsize=(8, 3), tight_layout=True)
         self._baseline_canvas = FigureCanvas(self._baseline_figure)
+        bar, self._baseline_toolbar = toolbar_row(self._baseline_canvas, baseline_page)
+        baseline_layout.addWidget(bar)
         baseline_layout.addWidget(self._baseline_canvas, stretch=1)
         self._result_tabs.addTab(baseline_page, "Baseline Comparison")
         self._files = QTextBrowser(); self._result_tabs.addTab(self._files, "Files")
@@ -1181,26 +1195,40 @@ class JointInversionModule(BaseModule):
     }
 
     def _build_models_page(self) -> QWidget:
-        """The Models tab: a colour map per panel above the panels it colours."""
+        """The Models tab: a colour map and colour limits per panel, above the panels.
+
+        Each panel's controls wrap together onto a new line in a narrow window
+        rather than widening the page (widgets.flow_layout).
+        """
         page = QWidget()
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
-        row = QHBoxLayout()
+        row = FlowLayout(spacing=12)
         row.setContentsMargins(6, 2, 6, 2)
-        row.addStretch(1)
         shared = cmaps.colormap_settings(self.state)
         self._model_colour_labels: List[QLabel] = []
         self._model_colours: List[cmaps.ColormapChooser] = []
+        self._model_ranges: List[ColorRange] = []
+        self._model_panel_controls: List[QWidget] = []
+        #: The model each panel's colour range was last set for.
+        self._model_quantities: List[Optional[str]] = [None, None]
         for _panel in range(2):
             label = QLabel("")
             chooser = cmaps.ColormapChooser(cmaps.RESISTIVITY, "viridis", shared=shared)
             chooser.colormapChanged.connect(self._on_model_colormap_changed)
-            for widget in (label, chooser):
-                widget.setVisible(False)   # shown for the panels a result draws
-                row.addWidget(widget)
+            # Six decimals: a susceptibility in SI is a few thousandths.
+            limits = ColorRange(decimals=6, what="this panel's colours")
+            limits.changed.connect(self._on_model_colormap_changed)
+            controls = control_group(label, chooser, limits)
+            controls.setVisible(False)     # shown for the panels a result colours
+            row.addWidget(controls)
             self._model_colour_labels.append(label)
             self._model_colours.append(chooser)
+            self._model_ranges.append(limits)
+            self._model_panel_controls.append(controls)
         layout.addLayout(row)
+        bar, self._models_toolbar = toolbar_row(self._models_canvas, page)
+        layout.addWidget(bar)
         layout.addWidget(self._models_canvas, stretch=1)
         return page
 
@@ -1211,7 +1239,26 @@ class JointInversionModule(BaseModule):
         used.add(panel)
         return cmaps.to_matplotlib(self._model_colours[panel].set_target(key, default))
 
-    def _on_model_colormap_changed(self, _name: str) -> None:
+    def _panel_limits(self, panel: int, name: str, values) -> Tuple[Optional[float], Optional[float]]:
+        """Colour limits for panel ``panel`` drawing model ``name`` from ``values``.
+
+        The limits typed in while that panel's "Lock range" is ticked, or the
+        range of ``values``. A lock holds while the panel shows the same model,
+        through redraws and a re-run, and is let go when it shows another.
+        """
+        limits = self._model_ranges[panel]
+        if self._model_quantities[panel] != name:
+            self._model_quantities[panel] = name
+            limits.blockSignals(True)       # this drawing uses the new range
+            limits.unlock()
+            limits.blockSignals(False)
+        finite = np.asarray(values, dtype=float).ravel()
+        finite = finite[np.isfinite(finite)]
+        if not finite.size:
+            return None, None
+        return limits.limits(float(finite.min()), float(finite.max()))
+
+    def _on_model_colormap_changed(self, _name: str = "") -> None:
         """Redraw the models on screen in the new colours; nothing is re-inverted."""
         if self._result is not None:
             self._plot_models(self._result)
@@ -1233,9 +1280,11 @@ class JointInversionModule(BaseModule):
                     continue
                 try:
                     import pygimli as pg
+                    low, high = self._panel_limits(index - 1, method, values)
                     pg.show(mesh, values, ax=axis,
                             label="Resistivity (Ω m)" if method == "ERT" else "Velocity (m/s)",
-                            cMap=self._panel_colormap(index - 1, method, coloured))
+                            cMap=self._panel_colormap(index - 1, method, coloured),
+                            cMin=low, cMax=high)
                     # pyGIMLi's own labels are always in metres.
                     set_section_axes(axis, mesh=mesh, xlabel="Profile distance",
                                      elevation_name="Elevation / z")
@@ -1251,9 +1300,11 @@ class JointInversionModule(BaseModule):
                 if len(edges) == 3 and len(shape) == 3 and values.size == int(np.prod(shape)):
                     model3d = values.reshape(shape, order="F")
                     y_index = shape[1] // 2
+                    low, high = self._panel_limits(index - 1, method, model3d[:, y_index, :])
                     image = axis.pcolormesh(
                         edges[0], edges[2], model3d[:, y_index, :].T,
                         shading="auto", cmap=self._panel_colormap(index - 1, method, coloured),
+                        vmin=low, vmax=high,
                     )
                     self._models_figure.colorbar(
                         image, ax=axis,
@@ -1276,17 +1327,19 @@ class JointInversionModule(BaseModule):
                 axis.set_xscale("log"); axis.set_xlabel("Resistivity (Ω m)")
                 set_length_axis(axis, "y", "Depth")
             else:
+                low, high = self._panel_limits(0, "FDEM–TDEM", model)
                 image = axis.imshow(model.T, aspect="auto", origin="upper",
-                                    cmap=self._panel_colormap(0, "FDEM–TDEM", coloured))
+                                    cmap=self._panel_colormap(0, "FDEM–TDEM", coloured),
+                                    vmin=low, vmax=high)
                 self._models_figure.colorbar(image, ax=axis, label="Resistivity (Ω m)")
                 axis.set_xlabel("Matched sounding"); axis.set_ylabel("Layer")
             axis.set_title("Shared FDEM–TDEM resistivity model")
-        # A chooser for each panel drawn in colour, and none for a line plot.
-        for panel, (label, chooser) in enumerate(zip(self._model_colour_labels,
-                                                     self._model_colours)):
-            label.setVisible(panel in coloured)
-            chooser.setVisible(panel in coloured)
+        # A colour map and colour limits for each panel drawn in colour, and none
+        # for a line plot.
+        for panel, controls in enumerate(self._model_panel_controls):
+            controls.setVisible(panel in coloured)
         self._models_canvas.draw_idle()
+        self._models_toolbar.update()       # Home and Back go to the new axes
 
     def _plot_fits(self, result: JointInversionResult) -> None:
         self._fit_figure.clear()
@@ -1326,11 +1379,13 @@ class JointInversionModule(BaseModule):
             axis.plot(predicted[:count], "-", lw=1.3, label="Predicted")
             axis.set_title(f"{method} data fit"); axis.set_xlabel("Datum"); axis.legend(); axis.grid(alpha=0.2)
         self._fit_canvas.draw_idle()
+        self._fit_toolbar.update()          # Home and Back go to the new axes
 
     def _plot_baseline(self, result: JointInversionResult) -> None:
         self._baseline_figure.clear()
         if not result.baseline:
             self._baseline_canvas.draw_idle()
+            self._baseline_toolbar.update()
             return
         comparisons: List[Tuple[str, np.ndarray, np.ndarray]] = []
         if result.methods == ("ERT", "SRT"):
@@ -1379,6 +1434,7 @@ class JointInversionModule(BaseModule):
             axis.set_title(method); axis.set_xlabel("Layer / cell")
             axis.grid(alpha=0.2); axis.legend(fontsize=8)
         self._baseline_canvas.draw_idle()
+        self._baseline_toolbar.update()
 
     def _open_output(self) -> None:
         if self._result is None:

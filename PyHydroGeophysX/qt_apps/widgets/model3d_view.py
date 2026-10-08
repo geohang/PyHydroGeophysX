@@ -30,6 +30,9 @@ from PySide6.QtWidgets import (
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.coalesce import Coalesced
+from PyHydroGeophysX.qt_apps.widgets.color_range import ColorRange
+from PyHydroGeophysX.qt_apps.widgets.flow_layout import FlowLayout
+from PyHydroGeophysX.qt_apps.widgets.readout import toolbar_row
 from PyHydroGeophysX.visualization.axis_units import (
     set_length_axis, set_section_axes, to_display_length)
 from PyHydroGeophysX.visualization.pyvista_compat import try_import_pyvista
@@ -49,6 +52,33 @@ def _recolour_actors(actors, name: str) -> int:
         except Exception:  # noqa: BLE001 - an actor without a table is left alone
             pass
     return changed
+
+
+def _rescale_actors(actors, clim) -> int:
+    """Give every colour-mapped PyVista actor the colour limits ``clim``.
+
+    In place, as :func:`_recolour_actors`: the scalar bar reads the same
+    lookup table, and the camera and a dragged clip plane stay as they are.
+    """
+    changed = 0
+    for actor in actors or ():
+        try:
+            actor.mapper.scalar_range = tuple(float(v) for v in clim)
+            changed += 1
+        except Exception:  # noqa: BLE001 - an actor without a mapper is left alone
+            pass
+    return changed
+
+
+def _finite_range(values, positive: bool = False):
+    """``(min, max)`` of the finite values (above zero if ``positive``), or None."""
+    values = np.asarray(values, dtype=float).ravel()
+    keep = np.isfinite(values)
+    if positive:
+        keep &= values > 0
+    if not keep.any():
+        return None
+    return float(values[keep].min()), float(values[keep].max())
 
 
 class VTKVolumeView(QWidget):
@@ -76,12 +106,17 @@ class VTKVolumeView(QWidget):
         self._clip_state = None
         self._has_view = False
         self._actors: list = []   # the colour-mapped actors now on screen
+        self._range_field: Optional[str] = None   # the field the colour range is for
         self._field = QComboBox(self)
         self._field.setToolTip('Physical property or categorical labels to display')
         self._field.currentTextChanged.connect(self._on_field_changed)
         self._colormap = cmaps.ColormapChooser(
             colormap_key, self._cmap, shared=colormaps, parent=self)
         self._colormap.colormapChanged.connect(self._on_colormap_changed)
+        # The colour limits beside the colour map: the field's own (its recorded
+        # limits, or its data range) until "Lock range" holds typed ones.
+        self._range = ColorRange(self, what="the volume's colours")
+        self._range.changed.connect(self._on_range_changed)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -102,7 +137,8 @@ class VTKVolumeView(QWidget):
                 self._plotter = qt_interactor(self, auto_update=False)
                 self._plotter.set_background("white")
                 self._plotter.add_axes()
-                controls = QHBoxLayout()
+                # Wraps in a narrow panel instead of widening the page.
+                controls = FlowLayout(spacing=6)
                 self._clip_cb.toggled.connect(self._redraw)
                 reset = QPushButton("Reset view")
                 reset.clicked.connect(self._reset_camera)
@@ -110,7 +146,7 @@ class VTKVolumeView(QWidget):
                 controls.addWidget(reset)
                 controls.addWidget(self._field)
                 controls.addWidget(self._colormap)
-                controls.addStretch(1)
+                controls.addWidget(self._range)
                 layout.addLayout(controls)
                 layout.addWidget(self._plotter.interactor, stretch=1)
             except Exception as exc:  # noqa: BLE001 - GL failure -> clean fallback
@@ -119,6 +155,7 @@ class VTKVolumeView(QWidget):
         if self._plotter is None:
             self._field.hide()
             self._colormap.hide()   # nothing here to colour
+            self._range.hide()
             self._notice = QLabel(
                 "Interactive 3D view is unavailable in this session.<br>"
                 f"<code>{err}</code><br><br>"
@@ -146,6 +183,7 @@ class VTKVolumeView(QWidget):
         """Keep the model prominent; display options remain in Details."""
         self._info.setVisible(not compact or self._mesh is None)
         self._colormap.setVisible(not compact and self.interactive_available)
+        self._range.setVisible(not compact and self.interactive_available)
         self._clip_cb.setText('Slice' if compact else 'Clip plane (drag to inspect the interior)')
         self._clip_cb.setToolTip('Drag the clipping plane to inspect the model interior.')
 
@@ -266,10 +304,12 @@ class VTKVolumeView(QWidget):
             },
         }
         categorical = bool(self._scalar and self._scalar.lower().endswith(' id'))
-        metadata = self._field_metadata.get(self._scalar, {})
-        if metadata.get('limits'):
-            kwargs['clim'] = tuple(metadata['limits'])
+        clim = None if categorical else self._colour_limits()
+        if clim is not None:
+            kwargs['clim'] = clim
         self._colormap.setEnabled(not categorical)
+        self._range.setEnabled(not categorical)     # labels have no colour scale
+        metadata = self._field_metadata.get(self._scalar, {})
         if categorical:
             # Map sparse IDs to compact colour positions on a plotting array;
             # the dataset and its original IDs remain unchanged.
@@ -390,6 +430,45 @@ class VTKVolumeView(QWidget):
         if self._sections is not None:
             self._sections.set_field(self._scalar, self._field_metadata.get(self._scalar), name)
 
+    # -- colour limits ---------------------------------------------------------
+    def _colour_limits(self):
+        """The volume's colour limits: locked ones, or the field's own; or None.
+
+        The field's own are the limits recorded with it, or else its data
+        range, which is what PyVista would use. A locked range holds across
+        files that carry the same field and is let go for another field.
+        """
+        if self._mesh is None or not self._scalar:
+            return None
+        if self._scalar != self._range_field:
+            self._range_field = self._scalar
+            self._range.blockSignals(True)      # the caller is drawing already
+            self._range.unlock()
+            self._range.blockSignals(False)
+        limits = self._field_metadata.get(self._scalar, {}).get('limits')
+        try:
+            auto = (tuple(float(v) for v in limits[:2]) if limits
+                    else _finite_range(self._mesh[self._scalar]))
+        except Exception:  # noqa: BLE001 - a field PyVista cannot hand back as numbers
+            auto = None
+        if auto is None:
+            return None
+        if not auto[1] > auto[0]:
+            # A constant field: recorded limits are drawn as given, and PyVista
+            # widens a data range of one value itself.
+            return auto if limits else None
+        return self._range.limits(*auto)
+
+    def _on_range_changed(self) -> None:
+        """Rescale the volume on screen in place, or draw it again."""
+        if not self.interactive_available or self._mesh is None:
+            return
+        clim = self._colour_limits()
+        if clim is not None and _rescale_actors(self._actors, clim):
+            self._refresh()
+        else:
+            self._redraw()
+
 
 class Model3DView(QWidget):
     """A regular 3-D grid: a PyVista volume, or matplotlib slices without one.
@@ -414,6 +493,12 @@ class Model3DView(QWidget):
         self._colormap.colormapChanged.connect(self._on_colormap_changed)
         # A page can switch the quantity per model, so the choice waits for one.
         self._colormap.setEnabled(False)
+        # The colour limits beside the colour map. Locked, they hold for the
+        # next model of the same quantity; a log scale ignores a lower limit of
+        # zero or below, which has no colour on it (see _limits).
+        self._range = ColorRange(self, what="the model's colours")
+        self._range.changed.connect(self._on_range_changed)
+        self._range.setEnabled(False)
 
         ok, pv, qt_interactor, err = try_import_pyvista()
         self._pv = pv if ok else None
@@ -426,14 +511,15 @@ class Model3DView(QWidget):
                 self._plotter = qt_interactor(self, auto_update=False)
                 self._plotter.set_background("white")
                 self._plotter.add_axes()
-                bar = QHBoxLayout()
+                # Wraps in a narrow panel instead of widening the page.
+                bar = FlowLayout(spacing=6)
                 self._clip_cb = QCheckBox("Clip plane (drag to slice)")
                 self._clip_cb.setChecked(True)
                 self._clip_cb.toggled.connect(self._redraw_pv)
                 reset = QPushButton("Reset view")
                 reset.clicked.connect(lambda: self._plotter and self._plotter.reset_camera())
                 bar.addWidget(self._clip_cb); bar.addWidget(reset)
-                bar.addWidget(self._colormap); bar.addStretch(1)
+                bar.addWidget(self._colormap); bar.addWidget(self._range)
                 layout.addLayout(bar)
                 layout.addWidget(self._plotter.interactor, stretch=1)
                 self._mode = "pyvista"
@@ -469,6 +555,9 @@ class Model3DView(QWidget):
         from matplotlib.figure import Figure
         self._fig = Figure(figsize=(7.5, 3.8), tight_layout=True)
         self._canvas = FigureCanvasQTAgg(self._fig)
+        # Zoom, pan, Home and Save, with the cursor position (widgets.readout).
+        bar, self._toolbar = toolbar_row(self._canvas, self)
+        layout.addWidget(bar)
         layout.addWidget(self._canvas, stretch=1)
         row = QHBoxLayout()
         row.addWidget(QLabel("Depth"))
@@ -485,8 +574,13 @@ class Model3DView(QWidget):
         self._y_slider = QSlider(Qt.Horizontal)
         self._y_slider.valueChanged.connect(self._slice_moved.request)
         row.addWidget(self._y_slider, stretch=1)
-        row.addWidget(self._colormap)
         layout.addLayout(row)
+        # The colour map and its limits on a row that wraps in a narrow panel
+        # instead of widening the page (widgets.flow_layout).
+        colours = FlowLayout(spacing=6)
+        colours.addWidget(self._colormap)
+        colours.addWidget(self._range)
+        layout.addLayout(colours)
 
     # -- public --------------------------------------------------------------
     def show_model(self, edges: Sequence, model3d, *, label: str = "value",
@@ -507,12 +601,19 @@ class Model3DView(QWidget):
             raise ValueError(
                 f"Model shape {parsed_model.shape} does not match edge-defined shape {expected}."
             )
+        # A locked range holds for the next model of the same quantity, which
+        # is what it is for; a model in other units starts on its own scale.
+        if (label, bool(log_scale)) != (self._label, self._log):
+            self._range.blockSignals(True)      # drawn once, below
+            self._range.unlock()
+            self._range.blockSignals(False)
         self._edges = parsed_edges
         self._model = parsed_model
         self._label = label
         self._cmap = self._colormap.set_target(
             colormap_key or self._colormap.key(), str(cmap))
         self._colormap.setEnabled(True)
+        self._range.setEnabled(True)
         self._log = bool(log_scale)
         if self._mode == "pyvista":
             self._redraw_pv()
@@ -552,6 +653,9 @@ class Model3DView(QWidget):
         grid.cell_data[self._label] = values.flatten(order="F")
         kw = dict(scalars=self._label, cmap=cmaps.to_pyvista(self._cmap), log_scale=self._log,
                   show_edges=False, scalar_bar_args={"title": self._label})
+        clim = self._pv_limits()
+        if clim is not None:
+            kw["clim"] = clim
         try:
             if self._clip_cb.isChecked():
                 actor = self._plotter.add_mesh_clip_plane(grid, **kw)
@@ -567,12 +671,46 @@ class Model3DView(QWidget):
         self._plotter.add_axes()
         self._plotter.reset_camera()
 
+    # -- colour limits ---------------------------------------------------------
+    def _limits(self, auto):
+        """The limits typed in while "Lock range" is ticked, or ``auto``.
+
+        On a log scale a lower limit of zero or below has no colour, so typed
+        limits like that leave the model on its own.
+        """
+        low, high = self._range.limits(*auto)
+        if self._log and low <= 0:
+            return tuple(auto)
+        return low, high
+
+    def _pv_limits(self):
+        """The volume's colour limits, from its data range as PyVista's are."""
+        auto = _finite_range(self._model, positive=self._log)
+        if auto is None or not auto[1] > auto[0]:
+            return None
+        return self._limits(auto)
+
+    def _on_range_changed(self) -> None:
+        """Draw the model with the colour limits now chosen."""
+        if self._model is None:
+            return
+        if self._mode == "pyvista":
+            # In place where possible: drawing the volume again resets the camera.
+            clim = self._pv_limits()
+            if clim is not None and _rescale_actors(self._actors, clim):
+                self._render()
+            else:
+                self._redraw_pv()
+        else:
+            self._redraw_mpl()
+
     def _mpl_norm(self):
         """A colour norm over the whole model, or None when it has nothing to show.
 
-        The limits are computed once per model; the norm is new each call,
-        because the images drawn with one listen to it and would outlive the
-        figure they were cleared from if it were shared.
+        The limits are computed once per model, and replaced by the ones typed
+        in while "Lock range" is ticked; the norm is new each call, because
+        the images drawn with one listen to it and would outlive the figure
+        they were cleared from if it were shared.
         """
         from matplotlib.colors import LogNorm, Normalize
 
@@ -595,7 +733,7 @@ class Model3DView(QWidget):
                 self._mpl_scale = (vmin, vmax)
         if not self._mpl_scale:
             return None
-        return (LogNorm if self._log else Normalize)(*self._mpl_scale)
+        return (LogNorm if self._log else Normalize)(*self._limits(self._mpl_scale))
 
     def _slice_indices(self):
         import numpy as np
@@ -657,6 +795,7 @@ class Model3DView(QWidget):
             )
             ax.axis("off")
             self._canvas.draw_idle()
+            self._toolbar.update()   # Home and Back go to the new axes
             return
         zc = 0.5 * (ez[:-1] + ez[1:])
         yc = 0.5 * (ey[:-1] + ey[1:])
@@ -676,6 +815,7 @@ class Model3DView(QWidget):
             bar = self._fig.colorbar(im, ax=ax, shrink=0.85, label=self._label)
             self._mpl_drawn = {"images": [(im, bar)]}
             self._canvas.draw_idle()
+            self._toolbar.update()
             return
         ax1 = self._fig.add_subplot(121)
         ax2 = self._fig.add_subplot(122)
@@ -692,6 +832,7 @@ class Model3DView(QWidget):
         self._mpl_drawn = {"images": [(im1, bar1), (im2, bar2)], "depth": im1,
                            "section": im2, "zc": zc, "yc": yc}
         self._canvas.draw_idle()
+        self._toolbar.update()
 
     # -- colour map ------------------------------------------------------------
     @property

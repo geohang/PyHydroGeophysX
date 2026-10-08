@@ -2350,3 +2350,37 @@ def test_a_section_without_elevation_reads_depth(top, label, lowest_tick):
         assert min(shown) > 900.0        # 300 m is 984 ft
     else:
         assert min(shown) == 0.0 and max(shown) >= 30.0    # 10 m of depth is 32.8 ft
+
+
+def test_model_comparison_differences_are_exact_and_refuse_mismatched_grids():
+    # The B - A section of two saved models. Unsigned models (uint16 1000 and
+    # 900) must give -100, not a wrapped 65436; grids that sit apart, or hold
+    # a non-finite value, are refused rather than differenced.
+    pv = pytest.importorskip("pyvista")
+    pytest.importorskip("PySide6")
+    import os
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+    from PyHydroGeophysX.qt_apps.widgets.scientific_sections import ModelComparison, require_aligned
+
+    QApplication.instance() or QApplication([])
+
+    def grid(density=1000):
+        mesh = pv.RectilinearGrid([100, 102, 109], [200, 203, 208], [-10, -8, 0])
+        mesh.cell_data["Density contrast (g/cm3)"] = np.full(8, density, dtype=np.uint16)
+        mesh.cell_data["Susceptibility (SI)"] = np.arange(8, dtype=float) / 10
+        return mesh
+
+    a = grid()
+    view = ModelComparison(a, grid(900))
+    np.testing.assert_array_equal(view.sections.axes[2].collections[0].get_array(), -100)
+    np.testing.assert_array_equal(a["Density contrast (g/cm3)"], 1000)
+    view.close()
+    shifted = grid()
+    shifted.x = shifted.x + 1
+    with pytest.raises(ValueError, match="grids differ"):
+        require_aligned(grid(), shifted)
+    broken = grid()
+    broken.cell_data["Susceptibility (SI)"][0] = np.nan
+    with pytest.raises(ValueError, match="nonfinite"):
+        ModelComparison(grid(), broken)
