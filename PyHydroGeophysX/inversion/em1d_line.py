@@ -116,6 +116,34 @@ def _line_block(head: Dict[str, Any],
     return int(found[0]), int(found.size)
 
 
+def _station_name(station_id: Any, index: int) -> str:
+    """A station's own id, or its 1-based place in the file when it has none."""
+    text = "" if station_id is None else str(station_id).strip()
+    return text if text and text.lower() != "nan" else f"sounding {int(index) + 1}"
+
+
+#: Failed soundings named in a line's warning; the rest are counted, and all of
+#: them are listed in the result's ``failed_soundings``.
+_FAILURES_NAMED = 10
+
+
+def _failure_summary(n_inverted: int, n_total: int,
+                     failed: Sequence[Dict[str, Any]]) -> str:
+    """One sentence naming the soundings a line inversion could not fit."""
+    named = []
+    for item in list(failed)[:_FAILURES_NAMED]:
+        where = f"line {item['line']}" + (
+            f", {item['position_m']:.0f} m" if item.get("position_m") is not None else "")
+        reason = str(item.get("reason", "")).strip().splitlines()
+        reason = reason[0][:120].rstrip(". ") if reason else "no reason given"
+        named.append(f"{item['station']} ({where}): {reason}")
+    more = len(failed) - len(named)
+    tail = f"; and {more} more" if more > 0 else ""
+    verb = "is" if len(failed) == 1 else "are"
+    return (f"Inverted {n_inverted} of {n_total} soundings; {len(failed)} failed "
+            f"and {verb} left blank: " + "; ".join(named) + tail + ".")
+
+
 def _line_chi2_summary(
     chi2_per_sounding, data_counts, *, objective_chi2=None,
 ) -> Dict[str, float]:
@@ -858,6 +886,12 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     geometries: List[Dict[str, Any]] = [geom] * n_pos
     per_sounding_outliers: Dict[int, Dict[str, Any]] = {}
     per_sounding_robust: Dict[int, Dict[str, Any]] = {}
+    # Which stations a solve actually fitted, and why each other one was not.
+    # A station that failed keeps a starting or interpolated model in the
+    # arrays below so the coupled solvers have a node there; without this it
+    # was counted as inverted and drawn in the section as if it were data.
+    fitted = np.zeros(n_pos, dtype=bool)
+    failures: Dict[int, str] = {}
     lateral_requested = float(inv.get("lateral_smoothness", 0.0))
     warm_models = np.asarray(initial_models, dtype=float) if initial_models is not None else None
     use_warm_models = (
@@ -920,6 +954,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         if failure is not None:
             chi2_list.append(float("nan"))
             data_count_list.append(0)
+            failures[s] = str(failure)
             log(f"  sounding {s + 1}/{n_pos} failed: {failure}")
             continue
         datasets[s] = data
@@ -937,6 +972,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         res = np.asarray(result["resistivity"], dtype=float).ravel()
         surface_models[s, :] = res
         model[s, 0, :] = res[::-1]  # deepest layer first to match ez ordering
+        fitted[s] = True
         chi2_list.append(float(result.get("chi2", np.nan)))
         data_count_list.append(int(result.get("n_data", 0)))
         if bool(result.get("outliers", {}).get("enabled", False)):
@@ -1093,9 +1129,11 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
             for s, fit, failure in fits:
                 if failure:
                     log(f"  sounding {s+1} failed: {failure}")
+                    failures[s] = str(failure)
                     data_count_list[s] = 0
                     continue
                 surface_models[s] = fit["resistivity"]
+                fitted[s] = True
                 chi2_list[s], data_count_list[s] = float(fit["chi2"]), int(fit["n_data"])
                 if fit.get("robust", {}).get("enabled"):
                     per_sounding_robust[s] = fit["robust"]
@@ -1143,10 +1181,20 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         def build(s: int):
             """Assemble one station's block, or hand back why it could not be."""
             try:
-                return s, build_sounding_block(
+                block = build_sounding_block(
                     datasets[s], geometries[s], station_inv(s), method,
                     position=float(pos_lci[s]), line=int(line_numbers[s]),
-                    label=f"sounding {s + 1}"), None
+                    label=f"sounding {s + 1}")
+                # Checked here because the coupled solve cannot: one station
+                # with a NaN gate made every residual non-finite and the whole
+                # line failed, where it is that one station that cannot be fitted.
+                values = np.concatenate([np.ravel(block.dobs), np.ravel(block.uncertainty)])
+                bad = int(np.count_nonzero(~np.isfinite(values)))
+                if bad or not np.size(block.dobs):
+                    raise ValueError(
+                        f"{bad} of {values.size} data and error values are not finite numbers"
+                        if bad else "no data left to fit")
+                return s, block, None
             except Exception as exc:  # noqa: BLE001 - one bad station is not fatal
                 return s, None, exc
 
@@ -1161,6 +1209,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         for s, block, failure in built:
             if failure is not None:
                 log(f"  sounding {s + 1} excluded from the LCI: {failure}")
+                failures[s] = f"excluded from the coupled solve: {failure}"
                 continue
             sounding_blocks.append(block)
             kept.append(s)
@@ -1174,6 +1223,8 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                     result = invert(datasets[s], geometries[s], station_inv(s), log=log)
                     surface_models[s, :] = np.asarray(
                         result["resistivity"], dtype=float).ravel()
+                    fitted[s] = True
+                    failures.pop(s, None)
                     chi2_list[s] = float(result.get("chi2", np.nan))
                     data_count_list[s] = int(result.get("n_data", 0))
                     if bool(result.get("outliers", {}).get("enabled", False)):
@@ -1183,6 +1234,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                     log(f"  sounding {s + 1}/{n_pos}: "
                         f"chi2={result.get('chi2', float('nan')):.3f}")
                 except Exception as exc:  # noqa: BLE001
+                    failures[s] = str(exc)
                     log(f"  sounding {s + 1}/{n_pos} failed: {exc}")
             model[:, 0, :] = surface_models[:, ::-1]
         else:
@@ -1328,6 +1380,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                                      initial_model=warm, log=log, **lci_kwargs)
             surface_models[kept] = outcome.models
             model[:, 0, :] = surface_models[:, ::-1]
+            fitted[kept] = True
             for index, s in enumerate(kept):
                 chi2_list[s] = float(
                     robust_info["chi2_per_sounding_original"][index]
@@ -1440,13 +1493,18 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                     )
                 )
                 if not usable_local_data:
+                    # Its neighbours' model, so later passes have a node here;
+                    # it has no gates of its own, so it is not reported as data.
                     updated[s] = np.power(10.0, reference_log)
+                    failures.setdefault(s, "no usable gates after selection")
                     continue
                 try:
                     result = invert(
                         datasets[s], geometries[s], local_inv, log=log)
                     updated[s] = np.asarray(
                         result["resistivity"], dtype=float).ravel()
+                    fitted[s] = True
+                    failures.pop(s, None)
                     chi2_list[s] = float(result.get("chi2", np.nan))
                     data_count_list[s] = int(result.get("n_data", 0))
                     if bool(result.get("outliers", {}).get("enabled", False)):
@@ -1454,6 +1512,9 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                     if result.get("robust", {}).get("enabled"):
                         per_sounding_robust[s] = result["robust"]
                 except Exception as exc:  # noqa: BLE001
+                    if not fitted[s]:
+                        # The previous model is only where it started.
+                        failures[s] = str(exc)
                     log(
                         f"  LCI pass {pass_index + 1}, sounding {s + 1} "
                         f"kept previous model: {exc}"
@@ -1515,6 +1576,19 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
             "kept": int(sum(item.get("kept", 0) for item in entries)),
             "dropped": int(sum(item.get("dropped", 0) for item in entries)),
         }
+
+    # A station no solve fitted is blanked rather than left holding the
+    # starting or interpolated model it was given as a node, so the section,
+    # the saved tables and the misfit summaries carry only what was inverted.
+    failed = [s for s in range(n_pos) if not fitted[s]]
+    for s in failed:
+        failures.setdefault(s, "no model was fitted")
+        surface_models[s, :] = np.nan
+        model[s, 0, :] = np.nan
+        chi2_list[s] = float("nan")
+        data_count_list[s] = 0
+        doi_blocks.pop(s, None)
+    n_inverted = n_pos - len(failed)
 
     # How far down the data still constrain each sounding, and what to hide.
     #
@@ -1614,6 +1688,18 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         float(math.sqrt(value)) if np.isfinite(value) and value >= 0 else float("nan")
         for value in chi2_list
     ]
+    failed_soundings = [
+        {"index": int(offset + s), "station": _station_name(station_ids[s], offset + s),
+         "line": int(line_numbers[s]),
+         "position_m": float(pos_lci[s]) if np.isfinite(pos_lci[s]) else None,
+         "reason": failures[s]}
+        for s in failed
+    ]
+    warnings: List[str] = []
+    if failed_soundings:
+        warnings.append(_failure_summary(n_inverted, n_pos, failed_soundings))
+        log(f"{len(failed_soundings)} of {n_pos} soundings failed and are left "
+            "blank in the section.")
     result = {
         "initialization": {
             "neighbor_starting_resistivity": (neighbor_starts.tolist()
@@ -1642,7 +1728,11 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         "data_residual_sounding_median": chi2_summary["data_residual_sounding_median"],
         "chi2_list": chi2_list, "data_residual_list": data_residual_list,
         "chi2_effective_list": chi2_effective_list,
+        # ``n_soundings`` is the section's width, failed stations included as
+        # blank columns; ``n_inverted`` is how many of them a solve fitted.
         "n_soundings": n_pos,
+        "n_inverted": n_inverted, "n_failed": len(failed_soundings),
+        "failed_soundings": failed_soundings, "warnings": warnings,
         "n_layers": n_layers, "n_data": int(sum(data_count_list)),
         "data_count_list": data_count_list, "data_scale": data_scale_used,
         "joint_moments": joint, "lci": bool(lci_report),

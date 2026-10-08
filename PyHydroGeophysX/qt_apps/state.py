@@ -34,6 +34,11 @@ class StudioState:
     #: is the Streamlit bridge/source-project context.
     results_store_root: Optional[Path] = None
     results_store: Optional[ResultsStore] = field(default=None, repr=False)
+    #: True while results go to the built-in fallback folder that nobody chose.
+    #: Every survey of every session lands in that one Project, so the window
+    #: offers to name a Project before data is first added, and says on screen
+    #: which of the two is in use.
+    default_project: bool = False
     hydro_data_dir: Optional[Path] = None
     hydro_output_dir: Optional[Path] = None
     selected_points: List[List[float]] = field(default_factory=list)
@@ -73,6 +78,9 @@ class StudioState:
     #: changed. The window uses it to keep its unsaved-run indicator honest. A
     #: plain callable rather than a signal, so this module stays Qt-free.
     on_runs_changed: Optional[Callable[[], None]] = field(default=None, repr=False)
+    #: Also called, with no arguments, whenever a run may have closed: pages
+    #: holding a run's log open use it to close that log (``modules/base.py``).
+    run_watchers: List[Callable[[], None]] = field(default_factory=list, repr=False)
 
     # -- construction --------------------------------------------------------
     @classmethod
@@ -95,6 +103,7 @@ class StudioState:
             else:
                 base = Path.home() / ".pyhydrogeophysx"
             state.output_dir = base
+            state.default_project = True
             state.result_path = base / "qt_bridge" / RESULT_FILENAME
         return state
 
@@ -160,6 +169,20 @@ class StudioState:
             self._notify_runs_changed()
 
     # -- durable Result Store ----------------------------------------------
+    @property
+    def project_directory(self) -> Optional[Path]:
+        """The active results destination, shared by all project displays."""
+        if self.results_store is not None:
+            return self.results_store.root
+        return self.results_store_root or self.output_dir
+
+    @property
+    def project_name(self) -> str:
+        if self.default_project:
+            return "Default folder"
+        path = self.project_directory
+        return (path.name or str(path)) if path is not None else "No project open"
+
     def set_results_store(self, root: str | Path, *, read_only: bool = False) -> ResultsStore:
         """Open/create the folder that owns durable Qt run history."""
         requested = Path(root).expanduser().resolve()
@@ -212,9 +235,16 @@ class StudioState:
             raise RuntimeError(
                 f"Operation {module_key!r}/{operation_key!r} already has an active persisted run."
             )
-        handle = self.ensure_results_store().begin_run(
-            module_key, operation_key, workflow_id, label=label
-        )
+        store = self.ensure_results_store()
+        # Modules suggest data/operation names. Include the named Project once,
+        # here, so every processing page and every save entry point agrees.
+        # Later user edits remain verbatim, and the run directory keeps its id.
+        label = str(label or "").strip()
+        if not self.default_project:
+            name = self.project_name
+            if label != name and not label.startswith(f"{name} · "):
+                label = f"{name} · {label}" if label else name
+        handle = store.begin_run(module_key, operation_key, workflow_id, label=label)
         self._active_run_handles[key] = handle
         return handle
 
@@ -244,12 +274,13 @@ class StudioState:
         return self._active_run_handles.pop(keys[0], None) if keys else None
 
     def _notify_runs_changed(self) -> None:
-        if self.on_runs_changed is None:
-            return
-        try:
-            self.on_runs_changed()
-        except Exception:  # noqa: BLE001 - an indicator must not break a run
-            pass
+        for watcher in [self.on_runs_changed, *self.run_watchers]:
+            if watcher is None:
+                continue
+            try:
+                watcher()
+            except Exception:  # noqa: BLE001 - an indicator must not break a run
+                pass
 
     def finish_run(
         self, module_name: str, result: Any, operation_id: str = ""
@@ -297,6 +328,21 @@ class StudioState:
             return []
         try:
             return store.save_all_unsaved()
+        finally:
+            self._notify_runs_changed()
+
+    def name_runs(self, names: Dict[str, str]) -> None:
+        """Give runs the names the user typed, keyed by run id.
+
+        Only the label in the run's record changes. The folder keeps its id for
+        a name, because modules hold paths into it that must keep resolving.
+        """
+        store = self.results_store
+        if store is None or not names:
+            return
+        try:
+            for run_id, label in names.items():
+                store.update_run(run_id, label=label)
         finally:
             self._notify_runs_changed()
 

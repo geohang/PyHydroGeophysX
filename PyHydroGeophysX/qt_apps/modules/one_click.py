@@ -715,6 +715,9 @@ class OneClickModule(BaseModule):
                 self.result_state.setText(f'Could not save: {exc}. Your output files remain available.')
 
     def _choose_folder(self):
+        from PyHydroGeophysX.qt_apps.widgets.project_dialogs import confirm_project_for_data
+        if not confirm_project_for_data(self):   # name a Project before the first data
+            return
         folder = QFileDialog.getExistingDirectory(self, 'Select the folder containing survey data and supporting files')
         if folder:
             for key, value in self._catalog_inputs.items():
@@ -783,6 +786,9 @@ class OneClickModule(BaseModule):
         self.catalog_table.setVisible(True)
 
     def _choose_files(self):
+        from PyHydroGeophysX.qt_apps.widgets.project_dialogs import confirm_project_for_data
+        if not confirm_project_for_data(self):   # name a Project before the first data
+            return
         role = self.role.currentData()
         if role.endswith('_dir'):
             path = QFileDialog.getExistingDirectory(self, 'Select model output folder')
@@ -972,6 +978,9 @@ class OneClickModule(BaseModule):
                 payload.update(mode='classify', data_folder=self._data_folder)
             if self._catalog:
                 payload['classification'] = self._catalog_rows()
+            if settings.get('chat_context'):
+                payload['request'] += '\n\n' + settings['chat_context']
+            payload['chat_reference_sources'] = settings.get('chat_reference_sources', [])
             worker = OneClickWorker(payload, self)
             self._worker = self.register_worker(worker)
             worker.progress.connect(self._on_progress)

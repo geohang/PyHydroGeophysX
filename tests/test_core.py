@@ -449,6 +449,30 @@ def test_em_line_damping_honors_its_reference_with_any_start(
     np.testing.assert_allclose(result["model3d"][:, 0, 1:], 30.0, rtol=1e-3)
 
 
+def test_a_failed_em_sounding_is_counted_named_and_left_blank(em_line, monkeypatch):
+    # A station that could not be read kept the starting model the coupled
+    # solve gave it as a node: it was counted among the inverted soundings,
+    # drawn in the section and saved as data, and only the log said otherwise.
+    data = em_line.load_sounding("synthetic.xyz", "TDEM")
+
+    def load(path, method, sounding=0, **options):
+        if sounding == 1:
+            raise ValueError("no gates survive selection")
+        return {**data, "n_soundings": 3}
+
+    monkeypatch.setattr(em_line, "load_sounding", load)
+    options = dict(n_layers=3, parallel_workers=1, auto_starting_model=False,
+                   starting_resistivity=100.0, lateral_smoothness=1.0, smoothness=0.01,
+                   auto_lambda=False, verbose=False)
+    result = em_line.invert_line("synthetic.xyz", "TDEM", {}, options, max_soundings=3,
+                                 doi_blank=False, log=lambda message: None)
+    assert (result["n_soundings"], result["n_inverted"], result["n_failed"]) == (3, 2, 1)
+    assert np.isnan(result["model3d"][1]).all() and np.isfinite(result["model3d"][[0, 2]]).all()
+    assert result["data_count_list"][1] == 0 and np.isnan(result["chi2_list"][1])
+    assert result["warnings"][0].startswith("Inverted 2 of 3 soundings")
+    assert "sounding 2" in result["warnings"][0] and "no gates survive" in result["warnings"][0]
+
+
 def test_a_tem_line_inverts_alike_with_or_without_its_recorded_system():
     # The data sign was read from the caller's geometry alone, while the rest
     # of the forward geometry was completed from the station's recorded system:
@@ -1262,6 +1286,56 @@ def test_the_neighbour_check_corrects_the_stray_pick_and_not_its_neighbour():
     assert time[(-2.0, 9.0)] == pytest.approx(0.030)
 
 
+def test_the_seismic_page_exports_every_shot_at_its_own_geophones(tmp_path, monkeypatch):
+    """The studio's picks file holds every shot, each at its record's own geophones.
+
+    It held only the shot on screen (24 of the example line's 311 picks) and
+    reported success; and on a roll-along line every record's picks were put
+    on the first record's geophones.
+    """
+    pytest.importorskip("PySide6")
+    pytest.importorskip("pyqtgraph")
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+    import csv
+
+    from PySide6.QtCore import QEvent
+    from PySide6.QtWidgets import QApplication, QFileDialog
+
+    from PyHydroGeophysX.data_processing.seismic import (
+        SegyMetadata, SeismicDataset, SeismicTraceHeader)
+    from PyHydroGeophysX.qt_apps.modules.seismic_processing import SeismicProcessingModule
+    from PyHydroGeophysX.qt_apps.state import StudioState
+
+    app = QApplication.instance() or QApplication([])
+    # Three shots on six geophones 2 m apart; the third shot's spread moved on 4 m.
+    headers = [SeismicTraceHeader(field_record=r, trace_number=k + 1, energy_source_point=r,
+                                  source_x=5.0 * r, source_y=0.0, source_z=0.0,
+                                  receiver_x=2.0 * k + (4.0 if r == 3 else 0.0), receiver_y=0.0,
+                                  receiver_z=0.0, offset=0.0)
+               for r in (1, 2, 3) for k in range(6)]
+    line = SeismicDataset("line", np.zeros((200, 18)), np.arange(200) * 2.5e-4, headers,
+                          SegyMetadata(250, 200, 5, 18, 0))
+    page = SeismicProcessingModule(StudioState(output_dir=tmp_path), lambda *args: None)
+    page._set_dataset(line)
+    for index in range(3):
+        page._shot_combo.setCurrentIndex(index)
+        for trace in range(6):
+            page._agent_set_pick({"trace": trace, "time_s": 0.01 + 0.001 * trace})
+    page._shot_combo.setCurrentIndex(0)
+    out = tmp_path / "picks.csv"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *args, **kw: (str(out), ""))
+    page._export_picks()
+    with out.open(encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+    assert sorted({row["field_record"] for row in rows}) == ["1", "2", "3"] and len(rows) == 18
+    assert [float(row["receiver_x"]) for row in rows if row["field_record"] == "3"] == [
+        4.0, 6.0, 8.0, 10.0, 12.0, 14.0]
+    page.close()
+    page.deleteLater()
+    QApplication.sendPostedEvents(page, QEvent.DeferredDelete)
+    app.processEvents()
+
+
 def _ricker(u, f):
     a = (np.pi * f * u) ** 2
     return (1.0 - 2.0 * a) * np.exp(-a)
@@ -1701,6 +1775,30 @@ def test_same_direction_repeats_are_stacks_not_reciprocals(rows, expected, kept)
     np.testing.assert_allclose(
         reciprocal_errors(frame, drop_failed=False)["reciprocalErrRel"], expected)
     assert len(reciprocal_errors(frame, max_reciprocal_error=.05)) == kept
+
+
+def test_time_lapse_step_vtks_are_the_files_pygimli_writes(tmp_path):
+    """Per-step VTKs come from a template cut from pyGIMLi's first file. Each must
+    still be the file pyGIMLi itself writes - a step whose coverage pyGIMLi drops
+    for a NaN included - and the run's mesh must come back without the fields."""
+    pg = pytest.importorskip("pygimli")
+    from PyHydroGeophysX.inversion._time_lapse_workflow import _export_vtks
+
+    mesh = pg.createGrid(x=np.linspace(0., 6., 7), y=np.linspace(-3., 0., 4))
+    rng = np.random.default_rng(0)
+    models = np.exp(rng.normal(4.6, 0.5, size=(mesh.cellCount(), 4)))
+    coverage = rng.normal(-1., 1., size=(4, mesh.cellCount()))
+    coverage[2, 3] = np.nan
+    steps, combined = _export_vtks(tmp_path, mesh, models, coverage, list("abcd"),
+                                   lambda message: None)
+    assert len(steps) == 4 and Path(combined).is_file()
+    for i, path in enumerate(steps):
+        reference = pg.Mesh(mesh)
+        reference["resistivity"] = models[:, i]
+        reference["coverage"] = coverage[i]
+        reference.exportVTK(str(tmp_path / "reference.vtk"))
+        assert Path(path).read_bytes() == (tmp_path / "reference.vtk").read_bytes()
+    assert not list(mesh.dataMap().keys())
 
 
 # --------------------------------------------------------------------------

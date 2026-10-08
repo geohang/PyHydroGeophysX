@@ -23,7 +23,7 @@ from __future__ import annotations
 import json
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 import numpy as np
 
@@ -250,6 +250,50 @@ def load_sequence_item(
         count = int(manifest.get("count", 0))
         position = max(0, min(int(index), count - 1))
         return _unpack_split(manifest["sequence"], archive, position)
+
+
+def _unpack_split_all(node: Mapping[str, Any], archive: Any, count: int) -> list:
+    """Every item of a split node, reading each stacked array once."""
+    kind = node["node"]
+    if kind == "shared":
+        # Stored once, so read once: the items hold the same object.
+        value = unpack(node["value"], archive)
+        return [value] * count
+    if kind == "stack":
+        stacked = np.asarray(archive[str(node["key"])])
+        return [stacked[index] for index in range(count)]
+    if kind == "mapping":
+        columns = {
+            key: _unpack_split_all(value, archive, count)
+            for key, value in dict(node.get("keys") or {}).items()
+        }
+        return [{key: values[index] for key, values in columns.items()}
+                for index in range(count)]
+    return [unpack(value, archive) for value in node["values"]]
+
+
+def load_sequence(source: str | Path, *, kind: Optional[str] = None) -> Tuple[list, Dict[str, Any]]:
+    """Every item of a sequence container, and its manifest's ``meta``.
+
+    :func:`load_sequence_item` opens the archive and decompresses each
+    stacked array to return one item, which is right for one item and
+    quadratic for all of them: reading 3000 soundings back that way took 16 s.
+    Here each array is read once, so the items share what the container
+    stored once and view what it stacked; copy one before changing it in place.
+    """
+    path = Path(source)
+    with np.load(path, allow_pickle=False) as archive:
+        manifest = json.loads(str(archive[_MANIFEST_KEY].item()))
+        stored = str(manifest.get("kind", ""))
+        if kind is not None and stored != str(kind):
+            raise ValueError(
+                f"{path.name} holds {stored or 'an unnamed kind'!r}, expected {kind!r}."
+            )
+        if "sequence" not in manifest:
+            raise ValueError(f"{path.name} is not a sequence container.")
+        count = int(manifest.get("count", 0))
+        items = _unpack_split_all(manifest["sequence"], archive, count) if count else []
+    return items, dict(manifest.get("meta") or {})
 
 
 def sequence_length(source: str | Path) -> int:

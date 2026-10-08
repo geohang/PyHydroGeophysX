@@ -11,7 +11,7 @@ can slice at different depths and positions. The numerics live in the Qt-free
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import pyqtgraph as pg
@@ -37,7 +37,11 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import QRectF, Qt
 
-from PyHydroGeophysX.data_processing.gravmag import extract_profile, qc_products
+from PyHydroGeophysX.data_processing.gravmag import (
+    extract_profile,
+    missing_station_message,
+    qc_products,
+)
 from PyHydroGeophysX.forward.gravmag import forward_bodies
 from PyHydroGeophysX.inversion.gravmag import backend_status
 from PyHydroGeophysX.qt_apps import io_utils, theme
@@ -229,6 +233,10 @@ class GravMagProcessingModule(BaseModule):
                                  "the residual anomaly.")
         self._inv_nxy = self._ispin(22, 8, 40)
         self._inv_nz = self._ispin(12, 4, 30)
+        # The mesh sets how many stations fit in memory, which the line
+        # beside Run states.
+        for spin in (self._inv_nxy, self._inv_nz):
+            spin.valueChanged.connect(lambda _value: self._update_run_scope())
         self._inv_iter = self._ispin(20, 3, 60)
         self._inv_iter.setToolTip(
             "Gauss-Newton iterations. Used by the SimPEG solver only; the linear "
@@ -244,10 +252,17 @@ class GravMagProcessingModule(BaseModule):
         self._station_z.setToolTip("Used only when the loaded table has no fourth z_m column.")
         self._rel_error = self._dspin(0.03, 0.0, 1.0, 0.01, 3)
         self._noise_floor = self._dspin(0.5, 0.0, 1e6, 0.1, 3)
-        self._max_stations = self._ispin(600, 20, 50000)
+        # "all" by default: a default of 600 inverted 600 of a 3,451-station
+        # survey with only a log line saying so. A number is for a quick test,
+        # and the Run group says how many stations it leaves out.
+        self._max_stations = self._ispin(0, 0, 1_000_000)
+        self._max_stations.setSpecialValueText("all")
         self._max_stations.setToolTip(
-            "Maximum stations passed to SimPEG. Larger files are reduced with deterministic "
-            "spatially balanced sampling rather than file-row order.")
+            "How many stations the inversion uses. \"all\" uses every station "
+            "with a value. A number thins a larger survey to an evenly spread "
+            "subset, for a quicker test run; the Run group says how many it "
+            "leaves out.")
+        self._max_stations.valueChanged.connect(lambda _value: self._update_run_scope())
         self._elevation_source = QLabel("Using global station elevation.")
         self._elevation_source.setWordWrap(True)
         theme.set_tone(self._elevation_source, "hint")
@@ -311,6 +326,11 @@ class GravMagProcessingModule(BaseModule):
         self._inv_btn.setIcon(theme.icon("fa5s.cubes", color="#ffffff"))
         self._inv_btn.clicked.connect(self._run_inversion)
         form.addRow(self._inv_btn)
+        # How much of the survey the next run takes, said where Run is pressed.
+        self._run_scope = QLabel("")
+        self._run_scope.setWordWrap(True)
+        self._run_scope.setVisible(False)
+        form.addRow(self._run_scope)
         self._export_btn = QPushButton("Export model…")
         self._export_btn.setIcon(theme.icon("fa5s.file-csv"))
         self._export_btn.setToolTip(
@@ -604,20 +624,29 @@ class GravMagProcessingModule(BaseModule):
         vals = self._fields.get("Observed")
         if vals is None or self._x is None:
             return
-        vmin, vmax = float(np.nanmin(vals)), float(np.nanmax(vals))
+        # A station without a value has no colour to give; it was drawn in
+        # whatever colour NaN cast to, as if it had been measured.
+        shown = np.flatnonzero(np.isfinite(vals) & np.isfinite(self._x) & np.isfinite(self._y))
+        if not shown.size:
+            self._scatter.setData([])
+            return
+        vmin, vmax = float(np.min(vals[shown])), float(np.max(vals[shown]))
         rng = vmax - vmin if vmax > vmin else 1.0
-        norm = (vals - vmin) / rng
+        norm = (vals[shown] - vmin) / rng
         lut = self._cmap.map(norm, mode="byte")
         spots = [{"pos": (float(self._x[i]), float(self._y[i])),
-                  "brush": pg.mkBrush(int(lut[i, 0]), int(lut[i, 1]), int(lut[i, 2])),
+                  "brush": pg.mkBrush(int(lut[k, 0]), int(lut[k, 1]), int(lut[k, 2])),
                   "size": 13, "pen": pg.mkPen("#333333", width=0.5)}
-                 for i in range(self._x.size)]
+                 for k, i in enumerate(shown)]
         self._scatter.setData(spots)
         if show:
             self._tabs.setCurrentWidget(self._plot_widget)
 
     # -- data ----------------------------------------------------------------
     def _load(self) -> None:
+        from PyHydroGeophysX.qt_apps.widgets.project_dialogs import confirm_project_for_data
+        if not confirm_project_for_data(self):   # name a Project before the first data
+            return
         path, _ = QFileDialog.getOpenFileName(self, "Load station file", "", _FILE_FILTER)
         if not path:
             return
@@ -669,6 +698,13 @@ class GravMagProcessingModule(BaseModule):
         self._elevation_source.setText(f"Using {elevation}.")
         self._info.setText(f"{self._source_path.name}<br>{self._x.size} stations · {elevation}")
         self.log(f"Loaded {self._x.size} stations from {self._source_path.name}", "success")
+        loaded, usable, _used = self._station_counts()
+        if usable < loaded:
+            # The maps and the inversion drop them; said once here, and again
+            # in the run's warnings.
+            self.log(missing_station_message(
+                loaded - usable, loaded, "the maps and the inversion"), "warn")
+        self._update_run_scope()
         self._refresh_scatter()
         self._refresh_qc()
         if hasattr(self.state, "register_geophysical_resource"):
@@ -698,6 +734,55 @@ class GravMagProcessingModule(BaseModule):
         self._publish()
         return True
 
+    def _station_counts(self) -> Optional[Tuple[int, int, int]]:
+        """``(loaded, usable, to invert)``: stations in the file, those with every
+        coordinate and the value, and how many of those the next run uses."""
+        values = self._fields.get("Observed")
+        if values is None or self._x is None or self._y is None:
+            return None
+        usable = (np.isfinite(self._x) & np.isfinite(self._y)
+                  & np.isfinite(values) & np.isfinite(self._effective_z()))
+        n_usable = int(np.count_nonzero(usable))
+        cap = int(self._max_stations.value())
+        if cap <= 0:
+            # "all" stops where the sensitivities would not fit in memory.
+            from PyHydroGeophysX.inversion.gravmag import sensitivity_station_limit
+
+            cap = sensitivity_station_limit(int(self._inv_nxy.value()),
+                                            int(self._inv_nz.value()))
+        return int(usable.size), n_usable, min(cap, n_usable)
+
+    def _scope_text(self) -> str:
+        counts = self._station_counts()
+        if counts is None:
+            return ""
+        loaded, usable, used = counts
+        if used >= usable:
+            text = f"Inverting all {usable:,} stations."
+        elif int(self._max_stations.value()) > 0:
+            text = (f"Inverting {used:,} of {usable:,} stations: Max stations is "
+                    f"set to {used:,}, so an evenly spread subset is used.")
+        else:
+            text = (f"Inverting {used:,} of {usable:,} stations: that many fit in "
+                    "memory on this mesh, so an evenly spread subset is used.")
+        if usable < loaded:
+            text += " " + missing_station_message(loaded - usable, loaded, "the run")
+        return text
+
+    def _update_run_scope(self) -> None:
+        """Say beside Run how much of the survey the next run inverts."""
+        if not hasattr(self, "_run_scope"):
+            return   # the errors group is built before the Run group
+        counts = self._station_counts()
+        if counts is None:
+            self._run_scope.setVisible(False)
+            return
+        loaded, usable, used = counts
+        self._run_scope.setText(self._scope_text())
+        theme.set_tone(self._run_scope,
+                       "hint" if used >= usable and usable == loaded else "warn")
+        self._run_scope.setVisible(True)
+
     def _effective_z(self) -> np.ndarray:
         """Return per-station elevation, preferring the optional z_m column."""
         if self._x is None:
@@ -723,7 +808,10 @@ class GravMagProcessingModule(BaseModule):
             field = {"strength_nT": self._B0.value(), "inclination": self._inc.value(),
                      "declination": self._dec.value()}
         try:
-            run = self.begin_persisted_run("gravmag.invert", "gravmag.invert")
+            from PyHydroGeophysX.qt_apps.results_store import run_label_from_files
+            run = self.begin_persisted_run(
+                "gravmag.invert", "gravmag.invert",
+                label=run_label_from_files([getattr(self, "_source_path", None)]))
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not prepare Project run: {exc}", "error")
             return
@@ -761,17 +849,18 @@ class GravMagProcessingModule(BaseModule):
         self._inv_busy.start()
         self._inv_btn.setText("Inverting…")
         self._inv_progress.setVisible(True); self._inv_progress.setRange(0, 0)
-        self.log(f"Running SimPEG 3D {kind} inversion ({self._x.size} stations, "
-                 f"cap {self._max_stations.value()}, detrend {self._detrend.value()})…", "info")
+        self.log(f"Running SimPEG 3D {kind} inversion (detrend "
+                 f"{self._detrend.value()})… {self._scope_text()}", "info")
         # In a process of its own: SimPEG's solves would otherwise hold the
         # window still. The model grid and its cell edges come back with it.
         worker = ProcessWorkflowWorker(recipe_path, project_root, run.outputs_dir,
                                        run.result_path, objects=("edges", "model3d"))
         worker.logged.connect(lambda message: self.log(message, "info"))
         worker.succeeded.connect(self._on_gravmag_workflow_ok)
-        worker.failed.connect(self._on_inversion_failed)
+        worker.failed.connect(
+            lambda message, w=worker: self._on_inversion_failed(message, w.missing_backend))
         worker.finished.connect(self._reset_inv_button)
-        self._inv_worker = self.register_worker(worker)
+        self._inv_worker = self.register_worker(worker, activity="Running the 3D inversion")
         worker.start()
         self._inv_stop.attach(worker, "gravmag.invert")
 
@@ -779,6 +868,8 @@ class GravMagProcessingModule(BaseModule):
         payload = dict(result.summary)
         payload.update(result.objects)
         payload["chi2"] = result.metrics.get("chi2", payload.get("chi2"))
+        # Stations left out or thinned; the workflow keeps them beside the summary.
+        payload["warnings"] = list(result.warnings)
         vtk_ref = next((item for item in result.artifacts if item.format == "vtk"), None)
         if vtk_ref is not None:
             path = Path(vtk_ref.path)
@@ -813,9 +904,14 @@ class GravMagProcessingModule(BaseModule):
         chi_txt = f", chi2={chi2:.1f}" if isinstance(chi2, float) and chi2 == chi2 else ""
         self.log(f"3D {result['kind']} inversion complete: {result['n_cells']} cells, "
                  f"model {rng[0]:.3g}..{rng[1]:.3g}{chi_txt}.", "success")
+        for warning in result.get("warnings") or []:
+            self.log(str(warning), "warn")
         beta = dict(result.get("beta") or {})
         linear = str(self._solver.currentData()) == "linear"
-        extra = {"cells": result.get("n_cells"), "stations used": result.get("n_data"),
+        used, loaded = result.get("n_data"), result.get("n_loaded")
+        extra = {"cells": result.get("n_cells"),
+                 "stations used": (f"{used} of {loaded}" if loaded and used != loaded
+                                   else used),
                  "detrend degree": self._detrend.value()}
         if linear:
             # One solve per beta, so a trial count says more than an iteration count.
@@ -860,10 +956,12 @@ class GravMagProcessingModule(BaseModule):
                             "model_vtk": vtk, "n_cells": result["n_cells"]})
         self.offer_map_export()
 
-    def _on_inversion_failed(self, message: str) -> None:
-        self.fail_persisted_run(message)
-        if ("backend" in message.lower() or "simpeg" in message.lower()
-                or "discretize" in message.lower() or "pymatsolver" in message.lower()):
+    def _on_inversion_failed(self, message: str, missing_backend: bool = False) -> None:
+        self.fail_persisted_run(message, "gravmag.invert")
+        # Told by the exception the run ended on, not by words in its message:
+        # a SimPEG error about a shape or a solve names SimPEG too, and was
+        # reported as SimPEG not being installed.
+        if missing_backend:
             self.log(f"SimPEG 3D inversion needs SimPEG + pymatsolver: {message}", "warn")
         else:
             self.log(f"3D inversion failed: {message}", "error")
@@ -901,7 +999,7 @@ class GravMagProcessingModule(BaseModule):
                   "desc": ("Set parameters. Inversion: solver (linear/simpeg), detrend (0..3), "
                            "lateral_cells, depth_cells, sensitivity_power (depth weighting), "
                            "max_iterations (simpeg solver only), station_elevation. "
-                           "Data errors: relative_error, noise_floor, max_stations. "
+                           "Data errors: relative_error, noise_floor, max_stations (0 = all stations). "
                            "Fit assistance (linear solver only): auto_beta, target_chi2, "
                            "chi2_tolerance, max_beta_trials. "
                            "Magnetics ambient field: field_strength, field_inclination, field_declination.")},

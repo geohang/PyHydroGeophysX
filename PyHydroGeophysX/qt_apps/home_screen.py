@@ -8,7 +8,6 @@ carries the Project group. A page added to the tree appears here too.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from PySide6.QtCore import QPoint, QPointF, QRect, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QConicalGradient, QPainter, QPainterPath, QPen, QPolygonF
@@ -358,13 +357,15 @@ class StudioHome(QWidget):
         actions = _FlowLayout(self._workspace_actions, spacing=2)
         for label, key in _group_pages("Project"):
             actions.addWidget(self._navigate_button(label, key, role="quiet"))
-        for text, signal in (("New Project", self.newProjectRequested),
-                             ("Open Project", self.openProjectRequested)):
+        for text, signal in (("New Project…", self.newProjectRequested),
+                             ("Open Project…", self.openProjectRequested)):
             button = QPushButton(text)
             button.setProperty("homeRole", "quiet")
             button.setCursor(Qt.PointingHandCursor)
             button.clicked.connect(signal.emit)
             actions.addWidget(button)
+            if signal is self.newProjectRequested:
+                self._new_project_button = button
         self._actions_below = None
         self._place_workspace_actions(below=False)
         return card
@@ -463,14 +464,23 @@ class StudioHome(QWidget):
 
         summary = self.state.context_summary()
         self._summary.setPlainText(json.dumps(summary, indent=2, default=str))
-        # The Project folder is also where results go; older contexts name only
-        # one of the two.
-        folder = (summary.get("results_store_root") or summary.get("project_root")
-                  or summary.get("output_dir"))
-        self._workspace_name.setText(Path(folder).name or folder if folder else "No project open")
+        folder = str(self.state.project_directory or "")
+        # The fallback folder is named for what it is, and New Project stands out
+        # while it is in use: it is shared by every session and every survey.
+        default = bool(getattr(self.state, "default_project", False))
+        name = self.state.project_name
+        self._workspace_name.setText(name)
         self._workspace_path.setText(folder or "Choose a project folder to organise your research.")
-        self._workspace_name.setToolTip(folder or "")
+        self._workspace_name.setToolTip(
+            (folder or "") + ("\nShared by every session until you create a project."
+                              if default else ""))
         self._workspace_path.setToolTip(folder or "")
+        button = self._new_project_button
+        if bool(button.property("primary")) != default:
+            button.setProperty("primary", default)
+            button.setProperty("homeRole", "" if default else "quiet")
+            button.style().unpolish(button)
+            button.style().polish(button)
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)

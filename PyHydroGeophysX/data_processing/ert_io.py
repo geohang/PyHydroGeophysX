@@ -20,7 +20,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Callable, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -509,6 +509,11 @@ def survey_timing_for(files: Sequence[str], *, allow_header: bool = True,
     so callers already holding this module do not need a second import. Prefer it
     over :func:`measurement_times_for` whenever the interval between surveys is
     worth reporting, which for a time-lapse survey is always.
+
+    Times come from the file names, then from a date line in each file's header
+    (a BERT file's ``# date: 2026-01-12 05:50:38`` first line), then - with
+    ``allow_mtime`` - from the modification time; ``SurveyTiming.describe(i)``
+    says which one dated file ``i``.
     """
     from PyHydroGeophysX.data_processing.survey_timing import survey_timing
 
@@ -663,7 +668,8 @@ def normalize_for_timelapse(files: Sequence[str], instrument: Optional[str],
                             out_dir: str, log: LogFn = _noop,
                             max_error: Optional[float] = None,
                             engine: str = "pyhydro",
-                            electrode_file: Optional[str] = None):
+                            electrode_file: Optional[str] = None,
+                            error_model: Optional[Mapping[str, Any]] = None):
     """Write native files, filtering each survey independently.
 
     PyHydro keeps each survey's own measurement count and ordering, and so do
@@ -672,6 +678,11 @@ def normalize_for_timelapse(files: Sequence[str], instrument: Optional[str],
     aligns the union of surviving ABMN rows and fills missing rows at 100%
     error. ``electrode_file`` places every survey's electrodes, as it does one
     survey's in :func:`load_ert_container`.
+
+    ``error_model`` (``{"m", "b", "floor"}``, see
+    :func:`reciprocal_model_errors`) replaces every survey's ``err`` column
+    with the reciprocal error model's error for each reading, before the
+    files are written: every engine reads its data errors from that column.
     """
     if engine not in ("pyhydro", "adtlert", "e4d", "r2", "r3t"):
         raise ValueError(f"Unsupported time-lapse engine: {engine}")
@@ -681,6 +692,14 @@ def normalize_for_timelapse(files: Sequence[str], instrument: Optional[str],
                                      electrode_file=electrode_file) for f in files]
     if not containers:
         raise ValueError("Time-lapse normalization needs at least one ERT file.")
+    if error_model:
+        for index, data in enumerate(containers):
+            used = apply_reciprocal_error_model(data, error_model)
+            log(f"Time-lapse data errors step {index}: reciprocal error model, median "
+                f"{100.0 * used['median']:.3g} %, from {100.0 * used['min']:.3g} to "
+                f"{100.0 * used['max']:.3g} %"
+                + (f"; {used['missing']} reading(s) with no resistance kept their own"
+                   if used["missing"] else ""))
     for index, data in enumerate(containers):
         rhoa = np.asarray(data["rhoa"], dtype=float)
         quality = np.isfinite(rhoa) & (rhoa > 0.0)
@@ -708,3 +727,263 @@ def normalize_for_timelapse(files: Sequence[str], instrument: Optional[str],
         log(f"Prepared {i + 1}/{len(files)}: {Path(f).name} -> "
             f"{int(data.size())} data, {int(data.sensorCount())} electrodes")
     return str(base), basenames, containers
+
+
+# ---------------------------------------------------------------------------
+# A survey written as two files: forward and reciprocal readings
+# ---------------------------------------------------------------------------
+#: Fields that are rebuilt, rather than dropped, for the readings of the file
+#: that did not carry them when two files are merged.
+_REBUILT_FIELDS = ("r", "k", "rhoa")
+
+
+def container_resistance(data) -> Optional[np.ndarray]:
+    """Each reading's transfer resistance: ``r`` where the data carry it, else
+    ``rhoa / k``; None when they carry neither."""
+    if data.haveData("r"):
+        return np.asarray(data["r"], dtype=float)
+    if data.haveData("rhoa") and data.haveData("k"):
+        k = np.asarray(data["k"], dtype=float)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            return np.asarray(data["rhoa"], dtype=float) / np.where(np.abs(k) > 1e-12, k, np.nan)
+    return None
+
+
+def reciprocal_scores(data):
+    """The survey's readings paired with their reciprocals, as a frame of
+    ``a, b, m, n, resist`` with each reading's ``reciprocalErrRel`` and
+    ``reciprocalMean`` (``ert_formats.reciprocal_errors``), in the data's order.
+
+    None when the container has no ABMN or no resistance to compare.
+    """
+    import pandas as pd
+
+    from PyHydroGeophysX.data_processing.ert_formats import reciprocal_errors
+
+    try:
+        frame = pd.DataFrame({t: np.asarray(data[t], dtype=np.int64)
+                              for t in ("a", "b", "m", "n")})
+    except Exception:  # noqa: BLE001 - a container without ABMN cannot be paired
+        return None
+    res = container_resistance(data)
+    if res is None or res.size != len(frame):
+        return None
+    # Scored, not filtered: an unpaired measurement, or a pair whose mean is
+    # not finite and non-zero, comes back NaN (unscored), in the file's order.
+    frame["resist"] = res
+    return reciprocal_errors(frame, drop_failed=False)
+
+
+def _without_fields(data, drop):
+    """A copy of ``data`` without the fields named in ``drop``.
+
+    pyGIMLi has no call that removes a field: ``remove`` reads a file of
+    indices and ``removeData`` removes readings, so the container is rebuilt
+    with the sensors and every other field.
+    """
+    import pygimli as pg
+
+    clean = pg.DataContainerERT()
+    for position in data.sensorPositions():
+        clean.createSensor(position)
+    clean.resize(int(data.size()))
+    for token in data.dataMap().keys():
+        if str(token) not in drop:
+            clean.set(str(token), data[str(token)])
+    return clean
+
+
+def merge_reciprocal(forward, reciprocal, snap: float = 1e-3):
+    """One survey from the containers of its forward and its reciprocal file.
+
+    Some instruments write a survey's reciprocal readings to a file of their
+    own, a few minutes after the forward one. Reciprocal errors are formed only
+    between readings of one container, so the two are merged before any QC:
+    the reciprocal readings are appended after the forward ones, on the
+    forward file's electrodes - pyGIMLi's ``DataContainer.add`` matches each
+    reciprocal electrode to the forward electrode at its position, within
+    ``snap`` metres. A reciprocal file whose electrodes are not where the
+    forward file's are describes another layout, and is refused.
+
+    A field only one of the files carries would read zero for the other's
+    readings, which a QC check takes for a failed reading; ``r``, ``k`` and
+    ``rhoa`` are rebuilt for those readings, any other such field is dropped
+    and named in ``info["dropped_fields"]``.
+
+    Returns ``(merged, info)``, ``info`` holding the reading counts.
+    """
+    import pygimli as pg
+    from pygimli.physics import ert as pg_ert
+
+    n_forward, n_reciprocal = int(forward.size()), int(reciprocal.size())
+    sensors = int(forward.sensorCount())
+    # ``add`` reads every field of the container it extends from the one it
+    # appends, and stops on a field only one file has - the forward file's
+    # ``k_file`` when only that file carried its own geometric factors, say.
+    # Both sides are padded with zeros to the same fields first; the loop
+    # below then rebuilds or drops each one-sided field as it always did.
+    def fields(data) -> set:
+        return {str(token) for token in data.dataMap().keys()} - {
+            "a", "b", "m", "n", "valid"}
+
+    padded_forward = pg.DataContainerERT(forward)
+    padded_reciprocal = pg.DataContainerERT(reciprocal)
+    for token in fields(forward) - fields(reciprocal):
+        padded_reciprocal.set(token, np.zeros(n_reciprocal))
+    for token in fields(reciprocal) - fields(forward):
+        padded_forward.set(token, np.zeros(n_forward))
+    merged = padded_forward
+    merged.add(padded_reciprocal, float(snap))
+    extra = int(merged.sensorCount()) - sensors
+    if extra:
+        raise ValueError(
+            f"{extra} electrode(s) of the reciprocal file are not at any position of "
+            "the forward file's electrodes, so the two do not describe one layout. "
+            "Check that both files use the same electrode positions.")
+    mine = np.arange(n_forward + n_reciprocal) < n_forward
+    dropped: List[str] = []
+    rebuilt: List[str] = []
+    tokens = {str(token) for token in merged.dataMap().keys()} - {
+        "a", "b", "m", "n", "valid"}
+    for token in sorted(tokens):
+        if forward.haveData(token) == reciprocal.haveData(token):
+            continue
+        if token in _REBUILT_FIELDS:
+            rebuilt.append(token)
+        else:
+            dropped.append(token)
+    if dropped:
+        merged = _without_fields(merged, dropped)
+    # In this order: k first, then r and rhoa from each other with it.
+    for token in [t for t in ("k", "r", "rhoa") if t in rebuilt]:
+        lacking = ~mine if forward.haveData(token) else mine
+        values = np.asarray(merged[token], dtype=float).copy()
+        if token == "k":
+            values[lacking] = np.asarray(
+                pg_ert.createGeometricFactors(merged, numerical=False), dtype=float)[lacking]
+        else:
+            k = np.asarray(merged["k"], dtype=float)
+            if token == "r":
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    values[lacking] = (np.asarray(merged["rhoa"], dtype=float)
+                                       / np.where(np.abs(k) > 1e-12, k, np.nan))[lacking]
+            else:
+                values[lacking] = (np.asarray(merged["r"], dtype=float) * k)[lacking]
+        merged.set(token, np.nan_to_num(values, nan=0.0, posinf=0.0, neginf=0.0))
+    return merged, {"forward": n_forward, "reciprocal": n_reciprocal,
+                    "total": int(merged.size()), "dropped_fields": dropped,
+                    "rebuilt_fields": rebuilt}
+
+
+def average_reciprocal_pairs(data, scores=None, floor: float = 0.0):
+    """Each quadrupole measured both ways made one reading.
+
+    A reading and its reciprocal are two measurements of one transfer
+    resistance, so the pair is replaced by a single row: the pair's first
+    reading - in a merged survey, the forward file's - with the pair's mean
+    resistance (``reciprocalMean``, repeats in one direction stacked first)
+    and, where the data carry an ``err`` column, the pair's relative
+    difference as its error, never below ``floor``. Its apparent resistivity
+    is scaled with the resistance, so whatever geometric factor formed it
+    still does. Readings with no reciprocal are kept as they are.
+
+    ``scores`` is :func:`reciprocal_scores` of ``data`` when already made.
+    Returns ``(averaged, reciprocal, info)``: the averaged container; each of
+    its rows' relative reciprocal error (NaN where unpaired), so the
+    reciprocal-error check can still judge an averaged pair; and the counts -
+    ``pairs`` averaged, ``removed`` rows, ``readings`` before and ``kept`` -
+    with ``kept_rows``, the index in ``data`` of each averaged row.
+    """
+    import pandas as pd
+    import pygimli as pg
+
+    from PyHydroGeophysX.data_processing.ert_formats import (
+        _reciprocal_direction,
+        _reciprocal_key,
+    )
+
+    n = int(data.size())
+    scores = reciprocal_scores(data) if scores is None else scores
+    out = pg.DataContainerERT(data)
+    if scores is None or not len(scores):
+        return out, np.full(n, np.nan), {"pairs": 0, "removed": 0, "readings": n, "kept": n,
+                                         "kept_rows": np.arange(n)}
+    key, _sign = _reciprocal_key(scores)
+    exchanged = pd.Series(_reciprocal_direction(scores, key), index=scores.index)
+    paired = ((~exchanged).groupby(key).transform("any")
+              & exchanged.groupby(key).transform("any")).to_numpy(dtype=bool)
+    first = ~key.duplicated().to_numpy(dtype=bool)
+    keep = ~paired | first
+    rows = np.flatnonzero(paired & first)
+    error = scores["reciprocalErrRel"].to_numpy(dtype=float)
+    mean = scores["reciprocalMean"].to_numpy(dtype=float)
+    resist = scores["resist"].to_numpy(dtype=float)
+
+    rhoa = np.asarray(out["rhoa"], dtype=float).copy()
+    with np.errstate(divide="ignore", invalid="ignore"):
+        scale = mean[rows] / resist[rows]
+    scaled = np.isfinite(scale)
+    rhoa[rows[scaled]] *= scale[scaled]
+    if out.haveData("k"):
+        k = np.asarray(out["k"], dtype=float)
+        rhoa[rows[~scaled]] = (mean * k)[rows[~scaled]]
+    out.set("rhoa", rhoa)
+    if out.haveData("r"):
+        r = np.asarray(out["r"], dtype=float).copy()
+        r[rows] = mean[rows]
+        out.set("r", r)
+    if out.haveData("err"):
+        err = np.asarray(out["err"], dtype=float).copy()
+        scored = rows[np.isfinite(error[rows])]
+        err[scored] = np.maximum(error[scored], float(floor))
+        out.set("err", err)
+    out.set("valid", pg.Vector(keep.astype(float)))
+    out.removeInvalid()
+    return out, error[keep], {"pairs": int(rows.size), "removed": int((~keep).sum()),
+                              "readings": n, "kept": int(keep.sum()),
+                              "kept_rows": np.flatnonzero(keep)}
+
+
+def reciprocal_model_errors(resistance, m: float, b: float, floor: float = 0.0) -> np.ndarray:
+    """Each reading's relative error from a reciprocal error model.
+
+    The model is the power law ``dR = 10**b * |R|**m`` fitted to the
+    differences of reciprocal pairs against their mean resistance, so the
+    relative error is ``dR / |R| = 10**b * |R|**(m - 1)``, never below
+    ``floor``: the reciprocal difference misses what both directions share
+    (electrode positions, the 2-D assumption), so a reading the model calls
+    near-perfect is not error-free. NaN where ``|R|`` is zero or not finite.
+    """
+    r = np.abs(np.asarray(resistance, dtype=float))
+    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+        err = (10.0 ** float(b)) * np.power(r, float(m) - 1.0)
+    usable = np.isfinite(err) & np.isfinite(r) & (r > 0)
+    return np.where(usable, np.maximum(err, float(floor or 0.0)), np.nan)
+
+
+def apply_reciprocal_error_model(data, model: Mapping[str, Any],
+                                 fallback: float = 0.05) -> Dict[str, Any]:
+    """Set ``data``'s ``err`` column from the reciprocal error ``model``
+    (``{"m", "b", "floor"}``) and say what it came to.
+
+    A reading with no usable resistance keeps the error it had, or
+    ``fallback`` when it had none. Returns the ``median``, ``min`` and
+    ``max`` error set and how many readings were ``missing`` a resistance.
+    """
+    n = int(data.size())
+    resistance = container_resistance(data)
+    if resistance is None:
+        resistance = np.full(n, np.nan)
+    err = reciprocal_model_errors(resistance, float(model["m"]), float(model["b"]),
+                                  float(model.get("floor") or 0.0))
+    missing = ~np.isfinite(err)
+    if missing.any():
+        own = (np.asarray(data["err"], dtype=float) if data.haveData("err")
+               else np.full(n, np.nan))
+        own = np.where(np.isfinite(own) & (own > 0), own, float(fallback))
+        err[missing] = own[missing]
+    data.set("err", err)
+    return {"median": float(np.median(err)) if n else float("nan"),
+            "min": float(err.min()) if n else float("nan"),
+            "max": float(err.max()) if n else float("nan"),
+            "missing": int(missing.sum())}

@@ -11,6 +11,7 @@ from PyHydroGeophysX._internal.optional_dependencies import BackendUnavailable
 from PyHydroGeophysX._internal.utils import noop as _noop
 from PyHydroGeophysX.data_processing import table_io
 from PyHydroGeophysX.data_processing.gravmag import (
+    missing_station_message,
     regional_residual,
     spatially_balanced_indices,
 )
@@ -58,10 +59,35 @@ def station_footprint(x, y) -> Tuple[float, float, float, float]:
     return x0, x1, y0, y1
 
 
+#: Most memory the sensitivity matrix of an "every station" run may take.
+#: SimPEG's integral simulation keeps it dense, one row of n_cells doubles per
+#: station: about 65 kB a station on the default 26 x 26 x 12 mesh, so 250 MB
+#: for 3,900 stations but 3 GB for a 50,000-station airborne survey.
+SENSITIVITY_MEMORY_BUDGET = 2 * 1024 ** 3
+
+
+def sensitivity_station_limit(n_xy: int = 22, n_z: int = 12) -> int:
+    """How many stations an "every station" run inverts on this mesh.
+
+    Their sensitivities must fit in :data:`SENSITIVITY_MEMORY_BUDGET` and in a
+    quarter of the memory free now, whichever is less; a larger survey is
+    thinned to this many, evenly spread, and the run says so.
+    """
+    budget = float(SENSITIVITY_MEMORY_BUDGET)
+    try:
+        import psutil
+
+        budget = min(budget, 0.25 * float(psutil.virtual_memory().available))
+    except Exception:  # noqa: BLE001 - without psutil the fixed budget stands
+        pass
+    n_cells = (int(n_xy) + 4) ** 2 * int(n_z)
+    return max(20, int(budget // (8 * n_cells)))
+
+
 def invert_gravmag(x, y, value, kind: str, *, z: Optional[np.ndarray] = None,
                    field: Optional[Dict[str, Any]] = None, detrend: int = 0,
                    n_xy: int = 22, n_z: int = 12, max_iterations: int = 20,
-                   beta0_ratio: float = 1.0, max_stations: int = 600,
+                   beta0_ratio: float = 1.0, max_stations: Optional[int] = 600,
                    relative_error: float = 0.03, noise_floor: Optional[float] = None,
                    solver: str = "simpeg", auto_beta: bool = True,
                    target_chi2: float = 1.0, chi2_tolerance: float = 0.2,
@@ -77,6 +103,13 @@ def invert_gravmag(x, y, value, kind: str, *, z: Optional[np.ndarray] = None,
     regional trend before inversion. The returned grid uses elevation increasing
     upward. ``random_seed`` makes SimPEG's eigenvalue-based beta estimate
     reproducible. Raises :class:`InversionBackendUnavailable` if SimPEG is missing.
+
+    ``max_stations`` thins a larger survey to a spatially balanced subset;
+    ``None`` or 0 inverts every station whose sensitivities fit in memory
+    (:func:`sensitivity_station_limit`), and thins a survey larger than that. Stations with a missing coordinate or
+    value are left out. Either reduction is named in the result's ``warnings``
+    (and ``n_loaded``, ``n_missing``, ``n_input``, ``n_data`` count it), since a
+    model fitted to part of a survey looks no different from one fitted to all.
     """
     try:
         import pymatsolver
@@ -102,6 +135,12 @@ def invert_gravmag(x, y, value, kind: str, *, z: Optional[np.ndarray] = None,
         if z.size != x.size:
             raise ValueError("z must be omitted or contain one elevation per station.")
     good = np.isfinite(x) & np.isfinite(y) & np.isfinite(value) & np.isfinite(z)
+    n_loaded = int(x.size)
+    n_missing = int(n_loaded - np.count_nonzero(good))
+    warnings = []
+    if n_missing:
+        warnings.append(missing_station_message(n_missing, n_loaded, "the inversion"))
+        log(warnings[-1])
     x, y, value, z = x[good], y[good], value[good], z[good]
     if x.size < 20:
         raise ValueError("Need at least ~20 stations for a stable inversion.")
@@ -109,9 +148,19 @@ def invert_gravmag(x, y, value, kind: str, *, z: Optional[np.ndarray] = None,
         _, value = regional_residual(x, y, value, degree=int(detrend))
         log(f"Removed a degree-{int(detrend)} regional trend before inversion.")
     n_input = int(x.size)
-    if x.size > int(max_stations):
-        idx = spatially_balanced_indices(x, y, int(max_stations))
+    cap = int(max_stations or 0)
+    reason = f"Max stations is set to {cap:,}"
+    if cap <= 0:
+        cap = sensitivity_station_limit(n_xy, n_z)
+        need = n_input * (int(n_xy) + 4) ** 2 * int(n_z) * 8 / 1024 ** 2
+        size = f"{need / 1024:.1f} GB" if need >= 1024 else f"{need:.0f} MB"
+        reason = f"every station would need {size} of memory for the sensitivities"
+    if 0 < cap < x.size:
+        idx = spatially_balanced_indices(x, y, cap)
         x, y, value, z = x[idx], y[idx], value[idx], z[idx]
+        warnings.append(f"Inverting {x.size:,} of {n_input:,} stations: {reason}, so "
+                        "an evenly spread subset was used.")
+        log(warnings[-1])
     log(f"{kind} inversion: {x.size} stations")
 
     x0, x1, y0, y1 = station_footprint(x, y)
@@ -204,7 +253,8 @@ def invert_gravmag(x, y, value, kind: str, *, z: Optional[np.ndarray] = None,
             kind, mesh, mrec, nx, ny, nz, ox, oy, oz, csx, csy, csz,
             m_label, m_cmap, chi2, value.size, n_input, relative_error,
             noise_floor, convergence, beta_report, out_dir,
-            fit=_station_fit(sim, mrec, x, y, value, std))
+            fit=_station_fit(sim, mrec, x, y, value, std),
+            survey={"n_loaded": n_loaded, "n_missing": n_missing, "warnings": warnings})
 
     invprob = inverse_problem.BaseInvProblem(dmis, reg, opt)
     # ``on_disk`` was added in newer SimPEG releases. ``save_txt=False`` keeps
@@ -227,7 +277,8 @@ def invert_gravmag(x, y, value, kind: str, *, z: Optional[np.ndarray] = None,
         kind, mesh, mrec, nx, ny, nz, ox, oy, oz, csx, csy, csz,
         m_label, m_cmap, chi2, value.size, n_input, relative_error,
         noise_floor, convergence, beta_report, out_dir,
-        fit=_station_fit(sim, mrec, x, y, value, std))
+        fit=_station_fit(sim, mrec, x, y, value, std),
+        survey={"n_loaded": n_loaded, "n_missing": n_missing, "warnings": warnings})
 
 
 def _station_fit(sim, model, x, y, value, std) -> Dict[str, Any]:
@@ -248,7 +299,8 @@ def _station_fit(sim, model, x, y, value, std) -> Dict[str, Any]:
 
 def _gravmag_payload(kind, mesh, mrec, nx, ny, nz, ox, oy, oz, csx, csy, csz,
                      m_label, m_cmap, chi2, n_data, n_input, relative_error,
-                     noise_floor, convergence, beta_report, out_dir, fit=None):
+                     noise_floor, convergence, beta_report, out_dir, fit=None,
+                     survey=None):
     """Shared result shape for both the SimPEG and the linear solver paths."""
     model3d = mrec.reshape((nx, ny, nz), order="F")
     ex = ox + csx * np.arange(nx + 1)
@@ -263,6 +315,11 @@ def _gravmag_payload(kind, mesh, mrec, nx, ny, nz, ox, oy, oz, csx, csy, csz,
         "model_range": [float(np.nanmin(mrec)), float(np.nanmax(mrec))],
         "beta": beta_report,
         "fit": dict(fit or {}),
+        # How many stations were loaded, left out as missing, and the warnings
+        # naming every reduction (see invert_gravmag).
+        "n_loaded": int((survey or {}).get("n_loaded", n_input)),
+        "n_missing": int((survey or {}).get("n_missing", 0)),
+        "warnings": list((survey or {}).get("warnings") or []),
     }
     if out_dir:
         base = table_io.ensure_dir(Path(out_dir) / "gravmag_inversion")

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 import csv
-from dataclasses import fields, is_dataclass
+from dataclasses import fields, is_dataclass, replace
 import inspect
 import json
 from pathlib import Path
@@ -198,6 +198,10 @@ def _legacy_result(
         objects = {"domain_result": result}
     status = str(raw.pop("status", "ok"))
     artifacts = []
+    # One checksum per file. A time-lapse run lists every per-step VTK twice,
+    # in data_paths and in vtk_step_paths, and reading 420 of them a second
+    # time cost seconds - minutes on a large mesh - after the run had finished.
+    checked: Dict[Path, ArtifactRef] = {}
     summary: Dict[str, Any] = {}
     for key, value in raw.items():
         if key == "output_dir":
@@ -217,13 +221,18 @@ def _legacy_result(
                 path_values = value
         for index, candidate in enumerate(path_values):
             path = Path(str(candidate))
-            if path.is_file():
-                artifacts.append(ArtifactRef.from_path(
+            if path in checked:
+                artifacts.append(replace(
+                    checked[path], artifact_id=f"{spec.workflow_id}:{key}:{index}",
+                    kind=key.rstrip("s")))
+            elif path.is_file():
+                checked[path] = ArtifactRef.from_path(
                     path,
                     artifact_id=f"{spec.workflow_id}:{key}:{index}",
                     kind=key.rstrip("s"),
                     base_dir=context.project_root,
-                ))
+                )
+                artifacts.append(checked[path])
         ok, encoded = _json_value(value)
         if ok:
             summary[key] = encoded
@@ -450,6 +459,14 @@ def run_ert_single(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult
         **options,
     )
     workflow_result = _legacy_result(spec, context, result)
+    # The page stages the survey under a generic name, so the file it came from
+    # and when it was acquired survive only in what the page recorded with it.
+    # Saved results heads the model by that time, as the ERT page does.
+    recorded = dict(source.metadata or {})
+    for key, name in (("source_file", "survey_file"), ("acquired", "survey_time"),
+                      ("acquired_from", "survey_time_source")):
+        if recorded.get(key):
+            workflow_result.summary[name] = str(recorded[key])
     manager = workflow_result.objects.pop("mgr", None)
     if manager is not None:
         workflow_result.objects["manager"] = manager
@@ -629,6 +646,7 @@ def run_joint(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
 def run_gravmag_process(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
     from PyHydroGeophysX.data_processing.gravmag import (
         extract_profile,
+        missing_station_message,
         qc_products,
         save_grid,
     )
@@ -691,6 +709,8 @@ def run_gravmag_process(spec: WorkflowSpec, context: RunContext) -> WorkflowRunR
         },
         metrics=qc["stats"],
         artifacts=artifacts,
+        warnings=([missing_station_message(int(qc["n_missing"]), int(x.size), "the maps")]
+                  if qc.get("n_missing") else []),
         provenance={"workflow_id": spec.workflow_id, "schema_version": spec.schema_version},
         objects={"qc": qc, "profile": profile},
     )
@@ -1001,8 +1021,12 @@ def run_mt_invert_profile(spec: WorkflowSpec, context: RunContext) -> WorkflowRu
             "strike_deg": float(strike),
             "modes": list(result.modes),
             "cells": int(result.resistivity.size),
+            # Impedance values each site gave the fit; a site that gave fewer
+            # than the profile asks for is named in the warnings.
+            "data_per_site": [int(v) for v in result.data_per_site],
         },
         metrics={"rms": float(result.rms), "iterations": len(result.history)},
+        warnings=list(result.warnings),
         artifacts=[
             _artifact(section_path, context=context, artifact_id="mt2d:section:npz", kind="mt2d_section",
                       metadata={"field": "Resistivity", "units": "ohm m", "log_scale": True,

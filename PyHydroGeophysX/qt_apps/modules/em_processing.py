@@ -195,6 +195,15 @@ class EMProcessingModule(BaseModule):
         self._project_layer_thicknesses: Optional[np.ndarray] = None
         self._ttem_gex_path: Optional[Path] = None
         self._ttem_tfi_path: Optional[Path] = None
+        #: ``(key, soundings)``: every sounding of the loaded survey, read once
+        #: on a worker thread under the load settings ``key`` names. Station
+        #: changes, the observed-data resource and Run are served from it, so
+        #: none of them walks the file again (see _ensure_survey).
+        self._survey: Optional[Tuple[Any, List[Dict[str, Any]]]] = None
+        self._survey_job: Optional[Tuple[Any, Any]] = None   # (worker, key)
+        self._survey_token = 0
+        self._loaded_key: Any = None   # the settings self._data was read under
+        self._summary_key: Any = None  # ... and the survey table was drawn for
 
         root = QHBoxLayout(self)
         self._tabs = QTabWidget()
@@ -904,22 +913,28 @@ class EMProcessingModule(BaseModule):
         """Re-read the survey table and the acquisition description.
 
         The table is a whole-file pass, so it is only worth doing for a project
-        that has one; a single-sounding text file has nothing to summarise. It
-        is cheap where it applies, about a tenth of a second for 929 stations.
+        that has one; a single-sounding text file has nothing to summarise.
+        It describes the survey, not the station on screen, so a station click
+        under the same load settings keeps it: redrawing it cost 0.3 s of each
+        click on a 564-station TEM2Go project.
         """
         self._metadata_view.set_metadata(self._data)
-        summary = None
-        source = self._source_path
-        if source is not None and self._data is not None and self._data.get("temcompany"):
-            try:
-                summary = em_data.survey_summary(
-                    str(source), moment=str(self._tem_moment.currentText()),
-                    **self._gate_qc())
-            except Exception as exc:  # noqa: BLE001 - a view must not stop a load
-                self.log(f"Survey summary unavailable: {exc}")
-                summary = None
-        self._survey_view.set_summary(summary)
-        self._signal_view.set_summary(summary)
+        key = self._loaded_key
+        if key is None or key != self._summary_key:
+            summary = None
+            source = self._source_path
+            if (source is not None and self._data is not None
+                    and self._data.get("temcompany")):
+                try:
+                    summary = em_data.survey_summary(
+                        str(source), moment=str(self._tem_moment.currentText()),
+                        **self._gate_qc())
+                except Exception as exc:  # noqa: BLE001 - a view must not stop a load
+                    self.log(f"Survey summary unavailable: {exc}")
+                    summary = None
+            self._survey_view.set_summary(summary)
+            self._signal_view.set_summary(summary)
+            self._summary_key = key
         # A response modelled for the station before this one says nothing about
         # this one, so the overlay goes when the station changes.
         self._gate_view.set_model(None)
@@ -1021,12 +1036,20 @@ class EMProcessingModule(BaseModule):
         self._line_spacing = self._dspin(50.0, 0.1, 100000.0, 10.0, 2)
         self._line_spacing.setToolTip("Uniform sounding spacing used for the section's x-axis "
                                       "when no geometry file is loaded.")
-        # The ceiling is raised to the station count when a survey is loaded. A
-        # fixed one clamps the value silently: a QSpinBox told to hold 887 with a
-        # maximum of 500 simply reads 500 afterwards, and the 387 stations past
-        # it never reach the inversion.
-        self._line_max = self._ispin(12, 1, 100000)
-        self._line_max.setToolTip("Cap on how many soundings to invert (keeps a long line fast).")
+        # "all" by default. A default of 12 inverted 12 of a generic table's
+        # soundings with only a log line saying so; a cap is now something set
+        # on purpose, for a quick test, and the Run group says what it leaves
+        # out. The ceiling is far above any survey, because a QSpinBox clamps
+        # silently: told to hold 887 with a maximum of 500 it reads 500.
+        self._line_max = self._ispin(0, 0, 1_000_000)
+        self._line_max.setSpecialValueText("all")
+        self._line_max.setToolTip(
+            "How many soundings to invert, counted from the first station of "
+            "the survey (or of the chosen line). \"all\" inverts every one; a "
+            "number is for a quick test, and the Run group says how many it "
+            "leaves out. Stations are ordered by line, so a cap drops the last "
+            "lines rather than thinning the survey.")
+        self._line_max.valueChanged.connect(lambda _value: self._update_run_scope())
         # Which survey lines to run. A survey whose lines differ in data quality
         # cannot be served by one set of settings, and the lateral constraint
         # never crosses a line anyway, so a line inverted on its own is tied
@@ -1042,6 +1065,7 @@ class EMProcessingModule(BaseModule):
             "Use it where one line is noisier than the rest: run the good lines "
             "at the usual settings, then that line with a lower retention "
             "floor, and export each section separately.")
+        self._line_pick.currentIndexChanged.connect(lambda _index: self._update_run_scope())
         self._lci_mode = QComboBox()
         for label, key in (("Simultaneous", "simultaneous"),
                            ("Block-coordinate", "sequential"),
@@ -1296,6 +1320,11 @@ class EMProcessingModule(BaseModule):
         self._inv_btn.setIcon(theme.icon("fa5s.bullseye", color="#ffffff"))
         self._inv_btn.clicked.connect(self._run_inversion)
         form.addRow(self._inv_btn)
+        # How much of the survey the next run takes, said where Run is pressed.
+        self._run_scope = QLabel("")
+        self._run_scope.setWordWrap(True)
+        self._run_scope.setVisible(False)
+        form.addRow(self._run_scope)
         self._backend_label = QLabel()
         self._backend_label.setWordWrap(True)
         self._backend_label.setStyleSheet("font-size:8pt;")
@@ -1576,7 +1605,10 @@ class EMProcessingModule(BaseModule):
             and np.isclose(project_layers[0], self._min_thick.value(), rtol=1e-3)
             and np.isclose(project_layers[-1], self._max_thick.value(), rtol=1e-3)
         ):
-            result["layer_thicknesses"] = project_layers.copy()
+            # Plain floats: these settings are written into the run's recipe,
+            # which refuses arrays, so a TEMcompany project's own layering
+            # stopped every line inversion before it started.
+            result["layer_thicknesses"] = [float(v) for v in project_layers]
         defaults = dict(self._data.get("inversion_defaults", {})) if self._data else {}
         if defaults.get("reference_distance") is not None:
             result["reference_distance"] = float(defaults["reference_distance"])
@@ -1619,6 +1651,9 @@ class EMProcessingModule(BaseModule):
 
     # -- data ----------------------------------------------------------------
     def _load(self) -> None:
+        from PyHydroGeophysX.qt_apps.widgets.project_dialogs import confirm_project_for_data
+        if not confirm_project_for_data(self):   # name a Project before the first data
+            return
         if self._data_format.currentText() in _TEM_FORMATS:
             selected = select_directory(self, "Load EM project folder", Path.cwd())
             if selected is None:
@@ -1721,6 +1756,10 @@ class EMProcessingModule(BaseModule):
         self._load_sounding(0)
         if self._data is None:
             return {"status": "failed", "error": f"Could not load example '{example_id}'."}
+        if int(self._line_max.value()) >= int(self._data.get("n_soundings", 1)):
+            # An example's own count is "all" of it; left as a number it
+            # would cap the next survey loaded after it.
+            self._line_max.setValue(0)
         self._example_note.setText(f"Example: {spec['note']}")
         self._example_note.setVisible(True)
         channels = (
@@ -1739,31 +1778,127 @@ class EMProcessingModule(BaseModule):
             "note": spec["note"],
         }
 
+    def _load_options(self, area_override: Optional[float]) -> Dict[str, Any]:
+        """The reader's keywords for what the load controls currently say."""
+        return {
+            "moment": self._tem_moment.currentText(),
+            "use_flags": bool(self._use_flags.isChecked()),
+            "max_relative_std": (float(self._tail_cut.value())
+                                 if self._tail_cut.value() > 0 else None),
+            "gate_rejection": str(self._gate_rejection.currentData()),
+            "reject_negative": not bool(self._keep_negative.isChecked()),
+            "min_gates_per_moment": self._min_gates_per_moment(),
+            "ttem_loop_area": area_override,
+            "ttem_gex_path": str(self._ttem_gex_path or ""),
+            "ttem_tfi_path": str(self._ttem_tfi_path or ""),
+        }
+
+    def _survey_key(self, options: Dict[str, Any]) -> Any:
+        """What a read of the survey depends on: the file, the method, the settings.
+
+        The tTEM keywords only reach a raw tTEM reader, so for every other
+        format they are left out; otherwise the first load, which takes the
+        loop area from the file, and every later one, which takes it from the
+        field, would never share a read.
+        """
+        import json
+
+        source = str(self._source_path)
+        ttem = em_data.is_ttem_source(source)
+        relevant = {key: value for key, value in options.items()
+                    if ttem or not key.startswith("ttem_")}
+        return (source, self._method.currentText(),
+                json.dumps(relevant, sort_keys=True, default=str))
+
+    def _forget_survey(self) -> None:
+        """Drop the survey read, and any read still running: the data changed."""
+        if self._survey_job is not None:
+            self._survey_job[0].cancel()
+            self._survey_job = None
+        self._survey_token += 1
+        self._survey = None
+        self._summary_key = None
+
+    def _survey_soundings(self, key: Any) -> Optional[List[Dict[str, Any]]]:
+        """The whole survey read under ``key``, or None while it is not in hand."""
+        if self._survey is not None and self._survey[0] == key:
+            return self._survey[1]
+        return None
+
+    def _ensure_survey(self, key: Any, options: Dict[str, Any], count: int) -> None:
+        """Read every sounding once, on a worker thread, under these settings.
+
+        A multi-sounding file was walked whole on the window's thread for every
+        station clicked - once to publish the survey for the joint page, again
+        when the run stored its input - and a generic table was re-parsed once
+        per sounding on each walk: 38 s per click at 3000 soundings. Now one
+        read per file and load setting, off the UI thread and named in the
+        status bar while it runs.
+        """
+        if self._survey_soundings(key) is not None:
+            return
+        if self._survey_job is not None:
+            if self._survey_job[1] == key:
+                return
+            self._survey_job[0].cancel()
+        self._survey = None
+        self._survey_token += 1
+        token = self._survey_token
+        from PyHydroGeophysX.qt_apps.workers import TaskWorker
+
+        worker = TaskWorker(em_data.read_survey, str(self._source_path),
+                            self._method.currentText(), with_cancel=True, **options)
+        worker.succeeded.connect(
+            lambda soundings: self._survey_ready(token, key, soundings))
+        worker.failed.connect(lambda message: self._survey_failed(token, message))
+        self._survey_job = (worker, key)
+        self.register_worker(worker, activity=f"Reading the survey ({count:,} soundings)")
+        worker.start()
+
+    def _survey_ready(self, token: int, key: Any, soundings: List[Dict[str, Any]]) -> None:
+        if token != self._survey_token:
+            return
+        self._survey_job = None
+        self._survey = (key, list(soundings))
+        if key == getattr(self, "_loaded_key", None):
+            # The joint page and the map now get the whole survey, read under
+            # the same gate selection the page shows.
+            self._register_observed_resource()
+
+    def _survey_failed(self, token: int, message: str) -> None:
+        if token != self._survey_token:
+            return
+        self._survey_job = None
+        self.log(f"Could not read every sounding of the survey: {message}", "warn")
+
     def _load_sounding(self, index: int, *, reset_geometry: bool = True) -> None:
         if self._source_path is None:
             return
-        area_override = (
-            None if reset_geometry and self._data is None
-            else float(self._loop_area.value())
-        )
+        fresh = reset_geometry and self._data is None
+        area_override = None if fresh else float(self._loop_area.value())
+        if fresh:
+            # Load data… on the same file re-reads it: it may have changed.
+            self._forget_survey()
+        options = self._load_options(area_override)
+        key = self._survey_key(options)
+        survey = self._survey_soundings(key)
         try:
-            self._data = em_data.load_sounding(
-                str(self._source_path), self._method.currentText(), sounding=int(index),
-                moment=self._tem_moment.currentText(),
-                use_flags=bool(self._use_flags.isChecked()),
-                max_relative_std=(float(self._tail_cut.value())
-                                  if self._tail_cut.value() > 0 else None),
-                gate_rejection=str(self._gate_rejection.currentData()),
-                reject_negative=not bool(self._keep_negative.isChecked()),
-                min_gates_per_moment=self._min_gates_per_moment(),
-                ttem_loop_area=area_override,
-                ttem_gex_path=str(self._ttem_gex_path or ""),
-                ttem_tfi_path=str(self._ttem_tfi_path or ""))
+            if survey is not None and 0 <= int(index) < len(survey):
+                self._data = dict(survey[int(index)])
+            else:
+                self._data = em_data.load_sounding(
+                    str(self._source_path), self._method.currentText(),
+                    sounding=int(index), **options)
         except Exception as exc:  # noqa: BLE001
             self._data = None
             self.log(f"Could not load sounding: {exc}", "error")
             self._info.setText(f"Load failed: {exc}")
             return
+        self._loaded_key = key
+        if int(self._data.get("n_soundings", 1)) > 1:
+            self._ensure_survey(key, options, int(self._data.get("n_soundings", 1)))
+        else:
+            self._forget_survey()
         if self._data.get("moments"):
             n = sum(
                 np.asarray(item["times"]).size
@@ -1806,6 +1941,7 @@ class EMProcessingModule(BaseModule):
             f"({format_txt}{moment_txt}, {kind}){snd_txt}")
         self.log(f"Loaded sounding {self._source_path.name}{snd_txt}", "success")
         self._register_observed_resource()
+        self._update_run_scope()
         self._plot_data()
         self._refresh_survey_views()
 
@@ -1836,6 +1972,60 @@ class EMProcessingModule(BaseModule):
         value = self._line_pick.currentData()
         return None if value is None else [int(value)]
 
+    def _line_scope(self) -> Optional[Dict[str, Any]]:
+        """What the next line run takes: how many soundings of how many, and
+        which survey lines a cap leaves out. ``None`` for a single sounding.
+
+        Counted the way ``invert_line`` counts, from the first station of the
+        chosen line (or of the survey), so what the Run group says is what runs.
+        """
+        data = self._data or {}
+        total = int(data.get("n_soundings", 1))
+        if total <= 1:
+            return None
+        lines = np.asarray(data.get("line_numbers", []), dtype=int).ravel()
+        selected = self._selected_lines()
+        first, available = 0, total
+        if selected and lines.size >= total:
+            found = np.flatnonzero(np.isin(lines[:total], selected))
+            if found.size:
+                first, available = int(found[0]), int(found.size)
+        cap = int(self._line_max.value())
+        count = available if cap <= 0 else min(cap, available)
+        dropped: List[int] = []
+        if count < available and lines.size >= first + available:
+            block = lines[first:first + available]
+            dropped = sorted(set(block[count:].tolist()) - set(block[:count].tolist()))
+        return {"count": count, "available": available, "dropped_lines": dropped,
+                "line": selected[0] if selected else None}
+
+    def _scope_text(self, scope: Dict[str, Any]) -> str:
+        """The scope in a sentence, for the Run group and the run's warnings."""
+        where = f" on line {scope['line']}" if scope["line"] is not None else ""
+        if scope["count"] >= scope["available"]:
+            return f"Inverting all {scope['available']:,} soundings{where}."
+        text = (f"Inverting {scope['count']:,} of {scope['available']:,} "
+                f"soundings{where}: Max soundings is set to {scope['count']:,}.")
+        if scope["dropped_lines"]:
+            gone = ", ".join(str(v) for v in scope["dropped_lines"])
+            text += (f" Line{'s' if len(scope['dropped_lines']) > 1 else ''} "
+                     f"{gone} {'are' if len(scope['dropped_lines']) > 1 else 'is'} "
+                     "left out.")
+        return text
+
+    def _update_run_scope(self) -> None:
+        """Say beside Run how much of the survey the next run inverts."""
+        if not hasattr(self, "_run_scope"):
+            return   # the Line group is built before the Run group
+        scope = self._line_scope()
+        if scope is None:
+            self._run_scope.setVisible(False)
+            return
+        self._run_scope.setText(self._scope_text(scope))
+        theme.set_tone(self._run_scope,
+                       "hint" if scope["count"] >= scope["available"] else "warn")
+        self._run_scope.setVisible(True)
+
     def _register_observed_resource(self) -> None:
         """Publish the active sounding or line, including map coordinates when loaded."""
         if (self._data is None or self._source_path is None
@@ -1852,26 +2042,21 @@ class EMProcessingModule(BaseModule):
             else self._data["times"].size
         )
         resource_payload: Any = dict(self._data)
-        if n_soundings > 1:
-            if not self._data.get("temcompany"):
-                resource_payload = {
-                    "soundings": [
-                        em_data.load_sounding(
-                            str(self._source_path), method, sounding=index,
-                            moment=self._tem_moment.currentText()
-                        )
-                        for index in range(n_soundings)
-                    ]
-                }
-                if (self._geom_x is not None and self._geom_y is not None
-                        and self._geom_x.size >= n_soundings
-                        and self._geom_y.size >= n_soundings):
-                    resource_payload["coordinates"] = np.column_stack(
-                        (self._geom_x[:n_soundings], self._geom_y[:n_soundings])
-                    )
-            # TEMcompany projects are kept lazy here: loading all SQLite stacks
-            # during every preview change makes the UI pause. Joint inversion
-            # can reload the full survey from the registered source path on demand.
+        survey = self._survey_soundings(self._loaded_key) if n_soundings > 1 else None
+        if survey is not None:
+            # The survey the page read once, on a worker (_ensure_survey).
+            # Until it is in hand the active sounding stands in, with the load
+            # settings beside it, and the joint page reads the file itself.
+            resource_payload = {"soundings": survey}
+            if (not self._data.get("temcompany")
+                    and self._geom_x is not None and self._geom_y is not None
+                    and self._geom_x.size >= n_soundings
+                    and self._geom_y.size >= n_soundings):
+                resource_payload["coordinates"] = np.column_stack(
+                    (self._geom_x[:n_soundings], self._geom_y[:n_soundings])
+                )
+        area = (float(self._loop_area.value())
+                if em_data.is_ttem_source(str(self._source_path)) else None)
         self.state.register_geophysical_resource(
             method,
             "observed_data",
@@ -1882,6 +2067,9 @@ class EMProcessingModule(BaseModule):
                 "channels": n_channels,
                 "soundings": n_soundings,
                 "sounding": int(self._data.get("sounding", 0)),
+                # The gate selection the page applied, so a page that reads the
+                # file again (the joint inversion) reads the same data.
+                "load_options": _plain(self._load_options(area)),
             },
             resource_id=f"{method.lower()}:observed_data:active",
         )
@@ -1946,16 +2134,12 @@ class EMProcessingModule(BaseModule):
             self._project_layer_thicknesses = np.asarray(
                 inversion.get("layer_thicknesses", []), dtype=float).ravel()
         n = int(self._data.get("n_soundings", 1))
-        # Track the station count exactly, and outside the block above, because a
-        # project without inversion defaults still has stations. Only raising the
-        # value would leave the cap behind when a reload brings more stations in,
-        # and inverting 71 of 94 without saying so is the kind of quiet
-        # truncation that is very hard to notice on the section. The ceiling goes
-        # up first: stations arrive ordered by line, so a cap below the count
-        # does not thin the survey, it cuts whole lines off the end of it.
+        # Max soundings stays as the user left it ("all" unless a quick test
+        # asked for fewer); the Run group says what a cap leaves out. It used
+        # to be reset to the station count here, and to 200 for raw tTEM, which
+        # inverted 200 of a longer tTEM survey with nothing on screen saying so.
         self._populate_line_pick()
-        self._line_max.setMaximum(max(1, n))
-        self._line_max.setValue(min(max(1, n), 200) if self._data.get("ttem") else max(1, n))
+        self._update_run_scope()
         span = (float(self._geom_positions[-1] - self._geom_positions[0])
                 if self._geom_positions is not None and self._geom_positions.size else 0.0)
         crs = str(self._data.get("coordinate_system", "embedded coordinates"))
@@ -2132,7 +2316,10 @@ class EMProcessingModule(BaseModule):
             self._reset_inv_button()
             return
         try:
-            run = self.begin_persisted_run("em.inversion", "em.inversion")
+            from PyHydroGeophysX.qt_apps.results_store import run_label_from_files
+            run = self.begin_persisted_run(
+                "em.inversion", "em.inversion",
+                label=run_label_from_files([self._source_path]))
         except Exception as exc:  # noqa: BLE001
             self._on_inversion_failed(f"Could not prepare Project run: {exc}", False)
             self._reset_inv_button()
@@ -2195,7 +2382,10 @@ class EMProcessingModule(BaseModule):
 
     def _start_line(self, method: str) -> None:
         try:
-            run = self.begin_persisted_run("em.line_inversion", "em.line_inversion")
+            from PyHydroGeophysX.qt_apps.results_store import run_label_from_files
+            run = self.begin_persisted_run(
+                "em.line_inversion", "em.line_inversion",
+                label=run_label_from_files([self._source_path]))
         except Exception as exc:  # noqa: BLE001
             self._on_line_failed(f"Could not prepare Project run: {exc}")
             self._reset_inv_button()
@@ -2207,24 +2397,17 @@ class EMProcessingModule(BaseModule):
             self._on_line_failed(f"Could not persist EM input: {exc}")
             self._reset_inv_button()
             return
-        out_dir = str(run.outputs_dir)
-        self.log(f"Starting {method} line inversion (up to {self._line_max.value()} soundings)…", "info")
-        cap = int(self._line_max.value())
         loaded = int(self._data.get("n_soundings", 1))
-        if cap < loaded:
+        scope = self._line_scope() or {"count": loaded, "available": loaded,
+                                       "dropped_lines": [], "line": None}
+        self.log(f"Starting {method} line inversion of {scope['count']} soundings…", "info")
+        if scope["count"] < scope["available"]:
             # Stations arrive ordered by line, so the cap does not thin the
             # survey, it stops partway through and drops whatever follows.
-            lines = np.asarray(self._data.get("line_numbers", []), dtype=int)
-            dropped = ""
-            if lines.size >= loaded:
-                gone = sorted(set(lines[cap:loaded].tolist())
-                              - set(lines[:cap].tolist()))
-                if gone:
-                    dropped = (", and survey line(s) "
-                               + ", ".join(str(v) for v in gone)
-                               + " are left out of the section entirely")
-            self.log(f"Max soundings is {cap} of {loaded} loaded: the last "
-                     f"{loaded - cap} station(s) are not inverted{dropped}.", "warn")
+            # Logged as a warning, so the run's record keeps it too.
+            self.log(f"{self._scope_text(scope)} The last "
+                     f"{scope['available'] - scope['count']} station(s) are not "
+                     "inverted.", "warn")
         inputs = {"data": ArtifactRef.from_path(
             source, artifact_id="em-line-soundings", kind="em_sounding", base_dir=run.run_dir)}
         # Along-line distance and sensor height per sounding, when the survey
@@ -2251,7 +2434,8 @@ class EMProcessingModule(BaseModule):
                 "geometry": self._collect_geom(),
                 "inversion": self._collect_inv(),
                 "spacing": float(self._line_spacing.value()),
-                "max_soundings": int(self._line_max.value()),
+                # The count itself, not "all": the recipe reruns what ran.
+                "max_soundings": int(scope["count"]),
                 "lines": self._selected_lines(),
                 "ref_resistivity": float(self._ref_res.value()),
                 # The whole model comes back with its sensitivity; the
@@ -2276,10 +2460,14 @@ class EMProcessingModule(BaseModule):
         worker = ProcessWorkflowWorker(recipe_path, run.run_dir, run.outputs_dir,
                                        run.result_path, objects=("*",))
         worker.logged.connect(lambda m: self.log(m, "info"))
-        worker.succeeded.connect(lambda result: self._on_line_ok(result.legacy_payload()))
-        worker.failed.connect(self._on_line_failed)
+        # The workflow's warnings (soundings that could not be fitted) travel
+        # beside the payload rather than in it, so they are put back here.
+        worker.succeeded.connect(lambda result: self._on_line_ok(
+            {**result.legacy_payload(), "warnings": list(result.warnings)}))
+        worker.failed.connect(
+            lambda message, w=worker: self._on_line_failed(message, w.missing_backend))
         worker.finished.connect(self._reset_inv_button)
-        self._line_worker = self.register_worker(worker)
+        self._line_worker = self.register_worker(worker, activity="Running the line inversion")
         worker.start()
         self._inv_stop.attach(worker, "em.line_inversion", what="The line inversion")
 
@@ -2297,21 +2485,28 @@ class EMProcessingModule(BaseModule):
             raise FileNotFoundError("No persisted EM source is available.")
         source = self._source_path
         geom = self._collect_geom()
+        options = dict(
+            moment=str(self._tem_moment.currentText()),
+            use_flags=bool(geom.get("use_project_flags", True)),
+            max_relative_std=geom.get("tail_max_relative_std"),
+            gate_rejection=str(geom.get("gate_rejection", "truncate")),
+            reject_negative=bool(geom.get("reject_negative", False)),
+            min_gates_per_moment=geom.get("min_gates_per_moment"),
+            ttem_loop_area=geom.get("loop_area"),
+            ttem_gex_path=geom.get("ttem_gex_path"),
+            ttem_tfi_path=geom.get("ttem_tfi_path"),
+        )
+        # The survey the page already read under these settings, when it has
+        # it: storing the run's input then costs no second walk of the file.
+        survey = self._survey_soundings(self._survey_key(options))
         try:
             return em_data.save_sounding_container(
                 inputs_dir / "em_soundings",
                 str(source),
                 method,
-                moment=str(self._tem_moment.currentText()),
-                use_flags=bool(geom.get("use_project_flags", True)),
-                max_relative_std=geom.get("tail_max_relative_std"),
-                gate_rejection=str(geom.get("gate_rejection", "truncate")),
-                reject_negative=bool(geom.get("reject_negative", False)),
-                min_gates_per_moment=geom.get("min_gates_per_moment"),
-                ttem_loop_area=geom.get("loop_area"),
-                ttem_gex_path=geom.get("ttem_gex_path"),
-                ttem_tfi_path=geom.get("ttem_tfi_path"),
                 progress=lambda message: self.log(message, "info"),
+                soundings=survey,
+                **options,
             )
         except Exception as exc:  # noqa: BLE001 - a run must not die on bookkeeping
             # Falling back to a reference keeps the run going and keeps the
@@ -2473,8 +2668,16 @@ class EMProcessingModule(BaseModule):
             chi_txt = f", global χ²={chi2:.2f}"
             if isinstance(sounding_median, float) and sounding_median == sounding_median:
                 chi_txt += f", sounding median χ²={sounding_median:.2f}"
-        self.log(f"{result['method']} line inversion complete: {result['n_soundings']} soundings, "
+        n_total = int(result.get("n_soundings") or 0)
+        n_inverted = int(result.get("n_inverted", n_total))
+        counted = (f"{n_total} soundings" if n_inverted >= n_total
+                   else f"inverted {n_inverted} of {n_total} soundings")
+        self.log(f"{result['method']} line inversion complete: {counted}, "
                  f"resistivity {rng[0]:.3g}..{rng[1]:.3g} Ω·m{chi_txt}.", "success")
+        # Which soundings failed and why, as warnings: the run's record keeps
+        # them, and the section leaves those stations blank.
+        for warning in result.get("warnings") or []:
+            self.log(str(warning), "warn")
         if coupled:
             # Terse: one line for how it stopped, one more only if the search moved.
             self.log(f"Coupled line solve: {report.get('iterations', 0)} iterations "
@@ -2492,6 +2695,8 @@ class EMProcessingModule(BaseModule):
         for path in saved:
             self.log(f"Saved {Path(path).name} to {path}", "info")
         self.report_result({"method": result["method"], "n_soundings": result.get("n_soundings"),
+                            "n_inverted": result.get("n_inverted", result.get("n_soundings")),
+                            "n_failed": result.get("n_failed", 0),
                             "global_chi2": chi2,
                             "sounding_median_chi2": result.get("chi2_sounding_median"),
                             "section_npz": saved[0] if saved else None})
@@ -2520,7 +2725,11 @@ class EMProcessingModule(BaseModule):
             sounding_mean = float(np.mean(finite_items)) if finite_items.size else None
             sounding_median = float(np.median(finite_items)) if finite_items.size else None
             residual_median = float(np.median(np.sqrt(finite_items))) if finite_items.size else None
-        extra = {"soundings": result.get("n_soundings"), "layers": result.get("n_layers")}
+        n_total = int(result.get("n_soundings") or 0)
+        n_inverted = int(result.get("n_inverted", n_total))
+        extra = {"soundings": (n_total if n_inverted >= n_total
+                               else f"{n_inverted} of {n_total} inverted"),
+                 "layers": result.get("n_layers")}
         show_median = bool(report.get("chi2_median_history")) and sounding_median is not None
         if show_median:
             extra["weighted global χ²" if robust.get("enabled") else "global χ²"] = f"{quality_chi2:.2f}"
@@ -2601,6 +2810,9 @@ class EMProcessingModule(BaseModule):
             "summary": {
                 "method": result.get("method"),
                 "n_soundings": result.get("n_soundings"),
+                "n_inverted": result.get("n_inverted", result.get("n_soundings")),
+                "n_failed": result.get("n_failed", 0),
+                "failed_soundings": list(result.get("failed_soundings") or []),
                 "model_range": result.get("model_range"),
             },
             "metrics": {
@@ -2611,7 +2823,7 @@ class EMProcessingModule(BaseModule):
                 "downweighted_gates": (result.get("robust") or {}).get("downweighted", 0),
             },
             "artifacts": [],
-            "warnings": [],
+            "warnings": [str(item) for item in result.get("warnings") or []],
             "provenance": {"operation_id": "em.line_inversion"},
         }
         if hasattr(self.state, "update_workflow_result"):
@@ -2634,9 +2846,12 @@ class EMProcessingModule(BaseModule):
         self.log(f"Inversion {'unavailable' if backend else 'failed'}: {message}",
                  "warn" if backend else "error")
 
-    def _on_line_failed(self, message: str) -> None:
+    def _on_line_failed(self, message: str, missing_backend: bool = False) -> None:
         self.fail_persisted_run(message, "em.line_inversion")
-        if any(k in message.lower() for k in ("backend", "simpeg", "discretize")):
+        # Told by the exception the run ended on, not by words in its message:
+        # a SimPEG error about a shape or a solve names SimPEG too, and was
+        # reported as SimPEG not being installed.
+        if missing_backend:
             self.log(f"Line inversion needs SimPEG: {message}", "warn")
         else:
             self.log(f"Line inversion failed: {message}", "error")
@@ -2789,7 +3004,7 @@ class EMProcessingModule(BaseModule):
                           "reverse sign within the gate range), "
                           "min_gates_per_moment (e.g. {\"LM\": 1, \"HM\": 3}; "
                           "drops a moment left with fewer gates than that). "
-                          "Line: spacing, max_soundings, "
+                          "Line: spacing, max_soundings (0 = all), "
                           "lateral_smoothness, lci_mode "
                           "(simultaneous/sequential/off), lci_passes "
                           "(block-coordinate only). Fit assistance (simultaneous "

@@ -52,10 +52,13 @@ from .ert_mesh import (  # noqa: F401 - re-exported, see below
 #: potential's samples within the reading, as a fraction of it, which Subsurface
 #: Insights records and the ``stack`` token carries - to the estimate in
 #: quadrature. That spread is not a reading's uncertainty and usually overstates
-#: it, so it is only ever asked for. ``file`` is the default because silently
+#: it, so it is only ever asked for. ``reciprocal`` gives each reading the error
+#: of a reciprocal error model ``dR = 10**b * |R|**m`` fitted to the survey's
+#: reciprocal pairs (``error_model``: ``m``, ``b``, ``floor``; see
+#: ``ert_io.reciprocal_model_errors``). ``file`` is the default because silently
 #: discarding measured errors makes chi2 report on an error model the data never
 #: had.
-ERROR_SOURCES = ("file", "estimate", "max", "stack")
+ERROR_SOURCES = ("file", "estimate", "max", "stack", "reciprocal")
 
 
 def _estimate_errors(data, *, relative_error: float, absolute_error: float):
@@ -96,12 +99,15 @@ def _prepare_ert_data(
     absolute_error: float = 0.0,
     error_source: str = "file",
     error_floor: float = 0.005,
+    error_model: Optional[Dict[str, Any]] = None,
 ):
     """Load an ERT file and fill in geometric factors, rhoa, and per-datum errors.
 
     Returns ``(data, error_info)``. ``error_info`` records which error model was
     used and its spread, so the caller can tell the user that chi2 is being
     measured against, say, the instrument's 6 % rather than an assumed 5 %.
+    ``error_model`` is the reciprocal error model ``error_source="reciprocal"``
+    applies (``m``, ``b``, ``floor``).
     """
     from PyHydroGeophysX.data_processing.ert_io import load_ert_container
 
@@ -126,7 +132,27 @@ def _prepare_ert_data(
         if np.any(np.isfinite(candidate) & (candidate > 0)):
             from_file = candidate
 
-    if source == "stack":
+    model = dict(error_model or {})
+    if source == "reciprocal":
+        if "m" in model and "b" in model:
+            from PyHydroGeophysX.data_processing.ert_io import (
+                container_resistance,
+                reciprocal_model_errors,
+            )
+
+            resistance = container_resistance(data)
+            # A reading the model cannot place (no resistance) is estimated,
+            # by the NaN fill below.
+            errors = reciprocal_model_errors(
+                resistance if resistance is not None else np.full(int(data.size()), np.nan),
+                float(model["m"]), float(model["b"]), float(model.get("floor") or 0.0))
+            used = (f"reciprocal error model dR = 10^{float(model['b']):.4f} * "
+                    f"R^{float(model['m']):.4f}, at least "
+                    f"{100.0 * float(model.get('floor') or 0.0):g} %")
+        else:
+            errors = estimated
+            used = "estimate (no reciprocal error model was given)"
+    elif source == "stack":
         # Independent errors add in quadrature: the reading's own scatter, and
         # the estimate standing for everything the scatter cannot see.
         if data.haveData("stack"):
@@ -163,6 +189,10 @@ def _prepare_ert_data(
         "file_mean": float(np.mean(from_file)) if from_file is not None else None,
         "estimate_mean": float(np.mean(estimated)),
     }
+    if source == "reciprocal" and "m" in model and "b" in model:
+        info["median"] = float(np.median(errors))
+        info["model"] = {key: model[key] for key in ("m", "b", "floor", "r2", "r2_raw",
+                                                     "pairs", "fitted_over") if key in model}
     log(f"  error model: {used}, mean {info['mean'] * 100:.2f} %")
     return data, info
 
@@ -1375,6 +1405,7 @@ def run_ert_manager_inversion(
     absolute_error: float = 0.0,
     error_source: str = "file",
     error_floor: float = 0.005,
+    error_model: Optional[Dict[str, Any]] = None,
     mesh_quality: float = 34.0,
     para_depth: float = 0.0,
     para_max_cell_size: float = 0.0,
@@ -1422,8 +1453,9 @@ def run_ert_manager_inversion(
        mesh and rebuilds ``rhoa`` from the measured transfer resistance.
     1. **Error model.** ``error_source`` decides whether the file's own ``err``
        column is trusted, recomputed from ``relative_error``/``absolute_error``,
-       combined with that estimate, or built from each reading's stacking spread
-       (see :data:`ERROR_SOURCES`). Overwriting a measured error with an assumed
+       combined with that estimate, built from each reading's stacking spread,
+       or given by a reciprocal error model (``error_model``; see
+       :data:`ERROR_SOURCES`). Overwriting a measured error with an assumed
        one makes chi2 report on an error model the data never had.
     2. **Inversion at the requested lambda, iterated to a plateau.** A run that
        exhausts ``max_iterations`` is continued (up to ``max_total_iterations``)
@@ -1491,7 +1523,7 @@ def run_ert_manager_inversion(
     data, error_info = _prepare_ert_data(
         data_path, relative_error=relative_error, instrument=instrument, log=log,
         absolute_error=absolute_error, error_source=error_source,
-        error_floor=error_floor,
+        error_floor=error_floor, error_model=error_model,
     )
     if engine == "adtlert" and not _adtlert_survey_supported(data):
         log(

@@ -64,6 +64,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
     set_rows_visible,
 )
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
+from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
 from PyHydroGeophysX.qt_apps.widgets.zone_boxes import ZoneBoxEditor, clip_box
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker, TaskWorker
 from PyHydroGeophysX.workflows import (
@@ -719,7 +720,10 @@ class Mesh3DModule(BaseModule):
 
         self._progress = QProgressBar()
         self._progress.setVisible(False)
-        form.addRow(self._progress)
+        # One Stop for the bar's run: the mesh build, or the 3D ERT forward
+        # model the assistant asks for, which shares the bar.
+        self._stop = self.stop_button("The mesh generation")
+        form.addRow(progress_with_stop(self._progress, self._stop))
         self._info = QLabel("Work down the steps, preview the layout, then generate the mesh.")
         self._info.setWordWrap(True)
         form.addRow(self._info)
@@ -1255,7 +1259,7 @@ class Mesh3DModule(BaseModule):
         worker.succeeded.connect(lambda mesh, p=path: self._on_e4d_mesh_read(p, mesh))
         worker.failed.connect(lambda message, p=path: self.log(
             f"Could not read the E4D mesh {Path(p).name}: {message}", "error"))
-        self.register_worker(worker)
+        self.register_worker(worker, activity="Reading the E4D mesh")
         worker.start()
 
     def _on_e4d_mesh_read(self, path: str, mesh: Any) -> None:
@@ -1330,8 +1334,9 @@ class Mesh3DModule(BaseModule):
         worker.succeeded.connect(lambda res: self._on_mesh_workflow_ok(cfg, res))
         worker.failed.connect(self._on_mesh_failed)
         worker.finished.connect(self._reset_gen_button)
-        self._gen_worker = self.register_worker(worker)
+        self._gen_worker = self.register_worker(worker, activity="Building the 3D mesh")
         worker.start()
+        self._stop.attach(worker, "mesh3d.build")
 
     def _on_mesh_workflow_ok(self, cfg: dict, result: WorkflowRunResult) -> None:
         try:
@@ -1443,6 +1448,9 @@ class Mesh3DModule(BaseModule):
             self._gen_busy = None
         self._gen_btn.setText("Generate mesh")
         self._progress.setVisible(False)
+        if self._gen_worker is not None and self._gen_worker.is_cancelled():
+            self._info.setText("Stopped before the mesh was finished. Generate it again "
+                               "to start over.")
 
     # -- hidden 3D ERT forward action (AQUAH only) -------------------------
     def _set_ert_forward_param(self, key: str, value: Any) -> None:
@@ -1533,8 +1541,10 @@ class Mesh3DModule(BaseModule):
         worker.succeeded.connect(self._on_ert3d_workflow_ok)
         worker.failed.connect(self._on_ert_forward_failed)
         worker.finished.connect(self._reset_ert_forward_progress)
-        self._ert_fwd_worker = self.register_worker(worker)
+        self._ert_fwd_worker = self.register_worker(
+            worker, activity="Running the 3D ERT forward model")
         worker.start()
+        self._stop.attach(worker, "ert3d.forward", what="The 3D ERT forward model")
 
     def _on_ert3d_workflow_ok(self, result: WorkflowRunResult) -> None:
         if hasattr(self.state, "update_workflow_result"):
@@ -1564,6 +1574,8 @@ class Mesh3DModule(BaseModule):
 
     def _reset_ert_forward_progress(self) -> None:
         self._progress.setVisible(False)
+        if self._ert_fwd_worker is not None and self._ert_fwd_worker.is_cancelled():
+            self._info.setText("The 3D ERT forward model was stopped before it finished.")
 
     def _safe_name(self) -> str:
         import re

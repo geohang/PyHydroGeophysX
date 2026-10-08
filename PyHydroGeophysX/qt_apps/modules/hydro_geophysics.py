@@ -55,6 +55,7 @@ from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.array_viewer import ArrayViewer
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
+from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker, TaskWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
@@ -103,6 +104,10 @@ class HydroGeophysicsModule(BaseModule):
         self._worker: Optional[ProcessWorkflowWorker] = None
         self._run_busy: Optional[BusyStateController] = None
         self._workflow_recipe_path = ""
+        #: Why the last run did not finish - its error, or that it was
+        #: stopped - for the assistant, whose status otherwise still showed
+        #: the result before it; "" while a run is under way or succeeded.
+        self._run_problem = ""
         self._preview_worker: Optional[TaskWorker] = None
         self._preview_debounced = Debouncer(self._update_preview, 120)
         self._param_panels: Dict[str, QWidget] = {}
@@ -669,7 +674,8 @@ class HydroGeophysicsModule(BaseModule):
 
         self._progress = QProgressBar()
         self._progress.setVisible(False)
-        layout.addWidget(self._progress)
+        self._stop = self.stop_button("The forward modeling")
+        layout.addWidget(progress_with_stop(self._progress, self._stop))
         self._run_status = QLabel("")
         self._run_status.setWordWrap(True)
         layout.addWidget(self._run_status)
@@ -1242,14 +1248,17 @@ class HydroGeophysicsModule(BaseModule):
         self.log("Starting hydro → geophysics forward modeling…", "info")
         # In a process of its own, so the window keeps painting through the
         # forward runs; the results are files, and nothing else comes back.
-        self._worker = self.register_worker(
-            ProcessWorkflowWorker(recipe_path, run.run_dir, run.outputs_dir, run.result_path)
-        )
-        self._worker.logged.connect(lambda message: self._on_worker_log(message, "info"))
-        self._worker.succeeded.connect(self._on_workflow_ok)
-        self._worker.failed.connect(lambda message: self._on_forward_failed(message, False))
-        self._worker.finished.connect(self._reset_run_button)
-        self._worker.start()
+        worker = ProcessWorkflowWorker(recipe_path, run.run_dir, run.outputs_dir,
+                                       run.result_path)
+        self._worker = self.register_worker(worker, activity="Running the forward models")
+        self._run_problem = ""
+        worker.logged.connect(lambda message: self._on_worker_log(message, "info"))
+        worker.succeeded.connect(self._on_workflow_ok)
+        worker.failed.connect(
+            lambda message, w=worker: self._on_forward_failed(message, w.missing_backend))
+        worker.finished.connect(self._reset_run_button)
+        worker.start()
+        self._stop.attach(worker, "hydro_geophysics.forward")
 
     def _on_workflow_ok(self, result: WorkflowRunResult) -> None:
         if hasattr(self.state, "update_workflow_result"):
@@ -1268,19 +1277,30 @@ class HydroGeophysicsModule(BaseModule):
     def _on_forward_ok(self, result: dict) -> None:
         self._progress.setRange(0, 1); self._progress.setValue(1)
         self.log(f"Forward modeling complete: {result.get('methods')}.", "success")
+        self._run_status.setText("Forward modelling finished.")
         result["selected_points"] = [self._point1, self._point2]
         self.report_result(result)
         self._populate_results(result)
         self._go_to(5)
 
     def _on_forward_failed(self, message: str, backend_unavailable: bool) -> None:
-        self.fail_persisted_run(message)
+        self._run_problem = message
+        self.fail_persisted_run(message, "hydro_geophysics.forward")
         self._progress.setRange(0, 1); self._progress.setValue(0)
-        level = "warn" if backend_unavailable else "error"
-        self.log(f"Forward run problem: {message}", level)
+        if not backend_unavailable:
+            # The run itself failed - out of memory, arrays of the wrong shape -
+            # and its own reason is what helps, on the Run step where the
+            # settings can be changed and the run tried again. Exporting the
+            # configuration in its place blamed a backend that was there.
+            self.log(f"Forward modeling failed: {message}", "error")
+            self._run_status.setText(f"The forward modeling failed: {message}")
+            self._go_to(4)
+            return
+        self.log(f"Forward modeling could not run: {message}", "warn")
         config_path = self._export_config()
-        note = ("Forward-modeling backend was not found or failed. The survey "
-                f"configuration has been exported to {config_path}.")
+        note = ("A forward-modeling engine this run needs is not installed or could not be "
+                "loaded (the log says which). The survey configuration has been exported "
+                f"to {config_path}.")
         self._run_status.setText(note)
         self.log(note, "warn")
         self._populate_results({"status": "config_exported", "methods": self._collect_methods(),
@@ -1293,6 +1313,9 @@ class HydroGeophysicsModule(BaseModule):
             self._run_busy = None
         self._run_btn.setText("Run forward modeling")
         self._progress.setVisible(False)
+        if self._worker is not None and self._worker.is_cancelled():
+            self._run_problem = "Stopped by user"
+            self._run_status.setText("Stopped before it finished. Run it again to start over.")
         self._update_strip()
 
     # -- AQUAH agent interface ----------------------------------------------
@@ -1388,6 +1411,7 @@ class HydroGeophysicsModule(BaseModule):
             "parameter_mode": self._agent_parameter_mode,
             "profile": {"p1": self._point1, "p2": self._point2},
             "last_result_status": last.get("status"),
+            "last_run_problem": self._run_problem,
         }
 
     def _agent_use_example_data(self) -> Dict[str, Any]:

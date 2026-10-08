@@ -101,6 +101,7 @@ webapp = [
     "pyarrow>=14.0",
 ]
 desktop = [
+    "pypdf>=4.0",
     "pyproj>=3.4",
     "psutil>=5.9",
     "PySide6>=6.5",
@@ -151,6 +152,7 @@ all = [
     "streamlit>=1.35,<2.0", "plotly>=5.18,<7.0", "streamlit-plotly-events>=0.0.6", "pyarrow>=14.0",
     "obspy>=1.4.0",
     "PySide6>=6.5", "pyqtgraph>=0.13", "qtawesome>=1.2", "psutil>=5.9",
+    "pypdf>=4.0",
     "pyvista>=0.40", "pyvistaqt>=0.10", "vtk>=9.2",
     "sphinx>=5.0", "sphinx-gallery", "sphinx_rtd_theme",
     "pytest>=7.0", "pytest-cov", "black", "flake8",

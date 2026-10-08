@@ -56,7 +56,10 @@ class StopButton(QPushButton):
         if not callable(getattr(worker, "cancel", None)):
             self.setVisible(False)
             return
-        worker.finished.connect(self.detach)
+        # Only its own end hides the button: a run in stages (the time-lapse
+        # QC, then the inversion) attaches the next stage before the first
+        # one's thread has reported finishing.
+        worker.finished.connect(lambda w=worker: self.detach() if self._worker is w else None)
         self.setEnabled(True)
         self.setVisible(True)
 

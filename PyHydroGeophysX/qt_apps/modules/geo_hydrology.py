@@ -55,6 +55,7 @@ from PyHydroGeophysX.qt_apps.qt_utils import (
 )
 from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
+from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
@@ -141,6 +142,10 @@ class GeoHydrologyModule(BaseModule):
         self._worker: Optional[ProcessWorkflowWorker] = None
         self._run_busy: Optional[BusyStateController] = None
         self._workflow_recipe_path = ""
+        #: Why the last run did not finish - its error, or that it was
+        #: stopped - for the assistant, whose status otherwise still showed
+        #: the result before it; "" while a run is under way or succeeded.
+        self._run_problem = ""
         self._current = 0
 
         root = QVBoxLayout(self)
@@ -614,7 +619,8 @@ class GeoHydrologyModule(BaseModule):
         layout.addWidget(cfg_btn)
 
         self._progress = QProgressBar(); self._progress.setVisible(False)
-        layout.addWidget(self._progress)
+        self._stop = self.stop_button("The water-content estimation")
+        layout.addWidget(progress_with_stop(self._progress, self._stop))
         self._run_status = QLabel(""); self._run_status.setWordWrap(True)
         layout.addWidget(self._run_status)
         layout.addStretch(1)
@@ -1102,15 +1108,18 @@ class GeoHydrologyModule(BaseModule):
         # In a process of its own, so the window keeps painting through the
         # Monte Carlo; the point series plot needs the cell centres and the
         # water-content statistics back.
-        self._worker = self.register_worker(
-            ProcessWorkflowWorker(recipe_path, run.run_dir, run.outputs_dir, run.result_path,
-                                  objects=("_cell_centers", "_wc_mean", "_wc_std"))
-        )
-        self._worker.logged.connect(lambda message: self._on_worker_log(message, "info"))
-        self._worker.succeeded.connect(self._on_workflow_ok)
-        self._worker.failed.connect(lambda message: self._on_run_failed(message, False))
-        self._worker.finished.connect(self._reset_run_button)
-        self._worker.start()
+        worker = ProcessWorkflowWorker(recipe_path, run.run_dir, run.outputs_dir,
+                                       run.result_path,
+                                       objects=("_cell_centers", "_wc_mean", "_wc_std"))
+        self._worker = self.register_worker(worker, activity="Estimating water content")
+        self._run_problem = ""
+        worker.logged.connect(lambda message: self._on_worker_log(message, "info"))
+        worker.succeeded.connect(self._on_workflow_ok)
+        worker.failed.connect(
+            lambda message, w=worker: self._on_run_failed(message, w.missing_backend))
+        worker.finished.connect(self._reset_run_button)
+        worker.start()
+        self._stop.attach(worker, "geo_hydrology.ert_to_wc")
 
     def _on_workflow_ok(self, result: WorkflowRunResult) -> None:
         if hasattr(self.state, "update_workflow_result"):
@@ -1129,6 +1138,7 @@ class GeoHydrologyModule(BaseModule):
     def _on_run_ok(self, result: dict) -> None:
         self._progress.setRange(0, 1); self._progress.setValue(1)
         self.log(f"Estimation complete: {result.get('products')}.", "success")
+        self._run_status.setText("Water content estimated.")
         self._last_result = result
         # Strip the in-process numpy payload before publishing to the bridge JSON.
         published = {k: v for k, v in result.items() if not k.startswith("_")}
@@ -1137,16 +1147,25 @@ class GeoHydrologyModule(BaseModule):
         self._go_to(5)
 
     def _on_run_failed(self, message: str, backend_unavailable: bool) -> None:
-        self.fail_persisted_run(message)
+        self._run_problem = message
+        self.fail_persisted_run(message, "geo_hydrology.ert_to_wc")
         self._progress.setRange(0, 1); self._progress.setValue(0)
-        level = "warn" if backend_unavailable else "error"
-        self.log(f"Estimation problem: {message}", level)
+        self._last_result = None
+        if not backend_unavailable:
+            # The run itself failed - out of memory, arrays of the wrong shape -
+            # and its own reason is what helps, on the Run step where the
+            # settings can be changed and the run tried again. Exporting the
+            # configuration in its place blamed a backend that was there.
+            self.log(f"Estimation failed: {message}", "error")
+            self._run_status.setText(f"The estimation failed: {message}")
+            self._go_to(4)
+            return
+        self.log(f"Estimation could not run: {message}", "warn")
         config_path = self._export_config()
-        note = ("The Monte Carlo backend (pygimli) was not found or failed. The "
-                f"petrophysics configuration has been exported to {config_path}.")
+        note = ("The Monte Carlo engine (pygimli) is not installed or could not be loaded. "
+                f"The petrophysics configuration has been exported to {config_path}.")
         self._run_status.setText(note)
         self.log(note, "warn")
-        self._last_result = None
         self._populate_results({"status": "config_exported",
                                 "products": self._collect_products(),
                                 "config_path": config_path, "figure_paths": []})
@@ -1158,6 +1177,9 @@ class GeoHydrologyModule(BaseModule):
             self._run_busy = None
         self._run_btn.setText("Run water-content estimation")
         self._progress.setVisible(False)
+        if self._worker is not None and self._worker.is_cancelled():
+            self._run_problem = "Stopped by user"
+            self._run_status.setText("Stopped before it finished. Run it again to start over.")
         self._update_strip()
 
     # -- AQUAH agent interface ----------------------------------------------
@@ -1252,6 +1274,7 @@ class GeoHydrologyModule(BaseModule):
             "products": self._collect_products(),
             "enabled_layers": [r["marker"] for r in self._enabled_layers()],
             "last_result_status": last.get("status"),
+            "last_run_problem": self._run_problem,
         }
 
     def _agent_use_example_data(self) -> Dict[str, Any]:

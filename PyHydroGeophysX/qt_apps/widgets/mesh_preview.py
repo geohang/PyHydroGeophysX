@@ -38,7 +38,6 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QPushButton,
-    QScrollArea,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
@@ -48,6 +47,7 @@ from PySide6.QtWidgets import (
 
 from PyHydroGeophysX.inversion.ert_zones import normalize_zones, zone_colors, zone_prior
 from PyHydroGeophysX.qt_apps import theme
+from PyHydroGeophysX.qt_apps.qt_utils import ContentWidthScrollArea
 from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.readout import navigation_toolbar
 from PyHydroGeophysX.visualization.axis_units import set_section_axes, to_display_length
@@ -208,13 +208,10 @@ class MeshPreviewView(QWidget):
         self._side = QVBoxLayout(column)
         self._side.setContentsMargins(0, 0, 4, 0)
         self._side.addWidget(self._build_zone_panel(), stretch=1)
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
+        scroll = ContentWidthScrollArea(minimum=320, maximum=420)
         scroll.setFrameShape(QFrame.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll.setWidget(column)
-        scroll.setMinimumWidth(300)
-        scroll.setMaximumWidth(520)
+        self._side_scroll = scroll
         return scroll
 
     # -- zone panel ----------------------------------------------------------
@@ -373,6 +370,7 @@ class MeshPreviewView(QWidget):
     def set_settings_panel(self, widget: QWidget) -> None:
         """Show the page's mesh settings above the zones."""
         self._side.insertWidget(0, widget)
+        self._side_scroll.fit_to_content()
 
     def conform_to_zones(self) -> bool:
         """Whether the mesh is to be rebuilt along the zone outlines."""

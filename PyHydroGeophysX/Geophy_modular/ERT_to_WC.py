@@ -16,8 +16,9 @@ Two layers:
   configuration, and reading monitoring-point time series never depend on the
   heavy backend.
 * ``run_ert_to_wc`` -- the real Monte Carlo run. It imports pygimli lazily to load
-  the mesh and render the section figures; if anything is missing or fails it
+  the mesh and render the section figures; if it is missing or will not load it
   raises ``BackendUnavailable`` so the caller can fall back to config export.
+  Any other failure propagates as itself.
 
 The petrophysical conversion itself (``resistivity_to_saturation`` /
 ``resistivity_to_porosity``) is pure numpy/scipy and is reused directly from the
@@ -393,8 +394,9 @@ def run_ert_to_wc(
     """Run the real ERT -> water content / porosity Monte Carlo inversion.
 
     Raises ``BackendUnavailable`` if pygimli cannot be imported (needed to load
-    the ``.bms`` mesh and render the section figures), and propagates any other
-    exception so the caller can fall back to config export.
+    the ``.bms`` mesh and render the section figures), so the caller can fall
+    back to config export, and propagates any other exception unchanged, to be
+    reported as itself.
     """
     try:
         import matplotlib

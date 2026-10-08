@@ -13,7 +13,7 @@ of this process, for a caller that wants it there.
 from __future__ import annotations
 
 import codecs
-from collections import deque
+import datetime
 import json
 from concurrent.futures import CancelledError
 import os
@@ -34,6 +34,8 @@ from PySide6.QtCore import (
 )
 
 from PyHydroGeophysX._internal.optional_dependencies import BackendUnavailable
+# Where a run's ``logs`` folder keeps everything its workflow process printed.
+from PyHydroGeophysX.qt_apps.run_records import LOG_ENCODING, OUTPUT_LOG_NAME
 from PyHydroGeophysX.workflows import (
     RunContext,
     WorkflowRunResult,
@@ -48,6 +50,9 @@ def _error_message(exc: Exception) -> str:
         return f"Backend unavailable: {exc}"
     return str(exc)
 
+
+#: Terminal colour and cursor codes, as in ``ESC[0;32;49m``.
+_ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
 #: Windows exit codes of a process ended by the system rather than by Python:
 #: the code a native solver dies with, which on its own tells a user nothing.
@@ -66,9 +71,12 @@ _MEMORY_LINE = re.compile(
     r"cannot allocate memory|not enough memory|insufficient memory",
     re.IGNORECASE,
 )
-#: Lines of a workflow process's output kept for its run's logs folder.
-_OUTPUT_TAIL_LINES = 2000
-OUTPUT_LOG_NAME = "workflow_output.log"
+#: The last exception of a workflow process that could not run for want of an
+#: engine - an optional backend not installed, or one whose libraries would not
+#: load - as Python prints it, with or without the module path. A subclass such
+#: as gravmag's ``InversionBackendUnavailable`` counts.
+_MISSING_BACKEND = re.compile(
+    r"^(\w+\.)*\w*(BackendUnavailable|ModuleNotFoundError|ImportError)(: |$)")
 
 
 def _process_failure_message(
@@ -82,11 +90,12 @@ def _process_failure_message(
 
     A native crash is reported as one, most likely a lack of memory (the
     solvers' usual way of dying), with the line the process printed about it if
-    it printed one; anything else keeps the exit code and the last exception.
+    it printed one; an error the workflow raised is reported as that error, and
+    only a process that ended without saying why is left with its exit code.
     """
     code = int(exit_code)
     unsigned = code & 0xFFFFFFFF
-    where = f" The last lines it printed are in {log_path}." if log_path else ""
+    where = f" Everything it printed is in {log_path}." if log_path else ""
     advice = (" Close other programs to free memory, or use a coarser mesh or fewer "
               "cells, and run again.")
     native = _NATIVE_CRASHES.get(unsigned)
@@ -100,8 +109,13 @@ def _process_failure_message(
     if memory_hint:
         said = last_exception or memory_hint
         return f"The solver ran out of memory: {said}.{advice}{where}"
-    reason = f" {last_exception}" if last_exception else ""
-    return f"Workflow process exited with code {code} (0x{unsigned:08X}).{reason}{where}"
+    if last_exception:
+        # The error itself, first: the exit code of a Python error is always 1
+        # and only pushed the reason down the line. It is in the output log, as
+        # is the module path an exception class is printed with.
+        said = re.sub(r"^(\w+\.)+(?=\w+(: |$))", "", last_exception.rstrip())
+        return f"{said}{'' if said.endswith(('.', '!', '?')) else '.'}{where}"
+    return f"Workflow process exited with code {code} (0x{unsigned:08X}).{where}"
 
 
 def _active_console_python() -> Path:
@@ -694,8 +708,15 @@ class ProcessWorkflowWorker(QObject):
         #: The first line the child printed about running out of memory, which a
         #: native solver prints as ordinary output just before it crashes.
         self._memory_hint = ""
-        #: The end of the child's output, kept in the run's logs folder.
-        self._output_tail: deque = deque(maxlen=_OUTPUT_TAIL_LINES)
+        #: Whether the run failed because an engine it needs is missing, rather
+        #: than in its own work. Pages that fall back to exporting their
+        #: configuration when a backend is absent did so for every failure, and
+        #: a run that ran out of memory or was handed arrays of the wrong shape
+        #: was reported as "backend not found". Set when the failure is.
+        self.missing_backend = False
+        #: The child's lines not yet appended to the run's output log.
+        self._output_unwritten: list = []
+        self._output_log_started = False
         self._loader: _ResultLoader | None = None
 
         self.process = QProcess(self)
@@ -814,10 +835,13 @@ class ProcessWorkflowWorker(QObject):
         if lines and not final and not lines[-1].endswith(("\n", "\r")):
             self._output_pending[stream] = lines.pop()
         for line in lines:
-            rendered = line.rstrip()
+            # pyGIMLi colours its log lines for a terminal; in the log panel and
+            # the run's logs the codes are only noise ("[0;32;49mINFO[0m").
+            rendered = _ANSI_ESCAPE.sub("", line).rstrip()
             if not rendered.strip():
                 continue
-            self._output_tail.append(rendered if stream == "stdout" else f"[stderr] {rendered}")
+            self._output_unwritten.append(
+                rendered if stream == "stdout" else f"[stderr] {rendered}")
             if not self._memory_hint and _MEMORY_LINE.search(rendered):
                 self._memory_hint = rendered.strip()[:300]
             match = re.match(
@@ -833,6 +857,9 @@ class ProcessWorkflowWorker(QObject):
                     r"^\w+(\.\w+)*(Error|Exception|Unavailable)(: |$)", rendered.strip()):
                 self._last_exception = rendered.strip()
             self.logged.emit(rendered)
+        # As it arrives rather than at the end: a crash of the studio itself
+        # still leaves everything printed so far.
+        self._append_output_log()
 
     def _read_stdout(self) -> None:
         self._emit_output(bytes(self.process.readAllStandardOutput()))
@@ -840,25 +867,42 @@ class ProcessWorkflowWorker(QObject):
     def _read_stderr(self) -> None:
         self._emit_output(bytes(self.process.readAllStandardError()), "stderr")
 
-    def _write_output_log(self, exit_code: int) -> Path | None:
-        """Keep the end of the child's output in its run's ``logs`` folder.
+    def _append_output_log(self, closing: str = "") -> Path | None:
+        """Append the child's new lines to its run's ``logs/workflow_output.log``.
 
         The page's log panel is gone with the session, and a run that crashed
-        otherwise left an empty ``logs`` folder and an exit code behind. Written
-        only where the result sits in a run folder that has one.
+        otherwise left an empty ``logs`` folder and an exit code behind. All of
+        the output is kept: a 2000-line tail lost the start of a long windowed
+        run - its settings, its data checks - which is where a failure is
+        usually explained. ``closing`` is a last line, the exit code. Written
+        only where the result sits in a run folder that has a ``logs`` folder;
+        lines a write could not take (a file held a moment by OneDrive) wait
+        for the next.
         """
         folder = self.result_path.parent / "logs"
-        if not self._output_tail or not folder.is_dir():
+        if closing:
+            self._output_unwritten.append(closing)
+        if not self._output_unwritten or not folder.is_dir():
             return None
         path = folder / OUTPUT_LOG_NAME
+        lines = list(self._output_unwritten)
+        if not self._output_log_started:
+            # One run folder can see more than one workflow process; each says
+            # where its own output begins.
+            lines.insert(0, f"[{self.recipe_path.name}, started "
+                            f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}]")
         try:
-            path.write_text(
-                "\n".join([*self._output_tail, f"[exit code {exit_code} "
-                           f"(0x{exit_code & 0xFFFFFFFF:08X})]"]) + "\n",
-                encoding="utf-8")
+            with open(path, "a", encoding=LOG_ENCODING, newline="\n") as handle:
+                handle.write("\n".join(lines) + "\n")
         except OSError:
-            return None
+            return path if path.is_file() else None
+        self._output_log_started = True
+        self._output_unwritten.clear()
         return path
+
+    @staticmethod
+    def _exit_line(exit_code: int, how: str = "exit code") -> str:
+        return f"[{how} {exit_code} (0x{exit_code & 0xFFFFFFFF:08X})]"
 
     def _on_process_error(self, error: QProcess.ProcessError) -> None:
         if error == QProcess.ProcessError.FailedToStart and not self._finished:
@@ -884,12 +928,18 @@ class ProcessWorkflowWorker(QObject):
         self._emit_output(b"", "stdout", final=True)
         self._emit_output(b"", "stderr", final=True)
         if self._cancelled:
+            self._append_output_log(self._exit_line(int(exit_code), "stopped by the user; exit code"))
             self._finished = True
             self.finished.emit()
             return
-        log_path = self._write_output_log(int(exit_code))
+        log_path = self._append_output_log(self._exit_line(int(exit_code)))
         crashed = _exit_status == QProcess.ExitStatus.CrashExit
         if int(exit_code) != 0 or crashed:
+            # Only an ordinary Python error exit (code 1) ended on the exception
+            # it names; a crash after some stray import warning did not.
+            self.missing_backend = (
+                int(exit_code) == 1 and not crashed and not self._memory_hint
+                and bool(_MISSING_BACKEND.match(self._last_exception)))
             self._finish_with_error(_process_failure_message(
                 int(exit_code), crashed, self._last_exception, self._memory_hint, log_path))
             return

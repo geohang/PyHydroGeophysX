@@ -81,10 +81,15 @@ class _ADTLERTWindowProgress:
                 f"{current}/{total} complete{suffix}"
             )
         elif name == "windowed_prediction_start":
+            n_times = int(event.get("n_times", 0))
             self.log(
-                "ADTLERT windows complete; assembling predictions for "
-                f"{int(event.get('n_times', 0))} time steps"
+                f"[progress 0/{n_times}] ADTLERT windows complete; assembling "
+                f"predictions for {n_times} time steps"
             )
+        elif name == "windowed_prediction_step":
+            done, n_times = int(event.get("done", 0)), int(event.get("n_times", 0))
+            self.log(f"[progress {done}/{n_times}] ADTLERT predicted data, "
+                     f"step {done}/{n_times}")
         elif name == "windowed_done":
             total = int(event.get("n_windows", self.n_windows))
             value = event.get("final_chi2")
@@ -147,8 +152,16 @@ def _adtlert_windows(forward, observed, initial, *, window_size: int,
     final_log = np.column_stack([np.mean(np.column_stack(models), axis=1)
                                  for models in contributions])
     progress({"event": "windowed_prediction_start", "n_times": n_times})
-    predicted_log = np.vstack([np.asarray(forward.forward(final_log[:, t], log_transform=True),
-                                          dtype=float) for t in range(n_times)])
+    # One forward run per step: about a minute for a 420-step series, which
+    # without a count reads as a hang right after the last window finished.
+    every = max(1, n_times // 20)
+    predicted_rows = []
+    for t in range(n_times):
+        predicted_rows.append(np.asarray(
+            forward.forward(final_log[:, t], log_transform=True), dtype=float))
+        if (t + 1) % every == 0 or t + 1 == n_times:
+            progress({"event": "windowed_prediction_step", "done": t + 1, "n_times": n_times})
+    predicted_log = np.vstack(predicted_rows)
     progress({"event": "windowed_done", "n_windows": len(starts),
               "final_chi2": window_chi2[-1] if window_chi2 else None})
     return TimeLapseERTInversionResult(

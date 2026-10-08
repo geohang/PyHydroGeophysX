@@ -25,6 +25,15 @@ LogFn = Callable[[str], None]
 
 INVERSION_TYPES = ("L2", "L1", "L1L2")
 
+#: The overview figure draws at most this many time steps. pyGIMLi lays the
+#: whole figure out again after every section it draws, so the figure's cost
+#: grows with the square of its panel count: a 420-step series spent most of an
+#: hour, after the inversion had finished, on one image 315 inches tall that
+#: nobody could read. A longer series shows this many steps, evenly spaced from
+#: the first to the last; every step is still saved in ``final_models.npy`` and
+#: the per-step VTK files, and the studio's step viewer shows any of them.
+OVERVIEW_MAX_PANELS = 12
+
 DEFAULT_TL = {
     "lambda_val": 50.0, "alpha": 10.0, "inversion_type": "L2",
     "max_iterations": 15, "relativeError": 0.05, "absoluteUError": 0.0,
@@ -51,6 +60,9 @@ DEFAULT_TL = {
     "conform_to_zones": False,
     "decouple_zones": False,
     "max_error": None,
+    # A reciprocal error model {"m", "b", "floor", ...} to set every reading's
+    # error from (ert_io.reciprocal_model_errors); None keeps each file's own.
+    "error_model": None,
     # Lambda relaxation. A trial here is a full joint inversion over every time
     # step, so the default budget is smaller than the single-inversion search.
     "auto_lambda": False, "target_chi2": 1.0, "chi2_tolerance": 0.2,
@@ -71,12 +83,20 @@ DEFAULT_TL = {
     # parameter mesh.
     "figure_clip": "coverage",
     "figure_clip_threshold": -2.0,
+    # How many time steps the overview figure draws at most; a longer series
+    # shows that many, evenly spaced. 0 draws every step.
+    "figure_max_panels": OVERVIEW_MAX_PANELS,
 }
 
 #: Above this many model unknowns (para cells x time steps) the dense
 #: Gauss-Newton matrices get large, so sparse/low-memory mode is auto-enabled
 #: unless the caller set ``save_memory`` explicitly.
 _AUTO_SPARSE_UNKNOWNS = 15000
+
+#: Roughly how many progress lines the per-step VTK export writes, however
+#: long the series: often enough to keep a progress bar moving, few enough not
+#: to bury the run's log under 420 lines that say the same thing.
+_VTK_PROGRESS_LINES = 20
 
 
 def _relax_timelapse_lambda(inversion, first, *, target_chi2: float,
@@ -339,6 +359,346 @@ def _safe_label(text: str) -> str:
     return out.strip("_") or "step"
 
 
+def overview_steps(n_time: int, max_panels: int = OVERVIEW_MAX_PANELS) -> List[int]:
+    """The time steps the overview figure draws, as 0-based indices in order.
+
+    Every step of a series of up to ``max_panels``; otherwise ``max_panels``
+    steps spread evenly over it, the first and the last always among them.
+    ``max_panels`` of 0 or less draws every step.
+
+    >>> overview_steps(5)
+    [0, 1, 2, 3, 4]
+    >>> overview_steps(420, 4)
+    [0, 140, 279, 419]
+    """
+    n_time, limit = int(n_time), int(max_panels or 0)
+    if limit <= 0 or n_time <= limit:
+        return list(range(max(0, n_time)))
+    # At least two, so a capped series always shows where it starts and ends.
+    picks = np.round(np.linspace(0, n_time - 1, max(2, limit))).astype(int)
+    return sorted({int(i) for i in picks})
+
+
+def _progress(log: LogFn, current: int, total: int, label: str) -> None:
+    """Log one ``[progress current/total] label`` line.
+
+    The studio reads these off the workflow process's output into its progress
+    bar and status bar (``qt_apps.workers.ProcessWorkflowWorker``); anywhere
+    else they are ordinary, readable log lines.
+    """
+    log(f"[progress {int(current)}/{int(total)}] {label}")
+
+
+class _JointIterationProgress:
+    """Report each iteration of the full (all steps at once) inversion.
+
+    The windowed inversion reports every window it finishes; the full one
+    solves every step together and said nothing a progress bar could read, so
+    the studio showed a bar that only knew the run was busy. This turns the
+    inversion's own iteration events into ``[progress i/n]`` lines, ``n`` being
+    the most iterations the run can take; one that converges early stops short.
+    """
+
+    def __init__(self, n_steps: int, log: LogFn) -> None:
+        self.n_steps = int(n_steps)
+        self.log = log
+
+    def __call__(self, event: Dict[str, Any]) -> None:
+        if event.get("event") != "timelapse_iteration_done":
+            return
+        iteration = int(event.get("iteration", 0))
+        maximum = max(1, int(event.get("max_iterations", 1)))
+        irls, irls_total = int(event.get("irls_iteration", 1)), int(event.get("irls_iterations", 1))
+        current = (irls - 1) * maximum + iteration
+        total = max(current, irls_total * maximum)
+        reweight = f", reweighting pass {irls}/{irls_total}" if irls_total > 1 else ""
+        self.log(f"[progress {current}/{total}] Inverting all {self.n_steps} steps together"
+                 f"{reweight}, iteration {iteration}/{maximum}: "
+                 f"chi2 {float(event.get('chi2', float('nan'))):.3f}")
+
+
+def _log_ticks(lo: float, hi: float) -> List[float]:
+    """Round values to label a logarithmic scale from ``lo`` to ``hi``.
+
+    Decades when the range spans three or more; otherwise 1-2-5 steps, or
+    finer ones for a range under a decade, so a bar always carries a few
+    readable labels rather than the ends' arbitrary values.
+
+    >>> _log_ticks(385.0, 2685.0)
+    [500.0, 1000.0, 2000.0]
+    >>> _log_ticks(1.0, 10000.0)
+    [1.0, 10.0, 100.0, 1000.0, 10000.0]
+    """
+    if not (hi > lo > 0.0):
+        return [lo, hi] if lo > 0.0 else []
+    first, last = int(np.floor(np.log10(lo))), int(np.ceil(np.log10(hi)))
+    for subs in ((1.0,), (1.0, 2.0, 5.0), (1.0, 1.5, 2.0, 3.0, 5.0, 7.0)):
+        ticks = [float(f"{m * 10.0 ** k:.6g}") for k in range(first, last + 1)
+                 for m in subs if lo <= m * 10.0 ** k <= hi]
+        if len(ticks) >= 3:
+            return ticks
+    return [float(f"{lo:.2g}"), float(f"{hi:.2g}")]
+
+
+def _draw_overview(path: Path, mesh: Any, models: np.ndarray,
+                   coverage: Optional[np.ndarray], *, steps: Sequence[int],
+                   titles: Sequence[str], rho_range: Sequence[float],
+                   clip_mode: str, clip_polygon: Any, title: str,
+                   log: LogFn) -> None:
+    """Draw the resistivity sections of ``steps`` in rows of four and save them.
+
+    Every section uses the same per-model, logarithmic rendering convention as
+    the interactive Resistivity model view, on one colour scale ``rho_range``.
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib import ticker
+    import pygimli as pg
+
+    n_panels = len(steps)
+    ncol = min(4, n_panels)
+    nrow = int(np.ceil(n_panels / ncol))
+    _progress(log, 0, n_panels, "Saving results: drawing the overview figure")
+    # The shared colour bar below gets its own 0.85 inch, added to the
+    # figure rather than taken from the panels.
+    height = 3.0 * nrow + 0.85
+    fig = plt.figure(figsize=(3.6 * ncol, height))
+    mappable = None
+    try:
+        for slot, i in enumerate(steps):
+            ax = fig.add_subplot(nrow, ncol, slot + 1)
+            show_kw = ert_plot_style.ert_model_plot_kwargs()
+            # One colour bar for the whole figure, drawn below: every panel is
+            # on the same scale, and a bar under each 3.6-inch panel pressed
+            # its five labels into one another ("385626101716522685").
+            show_kw.update(
+                ax=ax,
+                cMin=float(rho_range[0]),
+                cMax=float(rho_range[1]),
+                colorBar=False,
+            )
+            step_coverage = (coverage[i] if coverage is not None and coverage.shape[0] > i
+                             else None)
+            if step_coverage is not None and clip_mode == "coverage":
+                show_kw["coverage"] = step_coverage
+            try:
+                pg.show(mesh, models[:, i], **show_kw)
+            except Exception:  # noqa: BLE001 - retry without coverage
+                show_kw.pop("coverage", None)
+                ax.clear()
+                pg.show(mesh, models[:, i], **show_kw)
+            if mappable is None and ax.collections:
+                mappable = ax.collections[0]   # the model's cells: cmap and LogNorm
+            if clip_polygon is not None:
+                _clip_axes(ax, clip_polygon, log)
+            ax.set_title(titles[i])
+            _progress(log, slot + 1, n_panels,
+                      f"Saving results: overview figure, panel {slot + 1}/{n_panels}")
+        fig.suptitle(title, y=1.0)
+        fig.tight_layout(rect=(0.0, 0.85 / height, 1.0, 0.97))
+        if mappable is not None:
+            cax = fig.add_axes((0.3, 0.32 / height, 0.4, 0.13 / height))
+            bar = fig.colorbar(mappable, cax=cax, orientation="horizontal")
+            bar.set_label(ert_plot_style.ERT_RESISTIVITY_LABEL)
+            bar.set_ticks(_log_ticks(float(rho_range[0]), float(rho_range[1])))
+            bar.ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda v, _: f"{v:g}"))
+            bar.ax.xaxis.set_minor_formatter(ticker.NullFormatter())
+        fig.savefig(path, dpi=160, bbox_inches="tight")
+    finally:
+        plt.close(fig)
+
+
+class _VTKTemplate:
+    """pyGIMLi's VTK file of one time step, with its field values left open.
+
+    Every per-step file holds the same mesh - points, cells, markers - and only
+    its resistivity and coverage differ, yet ``exportVTK`` formats the whole
+    geometry again for each one: on a 60 000-cell mesh three quarters of a
+    file's 0.3 s, repeated for every step. The template is cut from the first
+    file pyGIMLi writes and fills in later steps' values the way pyGIMLi
+    formats them. It is used only after it reproduced that first file byte for
+    byte, and a step it cannot render the same way (a NaN, say, whose spelling
+    is the C++ library's own) is left to pyGIMLi.
+    """
+
+    def __init__(self, segments: List[Any]) -> None:
+        #: Runs of the file's lines as bytes, and ``(field, line ending)`` where
+        #: a field's values go.
+        self.segments = segments
+        self.fields = {item[0] for item in segments if isinstance(item, tuple)}
+
+    @staticmethod
+    def values_line(values: Any) -> Optional[bytes]:
+        """One field's values as pyGIMLi writes them; None if they are not all finite."""
+        array = np.asarray(values, dtype=float).ravel()
+        if not np.all(np.isfinite(array)):
+            return None
+        return " ".join(["%.14g" % value for value in array.tolist()]).encode("ascii") + b" "
+
+    @classmethod
+    def from_reference(cls, reference: bytes,
+                       fields: Dict[str, Any]) -> Optional["_VTKTemplate"]:
+        """The template of ``reference``, a file pyGIMLi wrote holding ``fields``;
+        None when it does not reproduce that file exactly."""
+        lines = reference.split(b"\n")
+        holes: Dict[int, Any] = {}
+        for name in fields:
+            header = f"SCALARS {name} double 1".encode("ascii")
+            found = [k for k, line in enumerate(lines) if line.rstrip(b"\r") == header]
+            if len(found) != 1 or found[0] + 2 >= len(lines):
+                return None
+            k = found[0] + 2
+            holes[k] = (name, b"\r" if lines[k].endswith(b"\r") else b"")
+        segments: List[Any] = []
+        run: List[bytes] = []
+        for k, line in enumerate(lines):
+            if k in holes:
+                if run:
+                    segments.append(b"\n".join(run))
+                    run = []
+                segments.append(holes[k])
+            else:
+                run.append(line)
+        if run:
+            segments.append(b"\n".join(run))
+        template = cls(segments)
+        return template if template.render(fields) == reference else None
+
+    def render(self, fields: Dict[str, Any]) -> Optional[bytes]:
+        """The file for ``fields``; None when it has to come from pyGIMLi instead."""
+        if set(fields) != self.fields:
+            return None
+        pieces: List[bytes] = []
+        for item in self.segments:
+            if isinstance(item, tuple):
+                line = self.values_line(fields[item[0]])
+                if line is None:
+                    return None
+                pieces.append(line + item[1])
+            else:
+                pieces.append(item)
+        return b"\n".join(pieces)
+
+
+def _export_vtks(out: Path, mesh: Any, models: np.ndarray,
+                 coverage: Optional[np.ndarray], labels: Sequence[str],
+                 log: LogFn):
+    """Write one VTK per time step and one holding every step.
+
+    The per-step files carry one resistivity field each (and that step's
+    coverage) - a clean ParaView time series; the combined file carries every
+    step as a field of its own on one mesh. Returns ``(step_paths,
+    combined_path)``; a file that cannot be written is logged and left out,
+    never fatal.
+    """
+    import pygimli as pg
+
+    n_time = int(models.shape[1])
+    every = max(1, -(-n_time // _VTK_PROGRESS_LINES))   # ceil
+    step_paths: List[str] = []
+    try:
+        steps_dir = io_utils.ensure_dir(out / "vtk_steps")
+        _progress(log, 0, n_time, f"Saving results: per-step VTK 0/{n_time}")
+        template = None
+        for i in range(n_time):
+            fields = {"resistivity": models[:, i]}
+            if coverage is not None and coverage.shape[0] > i:
+                fields["coverage"] = np.asarray(coverage[i], dtype=float)
+            lbl = _safe_label(labels[i]) if i < len(labels) else f"{i:03d}"
+            sp = steps_dir / f"resistivity_t{i:03d}_{lbl}.vtk"
+            text = template.render(fields) if template is not None else None
+            if text is not None:
+                sp.write_bytes(text)
+            else:
+                step_mesh = pg.Mesh(mesh)
+                for name, values in fields.items():
+                    step_mesh[name] = values
+                step_mesh.exportVTK(str(sp))
+                if i == 0:
+                    template = _VTKTemplate.from_reference(sp.read_bytes(), fields)
+            step_paths.append(str(sp))
+            if (i + 1) % every == 0 or i + 1 == n_time:
+                _progress(log, i + 1, n_time,
+                          f"Saving results: per-step VTK {i + 1}/{n_time}")
+    except Exception as exc:  # noqa: BLE001
+        log(f"Per-step VTK export skipped: {exc}")
+    # Every time step as a separate field, on a copy: the mesh handed back to
+    # the caller stays the bare parameter mesh rather than carrying one field
+    # per step for the rest of its life.
+    combined = ""
+    try:
+        _progress(log, 0, 1, f"Saving results: combined VTK ({n_time} steps in one file)")
+        combined_mesh = pg.Mesh(mesh)
+        for i in range(n_time):
+            combined_mesh[f"resistivity_t{i}"] = models[:, i]
+        vtk = out / "timelapse_resistivity.vtk"
+        combined_mesh.exportVTK(str(vtk))
+        combined = str(vtk)
+    except Exception as exc:  # noqa: BLE001
+        log(f"VTK export skipped: {exc}")
+    return step_paths, combined
+
+
+#: The range of relative data errors each time-lapse engine accepts from the
+#: ``err`` column; a value outside it is moved to the nearer limit.
+#: TimeLapseERTInversion clips to 1-50 % (time_lapse.py), the windowed ADTLERT
+#: backend raises anything below 1 % (windowed.py), and E4D, R2 and R3t take
+#: the column as it is (e4d._survey_data).
+_ENGINE_ERROR_RANGE = {"pyhydro": (0.01, 0.50), "adtlert": (0.01, None)}
+
+
+def _data_error_report(engine: str, containers, error_model: Optional[Dict[str, Any]],
+                       log: LogFn = _noop) -> Dict[str, Any]:
+    """What the run hands the engine as data errors, and what the engine
+    makes of them.
+
+    Every time-lapse engine reads each survey's ``err`` column - set from the
+    reciprocal error model when there is one - but not all of them take every
+    value: the limits in ``_ENGINE_ERROR_RANGE`` move the errors outside
+    them, which is said here rather than left to look as if the model's
+    errors were used as they are.
+    """
+    errors = [np.asarray(c["err"], dtype=float) for c in containers if c.haveData("err")]
+    if len(errors) != len(containers) or not errors:
+        return {"source": "estimate (the surveys carry no error column)"}
+    values = np.concatenate(errors)
+    # ADTLERT inverts the union of every survey's readings, and a reading a
+    # survey lacks is filled in at 100 % error (align_timelapse_abmn); those
+    # placeholders are counted apart, not as errors the data were given.
+    filled = int((values == 1.0).sum()) if engine == "adtlert" else 0
+    if filled and filled < values.size:
+        values = values[values != 1.0]
+    low, high = _ENGINE_ERROR_RANGE.get(engine, (None, None))
+    raised = int((values < low).sum()) if low is not None else 0
+    lowered = int((values > high).sum()) if high is not None else 0
+    report = {
+        "source": ("reciprocal error model" if error_model else "each survey's err column"),
+        "median": float(np.median(values)), "min": float(values.min()),
+        "max": float(values.max()), "readings": int(values.size),
+        "engine_range": [low, high], "raised_to_engine_minimum": raised,
+        "lowered_to_engine_maximum": lowered, "filled_at_100_percent": filled,
+    }
+    if error_model:
+        report["model"] = {key: error_model[key] for key in (
+            "m", "b", "floor", "r2", "r2_raw", "pairs", "surveys", "fitted_over")
+            if key in error_model}
+    if error_model or raised or lowered:
+        log(f"Data errors: {report['source']}, median {100.0 * report['median']:.3g} % "
+            f"(from {100.0 * report['min']:.3g} to {100.0 * report['max']:.3g} %) over "
+            f"{report['readings']} readings"
+            + (f"; besides them, {filled} reading(s) a survey lacks were filled in at "
+               "100 % error to align the surveys" if filled else "") + ".")
+        if raised or lowered:
+            limits = " and ".join(text for text in (
+                f"below {100.0 * low:g} %" if low is not None else "",
+                f"above {100.0 * high:g} %" if high is not None else "") if text)
+            log(f"  Note: the {engine} engine takes no error {limits}: {raised} "
+                f"reading(s) were raised and {lowered} lowered to that limit, so "
+                "those readings are fitted to the limit, not to their own error.")
+        elif error_model:
+            log(f"  The {engine} engine uses these errors as they are.")
+    return report
+
+
 def build_timelapse_config(data_files: Sequence[str], measurement_times: Sequence[float],
                            params: Dict[str, Any]) -> Dict[str, Any]:
     """JSON-serializable configuration (no backend needed)."""
@@ -357,12 +717,13 @@ def build_timelapse_config(data_files: Sequence[str], measurement_times: Sequenc
             "para_max_cell_size", "para_boundary", "surface_nodes", "outer_width",
             "outer_max_cell_size", "mesh_file", "zones", "conform_to_zones",
             "decouple_zones",
-            "max_error", "temporal_weighting", "temporal_weight_limit")},
+            "max_error", "error_model", "temporal_weighting", "temporal_weight_limit")},
         # Post-processing that changes what the sections show has to travel with
         # the configuration, or a re-run reproduces different pictures.
         "temperature_correction": p.get("temperature_correction"),
         "figure_clip": p.get("figure_clip"),
         "figure_clip_threshold": p.get("figure_clip_threshold"),
+        "figure_max_panels": p.get("figure_max_panels"),
     }
 
 
@@ -405,7 +766,7 @@ def run_timelapse_ert(
         matplotlib.use("Agg", force=True)
         import matplotlib.pyplot as plt
         plt.ioff()
-        import pygimli as pg
+        import pygimli  # noqa: F401 - a missing backend is reported here, up front
         from pygimli.physics import ert as pg_ert
         from PyHydroGeophysX.inversion.time_lapse import TimeLapseERTInversion
         from PyHydroGeophysX.inversion.windowed import WindowedTimeLapseERTInversion
@@ -483,8 +844,11 @@ def run_timelapse_ert(
     clean_dir, basenames, containers = ert_load.normalize_for_timelapse(
         source_files, instrument, out_dir, log=log,
         max_error=p.get("max_error"), engine=engine,
-        electrode_file=str(electrode_file) if electrode_file else None)
+        electrode_file=str(electrode_file) if electrode_file else None,
+        error_model=p.get("error_model") or None)
     files = [os.path.join(clean_dir, b) for b in basenames]
+    data_error = _data_error_report(engine, containers, p.get("error_model") or None,
+                                    log=log)
 
     # The same mesh builder as the single-survey run and the ERT page's mesh
     # preview, so the preview of the first survey is the mesh inverted here.
@@ -633,8 +997,9 @@ def run_timelapse_ert(
     else:
         log(f"Running full {p['inversion_type']} time-lapse inversion: {len(files)} steps, "
             f"lambda={p['lambda_val']}, alpha={p['alpha']}")
-        inversion = TimeLapseERTInversion(data_files=files, measurement_times=times,
-                                          mesh=mesh, **inv_kwargs)
+        inversion = TimeLapseERTInversion(
+            data_files=files, measurement_times=times, mesh=mesh,
+            progress_callback=_JointIterationProgress(len(files), log), **inv_kwargs)
         result = inversion.run()
         mode = "full"
         if bool(p.get("auto_lambda", False)):
@@ -738,41 +1103,27 @@ def run_timelapse_ert(
     if coverage is not None and clip_mode == "envelope":
         clip_polygon = _envelope_polygon(
             res_mesh, np.nanmean(coverage, axis=0), clip_cut, sensors, log)
-    ncol = min(4, n_time)
-    nrow = int(np.ceil(n_time / ncol))
-    fig = plt.figure(figsize=(3.6 * ncol, 3.0 * nrow))
-    for i in range(n_time):
-        ax = fig.add_subplot(nrow, ncol, i + 1)
-        show_kw = ert_plot_style.ert_model_plot_kwargs()
-        show_kw.update(
-            ax=ax,
-            label=ert_plot_style.ERT_RESISTIVITY_LABEL,
-            cMin=rho_min,
-            cMax=rho_max,
-        )
-        step_coverage = (coverage[i] if coverage is not None and coverage.shape[0] > i
-                         else None)
-        if step_coverage is not None and clip_mode == "coverage":
-            show_kw["coverage"] = step_coverage
-        try:
-            pg.show(res_mesh, final_models[:, i], **show_kw)
-        except Exception:  # noqa: BLE001 - retry without coverage
-            show_kw.pop("coverage", None)
-            ax.clear()
-            pg.show(res_mesh, final_models[:, i], **show_kw)
-        if clip_polygon is not None:
-            _clip_axes(ax, clip_polygon, log)
-        ax.set_title(panel_titles[i])
+    # A long series is drawn as a sample of its steps (OVERVIEW_MAX_PANELS),
+    # and the title says so, so the figure is never mistaken for the whole run.
+    max_panels = int(p.get("figure_max_panels", OVERVIEW_MAX_PANELS) or 0)
+    shown_steps = overview_steps(n_time, max_panels)
     span = f": {labels[0]} → {labels[-1]}" if n_time and any("-" in str(l) for l in labels) else ""
     corrected = (f", corrected to "
                  f"{temperature_report.get('reference_temperature_C', 25.0):g} °C"
                  if temperature_report.get("applied") else "")
-    fig.suptitle(f"Time-lapse resistivity ({mode}, {n_time} time steps)"
-                 f"{corrected}{span}", y=1.0)
-    fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.97))
+    counted = (f"{n_time} time steps" if len(shown_steps) == n_time
+               else f"{len(shown_steps)} of {n_time} time steps, evenly spaced")
     panel = out / "timelapse_resistivity.png"
-    fig.savefig(panel, dpi=160, bbox_inches="tight"); plt.close(fig)
+    _draw_overview(panel, res_mesh, final_models, coverage, steps=shown_steps,
+                   titles=panel_titles, rho_range=(rho_min, rho_max),
+                   clip_mode=clip_mode, clip_polygon=clip_polygon,
+                   title=f"Time-lapse resistivity ({mode}, {counted}){corrected}{span}",
+                   log=log)
     figure_paths.append(str(panel))
+    if len(shown_steps) < n_time:
+        log(f"The overview figure shows {len(shown_steps)} of the {n_time} time steps, "
+            f"evenly spaced from the first to the last. Every step is saved in "
+            f"final_models.npy and the per-step VTK files.")
 
     # Exports go through a sibling temp file that is swapped into place, so a run
     # that cannot replace the target leaves the previous file intact rather than
@@ -806,35 +1157,22 @@ def run_timelapse_ert(
     except Exception as exc:  # noqa: BLE001
         mesh_path = None
         log(f"Mesh export skipped: {exc}")
-    # Per-step VTKs (one resistivity field each) — a clean ParaView time series.
-    vtk_step_paths: List[str] = []
-    try:
-        steps_dir = io_utils.ensure_dir(out / "vtk_steps")
-        for i in range(n_time):
-            step_mesh = pg.Mesh(res_mesh)  # copy before the combined fields are added
-            step_mesh["resistivity"] = final_models[:, i]
-            if coverage is not None and coverage.shape[0] > i:
-                step_mesh["coverage"] = np.asarray(coverage[i], dtype=float)
-            lbl = _safe_label(labels[i]) if i < len(labels) else f"{i:03d}"
-            sp = steps_dir / f"resistivity_t{i:03d}_{lbl}.vtk"
-            step_mesh.exportVTK(str(sp))
-            vtk_step_paths.append(str(sp)); data_paths.append(str(sp))
-    except Exception as exc:  # noqa: BLE001
-        log(f"Per-step VTK export skipped: {exc}")
-    # Combined VTK: every time step as a separate field on one mesh.
-    vtk_combined = ""
-    try:
-        for i in range(n_time):
-            res_mesh[f"resistivity_t{i}"] = final_models[:, i]
-        vtk = out / "timelapse_resistivity.vtk"
-        res_mesh.exportVTK(str(vtk)); data_paths.append(str(vtk))
-        vtk_combined = str(vtk)
-    except Exception as exc:  # noqa: BLE001
-        log(f"VTK export skipped: {exc}")
+    # Per-step VTKs (a clean ParaView time series) and the combined one.
+    vtk_step_paths, vtk_combined = _export_vtks(
+        out, res_mesh, final_models, coverage, labels, log)
+    data_paths.extend(vtk_step_paths)
+    if vtk_combined:
+        data_paths.append(vtk_combined)
 
     config = build_timelapse_config(source_files, times, p)
     config["electrode_file"] = str(electrode_file) if electrode_file else None
+    # Which steps the overview figure drew, 0-based; the setting that chose
+    # them is in the configuration's figure_max_panels.
+    config["overview_steps"] = list(shown_steps)
     io_utils.write_json(out / "timelapse_config.json", config)
+    # The workflow layer reads every file once more to record its checksum,
+    # which for a long series on a large mesh is gigabytes; say so meanwhile.
+    _progress(log, 1, 1, "Saving results: recording the files written")
 
     return {
         "status": "ok",
@@ -872,6 +1210,8 @@ def run_timelapse_ert(
         # Where the electrode positions came from, when not each file's header.
         "electrode_file": Path(electrode_file).name if electrode_file else "",
         "save_memory": bool(save_memory),
+        # The data errors the engine was handed, and what it did with them.
+        "data_error": data_error,
         "chi2": final_chi2,
         "chi2_history": chi2_history,
         "auto_lambda": lambda_report,
@@ -886,6 +1226,9 @@ def run_timelapse_ert(
         "temporal_weighting": temporal_report,
         "temperature_correction": temperature_report,
         "figure_clip": clip_mode,
+        # The steps the overview figure drew, 0-based: all of them unless the
+        # series was longer than figure_max_panels.
+        "overview_steps": list(shown_steps),
         "resistivity_range": [rho_min, rho_max],
         "figure_paths": figure_paths,
         "data_paths": data_paths,

@@ -364,6 +364,16 @@ Do not use a narrow resistivity range simply to make a smooth-looking plot.
 Check suspicious points against acquisition notes, reciprocal error, contact
 resistance, and neighboring measurements before deleting them.
 
+For data measured both ways, the **Reciprocal errors** tab, beside
+**Pseudosection**, plots each pair's reciprocal error against its mean
+resistance with the reciprocal error model fitted through the pairs - one
+survey, or in time-lapse mode every survey of the list, coloured first to last
+(the series is read in the background). Its **Fit to** choice fits the model to
+all pairs before filtering or only to the pairs the applied filter kept, the
+others drawn in grey; the data errors taken from the model, ``qc_report.txt``,
+``inversion_settings.txt`` and the run's figure use the same choice, and Saved
+Results shows the same view for the run.
+
 Step 4 -- check the mesh and set a-priori zones
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -878,6 +888,33 @@ Using AQUAH Chat Safely
 
 The right-side **AQUAH Chat** tab can navigate modules, load example data,
 change parameters, and start supported actions.
+
+Copy files in your file manager and paste them into the chat input with
+**Ctrl+V**, or drag files and model folders into it. AQUAH and the selected
+GeoSAGE assistant receive their local paths; file names appear above the input.
+Describe your task and send it. The AI uses file names, bounded content previews
+and the task to identify survey data, model configurations and RAG reference
+documents. Data are added to **Workflow → Data & reports**, and literature is
+made available for local retrieval. You do not need to choose roles manually.
+Ambiguous files prompt a clarification before any classification is applied.
+Select a file and click **Remove** to detach it without deleting its source.
+
+Identifying a reference enables the **RAG** setting. With RAG enabled, each request
+searches local references in the background and supplies relevant excerpts to
+the assistant, displaying their source paths and page or line locations in chat.
+These excerpts are also available to **Auto to report**, and their citations are
+saved in ``chat_reference_sources.json`` in the run folder. Host chat retrieval
+works even when an optional assistant has no workflow-specific RAG controls.
+
+Supported references are PDF, DOCX, TXT, Markdown, RST, CSV and JSON, up to
+10 MB per file. PDF reading requires ``pypdf`` (included in the desktop extra),
+reads at most 50 pages and needs selectable text; scanned PDFs require OCR
+before attaching. Retrieval reads at most 100,000 characters per document and
+sends up to six matching excerpts. It reports unreadable documents in chat.
+Disable **RAG** to stop sending reference excerpts on subsequent requests.
+Files stay in their original locations, and attaching them does not start a
+workflow. Reference selections are kept for the current Project and assistant
+in this session.
 
 1. Choose a **Level** (see :ref:`choosing-a-request-level`), then select OpenAI,
    Anthropic, or an OpenAI-compatible provider. The level fixes the model; the

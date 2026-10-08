@@ -39,6 +39,13 @@ def regional_residual(x: np.ndarray, y: np.ndarray, value: np.ndarray,
     return regional, v - regional
 
 
+def missing_station_message(n_missing: int, n_total: int, what: str) -> str:
+    """The sentence a page and a run both use for stations left out as missing."""
+    verb = "has" if n_missing == 1 else "have"
+    return (f"{n_missing:,} of {n_total:,} stations {verb} a missing coordinate or "
+            f"value and {'is' if n_missing == 1 else 'are'} left out of {what}.")
+
+
 def spatially_balanced_indices(x: np.ndarray, y: np.ndarray, max_stations: int) -> np.ndarray:
     """Return deterministic farthest-point indices for a spatially balanced subset.
 
@@ -80,6 +87,7 @@ def qc_products(x: np.ndarray, y: np.ndarray, value: np.ndarray, *, detrend: int
     good = np.isfinite(x) & np.isfinite(y) & np.isfinite(value)
     if int(good.sum()) < 3:
         raise ValueError("Need at least three finite stations for QC products.")
+    n_missing = int(good.size - np.count_nonzero(good))
     x, y, value = x[good], y[good], value[good]
     degree = max(0, int(detrend))
     if degree == 0:
@@ -94,8 +102,10 @@ def qc_products(x: np.ndarray, y: np.ndarray, value: np.ndarray, *, detrend: int
                "mean": float(np.nanmean(values)), "std": float(np.nanstd(values))}
         for name, values in fields.items()
     }
+    # ``n_missing``: stations left out for a missing x, y or value, so a
+    # caller can say how many the maps do not show.
     return {"x": x, "y": y, "fields": fields, "grids": grids, "stats": stats,
-            "detrend": degree}
+            "detrend": degree, "n_missing": n_missing}
 
 
 def grid_data(x: np.ndarray, y: np.ndarray, value: np.ndarray,
@@ -163,6 +173,7 @@ def build_gravmag_config(kind: str, settings: Dict[str, Any], bodies: List[Dict[
 
 
 __all__ = [
+    "missing_station_message",
     "regional_residual",
     "spatially_balanced_indices",
     "qc_products",

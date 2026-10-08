@@ -63,13 +63,14 @@ def run(payload, progress, *, context_factory=None, run_fn=None, events=None,
     output.mkdir(parents=True, exist_ok=True)
     progress('Understanding request', 0.02, 'Preparing the workflow configuration')
     inputs = dict(payload.get('inputs', {}))
-    sources = []
+    sources = list(payload.get('chat_reference_sources') or [])
     from PyHydroGeophysX.llm.runtime_options import retrieved_context
     if payload.get('use_rag'):
         from PyHydroGeophysX.agents.local_knowledge import retrieve
         progress('Retrieving local references', .03, 'Searching documentation and reference files')
         refs = inputs.get('reference_file', [])
-        sources = retrieve(request, refs if isinstance(refs, list) else [refs])
+        if not sources:
+            sources = retrieve(request, refs if isinstance(refs, list) else [refs])
         retrieved_context.set(json.dumps(sources))
         progress('References retrieved', .04, f'{len(sources)} source excerpts; citations will be retained')
     if payload.get('use_mcp'):

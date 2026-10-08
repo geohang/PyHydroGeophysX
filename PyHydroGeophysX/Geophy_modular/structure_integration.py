@@ -383,7 +383,8 @@ def build_3d_model(
     """Build the 3D subsurface model from the configured seismic lines.
 
     Raises ``BackendUnavailable`` if pygimli or Matplotlib cannot be imported,
-    and propagates other exceptions so the caller can fall back to config export.
+    so the caller can fall back to config export, and propagates other
+    exceptions unchanged, to be reported as themselves.
     """
     try:
         import matplotlib

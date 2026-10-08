@@ -145,6 +145,36 @@ def test_returning_to_model_keeps_renderer_and_view_state(app, tmp_path, monkeyp
     assert not isValid(renderer), 'The bounded renderer cache belongs to the page lifetime'
 
 
+def test_runs_named_from_their_data_and_renamed_without_moving_folders(app, tmp_path):
+    from PyHydroGeophysX.qt_apps.modules.model_viewer import ModelViewerModule
+    from PyHydroGeophysX.qt_apps.results_store import run_label_from_files
+    from PyHydroGeophysX.qt_apps.state import StudioState
+    files = [f'C:/data/wennerv2_64_{i:03d}.dat' for i in range(1, 421)]
+    label = run_label_from_files(files, unit='surveys')
+    assert label == 'wennerv2_64 · 420 surveys'
+    state = StudioState()
+    store = state.set_results_store(tmp_path / 'project')
+    runs = []
+    for _ in range(2):
+        runs.append(state.begin_run('ert_processing', 'ert.timelapse_inversion', label=label))
+        state.finish_run('ert_processing', {'status': 'success'}, 'ert.timelapse_inversion')
+    label = f'project · {label}'
+    store.save_run(runs[1].run_id)
+    page = ModelViewerModule(state, lambda *args: None)
+    items = page._agent_items([run.run_id for run in runs])
+    # Two runs of the same surveys share a name; the list still tells them apart.
+    assert {items[run.run_id].text(0) for run in runs} == {
+        f"{label}  ({run.run_id.rpartition('_')[2]})" for run in runs}
+    assert page._rename_run(runs[1].run_id, 'Line A dry')
+    folder = runs[1].run_dir
+    assert folder.is_dir() and 'Line A dry' in (folder / 'run.json').read_text(encoding='utf-8')
+    assert items[runs[1].run_id].text(0) == 'Line A dry'
+    assert items[runs[0].run_id].text(0) == label
+    # Naming an unsaved run must not save it as a side effect.
+    assert page._rename_run(runs[0].run_id, 'Line A wet') and store.is_unsaved(runs[0].run_id)
+    page.close()
+
+
 def test_window_reset_retains_viewer_but_discards_other_project_pages(app, tmp_path):
     from types import SimpleNamespace
     from PySide6.QtCore import QEvent
@@ -170,3 +200,136 @@ def test_window_reset_retains_viewer_but_discards_other_project_pages(app, tmp_p
     assert viewer._store.root == (tmp_path / 'new-project').resolve()
     stack.close()
     stack.deleteLater()
+
+
+def test_project_names_follow_create_save_reopen_and_switch(app, tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from PySide6.QtWidgets import QLabel, QMainWindow
+    from PyHydroGeophysX.qt_apps import main_window
+    from PyHydroGeophysX.qt_apps.home_screen import StudioHome
+    from PyHydroGeophysX.qt_apps.modules.model_viewer import ModelViewerModule
+    from PyHydroGeophysX.qt_apps.results_store import ResultsStore
+    from PyHydroGeophysX.qt_apps.state import StudioState
+    from PyHydroGeophysX.qt_apps.widgets.project_dialogs import NewProjectDialog, SaveRunsDialog
+
+    # Exercise the actual project transition without starting the assistant or
+    # changing the user's remembered Project in the system settings.
+    monkeypatch.setattr(main_window, 'QSettings', lambda *args: SimpleNamespace(
+        setValue=lambda *args: None))
+    class Window(QMainWindow):
+        _project_name = main_window.PyHydroGeophysXStudio._project_name
+        _refresh_output_label = main_window.PyHydroGeophysXStudio._refresh_output_label
+        _activate_results_store = main_window.PyHydroGeophysXStudio._activate_results_store
+        _switch_project = main_window.PyHydroGeophysXStudio._switch_project
+        _create_project = main_window.PyHydroGeophysXStudio._create_project
+        _reset_pages = main_window.PyHydroGeophysXStudio._reset_pages
+
+    window = Window()
+    window.state = StudioState(output_dir=tmp_path / 'fallback', default_project=True)
+    window._output_label = QLabel()
+    window.log = lambda *args: None
+    window._resolve_unsaved_runs = lambda *args: True
+    window._offer_to_clear_abandoned = lambda: None
+    window._refresh_unsaved_state = lambda: None
+    window._refresh_properties = lambda: None
+    home = StudioHome(window.state)
+    viewer = ModelViewerModule(window.state, lambda *args: None)
+    window._pages = {'home': home, 'model_viewer': viewer}
+    assert home._workspace_name.text() == 'Default folder'
+    assert viewer._path.text() == 'Project: Default folder'
+
+    dialog = NewProjectDialog(window, tmp_path, name='Site A 2026')
+    assert not dialog.problem()
+    assert window._create_project(dialog, None)
+    project = dialog.project_path().resolve()
+    assert window.state.project_directory == project
+    assert window.windowTitle().startswith('Site A 2026 — ')
+    assert window._output_label.text() == 'Project: Site A 2026'
+    assert home._workspace_name.text() == 'Site A 2026'
+    assert viewer._path.text() == 'Project: Site A 2026'
+    assert str(project) in viewer._path.toolTip()
+
+    run = window.state.begin_run('ert_processing', 'ert.single_inversion', label='Line 01')
+    window.state.finish_run('ert_processing', {'status': 'success'}, 'ert.single_inversion')
+    expected = 'Site A 2026 · Line 01'
+    save = SaveRunsDialog(window, [run.record])
+    assert save._edits[run.run_id].text() == expected
+    window.state.save_all_runs()
+    viewer.refresh()
+    assert viewer._agent_items([run.run_id])[run.run_id].text(0) == expected
+    assert ResultsStore(project).get_run(run.run_id).label == expected
+
+    # A new project uses its own name and cannot show the previous history.
+    window.state.set_results_store(tmp_path / 'Site B')
+    viewer.reset_project()
+    home.refresh()
+    window._refresh_output_label()
+    assert viewer._path.text() == 'Project: Site B'
+    assert home._workspace_name.text() == 'Site B'
+    assert not viewer._records
+    other = window.state.begin_run('em_processing', 'em.inversion')
+    assert other.record.label == 'Site B'
+    assert other.run_dir.parent.parent == (tmp_path / 'Site B').resolve()
+
+    # Reopening the first project preserves an explicit user rename exactly.
+    window.state.cancel_run('em_processing', operation_id='em.inversion')
+    window.state.discard_all_runs()
+    window.state.set_results_store(project)
+    window.state.name_runs({run.run_id: 'Dry baseline'})
+    viewer.reset_project()
+    assert viewer._agent_items([run.run_id])[run.run_id].text(0) == 'Dry baseline'
+    assert ResultsStore(project).get_run(run.run_id).label == 'Dry baseline'
+    assert run.run_dir.is_dir()
+    viewer.close()
+    home.close()
+    window.close()
+
+
+def test_browsing_other_project_keeps_name_and_read_only_status(app, tmp_path, monkeypatch):
+    from PyHydroGeophysX.qt_apps.modules import model_viewer
+    from PyHydroGeophysX.qt_apps.results_store import ResultsStore
+    from PyHydroGeophysX.qt_apps.state import StudioState
+    state = StudioState(output_dir=tmp_path / 'Active')
+    page = model_viewer.ModelViewerModule(state, lambda *args: None)
+    other = ResultsStore(tmp_path / 'Other')
+    handle = other.begin_run('ert', 'ert.single_inversion', label='Original')
+    other.finish_run(handle, {'status': 'success'})
+    other.save_run(handle.run_id)
+    monkeypatch.setattr(model_viewer.QFileDialog, 'getExistingDirectory',
+                        lambda *args: str(other.root))
+    page.browse_store()
+    for compact in (True, False):
+        page.set_compact(compact)
+        assert page._path.text() == 'Project: Other — read-only'
+        assert str(other.root) in page._path.toolTip()
+        assert not page._rename_run(handle.run_id, 'Not editable')
+    other.update_run(handle.run_id, label='Changed on disk')
+    page.refresh()
+    assert page._records[handle.run_id].label == 'Changed on disk'
+    assert state.project_name == 'Active'
+    page.use_current_store()
+    assert page._path.text() == 'Project: Active'
+    assert not page._records
+    page.close()
+
+
+def test_default_folder_and_existing_project_prefix(app, tmp_path):
+    from PyHydroGeophysX.qt_apps.results_store import run_title
+    from PyHydroGeophysX.qt_apps.state import StudioState
+    state = StudioState(output_dir=tmp_path / 'fallback', default_project=True)
+    handle = state.begin_run('ert', 'ert.single_inversion', label='Line 01')
+    assert handle.record.label == 'Line 01'
+    with pytest.raises(RuntimeError, match='Cannot switch Project'):
+        state.set_results_store(tmp_path / 'Site B')
+    assert state.project_name == 'Default folder'
+    state.cancel_run('ert', operation_id='ert.single_inversion')
+    state.discard_all_runs()
+    state.set_results_store(tmp_path / 'Site B')
+    state.default_project = False
+    handle = state.begin_run('ert', 'ert.single_inversion', label='Site B · Line 01')
+    assert handle.record.label == 'Site B · Line 01'
+    state.cancel_run('ert', operation_id='ert.single_inversion')
+    state.discard_all_runs()
+    state.set_results_store(tmp_path / 'ert')
+    handle = state.begin_run('ert', 'ert.single_inversion', label='Line 01')
+    assert run_title(handle.record) == 'ert · Line 01'

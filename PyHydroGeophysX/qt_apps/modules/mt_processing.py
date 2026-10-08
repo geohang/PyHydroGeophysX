@@ -564,6 +564,9 @@ class MTProcessingModule(BaseModule):
 
     # -- browsing ------------------------------------------------------------
     def _browse_recording(self, folder: bool) -> None:
+        from PyHydroGeophysX.qt_apps.widgets.project_dialogs import confirm_project_for_data
+        if not confirm_project_for_data(self):   # name a Project before the first data
+            return
         if folder:
             path = QFileDialog.getExistingDirectory(self, "Open MT recording folder")
         else:
@@ -596,6 +599,9 @@ class MTProcessingModule(BaseModule):
             self._tem.setText(path)
 
     def _browse_sites(self) -> None:
+        from PyHydroGeophysX.qt_apps.widgets.project_dialogs import confirm_project_for_data
+        if not confirm_project_for_data(self):   # name a Project before the first data
+            return
         paths, _ = QFileDialog.getOpenFileNames(self, "Add MT sites", "", _TF_FILTER)
         for path in paths:
             self._add_site_file(Path(path))
@@ -1205,6 +1211,9 @@ class MTProcessingModule(BaseModule):
               f"{section.resistivity.size} cells")
         self.log(f"2D inversion: RMS {section.rms:.2f} after {len(section.history)} iterations, "
                  f"{section.resistivity.size} cells.", "success")
+        # Sites that gave the profile fewer values than it asks for, by name.
+        for warning in result.warnings:
+            self.log(str(warning), "warn")
         self.report_result({"mt_2d_rms": float(section.rms), "mt_2d_sites": len(sites)})
         self.offer_map_export()
 

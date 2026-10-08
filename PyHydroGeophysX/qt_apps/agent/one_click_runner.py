@@ -66,8 +66,14 @@ def execute(payload, progress, approve=None, on_event=None, **kwargs):
         if not ready:
             raise RuntimeError(why)
         run = assistant.load_workflow()
-        return run(payload, observed, events=events, approve=approve,
-                   on_event=stepped, **kwargs)
+        result = run(payload, observed, events=events, approve=approve,
+                     on_event=stepped, **kwargs)
+        sources = payload.get('chat_reference_sources') or []
+        if sources:
+            from pathlib import Path
+            (Path(payload['output_dir']) / 'chat_reference_sources.json').write_text(
+                json.dumps(sources, indent=2, ensure_ascii=False), encoding='utf-8')
+        return result
     finally:
         stop_counting()
         reasoning_effort.reset(token)

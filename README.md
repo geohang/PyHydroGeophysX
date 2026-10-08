@@ -663,6 +663,32 @@ Please also cite the underlying libraries you use:
 }
 ```
 
+**ERT reciprocal errors and the reciprocal error model (the ERT page's Reciprocal errors tab, data errors from the reciprocal error model):**
+```bibtex
+@article{slater2000crosshole,
+  author  = {Slater, L. and Binley, A. M. and Daily, W. and Johnson, R.},
+  title   = {Cross-hole electrical imaging of a controlled saline tracer injection},
+  journal = {Journal of Applied Geophysics},
+  volume  = {44},
+  number  = {2-3},
+  pages   = {85--102},
+  year    = {2000},
+  doi     = {10.1016/S0926-9851(00)00002-1}
+}
+
+@article{koestel2008quantitative,
+  author  = {Koestel, Johannes and Kemna, Andreas and Javaux, Mathieu and
+             Binley, Andrew and Vereecken, Harry},
+  title   = {Quantitative imaging of solute transport in an unsaturated and
+             undisturbed soil monolith with {3-D} {ERT} and {TDR}},
+  journal = {Water Resources Research},
+  volume  = {44},
+  number  = {12},
+  year    = {2008},
+  doi     = {10.1029/2007WR006755}
+}
+```
+
 **R2 and R3t inversions (the `r2` and `r3t` engines) and their difference inversion for time-lapse series:**
 ```bibtex
 @book{binley2020resistivity,

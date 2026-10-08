@@ -678,6 +678,14 @@ def series_survey_times(summary: Optional[Mapping[str, Any]],
             parsed = [parse_timestamp(str(label)) for label in labels]
             if all(item is not None for item in parsed):
                 dates = [item[0] for item in parsed]
+    if dates is None and n_steps == 1 and summary.get("survey_time"):
+        # A single inversion records when its one survey was measured; the ERT
+        # page dates the model by the same file, as ([0.0], [time]).
+        try:
+            dates = [_dt.datetime.fromisoformat(str(summary["survey_time"]))]
+            days = days or [0.0]
+        except ValueError:
+            pass
     return days, dates
 
 

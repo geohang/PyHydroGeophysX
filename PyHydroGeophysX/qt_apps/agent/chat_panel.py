@@ -44,6 +44,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QPlainTextEdit,
     QPushButton,
     QSizePolicy,
@@ -97,6 +99,7 @@ Rules:
 - For a processing request, a typical sequence is: navigate to the right module (its result describes the module), load data (use the example data if the user gave none), set parameters, then run.
 - If a tool result has status "failed" or "declined", read it and adjust, or ask the user what to do. Do not invent module names, actions, or parameters; discover them with the tools.
 - Always finish your turn by telling the user the next step: what you will do next, or what they can ask for. When you START a long job (a tool result with status "started"), say it is running in the background and that the user can ask for its status (for example "is it done?") or say "continue" to proceed once it finishes — then end your turn rather than guessing the job is complete.
+- After a background job, refresh the module's status before reporting progress. Read inversion_status, inversion_running, has_model and result_summary when provided. A completed model is available for review in the processing module even before saving it or adding it to Map. Report the returned fit metrics; if a metric is missing, say it is unavailable rather than claiming no model exists. If a new run is running or failed while an earlier model remains, distinguish the latest run from that earlier result.
 - When a tool returns status "awaiting_user", the workflow is paused for the user to act in the GUI (for example correcting picks). Relay the message, end your turn, and resume only when the user says to continue.
 {persona}{vision_rules}
 Studio modules (key: purpose):
@@ -116,15 +119,49 @@ class ChatInputEdit(QPlainTextEdit):
     """Multi-line input box that sends on Ctrl/Command+Enter."""
 
     sendRequested = Signal()
+    filesPasted = Signal(list)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setMinimumHeight(96)
-        self.setMaximumHeight(190)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.setLineWrapMode(QPlainTextEdit.WidgetWidth)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.setFixedHeight(190)
+        self.setAcceptDrops(True)
+
+    def insertFromMimeData(self, source) -> None:
+        paths = [url.toLocalFile() for url in source.urls() if url.isLocalFile()] if source.hasUrls() else []
+        if not paths and source.hasText():
+            lines = [line.strip().strip('"') for line in source.text().splitlines() if line.strip()]
+            if lines and all(Path(line).is_absolute() and Path(line).exists() for line in lines):
+                paths = lines
+        if paths:
+            self.filesPasted.emit([str(Path(path)) for path in paths])
+            return
+        super().insertFromMimeData(source)
+
+    def canInsertFromMimeData(self, source) -> bool:
+        return source.hasUrls() or super().canInsertFromMimeData(source)
+
+    def dragEnterEvent(self, event) -> None:
+        if event.mimeData().hasUrls() and any(url.isLocalFile() for url in event.mimeData().urls()):
+            event.acceptProposedAction()
+        else:
+            super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event) -> None:
+        if event.mimeData().hasUrls() and any(url.isLocalFile() for url in event.mimeData().urls()):
+            event.acceptProposedAction()
+        else:
+            super().dragMoveEvent(event)
+
+    def dropEvent(self, event) -> None:
+        if event.mimeData().hasUrls() and any(url.isLocalFile() for url in event.mimeData().urls()):
+            self.insertFromMimeData(event.mimeData())
+            event.acceptProposedAction()
+        else:
+            super().dropEvent(event)
 
     def keyPressEvent(self, event) -> None:  # noqa: D401 - Qt event override
         if (
@@ -185,6 +222,8 @@ class AssistantChatPanel(QWidget):
         self._vision = False
         self._tool_specs: List[Dict[str, Any]] = []
         self._system = ""
+        self._reference_workers = []
+        self._conversation_scope = self._controller.attachment_scope()
         # (provider, whether it could send) when its warm-up was last started.
         self._prewarmed: Optional[Tuple[Any, bool]] = None
         self._thinking_started = 0.0
@@ -349,18 +388,87 @@ class AssistantChatPanel(QWidget):
         root.addWidget(self._confirm)
 
         # Multi-line input row.
-        input_row = QHBoxLayout()
+        self._attachments_box = QWidget()
+        attachments_layout = QHBoxLayout(self._attachments_box)
+        attachments_layout.setContentsMargins(0, 0, 0, 0)
+        self._attachments = QListWidget()
+        self._attachments.setMaximumHeight(82)
+        self._attachments.setTextElideMode(Qt.ElideMiddle)
+        self._attachments.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._attachments.setToolTip('Files shared with the assistant; RAG references are searched when RAG is enabled.')
+        attachments_layout.addWidget(self._attachments, 1)
+        self._remove_attachment_btn = QPushButton('Remove')
+        self._remove_attachment_btn.clicked.connect(self._remove_attachment)
+        attachments_layout.addWidget(self._remove_attachment_btn)
+        root.addWidget(self._attachments_box)
+        self._attachments_box.hide()
+        composer = QVBoxLayout()
+        composer.setSpacing(5)
         self._input = ChatInputEdit()
         self._input.setPlaceholderText("e.g. Build a 3D crosshole mesh with 12 sensors per borehole")
         self._input.sendRequested.connect(self._on_send)
+        self._input.filesPasted.connect(self._paste_files)
         self._input.textChanged.connect(self._prewarm_provider)
         self._send_btn = QPushButton("Send")
         self._send_btn.setProperty("primary", True)
         self._send_btn.setIcon(theme.icon("fa5s.paper-plane", color="#ffffff"))
         self._send_btn.clicked.connect(self._on_send)
-        input_row.addWidget(self._input, stretch=1)
-        input_row.addWidget(self._send_btn, alignment=Qt.AlignBottom)
-        root.addLayout(input_row)
+        composer.addWidget(self._input)
+        input_actions = QHBoxLayout()
+        input_hint = QLabel('Paste or drop files · Ctrl+Enter to send')
+        theme.set_tone(input_hint, 'muted')
+        input_hint.setWordWrap(True)
+        input_actions.addWidget(input_hint)
+        input_actions.addStretch(1)
+        input_actions.addWidget(self._send_btn)
+        composer.addLayout(input_actions)
+        root.addLayout(composer)
+        self._attachment_timer = QTimer(self)
+        self._attachment_timer.setInterval(1000)
+        self._attachment_timer.timeout.connect(self._refresh_attachment_list)
+        self._attachment_timer.start()
+
+    def _refresh_attachment_list(self):
+        rows = self._controller.chat_attachments()
+        signature = [(r['role'], r['path'], r['rag']) for r in rows]
+        if signature == getattr(self, '_attachment_signature', None):
+            return
+        self._attachment_signature = signature
+        self._attachments.clear()
+        labels = {key: label for label, key in self._controller.chat_attachment_roles()}
+        for row in rows:
+            label = 'AI will identify the purpose when you send your task' if row['role'] == 'pending' else labels.get(row['role'], row['role'])
+            item = QListWidgetItem(Path(row['path']).name)
+            item.setToolTip(row['path'] + '\n' + label)
+            item.setData(Qt.UserRole, row)
+            self._attachments.addItem(item)
+        row_height = self._attachments.sizeHintForRow(0) if rows else 0
+        self._attachments.setFixedHeight(min(82, max(28, row_height * min(len(rows), 3)
+                                                    + 2 * self._attachments.frameWidth())))
+        self._attachments_box.setVisible(bool(rows))
+
+    def _paste_files(self, paths):
+        if self._busy:
+            return
+        result = self._controller.queue_chat_files(paths)
+        if result.get('status') != 'ok':
+            self._render_note(html.escape(result.get('error', 'Could not add files.')))
+            return
+        self._refresh_attachment_list()
+        if result['added']:
+            names = ', '.join(Path(path).name for path in result['added'])
+            self._render_note('Files received: ' + html.escape(names) + '. Describe your task; I will identify how to use them.')
+
+    def _remove_attachment(self):
+        if self._busy or self._attachments.currentItem() is None:
+            return
+        row = self._attachments.currentItem().data(Qt.UserRole)
+        result = self._controller.remove_chat_attachment(row['role'], row['path'])
+        if result.get('status') != 'ok':
+            self._render_note(html.escape(result.get('error', 'Could not remove the file.')))
+        self._refresh_attachment_list()
+        if not self._controller.pending_chat_files():
+            self._file_goal = ''
 
     def _build_settings(self) -> QWidget:
         """Build the collapsible configuration block.
@@ -497,7 +605,9 @@ class AssistantChatPanel(QWidget):
     def _sync_assistant_options(self):
         agent = assistant_registry.active()
         for key, widget in (('rag', self._rag), ('mcp', self._mcp)):
-            available = key in getattr(agent, 'retrieval', ('rag', 'mcp'))
+            # Host chat retrieval is available even when a plugin does not
+            # implement its own workflow retrieval controls.
+            available = key == 'rag' or key in getattr(agent, 'retrieval', ('rag', 'mcp'))
             widget.setVisible(available)
             widget.setEnabled(available)
         if agent.offline_workflow:
@@ -700,6 +810,8 @@ class AssistantChatPanel(QWidget):
 
     def closeEvent(self, event):
         self._closing = True
+        for worker in self._reference_workers:
+            worker.requestInterruption()
         for process in list(self._cli_logins.values()):
             process.kill()
             process.waitForFinished(1000)
@@ -817,6 +929,9 @@ class AssistantChatPanel(QWidget):
         if hasattr(self._controller, 'reset_workflow_request'):
             self._controller.reset_workflow_request()
         self._messages = []
+        self._reference_query = ''
+        self._file_goal = ''
+        self._conversation_scope = self._controller.attachment_scope()
         self._tool_queue = []
         self._pending_workflow_text = None
         self._current_call = None
@@ -879,6 +994,8 @@ class AssistantChatPanel(QWidget):
         text = self._input.toPlainText().strip()
         if not text:
             return
+        if self._conversation_scope != self._controller.attachment_scope():
+            self._reset_conversation()
         # Fast-path: while paused at a checkpoint, "continue" runs the module's
         # declared resume action directly — no LLM round-trip, no approval click.
         if self._execution_mode.currentData() != "auto" and self._paused_resume and text.lower() in _CONTINUE_WORDS:
@@ -893,20 +1010,121 @@ class AssistantChatPanel(QWidget):
             return
         self._input.clear()
         self._render_user(text)
-        self._messages.append({"role": "user", "content": text})
+        if text.lower() not in _CONTINUE_WORDS:
+            self._reference_query = text
+        pending = self._controller.pending_chat_files()
+        if pending:
+            self._file_goal = (self._file_goal + '\nUser clarification: ' + text) if self._file_goal else text
+            from .attachments import ClipboardClassificationWorker
+            self._provider.reasoning_effort = self._reasoning.currentText()
+            worker = ClipboardClassificationWorker(
+                self._file_goal, pending,
+                {key: label for label, key in self._controller.chat_attachment_roles()},
+                self._provider, self._controller.attachment_scope(), QApplication.instance())
+            self._track_file_worker(worker, self._on_files_classified)
+            self._set_live('Identifying how to use the pasted files', presence.THINKING)
+            worker.start()
+            return
+        self._retrieve_for_text(text)
+
+    def _track_file_worker(self, worker, callback):
+        self._reference_workers.append(worker)
+        worker.ready.connect(callback)
+        worker.finished.connect(lambda w=worker: self._reference_workers.remove(w))
+        worker.finished.connect(worker.deleteLater)
+        self._set_busy(True)
+
+    def _on_files_classified(self, result):
+        if self._closing:
+            return
+        self._set_live(None)
+        if result['scope'] != self._controller.attachment_scope():
+            self._set_busy(False)
+            self._reset_conversation()
+            self._render_note('The Project or assistant changed. Send the task again for the current files.')
+            return
+        if result.get('error'):
+            self._render_note('Could not identify file purposes: ' + html.escape(result['error']))
+            self._set_busy(False)
+            return
+        applied = self._controller.apply_chat_classification(result['files'])
+        if applied.get('status') != 'ok':
+            message = applied.get('error', 'Tell me more about these files.')
+            for row in applied.get('files', []):
+                message += '\n' + Path(row['path']).name + ': ' + str(row.get('reason', 'Purpose unclear'))
+            self._render_note(html.escape(message).replace('\n', '<br>'))
+            self._set_busy(False)
+            return
+        labels = {key: label for label, key in self._controller.chat_attachment_roles()}
+        for row in result['files']:
+            self._render_note(html.escape(f"{Path(row['path']).name}: {labels.get(row['role'], row['role'])}. {row.get('reason', '')}"))
+        if any(row['role'] == 'chat_reference' for row in result['files']):
+            self._rag.setChecked(True)
+        self._file_goal = ''
+        self._reference_query = result['query']
+        self._refresh_attachment_list()
+        self._retrieve_for_text(result['query'])
+
+    def _retrieve_for_text(self, text):
+        paths = list(dict.fromkeys(row['path'] for row in self._controller.chat_attachments() if row['rag']))
+        if self._rag.isChecked() and paths:
+            from .attachments import ReferenceRetrievalWorker
+            worker = ReferenceRetrievalWorker(text, paths, self._controller.attachment_scope(),
+                                             QApplication.instance(), search_query=self._reference_query or text)
+            self._track_file_worker(worker, self._on_references_ready)
+            self._set_live('Searching attached reference documents', presence.THINKING)
+            worker.start()
+            return
+        self._deliver_text(text)
+
+    def _on_references_ready(self, result):
+        if self._closing:
+            return
+        if result['scope'] != self._controller.attachment_scope():
+            self._set_live(None)
+            self._set_busy(False)
+            self._reset_conversation()
+            self._render_note('The Project or assistant changed. Send your request again with the current files.')
+            return
+        for warning in result['diagnostics']:
+            self._render_note('Reference: ' + html.escape(warning))
+        sources = result['sources']
+        if sources:
+            lines = []
+            for source in sources:
+                location = f"page {source['page']}" if 'page' in source else f"line {source['line']}"
+                lines.append(html.escape(f"{source['source']} ({location})"))
+            self._render_note('<b>RAG sources</b><br>' + '<br>'.join(lines))
+        else:
+            self._render_note('No matching reference excerpts found for this request.')
+        self._set_live(None)
+        self._deliver_text(result['query'], sources)
+
+    def _deliver_text(self, text, sources=()):
+        from PyHydroGeophysX.agents.local_knowledge import format_context
+        rows = self._controller.chat_attachments()
+        manifest = '\n'.join(f"{row['role']}: {row['path']}" for row in rows)
+        context = ('Attached local files (use only for their listed roles):\n' + manifest if manifest else '')
+        reference_context = format_context(sources)
+        if reference_context:
+            context += '\n\n' + reference_context
+        self._messages.append({"role": "user", "content": text + ('\n\n' + context if context else '')})
         if self._execution_mode.currentData() == "auto":
             agent = assistant_registry.active()
             if self._provider_id not in set(agent.providers):
                 self._render_note(f"Auto to report with {html.escape(agent.name)} supports "
                                   f"{', '.join(agent.providers)}. Choose one of those above, "
                                   "or use step-by-step assistance.")
+                self._set_busy(False)
                 return
             settings = {"assistant": agent.key,
                         "provider": "claude" if self._provider_id == "anthropic" else self._provider_id,
                         "model": self._provider.model,
                         "api_key": self._provider._api_key,
                         "reasoning_effort": self._reasoning.currentText(),
-                        "use_rag": self._rag.isEnabled() and self._rag.isChecked(),
+                        "use_rag": self._rag.isChecked() and 'rag' in agent.retrieval,
+                        "chat_context": context,
+                        "chat_reference_sources": list(sources),
                         "use_mcp": self._mcp.isEnabled() and self._mcp.isChecked()}
             try:
                 message = self._controller.run_to_report(
@@ -1207,6 +1425,7 @@ class AssistantChatPanel(QWidget):
         # One assistant per conversation turn: no switching mid-run.
         self._assistant_combo.setEnabled(not busy)
         self._new_btn.setEnabled(not busy)
+        self._remove_attachment_btn.setEnabled(not busy)
         self._input.setEnabled(not busy)
         self._send_btn.setEnabled(not busy)
         if not busy:

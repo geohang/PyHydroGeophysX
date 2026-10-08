@@ -33,6 +33,20 @@ hydrological model, which is the last step of the
 BibTeX entries for the three references above are in the
 `project README <https://github.com/geohang/PyHydroGeophysX#citation>`_.
 
+Cite GeoSAGE
+------------
+
+If your analysis uses the optional :doc:`GeoSAGE assistant <agents/geosage>`
+for joint gravity–magnetic inversion, pseudo-geological modeling or geological
+interpretation, please also cite:
+
+- Fang, Z., Yang, P., Liu, Y., Feng, D., & Chen, H. (2026). GeoSAGE: A Multi-Agent
+  Workflow for Geological Reasoning From Joint Gravity and Magnetic Inversion
+  Models. *Computers & Geosciences*, 106282.
+
+The source code and workflow documentation are available at
+`ZhengyangFang/GeoSAGE <https://github.com/ZhengyangFang/GeoSAGE>`_.
+
 Cite the engines you used
 -------------------------
 
@@ -51,6 +65,17 @@ Cite the engines you used
    * - ERT data processing and quality control
      - Blanchy, G., Saneiyan, S., Boyd, J., McLachlan, P., and Binley, A.
        (2020). ResIPy. *Computers and Geosciences*, 137, 104423.
+   * - ERT reciprocal errors and the reciprocal error model (the ERT page's
+       Reciprocal errors tab, or data errors taken from the reciprocal error
+       model)
+     - Slater, L., Binley, A. M., Daily, W., and Johnson, R. (2000).
+       Cross-hole electrical imaging of a controlled saline tracer injection.
+       *Journal of Applied Geophysics*, 44(2-3), 85-102.
+       https://doi.org/10.1016/S0926-9851(00)00002-1; Koestel, J., Kemna, A.,
+       Javaux, M., Binley, A., and Vereecken, H. (2008). Quantitative imaging
+       of solute transport in an unsaturated and undisturbed soil monolith
+       with 3-D ERT and TDR. *Water Resources Research*, 44(12).
+       https://doi.org/10.1029/2007WR006755
    * - R2 or R3t inversions (``engine="r2"`` or ``engine="r3t"``, single
        surveys or time-lapse)
      - Binley, A. and Slater, L. (2020). *Resistivity and Induced
@@ -163,14 +188,7 @@ Cite the engines you used
        Geological Survey Techniques and Methods 6-A55.
        https://doi.org/10.3133/tm6A55
    * - ParFlow outputs or written ParFlow inputs
-     - The four papers ParFlow asks users to cite: Ashby, S. F. and Falgout,
-       R. D. (1996). A parallel multigrid preconditioned conjugate gradient
-       algorithm for groundwater flow simulations. *Nuclear Science and
-       Engineering*, 124(1), 145-159. https://doi.org/10.13182/NSE96-A24230;
-       Jones, J. E. and Woodward, C. S. (2001). Newton-Krylov-multigrid solvers
-       for large-scale, highly heterogeneous, variably saturated flow problems.
-       *Advances in Water Resources*, 24(7), 763-774.
-       https://doi.org/10.1016/S0309-1708(00)00075-0; Kollet, S. J. and
+     - Kollet, S. J. and
        Maxwell, R. M. (2006). Integrated surface-groundwater flow modeling: A
        free-surface overland flow boundary condition in a parallel groundwater
        flow model. *Advances in Water Resources*, 29(7), 945-958.
@@ -178,9 +196,7 @@ Cite the engines you used
        (2013). A terrain-following grid transform and preconditioner for
        parallel, large-scale, integrated hydrologic modeling. *Advances in
        Water Resources*, 53, 109-117.
-       https://doi.org/10.1016/j.advwatres.2012.10.001. Cite the ParFlow
-       release you ran as well: https://doi.org/10.5281/zenodo.4816884
-       resolves to the latest one.
+       https://doi.org/10.1016/j.advwatres.2012.10.001.
    * - ATS outputs (``ATSSaturation``, ``ATSWaterContent``, ...)
      - The code, as ATS asks in all works: Coon, E. T., Berndt, M., Jan, A.,
        Svyatsky, D., Atchley, A. L., Kikinzon, E., Harp, D. R., Manzini, G.,

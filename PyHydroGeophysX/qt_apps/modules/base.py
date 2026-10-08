@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import datetime
 import html
 import os
-from collections import OrderedDict
+import re
+import time
+from collections import OrderedDict, deque
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from PySide6.QtCore import QEvent, QObject, Qt, QUrl, Signal
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QDesktopServices, QPixmap
 from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QPlainTextEdit,
                                QVBoxLayout, QWidget)
@@ -26,6 +30,25 @@ FIGURE_SUFFIXES = (".png", ".jpg", ".jpeg", ".svg")
 _THUMBNAILS: "OrderedDict[Tuple[str, int, int, int], QPixmap]" = OrderedDict()
 #: Enough for several runs' strips; one entry is at most a few hundred KB.
 _THUMBNAIL_LIMIT = 32
+
+#: The activity of a page whose running workers say nothing more specific.
+GENERIC_ACTIVITY = "Working…"
+
+#: A count such as "12/418" that a progress line already carries.
+_COUNT = re.compile(r"\d+\s*/\s*\d+")
+
+
+def _reports_progress(worker: Any) -> bool:
+    """Whether ``worker`` has a ``progressed(int, int, str)`` signal.
+
+    Asked of the signal's signature rather than its name: a worker whose
+    ``progressed`` carries something else - a percentage and a message - would
+    otherwise be handed arguments it never sends.
+    """
+    try:
+        return worker.metaObject().indexOfSignal("progressed(int,int,QString)") >= 0
+    except (AttributeError, RuntimeError):
+        return False
 
 
 def thumbnail_pixmap(path: str, height: int = 96) -> Optional[QPixmap]:
@@ -380,6 +403,8 @@ class BaseModule(QWidget):
     viewMeshRequested = Signal(str)
     #: Ask the main window to switch to another module by key (cross-module handoff).
     navigateRequested = Signal(str)
+    #: What the page is busy with changed: the new :meth:`activity`, "" once idle.
+    activityChanged = Signal(str)
     module_key = "base"
     module_title = "Module"
 
@@ -389,6 +414,20 @@ class BaseModule(QWidget):
         self._log_fn = log
         self._workers: list = []
         self._run_activity: Optional[RunActivity] = None
+        #: What each registered worker is doing, by id(): the phrase it was
+        #: registered with, then its latest progress line.
+        self._worker_activity: Dict[int, str] = {}
+        #: Work on the GUI thread the page announced itself (set_activity).
+        self._activity_text = ""
+        #: time.monotonic() when the page last went from idle to busy.
+        self._busy_since: Optional[float] = None
+        #: (handle, operation, RunLog, closing) for each run whose log is open.
+        self._run_logs: List[list] = []
+        #: The lines logged in the current event-loop turn, so a run started in
+        #: it keeps what was logged while it was being prepared.
+        self._turn_log: deque = deque(maxlen=200)
+        self._turn_log_ends = False
+        self._run_log_flush_due = False
 
     # -- live workflow activity ---------------------------------------------
     def show_run_activity(self, step: str, details: str = "",
@@ -469,6 +508,7 @@ class BaseModule(QWidget):
             self._log_fn(message, level)
         except Exception:
             pass
+        self._keep_log_line(message, level)
 
     def report_result(self, data: Dict[str, Any]) -> None:
         self.state.update_module_result(self.module_key, data)
@@ -536,10 +576,15 @@ class BaseModule(QWidget):
     def begin_persisted_run(
         self, operation_id: str, workflow_id: str = "", *, label: str = ""
     ):
-        """Allocate the sole durable directory for a module operation."""
-        return self.state.begin_run(
+        """Allocate the sole durable directory for a module operation.
+
+        The run's log opens with it: see :meth:`_open_run_log`.
+        """
+        handle = self.state.begin_run(
             self.module_key, operation_id, workflow_id, label=label
         )
+        self._open_run_log(handle, operation_id)
+        return handle
 
     def finish_persisted_run(self, result: Any, operation_id: str = "") -> None:
         self.state.finish_run(self.module_key, result, operation_id)
@@ -549,6 +594,132 @@ class BaseModule(QWidget):
 
     def cancel_persisted_run(self, error: str = "", operation_id: str = "") -> None:
         self.state.cancel_run(self.module_key, error, operation_id)
+
+    # -- run log -------------------------------------------------------------
+    def _open_run_log(self, handle: Any, operation_id: str) -> None:
+        """Keep every line this page logs for the run in its ``logs/run_log.txt``.
+
+        The Log window holds its last two thousand lines and is gone with the
+        session, and the long runs - a 420-survey time-lapse prints thousands -
+        are the ones reviewed afterwards. So the page's lines also go to the run
+        folder, in order and as displayed: what was logged while the run was
+        prepared in the same turn, before its folder existed; everything the
+        workflow process printed; and the summary the page writes once the
+        result is in. The log closes on the event-loop turn after the run
+        closes, because a page often records the run's result and only then
+        logs its summary, in the same slot.
+
+        Every page's lines go to every run of that page still open, so two runs
+        of one page that overlap each keep the other's lines as well.
+        """
+        from PyHydroGeophysX.qt_apps.run_records import RUN_LOG_NAME, RunLog
+
+        try:
+            path = Path(handle.logs_dir) / RUN_LOG_NAME
+            run_id = handle.run_id
+        except Exception:  # noqa: BLE001 - a state without run folders (tests)
+            return
+        record = RunLog(path, f"Log of run {run_id} ({self.module_title}, {operation_id})")
+        for entry in self._turn_log:
+            record.add(*entry)
+        # [handle, operation, log, closing]
+        self._run_logs.append([handle, str(operation_id), record, False])
+        watchers = getattr(self.state, "run_watchers", None)
+        if isinstance(watchers, list) and self._watch_run_logs not in watchers:
+            watchers.append(self._watch_run_logs)
+        self._flush_run_logs_soon()
+
+    def _keep_log_line(self, message: Any, level: str) -> None:
+        """Hand a logged line to the open run logs, and to the turn's lines."""
+        entry = (datetime.datetime.now(), level or "info", str(message))
+        self._turn_log.append(entry)
+        if not self._turn_log_ends:
+            self._turn_log_ends = True
+            QTimer.singleShot(0, self, self._end_log_turn)
+        if not self._run_logs:
+            return
+        for item in self._run_logs:
+            item[2].add(*entry)
+        self._flush_run_logs_soon()
+        # A run closed without the state announcing it - its result could not
+        # be recorded - still stops collecting once this turn is over.
+        self._watch_run_logs()
+
+    def _end_log_turn(self) -> None:
+        self._turn_log.clear()
+        self._turn_log_ends = False
+
+    def _flush_run_logs_soon(self) -> None:
+        """Write the queued lines once this turn is over: one write per burst."""
+        if not self._run_log_flush_due:
+            self._run_log_flush_due = True
+            QTimer.singleShot(0, self, self._flush_run_logs)
+
+    def _flush_run_logs(self) -> None:
+        self._run_log_flush_due = False
+        for item in self._run_logs:
+            item[2].flush()
+
+    def _run_still_open(self, handle: Any, operation_id: str) -> bool:
+        active = getattr(self.state, "active_run", None)
+        if callable(active):
+            try:
+                return active(self.module_key, operation_id) is handle
+            except Exception:  # noqa: BLE001 - fall back to the record's status
+                pass
+        return getattr(getattr(handle, "record", None), "status", "running") == "running"
+
+    def _watch_run_logs(self) -> None:
+        """Close the log of every run that has closed, after this turn."""
+        for item in self._run_logs:
+            handle, operation, record, closing = item
+            if closing or self._run_still_open(handle, operation):
+                continue
+            item[3] = True
+            # Now as well as later: a run closed by quitting the studio may
+            # not see another turn.
+            record.flush()
+            QTimer.singleShot(0, self, lambda item=item: self._close_run_log(item))
+
+    def _close_run_log(self, item: list) -> None:
+        self._run_logs = [other for other in self._run_logs if other is not item]
+        item[2].flush()
+        self._keep_run_warnings(item[0], item[2].warnings)
+        watchers = getattr(self.state, "run_watchers", None)
+        if not self._run_logs and isinstance(watchers, list) \
+                and self._watch_run_logs in watchers:
+            watchers.remove(self._watch_run_logs)
+
+    #: Warning lines a run's record keeps; the rest are in its run log.
+    _RUN_WARNING_LIMIT = 50
+
+    def _keep_run_warnings(self, handle: Any, warnings: List[str]) -> None:
+        """Keep the warnings this page logged during the run with the run.
+
+        A workflow reports its own warnings in its result, and few do; what the
+        page warned about - an engine that fell back, zones not applied,
+        surveys without times - went only to the Log window, and Saved Results
+        showed the run as clean. The run has closed by now, so its record is
+        final; a run already saved has its record written again.
+        """
+        record = getattr(handle, "record", None)
+        if record is None or not warnings:
+            return
+        known = set(record.warnings)
+        new = [text for text in warnings if text not in known]
+        if not new:
+            return
+        if len(new) > self._RUN_WARNING_LIMIT:
+            new = new[:self._RUN_WARNING_LIMIT] + [
+                f"{len(new) - self._RUN_WARNING_LIMIT} more warnings are in logs/run_log.txt."]
+        record.warnings.extend(new)
+        store = getattr(self.state, "results_store", None)
+        try:
+            if store is not None and not store.is_unsaved(record.run_id) \
+                    and store.get_run(record.run_id) is record:
+                store.update_run(record.run_id)
+        except Exception:  # noqa: BLE001 - the warnings stay in the run log regardless
+            pass
 
     def stop_button(self, what: str = "The inversion"):
         """A Stop button for this page's runs, to sit beside the run's progress bar.
@@ -598,21 +769,89 @@ class BaseModule(QWidget):
         """
         return None
 
+    # -- activity, for the status bar ----------------------------------------
+    def activity(self) -> str:
+        """What this page is busy with, in plain words; "" when it is idle.
+
+        Busy while any registered worker has not finished, or while the page
+        has announced work of its own (:meth:`set_activity`). The phrase is the
+        latest a running worker gave - its progress line when it reports one -
+        or "Working…" when none says more. Without this the status bar read
+        "Ready" from the moment a run was started until long after an
+        inversion had finished and its results were still being written, and
+        a user could close the window on a run that was not done.
+        """
+        if self._activity_text:
+            return self._activity_text
+        for worker in reversed(self._workers):
+            phrase = self._worker_activity.get(id(worker), "")
+            if phrase:
+                return phrase
+        return GENERIC_ACTIVITY if self._workers else ""
+
+    def busy_since(self) -> Optional[float]:
+        """``time.monotonic()`` when the page became busy, or None when idle."""
+        return self._busy_since
+
+    def set_activity(self, text: str = "") -> None:
+        """Say what the page is doing on the GUI thread; "" when it is done.
+
+        For work no worker runs - reading a large result back into the page,
+        drawing it - which holds the window still while it lasts. The status
+        bar is repainted at once, so the phrase is on screen before the work
+        starts and the window does not look hung meanwhile.
+        """
+        self._activity_text = str(text or "")
+        self._activity_changed()
+
+    def _activity_changed(self) -> None:
+        current = self.activity()
+        if current and self._busy_since is None:
+            self._busy_since = time.monotonic()
+        elif not current:
+            self._busy_since = None
+        self.activityChanged.emit(current)
+
+    def _on_worker_progress(self, worker: Any, current: int, total: int, label: str) -> None:
+        """Keep a worker's latest progress line as the page's activity."""
+        text = str(label or "").strip()
+        # A line that does not carry its own count gets one, unless there is
+        # nothing to count; "ADTLERT window 12/418 complete" already says it.
+        if int(total) > 1 and not _COUNT.search(text):
+            text = f"{text} ({int(current)}/{int(total)})" if text else \
+                f"{int(current)}/{int(total)}"
+        if id(worker) in self._worker_activity:
+            self._worker_activity[id(worker)] = text
+            self._activity_changed()
+
     # -- worker lifecycle ----------------------------------------------------
-    def register_worker(self, worker: Any) -> Any:
-        """Track a QThread so the window can join it on shutdown.
+    def register_worker(self, worker: Any, activity: str = "") -> Any:
+        """Track a worker so the window can join it on shutdown.
 
         The reference is kept until the thread finishes, which both prevents the
         worker from being garbage-collected mid-run and lets :meth:`stop_workers`
         cancel/join anything still running when the app closes.
+
+        Until it finishes the page also counts as busy (:meth:`activity`), and
+        the window's status bar says so. ``activity`` names the work in plain
+        words ("Loading the survey"); a worker with a ``progressed(int, int,
+        str)`` signal replaces it with its latest progress line as it goes.
         """
         self._workers.append(worker)
+        self._worker_activity[id(worker)] = str(activity or "")
+        if _reports_progress(worker):
+            worker.progressed.connect(
+                lambda current, total, label, w=worker:
+                self._on_worker_progress(w, current, total, label))
         worker.finished.connect(lambda: self._drop_worker(worker))
+        self._activity_changed()
         return worker
 
     def _drop_worker(self, worker: Any) -> None:
         if worker in self._workers:
             self._workers.remove(worker)
+            self._worker_activity.pop(id(worker), None)
+            self._activity_changed()
 
     def stop_workers(self, wait_ms: int = 5000) -> None:
         """Cancel cooperatively-interruptible workers and join running threads."""

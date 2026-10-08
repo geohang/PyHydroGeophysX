@@ -531,6 +531,9 @@ def build_qss() -> str:
     /* Status bar */
     QStatusBar {{ background-color: {p['bg']}; color: {p['muted']}; border-top: 1px solid {p['border']}; }}
     QStatusBar QLabel {{ background: transparent; color: {p['muted']}; }}
+    /* Something is still running: full-strength text, not a colour, so it
+       reads at a glance without borrowing the meaning of green or orange. */
+    QStatusBar QLabel[tone="busy"] {{ color: {p['text']}; font-weight: 600; }}
 
     /* Progress */
     QProgressBar {{ background-color: {p['track']}; border: none; border-radius: 4px; height: 12px; text-align: center; color: {p['text']}; }}

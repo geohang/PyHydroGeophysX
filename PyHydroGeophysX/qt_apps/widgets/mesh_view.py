@@ -317,20 +317,30 @@ class MeshResultView(QWidget):
         self._side.setStretchFactor(0, 1)
         self._side.setStretchFactor(self._side.count() - 1, 0)
 
-    def show_model(self, mgr, kind: str = "ert") -> None:
+    def show_model(self, mgr, kind: str = "ert", title: str = "") -> None:
         """Display the inverted model from a pyGIMLi manager (``ert`` or ``srt``)."""
         self._mgr = mgr
         self._mesh = None
         self._values = None
         self._coverage = None
         self._kind = kind
-        self._title = ""
+        self._title = title or ""
         self._new_result()
         # A standalone model is a new quantity on a new mesh, so limits carried
         # over from whatever was shown before would be meaningless.
         self._lock_range.setChecked(False)
         self._sync_controls()
         self._redraw()
+
+    def clean_cut(self) -> float | None:
+        """The coverage cut of the clean-cut clipping on screen, or None when off.
+
+        Figures a page writes for a result are trimmed the way this view trims
+        the section, so the page needs no second copy of the option.
+        """
+        if self._mask_low.isChecked() and self._clean_cut.isChecked():
+            return float(self._cov_threshold.value())
+        return None
 
     def set_color_range(self, vmin: float, vmax: float, lock: bool = True) -> None:
         """Fix the colour limits — e.g. to the range over every time step.
@@ -560,10 +570,11 @@ class MeshResultView(QWidget):
         # cells already drawn, and a moved coverage cut re-masks them, rather
         # than having pyGIMLi rebuild every one. Contour bands are cut at the
         # colour limits, so there the limits belong to the drawing.
-        shape = (self._version, self._kind, self._title, role, clip_key, smooth_level,
+        frame = (self._kind, role, clip_key, smooth_level,
                  self._show_mesh.isChecked(), rays, length_units.current(),
                  (int(self._levels.value()), show_kw.get("cMin"), show_kw.get("cMax"))
                  if contour else None)
+        shape = (self._version, self._title) + frame
         drawn = self._drawn
         # Unlocking hands the limits back to pyGIMLi's autoscale, which only a
         # drawing from scratch computes.
@@ -572,6 +583,15 @@ class MeshResultView(QWidget):
                 if self._recolour(show_kw, drawn):
                     drawn.update(locked=locked, mask=mask_key)
                     return
+        # Another step of a series on the same mesh - the time-lapse step
+        # buttons - changes only the cells' values, their coverage fade and the
+        # title, so those are put on the cells already drawn. Drawing the section
+        # from scratch cost two seconds a click on a 60 000-cell mesh.
+        if (drawn is not None and drawn.get("frame") == frame and drawn.get("mesh") is mesh
+                and (locked or not drawn["locked"])
+                and self._revalue(values, coverage, show_kw, drawn)):
+            drawn.update(shape=shape, locked=locked, mask=mask_key)
+            return
 
         self._drawn = None
         self._fig.clear()
@@ -637,7 +657,8 @@ class MeshResultView(QWidget):
             set_section_axes(ax, vertical=mode, depth_reference=reference)
             if self._title:
                 ax.set_title(self._title)
-            self._drawn = {"shape": shape, "mask": mask_key, "locked": locked,
+            self._drawn = {"shape": shape, "frame": frame, "mesh": mesh,
+                           "mask": mask_key, "locked": locked,
                            "mappable": mappable, "colorbar": cbar, "contour": drew_contour,
                            "masked_in_place": (not drew_contour and smooth_level == 0
                                                and clip_polygon is None),
@@ -713,6 +734,48 @@ class MeshResultView(QWidget):
         except Exception:  # noqa: BLE001 - draw from scratch instead
             return False
         return True
+
+    def _revalue(self, values, mask, show_kw: dict, drawn: dict) -> bool:
+        """Put new cell values, their coverage fade and the title on what is drawn.
+
+        Only for cells drawn one per model cell (as for :meth:`_remask`). The
+        values go on through pyGIMLi's own ``setMappableData`` and the fade
+        through its ``addCoverageAlpha``, the two calls ``pg.show`` makes, so
+        the picture is the one a drawing from scratch would give; False sends
+        the caller back to drawing from scratch.
+        """
+        import numpy as np
+        import pygimli as pg
+
+        mappable = drawn.get("mappable")
+        set_data = getattr(pg.viewer.mpl, "setMappableData", None)
+        add_alpha = getattr(pg.viewer.mpl, "addCoverageAlpha", None)
+        values = np.asarray(values, dtype=float)
+        if (mappable is None or set_data is None or add_alpha is None
+                or not drawn.get("masked_in_place") or drawn.get("colorbar") is None
+                or values.size != len(mappable.get_paths())):
+            return False
+        faded = mask is not None and np.asarray(mask).size == values.size
+        try:
+            norm = mappable.norm
+            set_data(mappable, values, cMin=show_kw.get("cMin"), cMax=show_kw.get("cMax"),
+                     logScale=show_kw.get("logScale"))
+            if mappable.norm is not norm and type(mappable.norm) is type(norm):
+                # setMappableData hands the cells a new norm of the same kind,
+                # and a colorbar given a new norm rebuilds its ticks from scratch
+                # - in a different place from the drawing it was made with. The
+                # old one, at the new limits, colours the cells the same.
+                low, high = mappable.norm.vmin, mappable.norm.vmax
+                mappable.set_norm(norm)
+                mappable.set_clim(low, high)
+            if faded:
+                add_alpha(mappable, mask)
+            else:
+                mappable.set_alpha(None)
+            mappable.axes.set_title(self._title or "")
+        except Exception:  # noqa: BLE001 - draw from scratch instead
+            return False
+        return self._recolour(show_kw, drawn)
 
     def _recolour(self, show_kw: dict, drawn: dict) -> bool:
         """Give what is drawn new colours in place; False when only a redraw can.

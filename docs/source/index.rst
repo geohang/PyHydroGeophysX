@@ -308,7 +308,7 @@ and any numerical engines your analysis actually ran.
    Workflows <tutorials/index>
    Methods <methods/index>
    Examples <examples/index>
-   AI workflows <agents/index>
+   Agentic AI <agents/index>
    API reference <api/index>
    Data and processing <data_and_processing>
    Usage and downloads <usage>

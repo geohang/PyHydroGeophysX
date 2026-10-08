@@ -177,6 +177,10 @@ class ProfileInversionResult:
     uncertainty: Dict[str, np.ndarray]
     rms: float
     history: List[Dict[str, float]] = field(default_factory=list)
+    #: Impedance values each site gave the fit (one per frequency and mode).
+    data_per_site: List[int] = field(default_factory=list)
+    #: A line for each site that gave fewer than the profile asks for.
+    warnings: List[str] = field(default_factory=list)
 
     def section(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """``(x_nodes, z_nodes, resistivity grid)`` of the ground, for ``pcolormesh``."""
@@ -188,23 +192,113 @@ class ProfileInversionResult:
         return mesh.nodes_x, mesh.nodes_y[: ground_rows.sum() + 1], grid[ground_rows]
 
 
+#: A site frequency within 5 % of a profile frequency (``|ln(f_site / f)|``
+#: below this) is taken as that frequency, as it always was.
+PROFILE_FREQUENCY_TOLERANCE = 0.05
+#: Widest gap between two of a site's own frequencies across which its
+#: impedance is interpolated to a profile frequency: a factor of 2.25, so a
+#: band sampled three times per decade still interpolates. Midway across a gap
+#: that wide the interpolation is off by at most 2.3 % on three test earths
+#: (100/10/300, 1000/1/1000 and 10/1000 ohm m), under half the 5 % error
+#: floor; at 5 per decade by 0.8 %, at 10 by 0.2 %.
+PROFILE_INTERPOLATION_SPAN = float(np.log(2.25))
+
+
+def _site_impedance(frequency: np.ndarray, values: np.ndarray, errors: Optional[np.ndarray],
+                    fr: float) -> Tuple[complex, float, bool]:
+    """One impedance element of a site at the profile frequency ``fr``.
+
+    ``(value, error, interpolated)``, NaN where the site has nothing there.
+    A site frequency within :data:`PROFILE_FREQUENCY_TOLERANCE` is used as it
+    is. Otherwise the value is interpolated between the site's two frequencies
+    that bracket ``fr`` - never extrapolated past its band - when they are at
+    most :data:`PROFILE_INTERPOLATION_SPAN` apart: ``Z / sqrt(f)``, whose
+    modulus is ``sqrt(rho_a)`` up to a constant, linearly in ``ln f``.
+    Interpolating that rather than ``Z`` itself takes out the ``sqrt(f)``
+    every impedance carries, which is what made a nearest-frequency match
+    wrong: on a three-layer earth sampled at 7.2 frequencies per decade, a
+    site recorded 8 % off the profile's frequencies has its ``|Z|`` off by up
+    to 6 % at the nearest one, more than the 5 % error floor, and this
+    interpolation by 0.2 % (0.3 % at a 20 % offset). The error is the larger
+    relative error of the two, applied to the interpolated value.
+    """
+    log_ratio = np.log(frequency / fr)
+    m = int(np.argmin(np.abs(log_ratio)))
+    if abs(log_ratio[m]) < PROFILE_FREQUENCY_TOLERANCE:
+        error = errors[m] if errors is not None else np.nan
+        return values[m], error, False
+    below = np.flatnonzero(log_ratio < 0)
+    above = np.flatnonzero(log_ratio > 0)
+    if not below.size or not above.size:
+        return np.nan + 0j, np.nan, False
+    lo = int(below[np.argmax(log_ratio[below])])
+    hi = int(above[np.argmin(log_ratio[above])])
+    span = float(np.log(frequency[hi] / frequency[lo]))
+    if span > PROFILE_INTERPOLATION_SPAN or not (
+            np.isfinite(values[lo]) and np.isfinite(values[hi])):
+        return np.nan + 0j, np.nan, False
+    t = float(np.log(fr / frequency[lo])) / span
+    scaled = ((1.0 - t) * values[lo] / np.sqrt(frequency[lo])
+              + t * values[hi] / np.sqrt(frequency[hi]))
+    value = scaled * np.sqrt(fr)
+    relative = np.nan
+    if errors is not None:
+        with np.errstate(divide="ignore", invalid="ignore"):
+            relative = np.nanmax([errors[lo] / abs(values[lo]), errors[hi] / abs(values[hi])])
+    return value, float(relative * abs(value)), True
+
+
 def _profile_data(tfs: Sequence[TransferFunction], frequencies: np.ndarray, strike: float,
                   modes: Sequence[str], error_floor: float):
+    """The profile's observed impedances and errors, and what each site gave.
+
+    ``counts[k]`` is ``(used, interpolated)``: how many of site ``k``'s
+    impedance values (one per profile frequency and mode) hold data, and how
+    many of those were interpolated (:func:`_site_impedance`).
+    """
     observed, uncertainty = {}, {}
+    counts = [[0, 0] for _ in tfs]
+    rotated = [tf.rotated(strike) for tf in tfs]
     for mode in modes:
         i, j = (0, 1) if mode == "te" else (1, 0)
         z = np.full((frequencies.size, len(tfs)), np.nan + 0j)
         err = np.full(z.shape, np.nan)
-        for k, tf in enumerate(tfs):
-            rotated = tf.rotated(strike)
+        for k, site in enumerate(rotated):
+            errors = site.z_err[:, i, j] if site.z_err is not None else None
             for n, fr in enumerate(frequencies):
-                m = int(np.argmin(np.abs(np.log(rotated.frequency / fr))))
-                if abs(np.log(rotated.frequency[m] / fr)) < 0.05:
-                    z[n, k] = rotated.z[m, i, j]
-                    e = rotated.z_err[m, i, j] if rotated.z_err is not None else np.nan
-                    err[n, k] = np.nanmax([e, error_floor * abs(z[n, k])])
+                value, error, interpolated = _site_impedance(
+                    site.frequency, site.z[:, i, j], errors, fr)
+                if not np.isfinite(value):
+                    continue
+                z[n, k] = value
+                err[n, k] = np.nanmax([error, error_floor * abs(value)])
+                counts[k][0] += 1
+                counts[k][1] += int(interpolated)
         observed[mode], uncertainty[mode] = z, err
-    return observed, uncertainty
+    return observed, uncertainty, [tuple(c) for c in counts]
+
+
+def _site_warnings(tfs: Sequence[TransferFunction], counts, n_frequencies: int,
+                   modes: Sequence[str]) -> List[str]:
+    """One line per site that gives the profile fewer values than it asks for."""
+    total = int(n_frequencies) * len(modes)
+    lines = []
+    for k, (tf, (used, interpolated)) in enumerate(zip(tfs, counts)):
+        if used >= total:
+            continue
+        name = tf.station or f"site {k + 1}"
+        if used == 0:
+            lines.append(f"Site {name} contributes no data: its frequencies cover "
+                         f"none of the profile's {n_frequencies}, so it is in the "
+                         "section only as a station position.")
+            continue
+        note = f", {interpolated} of them interpolated between its own frequencies" \
+            if interpolated else ""
+        lines.append(f"Site {name} contributes {used} of {total} impedance values "
+                     f"({'/'.join(m.upper() for m in modes)} at {n_frequencies} "
+                     f"frequencies){note}; the rest are outside its band, between "
+                     "frequencies too far apart, or have no value.")
+    return lines
 
 
 def invert_profile(tfs: Sequence[TransferFunction], station_x: Sequence[float], *,
@@ -219,14 +313,21 @@ def invert_profile(tfs: Sequence[TransferFunction], station_x: Sequence[float], 
     ``tfs`` are the sites' transfer functions and ``station_x`` their
     distances along the profile (m); ``strike`` (degrees clockwise from
     north) is the strike the impedances are rotated to. ``frequencies``
-    defaults to those of the first site, which every site should share.
+    defaults to those of the first site. A site recorded at other frequencies
+    is interpolated to them within its own band (:func:`_site_impedance`);
+    a site that gives fewer values than the profile asks for is named in the
+    result's ``warnings``, with ``data_per_site`` counting what each gave.
     """
     from simpeg import data as sdata, data_misfit, directives, inverse_problem, inversion, \
         optimization, regularization
 
     x = np.asarray(station_x, dtype=float)
     f = np.asarray(frequencies if frequencies is not None else tfs[0].frequency, dtype=float)
-    observed, uncertainty = _profile_data(tfs, f, strike, modes, error_floor)
+    observed, uncertainty, counts = _profile_data(tfs, f, strike, modes, error_floor)
+    warnings = _site_warnings(tfs, counts, f.size, modes)
+    for line in warnings:
+        if log is not None:
+            log(line)
     if starting_resistivity is None:
         rho_a = [np.abs(observed[m]) ** 2 / (2 * np.pi * f[:, None] * 4e-7 * np.pi) for m in modes]
         starting_resistivity = float(10 ** np.nanmedian(np.log10(np.concatenate([r.ravel() for r in rho_a]))))
@@ -274,7 +375,9 @@ def invert_profile(tfs: Sequence[TransferFunction], station_x: Sequence[float], 
     phi_d = sum(float(np.nansum(((predicted[m] - observed[m]).real / uncertainty[m]) ** 2
                                 + ((predicted[m] - observed[m]).imag / uncertainty[m]) ** 2)) for m in modes)
     return ProfileInversionResult(profile, np.exp(-model), f, list(modes), observed, predicted,
-                                  uncertainty, float(np.sqrt(phi_d / max(n_data, 1))), history)
+                                  uncertainty, float(np.sqrt(phi_d / max(n_data, 1))), history,
+                                  data_per_site=[int(used) for used, _ in counts],
+                                  warnings=warnings)
 
 
 def station_distances(tfs: Sequence[TransferFunction]) -> Tuple[np.ndarray, float]:

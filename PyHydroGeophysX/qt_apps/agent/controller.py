@@ -17,6 +17,7 @@ lifts it out into an image message and never lets it reach the text transcript.
 from __future__ import annotations
 
 import base64
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import QObject
@@ -76,6 +77,140 @@ class StudioController(QObject):
     def __init__(self, window: Any) -> None:
         super().__init__(window if isinstance(window, QObject) else None)
         self._window = window
+        self._chat_references = {}
+        self._pending_chat_files = {}
+
+    def queue_chat_files(self, paths):
+        paths = list(dict.fromkeys(str(Path(p).resolve()) for p in paths))
+        if not paths or any(not Path(p).exists() for p in paths):
+            return {'status': 'failed', 'error': 'Paste existing local files or folders.'}
+        pending = self._pending_chat_files.setdefault(self.attachment_scope(), [])
+        known = {row['path'] for row in self.chat_attachments()}
+        added = [path for path in paths if path not in known]
+        if len(pending) + len(added) > 100:
+            return {'status': 'failed', 'error': 'Paste at most 100 files at a time.'}
+        pending.extend(added)
+        return {'status': 'ok', 'added': added}
+
+    def pending_chat_files(self):
+        return list(self._pending_chat_files.get(self.attachment_scope(), []))
+
+    def apply_chat_classification(self, rows):
+        """Validate a whole classification before changing workflow inputs."""
+        expected = self.pending_chat_files()
+        if len(rows) != len(expected) or [row['path'] for row in rows] != expected:
+            return {'status': 'failed', 'error': 'File selection changed; send the request again.'}
+        allowed = {key for label, key in self.chat_attachment_roles()}
+        unknown = [row for row in rows if row['role'] == 'unknown' or row['role'] not in allowed | {'ignore'}]
+        if unknown:
+            return {'status': 'needs_input', 'error': 'Tell me what these files contain or how you want to use them: ',
+                    'files': unknown}
+        groups = {}
+        for row in rows:
+            if row['role'] != 'ignore':
+                role = row['role']
+                path = Path(row['path'])
+                value = str(path.parent) if role.endswith('_dir') and path.is_file() else str(path)
+                groups.setdefault(role, []).append(value)
+        from PyHydroGeophysX.agents.assistants import active
+        groups = {role: list(dict.fromkeys(paths)) for role, paths in groups.items()}
+        for role, paths in groups.items():
+            if role != 'chat_reference' and role not in active().ordered_roles and len(paths) > 1:
+                return {'status': 'needs_input', 'error': f'More than one file was identified as {role}; tell me which to use.'}
+        if 'data_file' in groups and 'time_lapse_files' in groups:
+            return {'status': 'needs_input', 'error': 'Tell me whether to run a single ERT survey or the time-lapse series.'}
+        page = self._attachment_page(create=any(role != 'chat_reference' for role in groups))
+        before = dict(getattr(page, '_inputs', {}))
+        refs = list(self._chat_references.get(self.attachment_scope(), []))
+        for role, paths in groups.items():
+            result = self.add_chat_attachments(role, paths)
+            if result.get('status') != 'ok':
+                if page is not None:
+                    page._inputs = before
+                    page._refresh_inputs()
+                self._chat_references[self.attachment_scope()] = refs
+                return result
+        self._pending_chat_files[self.attachment_scope()] = []
+        return {'status': 'ok'}
+
+    def attachment_scope(self):
+        from PyHydroGeophysX.agents.assistants import active
+        state = getattr(self._window, 'state', None)
+        root = getattr(state, 'results_store_root', None) or getattr(state, 'output_dir', None)
+        return (active().key, str(root or ''))
+
+    def chat_attachment_roles(self):
+        from PyHydroGeophysX.agents.assistants import active
+        return [('Reference documents (RAG)', 'chat_reference')] + [
+            (label, role) for label, role in active().input_roles if role != 'reference_file']
+
+    def _attachment_page(self, create=False):
+        page = getattr(self._window, '_pages', {}).get('one_click')
+        if page is None and create and self._window is not None:
+            self._window.show_module('one_click')
+            page = self._window._pages.get('one_click')
+        return page
+
+    def chat_attachments(self):
+        refs = self._chat_references.get(self.attachment_scope(), [])
+        rows = []
+        page = self._attachment_page()
+        for role, value in getattr(page, '_inputs', {}).items():
+            for path in value if isinstance(value, list) else [value]:
+                rows.append({'role': role, 'path': str(path),
+                             'rag': role == 'reference_file' or str(path) in refs})
+        represented = {row['path'] for row in rows}
+        rows.extend({'role': 'chat_reference', 'path': path, 'rag': True}
+                    for path in refs if path not in represented)
+        rows.extend({'role': 'pending', 'path': path, 'rag': False}
+                    for path in self.pending_chat_files())
+        return rows
+
+    def add_chat_attachments(self, role, paths, use_rag=False):
+        """Register local paths; never copy files or start a workflow."""
+        from PyHydroGeophysX.agents.local_knowledge import REFERENCE_SUFFIXES, MAX_DOCUMENT_BYTES
+        roles = dict((key, label) for label, key in self.chat_attachment_roles())
+        if role not in roles:
+            return {'status': 'failed', 'error': 'Choose a supported input role.'}
+        paths = list(dict.fromkeys(str(Path(p).resolve()) for p in paths))
+        if not paths:
+            return {'status': 'failed', 'error': 'Choose at least one file.'}
+        use_rag = use_rag or role == 'chat_reference'
+        for filename in paths:
+            path = Path(filename)
+            if not path.exists() or (not role.endswith('_dir') and not path.is_file()):
+                return {'status': 'failed', 'error': f'File not found: {filename}'}
+            if use_rag and (path.suffix.lower() not in REFERENCE_SUFFIXES
+                            or path.stat().st_size > MAX_DOCUMENT_BYTES):
+                return {'status': 'failed', 'error':
+                        'RAG accepts PDF, DOCX, TXT, Markdown, RST, CSV and JSON files up to 10 MB each.'}
+        if role != 'chat_reference':
+            page = self._attachment_page(create=True)
+            if page is None:
+                return {'status': 'failed', 'error': 'Workflow page is unavailable.'}
+            result = page._agent_add_input(role, paths)
+            if result.get('status') != 'ok':
+                return result
+        if use_rag:
+            refs = self._chat_references.setdefault(self.attachment_scope(), [])
+            refs.extend(path for path in paths if path not in refs)
+        return {'status': 'ok', 'attachments': self.chat_attachments()}
+
+    def remove_chat_attachment(self, role, path):
+        if role == 'pending':
+            pending = self._pending_chat_files.get(self.attachment_scope(), [])
+            if path in pending:
+                pending.remove(path)
+            return {'status': 'ok'}
+        page = self._attachment_page()
+        if role != 'chat_reference' and page is not None:
+            result = page._agent_remove_input(role, path)
+            if result.get('status') != 'ok':
+                return result
+        refs = self._chat_references.get(self.attachment_scope(), [])
+        if path in refs:
+            refs.remove(path)
+        return {'status': 'ok'}
 
     # -- public API ----------------------------------------------------------
     def reset_workflow_request(self):

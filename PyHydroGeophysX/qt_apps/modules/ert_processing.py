@@ -13,14 +13,17 @@ remains an internal fallback when a device parser raises.
 
 from __future__ import annotations
 
+import json
+import os
 from pathlib import Path
+import re
 import shutil
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import uuid
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import QEventLoop, Qt, QTimer
+from PySide6.QtCore import QEventLoop, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QAbstractSpinBox,
@@ -38,6 +41,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QProgressBar,
     QPushButton,
+    QSizePolicy,
     QSpinBox,
     QTabWidget,
     QVBoxLayout,
@@ -63,6 +67,7 @@ from PyHydroGeophysX.qt_apps.widgets import temperature_panel
 from PyHydroGeophysX.qt_apps.widgets.mesh_preview import MeshPreviewView
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
+from PyHydroGeophysX.qt_apps.widgets.reciprocal_view import ReciprocalErrorView
 from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
 from PyHydroGeophysX.qt_apps.workers import (
     ProcessProbeWorker,
@@ -93,6 +98,15 @@ _MAX_MESH_QUALITY = 34.0
 _TC_WAITING = ("Run an inversion - one survey or a time-lapse series; Apply then "
                "corrects the model shown here, without inverting again.")
 
+#: The Reciprocal errors tab before data are loaded, and how to get pairs.
+_RECIP_NO_DATA = ("Load ERT data to see how far each reading and its reciprocal disagree. "
+                  "In time-lapse mode the tab shows every survey of the list.")
+_RECIP_HOW = ("To get them, measure reciprocals in the field - each reading repeated with "
+              "its current and potential electrodes exchanged; most instruments can add "
+              "them to a protocol. For a survey written as two files, add the reciprocal "
+              "file to the list as well and keep “Pair reciprocal files with their forward "
+              "file” ticked.")
+
 #: Where the Data QC checks start. None acts until Apply filter is pressed, and
 #: those under "More checks" only while it is unfolded, so none changes a run
 #: nobody filtered. Each was checked against the shipped BERT, DAS-1 and E4D
@@ -119,6 +133,22 @@ def _value_name(correction: Optional[Dict[str, Any]]) -> str:
 
 _ELEC_FILTER = "Electrodes (*.csv *.txt *.dat);;All files (*)"
 _DATA_FILTER = "ERT data (*.dat *.ohm *.txt *.csv *.Data *.bin *.stg *.amp *.udf);;All files (*)"
+
+#: How the file list finds each survey's time, on hover over its summary line.
+#: survey_timing reads every form listed; ert_input_format.md says the same.
+_TIME_FORMATS_TIP = (
+    "How survey times are read\n\n"
+    "1. From the file name. Put the year first:\n"
+    "      site_2026-01-12_05-50-38.dat   (recommended)\n"
+    "      site_2026_01_12_05_50_38.dat\n"
+    "      site_20260112_055038.dat\n"
+    "      site_2026-01-12T05-50-38.dat\n"
+    "2. Otherwise from a date line at the top of the file, e.g.\n"
+    "      # date: 2026-01-12 05:50:38\n"
+    "   (for BERT / pyGIMLi files: the very first line, before the electrode count).\n"
+    "3. Otherwise, if “Use file times” is ticked, from each file's modified time.\n\n"
+    "Avoid month-first or day-first names such as 01-12-2026: they can be read two\n"
+    "ways. Hover over a file to see where its time came from. Data format has more.")
 
 _INSTRUMENTS: List[Tuple[str, Optional[str]]] = [
     ("BERT / Unified (.ohm/.dat)", "BERT"),
@@ -160,6 +190,8 @@ class ERTProcessingModule(BaseModule):
         # The thresholds of the last "Apply filter", until Reset: what a
         # time-lapse run applies to every one of its surveys.
         self._qc_applied: Optional[Dict[str, Any]] = None
+        # What that filter did to the data loaded now: the run's QC report.
+        self._qc_report: Optional[Dict[str, Any]] = None
         self._pseudo: List[Tuple[float, float, float]] = []
         self._n_meas = 0
         self._ert_data = None        # pygimli DataContainerERT for inversion (filtered)
@@ -181,6 +213,10 @@ class ERTProcessingModule(BaseModule):
         self._r2_probe_serial = 0
         self._r2_found: Optional[Dict[str, Any]] = None    # the last R2/R3t check
         self._ert_recipe_path: str = ""
+        # The running runs' inversion_settings.txt, which their outcome is added
+        # to; the time-lapse one with the parameters it was launched with.
+        self._ert_settings_path: Optional[Path] = None
+        self._tl_settings: Optional[Tuple[Path, Dict[str, Any]]] = None
         # Set by the Mode selector, which trades the pre-inversion checks against
         # turnaround. Quick skips them; Full validates and repairs k. A k that
         # disagrees with the geometry rescales the whole section while leaving
@@ -193,12 +229,25 @@ class ERTProcessingModule(BaseModule):
         # and _inv_mgr always points at the one on screen.
         self._inv_mgr = None
         self._inv_choices: List[Dict[str, Any]] = []
+        self._agent_run_state = "idle"
+        self._agent_run_error = ""
         # A temperature correction of the single-inversion model on screen: what
         # was applied, and the corrected model. The manager keeps the model as
         # inverted, so the correction can be changed or taken off.
         self._inv_correction: Optional[Dict[str, Any]] = None
         self._inv_corrected: Optional[np.ndarray] = None
         self._load_worker: Optional[TaskWorker] = None
+        # Every file added to the list, reciprocal files included, in the order
+        # the list keeps them. _tl_files holds the surveys made of them: while
+        # "Pair reciprocal files" is ticked, a forward file stands for itself and
+        # its reciprocal (_tl_partner), and a reciprocal file no forward file
+        # matches is left out (_tl_left_out).
+        self._tl_all: List[str] = []
+        self._tl_partner: Dict[str, str] = {}
+        self._tl_left_out: List[str] = []
+        # The reciprocal file merged with the survey on screen, and its counts.
+        self._data_partner: Optional[Path] = None
+        self._pair_info: Optional[Dict[str, Any]] = None
         self._tl_files: List[str] = []
         self._tl_labels: List[str] = []
         self._tl_times: List[float] = []
@@ -261,8 +310,11 @@ class ERTProcessingModule(BaseModule):
         pseudo_layout.addWidget(self._pseudo_canvas, stretch=1)
 
         self._pseudo_legend = QWidget()
+        # Reserve the legend's full text height; the canvas takes the remaining
+        # space, including in short windows and with larger display fonts.
+        self._pseudo_legend.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         legend_layout = QVBoxLayout(self._pseudo_legend)
-        legend_layout.setContentsMargins(8, 0, 8, 0)
+        legend_layout.setContentsMargins(8, 0, 8, 6)
         legend_layout.setSpacing(1)
         # The colour map beside the colour scale it changes. The title takes the
         # stretch itself: the page lets long labels elide, and an eliding label
@@ -282,6 +334,7 @@ class ERTProcessingModule(BaseModule):
         self._pseudo_scale_labels: List[QLabel] = []
         for index in range(5):
             label = QLabel("—")
+            label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
             label.setAlignment(
                 Qt.AlignLeft if index == 0 else Qt.AlignRight if index == 4 else Qt.AlignCenter
             )
@@ -289,6 +342,11 @@ class ERTProcessingModule(BaseModule):
             self._pseudo_scale_labels.append(label)
         legend_layout.addLayout(scale_row)
         pseudo_layout.addWidget(self._pseudo_legend)
+        # Until data arrive the tab says what to do. Left as built it showed an
+        # empty 0-1 axis over a colour bar of "—" placeholders, which read as a
+        # bar whose numbers had been covered.
+        self._show_pseudosection_message(
+            "Add ERT data files on the right to see their pseudosection.")
 
         # The studio state's colormap choices, shared with Saved Results: a
         # section recoloured on either page is recoloured on both.
@@ -298,6 +356,7 @@ class ERTProcessingModule(BaseModule):
         # in one run mode's settings, where the other mode's results cannot reach
         # them. Saved Results puts the same panel in the same place.
         self._model_view.add_side_panel(self._build_temperature_group())
+        self._model_view._side.setSizes([1000, 360])
         # The "Resistivity model" tab shows the single inversion OR any time step
         # of a time-lapse run, picked with the step selector (hidden until a
         # time-lapse result is available) — so there is no separate time-lapse tab.
@@ -373,8 +432,31 @@ class ERTProcessingModule(BaseModule):
         self._mesh_timer.setInterval(400)
         self._mesh_timer.timeout.connect(self._refresh_mesh_preview)
 
+        # Each reciprocal pair's error against its resistance, with the error
+        # model fitted through them: the survey on screen, or every survey of a
+        # time-lapse list. Its "Fit to" chooser is the page's one setting for
+        # which pairs the model is fitted to - the data errors, the QC report,
+        # the settings file and the run's figure all follow it.
+        self._recip_view = ReciprocalErrorView()
+        self._recip_view.fitToChanged.connect(self._on_error_fit_changed)
+        self._recip_view.useRequested.connect(self._use_reciprocal_errors)
+        # The loaded survey's pairing, made with it off the UI thread.
+        self._loaded_pairing: Optional[Dict[str, Any]] = None
+        # Each survey's QC report - its pairing among it - as read for the
+        # series view or by the time-lapse QC: {survey key: {filter key:
+        # report}} (_recip_survey_key, _recip_qc_key). A series of 420 surveys
+        # takes minutes to read, so it is read once per file and filter.
+        self._recip_cache: Dict[tuple, Dict[str, Dict[str, Any]]] = {}
+        self._recip_worker: Optional[TaskWorker] = None
+        self._recip_reading: Optional[tuple] = None
+        self._recip_timer = QTimer(self)
+        self._recip_timer.setSingleShot(True)
+        self._recip_timer.setInterval(500)
+        self._recip_timer.timeout.connect(self._refresh_recip_view)
+
         self._tabs.addTab(self._plot_widget, "Electrodes")
         self._tabs.addTab(self._pseudo_widget, "Pseudosection")
+        self._tabs.addTab(self._recip_view, "Reciprocal errors")
         self._tabs.addTab(self._mesh_tab, "Mesh")
         self._tabs.addTab(model_tab, "Resistivity model")
         self._tabs.addTab(self._quality_view, "Inversion quality")
@@ -386,7 +468,10 @@ class ERTProcessingModule(BaseModule):
         center_layout.addWidget(self._tabs, stretch=1)
         center_layout.addWidget(self._reproduce)
         root.addWidget(center, stretch=1)
-        root.addWidget(self._build_controls())
+        self._controls = self._build_controls()
+        self._sync_recip_use()
+        root.addWidget(self._controls)
+        self._sync_tab_controls()
 
     # -- controls ------------------------------------------------------------
     def _build_controls(self) -> QWidget:
@@ -401,6 +486,7 @@ class ERTProcessingModule(BaseModule):
         layout = QVBoxLayout(panel)
 
         loader = QGroupBox("Load resistivity data")
+        self._load_group = loader
         lform = QFormLayout(loader)
         self._instrument = QComboBox()
         for label, value in _INSTRUMENTS:
@@ -408,11 +494,19 @@ class ERTProcessingModule(BaseModule):
         # Don't let the longest item ("BERT / Unified (.ohm/.dat)") force the whole
         # control panel wide; elide in the closed box (full text in the dropdown).
         self._instrument.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
-        self._instrument.setMinimumContentsLength(16)
+        self._instrument.setMinimumContentsLength(12)
         # A time-lapse run reads its first survey with this reader to build the
-        # mesh, and so does the Mesh tab's preview of it.
+        # mesh, and so does the Mesh tab's preview of it; the Reciprocal errors
+        # tab reads a series' surveys with it.
         self._instrument.currentIndexChanged.connect(self._mesh_inputs_changed)
-        lform.addRow("Instrument / format", self._instrument)
+        self._instrument.currentIndexChanged.connect(self._recip_inputs_changed)
+        self._resipy_ready = QLabel()
+        self._resipy_ready.setWordWrap(False)
+        instrument_row = QHBoxLayout()
+        instrument_row.setSpacing(8)
+        instrument_row.addWidget(self._instrument, stretch=1)
+        instrument_row.addWidget(self._resipy_ready)
+        lform.addRow("Instrument / format", instrument_row)
 
         # Which reader handled the file is not visible in the result, and the two
         # do not always agree on how many measurements a file holds, so it is
@@ -423,22 +517,20 @@ class ERTProcessingModule(BaseModule):
         lform.addRow("", self._reader_status)
         self._show_reader_status()
 
-        load_hint = QLabel("Add one or more ERT files (one per time step for time-lapse). "
-                           "Click a row to preview it; order top→bottom is time order.")
-        load_hint.setWordWrap(True)
-        lform.addRow(load_hint)
-
         self._tl_list = QListWidget()
         self._tl_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self._tl_list.setMaximumHeight(150)
-        self._tl_list.setToolTip("Loaded ERT files. Click a row to preview it; two or more "
-                                 "become a time sequence for time-lapse inversion.")
+        self._tl_list.setToolTip("Click a row to preview it. Each file is one time step; "
+                                 "the list runs from earliest at the top to latest at the bottom. "
+                                 "Use Sort by time to order the sequence.")
         self._tl_list.itemSelectionChanged.connect(self._on_tl_selection_changed)
         self._tl_list.itemClicked.connect(self._preview_tl_item)
         lform.addRow(self._tl_list)
 
         tl_btns = QHBoxLayout()
         add_btn = QPushButton("Add files…")
+        add_btn.setToolTip("Add one or more ERT files, one per survey for time-lapse. "
+                           "Choose the instrument / format first.")
         add_btn.setProperty("primary", True)
         add_btn.setIcon(theme.icon("fa5s.file-import", color="#ffffff"))
         add_btn.clicked.connect(self._add_tl_files)
@@ -468,12 +560,44 @@ class ERTProcessingModule(BaseModule):
         lform.addRow(order_btns)
 
         self._tl_info = QLabel("No files added."); self._tl_info.setWordWrap(True)
+        # The accepted time formats on hover, so the line itself stays short.
+        self._tl_info.setToolTip(_TIME_FORMATS_TIP)
         lform.addRow(self._tl_info)
+
+        # Shown only when names in the list look like forward/reciprocal halves,
+        # and on then: the detection goes by name and time, so it can be wrong,
+        # and unticking it puts every file back as a survey of its own.
+        self._tl_pair_box = QCheckBox("Pair reciprocal files with their forward file")
+        self._tl_pair_box.setChecked(True)
+        self._tl_pair_box.setToolTip(
+            "Some instruments write each survey as two files: the forward readings, "
+            "and a few minutes later the reciprocal readings (“recip” in the name). "
+            "Ticked, each reciprocal file is joined to the forward file measured just "
+            "before it with the same name, and the two are one survey: one row in "
+            "the list, at the forward file's time, one time step, and the readings "
+            "of both in one data set, so each reading can be compared with its "
+            "reciprocal.\n\n"
+            "A forward file with no reciprocal stays a survey on its own. A "
+            "reciprocal file with no forward file is left out, and the line above "
+            "names it.\n\n"
+            "Untick it if a file was joined to the wrong partner: every file is "
+            "then a survey of its own again.")
+        self._tl_pair_box.toggled.connect(self._on_tl_pairing_changed)
+        self._tl_pair_box.setVisible(False)
+        lform.addRow(self._tl_pair_box)
 
         load_e = QPushButton("Electrode file (optional)…")
         load_e.setIcon(theme.icon("fa5s.folder-open"))
         load_e.clicked.connect(self._load_electrodes)
-        lform.addRow(load_e)
+        fmt_btn = QPushButton("Data format")
+        fmt_btn.setIcon(theme.icon("fa5s.file-alt"))
+        fmt_btn.setToolTip("The file formats this page reads, the electrode file, and "
+                           "how to give each survey its time.")
+        fmt_btn.clicked.connect(self._show_format_help)
+        elec_row = QHBoxLayout()
+        elec_row.addWidget(load_e)
+        elec_row.addWidget(fmt_btn)
+        lform.addRow(elec_row)
         layout.addWidget(loader)
 
         self._info = QLabel("No data loaded.")
@@ -481,7 +605,17 @@ class ERTProcessingModule(BaseModule):
         layout.addWidget(self._info)
 
         qc = QGroupBox("Data QC / filter")
+        self._qc_group = qc
         qform = QFormLayout(qc)
+        # Check 0, before every other check, as in Craig Ulrich's processing.
+        # Off by default: kept apart, the two readings of a pair let the fit see
+        # how far they disagree, and an averaged pair hides that.
+        self._qc_average = QCheckBox("Average each reading with its reciprocal")
+        self._qc_average.setChecked(False)
+        self._qc_average.setEnabled(False)
+        self._qc_average.setToolTip("Load ERT data first.")
+        self._qc_average.toggled.connect(self._sync_error_rows)
+        qform.addRow(self._qc_average)
         self._rmin = QDoubleSpinBox(); self._rmin.setRange(0.0, 1e6); self._rmin.setValue(0.0); self._rmin.setSuffix(" Ω·m")
         self._rmax = QDoubleSpinBox(); self._rmax.setRange(1.0, 1e7); self._rmax.setValue(100000.0); self._rmax.setSuffix(" Ω·m")
         self._max_err = QDoubleSpinBox(); self._max_err.setRange(0.0, 100.0)
@@ -598,6 +732,7 @@ class ERTProcessingModule(BaseModule):
         # time-lapse inversion; ticking "Time-lapse" reveals the time-lapse-only
         # options and swaps the Run button.
         inv = QGroupBox("Inversion")
+        self._inversion_group = inv
         iform = QFormLayout(inv)
         self._inv_form = iform
 
@@ -676,35 +811,38 @@ class ERTProcessingModule(BaseModule):
             "one significant digit.")
         iform.addRow("Lambda", self._lam)
 
-        # Iteration budget: one number per attempt, one for the total. They belong
-        # on one line because they are two ends of the same setting.
-        self._iter = QSpinBox(); self._iter.setRange(2, 60); self._iter.setValue(15)
-        self._iter.setToolTip(
-            "Iterations per attempt. A run that uses all of them while still improving "
-            "is continued from its own model rather than being judged there, up to the "
-            "ceiling beside it, so λ is never blamed for an unfinished descent.")
+        # How long an inversion may run, and when it counts as done. Each mode and
+        # engine shows only the limits it obeys (_sync_iteration_rows): the three
+        # numbers on one line read as one setting, and two of them never applied
+        # to a time-lapse run.
         self._iter_ceiling = QSpinBox(); self._iter_ceiling.setRange(5, 400)
         self._iter_ceiling.setValue(60)
         self._iter_ceiling.setToolTip(
-            "Total iterations allowed at one λ, counting continuations. Reaching it "
-            "means the reported χ² is an upper bound, and the log says so.")
-        iter_row = QHBoxLayout()
-        iter_row.setContentsMargins(0, 0, 0, 0)
-        iter_row.addWidget(self._iter)
-        iter_row.addWidget(QLabel("per pass, up to"))
-        iter_row.addWidget(self._iter_ceiling)
-        iter_row.addStretch(1)  # pack left; stretched spin boxes leave odd gaps
-        self._iter_row = QWidget(); self._iter_row.setLayout(iter_row)
-        iform.addRow("Iterations", self._iter_row)
+            "The most iterations the inversion may take (for each λ when Auto-λ is "
+            "on). It normally stops sooner, once χ² stops improving (next row). "
+            "Reaching this limit means the fit could still improve, and the log "
+            "says so.")
+        iform.addRow("Max iterations", self._iter_ceiling)
+        # A single run checks its progress after this many iterations and goes on
+        # from its own model while still improving, so λ is never judged on an
+        # unfinished descent. That checkpoint is an internal detail there; a
+        # time-lapse run has no continuation, and this is its whole limit.
+        self._iter = QSpinBox(); self._iter.setRange(2, 60); self._iter.setValue(15)
+        self._iter.setToolTip(
+            "The most iterations of the time-lapse inversion; with Windowed on, of "
+            "each window.")
+        iform.addRow("Max iterations", self._iter)
 
         self._plateau = QDoubleSpinBox()
         self._plateau.setRange(0.01, 10.0); self._plateau.setDecimals(2)
         self._plateau.setSingleStep(0.1); self._plateau.setValue(0.5)
-        self._plateau.setSuffix(" %")
+        self._plateau.setPrefix("< ")
+        self._plateau.setSuffix(" % per iteration")
         self._plateau.setToolTip(
-            "A λ is finished once χ² improves by less than this per iteration. Loosen it "
-            "for speed, tighten it to be sure a λ has really run out of room.")
-        iform.addRow("Stop below", self._plateau)
+            "The inversion is done when one more iteration lowers χ² by less than "
+            "this. Larger stops sooner; smaller makes sure the fit has really run "
+            "out of room.")
+        iform.addRow("Stop when χ² improves", self._plateau)
 
         # The mesh settings live on the Mesh tab, next to the mesh they build;
         # this row says what is set and leads there.
@@ -724,19 +862,25 @@ class ERTProcessingModule(BaseModule):
 
         # -- data errors -----------------------------------------------------
         errs = QGroupBox("Data errors")
+        self._errors_group = errs
         eform = QFormLayout(errs)
         self._err_source = QComboBox()
         for label, value in (("File err column", "file"),
                              ("Estimate from the values below", "estimate"),
                              ("Larger of the two", "max"),
-                             ("Stacking spread with the estimate", "stack")):
+                             ("Stacking spread with the estimate", "stack"),
+                             ("From the reciprocal error model", "reciprocal")):
             self._err_source.addItem(label, value)
+        self._err_source.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self._err_source.setMinimumContentsLength(16)
         self._err_source.setToolTip(
             "Where the per-measurement error comes from. Most instruments write an err "
             "column; replacing it with an assumed percentage makes χ² report on an error "
             "model the data never had. The stacking spread is offered for data that "
-            "record it.")
-        self._refresh_error_sources(None)
+            "record it, the reciprocal error model for data measured both ways.")
+        self._err_source.currentIndexChanged.connect(self._sync_error_rows)
+        # The Reciprocal errors tab says whether the next run uses its model.
+        self._err_source.currentIndexChanged.connect(self._sync_recip_use)
         eform.addRow("Taken from", self._err_source)
 
         self._relerr = QDoubleSpinBox(); self._relerr.setRange(0.005, 1.0)
@@ -762,10 +906,34 @@ class ERTProcessingModule(BaseModule):
         err_row.addStretch(1)
         self._errmodel_row = QWidget(); self._errmodel_row.setLayout(err_row)
         eform.addRow("Estimate", self._errmodel_row)
-        layout.addWidget(errs)
+
+        # The smallest error a reciprocal can give a reading. 1 %: what the
+        # in-house and ADTLERT time-lapse engines take as their own minimum, so
+        # the errors recorded are the errors used; and a pair that agrees to a
+        # tenth of a percent still shares every error that cannot differ
+        # between its two directions.
+        self._recip_floor = QDoubleSpinBox()
+        self._recip_floor.setRange(0.1, 20.0); self._recip_floor.setDecimals(1)
+        self._recip_floor.setSingleStep(0.5); self._recip_floor.setValue(1.0)
+        self._recip_floor.setSuffix(" %")
+        self._recip_floor.setToolTip(
+            "No reading is given a smaller error than this when its error comes from "
+            "reciprocals: the error model, or an averaged pair's own difference. Two "
+            "directions that agree closely still share the errors that cannot differ "
+            "between them - the electrode positions, the 2-D assumption - so a "
+            "near-perfect pair is not an error-free reading. 1 % is also the smallest "
+            "error the in-house and ADTLERT time-lapse inversions accept. Averaged pairs "
+            "take it when Apply filter averages them; the model takes it when the "
+            "inversion runs.")
+        eform.addRow("Minimum", self._recip_floor)
+        self._refresh_error_sources(None)
+        # Data errors are settled before the inversion is, so the group sits
+        # between the QC and the inversion settings: load, QC, errors, invert.
+        layout.insertWidget(layout.indexOf(inv), errs)
 
         # -- fit assistance --------------------------------------------------
         assist = QGroupBox("Fit assistance")
+        self._fit_group = assist
         aform = QFormLayout(assist)
 
         # Kept short enough to fit the panel; the tooltip carries the detail.
@@ -852,6 +1020,7 @@ class ERTProcessingModule(BaseModule):
 
         # -- run -------------------------------------------------------------
         runbox = QGroupBox("Run")
+        self._run_group = runbox
         rform = QFormLayout(runbox)
         iform = rform  # the time-lapse panel and Run button live here
 
@@ -861,6 +1030,7 @@ class ERTProcessingModule(BaseModule):
                                  "(the time-lapse options appear below).")
         self._tl_mode.toggled.connect(self._on_tl_mode)
         iform.addRow(self._tl_mode)
+        self._sync_iteration_rows()
 
         self._invert_btn = QPushButton("Run inversion")
         self._invert_btn.setProperty("primary", True)
@@ -886,6 +1056,7 @@ class ERTProcessingModule(BaseModule):
         # selects an electrode so its position can be read off.
 
         exp = QGroupBox("Export")
+        self._geometry_export_group = exp
         ebox = QVBoxLayout(exp)
         exp_e = QPushButton("Export electrode file…")
         exp_e.setIcon(theme.icon("fa5s.file-csv"))
@@ -900,9 +1071,17 @@ class ERTProcessingModule(BaseModule):
         self._model_export_btn.clicked.connect(self._export_resistivity_model)
         ebox.addWidget(exp_e)
         ebox.addWidget(exp_g)
-        ebox.addWidget(self._model_export_btn)
-        ebox.addWidget(self.map_export_button())
         layout.addWidget(exp)
+
+        # Result exports belong beside the result, where model post-processing
+        # remains available without retaining the entire preparation column.
+        self._model_export_group = QGroupBox("Export model")
+        model_exports = QVBoxLayout(self._model_export_group)
+        model_exports.addWidget(self._model_export_btn)
+        model_exports.addWidget(self.map_export_button())
+        self._postprocess_layout.addWidget(self._model_export_group)
+        self._postprocess_layout.addStretch(1)
+        self._postprocess_scroll.fit_to_content()
 
         layout.addStretch(1)
         scroll.fit_to_content()
@@ -959,22 +1138,6 @@ class ERTProcessingModule(BaseModule):
         self._tl_use_mtime.toggled.connect(self._on_tl_time_source_changed)
         tlform.addRow(self._tl_use_mtime)
 
-        self._tl_clip = QCheckBox("Clip sections to the coverage envelope")
-        self._tl_clip.setToolTip(
-            "Trim the exported panels to a smooth clipping depth at the coverage "
-            "cut - the traditional clean-cut resistivity image - instead of fading "
-            "each cell by its own sensitivity.")
-        self._tl_clip_cut = QDoubleSpinBox()
-        self._tl_clip_cut.setRange(-10.0, 10.0); self._tl_clip_cut.setDecimals(2)
-        self._tl_clip_cut.setSingleStep(0.25); self._tl_clip_cut.setValue(-2.0)
-        self._tl_clip_cut.setToolTip(
-            "Coverage cut the envelope follows, in log10 cumulative sensitivity. "
-            "The same number the model view's “Hide below” uses.")
-        self._tl_clip_cut.setEnabled(False)
-        self._tl_clip.toggled.connect(self._tl_clip_cut.setEnabled)
-        tlform.addRow(self._tl_clip)
-        tlform.addRow("Clip at coverage", self._tl_clip_cut)
-
         self._tl_btn = QPushButton("Run time-lapse inversion")
         self._tl_btn.setProperty("primary", True)
         self._tl_btn.setIcon(theme.icon("fa5s.history", color="#ffffff"))
@@ -1020,8 +1183,13 @@ class ERTProcessingModule(BaseModule):
         self._tc_box.applyRequested.connect(self._apply_temperature)
         self._tc_box.removeRequested.connect(lambda: self._apply_temperature(None))
         self._tc_box.set_available(False, _TC_WAITING)
-        side = ContentWidthScrollArea()
-        side.setWidget(self._tc_box)
+        panel = QWidget()
+        self._postprocess_layout = QVBoxLayout(panel)
+        self._postprocess_layout.setContentsMargins(0, 0, 4, 0)
+        self._postprocess_layout.addWidget(self._tc_box)
+        side = ContentWidthScrollArea(minimum=320, maximum=380)
+        side.setWidget(panel)
+        self._postprocess_scroll = side
         return side
 
     def _apply_temperature(self, spec: Optional[Dict[str, Any]]) -> Tuple[bool, str]:
@@ -1042,10 +1210,76 @@ class ERTProcessingModule(BaseModule):
         single profile can correct it, and the correction says so. The file is
         the one recorded with the model, not whichever was previewed since.
         """
-        if self._inv_source is None:
-            return None, None
-        stamp = survey_timing.survey_timing([str(self._inv_source)]).timestamps[0]
+        stamp, _where = self._survey_time(self._inv_source)
         return ([0.0], [stamp]) if stamp is not None else (None, None)
+
+    def _survey_time(self, path: Optional[Path]) -> Tuple[Optional[Any], str]:
+        """``(time, where)`` one survey file was acquired, or ``(None, "")``.
+
+        Read the way the file list reads a sequence - the name, then a date line
+        at the top of the file - and ``where`` says which ("file name" or "file
+        header"). Kept per file and modification time, because the data panel
+        asks on every redraw and a file given a date line since must be read again.
+        """
+        if path is None:
+            return None, ""
+        try:
+            key = (str(path), Path(path).stat().st_mtime)
+        except OSError:
+            key = (str(path), None)
+        cache = getattr(self, "_survey_times", None)
+        if cache is None:
+            cache = self._survey_times = {}
+        if key not in cache:
+            timing = survey_timing.survey_timing([str(path)])
+            stamp = timing.timestamps[0] if timing.timestamps else None
+            cache[key] = (stamp, timing.sources[0] if stamp is not None else "")
+        return cache[key]
+
+    def _single_title(self) -> str:
+        """The single model's heading, with the survey's time when it has one.
+
+        Saved results heads the same run the same way, from the time the run
+        recorded (``survey_time`` in its summary).
+        """
+        when = survey_timing.format_time(self._survey_time(self._inv_source)[0])
+        return f"Resistivity · {when}" if when else "Resistivity"
+
+    def _survey_time_record(self, path: Optional[Path]) -> Dict[str, Any]:
+        """What the run records about the survey it inverts, for Saved results.
+
+        The run stages the data under a generic name, so the file it came from
+        and the time it was acquired survive only if they are written down here.
+        """
+        if path is None:
+            return {}
+        stamp, where = self._survey_time(path)
+        record: Dict[str, Any] = {"source_file": Path(path).name}
+        if stamp is not None:
+            record.update(acquired=stamp.isoformat(sep=" "), acquired_from=where)
+        return record
+
+    def _show_format_help(self) -> None:
+        """The ERT input-format note: formats, electrode file, survey times."""
+        from PySide6.QtWidgets import QDialog, QTextBrowser
+
+        doc_path = Path(__file__).with_name("ert_input_format.md")
+        try:
+            text = doc_path.read_text(encoding="utf-8")
+        except Exception:  # noqa: BLE001
+            text = ("Pick the instrument / format, then add one file per survey. "
+                    "Name each file with its time, year first: "
+                    "site_2026-01-12_05-50-38.dat.")
+        dlg = QDialog(self); dlg.setWindowTitle("ERT input formats")
+        dlg.resize(760, 640); lay = QVBoxLayout(dlg)
+        browser = QTextBrowser(); browser.setOpenExternalLinks(True)
+        try:
+            browser.setMarkdown(text)
+        except Exception:  # noqa: BLE001
+            browser.setPlainText(text)
+        lay.addWidget(browser)
+        close = QPushButton("Close"); close.clicked.connect(dlg.accept); lay.addWidget(close)
+        dlg.exec()
 
     def _apply_single_temperature(self, spec: Optional[Dict[str, Any]]) -> Tuple[bool, str]:
         """Correct the single-inversion model on screen, or put the inverted one back."""
@@ -1077,7 +1311,7 @@ class ERTProcessingModule(BaseModule):
         mgr = self._inv_mgr
         self._inv_corrected = None if corrected is None else np.asarray(corrected, dtype=float)
         if self._inv_corrected is None:
-            self._model_view.show_model(mgr, kind="ert")
+            self._model_view.show_model(mgr, kind="ert", title=self._single_title())
         else:
             # The coverage the uncorrected view would fade by, accepted on the same
             # terms: a flat or empty coverage is no mask at all, and handed over as
@@ -1092,7 +1326,8 @@ class ERTProcessingModule(BaseModule):
                 pass
             self._model_view.show_field(
                 mgr.paraDomain, self._inv_corrected, kind="ert", coverage=coverage,
-                title="Resistivity" + temperature_panel.title_suffix(self._inv_correction))
+                title=self._single_title()
+                + temperature_panel.title_suffix(self._inv_correction))
         self._tabs.setCurrentWidget(self._model_tab)
 
     def _tl_summary(self) -> Dict[str, Any]:
@@ -1143,10 +1378,10 @@ class ERTProcessingModule(BaseModule):
         self._tabs.setCurrentWidget(self._model_tab)
 
     def _on_tl_time_source_changed(self, *_args: Any) -> None:
-        """Re-read the acquisition times when the allowed sources change."""
-        if self._tl_files:
-            self._read_tl_times()
-            self._refresh_tl_list()
+        """Re-read the acquisition times when the allowed sources change; the
+        pairs of forward and reciprocal files are found by them too."""
+        if self._tl_all:
+            self._set_tl_files(self._tl_all)
 
     def _on_tl_mode(self, checked: bool) -> None:
         """Toggle between single-file and time-lapse inversion."""
@@ -1155,11 +1390,34 @@ class ERTProcessingModule(BaseModule):
         # A time-lapse run builds its mesh from the first survey of the series.
         self._sync_mesh_engine()
         self._mesh_inputs_changed()
+        self._sync_iteration_rows()
+        # The Reciprocal errors tab shows the whole series in time-lapse mode.
+        self._recip_inputs_changed()
+
+    def _sync_iteration_rows(self) -> None:
+        """Show the iteration limits the next run obeys, and only those.
+
+        A single run stops at "Max iterations" or once χ² stops improving, on
+        every engine. A time-lapse run on the in-house or ADTLERT engine has
+        one limit, its own iteration count; E4D runs each survey until χ²
+        stops improving and takes no count; R2 and R3t decide both themselves.
+        """
+        from PyHydroGeophysX.qt_apps.qt_utils import set_rows_enabled
+
+        timelapse = self._tl_mode.isChecked()
+        engine = self._engine.currentData()
+        # The two limits share a name, so only the mode's own is on screen; a
+        # limit the engine ignores stays visible but greyed, as elsewhere.
+        self._set_rows_visible([self._iter_ceiling], not timelapse)
+        self._set_rows_visible([self._iter], timelapse)
+        set_rows_enabled([self._iter], engine not in ("e4d", "r2", "r3t"))
+        set_rows_enabled([self._plateau], not timelapse or engine == "e4d")
 
     def _on_engine_changed(self, _index: int = -1) -> None:
         """Probe the selected CUDA backend without changing user parameters."""
         e4d = self._engine.currentData() == "e4d"
         self._set_rows_visible(self._e4d_rows, e4d)
+        self._sync_iteration_rows()
         if e4d:
             self._check_e4d()
         program = self._r2_program_name()
@@ -1196,7 +1454,7 @@ class ERTProcessingModule(BaseModule):
                 token, message
             )
         )
-        self._adtlert_probe_worker = self.register_worker(worker)
+        self._adtlert_probe_worker = self.register_worker(worker, activity="Checking the GPU inversion engine")
         worker.start()
 
     def _on_adtlert_probe_ok(self, serial: int, result: Dict[str, Any]) -> None:
@@ -1218,7 +1476,7 @@ class ERTProcessingModule(BaseModule):
         )
         worker.succeeded.connect(lambda result: self._finish_adtlert_numerical_check(serial, stage, True, ""))
         worker.failed.connect(lambda error: self._finish_adtlert_numerical_check(serial, stage, False, error))
-        self._adtlert_probe_worker = self.register_worker(worker)
+        self._adtlert_probe_worker = self.register_worker(worker, activity="Checking the GPU inversion engine")
         worker.start()
 
     def _finish_adtlert_numerical_check(self, serial: int, stage: str, ok: bool, error: str) -> None:
@@ -1361,7 +1619,7 @@ class ERTProcessingModule(BaseModule):
         worker.failed.connect(lambda message, token=serial: self._on_e4d_found(
             token, {"runs": False, "kind": "missing",
                     "message": f"The E4D check did not finish: {message}"}))
-        self._e4d_probe_worker = self.register_worker(worker)
+        self._e4d_probe_worker = self.register_worker(worker, activity="Looking for E4D")
         worker.start()
 
     def _on_e4d_found(self, serial: int, result: Dict[str, Any]) -> None:
@@ -1493,7 +1751,7 @@ class ERTProcessingModule(BaseModule):
         worker.failed.connect(lambda message, token=serial: self._on_r2_found(
             token, {"runs": False, "kind": "missing",
                     "message": f"The check did not finish: {message}"}))
-        self._r2_probe_worker = self.register_worker(worker)
+        self._r2_probe_worker = self.register_worker(worker, activity="Looking for R2 / R3t")
         worker.start()
 
     def _on_r2_found(self, serial: int, result: Dict[str, Any]) -> None:
@@ -1538,14 +1796,20 @@ class ERTProcessingModule(BaseModule):
         ``done(outcome, value)`` is told how this load ended, once the page has
         been updated: ``("loaded", result)``, ``("failed", message)``, or
         ``("superseded", None)`` when a newer load replaced it first. It is
-        connected before the worker starts, so a fast parse cannot be missed."""
+        connected before the worker starts, so a fast parse cannot be missed.
+
+        A forward file paired with its reciprocal file in the list is loaded
+        with it, the two merged into one survey."""
         instrument = self._instrument.currentData()
         # Capture widget/state values on the UI thread; the parse runs off-thread.
         out_dir = self.state.ensure_results_store().scratch_dir(self.module_key)
         elec_file = self._electrode_file()
         spacing = None  # geometry comes from the file; instrument loaders handle layout
-        self._info.setText(f"Loading {Path(path).name}…")
-        worker = TaskWorker(self._parse_ert, path, instrument, out_dir, elec_file, spacing)
+        reciprocal = self._tl_partner.get(str(path))
+        self._info.setText(f"Loading {Path(path).name}"
+                           + (" with its reciprocal file" if reciprocal else "") + "…")
+        worker = TaskWorker(self._parse_ert, path, instrument, out_dir, elec_file, spacing,
+                            reciprocal)
         # Only the latest request may land. Each click starts a load without
         # waiting for the one before, and a slow earlier file finishing last
         # replaced the data under a list highlighting the newer one - so the
@@ -1579,7 +1843,7 @@ class ERTProcessingModule(BaseModule):
             # A cancelled load emits no result at all, only ``finished``.
             worker.finished.connect(lambda: done("superseded", None))
         self._supersede_load()
-        self._load_worker = self.register_worker(worker)
+        self._load_worker = self.register_worker(worker, activity="Reading the data file")
         worker.start()
 
     def _load_and_wait(self, path: str) -> Tuple[str, Any]:
@@ -1619,6 +1883,20 @@ class ERTProcessingModule(BaseModule):
         """The electrode table the instrument readers are handed, if any."""
         table = self._electrode_table
         return str(table) if table is not None and table.exists() else None
+
+    def _run_label(self, files, unit: str = "files") -> str:
+        """The name a new run is listed under in Saved Results.
+
+        Drawn from its data - the file, or the name a sequence shares and how
+        many surveys - with the engine added when it is not the in-house one,
+        so runs of different surveys no longer all read ``Run`` and a code.
+        """
+        from PyHydroGeophysX.qt_apps.results_store import run_label_from_files
+
+        label = run_label_from_files(files, unit=unit)
+        if label and str(self._engine.currentData() or "pyhydro") != "pyhydro":
+            label += " · " + self._engine.currentText().split(" ")[0]
+        return label
 
     @staticmethod
     def _resipy_version() -> str:
@@ -1665,27 +1943,79 @@ class ERTProcessingModule(BaseModule):
         what is installed.
         """
         version = self._resipy_version()
+        named = "ResIPy" if version == "yes" else f"ResIPy {version}"
+        self._resipy_ready.setText("ResIPy ready" if version else "ResIPy unavailable")
+        theme.set_tone(self._resipy_ready, "ok" if version else "warn")
+        self._resipy_ready.setToolTip(
+            f"{named} available for loading data." if version else
+            "ResIPy is not installed; some formats require it. See Data format.")
         if not reader:
-            named = "ResIPy" if version == "yes" else f"ResIPy {version}"
             if version:
                 self._reader_status.setText(f"{named} available for loading data.")
-                self._reader_status.setToolTip("")
+                self._instrument.setToolTip(self._reader_status.text())
+                self._reader_status.hide()
                 return
             from PyHydroGeophysX.data_processing.ert_data_agent import (
                 _EMBEDDED_PARSER_MAP, resipy_install_hint,
             )
-            self._reader_status.setText(
-                "ResIPy not installed. Reading "
-                + ", ".join(sorted(_EMBEDDED_PARSER_MAP))
-                + " only.")
-            self._reader_status.setToolTip(resipy_install_hint())
+            self._reader_status.setText("ResIPy unavailable; some formats need it.")
+            details = ("Available readers: " + ", ".join(sorted(_EMBEDDED_PARSER_MAP))
+                       + ".\n\n" + resipy_install_hint())
+            self._reader_status.setToolTip(details)
+            self._instrument.setToolTip(details)
+            self._reader_status.show()
             return
         note = f", {detail}" if detail else ""
         self._reader_status.setText(f"Data loaded by {reader}{note}.")
         self._reader_status.setToolTip("")
+        self._reader_status.show()
 
-    def _parse_ert(self, path, instrument, out_dir, elec_file, spacing):
-        """Parse ERT data off the UI thread. Returns a plain dict for the slot."""
+    def _parse_ert(self, path, instrument, out_dir, elec_file, spacing, reciprocal=None):
+        """Parse ERT data off the UI thread. Returns a plain dict for the slot.
+
+        With ``reciprocal``, that file is read the same way and its readings
+        appended to ``path``'s (``ert_io.merge_reciprocal``): one survey, on
+        the forward file's electrodes, whose readings pair across the two files.
+        ``res["pair"]`` then holds the counts of each and of the pairs, and
+        ``res["pairing"]`` is the survey's reciprocal pairing either way, for
+        the Reciprocal errors tab and the error model.
+        """
+        from PyHydroGeophysX.qt_apps.ert_records import reciprocal_pairing
+
+        res = self._parse_one(path, instrument, out_dir, elec_file, spacing)
+        if not reciprocal:
+            res["pairing"] = (reciprocal_pairing(self._reciprocal_scores(res["data"]))
+                              if res["data"] is not None else None)
+            return res
+        if res["data"] is None:
+            res["warning"] = "; ".join(filter(None, [res["warning"], (
+                f"{Path(path).name} could not be converted for inversion, so its "
+                f"reciprocal file {Path(reciprocal).name} was not merged with it.")]))
+            return res
+        other = self._parse_one(reciprocal, instrument, out_dir, elec_file, spacing)
+        if other["data"] is None:
+            raise ValueError(
+                f"the reciprocal file {Path(reciprocal).name} could not be converted for "
+                f"inversion ({other['data_note'] or 'no usable readings'}), so it cannot be "
+                f"merged with {Path(path).name}. Untick “Pair reciprocal files” to load "
+                "each file on its own.")
+        try:
+            merged, info = ert_load.merge_reciprocal(res["data"], other["data"])
+        except ValueError as exc:
+            raise ValueError(
+                f"{Path(path).name} and its reciprocal file {Path(reciprocal).name} could "
+                f"not be merged: {exc} Untick “Pair reciprocal files” to load each file on "
+                "its own.") from exc
+        pairing = reciprocal_pairing(self._reciprocal_scores(merged))
+        info.update(file=str(reciprocal), pairs=int(pairing.get("pairs", 0) or 0),
+                    unpaired=int(pairing.get("unpaired_readings", 0) or 0))
+        res.update(data=merged, nmeas=int(merged.size()), pair=info, pairing=pairing,
+                   pseudo=self._pseudo_from_data(merged),
+                   warning="; ".join(filter(None, [res["warning"], other["warning"]])))
+        return res
+
+    def _parse_one(self, path, instrument, out_dir, elec_file, spacing):
+        """Parse one ERT file; see :meth:`_parse_ert`."""
         warning = ""
         reader, reason = "ResIPy", ""
         if instrument is None:  # defensive: the dropdown has no auto/None option
@@ -1731,6 +2061,9 @@ class ERTProcessingModule(BaseModule):
         self._electrode_origins = list(range(len(self._x)))
         self._selected = None
         self._data_path = Path(path)
+        pair = res.get("pair")
+        self._pair_info = dict(pair) if pair else None
+        self._data_partner = Path(pair["file"]) if pair else None
         self._pseudo = pseudo
         self._n_meas = nmeas
         self._ert_data = data
@@ -1741,6 +2074,8 @@ class ERTProcessingModule(BaseModule):
         # from the raw values, so say here what has been lost rather than
         # leaving the module looking loaded until an inversion asks for it.
         self._qc_mask = [True] * int(data.size()) if data is not None else []
+        self._qc_report = None       # these data are unfiltered until Apply filter
+        self._loaded_pairing = res.get("pairing")
         self._data_note = ""
         if data is None:
             cause = str(res.get("data_note") or
@@ -1757,18 +2092,35 @@ class ERTProcessingModule(BaseModule):
             self.state.register_geophysical_resource(
                 "ERT", "observed_data", data,
                 label=f"ERT observations · {Path(path).name}", path=str(path),
-                metadata={"measurements": int(nmeas), "electrodes": len(self._x)},
+                metadata={"measurements": int(nmeas), "electrodes": len(self._x),
+                          **({"reciprocal_file": self._data_partner.name}
+                             if self._data_partner else {})},
                 resource_id="ert:observed_data:active",
             )
         self._refresh()
         self._draw_pseudosection()
-        if pseudo:
+        self._recip_inputs_changed()
+        # The Reciprocal errors tab stays up when it is the one being looked at:
+        # clicking through the list compares the surveys' pairs there.
+        if pseudo and self._tabs.currentWidget() is not self._recip_view:
             self._tabs.setCurrentWidget(self._pseudo_widget)
         if data is None:
             pass  # already reported above, naming the specific cause
         elif nmeas == 0:
             self.log(f"{Path(path).name}: parsed {len(self._x)} electrodes but 0 measurements — "
                      f"the Instrument / format is probably wrong for this file.", "warn")
+        elif pair:
+            # As Craig Ulrich's pairing summary gives it: both files, the
+            # readings of each, and how many quadrupoles were measured both ways.
+            self.log(f"Loaded {len(self._x)} electrodes, {nmeas} measurements from "
+                     f"{Path(path).name} with its reciprocal file {Path(pair['file']).name}: "
+                     f"forward {pair['forward']} | reciprocal {pair['reciprocal']} | total "
+                     f"{pair['total']}; {pair['pairs']} quadrupoles measured both ways, "
+                     f"{pair['unpaired']} readings without a reciprocal.", "success")
+            if pair.get("dropped_fields"):
+                self.log("Only one of the two files carries "
+                         + ", ".join(pair["dropped_fields"])
+                         + ", so the merged survey leaves it out.", "warn")
         else:
             self.log(f"Loaded {len(self._x)} electrodes, {nmeas} measurements from {Path(path).name}", "success")
 
@@ -1939,9 +2291,19 @@ class ERTProcessingModule(BaseModule):
     def _pseudo_from_data(self, data) -> List[Tuple[float, float, float]]:
         return [tuple(row) for row in ert_load.container_pseudosection(data).tolist()]
 
-    @staticmethod
-    def _reciprocal_error(data) -> Optional[np.ndarray]:
+    @classmethod
+    def _reciprocal_error(cls, data) -> Optional[np.ndarray]:
         """Relative reciprocal error per measurement, NaN where there is no partner.
+
+        See :meth:`_reciprocal_scores`, whose ``reciprocalErrRel`` this is.
+        """
+        scored = cls._reciprocal_scores(data)
+        return None if scored is None else scored["reciprocalErrRel"].to_numpy(dtype=float)
+
+    @staticmethod
+    def _reciprocal_scores(data):
+        """The survey paired with its reciprocals: a frame of a, b, m, n, resist
+        with each reading's ``reciprocalErrRel`` and ``reciprocalMean``.
 
         A reciprocal swaps the current and potential pairs, (A,B,M,N) -> (M,N,A,B),
         and reciprocity requires the same transfer resistance from both. How far
@@ -1957,31 +2319,10 @@ class ERTProcessingModule(BaseModule):
         one direction are stacked, not scored as reciprocals of each other.
 
         Returns None when the file has neither a resistance nor the rhoa and k
-        needed to rebuild one.
+        needed to rebuild one. The pairing itself is ``ert_io.reciprocal_scores``,
+        which also averages pairs and merges a survey's two files.
         """
-        import pandas as pd
-        from PyHydroGeophysX.data_processing.ert_formats import reciprocal_errors
-
-        try:
-            frame = pd.DataFrame({t: np.asarray(data[t], dtype=np.int64)
-                                  for t in ("a", "b", "m", "n")})
-        except Exception:  # noqa: BLE001 - a container without ABMN cannot be paired
-            return None
-        if data.haveData("r"):
-            res = np.asarray(data["r"], dtype=float)
-        elif data.haveData("rhoa") and data.haveData("k"):
-            k = np.asarray(data["k"], dtype=float)
-            with np.errstate(divide="ignore", invalid="ignore"):
-                res = np.asarray(data["rhoa"], dtype=float) / np.where(np.abs(k) > 1e-12, k, np.nan)
-        else:
-            return None
-        if res.size != len(frame):
-            return None
-        # Scored, not filtered: an unpaired measurement, or a pair whose mean is
-        # not finite and non-zero, comes back NaN (unscored), in the file's order.
-        frame["resist"] = res
-        scored = reciprocal_errors(frame, drop_failed=False)
-        return scored["reciprocalErrRel"].to_numpy(dtype=float)
+        return ert_load.reciprocal_scores(data)
 
     def _refresh_qc_availability(self) -> None:
         """Enable each folded QC row only where the loaded file can support it.
@@ -2002,7 +2343,7 @@ class ERTProcessingModule(BaseModule):
         self._refresh_error_sources(data)
         if data is None:
             for w in (self._qc_min_v, self._qc_min_i, self._qc_max_k, self._qc_max_rc,
-                      self._qc_max_stack, self._qc_max_recip):
+                      self._qc_max_stack, self._qc_max_recip, self._qc_average):
                 gate(w, False, "Load ERT data first.")
             self._qc_support_note.setText(
                 "Load data to see which checks are available."
@@ -2092,10 +2433,24 @@ class ERTProcessingModule(BaseModule):
                  f"have a reciprocal here; "
                  f"their disagreement runs to {100.0 * finite.max():.1f}%, median "
                  f"{100.0 * float(np.median(finite)):.1f}%. Unpaired measurements are kept.")
+            gate(self._qc_average, True,
+                 "Check 0, before every other check: each reading and its reciprocal "
+                 "become one reading, with the mean of their two resistances and their "
+                 "difference as its error (never below the Minimum under Data "
+                 f"errors). {paired} of {data.size()} readings here have a reciprocal. "
+                 "Readings without one are kept as they are. The reciprocal-error check "
+                 "still judges each averaged pair by its difference.\n\n"
+                 "Off by default: kept apart, both readings go to the inversion and the "
+                 "fit sees how far they disagree. Applied with Apply filter, like the "
+                 "checks below, and to every survey of a time-lapse run.")
         else:
             gate(self._qc_max_recip, False,
                   "This survey contains no reciprocal pairs, so there is nothing to compare. "
                   "Reciprocals have to be measured in the field; they cannot be recovered here.")
+            gate(self._qc_average, False,
+                 "This survey contains no reading measured both ways, so there is nothing "
+                 "to average. For a survey written as two files, add both and keep “Pair "
+                 "reciprocal files” ticked.")
             unavailable.append("Max reciprocal error (no reciprocal pairs)")
 
         if unavailable:
@@ -2115,9 +2470,38 @@ class ERTProcessingModule(BaseModule):
         self._qc_max_k_follows_file = False
 
     def _refresh_error_sources(self, data) -> None:
-        """Offer the stacking-spread error model only for data that record a spread."""
-        index = self._err_source.findData("stack")
+        """Offer the stacking-spread error model only for data that record a
+        spread, and the reciprocal error model only for data measured both ways."""
         model = self._err_source.model()
+        index = self._err_source.findData("reciprocal")
+        item = model.item(index) if index >= 0 and hasattr(model, "item") else None
+        if item is not None:
+            # A series counts too: a time-lapse run fits the model over all of
+            # its surveys, whichever one is on screen.
+            paired = self._reciprocal_pair_count(data)
+            available = bool(paired or self._tl_partner)
+            item.setEnabled(available)
+            item.setToolTip(
+                "Each reading's error from a line fitted to the reciprocal pairs: "
+                "log10(dR) = m·log10(R) + b, where R is a pair's mean resistance and dR "
+                "the difference between its two directions, so dR = 10^b·R^m and the "
+                "relative error is dR / R, never below the Minimum set below. A "
+                "single inversion fits it to the survey's own pairs; a time-lapse "
+                "inversion fits one line to the pairs of every survey and gives it to "
+                "all of them. The Reciprocal errors tab draws the pairs and the line, "
+                "and its “Fit to” chooser sets whether the line is fitted to all pairs "
+                "or only to those the filter kept. The Data QC report and the settings "
+                "file state the fit."
+                if available else
+                "Needs readings measured both ways (each reading and its reciprocal). "
+                "The loaded data have none; for a survey written as two files, add both "
+                "and keep “Pair reciprocal files” ticked.")
+            if not available and self._err_source.currentData() == "reciprocal":
+                self._err_source.setCurrentIndex(self._err_source.findData("file"))
+                if data is not None:
+                    self.log("These data have no reciprocal pairs, so the data errors are "
+                             "taken from the file's err column instead.", "warn")
+        index = self._err_source.findData("stack")
         item = model.item(index) if index >= 0 and hasattr(model, "item") else None
         if item is None:
             return
@@ -2136,6 +2520,27 @@ class ERTProcessingModule(BaseModule):
             if data is not None:
                 self.log("These data record no stacking spread, so the data errors are "
                          "taken from the file's err column instead.", "warn")
+        self._sync_error_rows()
+
+    def _reciprocal_pair_count(self, data) -> int:
+        """How many readings of ``data`` have a reciprocal (0 for no data)."""
+        if data is None:
+            return 0
+        rec = self._reciprocal_error(data)
+        return 0 if rec is None else int(np.isfinite(rec).sum())
+
+    def _sync_error_rows(self, *_args: Any) -> None:
+        """Show "Minimum" only while an error comes from reciprocals."""
+        floor = getattr(self, "_recip_floor", None)
+        if floor is None:                       # still being built
+            return
+        used = (self._err_source.currentData() == "reciprocal"
+                or self._qc_average.isChecked())
+        self._set_rows_visible([floor], used)
+
+    def _reciprocal_floor(self) -> float:
+        """The "Minimum" error as a fraction."""
+        return float(self._recip_floor.value()) / 100.0
 
     def _qc_settings(self) -> Dict[str, Any]:
         """The QC thresholds as set in the panel, as plain values.
@@ -2155,42 +2560,143 @@ class ERTProcessingModule(BaseModule):
             "max_contact_r": float(self._qc_max_rc.value()),
             "max_stack": float(self._qc_max_stack.value()),
             "max_reciprocal": float(self._qc_max_recip.value()),
+            # Check 0 and the error each averaged pair takes, as a fraction.
+            "average_reciprocals": bool(self._qc_average.isChecked()
+                                        and self._qc_average.isEnabled()),
+            "reciprocal_floor": self._reciprocal_floor(),
         }
 
     @classmethod
-    def _qc_keep(cls, data, qc: Dict[str, Any]) -> Tuple[np.ndarray, List[str]]:
+    def _qc_survey(cls, data, qc: Dict[str, Any],
+                   report: Optional[Dict[str, Any]] = None):
+        """``(survey, keep, reasons)``: ``data`` through check 0 and the checks.
+
+        Check 0, when ``qc`` asks for it, averages each reading with its
+        reciprocal (``ert_io.average_reciprocal_pairs``); the checks then run on
+        what is left, the reciprocal-error check judging each averaged pair by
+        its own difference. ``survey`` is the copy to invert, and ``keep`` says
+        which rows of ``data`` it holds - an averaged pair as its first reading.
+        The pairing in ``report`` is the survey's as read, and its ``readings``
+        the count before check 0, so the logs total what the files held.
+        """
+        import pygimli as pg
+
+        scores = cls._reciprocal_scores(data)
+        work, reciprocal, averaged = data, None, None
+        rows = np.arange(int(data.size()))
+        if qc.get("average_reciprocals"):
+            work, reciprocal, averaged = ert_load.average_reciprocal_pairs(
+                data, scores, floor=float(qc.get("reciprocal_floor") or 0.0))
+            rows = np.asarray(averaged.pop("kept_rows"), dtype=int)
+            if report is not None:
+                report["averaged"] = averaged
+        passed, reasons = cls._qc_keep(work, qc, report, scores=scores,
+                                       reciprocal=reciprocal)
+        if averaged and averaged["removed"]:
+            reasons.insert(0, f"averaging {averaged['pairs']} reciprocal pairs removed "
+                              f"{averaged['removed']}")
+        if report is not None:
+            report["readings"] = int(data.size())
+        survey = pg.DataContainerERT(work)
+        survey.set("valid", pg.Vector(passed.astype(float)))
+        survey.removeInvalid()
+        keep = np.zeros(int(data.size()), dtype=bool)
+        keep[rows[passed.astype(bool)]] = True
+        pairing = (report or {}).get("pairing")
+        if pairing and pairing.get("available"):
+            # Which pairs the filter kept, for the error model fitted to them
+            # and the Reciprocal errors tab that draws the rest in grey.
+            from PyHydroGeophysX.qt_apps.ert_records import reciprocal_pair_kept
+
+            kept = reciprocal_pair_kept(scores, keep, averaged=averaged is not None)
+            if kept is not None:
+                pairing["kept"] = kept
+        return survey, keep, reasons
+
+    @classmethod
+    def _qc_keep(cls, data, qc: Dict[str, Any],
+                 report: Optional[Dict[str, Any]] = None, *, scores=None,
+                 reciprocal: Optional[np.ndarray] = None) -> Tuple[np.ndarray, List[str]]:
         """``(keep, reasons)``: which measurements pass ``qc``, and what cut the rest.
 
         Every criterion that drops anything says how many, the error limit too:
         it starts at 20 %, and a filter that quietly took readings for it would
         read as the ρa range having done so.
+
+        ``report``, when given, is filled in as the filter runs - the readings,
+        how they pair with their reciprocals, and each check with its threshold
+        and the count before and after it - for the run's QC logs
+        (``qt_apps/ert_records.py``). Recorded here rather than worked out again
+        afterwards, so the logs say what this filter did.
+
+        ``scores`` is the survey's reciprocal pairing when already made - of the
+        survey as read, when ``data`` is its averaged copy - and ``reciprocal``
+        the reciprocal error of each row of ``data``, which an averaged copy can
+        no longer be paired to find.
         """
         rhoa = np.asarray(data["rhoa"], dtype=float)
+        total = int(rhoa.size)
+        checks: Optional[List[Dict[str, Any]]] = None
+        if scores is None and (report is not None or (
+                reciprocal is None and qc["more_checks"] and qc["max_reciprocal"] > 0)):
+            scores = cls._reciprocal_scores(data)
+        if reciprocal is None and scores is not None and len(scores) == total:
+            reciprocal = scores["reciprocalErrRel"].to_numpy(dtype=float)
+        if report is not None:
+            from PyHydroGeophysX.qt_apps.ert_records import reciprocal_pairing
+
+            checks = []
+            report.update(readings=total, pairing=reciprocal_pairing(scores), checks=checks)
         keep = np.isfinite(rhoa) & (rhoa >= qc["min_rhoa"]) & (rhoa <= qc["max_rhoa"])
         reasons: List[str] = []
         if int((~keep).sum()):
             reasons.append(f"ρa outside {qc['min_rhoa']:g}–{qc['max_rhoa']:g} Ω·m dropped "
                            f"{int((~keep).sum())}")
+        if checks is not None:
+            checks.append({"name": "Apparent resistivity range",
+                           "threshold": f"{qc['min_rhoa']:g} to {qc['max_rhoa']:g} ohm-m",
+                           "before": total, "after": int(keep.sum())})
         if qc["max_error"] > 0 and data.haveData("err"):
             before = int(keep.sum())
             keep &= np.asarray(data["err"], dtype=float) <= (qc["max_error"] / 100.0)
             if before - int(keep.sum()):
                 reasons.append(f"error above {qc['max_error']:g} % dropped "
                                f"{before - int(keep.sum())}")
+            if checks is not None:
+                checks.append({"name": "Relative error (err column)",
+                               "threshold": f"<= {qc['max_error']:g} %",
+                               "before": before, "after": int(keep.sum())})
+        elif checks is not None:
+            checks.append({"name": "Relative error (err column)", "before": None,
+                           "threshold": "off" if qc["max_error"] <= 0 else
+                           f"<= {qc['max_error']:g} %",
+                           "note": "" if qc["max_error"] <= 0 else
+                           "not applied: the file has no error column"})
         if qc["more_checks"]:
-            reasons += cls._apply_extra_filters(data, keep, qc)
+            reasons += cls._apply_extra_filters(data, keep, qc, checks=checks,
+                                                reciprocal=reciprocal)
+        elif checks is not None:
+            checks.append({"name": "More checks", "threshold": "off", "before": None,
+                           "note": "not applied"})
+        if report is not None:
+            report["kept"] = int(keep.sum())
         return keep, reasons
 
     @classmethod
-    def _apply_extra_filters(cls, data, keep: np.ndarray, qc: Dict[str, Any]) -> List[str]:
+    def _apply_extra_filters(cls, data, keep: np.ndarray, qc: Dict[str, Any], *,
+                             checks: Optional[List[Dict[str, Any]]] = None,
+                             reciprocal: Optional[np.ndarray] = None) -> List[str]:
         """Apply the folded QC criteria to ``keep`` in place; report what each cost.
 
         A criterion whose field is missing is skipped rather than failing the
-        whole filter, matching the row being disabled in the panel.
+        whole filter, matching the row being disabled in the panel. ``checks``
+        collects each criterion as :meth:`_qc_keep` describes; ``reciprocal``
+        is each row's reciprocal error already worked out for it, used rather
+        than made again.
         """
         reasons: List[str] = []
 
-        def cut(mask: np.ndarray, label: str) -> None:
+        def cut(mask: np.ndarray, label: str, name: str = "", threshold: str = "") -> None:
             before = int(keep.sum())
             # In place on purpose: `keep &= mask` here would rebind the enclosing
             # name and raise UnboundLocalError instead of narrowing the caller's array.
@@ -2198,29 +2704,66 @@ class ERTProcessingModule(BaseModule):
             lost = before - int(keep.sum())
             if lost:
                 reasons.append(f"{label} dropped {lost}")
+            if checks is not None:
+                checks.append({"name": name or label, "threshold": threshold,
+                               "before": before, "after": int(keep.sum())})
+
+        def skipped(name: str, threshold: str, note: str) -> None:
+            if checks is not None:
+                checks.append({"name": name, "threshold": threshold, "before": None,
+                               "note": note})
 
         if qc["drop_nonpositive"]:
-            cut(np.asarray(data["rhoa"], dtype=float) > 0.0, "ρa ≤ 0")
-        for key, token, label in (("min_voltage", "u", "|V| floor"),
-                                  ("min_current", "i", "|I| floor")):
+            cut(np.asarray(data["rhoa"], dtype=float) > 0.0, "ρa ≤ 0",
+                "Apparent resistivity above 0", "> 0")
+        else:
+            skipped("Apparent resistivity above 0", "off", "")
+        for key, token, label, name, unit, column in (
+                ("min_voltage", "u", "|V| floor", "Potential |V|", "V", "voltage"),
+                ("min_current", "i", "|I| floor", "Current |I|", "A", "current")):
             if qc[key] > 0 and data.haveData(token):
-                cut(np.abs(np.asarray(data[token], dtype=float)) >= qc[key], label)
+                cut(np.abs(np.asarray(data[token], dtype=float)) >= qc[key], label,
+                    name, f">= {qc[key]:g} {unit}")
+            else:
+                skipped(name, "off" if qc[key] <= 0 else f">= {qc[key]:g} {unit}",
+                        "" if qc[key] <= 0 else f"not applied: no {column} column")
         if qc["max_k"] > 0 and data.haveData("k"):
-            cut(np.abs(np.asarray(data["k"], dtype=float)) <= qc["max_k"], "|k| ceiling")
+            cut(np.abs(np.asarray(data["k"], dtype=float)) <= qc["max_k"], "|k| ceiling",
+                "Geometric factor |k|", f"<= {qc['max_k']:g} m")
+        else:
+            skipped("Geometric factor |k|", "off" if qc["max_k"] <= 0 else
+                    f"<= {qc['max_k']:g} m",
+                    "" if qc["max_k"] <= 0 else "not applied: no geometric factors")
         if qc["max_contact_r"] > 0 and data.haveData("rc"):
             cut(np.asarray(data["rc"], dtype=float) <= qc["max_contact_r"],
-                "contact R ceiling")
+                "contact R ceiling", "Contact resistance", f"<= {qc['max_contact_r']:g} ohm")
+        else:
+            skipped("Contact resistance", "off" if qc["max_contact_r"] <= 0 else
+                    f"<= {qc['max_contact_r']:g} ohm",
+                    "" if qc["max_contact_r"] <= 0 else
+                    "not applied: no contact resistance column")
         # .get: QC settings saved before this check existed do not name it.
-        if qc.get("max_stack", 0.0) > 0 and data.haveData("stack"):
+        stack = qc.get("max_stack", 0.0)
+        if stack > 0 and data.haveData("stack"):
             cut(np.asarray(data["stack"], dtype=float) <= qc["max_stack"] / 100.0,
-                "stacking spread ceiling")
+                "stacking spread ceiling", "Stacking spread", f"<= {stack:g} %")
+        else:
+            skipped("Stacking spread", "off" if stack <= 0 else f"<= {stack:g} %",
+                    "" if stack <= 0 else "not applied: no stacking spread column")
         if qc["max_reciprocal"] > 0:
-            rec = cls._reciprocal_error(data)
+            rec = cls._reciprocal_error(data) if reciprocal is None else reciprocal
+            threshold = f"<= {qc['max_reciprocal']:g} %"
             if rec is not None:
                 limit = qc["max_reciprocal"] / 100.0
                 # An unpaired measurement has no reciprocal to disagree with, so it
                 # is kept rather than judged against a test it cannot take.
-                cut(~(np.isfinite(rec) & (rec > limit)), "reciprocal error")
+                cut(~(np.isfinite(rec) & (rec > limit)), "reciprocal error",
+                    "Reciprocal error", threshold + " (unpaired kept)")
+            else:
+                skipped("Reciprocal error", threshold,
+                        "not applied: no resistances to pair")
+        else:
+            skipped("Reciprocal error", "off", "")
         return reasons
 
     def _apply_filter(self) -> None:
@@ -2229,31 +2772,50 @@ class ERTProcessingModule(BaseModule):
             return
         try:
             import pygimli as pg
-            data = pg.DataContainerERT(self._ert_data_full)
             # Folding "More checks" away also switches its criteria off, so what
             # the panel shows is what the filter did.
             qc = self._qc_settings()
-            keep, reasons = self._qc_keep(data, qc)
+            report: Dict[str, Any] = {}
+            data, keep, reasons = self._qc_survey(
+                pg.DataContainerERT(self._ert_data_full), qc, report)
+            if self._pair_info is not None:
+                report["files"] = self._pair_record()
             if reasons:
                 self.log("QC: " + "; ".join(reasons), "info")
             removed = int((~keep).sum())
             self._qc_mask = keep.astype(bool).tolist()
-            data.set("valid", pg.Vector(keep.astype(float)))
-            data.removeInvalid()
         except Exception as exc:  # noqa: BLE001
             self.log(f"Filter failed: {exc}", "error")
             return
         self._ert_data = data
         self._qc_applied = qc
+        # What this filter did to the data now loaded, for the next run's QC
+        # report; a new load or Reset leaves the data unfiltered and drops it.
+        self._qc_report = report
         self._pseudo = self._pseudo_from_data(data)
         self._n_meas = int(data.size())
         self._draw_pseudosection()
         self._refresh()
-        self._tabs.setCurrentWidget(self._pseudo_widget)
+        self._recip_inputs_changed()
+        # On the Reciprocal errors tab the filter's effect on the pairs is what
+        # is being looked at; elsewhere the section shows what it left.
+        if self._tabs.currentWidget() is not self._recip_view:
+            self._tabs.setCurrentWidget(self._pseudo_widget)
         self.log(f"Filter applied: kept {data.size()}, removed {removed}.", "success")
+
+    def _pair_record(self) -> Dict[str, Any]:
+        """The loaded survey's two files and their readings, for its QC log."""
+        info = dict(self._pair_info or {})
+        return {"forward": self._data_path.name if self._data_path else "",
+                "reciprocal": self._data_partner.name if self._data_partner else None,
+                "forward_readings": int(info.get("forward", self._n_meas) or 0),
+                "reciprocal_readings": int(info.get("reciprocal", 0) or 0),
+                "dropped_fields": list(info.get("dropped_fields") or [])}
 
     def _reset_filter(self) -> None:
         self._qc_applied = None
+        self._qc_report = None
+        self._recip_inputs_changed()
         if self._ert_data_full is None:
             return
         try:
@@ -2267,6 +2829,233 @@ class ERTProcessingModule(BaseModule):
         self._draw_pseudosection()
         self._refresh()
         self.log("Filter reset.", "info")
+
+    # -- the Reciprocal errors tab --------------------------------------------
+    def _error_fit_to(self) -> str:
+        """What the reciprocal error model is fitted to: the tab's "Fit to"."""
+        return self._recip_view.fit_to()
+
+    def _on_error_fit_changed(self, fit_to: str) -> None:
+        from PyHydroGeophysX.qt_apps.ert_records import FIT_TO_TEXT
+
+        self.log(f"Reciprocal error model: fitted to {FIT_TO_TEXT[fit_to]} - for data errors "
+                 "taken from it, the QC report and the run's figure.", "info")
+
+    def _recip_inputs_changed(self, *_args: Any) -> None:
+        """Something the Reciprocal errors tab draws changed: the data, the file
+        list or its pairing, the filter. Redrawn a moment later while the tab is
+        on screen, so a burst of changes reads a series once; off screen when
+        the tab is next opened."""
+        timer = getattr(self, "_recip_timer", None)
+        if timer is not None and self._tabs.currentWidget() is self._recip_view:
+            timer.start()
+
+    def _recip_series_mode(self) -> bool:
+        """Whether the tab shows the time-lapse series rather than one survey."""
+        box = getattr(self, "_tl_mode", None)
+        return bool(box is not None and box.isChecked() and len(self._tl_files) >= 2)
+
+    def _single_pairing(self) -> Optional[Dict[str, Any]]:
+        """The loaded survey's reciprocal pairing: with each pair marked kept or
+        not when Apply filter filtered these data, otherwise as read."""
+        if self._qc_report is not None and self._qc_applied is not None:
+            pairing = self._qc_report.get("pairing")
+            if pairing:
+                return pairing
+        if self._loaded_pairing is None and self._ert_data_full is not None:
+            from PyHydroGeophysX.qt_apps.ert_records import reciprocal_pairing
+
+            self._loaded_pairing = reciprocal_pairing(
+                self._reciprocal_scores(self._ert_data_full))
+        return self._loaded_pairing
+
+    def _sync_recip_use(self, *_args: Any) -> None:
+        """Tell the Reciprocal errors tab whether the next run uses its model."""
+        view = getattr(self, "_recip_view", None)
+        if view is not None:
+            view.set_use_state(self._err_source.currentData() == "reciprocal")
+
+    def _use_reciprocal_errors(self) -> None:
+        """The tab's "Use for the data errors": the source under Data errors."""
+        index = self._err_source.findData("reciprocal")
+        if index >= 0:
+            self._err_source.setCurrentIndex(index)
+            self.log("Data errors now come from the reciprocal error model.", "info")
+
+    def _refresh_recip_view(self) -> None:
+        """Draw the Reciprocal errors tab for the data on the page: the survey
+        on screen, or, in time-lapse mode, every survey of the list."""
+        if not hasattr(self, "_tl_mode"):
+            return                                   # still being built
+        self._recip_timer.stop()
+        if self._recip_series_mode():
+            self._show_series_pairs()
+            return
+        from PyHydroGeophysX.qt_apps.ert_records import error_model_pairs
+
+        view = self._recip_view
+        if self._ert_data_full is None:
+            view.show_message(
+                _RECIP_NO_DATA if self._data_path is None else
+                f"{self._data_path.name} could not be converted for inversion, so its "
+                "readings cannot be paired with their reciprocals.")
+            return
+        pairing = self._single_pairing() or {}
+        pairs = error_model_pairs([pairing])
+        if not pairs["R"].size:
+            name = self._data_path.name if self._data_path is not None else "These data"
+            view.show_message(
+                f"Every reciprocal pair of {name} agrees exactly, so there is no error to "
+                "plot." if pairing.get("scored_pairs") else
+                f"{name} has no reciprocal pairs: no reading was measured a second time "
+                "with its current and potential electrodes exchanged, so there is nothing "
+                "to plot.\n\n" + _RECIP_HOW)
+            return
+        view.show_pairs(pairs, series=False)
+
+    def _recip_survey_key(self, source: str, partner: Optional[str]) -> tuple:
+        """What a survey's pairs depend on: its files as they are on disk, the
+        reader and the electrode file."""
+        def stamp(path: Optional[str]) -> Optional[tuple]:
+            if not path:
+                return None
+            try:
+                status = os.stat(path)
+            except OSError:
+                return (str(path), None, None)
+            return (str(path), status.st_mtime_ns, status.st_size)
+
+        return (stamp(source), stamp(partner), str(self._instrument.currentData()),
+                stamp(self._electrode_file()))
+
+    @staticmethod
+    def _recip_qc_key(qc: Optional[Dict[str, Any]]) -> str:
+        """The filter a survey was read through, as a cache key ("" for none)."""
+        return json.dumps(qc, sort_keys=True, default=str) if qc else ""
+
+    def _series_recip_jobs(self) -> Tuple[List[Tuple[str, Optional[str], tuple]],
+                                          Optional[Dict[str, Any]], str]:
+        """``(jobs, qc, qc_key)``: each survey of the list with its reciprocal
+        file and cache key, and the filter a time-lapse run puts them through -
+        Apply filter's, as the run applies it to every survey."""
+        jobs = []
+        for source in self._tl_files:
+            partner = self._tl_partner.get(source)
+            jobs.append((source, partner, self._recip_survey_key(source, partner)))
+        qc = dict(self._qc_applied) if self._qc_applied is not None else None
+        return jobs, qc, self._recip_qc_key(qc)
+
+    def _show_series_pairs(self) -> None:
+        """Draw every survey's pairs, reading the surveys not read yet first."""
+        from PyHydroGeophysX.qt_apps.ert_records import error_model_pairs
+
+        jobs, qc, qc_key = self._series_recip_jobs()
+        reports = [self._recip_cache.get(key, {}).get(qc_key) for _s, _p, key in jobs]
+        missing = [job for job, report in zip(jobs, reports) if report is None]
+        if missing:
+            self._start_recip_read(missing, qc, qc_key, len(jobs))
+            return
+        failed = [Path(source).name for (source, _p, _k), report in zip(jobs, reports)
+                  if report.get("error")]
+        unread = ""
+        if failed:
+            unread = (f"{len(failed)} survey(s) could not be read and are not drawn: "
+                      + ", ".join(failed[:3]) + (", …" if len(failed) > 3 else "") + ".")
+        pairs = error_model_pairs([report.get("pairing") or {} for report in reports])
+        if not pairs["R"].size:
+            self._recip_view.show_message(
+                f"None of the {len(jobs)} surveys has reciprocal pairs: no reading was "
+                "measured a second time with its current and potential electrodes "
+                "exchanged, so there is nothing to plot.\n\n" + _RECIP_HOW
+                + (f"\n\n{unread}" if unread else ""))
+            return
+        self._recip_view.show_pairs(pairs, series=True,
+                                    note=unread)
+
+    def _start_recip_read(self, missing: List[Tuple[str, Optional[str], tuple]],
+                          qc: Optional[Dict[str, Any]], qc_key: str, total: int) -> None:
+        """Read the surveys of ``missing`` off the UI thread, with progress."""
+        reading = (tuple(key for _s, _p, key in missing), qc_key)
+        worker = self._recip_worker
+        if worker is not None and worker.isRunning():
+            if self._recip_reading == reading:
+                return                                # already reading these
+            worker.cancel()                           # what it read is kept
+        self._recip_view.show_message(self._recip_reading_text(0, len(missing), total))
+        worker = TaskWorker(self._read_recip_surveys, list(missing),
+                            self._instrument.currentData(), self._electrode_file(), qc,
+                            qc_key, self._recip_cache, with_log=True)
+        worker.logged.connect(
+            lambda message, w=worker, n=total: self._on_recip_read_logged(w, message, n))
+        worker.failed.connect(lambda message: self.log(
+            f"Reading the surveys' reciprocal pairs stopped: {message}", "warn"))
+        worker.finished.connect(lambda w=worker: self._on_recip_read_done(w))
+        self._recip_worker = self.register_worker(
+            worker, activity="Reading the surveys' reciprocal pairs")
+        self._recip_reading = reading
+        worker.start()
+
+    @staticmethod
+    def _recip_reading_text(done: int, count: int, total: int) -> str:
+        before = f" ({total - count} read before)" if count < total else ""
+        return (f"Reading the reciprocal pairs of {count} surveys{before}: {done} of {count} "
+                "done.\n\nA long series takes a few minutes; the page can be used "
+                "meanwhile.")
+
+    def _on_recip_read_logged(self, worker: Any, message: str, total: int) -> None:
+        match = re.match(r"^(\d+)/(\d+) ", str(message))
+        if match is None:
+            return
+        done, count = int(match.group(1)), int(match.group(2))
+        self._on_worker_progress(worker, done, count, "Reading the surveys' reciprocal pairs")
+        if worker is self._recip_worker and not self._recip_view.has_plot():
+            self._recip_view.show_message(self._recip_reading_text(done, count, total))
+
+    def _on_recip_read_done(self, worker: Any) -> None:
+        if worker is not self._recip_worker:
+            return                                    # replaced by a newer read
+        self._recip_worker = None
+        self._recip_reading = None
+        if not worker.is_cancelled() and self._tabs.currentWidget() is self._recip_view:
+            self._refresh_recip_view()
+
+    @classmethod
+    def _read_recip_surveys(cls, jobs: List[Tuple[str, Optional[str], tuple]],
+                            instrument: Optional[str], electrode_file: Optional[str],
+                            qc: Optional[Dict[str, Any]], qc_key: str,
+                            cache: Dict[tuple, Dict[str, Dict[str, Any]]], log=None) -> int:
+        """Read each survey of ``jobs`` as the time-lapse run prepares it
+        (:meth:`_prepare_survey`) and keep its QC report in ``cache``; runs off
+        the UI thread. Each survey is kept as soon as it is read, so a read
+        stopped half way keeps that half; one that cannot be read is kept as
+        its error, so it is named rather than read again and again."""
+        log = log or (lambda _message: None)
+        for done, (source, partner, key) in enumerate(jobs, start=1):
+            try:
+                _data, report, _reasons = cls._prepare_survey(
+                    source, partner, instrument, electrode_file, qc)
+                entry = cls._recip_entry(report)
+            except Exception as exc:  # noqa: BLE001 - one unreadable survey is named
+                entry = {"error": str(exc), "readings": 0, "kept": 0, "pairing": {}}
+            cls._cache_recip(cache, key, qc_key, entry)
+            log(f"{done}/{len(jobs)} {Path(source).name}")
+        return len(jobs)
+
+    @staticmethod
+    def _recip_entry(report: Dict[str, Any]) -> Dict[str, Any]:
+        """The part of a survey's QC report the tab and the run's records use."""
+        return {key: report[key] for key in ("readings", "kept", "checks", "pairing",
+                                             "files", "averaged") if key in report}
+
+    @staticmethod
+    def _cache_recip(cache: Dict[tuple, Dict[str, Dict[str, Any]]], key: tuple,
+                     qc_key: str, entry: Dict[str, Any]) -> None:
+        """Keep a survey's report under its filter; two filters per survey at most."""
+        slot = cache.setdefault(key, {})
+        slot.pop(qc_key, None)
+        slot[qc_key] = entry
+        while len(slot) > 2:
+            slot.pop(next(iter(slot)))
 
     @staticmethod
     def _read_electrodes(path: str) -> Tuple[List[float], List[float], str]:
@@ -2447,9 +3236,11 @@ class ERTProcessingModule(BaseModule):
         self._warn_external_not_running("run folder")
         if str(self._inv_mode.currentData() or "quick") == "full":
             self._report_data_health()
+        error_source, error_model = self._single_error_model()
         try:
             run = self.begin_persisted_run(
-                "ert.single_inversion", "ert.single_inversion"
+                "ert.single_inversion", "ert.single_inversion",
+                label=self._run_label([self._data_path]),
             )
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not prepare Project run: {exc}", "error")
@@ -2480,6 +3271,11 @@ class ERTProcessingModule(BaseModule):
                 "source_measurements": int(self._ert_data_full.size())
                 if self._ert_data_full is not None else int(self._ert_data.size()),
                 "filtered_measurements": int(self._ert_data.size()),
+                # "keep" is over the forward and reciprocal readings together,
+                # and an averaged pair is kept as its first reading.
+                "reciprocal_file": self._data_partner.name if self._data_partner else "",
+                "averaged_pairs": int(((self._qc_report or {}).get("averaged") or {})
+                                      .get("pairs", 0)) if self._averaged_loaded() else 0,
             },
         )
         try:
@@ -2503,6 +3299,9 @@ class ERTProcessingModule(BaseModule):
                         "electrodes": len(self._x),
                         "measurements": self._n_meas,
                         "qc_filtered": True,
+                        **({"reciprocal_file": self._data_partner.name}
+                           if self._data_partner is not None else {}),
+                        **self._survey_time_record(self._data_path),
                     },
                 ),
                 "electrodes": ArtifactRef.from_path(
@@ -2522,13 +3321,21 @@ class ERTProcessingModule(BaseModule):
             },
             parameters={
                 "lambda": float(self._lam.value()),
-                "max_iterations": int(self._iter.value()),
+                "max_iterations": min(int(self._iter.value()),
+                                      int(self._iter_ceiling.value())),
                 "relative_error": float(self._relerr.value()),
                 **self._mesh_options(),
                 "instrument": "BERT",
                 "engine": str(self._engine.currentData()),
                 "geometric_factor_policy": str(self._geom_policy),
-                "error_source": str(self._err_source.currentData()),
+                "error_source": error_source,
+                **({"error_model": error_model} if error_model else {}),
+                # The lowest error a reciprocal gives, for every reading, when
+                # the errors come from reciprocals: the model's, or the one the
+                # pairs were averaged with.
+                **({"error_floor": float(error_model["floor"])} if error_model else
+                   {"error_floor": float(self._qc_applied["reciprocal_floor"])}
+                   if self._averaged_loaded() else {}),
                 "absolute_error": float(self._abserr.value()),
                 "plateau_tolerance": float(self._plateau.value()) / 100.0,
                 "max_total_iterations": int(self._iter_ceiling.value()),
@@ -2551,6 +3358,7 @@ class ERTProcessingModule(BaseModule):
         recipe_path, script_path = export_workflow_bundle(spec, run.run_dir, stem="ert")
         self._reproduce.set_bundle(recipe_path, script_path)
         self._ert_recipe_path = str(recipe_path)
+        self._write_single_records(run, spec)
         self._inv_busy = BusyStateController([self._invert_btn])
         self._inv_busy.start()
         self._invert_btn.setText("Inverting…")
@@ -2561,6 +3369,8 @@ class ERTProcessingModule(BaseModule):
         # path can retain the GIL, while ADTLERT owns a CUDA context.  The
         # process-safe model bundle below restores mesh/model/response/coverage
         # into the interactive viewer when the child exits.
+        self._agent_run_state = "running"
+        self._agent_run_error = ""
         self._inv_worker = ProcessWorkflowWorker(
             recipe_path,
             project_root,
@@ -2574,9 +3384,147 @@ class ERTProcessingModule(BaseModule):
             lambda result, source=self._data_path: self._on_ert_workflow_ok(result, source))
         self._inv_worker.failed.connect(self._on_inversion_failed)
         self._inv_worker.finished.connect(self._reset_invert_button)
-        self.register_worker(self._inv_worker)
+        self.register_worker(self._inv_worker, activity="Running the ERT inversion")
         self._inv_worker.start()
         self._inv_stop.attach(self._inv_worker, "ert.single_inversion")
+
+    def _averaged_loaded(self) -> bool:
+        """Whether the data on screen had their reciprocal pairs averaged."""
+        return bool(self._qc_report is not None and self._qc_applied is not None
+                    and self._qc_applied.get("average_reciprocals")
+                    and (self._qc_report.get("averaged") or {}).get("pairs"))
+
+    def _single_error_model(self) -> Tuple[str, Optional[Dict[str, Any]]]:
+        """``(error_source, error_model)`` for a single inversion.
+
+        "From the reciprocal error model" fits the survey's own pairs - all of
+        them as read, or those the filter kept, as the Reciprocal errors tab's
+        "Fit to" says: the fit the tab draws and the QC report states - and
+        hands the model to the inversion, which sets each reading's error from
+        it. With too few pairs to fit, the estimate is used and the log says so.
+        """
+        source = str(self._err_source.currentData())
+        if source != "reciprocal":
+            return source, None
+        from PyHydroGeophysX.qt_apps.ert_records import (
+            fit_series_error_model,
+            fit_to_sentence,
+            power_law,
+        )
+
+        fit_to = self._error_fit_to()
+        pairing = self._single_pairing() or {}
+        fit = fit_series_error_model([pairing], fit_to)
+        if fit is None:
+            self.log(f"Data errors: the survey has {pairing.get('scored_pairs', 0)} scored "
+                     "reciprocal pairs, too few to fit an error model (at least 15 are "
+                     "needed), so the errors are estimated from the values under Data "
+                     "errors instead.", "warn")
+            return "estimate", None
+        model = {"m": fit["m"], "b": fit["b"], "r2": fit["r2"], "r2_raw": fit["r2_raw"],
+                 "pairs": fit["n"], "floor": self._reciprocal_floor(),
+                 "fitted_over": self._fitted_over(fit, series=False)}
+        self.log(f"Data errors from the reciprocal error model {power_law(model)}, fitted to "
+                 f"{fit_to_sentence(fit_to, fit['filtered'])} (binned R² {fit['r2']:.3f}, "
+                 f"{fit['n']} pairs), at least {100.0 * model['floor']:g} %.", "info")
+        return source, model
+
+    def _error_model_text(self, timelapse: bool = False,
+                          model: Optional[Dict[str, Any]] = None) -> str:
+        """The data errors a run is set to use, in a sentence for its records."""
+        estimate = (f"{float(self._relerr.value()):g} + {float(self._abserr.value()):g} "
+                    "ohm / |R|")
+        if model:
+            from PyHydroGeophysX.qt_apps.ert_records import power_law
+
+            return (f"the reciprocal error model {power_law(model)}, never below "
+                    f"{100.0 * float(model.get('floor') or 0.0):g} %")
+        if timelapse:
+            return (f"each survey's err column where every reading has one, otherwise "
+                    f"relative error {float(self._relerr.value()):g}")
+        return f"{self._err_source.currentText()} (estimate {estimate})"
+
+    def _write_single_records(self, run, spec: WorkflowSpec) -> None:
+        """Write the run's ``inversion_settings.txt`` and, for filtered data, its
+        ``qc_report.txt`` (``qt_apps/ert_records.py``), from the spec the run is
+        handed and the counts Apply filter recorded. A file that cannot be
+        written is said in the log; the run goes ahead, its recipe being the
+        record it needs to rerun."""
+        from PyHydroGeophysX.qt_apps import ert_records
+
+        self._ert_settings_path = None
+        try:
+            source = str(self._data_path or "")
+            stamp = survey_timing.survey_timing([source]).timestamps[0] if source else None
+            acquired = f"{stamp:%Y-%m-%d %H:%M:%S}" if stamp is not None else ""
+            reader = self._reader_status.text().removeprefix("Data loaded by ").rstrip(".")
+            inverted = int(self._ert_data.size())
+            total = (int(self._ert_data_full.size()) if self._ert_data_full is not None
+                     else inverted)
+            # The thresholds count only when they filtered the data loaded now.
+            filtered = self._qc_report is not None and self._qc_applied is not None
+            pair = self._pair_record() if self._data_partner is not None else None
+            model = dict(spec.parameters.get("error_model") or {}) or None
+            # The pairs the error model is fitted to, said wherever there are pairs.
+            fit_to = self._error_fit_to()
+            paired = bool((self._single_pairing() or {}).get("scored_pairs"))
+            path = ert_records.write_settings(run.run_dir, ert_records.single_settings_text(
+                spec, run_id=run.run_id, source=source, acquired=acquired,
+                instrument=self._instrument.currentText(), reader=reader,
+                electrode_file=str(self._electrode_path or ""), electrodes=len(self._x),
+                measurements=(total, inverted),
+                qc=self._qc_applied if filtered else None,
+                mode=self._inv_mode.currentText(),
+                reciprocal=({"file": pair["reciprocal"],
+                             "forward_readings": pair["forward_readings"],
+                             "reciprocal_readings": pair["reciprocal_readings"]}
+                            if pair else None),
+                fit_to=fit_to if paired or model else None))
+            self._ert_settings_path = path
+            self.log(f"Inversion settings written to {path}", "info")
+            # A survey of two files, or errors from its pairs, is worth its QC
+            # report - the pairing and the model - even when nothing filtered it.
+            if filtered or pair or model:
+                if filtered:
+                    qc_log = dict(self._qc_report)
+                else:
+                    qc_log = {"readings": total, "kept": inverted, "checks": [],
+                              "pairing": self._single_pairing() or {}}
+                if pair:
+                    qc_log["files"] = pair
+                report = ert_records.write_single_qc_report(
+                    run.run_dir, source=Path(source).name, acquired=acquired,
+                    reader=f"{self._instrument.currentText()}, read by {reader}",
+                    qc=self._qc_applied if filtered else None, report=qc_log,
+                    error_model=self._error_model_text(model=model),
+                    applied_model=model, fit_to=fit_to)
+                self.log(f"Data QC report written to {report}", "info")
+        except Exception as exc:  # noqa: BLE001 - a record must not stop the run
+            self.log(f"Could not write the run's settings file: {exc}", "warn")
+
+    def _record_outcome(self, path: Optional[Path], kind: str, summary: Dict[str, Any],
+                        extra: Dict[str, Any]) -> None:
+        """Add what the finished run reported to its ``inversion_settings.txt``:
+        the engine that ran, the fit, and for a time-lapse run any setting the
+        engine replaced. Warnings in it are logged, so they stay with the run."""
+        from PyHydroGeophysX.qt_apps import ert_records
+
+        if path is None:
+            return
+        try:
+            if kind == "single":
+                rows, notes = ert_records.single_outcome(dict(summary), dict(extra))
+            else:
+                rows, notes = ert_records.timelapse_outcome(dict(summary), dict(extra))
+                zones = list(summary.get("zones_not_applied") or [])
+                if zones:
+                    self.log("The engine did not take the a-priori zone values ("
+                             + ", ".join(map(str, zones)) + "); the run used none.", "warn")
+            ert_records.append_outcome(Path(path), rows, notes)
+            for note in notes[1:]:
+                self.log(f"The engine ran with {note.strip()} (its own default).", "info")
+        except Exception as exc:  # noqa: BLE001 - a record must not lose the result
+            self.log(f"Could not add the outcome to {Path(path).name}: {exc}", "warn")
 
     def _abs_path(self, value: Any) -> str:
         """Resolve a workflow-relative output path against the recipe directory."""
@@ -2589,6 +3537,8 @@ class ERTProcessingModule(BaseModule):
 
     def _on_ert_workflow_ok(self, result: WorkflowRunResult,
                             source: Optional[Path] = None) -> None:
+        self._record_outcome(self._ert_settings_path, "single", result.summary,
+                             result.metrics)
         summary = dict(result.summary)
         manager = result.objects.get("manager")
         fixed_manager = result.objects.get("fixed_manager")
@@ -2679,6 +3629,8 @@ class ERTProcessingModule(BaseModule):
             return None
 
     def _on_inversion_ok(self, result: dict) -> None:
+        self._agent_run_state = "completed"
+        self._agent_run_error = ""
         metrics = dict(result.get("metrics") or {})
         engine = str(result.get("engine") or "")
         requested_engine = str(result.get("engine_requested") or engine)
@@ -3199,7 +4151,7 @@ class ERTProcessingModule(BaseModule):
         worker = TaskWorker(build)
         worker.succeeded.connect(lambda result: (settled.update(result=result), loop.quit()))
         worker.failed.connect(lambda message: (settled.update(error=message), loop.quit()))
-        self.register_worker(worker)
+        self.register_worker(worker, activity="Building the mesh")
         self._mesh_note.setText(f"Building the mesh {Path(path).name} describes, as E4D would…")
         worker.start()
         if not settled:
@@ -3296,8 +4248,35 @@ class ERTProcessingModule(BaseModule):
                                   self._tl_mode.isChecked())
 
     def _on_tab_changed(self, index: int) -> None:
+        self._sync_tab_controls()
         if self._tabs.widget(index) is self._mesh_tab:
             self._refresh_mesh_preview()
+        elif self._tabs.widget(index) is self._recip_view:
+            self._refresh_recip_view()
+
+    def _sync_tab_controls(self) -> None:
+        """Show only the controls belonging to the selected ERT stage."""
+        if not hasattr(self, "_controls"):
+            return
+        current = self._tabs.currentWidget()
+        electrodes = current is self._plot_widget
+        data = current is self._pseudo_widget
+        quality = current is self._quality_view
+        # Mesh and model views already have their own tools beside the plot.
+        # Hiding this whole column gives their plot and tools the full width.
+        self._controls.setVisible(electrodes or data or quality)
+        for widget, visible in (
+            (self._load_group, electrodes),
+            (self._info, electrodes or data),
+            (self._qc_group, data),
+            (self._errors_group, data),
+            (self._inversion_group, data or quality),
+            (self._fit_group, data or quality),
+            (self._run_group, data or quality),
+            (self._geometry_export_group, electrodes),
+        ):
+            widget.setVisible(visible)
+        self._controls.fit_to_content()
 
     def _mesh_inputs_changed(self, *_args: Any) -> None:
         """Something the mesh depends on changed; rebuild it if it is on screen.
@@ -3378,7 +4357,7 @@ class ERTProcessingModule(BaseModule):
             lambda preview, w=worker: self._on_mesh_preview_ready(w, key, where, preview))
         worker.failed.connect(
             lambda error, w=worker: self._on_mesh_preview_failed(w, key, error))
-        self._mesh_worker = self.register_worker(worker)
+        self._mesh_worker = self.register_worker(worker, activity="Previewing the mesh")
         worker.start()
 
     def _mesh_summary(self) -> Dict[str, Any]:
@@ -3478,6 +4457,8 @@ class ERTProcessingModule(BaseModule):
         self._set_rows_visible((self._reject_row, self._min_keep), on)
 
     def _on_inversion_failed(self, message: str) -> None:
+        self._agent_run_state = "failed"
+        self._agent_run_error = message
         self.fail_persisted_run(message, "ert.single_inversion")
         self.log(f"ERT inversion failed: {message}", "error")
 
@@ -3490,17 +4471,79 @@ class ERTProcessingModule(BaseModule):
 
     # -- time-lapse inversion ------------------------------------------------
     def _set_tl_files(self, paths: List[str]) -> None:
-        """Replace the ordered time-lapse file set and refresh the list + times."""
-        self._tl_files = [str(p) for p in paths]
+        """Replace every file of the list, reciprocal files included, regroup
+        them into surveys, and refresh the list and its times."""
+        self._tl_all = [str(p) for p in paths]
+        self._group_tl_surveys()
         self._read_tl_times()
         self._refresh_tl_list()
 
+    def _group_tl_surveys(self) -> None:
+        """Make each forward file and its reciprocal file one survey.
+
+        ``survey_timing.reciprocal_pairs`` finds them by name and time; the
+        pairs hold while "Pair reciprocal files" is ticked, and the box is shown
+        only when the list holds a file named as a reciprocal. Unticked, or with
+        none, every file is a survey of its own, as before pairing existed.
+        """
+        paths = list(self._tl_all)
+        self._tl_partner, self._tl_left_out = {}, []
+        found: Dict[str, Any] = {"pairs": [], "orphans": [], "gap_seconds": None}
+        if paths:
+            mtime_box = getattr(self, "_tl_use_mtime", None)
+            timing = ert_load.survey_timing_for(
+                paths, allow_mtime=bool(mtime_box is not None and mtime_box.isChecked()))
+            found = survey_timing.reciprocal_pairs(paths, timing.found or None)
+            # Each file's own time, the reciprocal files' included, for the rows.
+            self._tl_stamp_of = dict(zip(paths, timing.found or []))
+        self._tl_pairs_found = found
+        detected = bool(found["pairs"] or found["orphans"])
+        self._tl_pair_box.setVisible(detected)
+        if detected and self._tl_pair_box.isChecked():
+            self._tl_partner = {paths[f]: paths[r] for f, r in found["pairs"]}
+            self._tl_left_out = [paths[r] for r in found["orphans"]]
+            hidden = set(self._tl_partner.values()) | set(self._tl_left_out)
+            self._tl_files = [p for p in paths if p not in hidden]
+        else:
+            self._tl_files = paths
+        # The reciprocal error model is offered for a paired series.
+        self._refresh_error_sources(self._ert_data_full)
+
+    def _tl_flat(self, surveys: List[str]) -> List[str]:
+        """Every file of ``surveys``, each forward file followed by its
+        reciprocal file, and then the reciprocal files left out."""
+        out: List[str] = []
+        for path in surveys:
+            out.append(path)
+            if path in self._tl_partner:
+                out.append(self._tl_partner[path])
+        return out + [p for p in self._tl_left_out if p not in out]
+
+    def _on_tl_pairing_changed(self, checked: bool) -> None:
+        """Pair or unpair the list's reciprocal files, and reload the survey on
+        screen when it was, or now is, one half of a pair."""
+        before = dict(self._tl_partner)
+        self._group_tl_surveys()
+        self._read_tl_times()
+        self._refresh_tl_list()
+        if checked:
+            self.log(f"Reciprocal files paired: {len(self._tl_partner)} survey(s) now "
+                     "hold a forward and a reciprocal file each.", "info")
+        else:
+            self.log("Reciprocal files unpaired: every file is a time step of its own.",
+                     "info")
+        shown = str(self._data_path) if self._data_path is not None else ""
+        if shown and (shown in before or shown in self._tl_partner) \
+                and before.get(shown) != self._tl_partner.get(shown):
+            self._start_load(shown)
+
     def _read_tl_times(self) -> None:
-        """Read the acquisition time of every file, from the names or the headers.
+        """Read the acquisition time of every survey, from the names or the headers.
 
         Kept in one place because three operations reorder the sequence, and a set
         of times that no longer matches the list is worse than none: the inversion
-        would pair each survey with someone else's date.
+        would pair each survey with someone else's date. A paired survey is timed
+        by its forward file.
         """
         mtime_box = getattr(self, "_tl_use_mtime", None)   # absent until built
         self._tl_timing = ert_load.survey_timing_for(
@@ -3509,54 +4552,156 @@ class ERTProcessingModule(BaseModule):
         self._tl_times = list(self._tl_timing.times)
         self._tl_labels = list(self._tl_timing.labels)
 
+    def _reciprocal_time(self, path: str) -> str:
+        """When a reciprocal file was measured, as hh:mm, or "" when unknown."""
+        stamp = getattr(self, "_tl_stamp_of", {}).get(path)
+        return f"{stamp:%H:%M}" if stamp is not None else ""
+
     def _refresh_tl_list(self) -> None:
         self._tl_list.blockSignals(True)
         self._tl_list.clear()
         timing = getattr(self, "_tl_timing", None)
         gaps = timing.intervals if timing is not None else []
+        # A forward file without its reciprocal is marked only in a list that
+        # pairs some: in one without reciprocal files every file is unpaired.
+        mark_unpaired = bool(self._tl_partner)
         for i, path in enumerate(self._tl_files):
             label = self._tl_labels[i] if i < len(self._tl_labels) else str(i + 1)
             # The gap to the previous survey, on the row it belongs to: an hourly
             # sequence and a monthly one look identical without it.
-            gap = f"   (+{survey_timing.format_duration(gaps[i - 1])})" if (
-                i > 0 and i - 1 < len(gaps)) else ""
-            item = QListWidgetItem(f"{i + 1}.  {label}    ·    {Path(path).name}{gap}")
+            gap = ""
+            if i > 0 and i - 1 < len(gaps):
+                step = gaps[i - 1]
+                gap = (f"   (+{survey_timing.format_duration(step)})" if step >= 0
+                       else f"   ({survey_timing.format_duration(step)}, out of order)")
+            text = f"{i + 1}.  {label}    ·    {Path(path).name}{gap}"
+            partner = self._tl_partner.get(path)
+            # The reciprocal file on a line of its own under its forward file,
+            # so a wrong pairing can be seen in the list itself.
+            if partner:
+                # Its time first: a long file name runs off the row's end.
+                when = self._reciprocal_time(partner)
+                text += (f"\n        + reciprocal{f' {when}' if when else ''}    ·    "
+                         f"{Path(partner).name}")
+            elif mark_unpaired:
+                text += "   (unpaired: no reciprocal file)"
+            item = QListWidgetItem(text)
             item.setData(Qt.UserRole, path)
-            item.setToolTip(path)
+            # Where this file's time came from: the one file whose time was not
+            # read from its name, or was read two ways, is the one to look at.
+            origin = timing.describe(i) if timing is not None else ""
+            tip = f"{path}\n{origin}" if origin else path
+            if partner:
+                tip += (f"\n\nReciprocal file, merged with it into one survey:\n{partner}")
+            item.setToolTip(tip)
             self._tl_list.addItem(item)
         self._tl_list.blockSignals(False)
         n = len(self._tl_files)
         if n == 0:
             self._tl_info.setText("No files added.")
         elif n == 1:
-            self._tl_info.setText(f"<b>1</b> file. Tick “Time-lapse” and add more for a "
-                                  f"time sequence. Instrument: {self._instrument.currentText()}.")
+            self._tl_info.setText(f"<b>1</b> survey. Tick “Time-lapse” and add more for a "
+                                  f"time sequence. Instrument: {self._instrument.currentText()}."
+                                  + self._tl_pairs_text(timing))
         else:
-            summary = timing.summary() if timing is not None else f"{n} files."
-            note = "" if (timing is not None and timing.dated) else (
-                "  Name the files with their acquisition time "
-                "(e.g. <code>site_2024-06-12_1430.dat</code>), or tick "
-                "“Use file times” below.")
-            self._tl_info.setText(f"{summary}{note} "
+            self._tl_info.setText(f"{self._tl_timing_text(timing)} "
                                   f"Instrument: {self._instrument.currentText()}.")
-        # A time-lapse mesh is built from whichever survey is now first.
+        # A time-lapse mesh is built from whichever survey is now first, and
+        # the Reciprocal errors tab draws the series as the list now holds it.
         self._mesh_inputs_changed()
+        self._recip_inputs_changed()
+
+    def _tl_timing_text(self, timing: Optional[Any]) -> str:
+        """The file list's summary line, and what to do when its times fall short.
+
+        The accepted forms are on the line's tooltip; what is said here is only
+        what this set of files needs: a time missing from some or all of them,
+        files out of time order, or forward and reciprocal halves.
+        """
+        n = len(self._tl_files)
+        if timing is None:
+            return f"{n} files."
+        how = ("  Put the time in each file name, year first (e.g. "
+               "<code>site_2026-01-12_05-50-38.dat</code>), add a line "
+               "<code># date: 2026-01-12 05:50:38</code> at the top of each file, "
+               "or tick “Use file times” below.")
+        # The summary names the files that keep an undated list from being dated
+        # (no time, or a time another file has too); hovering a row says why.
+        text = timing.summary()
+        if timing.dated and any(gap < 0 for gap in timing.intervals):
+            text += " The files are not in time order: press Sort by time."
+        elif not timing.dated and timing.undated_files():
+            text += how
+        return text + self._tl_pairs_text(timing)
+
+    def _tl_pairs_text(self, timing: Any) -> str:
+        """What the list made of forward and reciprocal files.
+
+        Paired, each survey is one forward file with its reciprocal: said once,
+        with the forward files that have none and - in amber - the reciprocal
+        files left out for want of one. Unpaired while the names say there are
+        pairs, each survey is inverted twice and its reciprocals are never
+        compared, which is warned about.
+        """
+        found = getattr(self, "_tl_pairs_found", None) or {"pairs": [], "orphans": []}
+        if not (found["pairs"] or found["orphans"]):
+            self._tl_pairs_logged = None
+            return ""
+        gap = survey_timing.format_duration(found["gap_seconds"]) \
+            if found.get("gap_seconds") is not None else ""
+        if self._tl_pair_box.isChecked():
+            paired = len(self._tl_partner)
+            alone = len(self._tl_files) - paired
+            text = (f" {paired} of {len(self._tl_files)} surveys are a forward file with its "
+                    f"reciprocal file{f' (about {gap} later)' if gap else ''}, merged into "
+                    "one time step so each reading is compared with its reciprocal.")
+            if alone:
+                text += f" {alone} forward file(s) have no reciprocal file and are inverted alone."
+            warning = ""
+            if self._tl_left_out:
+                warning = (f"{len(self._tl_left_out)} reciprocal file(s) have no forward file "
+                           "and are left out: "
+                           + ", ".join(Path(p).name for p in self._tl_left_out) + ".")
+            key = ("paired", paired, tuple(self._tl_left_out))
+            message = (text.strip() + (" " + warning if warning else ""), "warn" if warning
+                       else "info")
+            shown = text + (f" <span style='color:{theme.color('amber')}'>{warning}</span>"
+                            if warning else "")
+        else:
+            warning = (
+                f"{len(found['pairs'])} file(s) look like the reciprocal half of a survey "
+                f"(“recip” in the name){f', each about {gap} after its forward file' if gap else ''}. "
+                f"With “Pair reciprocal files” unticked every file is a time step of its "
+                f"own, so each survey appears twice and no reciprocal errors are formed "
+                f"between the two files.")
+            key = ("unpaired", tuple(sorted(found["reciprocal"])))
+            message = (warning, "warn")
+            shown = f" <span style='color:{theme.color('amber')}'>{warning}</span>"
+        # Logged once per state, so reordering the list does not repeat it.
+        if getattr(self, "_tl_pairs_logged", None) != key:
+            self._tl_pairs_logged = key
+            self.log(*message)
+        return shown
 
     def _add_tl_files(self) -> None:
+        from PyHydroGeophysX.qt_apps.widgets.project_dialogs import confirm_project_for_data
+        if not confirm_project_for_data(self):   # name a Project before the first data
+            return
         paths, _ = QFileDialog.getOpenFileNames(
             self, "Add ERT data file(s)", "", _DATA_FILTER)
         if not paths:
             return
         # Append new files, preserving order and dropping duplicates.
         old_n = len(self._tl_files)
-        merged = list(self._tl_files)
+        merged = list(self._tl_all)
         added = 0
         for p in paths:
             if p not in merged:
                 merged.append(p); added += 1
         self._set_tl_files(merged)
-        self.log(f"Added {added} ERT file(s); {len(self._tl_files)} loaded.", "info")
-        # Auto-preview the first newly added file so the user sees data immediately.
+        self.log(f"Added {added} ERT file(s); {len(self._tl_files)} survey(s) in the list.",
+                 "info")
+        # Auto-preview the first newly added survey so the user sees data immediately.
         if added and old_n < len(self._tl_files):
             self._tl_list.setCurrentRow(old_n)
             self._preview_tl_item(self._tl_list.item(old_n))
@@ -3569,8 +4714,10 @@ class ERTProcessingModule(BaseModule):
         if not rows:
             self.log("Select one or more files in the list to remove.", "warn")
             return
-        self._set_tl_files([p for i, p in enumerate(self._tl_files) if i not in rows])
-        self.log(f"Removed {len(rows)} file(s); {len(self._tl_files)} remain.", "info")
+        # A row is a survey: its reciprocal file goes with it.
+        self._set_tl_files(self._tl_flat(
+            [p for i, p in enumerate(self._tl_files) if i not in rows]))
+        self.log(f"Removed {len(rows)} survey(s); {len(self._tl_files)} remain.", "info")
 
     def _move_tl_files(self, delta: int) -> None:
         rows = self._selected_tl_rows()
@@ -3589,7 +4736,9 @@ class ERTProcessingModule(BaseModule):
                 order[i], order[j] = order[j], order[i]
         if order == list(range(len(order))):
             return
+        # A pair moves as one row; the full list follows the surveys' order.
         self._tl_files = [self._tl_files[i] for i in order]
+        self._tl_all = self._tl_flat(self._tl_files)
         self._read_tl_times()
         moved = {order.index(i) for i in rows}
         self._refresh_tl_list()
@@ -3602,7 +4751,7 @@ class ERTProcessingModule(BaseModule):
         The sequence order is part of the result - each survey is compared with
         the one before it - and a file dialog returns names in whatever order the
         filesystem gives, which for ``survey_9`` and ``survey_10`` is not the
-        order they were recorded in.
+        order they were recorded in. A paired survey sorts by its forward file.
         """
         timing = getattr(self, "_tl_timing", None)
         if timing is None or not timing.dated:
@@ -3613,8 +4762,8 @@ class ERTProcessingModule(BaseModule):
         if order == list(range(len(self._tl_files))):
             self.log("Files are already in acquisition order.", "info")
             return
-        self._set_tl_files([self._tl_files[i] for i in order])
-        self.log(f"Sorted {len(self._tl_files)} files into acquisition order.", "success")
+        self._set_tl_files(self._tl_flat([self._tl_files[i] for i in order]))
+        self.log(f"Sorted {len(self._tl_files)} surveys into acquisition order.", "success")
 
     def _clear_tl_files(self) -> None:
         self._set_tl_files([])
@@ -3623,7 +4772,7 @@ class ERTProcessingModule(BaseModule):
     def _on_tl_selection_changed(self) -> None:
         rows = self._selected_tl_rows()
         if len(rows) > 1:
-            self._tl_info.setText(f"{len(rows)} files selected — Remove / Move ↑ ↓, "
+            self._tl_info.setText(f"{len(rows)} surveys selected — Remove / Move ↑ ↓, "
                                   f"or click one to preview.")
 
     def _preview_tl_item(self, item: QListWidgetItem) -> None:
@@ -3692,9 +4841,12 @@ class ERTProcessingModule(BaseModule):
             params["plateau_tolerance"] = float(self._plateau.value()) / 100.0
         if self._r2_program_name() is not None:
             params["r2"] = self._r2_settings()
-        if self._tl_clip.isChecked():
+        # The exported panels are trimmed the way the Resistivity model view trims
+        # the section ("Hide below" + "Clean cut"), the one place this is chosen.
+        cut = self._model_view.clean_cut()
+        if cut is not None:
             params["figure_clip"] = "envelope"
-            params["figure_clip_threshold"] = float(self._tl_clip_cut.value())
+            params["figure_clip_threshold"] = cut
         times = self._tl_times if len(self._tl_times) == len(self._tl_files) else None
         timing = getattr(self, "_tl_timing", None)
         # The bundle below renames the files, so the acquisition times have to
@@ -3703,7 +4855,8 @@ class ERTProcessingModule(BaseModule):
                   if timing is not None and timing.dated else [])
         try:
             run = self.begin_persisted_run(
-                "ert.timelapse_inversion", "ert.timelapse_inversion"
+                "ert.timelapse_inversion", "ert.timelapse_inversion",
+                label=self._run_label(self._tl_files, unit="surveys"),
             )
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not prepare Project run: {exc}", "error")
@@ -3734,36 +4887,166 @@ class ERTProcessingModule(BaseModule):
         self._tl_btn.setText("Inverting…")
         self._tl_progress.setVisible(True); self._tl_progress.setRange(0, 0)
         qc = self._qc_applied
-        if qc is None:
+        # Each survey's reciprocal file, as the list paired them when Run was
+        # pressed, and the reciprocal files it left out.
+        partners = [self._tl_partner.get(path) for path in sources]
+        left_out = list(self._tl_left_out)
+        fit_model = self._err_source.currentData() == "reciprocal"
+        # What the error model is fitted to, as the Reciprocal errors tab said
+        # when Run was pressed; the surveys' cache keys, so the pairs the QC
+        # reads are kept for the tab, and the ones the tab read can serve here.
+        fit_to = self._error_fit_to()
+        survey_keys = [self._recip_survey_key(path, partner)
+                       for path, partner in zip(sources, partners)]
+        qc_key = self._recip_qc_key(qc)
+        reader = f"{instrument or 'auto-detected format'}" + (
+            # The user's electrode file, not the readers' copy of it.
+            f", electrodes from {(self._electrode_path or Path(electrodes)).name}"
+            if electrodes is not None else "")
+        if qc is None and not any(partners) and not fit_model:
             self.log("Time-lapse QC: no filter applied, so every survey is inverted as "
                      "loaded. The Data QC thresholds take effect with Apply filter, and "
                      "then filter every survey of the series.", "info")
             self._launch_timelapse(run, sources, sources, labels, params, times, stamps, None,
-                                   electrodes)
+                                   electrodes, fit_to=fit_to)
             return
+        if qc is None and not any(partners):
+            # Read only to fit the model: when the Reciprocal errors tab has read
+            # every survey already, its pairs are fitted and the surveys go to
+            # the run as they are, as they do with no model.
+            cached = [self._recip_cache.get(key, {}).get(qc_key) for key in survey_keys]
+            if all(entry is not None and not entry.get("error") for entry in cached):
+                self._fit_timelapse_from_cache(run, sources, labels, params, times, stamps,
+                                               electrodes, [dict(e) for e in cached],
+                                               reader, left_out, fit_to)
+                return
         # The QC applied on this page holds for the whole series, as it did for
         # the survey on screen. Each survey is filtered on its own - the
         # pipeline accepts surveys with different measurement sets, and ADTLERT
         # aligns them - and handed over in PyGIMLi's own format, which it reads
-        # back as written, as the single inversion's filtered data is.
-        self.log(f"Time-lapse QC: filtering each of the {len(sources)} surveys as "
-                 f"Apply filter did ({self._describe_qc(qc)})…", "info")
+        # back as written, as the single inversion's filtered data is. A survey
+        # of two files is merged first, so its pairs are formed across them; and
+        # the reciprocal error model is fitted over every survey's pairs.
+        doing = [f"filtering as Apply filter did ({self._describe_qc(qc)})"
+                 if qc is not None else "no QC filter applied"]
+        if any(partners):
+            doing.insert(0, f"merging {sum(1 for p in partners if p)} with their "
+                            "reciprocal file")
+        if fit_model:
+            doing.append("fitting the reciprocal error model over the series, to "
+                         + self._fit_to_text(fit_to, qc))
+        self.log(f"Time-lapse QC: preparing each of the {len(sources)} surveys - "
+                 + "; ".join(doing) + "…", "info")
+        if left_out:
+            self.log(f"Time-lapse: {len(left_out)} reciprocal file(s) have no forward file "
+                     "and are left out of the run: "
+                     + ", ".join(Path(p).name for p in left_out) + ".", "warn")
+        # Its QC logs and report go in the run folder (qt_apps/ert_records.py).
         worker = TaskWorker(self._qc_series, sources, instrument, qc,
                             run.inputs_dir / "ert_timesteps_qc", with_log=True,
-                            electrode_file=electrodes)
-        worker.logged.connect(lambda message: self.log(message, "info"))
-        worker.succeeded.connect(lambda out: self._launch_timelapse(
-            run, sources, out["files"], labels, {**params, "instrument": None},
-            times, stamps, {"thresholds": qc, "source_instrument": instrument,
-                            "steps": out["steps"]}, electrodes))
+                            electrode_file=electrodes, report_dir=run.run_dir,
+                            acquired=stamps, error_model=self._error_model_text(True),
+                            reader=reader, partners=partners, left_out=left_out,
+                            fit_model=fit_model, floor=self._reciprocal_floor(),
+                            fit_to=fit_to)
+
+        def prepared(out: Dict[str, Any]) -> None:
+            # Every survey's pairs as the run read them, for the Reciprocal
+            # errors tab, which then need not read the series again.
+            for key, report in zip(survey_keys, out.get("reports") or []):
+                self._cache_recip(self._recip_cache, key, qc_key, self._recip_entry(report))
+            self._recip_inputs_changed()
+            run_params = {**params, "instrument": None}
+            model = out.get("model")
+            if fit_model and model:
+                run_params["error_model"] = model
+            elif fit_model:
+                self.log("Data errors: the series has too few reciprocal pairs to fit an "
+                         "error model (at least 15 are needed), so each survey keeps its "
+                         "own errors.", "warn")
+            self._launch_timelapse(
+                run, sources, out["files"], labels, run_params, times, stamps,
+                {"thresholds": qc, "source_instrument": instrument, "steps": out["steps"],
+                 "partners": partners, "left_out": left_out}, electrodes, fit_to=fit_to)
+
+        worker.logged.connect(self._on_tl_qc_logged)
+        worker.succeeded.connect(prepared)
         worker.failed.connect(self._on_tl_qc_failed)
-        self.register_worker(worker)
+        # Stopped, it ends at the next survey without a word; the button comes back.
+        worker.finished.connect(
+            lambda w=worker: self._reset_tl_button() if w.is_cancelled() else None)
+        self._tl_qc_worker = self.register_worker(worker, activity="Checking data quality")
+        self._tl_progress.setRange(0, len(sources))
+        self._tl_progress.setValue(0)
+        self._tl_progress.setFormat(f"Data QC 0/{len(sources)}")
         worker.start()
+        # Reading every survey takes most of a second each, minutes for a long
+        # series, so the QC can be stopped like the inversion that follows it.
+        self._tl_stop.attach(worker, "ert.timelapse_inversion", "The time-lapse data QC")
+
+    @staticmethod
+    def _fit_to_text(fit_to: str, qc: Optional[Dict[str, Any]]) -> str:
+        from PyHydroGeophysX.qt_apps.ert_records import fit_to_sentence
+
+        return fit_to_sentence(fit_to, qc is not None)
+
+    def _fit_timelapse_from_cache(self, run, sources: List[str], labels: List[str],
+                                  params: Dict[str, Any], times, stamps: List[str],
+                                  electrodes: Optional[str], reports: List[Dict[str, Any]],
+                                  reader: str, left_out: List[str], fit_to: str) -> None:
+        """Fit the series' error model to the pairs the Reciprocal errors tab
+        read, write the QC records from them, and start the run on the surveys
+        as they are - with no filter and no reciprocal files to merge, the
+        surveys were read only for these pairs, and are not read twice."""
+        self.log(f"Time-lapse: fitting the reciprocal error model to the pairs of the "
+                 f"{len(sources)} surveys the Reciprocal errors tab has read, to "
+                 f"{self._fit_to_text(fit_to, None)}; the surveys are not read again.",
+                 "info")
+        worker = TaskWorker(self._finish_series_qc, list(sources), reports, with_log=True,
+                            report_dir=run.run_dir, stamps=list(stamps), reader=reader,
+                            qc=None, error_model=self._error_model_text(True), fit_model=True,
+                            floor=self._reciprocal_floor(), left_out=list(left_out),
+                            fit_to=fit_to, logs_written=False)
+
+        def fitted(model: Optional[Dict[str, Any]]) -> None:
+            run_params = dict(params)
+            if model:
+                run_params["error_model"] = model
+            else:
+                self.log("Data errors: the series has too few reciprocal pairs to fit an "
+                         "error model (at least 15 are needed), so each survey keeps its "
+                         "own errors.", "warn")
+            self._launch_timelapse(run, sources, sources, labels, run_params, times, stamps,
+                                   None, electrodes, fit_to=fit_to)
+
+        worker.logged.connect(lambda message: self.log(message, "info"))
+        worker.succeeded.connect(fitted)
+        worker.failed.connect(self._on_tl_qc_failed)
+        worker.finished.connect(
+            lambda w=worker: self._reset_tl_button() if w.is_cancelled() else None)
+        self._tl_qc_worker = self.register_worker(worker, activity="Fitting the error model")
+        worker.start()
+        self._tl_stop.attach(worker, "ert.timelapse_inversion", "The time-lapse data QC")
+
+    def _on_tl_qc_logged(self, message: str) -> None:
+        """Log a line of the time-lapse QC, and move its progress bar per survey."""
+        self.log(message, "info")
+        match = re.match(r"^QC (\d+)/(\d+) ", str(message))
+        if match is not None:
+            done, total = int(match.group(1)), int(match.group(2))
+            self._on_tl_progress(done, total, f"Data QC {done}/{total}")
+            # The status bar too: reading 420 surveys takes minutes, and a bare
+            # "Checking data quality" for that long reads as a hang.
+            worker = getattr(self, "_tl_qc_worker", None)
+            if worker is not None:
+                self._on_worker_progress(worker, done, total, "Checking data quality")
 
     @staticmethod
     def _describe_qc(qc: Dict[str, Any]) -> str:
         """The thresholds in ``qc`` that cut anything, in the panel's terms."""
         parts = [f"ρa {qc['min_rhoa']:g}–{qc['max_rhoa']:g} Ω·m"]
+        if qc.get("average_reciprocals"):
+            parts.insert(0, "each reading averaged with its reciprocal")
         if qc["max_error"] > 0:
             parts.append(f"error ≤ {qc['max_error']:g} %")
         if qc["more_checks"]:
@@ -3779,43 +5062,196 @@ class ERTProcessingModule(BaseModule):
         return ", ".join(parts)
 
     @classmethod
-    def _qc_series(cls, files: List[str], instrument: Optional[str], qc: Dict[str, Any],
-                   staging: Path, log=None,
-                   electrode_file: Optional[str] = None) -> Dict[str, Any]:
-        """Filter every survey of a series with ``qc``; runs off the UI thread.
+    def _prepare_survey(cls, source: str, partner: Optional[str], instrument: Optional[str],
+                        electrode_file: Optional[str], qc: Optional[Dict[str, Any]], *,
+                        paired_series: bool = False, log=None):
+        """``(data, report, reasons)``: one survey of a series, as the run prepares it.
 
-        Each file is read the way the time-lapse pipeline reads it, electrodes
-        placed from ``electrode_file`` when there is one, and written back
-        filtered. Returns the filtered files, in order, and per survey what was
-        kept.
+        The file is read the way the time-lapse pipeline reads it, electrodes
+        placed from ``electrode_file`` when there is one; with ``partner``,
+        that reciprocal file is read too and merged with it
+        (``ert_io.merge_reciprocal``), so its pairs are formed across the two.
+        ``qc`` - None when no filter was applied - then filters it, check 0
+        included (:meth:`_qc_survey`), marking which pairs it kept. ``report``
+        is the survey's QC log as ``ert_records.survey_qc_log`` reads it. The
+        run's QC (:meth:`_qc_series`) and the Reciprocal errors tab both read
+        their surveys here, so the two hold the same pairs.
         """
-        import pygimli as pg
+        log = log or (lambda _message: None)
+        data = ert_load.load_ert_container(source, instrument=instrument, log=log,
+                                           electrode_file=electrode_file)
+        report: Dict[str, Any] = {}
+        if partner:
+            other = ert_load.load_ert_container(partner, instrument=instrument, log=log,
+                                                electrode_file=electrode_file)
+            try:
+                data, merged = ert_load.merge_reciprocal(data, other)
+            except ValueError as exc:
+                raise ValueError(
+                    f"{Path(source).name} and its reciprocal file {Path(partner).name} "
+                    f"could not be merged: {exc}") from exc
+            report["files"] = {
+                "forward": Path(source).name, "reciprocal": Path(partner).name,
+                "forward_readings": merged["forward"],
+                "reciprocal_readings": merged["reciprocal"],
+                "dropped_fields": merged["dropped_fields"]}
+        elif paired_series:
+            report["files"] = {"forward": Path(source).name, "reciprocal": None,
+                               "forward_readings": int(data.size())}
+        if qc is not None:
+            data, _keep, reasons = cls._qc_survey(data, qc, report)
+        else:
+            from PyHydroGeophysX.qt_apps.ert_records import reciprocal_pairing
+
+            reasons = []
+            report.update(readings=int(data.size()), kept=int(data.size()), checks=[],
+                          pairing=reciprocal_pairing(cls._reciprocal_scores(data)))
+        return data, report, reasons
+
+    @classmethod
+    def _qc_series(cls, files: List[str], instrument: Optional[str],
+                   qc: Optional[Dict[str, Any]],
+                   staging: Path, log=None,
+                   electrode_file: Optional[str] = None,
+                   report_dir: Optional[Path] = None,
+                   acquired: Optional[List[str]] = None,
+                   error_model: str = "", reader: str = "",
+                   partners: Optional[List[Optional[str]]] = None,
+                   left_out: Optional[List[str]] = None, fit_model: bool = False,
+                   floor: float = 0.0, fit_to: str = "all") -> Dict[str, Any]:
+        """Prepare every survey of a series for the run; runs off the UI thread.
+
+        Each survey is read, merged with its reciprocal file in ``partners``
+        and filtered by ``qc`` as :meth:`_prepare_survey` does it, and written
+        back. Returns the prepared files, in order, per survey what was kept,
+        ``reports`` (each survey's QC report, its pairing among it) and
+        ``model``: with ``fit_model``, the reciprocal error model fitted over
+        the pairs ``fit_to`` names - all of them as read, or those the filter
+        kept - (``ert_records.fit_series_error_model``, the fit the QC report
+        states), its errors never below ``floor``; None when there are too few
+        pairs.
+
+        With ``report_dir`` (the run folder) each survey's QC log goes in its
+        ``qc/`` folder as it is prepared - a survey that stops the series
+        included - and ``qc_report.txt`` sums them up at the end, naming the
+        reciprocal files ``left_out`` for want of a forward file. Once the
+        series' model is known each log is written again with it at the top,
+        as Craig Ulrich's logs carry it (:meth:`_finish_series_qc`).
+        """
+        from PyHydroGeophysX.qt_apps import ert_records
+        from PyHydroGeophysX.qt_apps.run_records import QC_FOLDER
 
         log = log or (lambda _message: None)
         staging = Path(staging)
         staging.mkdir(parents=True, exist_ok=True)
         out_files: List[str] = []
         steps: List[Dict[str, Any]] = []
+        reports: List[Dict[str, Any]] = []
+        stamps = list(acquired or [])
+        partners = list(partners or [])
+        paired_series = any(partners)
+        reader = reader or f"{instrument or 'auto-detected format'}" + (
+            f", electrodes from {Path(electrode_file).name}" if electrode_file else "")
+
         for index, source in enumerate(files):
-            data = ert_load.load_ert_container(source, instrument=instrument, log=log,
-                                               electrode_file=electrode_file)
-            keep, reasons = cls._qc_keep(data, qc)
-            kept, total = int(keep.sum()), int(keep.size)
+            partner = partners[index] if index < len(partners) else None
+            data, report, reasons = cls._prepare_survey(
+                source, partner, instrument, electrode_file, qc,
+                paired_series=paired_series, log=log)
+            kept, total = int(report["kept"]), int(report["readings"])
+            if report_dir is not None:
+                ert_records.write_series_qc_logs(
+                    Path(report_dir) / QC_FOLDER, index, len(files), source, report,
+                    acquired=stamps[index] if index < len(stamps) else "", reader=reader,
+                    fit_to=fit_to)
+            reports.append(report)
             if kept < 4:
                 raise ValueError(
                     f"the QC filter leaves {kept} of {total} measurements in "
                     f"{Path(source).name}, and a time-lapse step needs at least four. "
                     "Loosen the Data QC thresholds, or Reset them.")
-            data.set("valid", pg.Vector(keep.astype(float)))
-            data.removeInvalid()
             target = staging / f"step_{index:04d}.dat"
             data.save(str(target))
             out_files.append(str(target))
             steps.append({"file": Path(source).name, "kept": kept, "total": total,
-                          "cut": list(reasons)})
-            log(f"QC {index + 1}/{len(files)} {Path(source).name}: kept {kept} of {total}"
-                + (f" ({'; '.join(reasons)})" if reasons else ""))
-        return {"files": out_files, "steps": steps}
+                          "cut": list(reasons), "qc": ert_records.step_summary(report)})
+            pair_note = (f" + {Path(partner).name} (forward {report['files']['forward_readings']}"
+                         f" | reciprocal {report['files']['reciprocal_readings']})"
+                         if partner else "")
+            log(f"QC {index + 1}/{len(files)} {Path(source).name}{pair_note}: kept {kept} "
+                f"of {total}" + (f" ({'; '.join(reasons)})" if reasons else ""))
+        model = cls._finish_series_qc(
+            files, reports, report_dir=report_dir, stamps=stamps, reader=reader, qc=qc,
+            error_model=error_model, fit_model=fit_model, floor=floor,
+            left_out=left_out, fit_to=fit_to, log=log)
+        return {"files": out_files, "steps": steps, "model": model, "reports": reports}
+
+    @staticmethod
+    def _fitted_over(fit: Dict[str, Any], series: bool) -> str:
+        """The pairs a fitted model is over, for the settings file."""
+        from PyHydroGeophysX.qt_apps.ert_records import FIT_KEPT
+
+        where = f" of {fit['surveys']} surveys" if series else ""
+        if fit.get("fit_to") == FIT_KEPT and fit.get("filtered"):
+            return (f"the {fit['n']} reciprocal pairs{where} the filter kept; the "
+                    f"{fit['left_out']} it removed are left out")
+        if fit.get("fit_to") == FIT_KEPT:
+            return f"{fit['n']} reciprocal pairs{where} (no filter applied, so every pair)"
+        return f"{fit['n']} reciprocal pairs{where}, as read, before any filter"
+
+    @classmethod
+    def _finish_series_qc(cls, files: List[str], reports: List[Dict[str, Any]], *,
+                          report_dir: Optional[Path], stamps: List[str], reader: str,
+                          qc: Optional[Dict[str, Any]], error_model: str, fit_model: bool,
+                          floor: float, left_out: Optional[List[str]], fit_to: str,
+                          logs_written: bool = True, log=None) -> Optional[Dict[str, Any]]:
+        """Fit the series' reciprocal error model and finish its QC records.
+
+        ``reports`` are each survey's QC report (:meth:`_prepare_survey`). One
+        model over the whole series, over the pairs ``fit_to`` names - the
+        fit ``error_model_lines`` reports and the figure draws - so the
+        records and the run agree; returned when ``fit_model``, else None.
+        With ``report_dir`` each survey's QC log is written again with the
+        model at its top (written for the first time, ``logs_written`` False,
+        when the surveys were read for the Reciprocal errors tab instead), and
+        ``qc_report.txt`` with the figure.
+        """
+        from PyHydroGeophysX.qt_apps import ert_records
+        from PyHydroGeophysX.qt_apps.run_records import QC_FOLDER
+
+        log = log or (lambda _message: None)
+        fitted = ert_records.fit_series_error_model(
+            [r.get("pairing") or {} for r in reports], fit_to)
+        model = None
+        if fit_model and fitted is not None:
+            model = {"m": fitted["m"], "b": fitted["b"], "r2": fitted["r2"],
+                     "r2_raw": fitted["r2_raw"], "pairs": fitted["n"],
+                     "surveys": fitted["surveys"], "floor": float(floor),
+                     "fitted_over": cls._fitted_over(fitted, series=True)}
+            log(f"Reciprocal error model over the series, fitted to "
+                f"{ert_records.fit_to_sentence(fit_to, fitted['filtered'])}: "
+                f"{ert_records.power_law(model)} (binned R2 {fitted['r2']:.3f}, "
+                f"{fitted['n']} pairs from {fitted['surveys']} surveys); every reading's "
+                f"error is dR / |R|, at least {100.0 * float(floor):g} %.")
+        if report_dir is not None:
+            if fitted is not None or not logs_written:
+                line = "" if fitted is None else (
+                    f"{ert_records.power_law(fitted)} (global fit over the series, to "
+                    f"{ert_records.FIT_TO_TEXT[fitted['fit_to']]}"
+                    + ("; used as the data errors)" if model else
+                       "; for reference, not used as the data errors)"))
+                for index, (source, report) in enumerate(zip(files, reports)):
+                    ert_records.write_series_qc_logs(
+                        Path(report_dir) / QC_FOLDER, index, len(files), source, report,
+                        acquired=stamps[index] if index < len(stamps) else "",
+                        reader=reader, model=line, fit_to=fit_to)
+            path = ert_records.write_series_qc_report(
+                Path(report_dir), sources=files, acquired=stamps, reader=reader, qc=qc,
+                reports=reports, error_model=error_model, applied_model=model,
+                left_out=list(left_out or []), fit_to=fit_to)
+            log(f"Data QC report written to {path}; each survey's QC log is in "
+                f"{Path(report_dir) / QC_FOLDER}")
+        return model
 
     def _on_tl_qc_failed(self, message: str) -> None:
         """A survey could not be read or filtered, so the inversion never started."""
@@ -3825,13 +5261,16 @@ class ERTProcessingModule(BaseModule):
     def _launch_timelapse(self, run, sources: List[str], files: List[str],
                           labels: List[str], params: Dict[str, Any], times, stamps,
                           qc: Optional[Dict[str, Any]],
-                          electrodes: Optional[str] = None) -> None:
+                          electrodes: Optional[str] = None, *,
+                          fit_to: str = "all") -> None:
         """Persist the series as it will be inverted, and start the workflow.
 
         ``sources`` are the files as the user listed them, ``files`` what is
         inverted: the same files, or their QC-filtered copies when ``qc`` says
         what filtered them. ``electrodes`` is the electrode table every survey
         is placed on; the run keeps its own copy, so it reruns as it ran.
+        ``fit_to`` is what the reciprocal error model was fitted to, for the
+        settings file.
         """
         electrodes_ref = None
         # One compressed bundle rather than a copy of every step. A time-lapse
@@ -3854,7 +5293,13 @@ class ERTProcessingModule(BaseModule):
             )
             if qc is not None:
                 io_utils.write_json(run.inputs_dir / "ert_qc.json", {
-                    **qc, "source_files": [Path(source).name for source in sources]})
+                    **{key: value for key, value in qc.items()
+                       if key not in ("partners", "left_out")},
+                    "source_files": [Path(source).name for source in sources],
+                    # Each survey's reciprocal file, merged into it, by name.
+                    "reciprocal_files": [Path(p).name if p else None
+                                         for p in (qc.get("partners") or [])],
+                    "left_out": [Path(p).name for p in (qc.get("left_out") or [])]})
                 # The bundle holds the filtered surveys; the loose copies go.
                 shutil.rmtree(run.inputs_dir / "ert_timesteps_qc", ignore_errors=True)
             if electrodes is not None:
@@ -3904,6 +5349,14 @@ class ERTProcessingModule(BaseModule):
         )
         self._reproduce.set_bundle(recipe_path, script_path)
         self._tl_recipe_path = str(recipe_path)
+        self._write_timelapse_settings(run, spec, sources, labels, stamps, times,
+                                       electrodes, qc, fit_to)
+        if not any(stamps):
+            # A warning, so it is kept with the run: every interval reads as one
+            # unit, which changes what the temporal smoothing does.
+            self.log("Time-lapse: the surveys carry no acquisition times, so every "
+                     "step is one unit apart.", "warn")
+        self._tl_progress.setRange(0, 0)
         self.log(f"Starting {params['inversion_type']} time-lapse ERT inversion "
                  f"({len(files)} steps)…", "info")
         # Both supported time-lapse engines execute long native/GPU kernels.
@@ -3911,6 +5364,8 @@ class ERTProcessingModule(BaseModule):
         # retain the GIL and ADTLERT cannot monopolize the GUI CUDA context.
         # This also covers an unavailable ADTLERT request that falls back to
         # the PyHydro engine inside the workflow process.
+        self._agent_run_state = "running"
+        self._agent_run_error = ""
         self._tl_worker = ProcessWorkflowWorker(
             recipe_path,
             run.run_dir,
@@ -3922,9 +5377,44 @@ class ERTProcessingModule(BaseModule):
         self._tl_worker.succeeded.connect(self._on_tl_workflow_ok)
         self._tl_worker.failed.connect(lambda message: self._on_tl_failed(message, False))
         self._tl_worker.finished.connect(self._reset_tl_button)
-        self.register_worker(self._tl_worker)
+        self.register_worker(self._tl_worker, activity="Running the time-lapse inversion")
         self._tl_worker.start()
         self._tl_stop.attach(self._tl_worker, "ert.timelapse_inversion")
+
+    def _write_timelapse_settings(self, run, spec: WorkflowSpec, sources: List[str],
+                                  labels: List[str], stamps: List[str], times,
+                                  electrodes: Optional[str],
+                                  qc: Optional[Dict[str, Any]],
+                                  fit_to: str = "all") -> None:
+        """Write the run's ``inversion_settings.txt`` from the spec it is handed
+        (``qt_apps/ert_records.py``); the QC report was written as the surveys
+        were filtered. A file that cannot be written is said in the log only.
+        ``fit_to`` - what the error model was fitted to - is stated wherever
+        the run fitted one: its QC report has the model, or it used it."""
+        from PyHydroGeophysX.qt_apps import ert_records
+        from PyHydroGeophysX.qt_apps.run_records import QC_REPORT_NAME
+
+        self._tl_settings = None
+        try:
+            instrument = str((qc or {}).get("source_instrument")
+                             or spec.parameters.get("instrument") or "auto-detected")
+            model = dict(spec.parameters.get("error_model") or {}) or None
+            path = ert_records.write_settings(run.run_dir, ert_records.timelapse_settings_text(
+                spec, run_id=run.run_id, sources=sources, labels=labels, stamps=stamps,
+                times=times, instrument=instrument,
+                electrode_file=str(self._electrode_path or electrodes or ""), qc=qc,
+                partners=(qc or {}).get("partners"), left_out=(qc or {}).get("left_out") or (),
+                data_errors=self._error_model_text(True, model)
+                + ("; pairs averaged by the QC carry their own difference"
+                   if ((qc or {}).get("thresholds") or {}).get("average_reciprocals")
+                   and not model else ""),
+                fit_to=fit_to if model or (Path(run.run_dir) / QC_REPORT_NAME).is_file()
+                else None))
+            # With what was asked, to say afterwards what the engine changed.
+            self._tl_settings = (path, dict(spec.parameters))
+            self.log(f"Inversion settings written to {path}", "info")
+        except Exception as exc:  # noqa: BLE001 - a record must not stop the run
+            self.log(f"Could not write the run's settings file: {exc}", "warn")
 
     def _on_tl_progress(self, current: int, total: int, label: str) -> None:
         """Show completed ADTLERT windows while retaining the text log."""
@@ -3943,6 +5433,9 @@ class ERTProcessingModule(BaseModule):
                 recipe_path=self._tl_recipe_path,
             )
         payload = result.legacy_payload()
+        settings = self._tl_settings
+        if settings is not None:
+            self._record_outcome(settings[0], "timelapse", payload, settings[1])
         if payload.get("mesh") is None and payload.get("model_bundle"):
             payload.update(self._load_timelapse_bundle(payload["model_bundle"]))
         self._on_tl_ok(payload)
@@ -3990,6 +5483,8 @@ class ERTProcessingModule(BaseModule):
             return {"mesh": None, "final_models": None, "coverage": None}
 
     def _on_tl_ok(self, result: dict) -> None:
+        self._agent_run_state = "completed"
+        self._agent_run_error = ""
         # Pull out the in-memory mesh + models for the interactive viewer, then
         # drop them so the published result stays JSON-serializable.
         self._tl_mesh = result.pop("mesh", None)
@@ -4166,6 +5661,8 @@ class ERTProcessingModule(BaseModule):
         self._model_view.show_field(self._tl_mesh, values, kind=kind, coverage=cov, title=title)
 
     def _on_tl_failed(self, message: str, backend: bool) -> None:
+        self._agent_run_state = "failed"
+        self._agent_run_error = message
         self.fail_persisted_run(message, "ert.timelapse_inversion")
         text = f"Time-lapse inversion {'unavailable' if backend else 'failed'}: {message}"
         self.log(text, "warn" if backend else "error")
@@ -4194,8 +5691,27 @@ class ERTProcessingModule(BaseModule):
                 seen.add(f); unique.append(f)
         return unique
 
+    class _ExportWorker(TaskWorker):
+        """A TaskWorker that reports ``progressed(current, total, label)``.
+
+        The page's status bar shows that line while the export runs.
+        """
+
+        progressed = Signal(int, int, str)
+
+        def __init__(self, fn: Callable[..., Any], **kwargs: Any) -> None:
+            super().__init__(fn, **kwargs)
+            self._kwargs["progress"] = self.progressed.emit
+
     def _export_tl_results(self, folder: Optional[str] = None) -> Optional[str]:
-        """Copy the time-lapse result files (VTK, npy, mesh, CSV, figure) to a folder."""
+        """Copy the time-lapse result files (VTK, npy, mesh, CSV, figure) to a folder.
+
+        Chosen here, on the page, the export runs on a worker thread with its
+        progress in the status bar: for a long series it is hundreds of VTK
+        files and a table of millions of numbers, which held the window still
+        for half a minute. Given a ``folder`` - the assistant's export - it runs
+        to the end before returning, as that caller expects.
+        """
         if not self._tl_result:
             self.log("Run the time-lapse inversion first.", "warn")
             return None
@@ -4203,6 +5719,7 @@ class ERTProcessingModule(BaseModule):
         if not files:
             self.log("No time-lapse result files found to export.", "warn")
             return None
+        interactive = not folder
         if not folder:
             selected = select_directory(
                 self, "Export time-lapse results to folder",
@@ -4211,10 +5728,67 @@ class ERTProcessingModule(BaseModule):
             folder = str(selected) if selected else ""
             if not folder:
                 return None
-        src_root = Path(self._tl_result.get("output_dir") or "")
         dest = io_utils.ensure_dir(Path(folder))
+        # What is on screen now, so a step or a correction changed while the
+        # export runs does not reach half of it.
+        job = dict(
+            files=files, src_root=Path(self._tl_result.get("output_dir") or ""), dest=dest,
+            mesh=self._tl_mesh,
+            models=None if self._tl_models is None else np.array(self._tl_models, dtype=float),
+            coverage=self._tl_coverage, step_labels=list(self._tl_step_titles or []) or None,
+            correction=dict(self._tl_correction) if self._tl_correction else None,
+        )
+        if not interactive:
+            self._on_tl_exported(self._export_timelapse(**job))
+            return str(dest)
+        worker = self._ExportWorker(self._export_timelapse, **job)
+        worker.succeeded.connect(self._on_tl_exported)
+        worker.failed.connect(
+            lambda message: self.log(f"Time-lapse export failed: {message}", "error"))
+        worker.finished.connect(lambda: self._tl_export_btn.setEnabled(bool(self._tl_result)))
+        self._tl_export_btn.setEnabled(False)
+        self.log(f"Exporting the time-lapse results to {dest}…", "info")
+        self.register_worker(worker, activity="Exporting the time-lapse results")
+        worker.start()
+        return str(dest)
+
+    def _on_tl_exported(self, summary: Dict[str, Any]) -> None:
+        """Report a finished time-lapse export."""
+        for warning in summary.get("warnings") or []:
+            self.log(warning, "warn")
+        self.log(f"Exported {summary.get('files', 0)} time-lapse result file(s) to "
+                 f"{summary.get('dest', '')}", "success")
+        correction = summary.get("correction")
+        if correction:
+            reference = float(correction.get("reference_temperature_C", 25.0))
+            self.log(
+                f"The series on screen, corrected to {reference:g} °C, is in "
+                f"final_models_temperature_corrected.npy, "
+                f"timelapse_resistivity_temperature_corrected.vtk and the cell CSV; "
+                f"temperature_correction.json records what was applied. "
+                f"final_models.npy, the per-step VTKs and the figure are the "
+                f"models as inverted.", "info")
+
+    @staticmethod
+    def _export_timelapse(*, files: List[str], src_root: Path, dest: Path, mesh: Any,
+                          models: Any, coverage: Any, step_labels: Optional[List[str]],
+                          correction: Optional[Dict[str, Any]],
+                          progress: Optional[Callable[[int, int, str], None]] = None,
+                          ) -> Dict[str, Any]:
+        """Write a time-lapse export into ``dest``; safe to run off the GUI thread.
+
+        Copies the run's files, keeping the ``vtk_steps`` folder, then writes
+        the per-cell table and, with a temperature correction on screen, the
+        corrected series. Touches no widget: what went wrong comes back in the
+        summary's ``warnings`` for the page to log.
+        """
+        report = progress or (lambda current, total, label: None)
+        warnings: List[str] = []
+        total = len(files)
+        every = max(1, -(-total // 20))          # about twenty updates, however many files
         copied = 0
-        for f in files:
+        report(0, total, f"Exporting: copying files 0/{total}")
+        for index, f in enumerate(files, start=1):
             try:
                 src = Path(f)
                 # Preserve the vtk_steps/ subfolder so per-step VTKs stay grouped.
@@ -4224,87 +5798,58 @@ class ERTProcessingModule(BaseModule):
                 shutil.copy2(str(src), str(target))
                 copied += 1
             except Exception as exc:  # noqa: BLE001
-                self.log(f"Could not copy {Path(f).name}: {exc}", "warn")
-        written = self._write_tl_csv(dest)
-        written += self._write_tl_correction(dest)
-        self.log(f"Exported {copied + written} time-lapse result file(s) to {dest}", "success")
-        if self._tl_correction:
-            reference = float(self._tl_correction.get("reference_temperature_C", 25.0))
-            self.log(
-                f"The series on screen, corrected to {reference:g} °C, is in "
-                f"final_models_temperature_corrected.npy, "
-                f"timelapse_resistivity_temperature_corrected.vtk and the cell CSV; "
-                f"temperature_correction.json records what was applied. "
-                f"final_models.npy, the per-step VTKs and the figure are the "
-                f"models as inverted.", "info")
-        return str(dest)
-
-    def _write_tl_correction(self, dest: Path) -> int:
-        """Write the temperature-corrected series beside the inverted one.
-
-        The files copied from the run are the models as inverted. With a
-        correction on screen, an export of only those would hand over a different
-        series from the one being looked at, and nothing in it would say so.
-        Returns how many files it added.
-        """
-        correction = self._tl_correction
-        if not correction or self._tl_models is None:
-            return 0
-        models = np.asarray(self._tl_models, dtype=float)
+                warnings.append(f"Could not copy {Path(f).name}: {exc}")
+            if index % every == 0 or index == total:
+                report(index, total, f"Exporting: copying files {index}/{total}")
         written = 0
-        try:
-            np.save(dest / "final_models_temperature_corrected.npy", models)
-            written += 1
-            io_utils.write_json(dest / "temperature_correction.json", correction)
-            written += 1
-        except Exception as exc:  # noqa: BLE001 - the copies already succeeded
-            self.log(f"Could not write the temperature-corrected models: {exc}", "warn")
-            return written
-        try:
-            import pygimli as pygimli
+        # The per-cell table: the copied files are all PyGIMLi meshes and NumPy
+        # arrays, and this is the one export a collaborator can open without
+        # either, with one row per cell and one column per time step.
+        if mesh is None or models is None:
+            warnings.append("Time-lapse models are not in memory, so no CSV was written; "
+                            "the mesh and .npy files were still copied.")
+        else:
+            report(0, 1, "Exporting: writing the per-cell table (CSV)")
+            try:
+                from PyHydroGeophysX.data_processing.model_csv import export_model_csv
 
-            from PyHydroGeophysX.core.mesh_serialization import via_ascii_path
+                # The table holds the series on screen; with a correction applied
+                # its columns say the temperature they are reported at.
+                written += len(export_model_csv(
+                    dest, mesh, models, value_name=_value_name(correction), units="ohm.m",
+                    coverage=coverage, step_labels=step_labels))
+            except Exception as exc:  # noqa: BLE001 - the copies already succeeded
+                warnings.append(f"Could not write the time-lapse CSV: {exc}")
+        # The temperature-corrected series beside the inverted one. The files
+        # copied from the run are the models as inverted; with a correction on
+        # screen, an export of only those would hand over a different series
+        # from the one being looked at, and nothing in it would say so.
+        if correction and models is not None:
+            report(0, 1, "Exporting: writing the temperature-corrected series")
+            series = np.asarray(models, dtype=float)
+            try:
+                np.save(dest / "final_models_temperature_corrected.npy", series)
+                written += 1
+                io_utils.write_json(dest / "temperature_correction.json", correction)
+                written += 1
+                try:
+                    import pygimli as pygimli
 
-            mesh = pygimli.Mesh(self._tl_mesh)
-            for index in range(models.shape[1]):
-                mesh[f"resistivity_t{index}"] = models[:, index]
-            via_ascii_path(mesh.exportVTK,
-                           dest / "timelapse_resistivity_temperature_corrected.vtk",
-                           mode="write")
-            written += 1
-        except Exception as exc:  # noqa: BLE001 - the arrays are already written
-            self.log(f"Temperature-corrected VTK skipped: {exc}", "warn")
-        return written
+                    from PyHydroGeophysX.core.mesh_serialization import via_ascii_path
 
-    def _write_tl_csv(self, dest: Path) -> int:
-        """Write the per-cell time-lapse table; return how many files it added.
-
-        The copied files are all PyGIMLi meshes and NumPy arrays.  This is the
-        one export a collaborator can open without either, with one row per cell
-        and one column per time step.
-        """
-        if self._tl_mesh is None or self._tl_models is None:
-            self.log(
-                "Time-lapse models are not in memory, so no CSV was written; "
-                "the mesh and .npy files were still copied.",
-                "warn",
-            )
-            return 0
-        try:
-            from PyHydroGeophysX.data_processing.model_csv import export_model_csv
-
-            # The table holds the series on screen; with a correction applied its
-            # columns say the temperature they are reported at.
-            paths = export_model_csv(
-                dest, self._tl_mesh, self._tl_models,
-                value_name=_value_name(self._tl_correction), units="ohm.m",
-                coverage=self._tl_coverage,
-                step_labels=self._tl_step_titles or None,
-            )
-            return len(paths)
-        except Exception as exc:  # noqa: BLE001 - the copies already succeeded
-            self.log(f"Could not write the time-lapse CSV: {exc}", "warn")
-            return 0
+                    combined = pygimli.Mesh(mesh)
+                    for index in range(series.shape[1]):
+                        combined[f"resistivity_t{index}"] = series[:, index]
+                    via_ascii_path(combined.exportVTK,
+                                   dest / "timelapse_resistivity_temperature_corrected.vtk",
+                                   mode="write")
+                    written += 1
+                except Exception as exc:  # noqa: BLE001 - the arrays are already written
+                    warnings.append(f"Temperature-corrected VTK skipped: {exc}")
+            except Exception as exc:  # noqa: BLE001 - the copies already succeeded
+                warnings.append(f"Could not write the temperature-corrected models: {exc}")
+        return {"dest": str(dest), "files": copied + written, "warnings": warnings,
+                "correction": correction}
 
     def _open_tl_output(self) -> None:
         out = self._tl_out or str(self.state.output_dir or "")
@@ -4504,10 +6049,17 @@ class ERTProcessingModule(BaseModule):
             note_txt = (f"<br><span style='color:{theme.color('red')}'>Not usable for "
                         f"inversion: {self._data_note} Check the Instrument / "
                         f"format setting.</span>")
+        # When the survey was measured, and from what: the same reading the file
+        # list and the model heading use, so the three never disagree.
+        stamp, where = self._survey_time(self._data_path)
+        when_txt = (f"<br>Acquired: {survey_timing.format_time(stamp, seconds=True)} "
+                    f"(from the {where})" if stamp is not None else "")
+        partner_txt = (f"<br>+ reciprocal file: {self._data_partner.name}"
+                       if self._data_partner is not None else "")
         self._info.setText(
             f"Electrodes: {len(self._x)} &nbsp; Measurements: {self._n_meas}"
-            f"<br>Data: {self._data_path.name if self._data_path else '—'}{rhoa_txt}"
-            f"{note_txt}"
+            f"<br>Data: {self._data_path.name if self._data_path else '—'}{partner_txt}"
+            f"{when_txt}{rhoa_txt}{note_txt}"
         )
         self._publish()
         # Every change of data or electrodes passes through here, and the mesh
@@ -4765,9 +6317,14 @@ class ERTProcessingModule(BaseModule):
                           "max_geometric_factor": "float",
                           "max_contact_resistance": "float (ohm)",
                           "max_stacking_spread": "float (fraction)",
-                          "max_reciprocal_error": "float (fraction)"},
+                          "max_reciprocal_error": "float (fraction)",
+                          "average_reciprocal_pairs": "bool (optional)"},
                  "desc": ("Filter measurements by apparent resistivity range and max relative "
-                          "error (20 % unless set; 0 is off). The optional criteria turn on "
+                          "error (20 % unless set; 0 is off). average_reciprocal_pairs=true "
+                          "first averages each reading with its reciprocal into one reading "
+                          "(mean resistance, the pair's difference as its error, never below "
+                          "reciprocal_error_floor) - check 0, off by default, for data "
+                          "measured both ways. The optional criteria turn on "
                           "'More checks'; each is skipped where the loaded file does not "
                           "carry the field it tests. With More checks on, a criterion the "
                           "call does not name keeps the panel's value, which starts at: "
@@ -4802,10 +6359,23 @@ class ERTProcessingModule(BaseModule):
                           "no cell straddles one; decouple_zones (bool) drops the "
                           "smoothness across the outlines so the model may jump there - "
                           "every engine honours it. "
-                          "Single-inversion error model: error_source (file/estimate/max, "
+                          "Error model: error_source (file/estimate/max, "
                           "or stack - each reading's stacking spread with the estimate in "
-                          "quadrature, for data that record it), "
-                          "absolute_error (Ohm). Convergence: plateau_tolerance (fraction), "
+                          "quadrature, for data that record it - or reciprocal - each "
+                          "reading's error from the power law dR = 10^b * R^m fitted to the "
+                          "reciprocal pairs: the survey's own for a single inversion, one fit "
+                          "over every survey for time-lapse; for data measured both ways), "
+                          "reciprocal_error_floor (fraction, default 0.01: the smallest error "
+                          "the model or an averaged pair gives), "
+                          "error_model_fit ('all', the default: the model is fitted to every "
+                          "reciprocal pair as read; 'kept': only to the pairs the applied QC "
+                          "filter kept - its reciprocal-error limit removes outlier pairs; "
+                          "the Reciprocal errors tab's Fit to, which every fit of the model "
+                          "follows), "
+                          "absolute_error (Ohm). pair_reciprocal_files (bool, default true): "
+                          "a forward file and its reciprocal file in the list ('recip' in the "
+                          "name, measured just after) are one survey; false makes every file "
+                          "a survey of its own. Convergence: plateau_tolerance (fraction), "
                           "max_total_iterations, engine (pyhydro/pygimli/adtlert/e4d/r2/"
                           "r3t; e4d is PNNL's external 3D code, set up in the E4D rows the "
                           "page shows for it, and runs on Linux, or on Windows only "
@@ -4845,11 +6415,17 @@ class ERTProcessingModule(BaseModule):
                 {"name": "add_timelapse_files", "args": {"paths": ["str", "str"], "append": "bool (optional)"},
                  "desc": ("Add ERT files for time-lapse inversion (one file per time step, like seismic "
                           "shots). append=true adds to the current list; otherwise replaces it. Files load "
-                          "with the selected instrument; times are parsed from filenames when dated.")},
+                          "with the selected instrument; times are parsed from filenames when dated. "
+                          "A survey written as two files - a forward file and its reciprocal "
+                          "('recip' in the name) - becomes one time step at the forward "
+                          "file's time, both files merged, while pair_reciprocal_files is on; "
+                          "a reciprocal file without a forward file is left out and named.")},
                 {"name": "list_timelapse_files", "args": {},
-                 "desc": "List the ordered time-lapse files with their parsed time labels."},
+                 "desc": ("List the ordered time-lapse surveys with their parsed time labels; a "
+                          "paired survey names its reciprocal file.")},
                 {"name": "remove_timelapse_files", "args": {"indices": ["int"]},
-                 "desc": "Remove time-lapse files by 0-based index (or omit to clear all)."},
+                 "desc": ("Remove time-lapse surveys by 0-based index (a paired survey's "
+                          "reciprocal file goes with it), or omit to clear all.")},
                 {"name": "preview_timelapse_file", "args": {"index": "int"},
                  "desc": "Load one time-lapse file (0-based index) into the electrode + pseudosection view."},
                 {"name": "run_timelapse", "args": {},
@@ -4858,7 +6434,9 @@ class ERTProcessingModule(BaseModule):
                  "desc": ("Export the last time-lapse result to a folder: combined VTK, per-step VTKs, "
                           "final_models.npy, mesh (.bms), times CSV, and the figure.")},
                 {"name": "get_status", "args": {},
-                 "desc": "Report loaded data, electrode/measurement counts, and last result."},
+                 "desc": ("Report inversion_status, inversion_running, has_model, and result_summary "
+                          "(fit metrics, model range, source and output paths), plus data/settings. "
+                          "Completed results are available before saving or adding them to Map.")},
             ],
         }
 
@@ -4897,14 +6475,21 @@ class ERTProcessingModule(BaseModule):
 
     def _agent_status(self) -> Dict[str, Any]:
         last = self.state.module_results.get(self.module_key, {})
+        result = self._agent_result_summary(last)
         return {
             "status": "ok",
+            **result,
             "data_loaded": self._ert_data is not None,
             "electrodes": len(self._x),
             "measurements": self._n_meas,
             "instrument": self._instrument.currentText(),
             "data_file": str(self._data_path or ""),
+            "reciprocal_file": str(self._data_partner or ""),
             "timelapse_files": len(self._tl_files),
+            **self._agent_pairing(),
+            "average_reciprocal_pairs": self._qc_average.isChecked(),
+            "reciprocal_error_floor": self._reciprocal_floor(),
+            "error_model_fit": self._error_fit_to(),
             "timelapse_labels": list(self._tl_labels),
             "timelapse_low_memory": self._tl_lowmem.isChecked(),
             "lambda": self._lam.value(),
@@ -4931,10 +6516,58 @@ class ERTProcessingModule(BaseModule):
             "target_chi2": self._target_chi2.value(),
             "chi2_tolerance": self._chi2_tol.value(),
             "max_lambda_trials": self._lam_trials.value(),
-            "has_model": getattr(self, "_inv_mgr", None) is not None,
             "models_available": [c["label"] for c in self._inv_choices],
             "last_result_keys": sorted(last.keys()),
         }
+
+    def _agent_result_summary(self, last: Dict[str, Any]) -> Dict[str, Any]:
+        """Expose the displayed model and its fit independently of Map exports."""
+        running = False
+        for worker in (self._inv_worker, self._tl_worker):
+            try:
+                running |= worker is not None and worker.isRunning()
+            except RuntimeError:  # Qt may already have deleted the finished worker.
+                pass
+        single = self._inv_mgr is not None
+        series = self._tl_models is not None and self._tl_mesh is not None
+        kind = getattr(self, "_map_result_kind", "single")
+        use_series = series and (kind == "timelapse" or not single)
+        summary = {}
+        if single or series:
+            if use_series:
+                record = dict(self._tl_result or {})
+                values = np.asarray(self._tl_models, dtype=float)
+                summary = {"kind": "timelapse", "time_steps": int(values.shape[1]),
+                           "output_dir": str(self._tl_out or "")}
+            else:
+                index = self._lam_pick.currentIndex()
+                choice = self._inv_choices[index] if 0 <= index < len(self._inv_choices) else {}
+                record = dict(choice.get("metrics") or {}) if choice else dict(last)
+                for key in ("chi2", "lambda", "vtk"):
+                    if key in choice:
+                        record[key] = choice[key]
+                values = np.asarray(self._inv_mgr.model, dtype=float)
+                summary = {"kind": "single", "label": choice.get("label", "Model"),
+                           "data_file": str(getattr(self, "_inv_source", None) or "")}
+            for key in ("chi2", "rrms", "iterations", "lambda", "engine", "convergence_stop"):
+                value = record.get(key)
+                # Non-finite fit statistics mean unavailable, not a successful fit.
+                if isinstance(value, (float, np.floating)) and not np.isfinite(value):
+                    value = None
+                summary[key] = value
+            summary["resistivity_vtk"] = str(record.get("vtk") or record.get("resistivity_vtk") or "")
+            finite = values[np.isfinite(values)]
+            summary["resistivity_range_ohm_m"] = ([float(finite.min()), float(finite.max())]
+                                                  if finite.size else None)
+            summary["model_cells"] = int(values.shape[0])
+        state = self._agent_run_state
+        if running:
+            state = "running"
+        elif state != "failed" and (single or series or last):
+            state = "completed"
+        return {"inversion_status": state, "inversion_running": bool(running),
+                "has_model": bool(single or series), "result_summary": summary,
+                "inversion_error": self._agent_run_error}
 
     def _agent_load(self, path: Any, instrument: Any) -> Dict[str, Any]:
         if not path:
@@ -4967,11 +6600,17 @@ class ERTProcessingModule(BaseModule):
             return {"status": "failed",
                     "error": f"A newer load replaced {p.name} before it finished."}
         # Reflect the loaded file in the file list (it doubles as the loader).
-        if str(p) not in self._tl_files:
-            self._set_tl_files(self._tl_files + [str(p)])
-        self._tl_list.setCurrentRow(self._tl_files.index(str(p)))
-        return {"status": "ok", "electrodes": len(self._x), "measurements": self._n_meas,
-                "instrument": self._instrument.currentText()}
+        if str(p) not in self._tl_all:
+            self._set_tl_files(self._tl_all + [str(p)])
+        if str(p) in self._tl_files:
+            self._tl_list.setCurrentRow(self._tl_files.index(str(p)))
+        out = {"status": "ok", "electrodes": len(self._x), "measurements": self._n_meas,
+               "instrument": self._instrument.currentText()}
+        if self._pair_info:
+            out["reciprocal_file"] = str(self._data_partner or "")
+            out["pairing"] = {key: self._pair_info.get(key) for key in (
+                "forward", "reciprocal", "total", "pairs", "unpaired")}
+        return out
 
     def _agent_load_electrodes(self, path: Any) -> Dict[str, Any]:
         if not path:
@@ -5077,6 +6716,12 @@ class ERTProcessingModule(BaseModule):
                 self._max_err.setValue(float(args["max_error"]))
             # The folded criteria are opt-in from the agent too: naming any one of
             # them unfolds the section, so the panel keeps matching what ran.
+            if "average_reciprocal_pairs" in args:
+                if args["average_reciprocal_pairs"] and not self._qc_average.isEnabled():
+                    return {"status": "failed",
+                            "error": "The loaded data have no reading measured both ways, "
+                                     "so there are no reciprocal pairs to average."}
+                self._qc_average.setChecked(bool(args["average_reciprocal_pairs"]))
             extra = {"drop_nonpositive_rhoa": lambda v: self._qc_drop_neg.setChecked(bool(v)),
                      "min_voltage": lambda v: self._qc_min_v.setValue(float(v)),
                      "min_current": lambda v: self._qc_min_i.setValue(float(v)),
@@ -5139,12 +6784,28 @@ class ERTProcessingModule(BaseModule):
             raise ValueError(f"must be one of {keys}")
 
         def set_error_source(value):
-            """``stack`` needs data that record a spread; refused, not left greyed."""
+            """``stack`` needs data that record a spread, ``reciprocal`` data
+            measured both ways; refused, not left greyed."""
             if str(value).strip().lower() == "stack" and not (
                     self._ert_data_full is not None and self._ert_data_full.haveData("stack")):
                 raise ValueError("needs each reading's stacking spread, which the loaded "
                                  "data do not record (Subsurface Insights exports do)")
+            if str(value).strip().lower() == "reciprocal" and not (
+                    self._reciprocal_pair_count(self._ert_data_full) or self._tl_partner):
+                raise ValueError("needs readings measured both ways; the loaded data and "
+                                 "the file list have no reciprocal pairs")
             set_combo_data(self._err_source, value)
+
+        def set_error_fit(value):
+            """What the reciprocal error model is fitted to: 'all' or 'kept'."""
+            key = str(value).strip().lower()
+            if key not in ("all", "kept"):
+                raise ValueError("must be one of ['all', 'kept']")
+            self._recip_view.set_fit_to(key)
+
+        def set_floor(value):
+            """The "Minimum" error, given as a fraction."""
+            set_in_range(self._recip_floor, float(value) * 100.0)
 
         def set_in_range(spin, value, cast=float):
             """A value the box would clip is refused, so the reply says so
@@ -5180,6 +6841,10 @@ class ERTProcessingModule(BaseModule):
             "inversion_mode": lambda v: set_inv_mode(v),
             "geometric_factor_policy": lambda v: set_geom_policy(v),
             "error_source": lambda v: set_error_source(v),
+            "reciprocal_error_floor": lambda v: set_floor(v),
+            "error_model_fit": lambda v: set_error_fit(v),
+            # Ticked by default; the list regroups as it changes.
+            "pair_reciprocal_files": lambda v: self._tl_pair_box.setChecked(bool(v)),
             "absolute_error": lambda v: self._abserr.setValue(float(v)),
             "plateau_tolerance": lambda v: self._plateau.setValue(float(v) * 100.0),
             "max_total_iterations": lambda v: self._iter_ceiling.setValue(int(v)),
@@ -5248,7 +6913,7 @@ class ERTProcessingModule(BaseModule):
         missing = [str(p) for p in paths if not Path(str(p)).exists()]
         if missing:
             return {"status": "failed", "error": f"Files not found: {missing}"}
-        merged = list(self._tl_files) if append else []
+        merged = list(self._tl_all) if append else []
         for p in paths:
             if str(p) not in merged:
                 merged.append(str(p))
@@ -5256,7 +6921,17 @@ class ERTProcessingModule(BaseModule):
         self._tl_mode.setChecked(True)  # reveal the time-lapse options in the UI
         return {"status": "ok", "files": len(self._tl_files),
                 "time_labels": list(self._tl_labels),
-                "timing": self._tl_timing.summary() if self._tl_timing else ""}
+                "timing": self._tl_timing.summary() if self._tl_timing else "",
+                **self._agent_pairing()}
+
+    def _agent_pairing(self) -> Dict[str, Any]:
+        """How the list paired forward and reciprocal files, for the agent."""
+        found = getattr(self, "_tl_pairs_found", None) or {}
+        if not (found.get("pairs") or found.get("orphans")):
+            return {}
+        return {"pair_reciprocal_files": self._tl_pair_box.isChecked(),
+                "paired_surveys": len(self._tl_partner),
+                "reciprocal_files_left_out": [Path(p).name for p in self._tl_left_out]}
 
     def _agent_list_timelapse(self) -> Dict[str, Any]:
         timing = self._tl_timing
@@ -5269,10 +6944,17 @@ class ERTProcessingModule(BaseModule):
             "timing": timing.summary() if timing is not None else "",
             "time_source": timing.source if timing is not None else "index",
             "intervals": [survey_timing.format_duration(g) for g in gaps],
+            # One entry per survey; a paired survey names its reciprocal file.
             "files": [{"index": i, "label": self._tl_labels[i] if i < len(self._tl_labels) else str(i + 1),
                        "time": self._tl_times[i] if i < len(self._tl_times) else float(i + 1),
-                       "name": Path(p).name, "path": p}
+                       # Where this file's time came from, as its row's tooltip says.
+                       "time_note": timing.describe(i) if timing is not None else "",
+                       "name": Path(p).name, "path": p,
+                       **({"reciprocal": Path(self._tl_partner[p]).name,
+                           "reciprocal_path": self._tl_partner[p]}
+                          if p in self._tl_partner else {})}
                       for i, p in enumerate(self._tl_files)],
+            **self._agent_pairing(),
         }
 
     def _agent_remove_timelapse(self, indices: Any) -> Dict[str, Any]:
@@ -5283,7 +6965,9 @@ class ERTProcessingModule(BaseModule):
             drop = {int(i) for i in indices}
         except (TypeError, ValueError):
             return {"status": "failed", "error": "Provide 'indices' as a list of integers."}
-        self._set_tl_files([p for i, p in enumerate(self._tl_files) if i not in drop])
+        # An index is a survey: a paired survey's reciprocal file goes with it.
+        self._set_tl_files(self._tl_flat(
+            [p for i, p in enumerate(self._tl_files) if i not in drop]))
         return {"status": "ok", "files": len(self._tl_files)}
 
     def _agent_preview_timelapse(self, index: Any) -> Dict[str, Any]:
@@ -5294,8 +6978,10 @@ class ERTProcessingModule(BaseModule):
         if not (0 <= i < len(self._tl_files)):
             return {"status": "failed", "error": f"index out of range (0..{len(self._tl_files) - 1})."}
         self._start_load(self._tl_files[i])
+        partner = self._tl_partner.get(self._tl_files[i])
         return {"status": "started", "message": f"Loading time step {i} for preview.",
-                "name": Path(self._tl_files[i]).name}
+                "name": Path(self._tl_files[i]).name,
+                **({"reciprocal": Path(partner).name} if partner else {})}
 
     def _agent_run_timelapse(self) -> Dict[str, Any]:
         if len(self._tl_files) < 2:

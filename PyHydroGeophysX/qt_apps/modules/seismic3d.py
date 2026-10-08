@@ -55,6 +55,7 @@ from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import VTKVolumeView
+from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
@@ -101,6 +102,10 @@ class Seismic3DModule(BaseModule):
         self._worker: Optional[ProcessWorkflowWorker] = None
         self._run_busy: Optional[BusyStateController] = None
         self._workflow_recipe_path = ""
+        #: Why the last run did not finish - its error, or that it was
+        #: stopped - for the assistant, whose status otherwise still showed
+        #: the result before it; "" while a run is under way or succeeded.
+        self._run_problem = ""
         self._current = 0
         self._interface_previewed = False
 
@@ -515,7 +520,8 @@ class Seismic3DModule(BaseModule):
         cfg_btn.setIcon(theme.icon("fa5s.file-export")); cfg_btn.clicked.connect(self._export_config)
         layout.addWidget(cfg_btn)
         self._progress = QProgressBar(); self._progress.setVisible(False)
-        layout.addWidget(self._progress)
+        self._stop = self.stop_button("The 3D model build")
+        layout.addWidget(progress_with_stop(self._progress, self._stop))
         self._run_status = QLabel(""); self._run_status.setWordWrap(True)
         layout.addWidget(self._run_status)
         layout.addStretch(1)
@@ -752,14 +758,17 @@ class Seismic3DModule(BaseModule):
         self.log("Starting seismic → 3D model build…", "info")
         # In a process of its own, so the window keeps painting through the
         # kriging; the model comes back as the files it writes.
-        self._worker = self.register_worker(
-            ProcessWorkflowWorker(recipe_path, run.run_dir, run.outputs_dir, run.result_path)
-        )
-        self._worker.logged.connect(lambda message: self._on_worker_log(message, "info"))
-        self._worker.succeeded.connect(self._on_workflow_ok)
-        self._worker.failed.connect(lambda message: self._on_build_failed(message, False))
-        self._worker.finished.connect(self._reset_run_button)
-        self._worker.start()
+        worker = ProcessWorkflowWorker(recipe_path, run.run_dir, run.outputs_dir,
+                                       run.result_path)
+        self._worker = self.register_worker(worker, activity="Building the 3D model")
+        self._run_problem = ""
+        worker.logged.connect(lambda message: self._on_worker_log(message, "info"))
+        worker.succeeded.connect(self._on_workflow_ok)
+        worker.failed.connect(
+            lambda message, w=worker: self._on_build_failed(message, w.missing_backend))
+        worker.finished.connect(self._reset_run_button)
+        worker.start()
+        self._stop.attach(worker, "seismic3d.build")
 
     def _on_workflow_ok(self, result: WorkflowRunResult) -> None:
         if hasattr(self.state, "update_workflow_result"):
@@ -777,17 +786,28 @@ class Seismic3DModule(BaseModule):
     def _on_build_ok(self, result: dict) -> None:
         self._progress.setRange(0, 1); self._progress.setValue(1)
         self.log(f"3D model built: {result.get('n_grid_points')} grid points.", "success")
+        self._run_status.setText("3D model built.")
         self.report_result(result)
         self._populate_results(result)
         self._go_to(4)
 
     def _on_build_failed(self, message: str, backend_unavailable: bool) -> None:
-        self.fail_persisted_run(message)
+        self._run_problem = message
+        self.fail_persisted_run(message, "seismic3d.build")
         self._progress.setRange(0, 1); self._progress.setValue(0)
-        level = "warn" if backend_unavailable else "error"
-        self.log(f"Build problem: {message}", level)
+        if not backend_unavailable:
+            # The build itself failed - out of memory, a grid too fine, a bad
+            # line file - and its own reason is what helps, on the Build step
+            # where the settings can be changed and the build tried again.
+            # Exporting the configuration in its place blamed a backend that
+            # was there.
+            self.log(f"3D model build failed: {message}", "error")
+            self._run_status.setText(f"The 3D model build failed: {message}")
+            self._go_to(3)
+            return
+        self.log(f"3D model build could not run: {message}", "warn")
         config_path = self._export_config()
-        note = ("The required 3D backend (pygimli) was not found or failed. The "
+        note = ("The 3D engine (pygimli) is not installed or could not be loaded. The "
                 f"configuration has been exported to {config_path}.")
         self._run_status.setText(note); self.log(note, "warn")
         self._populate_results({"status": "config_exported", "n_lines": len(self._lines),
@@ -799,7 +819,11 @@ class Seismic3DModule(BaseModule):
             self._run_busy.finish()
             self._run_busy = None
         self._run_btn.setText("Build 3D model")
-        self._progress.setVisible(False); self._update_strip()
+        self._progress.setVisible(False)
+        if self._worker is not None and self._worker.is_cancelled():
+            self._run_problem = "Stopped by user"
+            self._run_status.setText("Stopped before it finished. Build it again to start over.")
+        self._update_strip()
 
     # -- AQUAH agent interface ----------------------------------------------
     def agent_describe(self) -> Dict[str, Any]:
@@ -887,6 +911,7 @@ class Seismic3DModule(BaseModule):
             "lines": len(self._lines),
             "line_names": [ln.get("name") for ln in self._lines],
             "last_result_status": last.get("status"),
+            "last_run_problem": self._run_problem,
         }
 
     def _agent_use_example(self) -> Dict[str, Any]:

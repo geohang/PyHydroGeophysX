@@ -744,6 +744,47 @@ def test_the_unified_reader_keeps_an_exponent_without_a_decimal_point(tmp_path) 
     assert df["dev"].iloc[0] == pytest.approx(0.03)
 
 
+BERT_SURVEY = DAS_DIR.parent / "Bert" / "fielddataline2.dat"
+
+
+@pytest.mark.parametrize("name, first_line, expected, origin", [
+    ("wennerv2_64_sorted_2026_01_12_05_50_38.dat", "", "2026-01-12 05:50:38", "file name"),
+    ("site_2026-01-12_05-50-38.dat", "", "2026-01-12 05:50:38", "file name"),
+    ("site_20260112_055038.dat", "", "2026-01-12 05:50:38", "file name"),
+    ("site_2026-01-12T05-50-38.dat", "", "2026-01-12 05:50:38", "file name"),
+    ("site.dat", "# date: 2026-01-12 05:50:38", "2026-01-12 05:50:38", "file header"),
+    ("site.dat", "#time=2026-01-12T05:50:38", "2026-01-12 05:50:38", "file header"),
+    # Undated: its electrode at x = 36.76100516 used to read as 7610-05-16.
+    ("site.dat", "", None, ""),
+], ids=["underscores", "recommended", "compact", "iso", "date-line", "time-line", "undated"])
+def test_a_survey_is_dated_by_its_name_or_its_first_line(
+        tmp_path, name, first_line, expected, origin) -> None:
+    """A misread time silently reorders or rescales a time-lapse series.
+
+    The documented forms - a year-first name, or a ``# date:`` line on the first
+    line of a BERT file - must date the survey, the line must stay invisible to
+    the readers, and a file with neither must stay undated rather than be dated
+    by its own numbers.
+    """
+    from PyHydroGeophysX.data_processing.ert_data_agent import _unified_ert_parser
+    from PyHydroGeophysX.data_processing.survey_timing import survey_timing
+
+    path = tmp_path / name
+    path.write_text((first_line + "\n" if first_line else "") + BERT_SURVEY.read_text())
+
+    timing = survey_timing([str(path)])
+    stamp = timing.timestamps[0]
+    assert (stamp.isoformat(sep=" ") if stamp else None) == expected
+    assert timing.sources[0] == origin
+    if first_line:
+        elec, df = _unified_ert_parser(path)
+        ref_elec, ref_df = _unified_ert_parser(BERT_SURVEY)
+        assert (len(elec), len(df)) == (len(ref_elec), len(ref_df))
+        pg_ert = pytest.importorskip("pygimli.physics.ert")
+        data, ref = pg_ert.load(str(path), verbose=False), pg_ert.load(str(BERT_SURVEY), verbose=False)
+        assert (data.size(), data.sensorCount()) == (ref.size(), ref.sensorCount())
+
+
 # --- ResIPy is handed the file types it dispatches on ------------------------
 
 @pytest.mark.parametrize("instrument, ftype", [
@@ -960,3 +1001,110 @@ def test_qc_writes_its_table_as_csv_without_a_parquet_engine(tmp_path, monkeypat
     assert "observations_parquet" not in artifacts
     assert len(pd.read_csv(artifacts["observations_csv"])) == len(ert.observations)
     assert Path(artifacts["standard_json"]).exists()
+
+
+# -- a survey written as a forward and a reciprocal file (Craig Ulrich's) ---------
+_WENNER = [(1, 4, 2, 3), (2, 5, 3, 4), (3, 6, 4, 5), (1, 7, 3, 5)]
+
+
+def _survey(rows, resistance, positions):
+    """A container on electrodes at ``positions``; ``rows`` number them 1-based
+    in the order of a line from x = 0, as an instrument does."""
+    pg = pytest.importorskip("pygimli")
+    from pygimli.physics import ert as pg_ert
+
+    data = pg.DataContainerERT()
+    for x in positions:
+        data.createSensor(pg.Pos(float(x), 0.0))
+    index = {x: i for i, x in enumerate(positions)}
+    data.resize(len(rows))
+    for column, token in enumerate("abmn"):
+        data.set(token, [index[float(row[column] - 1)] for row in rows])
+    data.set("r", np.asarray(resistance, dtype=float))
+    data.set("k", pg_ert.createGeometricFactors(data, numerical=False))
+    data.set("rhoa", np.asarray(data["r"]) * np.asarray(data["k"]))
+    data.set("err", np.full(len(rows), 0.05))
+    return data
+
+
+@pytest.mark.parametrize("reversed_electrodes", [False, True], ids=["same", "reversed"])
+def test_a_reciprocal_file_joins_its_forward_file_as_one_survey(reversed_electrodes) -> None:
+    """The names pair forward and reciprocal files measured minutes apart; a
+    reciprocal without its forward file is left out rather than joined to an
+    earlier survey; merged, the reciprocal readings land on the forward file's
+    electrodes - wherever its own table lists them - and pair with theirs."""
+    from PyHydroGeophysX.data_processing.ert_io import merge_reciprocal, reciprocal_scores
+    from PyHydroGeophysX.data_processing.survey_timing import reciprocal_pairs, survey_timing
+    from PyHydroGeophysX.qt_apps.ert_records import reciprocal_pairing
+
+    names = ["w_sorted_2026_01_12_05_50_38.dat", "w_recip_sorted_2026_01_12_06_12_23.dat",
+             "w_sorted_2026_01_12_14_59_22.dat",                     # no reciprocal
+             "w_recip_sorted_2026_01_13_20_44_58.dat",               # no forward file
+             "w_sorted_2026_01_14_10_36_13.dat", "w_recip_sorted_2026_01_14_10_54_01.dat",
+             "w_sorted_2026_01_15_02_55_59.dat", "w_recip_sorted_2026_01_15_03_13_46.dat"]
+    found = reciprocal_pairs(names, survey_timing(names).found)
+    assert found["pairs"] == [(0, 1), (4, 5), (6, 7)]
+    assert found["orphans"] == [3]
+
+    positions = [float(x) for x in range(7)]
+    forward = _survey(_WENNER, [10.0, 20.0, 30.0, 40.0], positions)
+    # The reciprocal file: current and potential exchanged, one reading missing.
+    recip_rows = [(m, n, a, b) for a, b, m, n in _WENNER[:3]]
+    reciprocal = _survey(recip_rows, [10.5, 19.0, 30.0],
+                         positions[::-1] if reversed_electrodes else positions)
+    merged, info = merge_reciprocal(forward, reciprocal)
+    assert (info["forward"], info["reciprocal"], info["total"]) == (4, 3, 7)
+    assert merged.sensorCount() == 7
+    pairing = reciprocal_pairing(reciprocal_scores(merged))
+    assert (pairing["pairs"], pairing["unpaired_readings"]) == (3, 1)
+    errors = reciprocal_scores(merged)["reciprocalErrRel"].to_numpy()
+    np.testing.assert_allclose(errors[[0, 1, 2]], [0.5 / 10.25, 1.0 / 19.5, 0.0])
+    assert np.isnan(errors[3])
+    np.testing.assert_allclose(np.asarray(merged["k"])[4:], np.asarray(forward["k"])[:3])
+
+    # A field only one file carries (a reader's k_file): pyGIMLi's add() stops
+    # on it unless both sides hold it, and it is then dropped and named.
+    forward.set("k_file", np.asarray(forward["k"], dtype=float))
+    merged, info = merge_reciprocal(forward, reciprocal)
+    assert info["dropped_fields"] == ["k_file"] and not merged.haveData("k_file")
+    assert merged.size() == 7 and merged.sensorCount() == 7
+
+
+@pytest.mark.parametrize("floor", [0.0, 0.03])
+def test_averaged_pairs_and_the_error_model_give_the_stated_errors(floor) -> None:
+    """Check 0 makes each pair one reading - the mean resistance, the pair's
+    difference as its error, never below the floor - and the reciprocal error
+    model recovers m and b from pairs that follow it and gives every reading
+    10**b * R**(m - 1), never below the floor."""
+    from PyHydroGeophysX.data_processing.ert_io import (
+        average_reciprocal_pairs,
+        merge_reciprocal,
+        reciprocal_model_errors,
+    )
+    from PyHydroGeophysX.qt_apps.ert_records import fit_series_error_model
+
+    positions = [float(x) for x in range(7)]
+    forward = _survey(_WENNER, [10.0, 20.0, 30.0, 40.0], positions)
+    reciprocal = _survey([(m, n, a, b) for a, b, m, n in _WENNER[:3]],
+                         [10.5, 19.0, 30.0], positions)
+    merged, _info = merge_reciprocal(forward, reciprocal)
+    averaged, reciprocal_error, counts = average_reciprocal_pairs(merged, floor=floor)
+    assert (counts["pairs"], counts["removed"], counts["kept"]) == (3, 3, 4)
+    np.testing.assert_allclose(np.asarray(averaged["r"]), [10.25, 19.5, 30.0, 40.0])
+    np.testing.assert_allclose(np.asarray(averaged["rhoa"]) / np.asarray(averaged["k"]),
+                               [10.25, 19.5, 30.0, 40.0])
+    np.testing.assert_allclose(
+        np.asarray(averaged["err"]),
+        [max(0.5 / 10.25, floor), max(1.0 / 19.5, floor), max(0.0, floor), 0.05])
+    assert np.isnan(reciprocal_error[3])
+
+    m, b = 0.58, -2.18                       # Craig Ulrich's global model
+    R = np.logspace(-1, 2, 200)
+    fit = fit_series_error_model([{"available": True, "scored_pairs": R.size,
+                                   "R": R, "dR": 10 ** b * R ** m}])
+    # Fitted to the groups' mean R and mean dR, so a curved law moves it slightly.
+    assert fit["m"] == pytest.approx(m, abs=0.005) and fit["b"] == pytest.approx(b, abs=0.005)
+    errors = reciprocal_model_errors([0.1, 1.0, 100.0, 0.0], m, b, floor)
+    np.testing.assert_allclose(errors[:3], np.maximum(10 ** b * np.array([0.1, 1.0, 100.0])
+                                                      ** (m - 1.0), floor))
+    assert np.isnan(errors[3])

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 import csv
 from datetime import datetime
 import gc
@@ -14,18 +15,22 @@ import numpy as np
 from PySide6.QtCore import QEvent, Qt, QUrl
 from PySide6.QtGui import QColor, QDesktopServices
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QComboBox,
     QCheckBox,
     QApplication,
+    QDialog,
     QFileDialog,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMenu,
     QMessageBox,
+    QPlainTextEdit,
     QPushButton,
     QSpinBox,
     QSplitter,
+    QStyledItemDelegate,
     QTabWidget,
     QTableWidget,
     QTableWidgetItem,
@@ -39,11 +44,14 @@ from PySide6.QtWidgets import (
 from PyHydroGeophysX.qt_apps.artifact_renderers import select_renderer
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.qt_utils import ContentWidthScrollArea
-from PyHydroGeophysX.qt_apps.results_store import ResultsStore, RunRecord
+from PyHydroGeophysX.qt_apps.results_store import (
+    ResultsStore, RunRecord, is_placeholder_label, run_title, short_run_id)
+from PyHydroGeophysX.qt_apps.run_records import run_documents
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets.array_viewer import ArrayViewer
 from PyHydroGeophysX.qt_apps.widgets.curve_viewer import CurveViewer
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
+from PyHydroGeophysX.qt_apps.widgets.project_dialogs import SaveRunsDialog
 from PyHydroGeophysX.qt_apps.widgets import temperature_panel
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
 from PyHydroGeophysX.qt_apps.workers import TaskWorker
@@ -72,6 +80,45 @@ _HEADLINE_METRICS = ("chi2", "rrms", "mean_chi2", "iterations", "n_data", "lambd
 #: Heading for runs this session produced that are not in the Project yet.
 _UNSAVED_GROUP = "⬤ Unsaved (this session)"
 _UNSAVED_COLOUR = "#0a84ff"
+
+#: What the Visualization tab's chooser leaves to Details in the compact view,
+#: and the run records it never offers there: a long series' per-survey QC
+#: logs are hundreds, listed on the Files tab instead.
+_DETAIL_RENDERERS = {"json", "file", "text"}
+
+
+def _in_chooser(artifact: Dict[str, Any], detailed: bool) -> bool:
+    # files_only: the reciprocal error PNG, where the run kept the pairs the
+    # chooser draws as the ERT page does (run_records.run_documents).
+    if {"listing_only", "files_only"} & set(artifact.get("metadata") or {}):
+        return False
+    return detailed or select_renderer(artifact) not in _DETAIL_RENDERERS
+
+
+#: Beyond this a text record is shown from its end, where a log is read first.
+_TEXT_VIEW_LIMIT = 8 * 1024 * 1024
+
+
+def _text_view(path: Path) -> QWidget:
+    """A run's text record - settings, QC report, a log - in a monospaced,
+    unwrapped, read-only view, so its aligned columns stay aligned."""
+    from PySide6.QtGui import QFontDatabase
+
+    view = QPlainTextEdit()
+    view.setReadOnly(True)
+    view.setLineWrapMode(QPlainTextEdit.NoWrap)
+    view.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+    size = path.stat().st_size
+    with open(path, "rb") as handle:
+        if size > _TEXT_VIEW_LIMIT:
+            handle.seek(size - _TEXT_VIEW_LIMIT)
+        text = handle.read().decode("utf-8", errors="replace")
+    if size > _TEXT_VIEW_LIMIT:
+        text = (f"[The first {_human_size(size - _TEXT_VIEW_LIMIT)} of this "
+                f"{_human_size(size)} file are not shown; double-click it on the "
+                "Files tab to open all of it.]\n" + text.partition("\n")[2])
+    view.setPlainText(text)
+    return view
 
 
 def _human_size(size: int) -> str:
@@ -196,12 +243,34 @@ def _run_title(record: "RunRecord") -> str:
     The store's default label repeats the operation and the start time, both of
     which the tree already shows in the group path and the ``When`` column.
     """
-    label = str(record.label or "").strip()
-    default_prefix = f"{record.operation_id} · "
-    if label and not label.startswith(default_prefix):
-        return label
-    suffix = str(record.run_id).rpartition("_")[2]
-    return f"Run {suffix}" if suffix else str(record.run_id)
+    return run_title(record)
+
+
+class _RunNameDelegate(QStyledItemDelegate):
+    """Renames a run in place in the run list (F2, a double-click, or Rename…).
+
+    The editor starts from the run's own name rather than the text shown, which
+    can carry a short id to tell two equal names apart, and what is typed goes
+    to the run's record through the page instead of into the tree's text.
+    """
+
+    def __init__(self, page: "ModelViewerModule") -> None:
+        super().__init__(page._tree)
+        self._page = page
+
+    def createEditor(self, parent, option, index):  # noqa: N802 - Qt override
+        editor = QLineEdit(parent)
+        editor.setPlaceholderText("Name this run")
+        return editor
+
+    def setEditorData(self, editor, index) -> None:  # noqa: N802 - Qt override
+        record = self._page._records.get(str(index.data(_RUN_ROLE)))
+        named = record is not None and not is_placeholder_label(record)
+        editor.setText(str(record.label).strip() if named else "")
+        editor.selectAll()
+
+    def setModelData(self, editor, model, index) -> None:  # noqa: N802 - Qt override
+        self._page._rename_run(str(index.data(_RUN_ROLE)), editor.text())
 
 
 def _parse_utc(value: str) -> Optional[datetime]:
@@ -313,6 +382,15 @@ class ModelViewerModule(BaseModule):
         self._tree.itemSelectionChanged.connect(self._selection_changed)
         self._tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self._tree.customContextMenuRequested.connect(self._show_tree_menu)
+        # A run is renamed where it is listed: F2, a double-click, or Rename…
+        # in its menu. Only the name column edits, and only through this page,
+        # so the stock triggers (which would edit whichever cell was clicked)
+        # are off and the three ways in call editItem on column 0 themselves.
+        self._tree.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._tree.setItemDelegateForColumn(0, _RunNameDelegate(self))
+        self._tree.itemDoubleClicked.connect(
+            lambda item, _column: self._rename_item(item))
+        self._tree.installEventFilter(self)
         left_layout.addWidget(self._tree, stretch=1)
         self._hint = QLabel("")
         self._hint.setWordWrap(True)
@@ -327,19 +405,27 @@ class ModelViewerModule(BaseModule):
         metadata_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.addWidget(self._metadata_panel)
         edit_row = QHBoxLayout()
+        # The name is kept as soon as it is typed (Enter, or moving on). A
+        # separate save button for it went unnoticed, and the name with it.
         self._label = QLineEdit()
-        self._label.setPlaceholderText("Run label")
+        self._label.setPlaceholderText("Name this run")
+        self._label.setToolTip("The name this run is listed under. It is kept when you "
+                               "press Enter or move on; F2 renames a run in the list too.")
+        self._label_run_id: Optional[str] = None
+        self._label.textEdited.connect(self._label_edited)
+        self._label.editingFinished.connect(self._commit_label)
         self._size = QLabel("Size: —")
-        save_meta = QPushButton("Save label/notes")
-        save_meta.setToolTip("Name this run so you can tell it apart later.")
-        save_meta.clicked.connect(self._save_metadata)
+        self._save_notes_button = QPushButton("Save Notes")
+        self._save_notes_button.setToolTip("Keep these notes with the run.")
+        self._save_notes_button.clicked.connect(self._save_notes)
+        self._save_notes_button.setVisible(False)
         self._save_run = QPushButton("Save to Project")
         self._save_run.setToolTip(
             "Add this run to the Project's history. Until then it exists only as "
             "a folder this session wrote, and closing the studio will ask."
         )
         self._save_run.setVisible(False)
-        self._save_run.clicked.connect(self._save_current_run)
+        self._save_run.clicked.connect(self._save_current_run_named)
         self._open_run = QPushButton("Open Folder")
         self._open_run.setToolTip("Open this run's folder in the system file manager.")
         self._open_run.clicked.connect(self.open_run_folder)
@@ -347,7 +433,6 @@ class ModelViewerModule(BaseModule):
         self._delete.clicked.connect(self._delete_run)
         edit_row.addWidget(self._label, stretch=1)
         edit_row.addWidget(self._size)
-        edit_row.addWidget(save_meta)
         edit_row.addWidget(self._save_run)
         edit_row.addWidget(self._open_run)
         edit_row.addWidget(self._delete)
@@ -357,8 +442,13 @@ class ModelViewerModule(BaseModule):
         self._notes.setMaximumHeight(75)
         self._notes_toggle = QCheckBox('Notes')
         self._notes_toggle.toggled.connect(self._notes.setVisible)
+        self._notes_toggle.toggled.connect(self._save_notes_button.setVisible)
         self._notes.hide()
-        metadata_layout.addWidget(self._notes_toggle)
+        notes_row = QHBoxLayout()
+        notes_row.addWidget(self._notes_toggle)
+        notes_row.addStretch(1)
+        notes_row.addWidget(self._save_notes_button)
+        metadata_layout.addLayout(notes_row)
         metadata_layout.addWidget(self._notes)
 
         self._tabs = QTabWidget()
@@ -392,6 +482,9 @@ class ModelViewerModule(BaseModule):
         visual_layout.addWidget(self._visual_host, stretch=1)
         self._files = QTableWidget(0, 5)
         self._files.setHorizontalHeaderLabels(["Kind", "Format", "Path", "Exists", "Size"])
+        self._files.setEditTriggers(QTableWidget.NoEditTriggers)
+        # A listed file is one to open: the run log, a survey's QC log.
+        self._files.cellDoubleClicked.connect(self._open_listed_file)
         self._tabs.addTab(self._overview, "Overview")
         self._tabs.addTab(self._metrics_page, "Metrics")
         self._tabs.addTab(self._visual_page, "Visualization")
@@ -412,9 +505,7 @@ class ModelViewerModule(BaseModule):
         self._compact = compact
         self._details_button.setVisible(compact)
         self._toggle_details(self._details_button.isChecked())
-        if self._store is not None:
-            self._path.setText(self._store.root.name if compact else f'Project: {self._store.root}')
-            self._path.setToolTip(str(self._store.root))
+        self._refresh_project_label()
         if changed:
             self.refresh()
 
@@ -424,7 +515,7 @@ class ModelViewerModule(BaseModule):
         self._artifact.blockSignals(True)
         self._artifact.clear()
         for row, artifact in enumerate(self._current_artifacts):
-            if detailed or select_renderer(artifact) not in {'json', 'file'}:
+            if _in_chooser(artifact, detailed):
                 self._artifact.addItem(_artifact_label(artifact), row)
         restored = self._artifact.findData(selected_artifact)
         if restored >= 0:
@@ -509,16 +600,25 @@ class ModelViewerModule(BaseModule):
             return
         self.refresh()
 
+    def _refresh_project_label(self) -> None:
+        if self._store is None:
+            return
+        name = (self.state.project_name if self._store is self.state.results_store
+                else self._store.root.name or str(self._store.root))
+        read_only = " — read-only" if self._store.read_only else ""
+        self._path.setText(f"Project: {name}{read_only}")
+        self._path.setToolTip(
+            f"{self._store.root}\n\n" + (
+            "Runs are browsed read-only; new computations still go to the active Project."
+            if self._store.read_only
+            else "New computations are written here, one folder per run.")
+        )
+
     def refresh(self) -> None:
         if self._store is None:
             return
-        read_only = " — read-only" if self._store.read_only else ""
-        self._path.setText(self._store.root.name if self._compact else f"Project: {self._store.root}{read_only}")
-        self._path.setToolTip(
-            "Runs are browsed read-only; new computations still go to the active Project."
-            if self._store.read_only
-            else "New computations are written here, one folder per run."
-        )
+        self._refresh_project_label()
+        self._store.rebuild_index()
         self._tree.clear()
         # Unsaved runs lead the list. They are the ones that disappear if the
         # session ends without a decision, so they should not be found by
@@ -526,6 +626,7 @@ class ModelViewerModule(BaseModule):
         unsaved = self._store.list_unsaved_runs() if not self._store.read_only else []
         self._unsaved_ids = {record.run_id for record in unsaved}
         self._records = {item.run_id: item for item in [*unsaved, *self._store.list_runs()]}
+        editable = self._editable()
         groups: Dict[tuple[str, str, str], QTreeWidgetItem] = {}
         counts: Dict[tuple[str, str, str], int] = {}
         for record in self._records.values():
@@ -572,8 +673,12 @@ class ModelViewerModule(BaseModule):
                 _duration(record.created_at, record.finished_at),
             ])
             item.setData(0, _RUN_ROLE, record.run_id)
+            if editable:
+                item.setFlags(item.flags() | Qt.ItemIsEditable)
             item.setForeground(1, QColor(colour))
             tooltip = [f"Run ID: {record.run_id}", f"Folder: {record.run_dir}"]
+            if editable:
+                tooltip.append("F2 or a double-click renames it; the folder keeps its name.")
             if record.error:
                 tooltip.append(f"Error: {record.error}")
             if record.imported:
@@ -594,6 +699,7 @@ class ModelViewerModule(BaseModule):
         for key, group in groups.items():
             total = counts.get(key, 0)
             group.setText(0, f"{group.text(0)}  ({total})")
+        self._retitle_runs()
         for column in range(self._tree.columnCount()):
             self._tree.resizeColumnToContents(column)
         if not self._records:
@@ -605,6 +711,7 @@ class ModelViewerModule(BaseModule):
         self._report.clear()
         self._tabs.setTabVisible(self._tabs.indexOf(self._report), False)
         self._current = None
+        self._label_run_id = None
         self._label.clear()
         self._notes.clear()
         self._size.setText("Size: —")
@@ -677,6 +784,13 @@ class ModelViewerModule(BaseModule):
         if self._current is not None:
             self._open_path(self._current.run_dir, "This run folder")
 
+    def _open_listed_file(self, row: int, column: int) -> None:
+        """Open a Files-tab row's file with the program the system uses for it."""
+        cell = self._files.item(row, column)
+        target = cell.data(Qt.UserRole) if cell is not None else None
+        if target:
+            self._open_path(Path(str(target)), "This file")
+
     def _copy_to_clipboard(self, text: str, what: str) -> None:
         QApplication.clipboard().setText(str(text))
         self.log(f"{what} copied to clipboard: {text}", "info")
@@ -690,6 +804,9 @@ class ModelViewerModule(BaseModule):
             # Right-click acts on what was right-clicked, so move the selection
             # first; the detail pane and the Delete guard both follow from it.
             self._tree.setCurrentItem(item)
+            rename = menu.addAction("Rename…\tF2", lambda: self._rename_item(item))
+            rename.setEnabled(self._editable())
+            menu.addSeparator()
             menu.addAction("Open Run Folder", self.open_run_folder)
             menu.addAction(
                 "Copy Folder Path",
@@ -705,6 +822,100 @@ class ModelViewerModule(BaseModule):
         menu.addAction("Open Project Folder", self.open_project_folder)
         menu.addAction("Refresh", self.refresh)
         menu.exec(self._tree.viewport().mapToGlobal(point))
+
+    # -- naming runs -----------------------------------------------------------
+    def _editable(self) -> bool:
+        """Runs can be renamed only in the Project new results go to.
+
+        Another Project is browsed read-only, so nothing here writes into it.
+        """
+        return bool(self._store is not None and self._store is self.state.results_store
+                    and not self._store.read_only)
+
+    def _retitle_runs(self) -> None:
+        """Show each run under its name; equal names get the run's short id.
+
+        Two time-lapse runs of the same surveys share their default name, and
+        the list must still tell them apart at a glance.
+        """
+        titles = {run_id: _run_title(record) for run_id, record in self._records.items()}
+        repeated = Counter(titles.values())
+        for run_id, item in self._agent_items(titles).items():
+            record = self._records[run_id]
+            title = titles[run_id]
+            if repeated[title] > 1 and not is_placeholder_label(record):
+                title = f"{title}  ({short_run_id(record)})"
+            item.setText(0, title)
+
+    def eventFilter(self, watched, event) -> bool:  # noqa: N802 - Qt override
+        # F2 renames on every platform; the stock edit key is off (see __init__).
+        if (watched is self._tree and event.type() == QEvent.KeyPress
+                and event.key() == Qt.Key_F2):
+            item = self._tree.currentItem()
+            if item is not None and item.data(0, _RUN_ROLE):
+                self._rename_item(item)
+                return True
+        return super().eventFilter(watched, event)
+
+    def _rename_item(self, item: Optional[QTreeWidgetItem]) -> None:
+        """Open the name of the run ``item`` lists for editing, in place."""
+        if item is None or not item.data(0, _RUN_ROLE) or not self._editable():
+            return
+        self._tree.setCurrentItem(item)
+        self._tree.editItem(item, 0)
+
+    def _rename_run(self, run_id: str, name: str) -> bool:
+        """Give a run a new name, saved or not. Only its record changes.
+
+        The folder keeps its id for a name: modules hold paths into it that
+        must keep resolving. A saved run's ``run.json`` and the index are
+        written at once; an unsaved run carries the name until it is saved.
+        """
+        name = str(name or "").strip()
+        record = self._records.get(str(run_id))
+        if record is None or not name or name == str(record.label).strip():
+            return False
+        if not self._editable():
+            return False
+        try:
+            record = self._store.update_run(record.run_id, label=name)
+        except Exception as exc:  # noqa: BLE001 - reported, the old name stays
+            self.log(f"Could not rename the run: {exc}", "error")
+            return False
+        self._records[record.run_id] = record
+        self._retitle_runs()
+        if self._current is not None and self._current.run_id == record.run_id:
+            self._current = record
+            self._label.setText(record.label)
+        # The window lists unsaved runs by name in its status bar.
+        if callable(getattr(self.state, "on_runs_changed", None)):
+            self.state.on_runs_changed()
+        self.log(f"Renamed run {short_run_id(record)} to “{name}”.", "info")
+        return True
+
+    def _label_edited(self, _text: str) -> None:
+        # Remember whose name is being typed: by the time editing finishes, a
+        # click in the list may already be selecting another run.
+        if self._current is not None:
+            self._label_run_id = self._current.run_id
+
+    def _commit_label(self) -> None:
+        run_id, self._label_run_id = self._label_run_id, None
+        if run_id:
+            self._rename_run(run_id, self._label.text())
+
+    def _save_notes(self) -> None:
+        if self._current is None or not self._editable():
+            return
+        try:
+            self._current = self._store.update_run(
+                self._current.run_id, notes=self._notes.toPlainText())
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "Save notes", str(exc))
+            return
+        self.log("Notes kept with the run"
+                 + ("; they go into the Project when the run is saved."
+                    if self._current.run_id in self._unsaved_ids else "."), "info")
 
     def _apply_filter(self) -> None:
         needle = self._search.text().strip().lower()
@@ -750,13 +961,12 @@ class ModelViewerModule(BaseModule):
             return
         self._current = selected[0]
         record = self._current
-        self._label.setText(record.label)
+        # A run nobody named shows an empty name field, not the store's stand-in.
+        self._label_run_id = None
+        self._label.setText("" if is_placeholder_label(record) else record.label)
         self._notes.setPlainText(record.notes)
         self._notes_toggle.setChecked(bool(record.notes))
-        editable = bool(
-            self._store is self.state.results_store
-            and self._store is not None and not self._store.read_only
-        )
+        editable = self._editable()
         self._label.setReadOnly(not editable)
         self._notes.setReadOnly(not editable)
         pending = record.run_id in self._unsaved_ids
@@ -837,6 +1047,24 @@ class ModelViewerModule(BaseModule):
         ]
         if record.imported:
             rows.append(("Origin", "Imported in place from an existing results folder"))
+        # When the inverted survey was measured, beside when the run started: a
+        # single ERT run records it (time-lapse runs head each step by theirs).
+        survey_time = (record.summary or {}).get("survey_time")
+        if survey_time:
+            from PyHydroGeophysX.data_processing.survey_timing import format_time
+
+            survey_file = (record.summary or {}).get("survey_file")
+            rows.insert(2, ("Survey measured", format_time(survey_time, seconds=True)
+                            + (f" ({survey_file})" if survey_file else "")))
+        documents = run_documents(record.run_dir)
+        if documents:
+            # Named here so a reopened run says where its settings and log are;
+            # each opens from the Visualization chooser or the Files tab.
+            shown = [doc["path"] for doc in documents
+                     if not (doc.get("metadata") or {}).get("listing_only")]
+            surveys = len(documents) - len(shown)
+            rows.append(("Run records", ", ".join(shown)
+                         + (f" and {surveys} survey QC logs in qc/" if surveys else "")))
 
         parts = [
             f'<p style="font-size:13pt;color:{colour};margin:0 0 8px 0;">'
@@ -951,6 +1179,12 @@ class ModelViewerModule(BaseModule):
                     "metadata": {"record_file": True},
                 })
                 registered.add(path_value)
+        # The run's records for people - settings, QC report, its log - which
+        # the page that ran it offers too (qt_utils.ReproduceBar).
+        for document in run_documents(record.run_dir):
+            if document["path"] not in registered:
+                artifacts.append(document)
+                registered.add(document["path"])
         # The run's model first, then the fixed-λ one - only when it is another
         # model: with a single λ both keys name the same files.
         bundles: List[Dict[str, Any]] = []
@@ -987,8 +1221,7 @@ class ModelViewerModule(BaseModule):
                 except ValueError:
                     pass
             missing = bool(path_value) and not (path and path.exists())
-            if (not self._compact or self._details_button.isChecked()
-                    or select_renderer(artifact) not in {"json", "file"}):
+            if _in_chooser(artifact, not self._compact or self._details_button.isChecked()):
                 self._artifact.addItem(_artifact_label(artifact, missing=missing), row)
             values = [
                 _pretty_kind(artifact.get("kind", "")),
@@ -1001,6 +1234,9 @@ class ModelViewerModule(BaseModule):
                 cell = QTableWidgetItem(str(value))
                 if col == 3 and missing:
                     cell.setForeground(QColor(_STATUS_DISPLAY["failed"][1]))
+                if path is not None and not missing:
+                    cell.setData(Qt.UserRole, str(path))
+                    cell.setToolTip(f"{path}\nDouble-click to open it.")
                 self._files.setItem(row, col, cell)
         self._files.resizeColumnsToContents()
         self._artifact.blockSignals(False)
@@ -1081,6 +1317,12 @@ class ModelViewerModule(BaseModule):
                 if not view.set_image_file(path):
                     raise ValueError("the image decoder could not read this file")
                 self._replace_visual(view)
+            elif renderer == "reciprocal_errors":
+                # The ERT page's Reciprocal errors view, from the pairs the run kept.
+                from PyHydroGeophysX.qt_apps.widgets.reciprocal_view import ReciprocalErrorView
+                view = ReciprocalErrorView(chooser=False)
+                view.show_saved(path)
+                self._replace_visual(view)
             elif renderer == "vtk":
                 from PyHydroGeophysX.qt_apps.widgets.model3d_view import VTKVolumeView
                 if self._vtk_view is None:
@@ -1103,6 +1345,8 @@ class ModelViewerModule(BaseModule):
                 text = QTextEdit(); text.setReadOnly(True)
                 text.setPlainText(json.dumps(json.loads(path.read_text(encoding="utf-8")), indent=2))
                 self._replace_visual(text)
+            elif renderer == "text":
+                self._replace_visual(_text_view(path))
             else:
                 suffix = path.suffix.lstrip(".") or "no extension"
                 self._clear_visual(
@@ -1308,9 +1552,13 @@ class ModelViewerModule(BaseModule):
             if isinstance(titles, list) and titles:
                 return [str(t) for t in titles]
         # A single inversion is headed as the ERT page heads it, not as step 1
-        # of a series it is not part of.
+        # of a series it is not part of: with the survey's time when the run
+        # recorded one.
         if np.ndim(model) == 1 or (np.ndim(model) == 2 and 1 in np.shape(model)):
-            return ["Resistivity"]
+            from PyHydroGeophysX.data_processing.survey_timing import format_time
+
+            when = format_time(summary.get("survey_time") or "")
+            return [f"Resistivity · {when}" if when else "Resistivity"]
         return []
 
     def _with_map_export(self, view: QWidget) -> QWidget:
@@ -1540,8 +1788,25 @@ class ModelViewerModule(BaseModule):
         except Exception as exc:  # noqa: BLE001
             QMessageBox.warning(self, "Save run", str(exc))
             return
-        self.log(f"Saved '{record.label}' to {self._store.root}", "success")
+        self.log(f"Saved '{_run_title(record)}' to {self._store.root}", "success")
         self.refresh()
+
+    def _save_current_run_named(self) -> None:
+        """Save to Project: confirm or change the run's name, then save it.
+
+        The button's own path. The assistant saves through
+        :meth:`_save_current_run`, which never opens a dialog.
+        """
+        if self._current is None or self._store is None:
+            return
+        self._commit_label()          # a name typed above counts
+        dialog = SaveRunsDialog(self, [self._current], title="Save Run to Project")
+        if dialog.exec() != QDialog.Accepted:
+            return
+        name = dialog.names().get(self._current.run_id)
+        if name:
+            self._label.setText(name)
+        self._save_current_run()
 
     def _save_metadata(self) -> None:
         if self._current is None or self._store is None or self._store.read_only:
@@ -1567,7 +1832,7 @@ class ModelViewerModule(BaseModule):
         answer = QMessageBox.question(
             self,
             "Discard unsaved run" if pending else "Delete run permanently",
-            f"Permanently delete '{self._current.label}' and {size} of files?\n\n"
+            f"Permanently delete '{_run_title(self._current)}' and {size} of files?\n\n"
             + ("This run was never saved to the Project. This cannot be undone."
                if pending else "This cannot be undone."),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No,

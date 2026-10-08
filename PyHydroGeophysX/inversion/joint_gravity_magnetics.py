@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
 import numpy as np
 
 from PyHydroGeophysX.data_processing.gravmag import (
+    missing_station_message,
     regional_residual,
     spatially_balanced_indices,
 )
@@ -92,7 +93,9 @@ def _station_data(value: Mapping[str, Any], name: str) -> Dict[str, np.ndarray]:
     x, y, z, observed = x[good], y[good], z[good], observed[good]
     if x.size < 20:
         raise ValueError(f"{name} requires at least 20 finite stations for 3-D inversion.")
-    return {"x": x, "y": y, "z": z, "value": observed}
+    # How many were dropped, for the run's warnings (see _prepare).
+    return {"x": x, "y": y, "z": z, "value": observed,
+            "n_loaded": int(good.size), "n_missing": int(good.size - np.count_nonzero(good))}
 
 
 def _overlap(a: Dict[str, np.ndarray], b: Dict[str, np.ndarray]) -> bool:
@@ -155,7 +158,10 @@ class JointGravityMagneticsInversion:
         self.n_xy = int(n_xy)
         self.n_z = int(n_z)
         self.max_iterations = int(max_iterations)
-        self.max_stations = int(max_stations)
+        # 0 (or None) inverts every station.
+        self.max_stations = int(max_stations or 0)
+        #: Stations left out or thinned, by survey; filled by _prepare.
+        self.station_warnings: List[str] = []
         self.gravity_relative_error = float(gravity_relative_error)
         self.magnetics_relative_error = float(magnetics_relative_error)
         self.gravity_noise_floor = float(gravity_noise_floor)
@@ -173,16 +179,27 @@ class JointGravityMagneticsInversion:
         self.progress_callback = progress_callback
 
     def _prepare(self, value: Mapping[str, Any], name: str, detrend: int) -> Dict[str, np.ndarray]:
+        """One survey's stations as inverted, with every reduction said in
+        ``self.station_warnings``: a joint model fitted to part of a survey
+        looks no different from one fitted to all of it."""
         stations = _station_data(value, name)
+        n_loaded, n_missing = stations.pop("n_loaded"), stations.pop("n_missing")
+        if n_missing:
+            self.station_warnings.append(
+                f"{name}: " + missing_station_message(n_missing, n_loaded, "the inversion"))
         if detrend > 0:
             _, stations["value"] = regional_residual(
                 stations["x"], stations["y"], stations["value"], degree=detrend
             )
-        if stations["x"].size > self.max_stations:
+        n_input = int(stations["x"].size)
+        if 0 < self.max_stations < n_input:
             indices = spatially_balanced_indices(
                 stations["x"], stations["y"], self.max_stations
             )
             stations = {key: array[indices] for key, array in stations.items()}
+            self.station_warnings.append(
+                f"{name}: inverting {stations['x'].size} of {n_input} stations, a "
+                f"spatially even subset (max_stations = {self.max_stations}).")
         return stations
 
     def _baseline(
@@ -251,6 +268,7 @@ class JointGravityMagneticsInversion:
         if self.cross_gradient_weight < 0:
             raise ValueError("cross_gradient_weight cannot be negative.")
 
+        self.station_warnings = []
         grav = self._prepare(self.gravity_data, "Gravity", self.gravity_detrend)
         mag = self._prepare(self.magnetics_data, "Magnetics", self.magnetics_detrend)
         if not _overlap(grav, mag):
@@ -438,6 +456,7 @@ class JointGravityMagneticsInversion:
                 "gravity_locations": np.c_[grav["x"], grav["y"], grav["z"]],
                 "magnetics_locations": np.c_[mag["x"], mag["y"], mag["z"]],
                 "baseline_warnings": baseline_warnings,
+                "station_warnings": list(self.station_warnings),
             },
         )
 

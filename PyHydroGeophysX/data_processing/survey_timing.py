@@ -16,6 +16,20 @@ the summary says when another reading was possible. A file header is read next,
 and the filesystem modification time only if the caller opts in. When nothing
 parses, the fallback is the old ``1..n`` index - reported as such, so it is
 visible rather than assumed.
+
+Every survey also keeps where its own time came from (``SurveyTiming.sources``),
+because a set dated half by name and half by header is worth a second look, and
+the one file whose name lacks the time is the one to rename.
+
+A file whose format has no field for the time - a BERT / pyGIMLi unified data
+file - can carry it as a comment on its first line, before the electrode count::
+
+    # date: 2026-01-12 05:50:38
+
+Every ERT reader the studio uses skips that line as a comment (tested on the
+shipped BERT survey with pyGIMLi, ResIPy and this package's own reader). It has to
+be the first line: between the count and the ``# x z`` line, pyGIMLi takes a
+comment for the list of columns.
 """
 
 from __future__ import annotations
@@ -31,10 +45,18 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 __all__ = [
     "SurveyTiming",
     "format_duration",
+    "format_time",
     "parse_timestamp",
+    "reciprocal_pairs",
     "timestamp_from_header",
     "survey_timing",
 ]
+
+#: Where one survey's time came from, as ``SurveyTiming.sources`` records it.
+FROM_NAME = "file name"
+FROM_HEADER = "file header"
+FROM_MTIME = "file modified time"
+FROM_SUPPLIED = "supplied"
 
 _SECONDS_PER_DAY = 86400.0
 
@@ -161,6 +183,35 @@ def format_duration(seconds: Optional[float]) -> str:
     return f"{sign}{days} d {hours:02d} h"
 
 
+def format_time(stamp: Any, seconds: bool = False) -> str:
+    """An acquisition time as a heading shows it: ``2026-01-12 05:50``.
+
+    ``stamp`` is a datetime or the ISO text a run records. A time of exactly
+    midnight is what a date-only name parses to, so it is shown as the date alone
+    rather than claiming a clock time nobody recorded.
+    """
+    if isinstance(stamp, str):
+        try:
+            stamp = _dt.datetime.fromisoformat(stamp.strip())
+        except ValueError:
+            return stamp.strip()
+    if not isinstance(stamp, _dt.datetime):
+        return ""
+    if stamp.time() == _dt.time(0, 0):
+        return f"{stamp:%Y-%m-%d}"
+    return stamp.strftime("%Y-%m-%d %H:%M:%S" if seconds else "%Y-%m-%d %H:%M")
+
+
+def _listed(names: Sequence[str], limit: int = 3) -> str:
+    """``a.dat, b.dat and c.dat``, or the first ``limit`` and how many more."""
+    names = list(names)
+    if len(names) > limit:
+        return f"{', '.join(names[:limit])} and {len(names) - limit} more"
+    if len(names) > 1:
+        return f"{', '.join(names[:-1])} and {names[-1]}"
+    return names[0] if names else ""
+
+
 def parse_timestamp(text: str, patterns: Optional[Sequence[str]] = None
                     ) -> Optional[Tuple[_dt.datetime, str]]:
     """First timestamp in ``text``, with the name of the pattern that read it.
@@ -205,6 +256,16 @@ def _choose_reading(readings: List[Tuple[str, List[_dt.datetime]]]
             distinct.append((name, values))    # 01-01 and 02-02 read alike either way
     if len(distinct) == 1:
         return distinct[0][0], distinct[0][1], ""
+    if len(distinct[0][1]) == 1:
+        # One name has no sequence to decide by: say both readings, and how a
+        # name avoids the question.
+        name, values = distinct[0]
+        others = "; ".join(f"{_LAYOUTS.get(other, other)}, as {other_values[0]:%Y-%m-%d}"
+                           for other, other_values in distinct[1:])
+        return name, values, (
+            f"Ambiguous date: the name also reads {others}. It was read "
+            f"{_LAYOUTS.get(name, name)}; a name that starts with the year "
+            f"(YYYY-MM-DD) can be read only one way.")
 
     def span(values: List[_dt.datetime]) -> float:
         return (max(values) - min(values)).total_seconds()
@@ -227,7 +288,8 @@ def _choose_reading(readings: List[Tuple[str, List[_dt.datetime]]]
     why = ("the only one in acquisition order" if len(increasing) == 1
            else "the more compact sequence")
     note = (f"Ambiguous dates: every name also reads {'; '.join(rivals)}. The "
-            f"{_LAYOUTS.get(name, name)} reading was kept as {why}.")
+            f"{_LAYOUTS.get(name, name)} reading was kept as {why}. Names that "
+            f"start with the year (YYYY-MM-DD) can be read only one way.")
     return name, values, note
 
 
@@ -273,9 +335,62 @@ _ACQUISITION_KEYS = ("system_datetime", "gps_datetime")
 #: Header rows whose date is not an acquisition time at all.
 _NOT_ACQUISITION_KEYS = ("code_version_date",)
 
+#: A header line that names the acquisition time, behind an optional comment
+#: mark: ``# date: 2026-01-12 05:50:38``, ``#time=2026-01-12T05:50:38``,
+#: ``% acquired 2026-01-12 05:50``. The documented way to date a file whose
+#: format has no field for it (see the module docstring); taken before any other
+#: date-shaped text in the header.
+_ACQUISITION_LINE = re.compile(
+    r"^\s*(?:#+|//|[;%!*]+)?\s*"
+    r"(?:acquisition[ _-]?(?:date|time)|acquired|measured|recorded|"
+    r"start[ _-]?(?:date|time)|date[ _-]?time|timestamp|date|time)"
+    r"\s*[:=,]?\s*(?P<value>\S.*)$",
+    re.IGNORECASE)
+
+#: One plain number: what a measurement row is made of.
+_NUMBER = re.compile(r"[-+]?(?:\d+\.\d*|\.\d+|\d+)(?:[eE][-+]?\d+)?")
+
+#: Years an ERT survey can have been recorded in. A date outside them in a
+#: header is digits that happen to fit the pattern, not an acquisition time.
+_PLAUSIBLE_YEARS = (1950, 2100)
+
 
 def _header_key(line: str) -> str:
     return line.split(",", 1)[0].strip().lower()
+
+
+def _is_measurement_row(line: str) -> bool:
+    """True for a row of plain numbers with a decimal among them.
+
+    Such a row is a measurement or an electrode, never a date, and its decimals
+    fit the date patterns all too well: the electrode at x = 36.76100516 in the
+    shipped BERT survey read as 7610-05-16, which dated every undated BERT file
+    by its own coordinates.
+    """
+    tokens = [t for t in re.split(r"[\s,;]+", line.strip()) if t]
+    return bool(tokens) and all(_NUMBER.fullmatch(t) for t in tokens) and any(
+        "." in t or "e" in t.lower() for t in tokens)
+
+
+def _stamp_in(text: str) -> Optional[_dt.datetime]:
+    """The first plausible acquisition time in one header line, or None."""
+    found = parse_timestamp(text)
+    stamp = found[0] if found is not None else None
+    if stamp is None:
+        slashed = re.search(
+            r"(?<!\d)(\d{1,2})/(\d{1,2})/(\d{4})(?:[T ,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?",
+            text)
+        if slashed:
+            a, b, year, hour, minute, second = slashed.groups()
+            # Month first unless that is impossible, which is the only way to tell
+            # 03/04/2024 apart without knowing the vendor's locale.
+            month, day = (a, b) if int(a) <= 12 else (b, a)
+            try:
+                stamp = _ymd_hms(year, month, day, hour, minute, second)
+            except ValueError:
+                stamp = None
+    low, high = _PLAUSIBLE_YEARS
+    return stamp if stamp is not None and low <= stamp.year <= high else None
 
 
 def timestamp_from_header(path: str, max_lines: int = 80) -> Optional[_dt.datetime]:
@@ -285,8 +400,9 @@ def timestamp_from_header(path: str, max_lines: int = 80) -> Optional[_dt.dateti
     and the E4D survey files all do, in their own layouts). Rather than a parser
     per vendor, the first timestamp-shaped text in the header wins - enough to
     recover a sequence whose filenames were renamed on download - except where the
-    header names its acquisition time outright (``system_datetime``), which is
-    taken first, and a software build date, which is never taken.
+    header names its acquisition time outright (``system_datetime``, then a
+    ``# date: ...`` line), which is taken first, and a software build date, which
+    is never taken. Rows of plain numbers are measurements and are not read.
     """
     try:
         with open(path, "r", errors="ignore") as handle:
@@ -295,27 +411,22 @@ def timestamp_from_header(path: str, max_lines: int = 80) -> Optional[_dt.dateti
         return None
     for line in head:
         if _header_key(line) in _ACQUISITION_KEYS:
-            found = parse_timestamp(line)
-            if found is not None:
-                return found[0]
+            stamp = _stamp_in(line)
+            if stamp is not None:
+                return stamp
     for line in head:
-        if not line.strip() or _header_key(line) in _NOT_ACQUISITION_KEYS:
+        named = _ACQUISITION_LINE.match(line)
+        if named:
+            stamp = _stamp_in(named.group("value"))
+            if stamp is not None:
+                return stamp
+    for line in head:
+        if (not line.strip() or _header_key(line) in _NOT_ACQUISITION_KEYS
+                or _is_measurement_row(line)):
             continue
-        found = parse_timestamp(line)
-        if found is not None:
-            return found[0]
-        slashed = re.search(
-            r"(?<!\d)(\d{1,2})/(\d{1,2})/(\d{4})(?:[T ,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?",
-            line)
-        if slashed:
-            a, b, year, hour, minute, second = slashed.groups()
-            # Month first unless that is impossible, which is the only way to tell
-            # 03/04/2024 apart without knowing the vendor's locale.
-            month, day = (a, b) if int(a) <= 12 else (b, a)
-            try:
-                return _ymd_hms(year, month, day, hour, minute, second)
-            except ValueError:
-                continue
+        stamp = _stamp_in(line)
+        if stamp is not None:
+            return stamp
     return None
 
 
@@ -338,6 +449,84 @@ class SurveyTiming:
     #: Set when the names also read another way (month or day first) and the
     #: sequence, not the names, decided; ``summary()`` carries it.
     note: str = ""
+    #: Where each file's own time was found: ``FROM_NAME``, ``FROM_HEADER``,
+    #: ``FROM_MTIME``, ``FROM_SUPPLIED``, or "" for none. Kept when the set falls
+    #: back to the index, so the files that lack a time can be named.
+    sources: List[str] = field(default_factory=list)
+    #: The time each file gave, kept - unlike ``timestamps`` - when the set falls
+    #: back to the index, so files that share a time can be named.
+    found: List[Optional[_dt.datetime]] = field(default_factory=list)
+
+    def undated_files(self) -> List[str]:
+        """Names of the files no time could be read for."""
+        sources = self.sources or [""] * len(self.files)
+        return [Path(f).name for f, s in zip(self.files, sources) if not s]
+
+    def shared_times(self) -> List[Tuple[_dt.datetime, List[str]]]:
+        """``(time, names)`` for every time two or more files gave."""
+        groups: Dict[_dt.datetime, List[str]] = {}
+        for path, stamp in zip(self.files, self.found):
+            if stamp is not None:
+                groups.setdefault(stamp, []).append(Path(path).name)
+        return [(stamp, names) for stamp, names in groups.items() if len(names) > 1]
+
+    def describe(self, index: int) -> str:
+        """Where survey ``index`` got its time, as one or two plain sentences."""
+        if not (0 <= index < len(self.files)):
+            return ""
+        origin = self.sources[index] if index < len(self.sources) else ""
+        stamp = self.timestamps[index] if index < len(self.timestamps) else None
+        if stamp is not None:
+            when = format_time(stamp, seconds=True)
+            if origin == FROM_HEADER:
+                return f"Time {when}, read from the file header."
+            if origin == FROM_MTIME:
+                return (f"Time {when}, taken from the file's modified time: its name "
+                        f"and header carry none.")
+            if origin == FROM_SUPPLIED:
+                return f"Time {when}, as entered."
+            return f"Time {when}, read from the file name." + self._reading(index, stamp)
+        if not origin:
+            return "No time found in this file's name or header." + (
+                " Until it has one, the whole list is numbered 1, 2, 3 … instead of "
+                "dated." if len(self.files) > 1 else "")
+        where = {FROM_HEADER: "file header", FROM_MTIME: "file's modified time"}.get(
+            origin, "file name")
+        found = self.found[index] if index < len(self.found) else None
+        head = f"Time {format_time(found, seconds=True)}, read from the {where}"
+        name = Path(self.files[index]).name
+        twins = next((names for when, names in self.shared_times()
+                      if when == found), [])
+        if twins:
+            return (f"{head}: the same time as {_listed([n for n in twins if n != name])}. "
+                    f"Two surveys cannot share a time, so the list is numbered 1, 2, "
+                    f"3 … until one of them is fixed.")
+        missing = len(self.undated_files())
+        if missing:
+            return (f"{head}, but {missing} other file(s) have none, so the list is "
+                    f"numbered 1, 2, 3 … until those are fixed.")
+        return (f"{head}, but other files share a time (named under the list), so "
+                f"the list is numbered 1, 2, 3 … until those are fixed.")
+
+    def _reading(self, index: int, stamp: _dt.datetime) -> str:
+        """Which way a name that also reads month or day first was read, if so."""
+        stem = Path(self.files[index]).stem
+        name = self.pattern
+        if name not in _RIVALS:
+            found = parse_timestamp(stem)
+            name = found[1] if found is not None else ""
+        if name not in _RIVALS:
+            return ""
+        for rival, _regex, _builder in _PATTERNS:
+            if rival == name or _RIVALS.get(rival) != _RIVALS[name]:
+                continue
+            other = parse_timestamp(stem, patterns=(rival,))
+            if other is not None and other[0] != stamp:
+                return (f" It was read {_LAYOUTS[name]}; it could also be read "
+                        f"{_LAYOUTS[rival]}, as {other[0]:%Y-%m-%d}. A name that "
+                        f"starts with the year ({stamp:%Y-%m-%d_%H-%M-%S}) can be "
+                        f"read only one way.")
+        return ""
 
     @property
     def dated(self) -> bool:
@@ -368,9 +557,27 @@ class SurveyTiming:
                         f"{' ' + self.unit if self.unit else ''}), from "
                         f"{self.source}. Without acquisition timestamps the real "
                         f"duration between surveys cannot be reported.")
+            # A series is dated only when every survey is: part dated and part
+            # numbered would place surveys on two different axes. What blocks it
+            # is named, file by file, so the names can be fixed.
+            fallback = (f"Panels will be headed \"Time step N\" and every gap is "
+                        f"treated as equal.")
+            undated = self.undated_files()
+            if undated and len(undated) < n:
+                return (f"{n} surveys, numbered 1..{n}: no time could be read for "
+                        f"{len(undated)} of them ({_listed(undated)}). The other "
+                        f"{n - len(undated)} are dated, but a series is dated only "
+                        f"when every file is. {fallback}")
+            shared = self.shared_times()
+            if shared and not undated:
+                clash = "; ".join(f"{_listed(names)} share "
+                                  f"{format_time(stamp, seconds=True)}"
+                                  for stamp, names in shared[:3])
+                more = f" (and {len(shared) - 3} more times)" if len(shared) > 3 else ""
+                return (f"{n} surveys, numbered 1..{n}: {clash}{more}, and two "
+                        f"surveys cannot share a time. {fallback}")
             return (f"{n} surveys with no readable acquisition time; using a "
-                    f"sequential 1..{n} index. Panels will be headed \"Time step N\" "
-                    f"and every gap is treated as equal.")
+                    f"sequential 1..{n} index. {fallback}")
         gaps = self.intervals
         span = format_duration(self.total_seconds)
         head = (f"{n} surveys, {self.timestamps[0]:%Y-%m-%d %H:%M} to "
@@ -398,6 +605,7 @@ class SurveyTiming:
                 gap_text = format_duration(gap)
             else:
                 gap_days, gap_text = "", ""
+            own = self.sources[index] if index < len(self.sources) else ""
             out.append((
                 index,
                 Path(path).name,
@@ -405,7 +613,7 @@ class SurveyTiming:
                 float(self.times[index]) if index < len(self.times) else "",
                 gap_days,
                 gap_text,
-                self.source,
+                own if stamp is not None and own else self.source,
             ))
         return out
 
@@ -434,6 +642,7 @@ class SurveyTiming:
             "total_seconds": self.total_seconds,
             "total_duration": format_duration(self.total_seconds),
             "note": self.note,
+            "sources": list(self.sources),
             "summary": self.summary(),
         }
 
@@ -480,33 +689,29 @@ def survey_timing(files: Sequence[str], *, allow_header: bool = True,
 
     if timestamps is not None and len(timestamps) == len(paths):
         stamps = [t if isinstance(t, _dt.datetime) else None for t in timestamps]
+        origins = [FROM_SUPPLIED if s is not None else "" for s in stamps]
         source, pattern = "supplied times", "supplied"
     else:
         stamps, pattern, note = _timestamps_by_pattern([Path(p).stem for p in paths])
-        if all(s is not None for s in stamps):
-            source = "file names"
-        if allow_header and any(s is None for s in stamps):
-            from_names = sum(s is not None for s in stamps)
-            filled = [s if s is not None else timestamp_from_header(p)
-                      for s, p in zip(stamps, paths)]
-            if all(s is not None for s in filled):
-                stamps = filled
-                # Naming which files needed the header, because a set that is half
-                # named and half sniffed is worth a second look.
-                source = "file headers" if from_names == 0 else "file names + headers"
-        if allow_mtime and any(s is None for s in stamps):
-            filled = []
-            for s, p in zip(stamps, paths):
-                if s is not None:
-                    filled.append(s)
-                    continue
+        stamps = list(stamps)
+        origins = [FROM_NAME if s is not None else "" for s in stamps]
+        # Each file the names leave undated tries its header, then - only when the
+        # user allowed it - its modification time. A header read is kept even when
+        # some other file has none, so a modification time fills only what is left.
+        for index, path in enumerate(paths):
+            if stamps[index] is None and allow_header:
+                found = timestamp_from_header(path)
+                if found is not None:
+                    stamps[index], origins[index] = found, FROM_HEADER
+            if stamps[index] is None and allow_mtime:
                 try:
-                    filled.append(_dt.datetime.fromtimestamp(os.path.getmtime(p)))
+                    stamps[index] = _dt.datetime.fromtimestamp(os.path.getmtime(path))
+                    origins[index] = FROM_MTIME
                 except OSError:
-                    filled.append(None)
-            if all(s is not None for s in filled):
-                stamps = filled
-                source = "file modification times"
+                    pass
+        # Naming every source used, because a set that is half named and half
+        # sniffed is worth a second look.
+        source = _source_of(origins)
 
     if all(s is not None for s in stamps):
         origin = min(s for s in stamps if s is not None)
@@ -515,12 +720,151 @@ def survey_timing(files: Sequence[str], *, allow_header: bool = True,
             return SurveyTiming(files=paths, timestamps=list(stamps), times=times,
                                 labels=_labels_for(stamps), source=source,
                                 pattern=pattern, unit="d",
-                                note=note if source == "file names" else "")
+                                note=note if source == "file names" else "",
+                                sources=origins, found=list(stamps))
         # Identical stamps cannot order a sequence; the index at least can.
 
+    # Not part dated and part numbered: one undated or duplicated file numbers the
+    # whole list. What each file did give is kept, so summary() and describe()
+    # can name the files that stand in the way.
     n = len(paths)
     return SurveyTiming(
         files=paths, timestamps=[None] * n,
         times=[float(i + 1) for i in range(n)],
         labels=[str(i + 1) for i in range(n)],
-        source="index", pattern="", unit="")
+        source="index", pattern="", unit="", sources=origins, found=list(stamps))
+
+
+def _source_of(origins: Sequence[str]) -> str:
+    """The set's ``source``: ``file names``, ``file names + headers``, ...
+
+    Unchanged from the single-source wording it always had, so a set dated by
+    one kind of source reads as it did.
+    """
+    whole = {FROM_NAME: "file names", FROM_HEADER: "file headers",
+             FROM_MTIME: "file modification times"}
+    short = {FROM_NAME: "names", FROM_HEADER: "headers",
+             FROM_MTIME: "modification times"}
+    used = [kind for kind in (FROM_NAME, FROM_HEADER, FROM_MTIME) if kind in origins]
+    if not used:
+        return "index"
+    if len(used) == 1:
+        return whole[used[0]]
+    return "file " + " + ".join(short[kind] for kind in used)
+
+
+#: Words in a file name that mark it as the reciprocal half of a survey, and the
+#: words that mark the forward half; both are dropped to match the two names.
+_RECIPROCAL_WORDS = frozenset({"recip", "recips", "reciprocal", "reciprocals", "rcp"})
+_FORWARD_WORDS = frozenset({"fwd", "forward", "normal", "norm"})
+
+
+def _name_without_time(stem: str) -> Tuple[Tuple[str, ...], bool]:
+    """The words of a name with its timestamp taken out, and whether it says reciprocal."""
+    for _name, regex, builder in _PATTERNS:
+        for match in regex.finditer(stem):
+            try:
+                builder(match.groups())
+            except (ValueError, TypeError, OverflowError, OSError):
+                continue
+            stem = stem[:match.start()] + " " + stem[match.end():]
+            break
+        else:
+            continue
+        break
+    words = [w for w in re.split(r"[^0-9a-z]+", stem.lower()) if w]
+    reciprocal = any(w in _RECIPROCAL_WORDS for w in words)
+    return tuple(w for w in words
+                 if w not in _RECIPROCAL_WORDS and w not in _FORWARD_WORDS), reciprocal
+
+
+def reciprocal_pairs(files: Sequence[str],
+                     timestamps: Optional[Sequence[Optional[_dt.datetime]]] = None
+                     ) -> Dict[str, Any]:
+    """Files that look like the forward and reciprocal halves of the same surveys.
+
+    Some instruments write a survey as two files, a forward one and its
+    reciprocal (``..._sorted_2026_01_12_05_50_38`` and
+    ``..._recip_sorted_2026_01_12_06_12_23``). A time-lapse list makes every
+    file a time step of its own, so such a set has each survey twice, a few
+    minutes apart, and the two halves are never compared - reciprocal errors are
+    formed only between readings in one file. This finds the pattern so the
+    page can say so: a name that carries a reciprocal word and otherwise matches
+    another file's name, its timestamp aside.
+
+    Returns ``{"pairs": [(forward, reciprocal), ...], "reciprocal": [...],
+    "orphans": [...], "gap_seconds": median gap or None}`` with indices into
+    ``files``; empty lists when nothing looks paired. ``orphans`` are the files
+    named as reciprocals that no forward file matches, which the ERT page leaves
+    out of a paired series and names.
+    """
+    names = [_name_without_time(Path(str(f)).stem) for f in files]
+    stamps = list(timestamps or [None] * len(names))
+    reciprocal = [i for i, (_words, is_recip) in enumerate(names) if is_recip]
+    pairs: List[Tuple[int, int]] = []
+    taken: set = set()
+
+    # Forward files by name, looked up rather than searched: a 420-survey
+    # series is 840 files.
+    forwards: Dict[Tuple[str, ...], List[int]] = {}
+    for i, (words, is_recip) in enumerate(names):
+        if not is_recip:
+            forwards.setdefault(words, []).append(i)
+
+    def candidates(r: int) -> List[int]:
+        return forwards.get(names[r][0], [])
+
+    def dated(r: int) -> bool:
+        return stamps[r] is not None and all(stamps[i] is not None for i in candidates(r))
+
+    # The forward half is the one measured last before its reciprocal, chosen
+    # among every forward file, taken or not, and the reciprocal measured first
+    # after it wins. A reciprocal whose own forward file is missing would
+    # otherwise reach back to an earlier survey whose reciprocal is missing
+    # too, hours apart, and merge two different surveys; it is left out.
+    timed = sorted((r for r in reciprocal if dated(r)), key=lambda r: stamps[r])
+    claimed = {max((i for i in candidates(r) if stamps[i] <= stamps[r]),
+                   key=lambda i: stamps[i]) for r in timed
+               if any(stamps[i] <= stamps[r] for i in candidates(r))}
+    for r in timed:
+        before = [i for i in candidates(r) if stamps[i] <= stamps[r]]
+        if before:
+            partner = max(before, key=lambda i: stamps[i])
+        else:
+            # Measured before every forward file: the first one after it, unless
+            # a later reciprocal is that file's own.
+            after = [i for i in candidates(r) if i not in claimed]
+            if not after:
+                continue
+            partner = min(after, key=lambda i: stamps[i])
+        if partner in taken:
+            continue
+        taken.add(partner)
+        pairs.append((partner, r))
+    # A reciprocal is measured minutes after its forward file. One that would
+    # pair across many times the usual gap - its own forward file missing, the
+    # one before it unpaired too - joins two surveys hours apart; it is left
+    # out instead. Judged once three pairs give a usual gap to judge by.
+    timed_gaps = [(stamps[r] - stamps[f]).total_seconds() for f, r in pairs]
+    if len(timed_gaps) >= 3:
+        usual = statistics.median(abs(g) for g in timed_gaps)
+        if usual > 0:
+            far = {r for (f, r), g in zip(pairs, timed_gaps) if abs(g) > 4.0 * usual}
+            pairs = [(f, r) for f, r in pairs if r not in far]
+            taken = {f for f, _r in pairs}
+    for r in reciprocal:
+        if dated(r):
+            continue
+        # Undated: the nearest forward file in the list still free.
+        free = [i for i in candidates(r) if i not in taken]
+        if free:
+            partner = min(free, key=lambda i: abs(i - r))
+            taken.add(partner)
+            pairs.append((partner, r))
+    pairs.sort(key=lambda pair: pair[1])
+    gaps = [(stamps[r] - stamps[f]).total_seconds() for f, r in pairs
+            if stamps[f] is not None and stamps[r] is not None]
+    matched = {r for _f, r in pairs}
+    return {"pairs": pairs, "reciprocal": [r for _f, r in pairs],
+            "orphans": [r for r in reciprocal if r not in matched],
+            "gap_seconds": float(statistics.median(gaps)) if gaps else None}

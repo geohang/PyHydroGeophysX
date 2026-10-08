@@ -52,6 +52,11 @@ _AUTO_DISCOVER_FORMATS = {
     "bms", "csv", "dat", "json", "jpg", "jpeg", "npy", "npz", "png",
     "ply", "stl", "tif", "tiff", "tsv", "txt", "vtk", "vtp", "vtu",
 }
+#: Output folders of working copies rather than results: the time-lapse run
+#: rewrites every survey into ``normalized/`` before inverting it. Listing them
+#: buried the results, and a 420-survey run was recorded with the warning that
+#: 220 output files were not listed - all of them those copies.
+_INTERMEDIATE_DIRS = {"normalized"}
 
 _SUCCESS = {"ok", "success", "saved", "completed", "complete", "succeeded"}
 _FAILED = {"failed", "failure", "error"}
@@ -96,6 +101,85 @@ def normalize_status(value: Any) -> str:
     if raw in {"running", "interrupted", "incomplete", "needs_review"}:
         return raw
     return "unknown"
+
+
+#: One word of a file name: what is left between separators.
+_NAME_WORD = re.compile(r"[^\s_.\-]+")
+#: A word that begins a date in a file name: a year, alone or run together
+#: with its month and day (``2026``, ``202601``, ``20260112``).
+_YEAR_WORD = re.compile(r"(19|20)\d{2}(\d{2}){0,2}")
+
+
+def run_label_from_files(paths: Iterable[Any], *, unit: str = "files") -> str:
+    """A run name drawn from the files it ran on.
+
+    One file gives its name without the extension. Several give the words their
+    names start with in common and how many there are, so a sequence
+    ``wennerv2_64_001.dat`` … ``wennerv2_64_420.dat`` with ``unit="surveys"``
+    becomes ``wennerv2_64 · 420 surveys``. Names that share no leading word fall
+    back on the folder the files came from. Returns ``""`` for no files, and the
+    store then uses its own default.
+    """
+    items = [Path(str(path)) for path in paths or () if path and str(path).strip()]
+    if not items:
+        return ""
+    if len(items) == 1:
+        return items[0].stem[:80]
+    stems = [item.stem for item in items]
+    spans = [match.span() for match in _NAME_WORD.finditer(stems[0])]
+    others = [[word.lower() for word in _NAME_WORD.findall(stem)] for stem in stems[1:]]
+    shared = 0
+    while shared < len(spans) and all(
+            shared < len(words)
+            and words[shared] == stems[0][slice(*spans[shared])].lower()
+            for words in others):
+        shared += 1
+    # Surveys named by their acquisition time share the leading part of the
+    # date too ("…_sorted_2026_01" for a January series), which names nothing.
+    # Cut the shared words back to before a trailing run of numbers that starts
+    # with a year.
+    words = [stems[0][slice(*span)] for span in spans[:shared]]
+    for start in range(len(words)):
+        if (_YEAR_WORD.fullmatch(words[start])
+                and all(word.isdigit() for word in words[start:])):
+            shared = start
+            break
+    common = stems[0][:spans[shared - 1][1]] if shared else ""
+    if not common:
+        parents = {item.parent for item in items}
+        common = next(iter(parents)).name if len(parents) == 1 else ""
+    count = f"{len(items)} {unit}"
+    return f"{common[:60]} · {count}" if common else count
+
+
+def is_placeholder_label(record: "RunRecord") -> bool:
+    """Whether a run still carries the store's stand-in label.
+
+    :meth:`ResultsStore.begin_run` labels a run nobody named with its operation
+    and start time, both of which a run list already shows elsewhere.
+    """
+    label = str(record.label or "").strip()
+    if not label:
+        return True
+    # A Project may itself be called "ert" or "ert.single_inversion".
+    # Only the generated operation + timestamp is a placeholder; a name that
+    # merely starts with the operation is still a user-facing name.
+    return any(
+        re.fullmatch(re.escape(prefix) + r" · \d{4}-\d{2}-\d{2} \d{2}:\d{2}", label)
+        for prefix in (record.operation_id, record.module_key) if prefix)
+
+
+def run_title(record: "RunRecord") -> str:
+    """The name a run is listed under: its own, or ``Run`` and a short id."""
+    if not is_placeholder_label(record):
+        return str(record.label).strip()
+    suffix = short_run_id(record)
+    return f"Run {suffix}" if suffix else str(record.run_id)
+
+
+def short_run_id(record: "RunRecord") -> str:
+    """The random tail of a run id, ``3f26`` in ``20260922-140312_erttl_3f26``."""
+    return str(record.run_id).rpartition("_")[2]
 
 
 def _json_safe(value: Any) -> Any:
@@ -414,6 +498,8 @@ class ResultsStore:
             path for path in handle.outputs_dir.rglob("*")
             if path.is_file() and not path.is_symlink()
             and path.suffix.lstrip(".").lower() in _AUTO_DISCOVER_FORMATS
+            and not _INTERMEDIATE_DIRS.intersection(
+                path.relative_to(handle.outputs_dir).parts[:-1])
         )
         undiscovered = 0
         added = 0
@@ -586,6 +672,73 @@ class ResultsStore:
             if (candidate / UNSAVED_MARKER).exists():
                 found.append(candidate)
         return found
+
+    @staticmethod
+    def is_recoverable(run_dir: Path) -> bool:
+        """Whether an abandoned run finished: its workflow wrote ``result.json``."""
+        return (Path(run_dir) / "result.json").is_file()
+
+    def recover_run(self, run_dir: Path) -> RunRecord:
+        """Put an abandoned run that finished back among the unsaved runs.
+
+        Unsaved runs are held in memory, so a crash or a forced quit lost every
+        finished run not yet saved, though its folder kept the recipe, the
+        result and the outputs. The record is rebuilt from those, as
+        :meth:`finish_run` built it from the result when the run ended, and the
+        user saves or discards it as any other unsaved run.
+        """
+        if self.read_only:
+            raise PermissionError("This Result Store is read-only.")
+        run_dir = Path(run_dir).resolve()
+        result_file = run_dir / "result.json"
+        payload = json.loads(result_file.read_text(encoding="utf-8"))
+        recipe = next(iter(sorted(run_dir.glob("*_recipe.json"))), None)
+        workflow_id = ""
+        if recipe is not None:
+            try:
+                workflow_id = str(json.loads(recipe.read_text(encoding="utf-8"))
+                                  .get("workflow_id") or "")
+            except (OSError, ValueError):
+                pass
+        workflow_id = workflow_id or str((payload.get("provenance") or {}).get("workflow_id") or "")
+        module_key = workflow_id.partition(".")[0] or "unknown"
+        try:
+            from PyHydroGeophysX.workflows.registry import MODULE_DESCRIPTORS
+
+            module_key = next((item.result_key for item in MODULE_DESCRIPTORS.values()
+                               if workflow_id in item.workflow_ids), module_key)
+        except Exception:  # noqa: BLE001 - the plain prefix will do
+            pass
+        try:
+            started = datetime.strptime(run_dir.name[:15], "%Y%m%d-%H%M%S").replace(
+                tzinfo=timezone.utc)
+        except ValueError:
+            started = datetime.fromtimestamp(run_dir.stat().st_mtime, timezone.utc)
+        record = RunRecord(
+            run_id=run_dir.name, run_dir=run_dir, module_key=module_key,
+            operation_id=workflow_id or module_key, workflow_id=workflow_id,
+            created_at=started.isoformat(timespec="seconds"),
+            label=f"{workflow_id or module_key} · {started.astimezone():%Y-%m-%d %H:%M} "
+                  "(recovered)",
+            recipe_path=recipe.name if recipe is not None else "",
+        )
+        self.finish_run(RunHandle(record), payload)
+        record.finished_at = datetime.fromtimestamp(
+            result_file.stat().st_mtime, timezone.utc).isoformat(timespec="seconds")
+        record.warnings.append("Recovered after an earlier session ended without "
+                               "saving this run.")
+        return record
+
+    def recover_abandoned_runs(self) -> List[RunRecord]:
+        """Recover every abandoned run that finished; the others stay as they are."""
+        recovered = []
+        for path in self.abandoned_run_dirs():
+            if self.is_recoverable(path):
+                try:
+                    recovered.append(self.recover_run(path))
+                except (OSError, ValueError, TypeError) as exc:
+                    self.last_warning = f"Could not recover {path.name}: {exc}"
+        return recovered
 
     def clear_abandoned_runs(self) -> int:
         """Delete the folders :meth:`abandoned_run_dirs` reports."""
@@ -962,5 +1115,9 @@ __all__ = [
     "RunHandle",
     "RunRecord",
     "ResultsStore",
+    "is_placeholder_label",
     "normalize_status",
+    "run_label_from_files",
+    "run_title",
+    "short_run_id",
 ]

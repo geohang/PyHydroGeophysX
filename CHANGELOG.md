@@ -9,6 +9,67 @@ minor release can change the API.
 
 ### Added
 
+- Every studio run keeps its own records, for reviewing and reproducing it.
+  `logs/run_log.txt` holds every line the page logged for the run, as the Log
+  window showed it - the preparation, all of the workflow process's output and
+  the summary logged once the result is in - however long the run, and
+  `logs/workflow_output.log` now keeps all of the process's output (it kept the
+  last 2000 lines), written as it arrives so a crash or a Stop leaves it too.
+  The warnings a page logged during a run are kept with the run, so Saved
+  Results shows them. ERT single and time-lapse runs also write
+  `inversion_settings.txt` at the top of the run folder: software versions, the
+  data files in order with their acquisition times, electrodes, reader, the QC
+  thresholds, the error model, the mesh and every inversion parameter (the
+  ones left at the code's default marked), with the engine, fit and lambda
+  the run reported added when it ends. With QC applied they write
+  `qc_report.txt` and, for a series, one QC log per survey in `qc/`: how the
+  readings pair with their reciprocals, each check with its threshold and what
+  it kept, and a reciprocal error model `dR = 10^b R^m` fitted over all
+  surveys and per survey, for reference. Saved Results and the ERT page's new
+  Run records button list and open them; a Files-tab row opens on double-click.
+- ERT page: a survey written as two files - a forward file and, minutes later,
+  its reciprocal file (`..._recip_...`) - is one survey. With "Pair reciprocal
+  files with their forward file" (shown, ticked, when the list holds such
+  names) the two make one row and one time step at the forward file's time,
+  their readings merged on the forward file's electrodes before any QC, so
+  reciprocal errors, the reciprocal-error check and the error model work
+  across the pair. Unpaired forward files stay surveys of their own; a
+  reciprocal file with no forward file is left out and named. Sorting, moving,
+  removing and the assistant's list actions keep pairs together. The run's
+  `qc_report.txt` and per-survey QC logs list each step's files and readings.
+- ERT Data QC: "Average each reading with its reciprocal" (check 0, off by
+  default) makes each pair one reading with the mean resistance and the pair's
+  difference as its error.
+- ERT Data errors: "From the reciprocal error model" gives every reading the
+  error of `dR = 10^b R^m` fitted to the reciprocal pairs - the survey's own
+  for a single inversion, one fit over the series for time-lapse - never below
+  "Minimum" (1 %). The inversion applies it (`error_source="reciprocal"`,
+  `error_model`; time-lapse `error_model`), and the settings file and QC
+  report state m, b and R²; a time-lapse run reports what each engine did
+  with the errors (the in-house engine takes 1-50 %, ADTLERT at least 1 %).
+  The Data errors group now sits before the Inversion group.
+- ERT page: a Reciprocal errors tab beside Pseudosection draws every
+  reciprocal pair - its error |dR| against its mean resistance |R|, on log
+  axes - with the mean error of each group of pairs and the fitted model
+  `dR = 10^b R^m`, its result stated in the title. In time-lapse mode it shows
+  the whole series, coloured first survey to last, with one global fit; the
+  surveys are read in the background with progress in the status bar, once
+  per file and filter, and the time-lapse QC reuses what was read (with no
+  filter and no reciprocal files to merge, the run fits the pairs already read
+  instead of reading the series again). Its "Fit to" chooser fits the model to
+  all pairs before filtering (the default) or only to the pairs the applied
+  Data QC filter kept, the others drawn in grey; the data errors, the QC
+  report, the settings file ("Error model fitted to") and the run's
+  `reciprocal_error_model.png` follow it. A run also keeps the pairs
+  (`reciprocal_error_pairs.npz`), so Saved Results shows the same view. The
+  assistant sets it as `error_model_fit` ("all" or "kept").
+- The time-lapse data QC shows its progress per survey and can be stopped.
+- A run that finished before the studio closed without saving it can be
+  recovered the next time the Project is opened, instead of only deleted.
+- Saved Results no longer lists a time-lapse run's working copies of its
+  surveys (`normalized/`), which buried its results and, for long series, added
+  a warning that files were not listed.
+
 - Redesigned the desktop Home screen: the active Project with its saved
   results, map and New / Open actions; an Agentic AI entrance that names the
   active assistant; and research task cards that follow the model-data loop
@@ -516,6 +577,43 @@ minor release can change the API.
 
 ### Fixed
 
+- EM line inversions no longer count a sounding that failed as inverted. It was
+  left holding the starting or interpolated model the solvers gave it as a
+  node, drawn in the section and saved as data, with only a log line saying it
+  had failed. It is now blank in the section and the saved tables, the result
+  counts `n_inverted` and `n_failed`, and the run's warnings and completion
+  message name each failed sounding ("Inverted 558 of 564 soundings; 6
+  failed ..."). A sounding with a non-finite value no longer fails the whole
+  coupled (LCI) solve; it is left out and named.
+- The EM page no longer freezes on large generic tables. Every station click,
+  and again Run, re-parsed the whole file once per sounding (38 s per click at
+  3000 soundings); the table is now parsed once per file version, the survey
+  is read once per load setting on a worker thread (named in the status bar),
+  and station clicks, the joint page's resource and Run are served from it. A
+  run's stored soundings read back in 1 s instead of 16 s, and a TEMcompany
+  project read under one moment (HM or LM) no longer re-selects every
+  station's gates for each station asked for (60 ms to 4 ms a station on 564
+  stations). A station click on a project no longer redraws the survey table
+  (0.25 s to 0.04 s). The joint page
+  reads an EM survey with the EM page's moment and gate selection rather than
+  the reader's defaults.
+- Default caps no longer invert part of a survey quietly: EM "Max soundings"
+  (12 for a generic table, 200 for raw tTEM) and grav/mag "Max stations" (600)
+  now default to all, and the Run group says how many of how many the next
+  run inverts and what a cap leaves out; the run's warnings record it.
+  Grav/mag stations with a missing coordinate or value are counted and named
+  in the warnings, on the station map no longer coloured as data, and the
+  joint grav/mag inversion reports the stations it thins or drops.
+- A 2-D MT site recorded at frequencies offset from the first site's
+  contributed no data (0 of 37 at an 8 % offset) without a word. Its impedance
+  is now interpolated to the profile's frequencies within its own band
+  (`Z/sqrt(f)` linear in `ln f`, across gaps up to a factor of 2.25), and a
+  site that gives fewer values than the profile asks for is named in the run's
+  warnings with the count it gave.
+- A time-lapse ERT run's `inversion_settings.txt` marked no setting as left at
+  its default and could not say which settings an engine changed: the defaults
+  were read from `DEFAULT_TL`, whose one entry naming a constant made the whole
+  table unreadable. They are now read entry by entry.
 - The seismic inversion recorded its velocity limits as slowness: pyGIMLi turns
   the list it is given into slowness in place, so the run's settings read
   [1/8000, 1/86] and a re-inversion from them would have bounded the model by

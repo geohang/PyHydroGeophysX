@@ -1,5 +1,5 @@
 GeoSAGE assistant
-================
+=================
 
 GeoSAGE provides geological interpretation of joint gravity–magnetic inversion
 models as an optional external assistant. Installing its Python package registers
@@ -34,6 +34,14 @@ and numerical tasks stay offline even if a CLI is already signed in.
 
 Using the workflow
 ------------------
+
+Copy files in your file manager and paste them into the assistant's chat input,
+or drag them into it. Describe your task; AI classification maps files to the
+installed GeoSAGE plugin's input roles or identifies them as RAG reference
+documents. Ambiguous purposes prompt a clarification. Geological literature
+is searched locally and matching excerpts are included in the AI request.
+This host chat retrieval is available independently of GeoSAGE's own reference handling.
+See :doc:`desktop_studio` for supported reference formats and reading limits.
 
 Choose a Project outside the source data folders. In **Data & reports**, add an
 **Existing GeoSAGE inversion folder** to inspect an archive, or a **GeoSAGE

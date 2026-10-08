@@ -10,8 +10,9 @@ Two layers:
   even when pygimli is not installed, so "Generate profile" and "Export survey
   config" never depend on the heavy backend.
 * ``run_hydro_forward`` -- the real forward run. It imports pygimli and the
-  ``hydro_to_*`` wrappers lazily; if anything is missing or fails it raises
-  ``BackendUnavailable`` so the caller can fall back to config export.
+  ``hydro_to_*`` wrappers lazily; if one is missing or will not load it raises
+  ``BackendUnavailable`` so the caller can fall back to config export. Any
+  other failure propagates as itself.
 """
 
 from __future__ import annotations
@@ -250,8 +251,8 @@ def run_hydro_forward(
     """Run the real hydro->geophysics forward pipeline.
 
     Raises ``BackendUnavailable`` if pygimli / the hydro_to_* wrappers cannot be
-    imported, and propagates any other exception from the forward run so the
-    caller can fall back to config export.
+    imported, so the caller can fall back to config export, and propagates any
+    other exception from the forward run unchanged, to be reported as itself.
     """
     try:
         import matplotlib

@@ -379,12 +379,14 @@ class JointInversionModule(BaseModule):
         method = self._selected_methods()[slot]
         payload = resource["payload"]
         path = resource.get("path", "")
-        # EM resources from the processing page represent the active sounding.
-        # Reload all soundings from their source file when available.
+        # The EM page publishes the whole survey once it has read it; until
+        # then the resource is the active sounding, and the survey is read here
+        # under the gate selection the EM page applied, which travels with it.
         if (method in {"FDEM", "TDEM"} and path
                 and not (isinstance(payload, dict) and "soundings" in payload)):
+            options = dict((resource.get("metadata") or {}).get("load_options") or {})
             try:
-                payload = self._load_em_file(path, method)
+                payload = self._load_em_file(path, method, options)
             except Exception as exc:
                 self.log(f"Could not reload full {method} resource: {exc}", "warn")
         self._data[method] = payload
@@ -444,13 +446,16 @@ class JointInversionModule(BaseModule):
         self._refresh_resource_choices(); self._render_data_status(); self._update_strip()
 
     @staticmethod
-    def _load_em_file(path: str, method: str) -> Any:
-        first = em_data.load_sounding(path, method, sounding=0)
-        count = int(first.get("n_soundings", 1))
-        if count == 1:
-            return first
-        return {"soundings": [em_data.load_sounding(path, method, sounding=index)
-                              for index in range(count)]}
+    def _load_em_file(path: str, method: str,
+                      options: Optional[Dict[str, Any]] = None) -> Any:
+        """Every sounding of an EM file, read once.
+
+        ``options`` are the reader's keywords (the EM page's moment and gate
+        selection); without them a project is read at the reader's defaults,
+        which is not the data the EM page showed.
+        """
+        soundings = em_data.read_survey(path, method, **dict(options or {}))
+        return soundings[0] if len(soundings) == 1 else {"soundings": soundings}
 
     def _use_example(self) -> None:
         pair = self._selected_methods()

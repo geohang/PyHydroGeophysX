@@ -60,7 +60,7 @@ from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
 from PyHydroGeophysX.qt_apps.widgets.reflection_view import ReflectionView
-from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
+from PyHydroGeophysX.qt_apps.widgets.run_controls import StopButton, progress_with_stop
 from PyHydroGeophysX.qt_apps.widgets.seismic_viewer import SeismicViewer
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker, TaskWorker
 from PyHydroGeophysX.visualization.axis_units import to_display_length
@@ -114,25 +114,90 @@ def parse_shot_list(text: str) -> List[int]:
 
 
 def _stack_reflections(traces: np.ndarray, dt: float, geometry: Any, params: Dict[str, Any],
-                       prepared: Any = None) -> Dict[str, Any]:
+                       prepared: Any = None, log=None) -> Dict[str, Any]:
     """The Reflection tab's run, off the window's thread: prepare the line, then stack it.
 
     ``prepared`` is the line from an earlier run with the same traces and
     clean-up, so a change of velocity or stack setting re-stacks without
-    re-timing every shot.
+    re-timing every shot. ``log`` is told as each step starts; the page's
+    worker raises there once Stop is pressed, so a stack ends between steps -
+    the step under way runs to its end first.
     """
+    log = log or (lambda _message: None)
     if prepared is None:
+        log("Checking the traces")
         qc = shallow.trace_qc(traces, dt, geometry, exclude_records=params["skip_shots"])
         if not params["drop_clipped"]:
             qc.clipped = np.zeros_like(qc.clipped)
         if not params["drop_early"]:
             qc.early_energy = np.zeros_like(qc.early_energy)
         remove_air = params["remove_air"]
+        log("Timing and cleaning every shot")
         prepared = shallow.prepare_line(
             traces, dt, geometry, qc=qc, statics=params["align"], suppress=remove_air,
-            band=params["band"], mute=(0.75e-3, 5.0e-3) if remove_air else None)
-    result = shallow.stack_line(prepared, params["velocity"], **params["stack"])
+            band=params["band"], mute=(0.75e-3, 5.0e-3) if remove_air else None, log=log)
+    log("Stacking")
+    result = shallow.stack_line(prepared, params["velocity"], log=log, **params["stack"])
     return {"prepared": prepared, "result": result, "ray_limit": params.get("ray_limit")}
+
+
+def _pick_shot(shot: Dict[str, Any], settings: Dict[str, Any]):
+    """One record's automatic picks on the page's geometry: ``(picks, repicked)``.
+
+    The seismic workflow's picker (``pick_and_correct``): threshold picks on
+    the traces with AGC when AGC is on, placed at the geophone positions and
+    shot x the page set (``shot["receivers"]`` holds each column's), and those
+    off their shot's first-arrival curve picked again along it.
+    ``trace_index`` is the trace's column in the record. Plain values only, so
+    it can run off the window's thread.
+    """
+    import dataclasses
+
+    record, receivers = int(shot["record"]), shot["receivers"]
+    shot_x, shot_z = float(shot["shot_x"]), float(shot["shot_z"])
+
+    def place(picks):
+        placed = []
+        for pick in picks:
+            trace = int(pick.trace_index)
+            receiver_x, receiver_z = receivers[trace]
+            placed.append(dataclasses.replace(
+                pick, source_id=record, receiver_id=trace + 1,
+                source_x=shot_x, source_z=shot_z,
+                receiver_x=float(receiver_x), receiver_z=float(receiver_z),
+                field_record=record, trace_number=trace + 1))
+        return placed
+
+    picks, repicked = pick_and_correct(
+        np.asarray(shot["traces"], dtype=float), dt=settings["dt"], headers=shot["headers"],
+        agc_window=settings["agc"], threshold=settings["threshold"],
+        max_time=settings["max_time"], place=place)
+    # A trace the picker and the re-pick left at time zero has no arrival to show.
+    return [p for p in picks if np.isfinite(p.time_s) and p.time_s > 0], repicked
+
+
+def _pick_shots(shots: List[Dict[str, Any]], settings: Dict[str, Any], log=None) -> Dict[str, Any]:
+    """"All shots", off the window's thread: pick every record, then screen them together.
+
+    A long line took a minute on the window's thread, which froze the page
+    with no sign of progress; ``log`` reports each shot as it is done.
+    """
+    log = log or (lambda _message: None)
+    picks, repicked = [], []
+    gathers: Dict[int, np.ndarray] = {}
+    for done, shot in enumerate(shots, start=1):
+        gathers[int(shot["record"])] = np.asarray(shot["traces"], dtype=float)
+        mine, again = _pick_shot(shot, settings)
+        picks += mine
+        repicked += again
+        log(f"{done} of {len(shots)} shots picked")
+    log("Checking the shots against each other")
+    check = settings["check"]
+    # trace_index is the trace's column in its own record.
+    screen = screen_picks(
+        picks, monotonic_check=check, reciprocity_check=check, neighbour_check=check,
+        traces=lambda p: gathers[int(p.field_record)][:, int(p.trace_index)], dt=settings["dt"])
+    return {"picks": picks, "repicked": repicked, "screen": screen}
 
 
 class SeismicProcessingModule(BaseModule):
@@ -157,6 +222,14 @@ class SeismicProcessingModule(BaseModule):
         self._geo_positions: Optional[Dict[int, Tuple[float, float]]] = None  # trace idx -> (x, z)
         self._shot_spacing: Optional[float] = None  # regular shot interval (m); auto-fills shot_x per record
         self._shot0_x: float = 0.0  # x of the first record's shot
+        self._header_shots: Optional[Dict[int, Optional[float]]] = None  # record -> header shot x
+        # Roll-along line: record -> how many geophone steps its spread sits past
+        # the line's first geophone, from the headers. Empty for one spread.
+        self._station_shift: Dict[int, int] = {}
+        self._spread_note = ""               # why the headers' geophones were not all used
+        self._pick_worker: Optional[TaskWorker] = None
+        self._pick_busy: Optional[BusyStateController] = None
+        self._pick_all_done: Optional[Dict[str, Any]] = None
         self._srt_worker: Optional[ProcessWorkflowWorker] = None
         self._srt_busy: Optional[BusyStateController] = None
         self._srt_spec: Optional[WorkflowSpec] = None
@@ -246,6 +319,7 @@ class SeismicProcessingModule(BaseModule):
                            "positions + topography into the SRT inversion.")
         pos_btn.clicked.connect(self._load_geometry_dialog)
         layout.addWidget(pos_btn)
+        self._pos_btn = pos_btn
         self._geo_info = QLabel("Even spacing (no position file).")
         theme.set_tone(self._geo_info, "hint")
         self._geo_info.setWordWrap(True)
@@ -362,6 +436,10 @@ class SeismicProcessingModule(BaseModule):
         auto_row.addWidget(auto_btn)
         auto_row.addWidget(all_btn)
         pbox.addLayout(auto_row)
+        self._auto_btn, self._all_btn = auto_btn, all_btn
+        self._pick_progress = QProgressBar()
+        self._pick_progress.setVisible(False)
+        pbox.addWidget(self._pick_progress)
         row = QHBoxLayout()
         undo_btn = QPushButton("Undo")
         undo_btn.setIcon(theme.icon("fa5s.undo"))
@@ -375,13 +453,17 @@ class SeismicProcessingModule(BaseModule):
         export_btn = QPushButton("Export picks CSV…")
         export_btn.setProperty("primary", True)
         export_btn.setIcon(theme.icon("fa5s.file-export", color="#ffffff"))
+        export_btn.setToolTip("Save the picks of every shot, not only the one on screen.")
         export_btn.clicked.connect(self._export_picks)
         pbox.addWidget(export_btn)
         tt_btn = QPushButton("Export travel-time .dat…")
         tt_btn.setIcon(theme.icon("fa5s.project-diagram"))
+        tt_btn.setToolTip("Save every shot's picks as travel times for PyGIMLi, as the "
+                          "inversion uses them.")
         tt_btn.clicked.connect(self._export_traveltime)
         pbox.addWidget(tt_btn)
         self._pick_info = QLabel("0 picks")
+        self._pick_info.setWordWrap(True)
         pbox.addWidget(self._pick_info)
         layout.addWidget(picks)
 
@@ -638,7 +720,15 @@ class SeismicProcessingModule(BaseModule):
         self._refl_progress = QProgressBar()
         self._refl_progress.setRange(0, 0)
         self._refl_progress.setVisible(False)
-        runbox.addWidget(self._refl_progress)
+        # Not BaseModule.stop_button: the stack keeps no run record to close as
+        # stopped. It runs in a thread, which can only be asked to stop between
+        # steps, and the tooltip says so.
+        self._refl_stop = StopButton(log=lambda text: self.log(text, "warn"),
+                                     what="The reflection stack")
+        self._refl_stop.setToolTip(
+            "Stop the stack. It stops between steps - checking the traces, cleaning the "
+            "shots, stacking - so the step under way finishes first.")
+        runbox.addWidget(progress_with_stop(self._refl_progress, self._refl_stop))
         self._refl_summary = QLabel()
         self._refl_summary.setWordWrap(True)
         self._refl_summary.setTextFormat(Qt.RichText)
@@ -746,26 +836,31 @@ class SeismicProcessingModule(BaseModule):
             "relaxes downward, continuing each λ from the previous solution.")
         form.addRow("Lambda", self._srt_lam)
 
-        self._srt_iter = make_spinbox(20, 2, 60, tooltip=(
-            "Iterations per attempt. A run that uses all of them while still "
-            "improving is continued from its own model, up to the ceiling beside "
-            "it, so λ is never blamed for an unfinished descent."))
+        # How long the inversion may run and when it counts as done, as on the
+        # ERT page. The run checks its progress every few iterations and goes on
+        # from its own model while still improving, so λ is never judged on an
+        # unfinished descent; that checkpoint (_srt_iter) is an internal detail
+        # and not shown - beside the limit it read as a second, competing one.
+        self._srt_iter = make_spinbox(20, 2, 60)
         self._srt_iter_ceiling = make_spinbox(60, 5, 400, tooltip=(
-            "Total iterations allowed at one λ, counting continuations. Reaching "
-            "it means the reported χ² is an upper bound, and the log says so."))
-        self._srt_iter_row = merged_row(
-            self._srt_iter, "per pass, up to", self._srt_iter_ceiling)
-        form.addRow("Iterations", self._srt_iter_row)
+            "The most iterations the inversion may take (for each λ when the λ "
+            "search is on). It normally stops sooner, once χ² stops improving "
+            "(next row). Reaching this limit means the fit could still improve, "
+            "and the log says so."))
+        form.addRow("Max iterations", self._srt_iter_ceiling)
 
         self._srt_plateau = QDoubleSpinBox()
         self._srt_plateau.setRange(0.01, 10.0)
         self._srt_plateau.setDecimals(2)
         self._srt_plateau.setSingleStep(0.1)
         self._srt_plateau.setValue(0.5)
-        self._srt_plateau.setSuffix(" %")
+        self._srt_plateau.setPrefix("< ")
+        self._srt_plateau.setSuffix(" % per iteration")
         self._srt_plateau.setToolTip(
-            "A λ is finished once χ² improves by less than this per iteration.")
-        form.addRow("Stop below", self._srt_plateau)
+            "The inversion is done when one more iteration lowers χ² by less than "
+            "this. Larger stops sooner; smaller makes sure the fit has really run "
+            "out of room.")
+        form.addRow("Stop when χ² improves", self._srt_plateau)
 
         self._srt_quality = make_double_spinbox(32.0, 20.0, 40.0, 1.0, 1)
         self._srt_quality.setToolTip(
@@ -840,7 +935,7 @@ class SeismicProcessingModule(BaseModule):
         if not in_house and self._srt_auto_lam.isChecked():
             self._srt_auto_lam.setChecked(False)
         set_rows_enabled(
-            [self._srt_iter_row, self._srt_plateau], in_house)
+            [self._srt_iter_ceiling, self._srt_plateau], in_house)
         searching = in_house and self._srt_auto_lam.isChecked()
         set_rows_enabled([self._srt_chi2_row, self._srt_lam_trials], searching)
 
@@ -855,7 +950,8 @@ class SeismicProcessingModule(BaseModule):
         return {
             "engine": str(self._srt_engine.currentData()),
             "lam": float(self._srt_lam.value()),
-            "max_iterations": int(self._srt_iter.value()),
+            "max_iterations": min(int(self._srt_iter.value()),
+                                  int(self._srt_iter_ceiling.value())),
             "max_total_iterations": int(self._srt_iter_ceiling.value()),
             "plateau_tolerance": float(self._srt_plateau.value()) / 100.0,
             "mesh_quality": float(self._srt_quality.value()),
@@ -870,6 +966,9 @@ class SeismicProcessingModule(BaseModule):
 
     # -- loading -------------------------------------------------------------
     def _load_gather(self) -> None:
+        from PyHydroGeophysX.qt_apps.widgets.project_dialogs import confirm_project_for_data
+        if not confirm_project_for_data(self):   # name a Project before the first data
+            return
         path, _ = QFileDialog.getOpenFileName(self, "Load seismic data", "", _FILE_FILTER)
         if not path:
             return
@@ -934,6 +1033,7 @@ class SeismicProcessingModule(BaseModule):
 
     def _set_dataset(self, dataset) -> None:
         self._dataset = dataset
+        self._header_shots = None
         self._dt = float(dataset.metadata.sample_interval_s)
         self._geometry_from_headers(dataset)
         records = list(dataset.field_records)
@@ -965,7 +1065,7 @@ class SeismicProcessingModule(BaseModule):
         self._pick_src = dict(self._all_src.get(record, {}))
         self._order = list(self._picks.keys())
         self._shot_x.blockSignals(True)
-        self._shot_x.setValue(self._shot_pos.get(record, self._default_shot_x(record)))
+        self._shot_x.setValue(self._record_shot_x(record))
         self._shot_x.blockSignals(False)
         self._recompute()
         self._update_info()
@@ -1004,6 +1104,12 @@ class SeismicProcessingModule(BaseModule):
         self._dataset = None
         self._current_gather = None
         self._headers = None
+        # One matrix, no shot records: nothing of an earlier file's shots may
+        # stay behind, or every-shot exports and the inversion would mix them in.
+        self._current_record = None
+        self._all_picks, self._all_src, self._shot_pos = {}, {}, {}
+        self._header_shots = None
+        self._station_shift, self._spread_note = {}, ""
         self._shot_group.setVisible(False)
 
     def _read_seg2(self, path: Path):
@@ -1127,12 +1233,34 @@ class SeismicProcessingModule(BaseModule):
             return hx
         return float(self._geo_start.value())
 
+    def _record_shot_x(self, record: int) -> float:
+        """The shot x a record's picks are placed at: set by hand, else the default.
+
+        Not ``dict.get(record, default)``: that works the default out every
+        time, and the travel-time plot asks for every pick on each click.
+        """
+        x = self._shot_pos.get(record)
+        return float(x) if x is not None else self._default_shot_x(record)
+
     def _header_shot_x(self, record: int) -> Optional[float]:
-        """Source x for a record from the SEG-Y trace headers, if populated."""
+        """Source x for a record from the SEG-Y trace headers, if populated.
+
+        Worked out for every record in one pass over the headers and kept: a
+        gather per call scanned the whole file, once per pick on each click.
+        """
         if self._dataset is None:
             return None
+        if self._header_shots is None:
+            by_record: Dict[int, list] = {}
+            for header in self._dataset.headers:
+                by_record.setdefault(int(header.field_record), []).append(header)
+            self._header_shots = {rec: self._shot_x_from_headers(headers)
+                                  for rec, headers in by_record.items()}
+        return self._header_shots.get(int(record))
+
+    @staticmethod
+    def _shot_x_from_headers(headers) -> Optional[float]:
         try:
-            headers = self._dataset.get_gather(int(record)).headers
             xs = [float(h.source_x) for h in headers if np.isfinite(h.source_x)]
         except Exception:  # noqa: BLE001
             return None
@@ -1152,10 +1280,18 @@ class SeismicProcessingModule(BaseModule):
                 return None
         return x0
 
-    def _receiver_position(self, trace: int) -> Tuple[float, float]:
-        if self._geo_positions and int(trace) in self._geo_positions:
-            return self._geo_positions[int(trace)]
-        return (self._geo_start.value() + int(trace) * self._spacing.value(), 0.0)
+    def _receiver_position(self, trace: int, record: Optional[int] = None) -> Tuple[float, float]:
+        """Where geophone ``trace`` of ``record`` (the record on screen if None) stands.
+
+        On a roll-along line each record's spread starts its own number of
+        geophone steps along the line, so its trace i is the line's geophone
+        i + that shift; on one spread the shift is 0.
+        """
+        record = self._current_record if record is None else record
+        station = int(trace) + self._station_shift.get(record, 0)
+        if self._geo_positions and station in self._geo_positions:
+            return self._geo_positions[station]
+        return (self._geo_start.value() + station * self._spacing.value(), 0.0)
 
     def _geophone_xs(self) -> List[float]:
         """x of every geophone of the record on screen, where a pick would put it."""
@@ -1199,17 +1335,47 @@ class SeismicProcessingModule(BaseModule):
         0. With a station column the geophones are taken in station order, so a
         file listing stations 3, 1, 2 still puts station 1 on the first trace;
         without one they follow the file's row order.
+
+        Raises ValueError naming the lines among the numbers that are not
+        numbers in the first row's columns: skipped, such a row put every
+        later geophone one place early, and a row missing its elevation was
+        read as (x, elevation) = (station, distance). Text before the first
+        row or after the last (a header, a footer) is skipped as before.
         """
         rows: List[List[float]] = []
+        unread: List[Tuple[int, str, bool]] = []      # (line, text, is it text)
+        first_row = last_row = 0
         with open(path, "r", encoding="utf-8", errors="ignore") as fh:
-            for line in fh:
-                parts = line.replace(",", " ").split()
+            for number, line in enumerate(fh, start=1):
+                parts = line.split("#", 1)[0].replace(",", " ").split()
                 if not parts:
                     continue
                 try:
-                    rows.append([float(p) for p in parts])
+                    nums = [float(p) for p in parts]
                 except ValueError:
-                    continue  # header / comment line
+                    if rows:
+                        unread.append((number, line.strip(), True))
+                    continue  # before the numbers: a header line
+                last_row = number
+                if rows and len(nums) != len(rows[0]):
+                    unread.append((number, line.strip(), False))
+                    continue
+                first_row = first_row or number
+                rows.append(nums)
+        # Text after the last row of numbers is a footer: it moves no geophone.
+        unread = [(n, text, is_text) for n, text, is_text in unread
+                  if not is_text or n < last_row]
+        if unread:
+            numbers = [str(n) for n, _, _ in unread]
+            listed = ", ".join(numbers[:5]) + (f" and {len(numbers) - 5} more"
+                                               if len(numbers) > 5 else "")
+            raise ValueError(
+                f"line{'s' if len(numbers) > 1 else ''} {listed} of {Path(path).name} "
+                f"{'are' if len(numbers) > 1 else 'is'} not {len(rows[0])} "
+                f"number{'s' if len(rows[0]) != 1 else ''} like the first row on line "
+                f"{first_row} (line {unread[0][0]}: '{unread[0][1][:60]}'). Each row places "
+                "one geophone, and leaving one out would put every later geophone a place "
+                "early, so the file was not used; correct the line and load the file again.")
         if rows and all(len(nums) >= 3 for nums in rows):
             # Stable, so repeated station numbers keep their file order.
             rows.sort(key=lambda nums: nums[0])
@@ -1240,7 +1406,14 @@ class SeismicProcessingModule(BaseModule):
             zs = [positions[k][1] for k in positions]
             self._geo_info.setText(
                 f"{len(positions)} geophones from file · x {min(xs):.1f}–{max(xs):.1f} m · "
-                f"elev {min(zs):.1f}–{max(zs):.1f} m")
+                f"elev {min(zs):.1f}–{max(zs):.1f} m" + self._spread_suffix())
+        needed = self._line_geophone_count()
+        if needed > len(positions):
+            # Said, not silent: those geophones fall back to even spacing at elevation 0.
+            self.log(f"The position file lists {len(positions)} geophones, but the line has "
+                     f"{needed}{' (the spread moves between records)' if self._station_shift else ''}. "
+                     f"Geophones past number {len(positions)} are placed on even spacing at "
+                     "elevation 0.", "warn")
         self._redraw_markers()
         self._update_pick_info()
         self._publish()
@@ -1253,10 +1426,10 @@ class SeismicProcessingModule(BaseModule):
         record's shot."""
         import dataclasses
 
-        def restamp(picks: Dict[int, Any]) -> None:
+        def restamp(picks: Dict[int, Any], record: Optional[int]) -> None:
             for tr in list(picks):
                 p = picks[tr]
-                rx, rz = self._receiver_position(int(tr))
+                rx, rz = self._receiver_position(int(tr), record)
                 if _SEISMIC_OK and hasattr(p, "receiver_x"):
                     picks[tr] = dataclasses.replace(
                         p, receiver_x=float(rx), receiver_z=float(rz),
@@ -1265,9 +1438,9 @@ class SeismicProcessingModule(BaseModule):
                     p["receiver_x"] = float(rx); p["receiver_z"] = float(rz)
                     p["source_z"] = float(self._interp_topography(p.get("source_x", 0.0)))
 
-        restamp(self._picks)
+        restamp(self._picks, self._current_record)
         for rec in self._all_picks:
-            restamp(self._all_picks[rec])
+            restamp(self._all_picks[rec], rec)
 
     def _load_geometry_dialog(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -1319,36 +1492,23 @@ class SeismicProcessingModule(BaseModule):
         self.log(f"Line pick: {len(points)} traces", "info")
 
     def _pick_record(self, record: int, traces: np.ndarray, headers, shot_x: float):
-        """One record's automatic picks on this page's geometry: ``(picks, repicked)``.
+        """One record's automatic picks on this page's geometry: ``(picks, repicked)``."""
+        return _pick_shot(self._shot_to_pick(record, traces, headers, shot_x),
+                          self._picker_settings())
 
-        The seismic workflow's picker (``pick_and_correct``): threshold picks on
-        the traces with AGC when AGC is on, placed at the geophone positions and
-        shot x set here, and those off their shot's first-arrival curve picked
-        again along it. ``trace_index`` is the trace's column in the record.
-        """
-        import dataclasses
+    def _shot_to_pick(self, record: int, traces: np.ndarray, headers, shot_x: float) -> Dict[str, Any]:
+        """What ``_pick_shot`` needs of one record, read off the page beforehand."""
+        traces = np.asarray(traces, dtype=float)
+        return {"record": int(record), "traces": traces, "headers": headers,
+                "shot_x": float(shot_x), "shot_z": self._interp_topography(shot_x),
+                "receivers": [self._receiver_position(trace, int(record))
+                              for trace in range(traces.shape[1])]}
 
-        shot_z = self._interp_topography(shot_x)
-
-        def place(picks):
-            placed = []
-            for pick in picks:
-                trace = int(pick.trace_index)
-                receiver_x, receiver_z = self._receiver_position(trace)
-                placed.append(dataclasses.replace(
-                    pick, source_id=int(record), receiver_id=trace + 1,
-                    source_x=float(shot_x), source_z=float(shot_z),
-                    receiver_x=float(receiver_x), receiver_z=float(receiver_z),
-                    field_record=int(record), trace_number=trace + 1))
-            return placed
-
-        agc = self._agc_window.value() / 1000.0 if self._agc.isChecked() else 0.0
-        picks, repicked = pick_and_correct(
-            np.asarray(traces, dtype=float), dt=self._dt, headers=headers, agc_window=agc,
-            threshold=self._threshold.value(), max_time=self._pick_window.value() / 1000.0,
-            place=place)
-        # A trace the picker and the re-pick left at time zero has no arrival to show.
-        return [p for p in picks if np.isfinite(p.time_s) and p.time_s > 0], repicked
+    def _picker_settings(self) -> Dict[str, Any]:
+        return {"dt": self._dt, "threshold": self._threshold.value(),
+                "agc": self._agc_window.value() / 1000.0 if self._agc.isChecked() else 0.0,
+                "max_time": self._pick_window.value() / 1000.0,
+                "check": self._screen_picks.isChecked()}
 
     def _picker_label(self) -> str:
         agc = f", AGC {self._agc_window.value():g} ms" if self._agc.isChecked() else ", no AGC"
@@ -1403,40 +1563,77 @@ class SeismicProcessingModule(BaseModule):
         self._update_pick_info()
         self._publish()
 
-    def _auto_pick_all(self) -> Optional[Dict[str, Any]]:
+    def _auto_pick_all(self) -> Optional[str]:
         """Pick every shot record as the seismic workflow does, all three checks included.
 
         Each record is picked at its own shot x (set by hand, from a regular
         shot layout, or from the headers). Picks made by hand are kept, in
         place of the automatic ones on their traces; a shot left out for its
-        reciprocals loses only its automatic picks. Returns what was done, for
-        the page's agent tool.
+        reciprocals loses only its automatic picks.
+
+        The picking runs on a worker, shot by shot under a progress bar: on a
+        long line it held the window still for a minute. ``_on_all_picked``
+        takes the result and keeps what was done for the page's agent tool.
+        Returns why it did not start, or None.
         """
         records = self._agent_records()
         if self._dataset is None or len(records) < 2:
             self._auto_pick()
             return None
         if not self._auto_pick_ready():
-            return None
+            return "Auto-pick could not start; see the log."
+        if self._pick_worker is not None:
+            return "The shots are already being picked."
         self._save_current_picks()
-        picks, repicked = [], []
-        gathers: Dict[int, np.ndarray] = {}
         try:
+            shots = []
             for record in records:
                 gather = self._dataset.get_gather(int(record))
-                gathers[int(record)] = np.asarray(gather.traces, dtype=float)
-                shot_x = self._shot_pos.get(record, self._default_shot_x(record))
-                mine, again = self._pick_record(int(record), gather.traces, gather.headers, shot_x)
-                picks += mine
-                repicked += again
-            check = self._screen_picks.isChecked()
-            # trace_index is the trace's column in its own record.
-            screen = screen_picks(
-                picks, monotonic_check=check, reciprocity_check=check, neighbour_check=check,
-                traces=lambda p: gathers[int(p.field_record)][:, int(p.trace_index)], dt=self._dt)
+                shots.append(self._shot_to_pick(int(record), gather.traces, gather.headers,
+                                                self._record_shot_x(record)))
         except Exception as exc:  # noqa: BLE001
             self.log(f"Auto-pick failed: {exc}", "error")
-            return None
+            return str(exc)
+        dataset = self._dataset
+        self._pick_all_done = None
+        # The geometry the picks are placed on stays as it was read until they
+        # are in. The Load button is left alone: a new file is caught on arrival.
+        self._pick_busy = BusyStateController([self._auto_btn, self._all_btn, self._pos_btn,
+                                               self._spacing, self._geo_start, self._shot_x])
+        self._pick_busy.start()
+        self._pick_progress.setRange(0, len(shots))
+        self._pick_progress.setValue(0)
+        self._pick_progress.setFormat(f"0 of {len(shots)} shots picked")
+        self._pick_progress.setVisible(True)
+        worker = TaskWorker(_pick_shots, shots, self._picker_settings(), with_log=True)
+        worker.logged.connect(self._on_pick_progress)
+        worker.succeeded.connect(lambda out: self._on_all_picked(dataset, records, out))
+        worker.failed.connect(lambda message: self.log(f"Auto-pick failed: {message}", "error"))
+        worker.finished.connect(self._reset_pick_all)
+        self._pick_worker = self.register_worker(worker)
+        worker.start()
+        return None
+
+    def _on_pick_progress(self, message: str) -> None:
+        bar = self._pick_progress
+        bar.setValue(min(bar.value() + 1, bar.maximum()))
+        bar.setFormat(message)
+
+    def _reset_pick_all(self) -> None:
+        if self._pick_busy is not None:
+            self._pick_busy.finish()
+            self._pick_busy = None
+        self._pick_progress.setVisible(False)
+        self._pick_worker = None
+
+    def _on_all_picked(self, dataset: Any, records: List[int], out: Dict[str, Any]) -> None:
+        """Take the worker's picks: keep the hand picks, report as the seismic workflow does."""
+        if dataset is not self._dataset:
+            self.log("The shots were picked on a file that is no longer loaded, so those "
+                     "picks were not kept.", "warn")
+            return
+        self._save_current_picks()           # hand picks made while it ran are kept too
+        picks, repicked, screen = out["picks"], out["repicked"], out["screen"]
         kept, dropped = screen.kept, screen.dropped
         rejected = list(screen.rejected) + list(screen.neighbour_rejected)
         manual = {record: {trace: self._all_picks[record][trace]
@@ -1501,10 +1698,11 @@ class SeismicProcessingModule(BaseModule):
         self._redraw_markers()
         self._update_pick_info()
         self._publish()
-        return {"picks": len(kept), "repicked": len(again), "rejected": len(rejected),
-                "neighbour_repicked": len(screen.neighbour_repicked),
-                "neighbour_rejected": len(screen.neighbour_rejected),
-                "manual_kept": n_manual, "shots_left_out": dropped, "records_left_out": left_out}
+        self._pick_all_done = {
+            "picks": len(kept), "repicked": len(again), "rejected": len(rejected),
+            "neighbour_repicked": len(screen.neighbour_repicked),
+            "neighbour_rejected": len(screen.neighbour_rejected),
+            "manual_kept": n_manual, "shots_left_out": dropped, "records_left_out": left_out}
 
     def _redraw_markers(self) -> None:
         self._viewer.set_picks(self._viewer_picks())
@@ -1531,7 +1729,14 @@ class SeismicProcessingModule(BaseModule):
         self._publish()
 
     def _update_pick_info(self) -> None:
-        self._pick_info.setText(f"{len(self._picks)} picks")
+        text = f"{len(self._picks)} picks"
+        others = [len(picks) for record, picks in self._all_picks.items()
+                  if picks and record != self._current_record]
+        if others:
+            # The exports and the inversion take every shot's picks, so say so.
+            shots = len(others) + int(bool(self._picks))
+            text += f" on this shot ({len(self._picks) + sum(others)} on {shots} shots in all)"
+        self._pick_info.setText(text)
         self._update_tt_qc()
         self._refresh_inversion_source()
 
@@ -1553,7 +1758,7 @@ class SeismicProcessingModule(BaseModule):
                           else "(no position file)")
                 self._geo_info.setText(
                     f"Even spacing {origin}: {len(geophones)} geophones, "
-                    f"x {min(geophones):g} to {max(geophones):g} m.")
+                    f"x {min(geophones):g} to {max(geophones):g} m{self._spread_suffix()}.")
         picks = self._all_first_breaks()
         if not picks:
             self._tt_plot.enableAutoRange()
@@ -1581,28 +1786,52 @@ class SeismicProcessingModule(BaseModule):
                                symbolSize=15, symbolBrush=color, symbolPen=pg.mkPen("#222", width=0.8))
 
     # -- export --------------------------------------------------------------
-    def _ordered_picks(self) -> list:
+    def _export_pick_list(self) -> Tuple[list, int]:
+        """Every shot's picks, shot by shot and trace by trace, and how many shots have any.
+
+        The exports wrote only the record on screen and said they had
+        succeeded, so a line picked shot by shot left one shot in the file.
+        """
         self._geometry_debounced.flush()     # an export reads the geophones stamped here
-        return [self._picks[t] for t in self._order if t in self._picks]
+        self._save_current_picks()
+        if self._current_record is None:     # one matrix, no shot records
+            return [self._picks[t] for t in sorted(self._picks)], int(bool(self._picks))
+        picks, shots = [], 0
+        for record in sorted(self._all_picks):
+            by_trace = self._all_picks[record]
+            if by_trace:
+                shots += 1
+                picks += [by_trace[t] for t in sorted(by_trace)]
+        return picks, shots
+
+    def _has_picks(self) -> bool:
+        """Whether any shot has a pick, the one on screen or another."""
+        return bool(self._picks) or any(
+            picks for record, picks in self._all_picks.items() if record != self._current_record)
+
+    @staticmethod
+    def _from_shots(shots: int) -> str:
+        return f"from {shots} shot{'s' if shots != 1 else ''}"
 
     def _export_picks(self) -> None:
-        if not self._picks:
+        picks, shots = self._export_pick_list()
+        if not picks:
             self.log("No picks to export.", "warn")
             return
         path, _ = QFileDialog.getSaveFileName(self, "Export picks", "seismic_picks.csv", "CSV (*.csv)")
         if not path:
             return
-        picks = self._ordered_picks()
         if _SEISMIC_OK:
             export_first_breaks(picks, path)
         else:
             rows = [(p["trace"], p["sample"], p["time_s"], p["value"]) for p in picks]
             io_utils.write_csv(path, rows, header=["trace", "sample", "time_s", "amplitude"])
-        self.log(f"Exported {len(picks)} picks to {path}", "success")
+        self.log(f"Exported {len(picks)} picks {self._from_shots(shots)} to {path}", "success")
         self._publish(picks_csv=path)
 
     def _export_traveltime(self) -> None:
-        if not self._picks:
+        picks, shots = self._export_pick_list()
+        if not picks:
             self.log("No picks to export.", "warn")
             return
         if not _SEISMIC_OK:
@@ -1612,11 +1841,18 @@ class SeismicProcessingModule(BaseModule):
         if not path:
             return
         try:
-            first_breaks_to_traveltime(self._ordered_picks(), path, receiver_spacing=self._spacing.value())
+            first_breaks_to_traveltime(picks, path, receiver_spacing=self._spacing.value())
+            # The count the file holds: a pick at time zero, or at its own shot's
+            # position, has no travel time and is not written.
+            lines = Path(path).read_text(encoding="utf-8").splitlines()
+            written = int(lines[2 + int(lines[0])])
         except Exception as exc:  # noqa: BLE001
             self.log(f"Travel-time export failed: {exc}", "error")
             return
-        self.log(f"Exported travel-time file to {path}", "success")
+        note = (f" ({len(picks) - written} of the {len(picks)} picks have no travel time: at "
+                "time zero, or at the shot's own position)" if written < len(picks) else "")
+        self.log(f"Exported {written} travel times {self._from_shots(shots)} to {path}{note}",
+                 "success")
         self._publish(traveltime_dat=path)
 
     # -- SRT inversion -------------------------------------------------------
@@ -1631,10 +1867,11 @@ class SeismicProcessingModule(BaseModule):
                 time_s = pick.time_s if hasattr(pick, "time_s") else pick["time_s"]
                 if not np.isfinite(time_s) or time_s <= 0:
                     continue
-                default_shot_x = self._shot_pos.get(record, self._default_shot_x(record))
                 source_x = getattr(pick, "source_x", None) if hasattr(pick, "source_x") else pick.get("source_x")
                 if source_x is None or not np.isfinite(float(source_x)):
-                    source_x = default_shot_x
+                    # Only for a pick without its shot x: worked out for every
+                    # pick, it scanned the file once per pick on each click.
+                    source_x = self._record_shot_x(record)
                 source_z = getattr(pick, "source_z", None) if hasattr(pick, "source_z") else pick.get("source_z")
                 if source_z is None or not np.isfinite(float(source_z)):
                     source_z = self._interp_topography(float(source_x))
@@ -1647,7 +1884,7 @@ class SeismicProcessingModule(BaseModule):
                     and np.isfinite(float(receiver_z))
                 )
                 if not receiver_ok:
-                    receiver_x, receiver_z = self._receiver_position(int(trace))
+                    receiver_x, receiver_z = self._receiver_position(int(trace), record)
                 out.append(FirstBreakPick(
                     source_id=int(record), receiver_id=int(trace) + 1, time_s=float(time_s),
                     source_x=float(source_x), source_z=float(source_z),
@@ -1658,6 +1895,9 @@ class SeismicProcessingModule(BaseModule):
 
     # -- upload pre-picked travel times --------------------------------------
     def _upload_traveltime(self) -> None:
+        from PyHydroGeophysX.qt_apps.widgets.project_dialogs import confirm_project_for_data
+        if not confirm_project_for_data(self):   # name a Project before the first data
+            return
         path, _ = QFileDialog.getOpenFileName(
             self, "Upload picked travel times", "",
             "Travel-time data (*.sgt *.tt *.gtt *.dat *.csv *.txt);;All files (*)")
@@ -1804,8 +2044,11 @@ class SeismicProcessingModule(BaseModule):
                 return
             start_msg = f"Running SRT inversion: {len(picks)} picks from {n_shots} shot(s)."
         try:
+            from PyHydroGeophysX.qt_apps.results_store import run_label_from_files
             run = self.begin_persisted_run(
-                "seismic.srt_inversion", "seismic.srt_inversion"
+                "seismic.srt_inversion", "seismic.srt_inversion",
+                label=run_label_from_files(
+                    [self._tt_path or getattr(self, "_source_path", None)]),
             )
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not prepare Project run: {exc}", "error")
@@ -2066,10 +2309,10 @@ class SeismicProcessingModule(BaseModule):
             if rec == self._current_record:
                 shot = float(self._shot_x.value())
             else:
-                shot = float(self._shot_pos.get(rec, self._default_shot_x(rec)))
+                shot = self._record_shot_x(rec)
             shot_z = self._interp_topography(shot)
             for i in range(arr.shape[1]):
-                x, z = self._receiver_position(i)
+                x, z = self._receiver_position(i, rec)
                 header = gather.headers[i] if i < len(gather.headers) else None
                 record.append(int(rec))
                 channel.append(int(header.trace_number) if header is not None else i + 1)
@@ -2233,12 +2476,15 @@ class SeismicProcessingModule(BaseModule):
         self._say_reflection("Stacking with the new settings…" if prepared is not None else
                              "Checking the traces, timing and cleaning every shot, then "
                              "stacking…")
-        worker = TaskWorker(_stack_reflections, traces, float(self._dt), geometry, params, prepared)
+        # with_log: the stack's step lines are where Stop can end it.
+        worker = TaskWorker(_stack_reflections, traces, float(self._dt), geometry, params,
+                            prepared, with_log=True)
         worker.succeeded.connect(lambda out: self._on_reflection_done(key, out))
         worker.failed.connect(self._on_reflection_failed)
         worker.finished.connect(self._reset_reflection_btn)
-        self._refl_worker = self.register_worker(worker)
+        self._refl_worker = self.register_worker(worker, activity="Stacking the reflection line")
         worker.start()
+        self._refl_stop.attach(worker)
         return None
 
     def _on_reflection_done(self, key: tuple, out: Dict[str, Any]) -> None:
@@ -2330,6 +2576,12 @@ class SeismicProcessingModule(BaseModule):
             self._refl_busy = None
         self._refl_btn.setText("Stack the line")
         self._refl_progress.setVisible(False)
+        if self._refl_worker is not None and self._refl_worker.is_cancelled():
+            # Said as an error too, so the assistant waiting on the stack does
+            # not report the section from the stack before as this one's.
+            self._refl_error = "The stack was stopped before it finished."
+            self._say_reflection("Stopped before the stack finished. Stack the line again "
+                                 "to start over.")
         self._refl_worker = None
 
     def _reset_reflection(self) -> None:
@@ -2412,24 +2664,76 @@ class SeismicProcessingModule(BaseModule):
         A SEG-Y line laid out along x carries each geophone's position. Left at
         the 1 m default, a 0.5 m line was picked and stacked at twice its offsets.
         Map coordinates are left alone: projecting them is a choice for the user.
+
+        Every record is checked, not only the first: on a roll-along line the
+        spread moves, and the later records' picks were put on the first
+        record's geophones. A spread that moves by whole geophone steps is
+        followed record by record (``_station_shift``); records whose geophones
+        fit no such pattern are named in a warning.
         """
         self._spacing_from_headers = False
+        self._station_shift, self._spread_note = {}, ""
         if not _SEISMIC_OK or not shallow.headers_have_positions(dataset):
             return
         headers = dataset.headers
         if any(abs(float(h.receiver_y) - float(headers[0].receiver_y)) > 1e-6
                or abs(float(h.source_y) - float(headers[0].receiver_y)) > 1e-6 for h in headers):
             return
-        first = dataset.get_gather(int(list(dataset.field_records)[0])).headers
-        xs = np.array([float(h.receiver_x) for h in first])
+        by_record: Dict[int, List[float]] = {}
+        for header in headers:
+            by_record.setdefault(int(header.field_record), []).append(float(header.receiver_x))
+        records = list(dataset.field_records)
+        xs = np.array(by_record[records[0]])
         steps = np.diff(xs)
         if xs.size < 2 or steps[0] <= 0 or not np.allclose(steps, steps[0], atol=1e-3):
             return
-        for box, value in ((self._spacing, float(steps[0])), (self._geo_start, float(xs[0]))):
+        step, start = float(steps[0]), float(xs[0])
+        shifts: Dict[int, int] = {}
+        misfits: List[int] = []
+        for record in records:
+            rx = np.asarray(by_record[record])
+            shift = int(round((rx[0] - start) / step))
+            if np.allclose(rx, start + (shift + np.arange(rx.size)) * step, atol=1e-3):
+                shifts[record] = shift
+            else:
+                misfits.append(record)
+        if misfits:
+            self._spread_note = "the records' geophones differ; all are placed as the first record's"
+            named = "; ".join(f"shot {r}: x {min(by_record[r]):g} to {max(by_record[r]):g} m"
+                              for r in misfits[:3])
+            self.log(f"The file headers put the geophones of {len(misfits)} record"
+                     f"{'s' if len(misfits) > 1 else ''} somewhere other than shot {records[0]}'s "
+                     f"x {start:g} to {xs[-1]:g} m ({named}{'; …' if len(misfits) > 3 else ''}). "
+                     "This page places every record's geophones as the first record's, so those "
+                     "records' picks would be placed wrongly: leave them unpicked, or invert "
+                     "them on their own.", "warn")
+        elif any(shifts.values()):
+            # Geophone 0 is the line's first: no record's spread starts before it.
+            first_station = min(shifts.values())
+            start += first_station * step
+            self._station_shift = {r: s - first_station for r, s in shifts.items()}
+            self._spread_note = "the spread moves along the line between records"
+            self.log(f"The geophones move along the line between records (x {start:g} to "
+                     f"{max(max(v) for v in by_record.values()):g} m in the file headers); each "
+                     "record's picks are placed at its own geophones.", "info")
+        for box, value in ((self._spacing, step), (self._geo_start, start)):
             box.blockSignals(True)
             box.setValue(value)
             box.blockSignals(False)
         self._spacing_from_headers = True
+
+    def _spread_suffix(self) -> str:
+        """The geometry line's note on a spread that moves, or does not fit one layout."""
+        return f" ({self._spread_note})" if self._spread_note else ""
+
+    def _line_geophone_count(self) -> int:
+        """How many geophone places the line has: every place a moving spread reaches."""
+        if self._dataset is None:
+            return int(self._raw.shape[1]) if self._raw is not None else 0
+        counts: Dict[int, int] = {}
+        for header in self._dataset.headers:
+            counts[int(header.field_record)] = counts.get(int(header.field_record), 0) + 1
+        return max((self._station_shift.get(rec, 0) + n for rec, n in counts.items()), default=0)
 
     def export_actions(self):
         actions = []
@@ -2439,7 +2743,7 @@ class SeismicProcessingModule(BaseModule):
                 "Velocity model (CSV + npy + mesh + VTK)",
                 self._export_velocity_model,
             ))
-        if self._picks:
+        if self._has_picks():
             actions.append(("First-arrival picks (CSV)", self._export_picks))
             actions.append(("Travel-time container (PyGIMLi .dat)", self._export_traveltime))
         return actions
@@ -2803,7 +3107,19 @@ class SeismicProcessingModule(BaseModule):
             return {"status": "failed", "error": "The file gives no sample interval to pick in."}
         if len(self._agent_records()) < 2:  # a single record, picked as auto_pick does
             return self._agent_auto_pick()
-        done = self._auto_pick_all()
+        error = self._auto_pick_all()
+        if error:
+            return {"status": "failed", "error": error}
+        worker = self._pick_worker
+        if worker is not None:
+            # As stack_reflection waits: a local loop keeps the window painting,
+            # connected before the check so a finish cannot slip by.
+            loop = QEventLoop()
+            worker.finished.connect(loop.quit)
+            if not worker.isFinished():
+                loop.exec()
+            QCoreApplication.processEvents()   # one that ended first still delivers
+        done = self._pick_all_done
         if done is None:
             return {"status": "failed", "error": "Auto-pick failed; see the log."}
         return {"status": "ok", **done,
@@ -2882,10 +3198,11 @@ class SeismicProcessingModule(BaseModule):
             traces: List[int] = []
             offsets: List[float] = []
             times: List[float] = []
+            shift = self._station_shift.get(self._current_record, 0)   # roll-along spread
             for tr, pick in self._picks.items():
                 t = pick.time_s if (_SEISMIC_OK and hasattr(pick, "time_s")) else pick["time_s"]
                 traces.append(int(tr))
-                offsets.append(abs((geo0 + int(tr) * spacing) - shot_x))
+                offsets.append(abs((geo0 + (int(tr) + shift) * spacing) - shot_x))
                 times.append(float(t))
             if len(traces) < 4:
                 return []

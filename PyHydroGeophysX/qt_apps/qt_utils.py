@@ -212,11 +212,48 @@ class ReproduceBar(QWidget):
         self._script_button.clicked.connect(self.open_script)
         self._notebook_button.clicked.connect(self.open_notebook)
         self._folder_button.clicked.connect(self.open_folder)
+        # The run's settings, QC report and log, as Saved Results lists them
+        # (run_records.run_documents), read when the menu opens: the log grows
+        # while the run goes on, and the outcome is added when it ends.
+        from PySide6.QtWidgets import QMenu
+
+        self._records_button = QPushButton("Run records")
+        self._records_button.setToolTip(
+            "Open this run's settings file, data QC report or log.")
+        self._records_menu = QMenu(self._records_button)
+        self._records_menu.aboutToShow.connect(self._fill_records_menu)
+        self._records_button.setMenu(self._records_menu)
+        self._records_button.setVisible(False)
         layout.addWidget(self._label, 1)
+        layout.addWidget(self._records_button)
         layout.addWidget(self._script_button)
         layout.addWidget(self._notebook_button)
         layout.addWidget(self._folder_button)
         self.setVisible(False)
+
+    def _run_folder(self) -> Optional[Path]:
+        target = self._script or self._recipe
+        folder = target.parent if target is not None else None
+        return folder if folder is not None and (folder / "logs").is_dir() else None
+
+    def _fill_records_menu(self) -> None:
+        from PyHydroGeophysX.qt_apps.run_records import QC_FOLDER, run_documents
+
+        self._records_menu.clear()
+        folder = self._run_folder()
+        documents = run_documents(folder) if folder is not None else []
+        for document in documents:
+            # The reciprocal pairs are drawn by Saved Results; their PNG opens.
+            if {"listing_only", "viewer_only"} & set(document.get("metadata") or {}):
+                continue
+            path = folder / document["path"]
+            action = self._records_menu.addAction(f"{document['label']}  ({document['path']})")
+            action.triggered.connect(lambda _checked=False, p=path: self._open(p))
+        if folder is not None and (folder / QC_FOLDER).is_dir():
+            action = self._records_menu.addAction(f"Each survey's QC log  ({QC_FOLDER}/)")
+            action.triggered.connect(lambda _checked=False, p=folder / QC_FOLDER: self._open(p))
+        if self._records_menu.isEmpty():
+            self._records_menu.addAction("Nothing written yet").setEnabled(False)
 
     def set_bundle(self, recipe_path, script_path) -> None:
         """Show the bundle from the run that just finished."""
@@ -247,6 +284,7 @@ class ReproduceBar(QWidget):
         if self._recipe is not None:
             lines.append(f"Recipe: {self._recipe}")
         self.setToolTip("\n".join(lines))
+        self._records_button.setVisible(self._run_folder() is not None)
         self.setVisible(True)
 
     def clear(self) -> None:

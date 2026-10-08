@@ -8,6 +8,9 @@ from typing import Any, Mapping, Optional, Sequence
 
 _VTK_FORMATS = {"vtk", "vtu", "vtp", "stl", "ply", "obj"}
 _IMAGE_FORMATS = {"png", "jpg", "jpeg", "bmp", "tif", "tiff"}
+#: The kinds ``qt_apps/run_records.py`` gives a run's text records (TEXT_KINDS
+#: there; repeated so this module stays import-free).
+_TEXT_KINDS = {"run_settings", "qc_report", "run_log", "workflow_output", "qc_survey_log"}
 
 
 def select_renderer(
@@ -20,6 +23,10 @@ def select_renderer(
         fmt = Path(str(artifact.get("path") or "")).suffix.lower().lstrip(".")
     if "model_bundle" in kind or kind in {"pygimli_bundle", "mesh_model_bundle"}:
         return "mesh_bundle"
+    # An ERT run's reciprocal pairs, drawn as the ERT page's Reciprocal errors
+    # tab draws them rather than as a bare array.
+    if kind == "reciprocal_error_pairs":
+        return "reciprocal_errors"
     # A recognized file format is stronger evidence than a broad semantic kind.
     # In particular, ``kind=volume`` with ``format=npy`` is a NumPy stack, not a
     # VTK file, and a ``figure_*`` data artifact must not be sent to an image
@@ -30,6 +37,10 @@ def select_renderer(
         return "vtk"
     if fmt in _IMAGE_FORMATS:
         return "image"
+    # A run's own records - settings, QC report, logs - are text for people,
+    # not tables: a .txt read as delimited columns came out as one garbled cell.
+    if fmt == "log" or kind in _TEXT_KINDS:
+        return "text"
     if fmt in {"npy", "npz"}:
         shape = tuple(array_shape or artifact.get("shape") or ())
         if len(shape) >= 3:

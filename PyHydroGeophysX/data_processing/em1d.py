@@ -936,6 +936,9 @@ _TEMCOMPANY_CACHE_LIMIT = temcompany_project.SURVEY_CACHE_LIMIT
 _TEMCOMPANY_DEFAULTS_CACHE: "OrderedDict[Any, Dict[str, Any]]" = OrderedDict()
 _TEMCOMPANY_SELECTION_CACHE: "OrderedDict[Any, List[Any]]" = OrderedDict()
 _STB_SURVEY_CACHE: "OrderedDict[Any, Dict[str, Any]]" = OrderedDict()
+#: Parsed generic sounding tables and run containers (see
+#: :func:`_sounding_table` and :func:`_container_soundings`).
+_TABLE_CACHE: "OrderedDict[Any, Any]" = OrderedDict()
 _TEMCOMPANY_CACHE_LOCK = threading.Lock()
 #: Held while a raw stream is decoded, so the threads of a line read wait for
 #: one decode instead of each running their own.
@@ -951,6 +954,7 @@ def clear_temcompany_caches() -> None:
         _TEMCOMPANY_DEFAULTS_CACHE.clear()
         _TEMCOMPANY_SELECTION_CACHE.clear()
         _STB_SURVEY_CACHE.clear()
+        _TABLE_CACHE.clear()
     temcompany_project.clear_survey_cache()
 
 
@@ -974,6 +978,35 @@ def _stb_survey(folder: Path, settings: "temcompany_stb.ProcessingSettings") -> 
             survey = _remember(_STB_SURVEY_CACHE, key,
                                temcompany_stb.read_acquisition_folder(folder, settings))
     return survey
+
+
+def _sounding_table(path: str) -> np.ndarray:
+    """A generic sounding table, parsed once per file version.
+
+    The table holds a whole survey side by side and a read returns one column
+    of it, so every caller that walks the soundings - the studio registering
+    the survey, a run storing its input, a line inversion reading its
+    stations - used to parse the whole file once per sounding: 38 s per
+    station change on a 3000-sounding table. Keyed on the file's size and
+    modification time, so a table rewritten between reads is parsed again.
+    The cached array is read-only; callers get copies of its columns.
+    """
+    source = Path(path)
+    try:
+        stat = source.stat()
+        key = (str(source.resolve()), stat.st_size, stat.st_mtime_ns)
+    except OSError:
+        key = None   # let the reader report the missing file in its own words
+    if key is not None:
+        with _TEMCOMPANY_CACHE_LOCK:
+            table = _TABLE_CACHE.get(key)
+        if table is not None:
+            return table
+    table = np.atleast_2d(table_io.load_2d_array(path)).astype(float)
+    table.setflags(write=False)
+    if key is not None:
+        _remember(_TABLE_CACHE, key, table)
+    return table
 
 
 def _remember(cache: "OrderedDict[Any, Any]", key: Any, value: Any) -> Any:
@@ -1017,24 +1050,37 @@ def _load_temcompany_database(path: Path, sounding: int, moment: str,
     gate_rejection = _check_gate_rejection(gate_rejection)
     specs, all_rows, saved_defaults = _temcompany_survey(path)
     value_key = f"{moment}_VoltageValues"
-    rows = []
-    for candidate in all_rows:
-        if candidate[value_key] in (None, "", "[]"):
-            continue
-        candidate_spec = specs.get(
-            candidate["RxTxSpecsId"], next(iter(specs.values()), {}))
-        try:
-            _temcompany_valid_channels(
-                np.asarray(candidate_spec.get(f"{moment}_GateCentreTime", []), dtype=float),
-                _temcompany_json_array(candidate[value_key]),
-                _temcompany_json_array(candidate[f"{moment}_VoltageValues_STD"]),
-                _temcompany_json_array(candidate[f"{moment}_InUseFlags"]),
-                use_flags, max_relative_std, gate_rejection,
-                reject_negative,
-            )
-        except (ValueError, TypeError, json.JSONDecodeError):
-            continue
-        rows.append(candidate)
+    # Which stations survive is a property of the survey and the settings, as
+    # in the joint reader below, and was worked out again for every station
+    # asked for: 60 ms a station on a 564-station project, so reading the
+    # survey under one moment took 34 s where LM+HM took 2.
+    selection_key = (
+        "single", temcompany_project.file_key(temcompany_project.project_file(path)),
+        str(moment), bool(use_flags), max_relative_std, gate_rejection,
+        bool(reject_negative),
+    )
+    with _TEMCOMPANY_CACHE_LOCK:
+        rows = _TEMCOMPANY_SELECTION_CACHE.get(selection_key)
+    if rows is None:
+        rows = []
+        for candidate in all_rows:
+            if candidate[value_key] in (None, "", "[]"):
+                continue
+            candidate_spec = specs.get(
+                candidate["RxTxSpecsId"], next(iter(specs.values()), {}))
+            try:
+                _temcompany_valid_channels(
+                    np.asarray(candidate_spec.get(f"{moment}_GateCentreTime", []), dtype=float),
+                    _temcompany_json_array(candidate[value_key]),
+                    _temcompany_json_array(candidate[f"{moment}_VoltageValues_STD"]),
+                    _temcompany_json_array(candidate[f"{moment}_InUseFlags"]),
+                    use_flags, max_relative_std, gate_rejection,
+                    reject_negative,
+                )
+            except (ValueError, TypeError, json.JSONDecodeError):
+                continue
+            rows.append(candidate)
+        _remember(_TEMCOMPANY_SELECTION_CACHE, selection_key, rows)
     if not rows:
         raise ValueError(f"No enabled {moment} station stacks were found in {path.name}.")
     s = max(0, min(int(sounding), len(rows) - 1))
@@ -2088,22 +2134,23 @@ def load_sounding(
             "no .stb raw stream, no project.tiw, no project.db and no "
             "*_StationData.xyz, so there is nothing to read. Copy the Data "
             "folder across as well, or export the station stacks as XYZ.")
-    table = np.atleast_2d(table_io.load_2d_array(path)).astype(float)
+    table = _sounding_table(path)
     if table.shape[1] < 2:
         raise ValueError(f"Expected >= 2 columns, got shape {table.shape}.")
-    x = table[:, 0]
+    # Copies: the parsed table is shared by every read of this file.
+    x = table[:, 0].copy()
     n_resp = table.shape[1] - 1
     if method == "FDEM":
         n_soundings = max(1, (n_resp + 1) // 2)
         s = max(0, min(int(sounding), n_soundings - 1))
         ri = 1 + 2 * s
-        real = table[:, ri]
-        imag = table[:, ri + 1] if ri + 1 < table.shape[1] else np.zeros_like(x)
+        real = table[:, ri].copy()
+        imag = table[:, ri + 1].copy() if ri + 1 < table.shape[1] else np.zeros_like(x)
         return {"frequencies": x, "real": real, "imag": imag,
                 "n_soundings": n_soundings, "sounding": s}
     n_soundings = n_resp
     s = max(0, min(int(sounding), n_soundings - 1))
-    return {"times": x, "response": table[:, 1 + s],
+    return {"times": x, "response": table[:, 1 + s].copy(),
             "n_soundings": n_soundings, "sounding": s}
 
 
@@ -2127,6 +2174,44 @@ def sounding_options(geom: Mapping[str, Any]) -> Dict[str, Any]:
     }
 
 
+def read_survey(path: str, method: str, *, progress=None,
+                cancelled=None, **options: Any) -> List[Dict[str, Any]]:
+    """Every sounding in ``path``, read once, as :func:`load_sounding` returns them.
+
+    ``options`` are :func:`load_sounding`'s keywords. ``progress`` is given a
+    line every hundred soundings; ``cancelled``, when it answers true, stops the
+    read early with :class:`InterruptedError`, so a caller that has moved on to
+    another file need not wait for this one.
+
+    A project sounding carries the survey's per-station columns (positions,
+    coordinates, line numbers, heights) as well as its own gates, so a list of
+    them grows with the square of the station count: 42 MB for 564 TEM2Go
+    stations. Those columns are the same in every sounding, so each one here
+    is the first sounding's array rather than a copy of it.
+    """
+    head = load_sounding(path, method, sounding=0, **options)
+    total = max(1, int(head.get("n_soundings", 1)))
+    shared = {key: value for key, value in head.items()
+              if isinstance(value, np.ndarray) and value.ndim == 1
+              and value.size == total and total > 1}
+    soundings: List[Dict[str, Any]] = [head]
+    for index in range(1, total):
+        if cancelled is not None and cancelled():
+            raise InterruptedError("The survey read was superseded.")
+        sounding = load_sounding(path, method, sounding=index, **options)
+        for key, column in shared.items():
+            value = sounding.get(key)
+            if (isinstance(value, np.ndarray) and value.shape == column.shape
+                    and value.dtype == column.dtype
+                    and np.array_equal(value, column,
+                                       equal_nan=column.dtype.kind == "f")):
+                sounding[key] = column
+        soundings.append(sounding)
+        if progress is not None and index % 100 == 0:
+            progress(f"  read {index + 1}/{total} soundings")
+    return soundings
+
+
 def save_sounding_container(
     destination: str | Path, path: str, method: str, *, moment: str = "HM",
     use_flags: bool = True, max_relative_std: Optional[float] = None,
@@ -2134,6 +2219,7 @@ def save_sounding_container(
     min_gates_per_moment: Optional[Mapping[str, int]] = None,
     ttem_loop_area: Optional[float] = None, ttem_gex_path: Optional[str] = None,
     ttem_tfi_path: Optional[str] = None, progress=None,
+    soundings: Optional[List[Dict[str, Any]]] = None,
 ) -> Path:
     """Materialize every sounding in ``path`` into one compressed container.
 
@@ -2146,6 +2232,9 @@ def save_sounding_container(
     a container written for ``LM+HM`` holds joint moments, and re-reading it
     under another moment would silently return the wrong gates. They travel in
     the manifest so a reader can report what it was given.
+
+    ``soundings`` are the survey already read under exactly these settings
+    (:func:`read_survey`); the file is then not read again.
     """
     settings = dict(
         moment=moment, use_flags=use_flags, max_relative_std=max_relative_std,
@@ -2155,13 +2244,10 @@ def save_sounding_container(
         ttem_loop_area=ttem_loop_area, ttem_gex_path=ttem_gex_path,
         ttem_tfi_path=ttem_tfi_path,
     )
-    head = load_sounding(path, method, sounding=0, **settings)
-    total = max(1, int(head.get("n_soundings", 1)))
-    soundings: List[Dict[str, Any]] = [head]
-    for index in range(1, total):
-        soundings.append(load_sounding(path, method, sounding=index, **settings))
-        if progress is not None and index % 100 == 0:
-            progress(f"  materialized {index + 1}/{total} soundings")
+    if not soundings:
+        soundings = read_survey(path, method, progress=progress, **settings)
+    head = soundings[0]
+    total = len(soundings)
     return run_inputs.save_sequence_container(
         destination,
         soundings,
@@ -2183,21 +2269,45 @@ def load_sounding_container(
 
     The moment and flag settings are not arguments here: they were applied when
     the container was written, and the stored arrays are what they produced.
+
+    The container is read whole once per file version and the soundings served
+    from memory, because a line inversion asks for every one of them in turn.
     """
-    manifest = run_inputs.read_manifest(path)
-    stored_method = str(manifest.get("meta", {}).get("method", "")).upper()
+    soundings, meta = _container_soundings(path)
+    stored_method = str(meta.get("method", "")).upper()
     if stored_method and str(method).upper() != stored_method:
         raise ValueError(
             f"{Path(path).name} holds {stored_method} soundings; {str(method).upper()} "
             "was requested. Re-import the survey to invert it as the other method."
         )
-    if run_inputs.sequence_length(path) < 1:
+    if not soundings:
         raise ValueError(f"{Path(path).name} holds no soundings.")
-    return dict(
-        run_inputs.load_sequence_item(
-            path, int(sounding), kind=SOUNDING_CONTAINER_KIND
-        )
-    )
+    position = max(0, min(int(sounding), len(soundings) - 1))
+    return _fresh(soundings[position])
+
+
+def _fresh(value: Any) -> Any:
+    """A copy of a cached sounding that its caller may change freely."""
+    if isinstance(value, np.ndarray):
+        return value.copy()
+    if isinstance(value, Mapping):
+        return {key: _fresh(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_fresh(item) for item in value]
+    return value
+
+
+def _container_soundings(path: str | Path) -> "tuple[List[Dict[str, Any]], Dict[str, Any]]":
+    """A run container's soundings and settings, read once per file version."""
+    source = Path(path)
+    stat = source.stat()
+    key = ("container", str(source.resolve()), stat.st_size, stat.st_mtime_ns)
+    with _TEMCOMPANY_CACHE_LOCK:
+        cached = _TABLE_CACHE.get(key)
+    if cached is None:
+        cached = _remember(_TABLE_CACHE, key, run_inputs.load_sequence(
+            source, kind=SOUNDING_CONTAINER_KIND))
+    return cached
 
 
 def load_line_geometry(path: str) -> Dict[str, Any]:
@@ -2470,6 +2580,7 @@ __all__ = [
     "load_sounding",
     "load_sounding_container",
     "load_line_geometry",
+    "read_survey",
     "save_sounding_container",
     "sounding_options",
     "build_em_config",

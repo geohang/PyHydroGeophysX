@@ -36,6 +36,23 @@ profile, so tick them in their order along the line; their distances come
 from the latitudes and longitudes in the files, or from the site spacing in
 step 5 when the files have none.
 
+### Sites recorded at different frequencies
+
+The 2D profile is inverted at one set of frequencies, taken from the first
+ticked site. A site whose own frequencies differ (another instrument, another
+processing run) has its impedance interpolated to those frequencies, between
+its two nearest frequencies on either side - never beyond its own band, and
+only where those two are less than a factor of 2.25 apart (three frequencies
+per decade still qualifies). It is interpolated as `Z / sqrt(f)` against
+`ln f`, which follows how an impedance changes with frequency: on layered test
+earths it is off by 0.1-0.3 % at 7-10 frequencies per decade and by under 2 %
+at three, well inside the 5 % error floor. A site frequency within 5 % of a
+profile frequency is used as it is. Interpolating every site onto common
+periods before a 2D inversion is the usual preparation (MTpy's ModEM data
+files are written the same way). The run's warnings name every site that
+gives fewer values than the profile asks for, and how many of its values were
+interpolated.
+
 ## TEM sounding for the 1D joint inversion (step 4)
 
 A central-loop TDEM sounding at the same place: a CSV or text file whose first

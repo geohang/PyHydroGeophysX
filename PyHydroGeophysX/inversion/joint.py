@@ -531,6 +531,8 @@ def _run_gravity_magnetics(request: JointInversionRequest) -> JointInversionResu
             "requested_backend": "simpeg",
         },
     )
+    # Stations left out or thinned first: they qualify every number after them.
+    result.warnings.extend(joint.meta.get("station_warnings", []))
     result.warnings.extend(joint.meta.get("baseline_warnings", []))
     out = Path(request.output_dir)
     out.mkdir(parents=True, exist_ok=True)

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from html import escape
 import json
 import os
+import time
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
@@ -11,6 +13,7 @@ import pyqtgraph as pg
 from PySide6.QtCore import QSettings, QTimer, Qt
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import (
+    QDialog,
     QDockWidget,
     QFileDialog,
     QInputDialog,
@@ -34,16 +37,45 @@ from PyHydroGeophysX.qt_apps.agent.controller import StudioController
 from PyHydroGeophysX.qt_apps import stall_watch
 from PyHydroGeophysX.qt_apps.layout_fit import relax_minimum_width
 from PyHydroGeophysX.qt_apps.modules import build_module
-from PyHydroGeophysX.qt_apps.modules.base import BaseModule
+from PyHydroGeophysX.qt_apps.modules.base import GENERIC_ACTIVITY, BaseModule
+from PyHydroGeophysX.qt_apps.results_store import run_title
 from PyHydroGeophysX.qt_apps.state import StudioState
 from PyHydroGeophysX.qt_apps.workers import prepare_workflow_process
 from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.ai_presence import AgentGlowFrame
 from PyHydroGeophysX.qt_apps.widgets.array_viewer import ArrayViewer
 from PyHydroGeophysX.qt_apps.widgets.log_panel import LogPanel
+from PyHydroGeophysX.qt_apps.widgets.project_dialogs import NewProjectDialog, SaveRunsDialog
 from PyHydroGeophysX.qt_apps.widgets.project_tree import ProjectTree
 
 WINDOW_TITLE = "PyHydroGeophysX Professional Studio"
+
+
+#: Longest activity phrase the status bar shows; the label never wraps, and a
+#: long one would push the output folder off the bar.
+_ACTIVITY_CHARS = 70
+
+
+def _page_activity(page) -> str:
+    """What ``page`` is busy with ("" when idle), shortened for the status bar."""
+    try:
+        phrase = str(page.activity() or "") if hasattr(page, "activity") else ""
+    except RuntimeError:                  # a page Qt has already destroyed
+        return ""
+    return phrase if len(phrase) <= _ACTIVITY_CHARS else phrase[:_ACTIVITY_CHARS - 1] + "…"
+
+
+def _elapsed_since(page, now: float) -> str:
+    """How long ``page`` has been busy, in words: "45 s", "3 min 05 s", "1 h 02 min"."""
+    since = page.busy_since() if hasattr(page, "busy_since") else None
+    if since is None:
+        return ""
+    seconds = max(0, int(now - since))
+    if seconds < 60:
+        return f"{seconds} s"
+    if seconds < 3600:
+        return f"{seconds // 60} min {seconds % 60:02d} s"
+    return f"{seconds // 3600} h {seconds % 3600 // 60:02d} min"
 
 
 def _stop_page_workers(pages) -> None:
@@ -126,16 +158,26 @@ class PyHydroGeophysXStudio(QMainWindow):
 
         self._status_label = QLabel("Ready")
         self.statusBar().addWidget(self._status_label)
+        # Ticks only while a page is busy, to keep the elapsed time current.
+        self._status_timer = QTimer(self)
+        self._status_timer.setInterval(1000)
+        self._status_timer.timeout.connect(self._refresh_status)
         # Runs are not recorded in the Project until saved, so how many are
         # waiting has to be visible without opening a menu.
         self._unsaved_label = QLabel()
         self.statusBar().addPermanentWidget(self._unsaved_label)
         self.state.on_runs_changed = self._refresh_unsaved_state
-        # Every module writes under state.output_dir, so where that points belongs
-        # on screen rather than only in whichever log line mentions a path.
+        # Every module writes under state.output_dir, so which Project that is
+        # belongs on screen rather than only in whichever log line mentions a
+        # path: its name here and in the title bar, the full path on hover.
         self._output_label = QLabel()
-        self._output_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self._output_label.setTextFormat(Qt.RichText)
+        self._output_label.setTextInteractionFlags(
+            Qt.TextSelectableByMouse | Qt.LinksAccessibleByMouse)
+        self._output_label.linkActivated.connect(lambda _link: self._new_project())
         self.statusBar().addPermanentWidget(self._output_label)
+        #: "Use Default Folder" was the answer this session; the next asks again.
+        self._kept_default_project = False
         self._restore_output_dir()
         self._activate_results_store(self.state.output_dir)
         self._refresh_unsaved_state()
@@ -180,40 +222,65 @@ class PyHydroGeophysXStudio(QMainWindow):
         override = os.environ.get("PYHYDROGEOPHYSX_OUTPUT_DIR")
         if override and not self.state.context:
             self.state.output_dir = Path(override).expanduser()
+            self.state.default_project = False
         elif not self.state.context:
             saved = QSettings("PyHydroGeophysX", "Studio").value("main/outputDir")
             if saved:
+                # Only a Project the user created or opened is remembered.
                 self.state.output_dir = Path(str(saved))
+                self.state.default_project = False
         self._refresh_output_label()
 
+    def _project_name(self) -> str:
+        """What the Project in use is called on screen."""
+        return self.state.project_name
+
     def _refresh_output_label(self) -> None:
-        path = self.state.output_dir
+        """Name the Project in use in the status bar and the window title."""
+        path = self.state.project_directory
         if path is None:
-            self._output_label.setText("Output: (not set)")
+            self.setWindowTitle(WINDOW_TITLE)
+            self._output_label.setText("Project: (none)")
             self._output_label.setToolTip("Results go to the current working directory.")
             return
+        name = self._project_name()
+        self.setWindowTitle(f"{name} — {WINDOW_TITLE}")
         text = str(path)
-        shown = text if len(text) <= 48 else "…" + text[-47:]
         warn = not mesh_serialization.ansi_safe(text)
-        self._output_label.setText(("⚠ " if warn else "") + f"Output: {shown}")
+        default = bool(getattr(self.state, "default_project", False))
+        # Left alone, the default folder collects every survey of every
+        # session, so it says it is not a named Project and offers to make one.
+        self._output_label.setText(
+            ("⚠ " if warn else "") + f"Project: {escape(name)}"
+            + ("  ·  <a href='new'>New Project…</a>" if default else ""))
         self._output_label.setToolTip(
-            text + ("\n\nWindows' ANSI codepage cannot represent this path. PyGIMLi writes "
-                    "are staged through a temporary folder to work around it, which is "
-                    "slower and fails outright if TEMP has the same problem. A path "
-                    "without such characters avoids it." if warn else ""))
+            text
+            + ("\n\nResults go to this default folder, shared by every session, until "
+               "you create a project. File › New Project… names one." if default else "")
+            + ("\n\nWindows' ANSI codepage cannot represent this path. PyGIMLi writes "
+               "are staged through a temporary folder to work around it, which is "
+               "slower and fails outright if TEMP has the same problem. A path "
+               "without such characters avoids it." if warn else ""))
 
-    def _switch_project(self, path: Path, landing: str) -> bool:
-        """Point the studio at *path* and open *landing*.
+    def _switch_project(self, path: Path, landing: Optional[str]) -> bool:
+        """Point the studio at *path* and open *landing* (stay put for None).
 
         The Project folder is also the output folder — the two were separate
         commands that set the same field, which left it possible to "open" one
         Project and write results into another. Every entry point now runs the
         same write probe, so an unwritable folder is refused before a run starts
         rather than after one finishes.
+
+        Leaving the default folder keeps every page as it is. Nobody chose that
+        folder, so whatever is open is the work the new Project is for, and the
+        question about it comes as data is being added - resetting the pages
+        then would throw away the very survey being set up. Moving between two
+        named Projects starts the pages afresh, as it always has.
         """
+        carry_session = bool(getattr(self.state, "default_project", False))
         # Unsaved runs live in the Project being left behind, so the decision has
         # to happen before the store is swapped out from under them.
-        if not self._resolve_unsaved_runs(f"They belong to the Project you are leaving."):
+        if not self._resolve_unsaved_runs("They belong to the Project you are leaving."):
             return False
         try:
             path.mkdir(parents=True, exist_ok=True)
@@ -226,19 +293,36 @@ class PyHydroGeophysXStudio(QMainWindow):
             return False
         if not self._activate_results_store(path):
             return False
+        self.state.default_project = False
         self._offer_to_clear_abandoned()
-        self._reset_pages(clear_session=True)
+        if carry_session:
+            # Only the run browser lists a Project; the other pages read the
+            # store each time they write, so they follow it without a reset.
+            viewer = self._pages.get("model_viewer")
+            if viewer is not None and hasattr(viewer, "reset_project"):
+                viewer.reset_project()
+        else:
+            self._reset_pages(clear_session=True)
         QSettings("PyHydroGeophysX", "Studio").setValue("main/outputDir", str(path))
         self._refresh_output_label()
         self._refresh_unsaved_state()
-        self.log(f"Results for this session go to {path}", "success")
+        self.log(f"Project {self._project_name()}: results for this session go to {path}",
+                 "success")
         if not mesh_serialization.ansi_safe(str(path)):
             self.log(
                 "This path contains characters Windows' ANSI codepage cannot represent. "
                 "PyGIMLi cannot open such paths directly, so mesh and model writes are "
                 "staged through a temporary folder. It works, but a plainer path is safer.",
                 "warn")
-        self.show_module(landing)
+        if landing:
+            self.show_module(landing)
+        else:
+            # Staying on the page the user is working in; Home and the map name
+            # the Project, so they are brought up to date where they are open.
+            current = self.state.selected_module
+            if current in ("home", "project_map") and hasattr(self._pages.get(current), "refresh"):
+                self._pages[current].refresh()
+            self._refresh_properties()
         return True
 
     def _make_dock(self, title: str, widget: QWidget, area: Qt.DockWidgetArea) -> QDockWidget:
@@ -347,6 +431,9 @@ class PyHydroGeophysXStudio(QMainWindow):
         # The toolbar carries the two commands a session actually repeats. The
         # bridge "Save" that used to sit here wrote a JSON manifest for the
         # Streamlit app, which read as the button that saved your results.
+        # New beside Open: a Project is made by naming it, and that was easy to
+        # miss with only a File menu entry that opened a bare folder picker.
+        self._add_action(toolbar, "New Project", self._new_project, icon_name="fa5s.folder-plus")
         self._add_action(toolbar, "Open Project", self._open_project, icon_name="fa5s.folder-open")
         # "Save" now means what a user reads it to mean. It used to write the
         # Streamlit bridge manifest, which is why it moved off the toolbar.
@@ -424,6 +511,8 @@ class PyHydroGeophysXStudio(QMainWindow):
             page.resultsUpdated.connect(self._refresh_properties)
             page.viewMeshRequested.connect(self._view_mesh_in_3d)
             page.navigateRequested.connect(self.show_module)
+            if hasattr(page, "activityChanged"):
+                page.activityChanged.connect(self._refresh_status)
             if hasattr(page, 'startAIRequested'):
                 page.startAIRequested.connect(self._start_task_ai)
             if hasattr(page, 'viewRunRequested'):
@@ -444,8 +533,57 @@ class PyHydroGeophysXStudio(QMainWindow):
         if self._pick_action.isChecked():
             self._pick_action.setChecked(False)
         self._refresh_properties()
-        title = getattr(self._pages[key], "module_title", key)
-        self._status_label.setText(f"Module: {title}    ·    Ready")
+        self._refresh_status()
+
+    # -- status bar ----------------------------------------------------------
+    def _refresh_status(self, *_changed) -> None:
+        """Say in the status bar what the studio is doing, not only where it is.
+
+        The open page's work comes first, with how long it has been going; a
+        page that is not on screen but still working is named as well, so
+        moving to another page never makes a run look finished. A 420-step
+        time-lapse run once spent an hour writing its results after the
+        inversion under a status bar that read "Ready" - which is how a studio
+        that is working gets closed.
+        """
+        label = getattr(self, "_status_label", None)
+        if label is None:
+            return
+        current = self._stack.currentWidget()
+        now = time.monotonic()
+        parts = [f"Module: {getattr(current, 'module_title', '') or self.state.selected_module}"]
+        doing = _page_activity(current)
+        if doing:
+            parts.append("Working…" if doing == GENERIC_ACTIVITY else f"Working: {doing}")
+            parts.extend(filter(None, [_elapsed_since(current, now)]))
+        others = [page for page in self._pages.values()
+                  if page is not current and _page_activity(page)]
+        if len(others) == 1:
+            other = others[0]
+            phrase = _page_activity(other)
+            text = f"{getattr(other, 'module_title', 'Another page')} is still working"
+            if phrase != GENERIC_ACTIVITY:
+                text += f": {phrase}"
+            parts.extend(filter(None, [text, _elapsed_since(other, now)]))
+        elif others:
+            names = [str(getattr(page, "module_title", "a page")) for page in others]
+            parts.append(f"{', '.join(names[:-1])} and {names[-1]} are still working")
+        busy = bool(doing or others)
+        if not busy:
+            parts.append("Ready")
+        text = "    ·    ".join(parts)
+        if text != label.text():
+            label.setText(text)
+            # Painted now rather than at the next turn of the event loop: a
+            # page announcing work on the GUI thread (set_activity) is about to
+            # hold that loop, and the phrase has to be on screen meanwhile.
+            label.repaint()
+        if bool(label.property("tone")) != busy:
+            theme.set_tone(label, "busy" if busy else None)
+        if busy and not self._status_timer.isActive():
+            self._status_timer.start()
+        elif not busy:
+            self._status_timer.stop()
 
     def _restore_assistant(self) -> None:
         """Start an ordinary Studio session with its native default assistant."""
@@ -635,12 +773,77 @@ class PyHydroGeophysXStudio(QMainWindow):
             self._pages['model_viewer'] = viewer
             viewer.reset_project()
 
+    def _project_location(self) -> Path:
+        """Where a new Project's folder is offered: beside the last one made."""
+        saved = QSettings("PyHydroGeophysX", "Studio").value("main/projectLocation")
+        if saved and Path(str(saved)).is_dir():
+            return Path(str(saved))
+        current = self.state.output_dir
+        if current is not None and not getattr(self.state, "default_project", False):
+            return Path(current).parent
+        documents = Path.home() / "Documents"
+        return documents if documents.is_dir() else Path.home()
+
+    def _create_project(self, dialog: NewProjectDialog, landing: Optional[str]) -> bool:
+        QSettings("PyHydroGeophysX", "Studio").setValue(
+            "main/projectLocation", str(dialog.location()))
+        return self._switch_project(dialog.project_path(), landing)
+
     def _new_project(self) -> None:
-        chosen = QFileDialog.getExistingDirectory(
-            self, "Choose or create Project folder", str(self.state.output_dir or Path.cwd())
-        )
-        if chosen:
-            self._switch_project(Path(chosen), "home")
+        """Make a Project from a name and a place, ``<location>/<name>``.
+
+        An existing folder is a Project to open, not one to create, so that is
+        Open Project's job and this dialog refuses one already in use.
+        """
+        dialog = NewProjectDialog(self, self._project_location())
+        if dialog.exec() != QDialog.Accepted:
+            return
+        # From the default folder the open pages come along (see _switch_project),
+        # so the user stays where they were; otherwise Home shows the new Project.
+        landing = None if getattr(self.state, "default_project", False) else "home"
+        self._create_project(dialog, landing)
+
+    def ask_for_project_before_data(self) -> bool:
+        """Offer once to name a Project before data first goes to the default folder.
+
+        Pages call this through ``project_dialogs.confirm_project_for_data``
+        first thing in their own "add data" action, before their file dialog.
+        Results otherwise land in the fallback folder nobody chose, together
+        with every other survey, and nobody can later tell which run was which.
+        Making the Project keeps every open page as it is, so the instrument
+        and anything else already set up stays. Returns False when the user
+        cancelled, and the page then stops.
+
+        "Use Default Folder" holds for the rest of the session; "Don't ask
+        again" for good. Nothing is asked while a computation runs, because the
+        Project cannot change under it.
+        """
+        if not getattr(self.state, "default_project", False):
+            return True
+        if getattr(self, "_kept_default_project", False):
+            return True
+        settings = QSettings("PyHydroGeophysX", "Studio")
+        if not settings.value("main/askForProject", True, type=bool):
+            return True
+        if any(record.status == "running" for record in self.state.unsaved_runs()):
+            return True
+        dialog = NewProjectDialog(
+            self, self._project_location(), title="Save This Work in a Project",
+            message=("Results are going to the default folder, which every session "
+                     "shares. Name a project for this survey to keep its runs "
+                     "together and easy to find."),
+            offer_default=True)
+        answer = dialog.exec()
+        if answer == NewProjectDialog.USE_DEFAULT:
+            self._kept_default_project = True
+            if dialog.dont_ask_again():
+                settings.setValue("main/askForProject", False)
+            self.log("Results keep going to the default folder. File › New Project… "
+                     "names a project at any time.", "info")
+            return True
+        if answer != QDialog.Accepted:
+            return False
+        return self._create_project(dialog, None)
 
     def _open_project(self) -> None:
         chosen = QFileDialog.getExistingDirectory(
@@ -675,12 +878,23 @@ class PyHydroGeophysXStudio(QMainWindow):
         self._unsaved_label.setToolTip(
             "Finished runs that are not in the Project's history yet.\n"
             "Ctrl+S adds them; closing the window will ask.\n\n"
-            + "\n".join(f"· {record.label}" for record in pending[:8])
+            + "\n".join(f"· {run_title(record)}" for record in pending[:8])
             + (f"\n… and {len(pending) - 8} more" if len(pending) > 8 else "")
         )
 
     def _save_runs(self) -> None:
+        pending = [record for record in self.state.unsaved_runs()
+                   if record.status != "running"]
+        if not pending:
+            self.log("No finished runs are waiting to be saved.", "info")
+            return
+        # Saving is when a run is worth naming, so the names are asked for here,
+        # each filled in already: keeping them as they are is one press of Enter.
+        dialog = SaveRunsDialog(self, pending)
+        if dialog.exec() != QDialog.Accepted:
+            return
         try:
+            self.state.name_runs(dialog.names())
             saved = self.state.save_all_runs()
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not save runs: {exc}", "error")
@@ -731,7 +945,8 @@ class PyHydroGeophysXStudio(QMainWindow):
         count towards the question, because stopping one leaves an unsaved
         record of it, but they are stopped only once the user has answered:
         Cancel must leave them running. The answer is then applied once, over
-        everything pending after the stop.
+        everything pending after the stop. The runs are listed with their
+        names, which can be changed there before Save.
         """
         runs = self.state.unsaved_runs()
         pending = [item for item in runs if item.status != "running"]
@@ -753,19 +968,18 @@ class PyHydroGeophysXStudio(QMainWindow):
                          f"{'is' if len(running) == 1 else 'are'} still running and "
                          "will be stopped; Cancel leaves "
                          f"{'it' if len(running) == 1 else 'them'} running.")
-        answer = QMessageBox.question(
-            self, "Unsaved runs",
-            " ".join(lines) + f"\n\n{reason}\n\n"
-            "Save keeps them; Discard deletes their folders.",
-            QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
-            QMessageBox.Save,
-        )
-        if answer == QMessageBox.Cancel:
+        dialog = SaveRunsDialog(
+            self, pending + running, title="Unsaved runs", allow_discard=True,
+            message=" ".join(lines) + f"\n\n{reason}\n\n"
+            "Save keeps them, with the names below; Discard deletes their folders.")
+        answer = dialog.exec()
+        if answer not in (QDialog.Accepted, SaveRunsDialog.DISCARD):
             return False
         if stop_running is not None:
             stop_running()
         try:
-            if answer == QMessageBox.Save:
+            if answer == QDialog.Accepted:
+                self.state.name_runs(dialog.names())
                 saved = self.state.save_all_runs()
                 self.log(f"Saved {len(saved)} run(s) before continuing.", "success")
             else:
@@ -777,11 +991,12 @@ class PyHydroGeophysXStudio(QMainWindow):
         return True
 
     def _offer_to_clear_abandoned(self) -> None:
-        """Offer to remove run folders an earlier session left unsaved.
+        """Offer to recover or remove run folders an earlier session left unsaved.
 
         A crash or a forced quit leaves a marked folder with no record. Nothing
         reads it and nothing lists it, so without this it would accumulate in
-        the Project unseen.
+        the Project unseen. A run that had finished still holds its recipe and
+        result, so it can be put back among the unsaved runs instead.
         """
         store = self.state.results_store
         if store is None or store.read_only:
@@ -793,13 +1008,31 @@ class PyHydroGeophysXStudio(QMainWindow):
         if not abandoned:
             return
         plural = "" if len(abandoned) == 1 else "s"
-        answer = QMessageBox.question(
-            self, "Unsaved runs from an earlier session",
-            f"This Project holds {len(abandoned)} run folder{plural} that an earlier "
-            "session never saved. They are not in the run history and nothing reads "
-            "them.\n\nDelete them now?",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
-        )
+        finished = sum(1 for path in abandoned if store.is_recoverable(path))
+        dialog = QMessageBox(self)
+        dialog.setIcon(QMessageBox.Question)
+        dialog.setWindowTitle("Unsaved runs from an earlier session")
+        text = (f"This Project holds {len(abandoned)} run folder{plural} that an earlier "
+                "session never saved. They are not in the run history.")
+        if finished:
+            text += (f"\n\n{finished} of them finished. Recover puts "
+                     f"{'it' if finished == 1 else 'them'} back among the unsaved runs, "
+                     "to save or discard; the others stay where they are.")
+        dialog.setText(text + "\n\nDelete deletes all of them.")
+        recover = dialog.addButton("Recover", QMessageBox.AcceptRole) if finished else None
+        delete = dialog.addButton("Delete", QMessageBox.DestructiveRole)
+        later = dialog.addButton("Not now", QMessageBox.RejectRole)
+        dialog.setDefaultButton(recover if recover is not None else later)
+        dialog.exec()
+        chosen = dialog.clickedButton()
+        if recover is not None and chosen is recover:
+            recovered = store.recover_abandoned_runs()
+            self.log(f"Recovered {len(recovered)} unsaved run(s) from an earlier session; "
+                     "save them to keep them.", "success")
+            self._refresh_unsaved_state()
+            self._refresh_model_viewer()
+            return
+        answer = QMessageBox.Yes if chosen is delete else QMessageBox.No
         if answer != QMessageBox.Yes:
             self.log(
                 f"{len(abandoned)} abandoned run folder(s) left in place under "
