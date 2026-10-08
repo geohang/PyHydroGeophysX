@@ -21,8 +21,8 @@ player does not load.
 Copy this prompt
 ----------------
 
-Paste this into Claude Code, Codex or another coding assistant. It covers CPU,
-optional CUDA and Desktop Studio.
+Paste this into Claude Code, Codex or another coding assistant. It matches the
+README installation prompt and covers CPU, optional CUDA and Desktop Studio.
 
 .. literalinclude:: _static/install-agent-prompt.txt
    :language: text

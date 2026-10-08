@@ -35,14 +35,16 @@ A Python package for integrating hydrological model outputs (MODFLOW, ParFlow) w
 
 ## Installation
 
-**Recommended — conda** (handles PyGIMLi's binary dependencies):
+### Recommended — conda
+
+conda handles PyGIMLi's binary dependencies:
 
 ```bash
 conda env create -f environment.yml
 conda activate pyhydrogeophysx
 ```
 
-**From PyPI:**
+### From PyPI
 
 ```bash
 pip install pyhydrogeophysx                  # core: petrophysics, model I/O, solvers
@@ -52,13 +54,111 @@ pip install "pyhydrogeophysx[all]"           # every general-purpose extra (ADTL
 
 If `pip` fails on PyGIMLi, install it first with `conda install -c gimli pygimli`, then add the extras.
 
-**From source** — the example scripts, notebooks, their data in `examples/data/` and the Streamlit apps come only with the repository, not the pip package:
+### From source
+
+The example scripts, notebooks, their data in `examples/data/` and the Streamlit apps come only with the repository, not the pip package:
 
 ```bash
 git clone https://github.com/geohang/PyHydroGeophysX.git
 cd PyHydroGeophysX
 pip install -e ".[geophysics]"
 ```
+
+### With a coding agent (Claude Code, Codex)
+
+The install has two decisions that trip people up: whether to reach for pip or
+conda, and whether this machine can use the CUDA build. Both pip and conda are
+correct in different environments, and picking the wrong one leaves two builds of
+VTK or Qt on the path. The GPU question is worse, because a CPU-only Torch wheel
+installs without complaint and the CUDA engine then quietly falls back.
+
+Paste the block below into Claude Code or Codex. It checks the machine, installs
+the matching build, and runs a small example before reporting success.
+
+```text
+Help me install PyHydroGeophysX and verify it on this computer.
+Repository: https://github.com/geohang/PyHydroGeophysX
+Official instructions: https://geohang.github.io/PyHydroGeophysX/installation.html
+Desktop guide: https://geohang.github.io/PyHydroGeophysX/agents/desktop_studio.html
+
+1. Inspect my OS, Python executable/version, available environment managers,
+   and existing NumPy, Qt, VTK and geophysical packages. Ask whether I want
+   Desktop Studio, Python workflows, or both, and which methods I need.
+   Do not assume Conda exists or infer all package origins from NumPy alone.
+
+2. Read the current official installation instructions and package metadata.
+   Prefer a dedicated environment with a supported Python version. If I ask
+   to reuse an environment, inspect its binary dependencies first. Use its
+   existing package manager for those dependencies; avoid duplicate pip/Conda
+   Qt and VTK installations. Show the plan before changing the environment.
+
+3. Choose a released package or source checkout explicitly. For a release,
+   use python -m pip install with the appropriate extras from the official
+   instructions. For source, locate an existing checkout or download the
+   official repository into a new directory, then enter the directory that
+   contains pyproject.toml before using an editable install. Do not overwrite
+   an existing checkout. Every pip command must use the chosen interpreter.
+   For updates, locate the checkout currently imported by that interpreter;
+   do not create another clone or worktree unless I request it. Record:
+     python -c "import sys, PyHydroGeophysX; print(sys.executable); print(PyHydroGeophysX.__file__)"
+   An editable source folder and an environment's Scripts launcher are normally
+   in different locations; that alone does not indicate a broken installation.
+
+4. Start with the CPU setup unless GPU acceleration is needed and supported.
+   For CUDA, inspect the NVIDIA GPU, driver, OS, Python and dependency support.
+   nvidia-smi reports driver capability, not the installed CUDA toolkit.
+   Select a compatible PyTorch/CuPy/cuDSS combination using current official
+   instructions; do not assume any CUDA 12 driver supports every CUDA wheel.
+   Never install competing CuPy variants. If torch.cuda.is_available() is
+   False, inspect the wheel, driver and device availability before diagnosing
+   the cause. Report an unsupported GPU configuration and offer the CPU path.
+
+5. Verify imports, the installed version and required engines. Download only
+   the small example files needed for a check, using a downloader suitable
+   for this OS, into a new test directory. Run a short example and report
+   finite results, any warnings and the engine that actually executed.
+   If testing ADTLERT, use a compatible dataset without remote electrodes;
+   report a fallback rather than claiming that GPU execution succeeded.
+   For ADTLERT, also run the three isolated checks (runtime, single, time-lapse):
+     python -m PyHydroGeophysX.inversion.adtlert_diagnostics --report gpu-check.json
+   Wait for the command to finish and inspect every stage's exit code and JSON
+   result. CUDA availability, a passing single-survey test, or Studio self-test
+   alone does not verify GPU time-lapse. A traceback line alone does not prove
+   that a process crashed; preserve the complete log and final exit status.
+   If this command is unavailable in an older release, report time-lapse as
+   unverified and use the matching release's documented test, or offer an update.
+   On failure, retain gpu-check.json and report each capability separately.
+   OpenMP conflicts can affect Intel or AMD CPUs. Do not set KMP_DUPLICATE_LIB_OK,
+   delete/rename DLLs, disable line search, or patch NumPy to make a check pass.
+   Do not modify source algorithms as part of installation unless I explicitly
+   request a code fix. Offer the CPU engine and verify it independently;
+   do not reinstall the same package combination repeatedly.
+   After successful verification, save python -m pip freeze and, for Conda,
+   conda env export. These record this tested machine; they are not a universal
+   GPU compatibility guarantee. Re-run the checks after dependency updates.
+
+6. For Desktop Studio, install the desktop extras and the engines needed for
+   my methods, then run:
+     python -m PyHydroGeophysX.qt_apps.launcher --self-test
+   Launch the application and give me the exact command to reopen it.
+   Report the environment name, installation path and any unverified features.
+
+   For AQUAH Auto to report, keep provider/model/API key settings in the right
+   assistant panel. The OpenAI default is gpt-5.6-luna with medium reasoning.
+   Folder classification sends filenames and short previews to that provider;
+   report whether a real API call was verified or only offline tests passed.
+   RAG uses local reference text. If I request MCP integration, install the
+   optional mcp extra and test the stdio server's list_workflows tool. Leave
+   numerical recipe execution disabled unless I request --allow-run.
+   Never claim that a generic DEM/XYZ file was used by an inversion merely
+   because the classifier recognized it; verify the supported geometry adapter.
+
+Do not delete environments, overwrite projects, or accept third-party Terms
+of Service on my behalf. If a step needs my action, explain what to do.
+Do not report success while required verification is failing.
+```
+
+### Optional extras
 
 | Extra | Packages installed |
 |---|---|
@@ -76,13 +176,13 @@ pip install -e ".[geophysics]"
 | `dev` | pytest, pytest-cov, black, flake8 |
 | `all` | all general-purpose groups above; ADTLERT remains opt-in |
 
-**Optional engines**, set up separately:
+### Optional engines
+
+These are set up separately:
 
 - **ADTLERT (GPU)** — `pip install "pyhydrogeophysx[adtlert]"` (on Windows, install a CUDA-enabled Torch wheel first). Before using field data, run `python -m PyHydroGeophysX.inversion.adtlert_diagnostics --report gpu-check.json`; see the [GPU setup and checks](https://geohang.github.io/PyHydroGeophysX/installation.html#install-the-optional-adtlert-ert-backend).
 - **E4D, R2 and R3t** — external programs, not installed with the package: E4D runs on Linux (on Windows inside WSL 2), R2/R3t natively on Windows and through Wine elsewhere. See [where they run and how to call them](https://geohang.github.io/PyHydroGeophysX/methods/ert.html#ert-e4d).
 - **TetGen** — `pip install tetgen` for E4D-style 3D meshes. It is AGPL-licensed, so it is not installed with the package; without it, Gmsh stands in.
-
-**With a coding agent:** Claude Code or Codex can check the machine, choose pip or conda and the right GPU build, and verify a small example. Copy the prompt from [Install with an AI agent](https://geohang.github.io/PyHydroGeophysX/agent_install.html).
 
 ---
 
