@@ -64,6 +64,37 @@ class CliSetupWorker(QThread):
         try:
             result = (check_login(self.provider) if self.check_only
                       else prepare_cli(self.provider, self._progress))
+            if self.provider.id == "codex_cli" and result["logged_in"]:
+                self._progress("Checking available models…")
+                from PyHydroGeophysX.llm.cli_models import list_codex_models
+
+                try:
+                    result["models"] = list_codex_models(self.provider)
+                except Exception as exc:
+                    # A catalog failure must not invalidate a working login.
+                    # Default and a manually entered model can still be used.
+                    result["model_error"] = str(exc)
             self.succeeded.emit(result)
         except Exception as exc:
             self.failed.emit(str(exc))
+
+
+class ScriptWorker(QThread):
+    """Run one approved temporary script (agents.runtime.scratch) off the UI thread."""
+
+    done = Signal(dict)
+
+    def __init__(self, source, inputs, folder, purpose="", parent=None):
+        super().__init__(parent)
+        self._args = (source, dict(inputs or {}), folder, purpose)
+
+    def run(self):  # noqa: D401 - QThread entry point
+        from PyHydroGeophysX.agents.runtime.scratch import run_script
+
+        source, inputs, folder, purpose = self._args
+        try:
+            record = run_script(source, inputs, folder, purpose=purpose)
+        except Exception as exc:  # noqa: BLE001 - reported to the chat, never raised
+            record = {"status": "failed", "error": f"{type(exc).__name__}: {exc}",
+                      "folder": str(folder)}
+        self.done.emit(record)

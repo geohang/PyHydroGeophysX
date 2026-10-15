@@ -81,7 +81,7 @@ different data formats, coordinate systems, and common data quality issues."""
 
             validation_error = self.validate_input_file(
                 data_file,
-                supported_extensions=[".ohm", ".bin", ".dat", ".stg", ".txt", ".data"],
+                supported_extensions=[".ohm", ".bin", ".dat", ".stg", ".txt", ".data", ".tab"],
                 field_name="data_file",
                 max_size_mb=input_data.get("max_file_size_mb"),
             )

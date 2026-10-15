@@ -33,7 +33,11 @@ def linearized_posterior(
 
     # J^T Cd^-1 J, without ever forming Cd^-1.
     if Cd.ndim == 1:
-        jt_cdinv_j = J.T @ (J / np.clip(Cd, 1e-12, None)[:, None])
+        if Cd.size != J.shape[0] or not np.all(np.isfinite(Cd) & (Cd > 0)):
+            raise ValueError("Diagonal data covariance must have one positive finite variance per datum.")
+        # Variance has physical units: a fixed floor changes the statistical
+        # model on conversion of units and disagrees with the dense diagonal.
+        jt_cdinv_j = J.T @ (J / Cd[:, None])
     else:
         jt_cdinv_j = J.T @ spd_solve(Cd, J, what="the data covariance Cd")
 
@@ -77,7 +81,11 @@ def propagate_petro_uncertainty(
     rho_cov = np.asarray(rho_cov, dtype=float)
 
     if rho_cov.ndim == 1:
-        rho_cov = np.diag(np.clip(rho_cov, 1e-12, None))
+        if rho_cov.size != rho.size or not np.all(np.isfinite(rho_cov) & (rho_cov >= 0)):
+            raise ValueError("Diagonal resistivity covariance must have one nonnegative finite variance per cell.")
+        # A zero variance is deterministic, and tiny variances are not noise
+        # floors. Match the same covariance supplied as a full diagonal matrix.
+        rho_cov = np.diag(rho_cov)
 
     rng = np.random.default_rng(seed)
     samples = rng.multivariate_normal(rho, rho_cov, size=int(n_samples))

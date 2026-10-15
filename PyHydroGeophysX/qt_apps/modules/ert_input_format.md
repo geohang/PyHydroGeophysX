@@ -23,11 +23,16 @@ to see which readers are available.
 | Sting / SuperSting | `.stg` |
 | ARES, Lippmann (`.tx0`), Electra | the instrument's export |
 | Subsurface Insights | `.csv` export |
+| BGS PRIME / RESIMGR | `.tab` export |
 
-BERT / unified, E4D, DAS-1, Res2DInv, Sting, ABEM-Lund, Lippmann, ARES and
-Subsurface Insights files load without ResIPy; Syscal, Protocol and Electra
-files need ResIPy installed. The line under the format names the reader that
-loaded the file.
+BERT / unified, E4D, DAS-1, Res2DInv, Sting, ABEM-Lund, Lippmann, ARES,
+Subsurface Insights and BGS PRIME files load without ResIPy; Syscal, Protocol
+and Electra files need ResIPy installed. The line under the format names the
+reader that loaded the file.
+
+A BGS PRIME `.tab` file has no electrode positions: the electrodes are placed
+1 m apart, in channel order, until you load the surveyed electrode file, which
+lists them in the same order (lowest channel first).
 
 A BERT / unified file, with the optional date line on the first line:
 

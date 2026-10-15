@@ -1,8 +1,9 @@
 """AQUAH: the hydrogeophysics assistant.
 
 Autonomous Query-driven Understanding Agent for Hydrogeophysics (Chen, 2026).
-It turns a request and survey files - ERT, seismic, TDEM, MT, hydrologic model
-output - into inverted models, water content and a report, by running the
+It turns a request and survey files - ERT, seismic, TDEM, MT, gravity and
+magnetics, GPR, hydrologic model output - into inverted models, processed
+sections, water content and a report, by running the
 runtime controller (:mod:`PyHydroGeophysX.agents.runtime`) over the tools in
 :mod:`PyHydroGeophysX.agents.runtime.catalog`.
 
@@ -30,8 +31,8 @@ ASSISTANT = Assistant(
     domain="Hydrogeophysics",
     title="Autonomous Query-driven Understanding Agent for Hydrogeophysics",
     summary=("Processes and models geophysical data for subsurface hydrology: ERT, "
-             "seismic, EM and MT inversion, water content with uncertainty, and "
-             "forward modeling from hydrologic models."),
+             "seismic, EM and MT inversion, GPR processing, water content with "
+             "uncertainty, and forward modeling from hydrologic models."),
     workflow="PyHydroGeophysX.agents.assistants.aquah.workflow:run",
     tools="PyHydroGeophysX.agents.assistants.aquah.workflow:tools",
     persona=PERSONA,
@@ -49,6 +50,7 @@ ASSISTANT = Assistant(
         ("TDEM survey", "tdem_file"),
         ("MT sites (EDI / EMTF)", "mt_files"),
         ("Gravity / magnetic stations", "gravmag_file"),
+        ("GPR line", "gpr_file"),
         ("Terrain / topography", "topography_file"),
         ("Map background (georeferenced image)", "basemap_file"),
         ("Geophone coordinates", "geophone_file"),
@@ -59,5 +61,5 @@ ASSISTANT = Assistant(
     # Roles that take several files: time-lapse surveys in order, MT sites.
     ordered_roles=("time_lapse_files", "mt_files"),
     folder_classifier=True,
-    providers=("openai", "anthropic", "codex_cli", "claude_code"),
+    providers=("openai", "anthropic", "openai_compatible", "codex_cli", "claude_code"),
 )

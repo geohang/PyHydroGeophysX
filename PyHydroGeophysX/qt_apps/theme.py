@@ -418,6 +418,9 @@ def build_qss() -> str:
     QPushButton[primary="true"]:hover {{ background-color: {p['accent']}; border-color: {p['accent']}; }}
     QPushButton[primary="true"]:pressed {{ background-color: {p['primary_dark']}; }}
     QPushButton[primary="true"]:disabled {{ background-color: {p['track']}; border-color: {p['track']}; color: {p['disabled_text']}; }}
+    /* A small button at the end of a line of text: an action that belongs to
+       that line (Log out beside "Signed in"), not a row of its own. */
+    QPushButton[compact="true"] {{ padding: 2px 10px; border-radius: 6px; font-weight: 400; }}
     /* A segmented choice: checkable buttons joined side by side, the chosen one
        filled and bold, the others plain - as clear as a choice can be at a
        glance, where a radio button's dot was not. */

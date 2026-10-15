@@ -36,7 +36,11 @@ def _components(tf: Any, components: Sequence[str]):
         p = phase[:, i, j]
         if name == "yx":
             p = p + 180.0
-        p = np.where(p > 180, p - 360, p)
+        # The circle is cut opposite the first quadrant, at -135 / 225 degrees: a
+        # phase near 180 then stays beside its neighbours instead of jumping from
+        # the top of the axis to the bottom. (Folding by 180 would not do: it
+        # would draw a sign-flipped estimate at -135 as a plausible 45.)
+        p = (p + 135.0) % 360.0 - 135.0
         yield (name, rho[:, i, j], p, None if rho_err is None else rho_err[:, i, j],
                None if phase_err is None else phase_err[:, i, j])
 
@@ -56,7 +60,9 @@ def plot_mt_sounding(tf: Any, *, components: Sequence[str] = ("xy", "yx"), axes:
         fig = axes[0].figure
     ax_rho, ax_phase = axes
     period = tf.period
+    drawn = []
     for name, rho, phase, rho_err, phase_err in _components(tf, components):
+        drawn.append(phase)
         color = _COLORS.get(name, None)
         label = {"xy": "Zxy", "yx": "Zyx", "det": "det(Z)"}.get(name, name)
         if errors and rho_err is not None:
@@ -78,8 +84,14 @@ def plot_mt_sounding(tf: Any, *, components: Sequence[str] = ("xy", "yx"), axes:
     ax_rho.set_ylabel("Apparent resistivity (Ω·m)")
     ax_rho.grid(True, which="both", alpha=0.25)
     ax_rho.legend(loc="best", fontsize=9)
-    ax_phase.set_ylim(0, 90)
-    ax_phase.set_yticks([0, 15, 30, 45, 60, 75, 90])
+    # 0-90 degrees, unless a phase falls outside: a channel wired the other
+    # way round puts a whole mode in another quadrant, and it is shown, not cut off.
+    phases = np.concatenate(drawn) if drawn else np.zeros(0)
+    phases = phases[np.isfinite(phases)]
+    low = min(0.0, 45.0 * np.floor(phases.min() / 45.0)) if phases.size else 0.0
+    high = max(90.0, 45.0 * np.ceil(phases.max() / 45.0)) if phases.size else 90.0
+    ax_phase.set_ylim(low, high)
+    ax_phase.set_yticks(np.arange(low, high + 1.0, 15.0 if high - low <= 90.0 else 45.0))
     ax_phase.set_ylabel("Phase (°)")
     ax_phase.set_xlabel("Period (s)")
     ax_phase.grid(True, which="both", alpha=0.25)

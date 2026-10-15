@@ -46,6 +46,7 @@ class InversionQualityView(QWidget):
         layout.addWidget(bar)
         layout.addWidget(self._canvas, stretch=1)
         self._drawn: Optional[Tuple] = None   # the arguments of the plots on screen
+        self._dirty = False
         self.clear()
         # View > Length Units: a per-item panel along a survey has a distance axis.
         length_units.notifier().changed.connect(self._on_length_unit_changed)
@@ -53,7 +54,29 @@ class InversionQualityView(QWidget):
     def _on_length_unit_changed(self, _unit: str) -> None:
         """Redraw the plots in the studio's new length unit, if one has a length axis."""
         if self._drawn is not None and self._drawn[3]:
+            self._request_redraw()
+
+    def _request_redraw(self) -> None:
+        self._dirty = True
+        if self.isVisible():
+            self.flush_redraw()
+
+    def flush_redraw(self) -> None:
+        """Prepare the latest plot, including when captured while hidden."""
+        if not self._dirty:
+            return
+        self._dirty = False
+        if self._drawn is not None:
             self._draw_convergence(*self._drawn)
+        else:
+            self._fig.clear()
+            self._toolbar.update()
+            self._fig.add_subplot(111).axis("off")
+            self._canvas.draw_idle()
+
+    def showEvent(self, event) -> None:  # noqa: N802 - Qt override
+        super().showEvent(event)
+        self.flush_redraw()
 
     @staticmethod
     def _verdict(chi2: Optional[float]) -> Tuple[str, str]:
@@ -116,7 +139,7 @@ class InversionQualityView(QWidget):
             f"<span style='color:{color}'><b>{verdict}</b></span>{note}")
 
         self._drawn = (convergence, chi2, m.get("convergence_track"), per_item, robust)
-        self._draw_convergence(*self._drawn)
+        self._request_redraw()
 
     def _draw_robust_convergence(self, ax, robust) -> None:
         """Effective histories in solid lines; raw values at recorded endpoints.
@@ -324,14 +347,14 @@ class InversionQualityView(QWidget):
         else:
             ax = self._fig.add_subplot(111)
         if self._draw_median_track(ax, track, weighted=bool(robust.get("enabled"))):
-            self._canvas.draw()
+            self._canvas.draw_idle()
             return
         if robust.get("enabled"):
             self._draw_robust_convergence(ax, robust)
-            self._canvas.draw()
+            self._canvas.draw_idle()
             return
         if self._draw_track(ax, track):
-            self._canvas.draw()
+            self._canvas.draw_idle()
             return
         conv: List[float] = []
         if convergence is not None:
@@ -368,16 +391,10 @@ class InversionQualityView(QWidget):
             ax.text(0.5, 0.5, "No per-iteration history for this inversion.",
                     ha="center", va="center", transform=ax.transAxes, color="#8e8e93")
             ax.axis("off")
-        # This tab is usually hidden when an inversion worker completes; draw()
-        # guarantees the finished figure is ready when the user opens it.
-        self._canvas.draw()
+        self._canvas.draw_idle()
 
     def clear(self) -> None:
         self._drawn = None
         self._metrics.setText("<span style='color:#8e8e93'>Run an inversion to see its "
                               "quality (χ², RMS, convergence) here.</span>")
-        self._fig.clear()
-        self._toolbar.update()
-        ax = self._fig.add_subplot(111)
-        ax.axis("off")
-        self._canvas.draw()
+        self._request_redraw()

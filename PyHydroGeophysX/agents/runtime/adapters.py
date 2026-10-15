@@ -117,7 +117,16 @@ The function:
 - skips headers, blank lines and comments itself; raises ValueError if the text
   is not what you described
 
-Write the reader for the layout you actually see above, not a general one."""
+Write the reader for the layout you actually see above, not a general one.{retry}"""
+
+#: Added to :data:`ADAPTER_PROMPT` when a reader the user approved failed.
+ADAPTER_RETRY = """
+
+A reader you wrote for this file was approved and run, and it failed with:
+{failure}
+That reader was:
+{previous}
+Fix the cause the error shows."""
 
 
 def sample_text(path: Any, lines: int = 12, chars: int = 1200) -> str:
@@ -260,11 +269,13 @@ def run_adapter(code: str, text: str, columns: int,
 
 
 def propose(ctx: RunContext, key: str, path: Any, error: str,
-            ask: Optional[Callable[[str], str]]) -> Tuple[str, str]:
+            ask: Optional[Callable[[str], str]], previous: str = "",
+            failure: str = "") -> Tuple[str, str]:
     """Ask the model for a reader for this file. Returns ``(code, description)``.
 
-    Returns ``("", "")`` when there is no model, the reply is unusable, or the
-    code it proposed is not allowed to run.
+    With ``previous`` and ``failure``, the reader it wrote before and how that
+    failed, for it to fix. Returns ``("", "")`` when there is no model, the
+    reply is unusable, or the code it proposed is not allowed to run.
     """
     columns = ADAPTABLE_FILES.get(key, 0)
     if not callable(ask) or not columns:
@@ -278,9 +289,14 @@ def propose(ctx: RunContext, key: str, path: Any, error: str,
     prompt = ADAPTER_PROMPT.format(
         name=Path(str(path)).name, columns=columns,
         meaning=meanings.get(key, "numbers"), error=str(error)[:400],
-        sample=sample)
+        sample=sample,
+        retry=ADAPTER_RETRY.format(failure=str(failure)[:600], previous=previous)
+        if previous else "")
+    from .recovery import ask_long
+
     try:
-        reply = ask(prompt)
+        # Room for the code: at the dispatch cap the reply was cut off mid-function.
+        reply = ask_long(ask, prompt)
     except Exception:  # noqa: BLE001 - an unreachable model proposes nothing
         return "", ""
     parsed = parse_json_object(str(reply or ""))
@@ -332,20 +348,31 @@ def adapt_file(ctx: RunContext, key: str, error: str,
     columns = ADAPTABLE_FILES.get(key, 0)
     if not path or not columns or not Path(str(path)).is_file():
         return ""
+    name = Path(str(path)).name
     code, description = propose(ctx, key, path, error, ask)
     if not code:
         return ""
-    if not review(ctx, key, path, code, description):
-        ctx.note(f"A generated reader for {Path(str(path)).name} was offered and "
-                 f"declined, so that file was left unread.")
-        return ""
-    try:
-        text = Path(str(path)).read_text(encoding="utf-8-sig", errors="replace")
-        rows = run_adapter(code, text, columns)
-    except (OSError, ValueError) as exc:
-        ctx.note(f"The generated reader for {Path(str(path)).name} was approved "
-                 f"but did not work ({exc}), so that file was left unread.")
-        return ""
+    lead = ""
+    # A reader that was approved and failed goes back to the model once with
+    # its error, and the fix is put to the user again. It used to end there.
+    for attempt in range(2):
+        if not review(ctx, key, path, code, lead + description):
+            ctx.note(f"A generated reader for {name} was offered and declined, so that "
+                     "file was left unread.")
+            return ""
+        try:
+            text = Path(str(path)).read_text(encoding="utf-8-sig", errors="replace")
+            rows = run_adapter(code, text, columns)
+            break
+        except (OSError, ValueError) as exc:
+            fixed, fixed_description = ("", "") if attempt or isinstance(exc, OSError) else \
+                propose(ctx, key, path, error, ask, previous=code, failure=str(exc))
+            if not fixed or fixed.strip() == code.strip():
+                ctx.note(f"The generated reader for {name} was approved but did not work "
+                         f"({exc}), so that file was left unread.")
+                return ""
+            code, description = fixed, fixed_description
+            lead = f"The reader you approved failed ({exc}); AQUAH has fixed it. "
     folder = Path(ctx.output_dir) / "adapted"
     folder.mkdir(parents=True, exist_ok=True)
     rewritten = folder / Path(str(path)).name

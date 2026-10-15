@@ -52,12 +52,26 @@ requires.
       phase tensors, Occam 1D with the static shift fixed by TEM, and 2D
       profiles.
 
+   .. grid-item-card:: Ground-penetrating radar
+      :link: gpr
+      :link-type: doc
+
+      GPR lines from GSSI, pulseEKKO, MALA and SEG-Y: clean-up, migration,
+      velocity from diffraction hyperbolas, and depth sections.
+
    .. grid-item-card:: MODFLOW and ParFlow
       :link: hydrological_models
       :link-type: doc
 
       The hydrological end: read model states, predict what a survey would
       record, and write an interpreted result back as model input.
+
+   .. grid-item-card:: Petrophysics and pore fluids
+      :link: petrophysics
+      :link-type: doc
+
+      Brine properties, ionic conductivity, clay surface conduction and
+      seismic grain-contact models with explicit units and uncertainty inputs.
 
 What each geophysical method needs and gives back
 -------------------------------------------------
@@ -91,6 +105,11 @@ What each geophysical method needs and gives back
      - Layered soundings and 2D sections
      - Aquifer and basement geometry below the reach of ERT; water content
        through a petrophysical relationship
+   * - Ground-penetrating radar
+     - Relative permittivity
+     - 2D reflection section in time or depth
+     - Layer boundaries and the water table in the top few metres; radar
+       velocity, hence permittivity and water content
 
 :doc:`MODFLOW and ParFlow <hydrological_models>` sit on the other side of that
 table. They supply the water content, saturation and porosity the first column
@@ -128,4 +147,6 @@ site.
    em
    potential_fields
    mt
+   gpr
    hydrological_models
+   petrophysics

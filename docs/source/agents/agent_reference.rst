@@ -506,7 +506,8 @@ tools whose inputs the run already holds (``load_ert_surveys``,
 ``convert_tdem_water_content``, ``load_mt_sites``, ``invert_mt``,
 ``evaluate_mt_inversion``, ``convert_mt_water_content``,
 ``load_gravmag_data``, ``invert_gravmag``, ``evaluate_gravmag_inversion``,
-``load_model_output``, ``write_report``), asks the model which one to run and
+``load_gpr_line``, ``process_gpr_line``, ``load_model_output``,
+``write_report``), asks the model which one to run and
 reads the result before choosing again. Without an API key it takes the first
 runnable tool in registration order, which is dependency order.
 
@@ -522,7 +523,10 @@ the inversion is evaluated before anything is built on it.
   one per shot; ``load_tdem_data`` the decays of up to six soundings beside the
   station layout; ``load_mt_sites`` each site's apparent resistivity and phase;
   ``load_gravmag_data`` the gravity or magnetic station values on a map, and
-  says which field the table holds before anything is inverted.
+  says which field the table holds before anything is inverted;
+  ``load_gpr_line`` a GPR line's radargram as recorded. A GPR line is
+  processed rather than inverted (``process_gpr_line``, see
+  :ref:`gpr-aquah`), and its depths use only a velocity somebody gave.
   The figures are written under ``raw_data/`` in the run folder, where the
   studio's Live tab shows them as they appear, and they open the method's
   figures in the report. The step summaries give the counts and ranges: for

@@ -192,7 +192,7 @@ def check_login(provider):
         except (ValueError, AttributeError):
             logged_in = False
     return {"logged_in": logged_in,
-            "message": "Signed in. Ready to chat." if logged_in else "Setup complete. Click Log In to continue."}
+            "message": "Signed in. Ready to chat." if logged_in else "Not signed in. Click Log in to continue."}
 
 
 def prepare_cli(provider, progress=lambda text: None):

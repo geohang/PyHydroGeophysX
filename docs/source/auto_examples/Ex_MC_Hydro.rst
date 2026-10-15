@@ -38,7 +38,7 @@ The analysis includes:
 4. Probabilistic water content estimation with uncertainty bounds
 5. Statistical analysis and visualization of results
 6. Time series extraction with confidence intervals
-7. Eastimate the porosity in satuatd zone
+7. Estimating porosity in the saturated zone
 
 Uncertainty quantification is essential for reliable hydrological 
 interpretation of geophysical data, providing confidence bounds on
@@ -665,176 +665,105 @@ reduced ERT sensitivity in low-porosity environments.
 %% [markdown]
 ### Estimate Porosity
 
-.. GENERATED FROM PYTHON SOURCE LINES 572-573
+.. GENERATED FROM PYTHON SOURCE LINES 572-579
 
-If we know the water table and then use it to estimate the porosity
+Below the water table the pores are full, so with saturation known (S = 1)
+the Waxman-Smits relation can be solved for porosity instead of saturation.
+The package's Monte Carlo draws the rock-physics parameters of each layer,
+solves for porosity in every cell and survey, and summarises the draws.
+A draw whose surface conductivity alone conducts more than the measured
+resistivity allows has no porosity solution: it is left out of the
+statistics, counted in ``no_root_fraction`` and reported in a warning.
 
-.. GENERATED FROM PYTHON SOURCE LINES 573-716
+.. GENERATED FROM PYTHON SOURCE LINES 579-627
 
 .. code-block:: Python
 
-
-
-
-    # Import PyHydroGeophysX modules
-    from PyHydroGeophysX.petrophysics.resistivity_models import resistivity_to_porosity
-
-    # Extract the inverted resistivity values
-    resistivity_values = np.load(os.path.join(structure_output_dir, "resmodel.npy"))
-    coverage = np.load(os.path.join(structure_output_dir, "all_coverage.npy"))
-    # Extract cell markers from the mesh (to identify different geological layers)
-    cell_markers = np.load(os.path.join(structure_output_dir, "index_marker.npy"))
-
-    mesh = pg.load(os.path.join(structure_output_dir, "mesh_res.bms"))
-
-    # Number of Monte Carlo realizations
-    n_realizations = 100
+    from PyHydroGeophysX.petrophysics.monte_carlo import run_petrophysics_monte_carlo
 
     # Assume full saturation under the water table
     saturation_value = 1.0
 
-    # Set up parameter distributions (means and standard deviations)
-    # For porosity estimation from resistivity with known saturation
-
-    # Layer 1 (top layer - marker 3) - Regolith/Soil
-    layer1_dist = {
-        'm': {'mean': 1.3, 'std': 0.1},               # Cementation exponent (lower for unconsolidated)
-        'n': {'mean': 2.1, 'std': 0.1},               # Saturation exponent
-        'sigma_sur': {'mean': 1/200, 'std': 1/200},  # Surface conductivity (S/m)
-    }
-
-    # Layer 2 (bottom layer - marker 2) - Fractured/Fresh Bedrock
-    layer2_dist = {
-        'm': {'mean': 1.9, 'std': 0.2},               # Cementation exponent (higher for consolidated)
-        'n': {'mean': 1.7, 'std': 0.2},               # Saturation exponent
-        'sigma_sur': {'mean': 0.0, 'std': 0.0},      # No surface conductivity in bedrock
-    }
-
-    # Create arrays to store all MC realization results
-    porosity_all = np.zeros((n_realizations, *resistivity_values.shape))
-    water_content_all = np.zeros((n_realizations, *resistivity_values.shape))  # Since saturation = 1, WC = porosity
-
-    # Create arrays to store the parameters used for each realization
-    params_used = {
-        'layer1': {
-            'm': np.zeros(n_realizations),
-            'rho_fluid': np.zeros(n_realizations),
-            'n': np.zeros(n_realizations),
-            'sigma_sur': np.zeros(n_realizations),
+    # Parameter distributions (means and standard deviations) for each layer
+    porosity_layers = [
+        {   # Layer 1 (top layer - marker 3) - Regolith/Soil
+            'marker': 3,
+            'm': {'mean': 1.3, 'std': 0.1},               # Cementation exponent (lower for unconsolidated)
+            'rho_fluid': 20.0,                            # Pore-water resistivity (ohm m)
+            'n': {'mean': 2.1, 'std': 0.1},               # Saturation exponent
+            'sigma_sur': {'mean': 1/200, 'std': 1/200},   # Surface conductivity (S/m)
         },
-        'layer2': {
-            'm': np.zeros(n_realizations),
-            'rho_fluid': np.zeros(n_realizations),
-            'n': np.zeros(n_realizations),
-            'sigma_sur': np.zeros(n_realizations),
-        }
-    }
+        {   # Layer 2 (bottom layer - marker 2) - Fractured/Fresh Bedrock
+            'marker': 2,
+            'm': {'mean': 1.9, 'std': 0.2},               # Cementation exponent (higher for consolidated)
+            'rho_fluid': 20.0,
+            'n': {'mean': 1.7, 'std': 0.2},               # Saturation exponent
+            'sigma_sur': 0.0,                             # No surface conductivity in bedrock
+        },
+    ]
 
-    # Perform Monte Carlo simulation
     print("Starting Monte Carlo simulation for porosity estimation...")
     print(f"Assuming full saturation (S = {saturation_value}) everywhere")
-
-    for mc_idx in tqdm(range(n_realizations), desc="MC Realizations"):
-    
-        # Sample parameters for each layer from their distributions
-        # Layer 1 (Top layer - Regolith/Soil)
-        layer1_params = {
-            'm': max(0.0, random_generator.normal(layer1_dist['m']['mean'], layer1_dist['m']['std'])),
-            'rho_fluid': 20,
-            'n': max(0.0, random_generator.normal(layer1_dist['n']['mean'], layer1_dist['n']['std'])),
-            'sigma_sur': max(0.0, random_generator.normal(layer1_dist['sigma_sur']['mean'], layer1_dist['sigma_sur']['std'])),
-        }
-    
-        # Layer 2 (Bottom layer - Bedrock)
-        layer2_params = {
-            'm': max(0.0, random_generator.normal(layer2_dist['m']['mean'], layer2_dist['m']['std'])),
-            'rho_fluid': 20,
-            'n': max(0.0, random_generator.normal(layer2_dist['n']['mean'], layer2_dist['n']['std'])),
-            'sigma_sur': 0,
-        }
-    
-        # Save the parameters used for this realization
-        params_used['layer1']['m'][mc_idx] = layer1_params['m']
-        params_used['layer1']['rho_fluid'][mc_idx] = layer1_params['rho_fluid']
-        params_used['layer1']['n'][mc_idx] = layer1_params['n']
-        params_used['layer1']['sigma_sur'][mc_idx] = layer1_params['sigma_sur']
-    
-        params_used['layer2']['m'][mc_idx] = layer2_params['m']
-        params_used['layer2']['rho_fluid'][mc_idx] = layer2_params['rho_fluid']
-        params_used['layer2']['n'][mc_idx] = layer2_params['n']
-        params_used['layer2']['sigma_sur'][mc_idx] = layer2_params['sigma_sur']
-    
-        # Create arrays to store porosity for this realization
-        porosity = np.zeros_like(resistivity_values)
-    
-        # Process each timestep
-        for t in range(resistivity_values.shape[1]):
-            # Extract resistivity for this timestep
-            resistivity_t = resistivity_values[:, t]
-        
-            # Process each layer separately using resistivity_to_porosity function
-        
-            # Layer 1 (marker 3) - Top layer
-            mask_layer1 = cell_markers == 3
-            if np.any(mask_layer1):
-                porosity[mask_layer1, t] = resistivity_to_porosity(
-                    resistivity=resistivity_t[mask_layer1],
-                    saturation=saturation_value,  # Full saturation
-                    m=layer1_params['m'],
-                    rho_fluid=layer1_params['rho_fluid'],
-                    n=layer1_params['n'],
-                    sigma_sur=layer1_params['sigma_sur'],
-                    a=1.0  # Fixed tortuosity
-                )
-        
-            # Layer 2 (marker 2) - Bottom layer
-            mask_layer2 = cell_markers == 2
-            if np.any(mask_layer2):
-                porosity[mask_layer2, t] = resistivity_to_porosity(
-                    resistivity=resistivity_t[mask_layer2],
-                    saturation=saturation_value,  # Full saturation
-                    m=layer2_params['m'],
-                    rho_fluid=layer2_params['rho_fluid'],
-                    n=layer2_params['n'],
-                    sigma_sur=layer2_params['sigma_sur'],
-                    a=1.0 # Fixed tortuosity for bedrock
-                )
-    
-        # Store this realization's porosity
-        porosity_all[mc_idx] = porosity
-    
-        # Since saturation = 1, water content = porosity
-        water_content_all[mc_idx] = porosity
-
+    porosity_mc = run_petrophysics_monte_carlo(
+        resistivity_values,
+        cell_markers,
+        porosity_layers,
+        products=("porosity",),
+        n_realizations=n_realizations,
+        seed=2026,
+        saturation_value=saturation_value,
+        tortuosity_a=1.0,  # Fixed tortuosity
+    )
     print("Monte Carlo simulation completed!")
 
-    # Calculate statistics across all realizations
-    print("Calculating statistics...")
-    porosity_mean = np.mean(porosity_all, axis=0)
-    porosity_std = np.std(porosity_all, axis=0)
+    # Statistics over the draws that have a porosity solution
+    porosity_stats = porosity_mc["statistics"]["porosity"]
+    porosity_mean = porosity_stats["mean"]  # NaN where no draw has a solution
+    porosity_std = porosity_stats["std"]
+    no_root_fraction = porosity_stats["no_root_fraction"]
+
+    for marker, name in ((3, "Regolith"), (2, "Bedrock")):
+        share = no_root_fraction[cell_markers == marker]
+        print(f"{name} (marker {marker}): {100 * share.mean():.1f}% of draws have no porosity "
+              f"solution; {100 * np.mean(share == 1.0):.1f}% of cell-surveys have none in any draw")
 
 
+.. GENERATED FROM PYTHON SOURCE LINES 628-639
 
+Where Porosity Has No Solution
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+With this regolith prior, the sampled surface conductivity alone conducts
+more than the measured regolith resistivity allows in most draws: 77% of
+the regolith draws have no porosity solution, and the warning above gives
+the ranges. The regolith statistics rest on the remaining low-sigma_sur
+draws and are not compared here. The regolith also never saturates in this
+model (true saturation at most 0.57 over the 12 surveys), so S = 1 does not
+hold there. Both comparisons below lie in the bedrock layer, where
+sigma_sur is zero and every draw has a solution.
 
-.. GENERATED FROM PYTHON SOURCE LINES 717-718
+.. GENERATED FROM PYTHON SOURCE LINES 641-642
 
 ### Unsaturated zone comparison
 
-.. GENERATED FROM PYTHON SOURCE LINES 720-740
+.. GENERATED FROM PYTHON SOURCE LINES 644-668
 
 .. code-block:: Python
 
     from scipy.interpolate import griddata
 
     porosity_true = np.load(os.path.join(time_lapse_dataset_dir, "porosity_mesh.npy"))
+    saturation_true = WC_true[10] / porosity_true  # Day 330, the survey compared here
     mesh_centers = np.array(mesh_true.cellCenters())
     x1, y1 = np.mgrid[40:55:100j, 1600:1600:1j]
     po_1 = griddata(mesh_centers[:,0:2], porosity_true, (x1, y1), method='linear')
+    sat_1 = griddata(mesh_centers[:,0:2], saturation_true, (x1, y1), method='linear')
 
     mesh_centers2 = np.array(mesh.cellCenters())
     po_2 = griddata(mesh_centers2[:,0:2], porosity_mean[:,10], (x1, y1), method='linear')
     std_2 = griddata(mesh_centers2[:,0:2], porosity_std[:,10], (x1, y1), method='linear')
+    print(f"True saturation along y = 1600 m: {np.nanmin(sat_1):.2f}-{np.nanmax(sat_1):.2f}")
+    print(f"Points with no porosity solution: {np.isnan(po_2).sum()} of {po_2.size}")
 
     fig = plt.figure(figsize=[6, 3])
 
@@ -846,15 +775,16 @@ If we know the water table and then use it to estimate the porosity
     plt.ylabel('Porosity (-)')
     plt.legend(frameon=False)
 
-.. GENERATED FROM PYTHON SOURCE LINES 741-754
+.. GENERATED FROM PYTHON SOURCE LINES 669-683
 
 Unsaturated Zone Porosity Estimation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Cross-sectional porosity comparison in unsaturated zone (y=1600m) shows 
-good agreement between estimated (solid) and true (dashed) values. 
-Uncertainty bands reflect parameter variability in petrophysical 
-relationships for partially saturated conditions.
+This line (y = 1600 m) lies above the water table: on day 330 the true
+saturation along it is 0.55-0.64, not the S = 1 the estimate assumes.
+Partly saturated rock is more resistive, and the estimate reads that as low
+porosity: about 0.10-0.11 against a true 0.28-0.31. Porosity from
+resistivity at S = 1 holds only below the water table.
 
 .. image:: /auto_examples/images/Ex_MC_Hydro_fig_05.png
    :align: center
@@ -862,20 +792,18 @@ relationships for partially saturated conditions.
 %% [markdown]
 ### Saturated zone comparison
 
-.. GENERATED FROM PYTHON SOURCE LINES 756-773
+.. GENERATED FROM PYTHON SOURCE LINES 685-700
 
 .. code-block:: Python
 
-    from scipy.interpolate import griddata
-
-    porosity_true = np.load(os.path.join(time_lapse_dataset_dir, "porosity_mesh.npy"))
-    mesh_centers = np.array(mesh_true.cellCenters())
     x1, y1 = np.mgrid[40:55:100j, 1590:1590:1j]
     po_1 = griddata(mesh_centers[:,0:2], porosity_true, (x1, y1), method='linear')
+    sat_1 = griddata(mesh_centers[:,0:2], saturation_true, (x1, y1), method='linear')
 
-    mesh_centers2 = np.array(mesh.cellCenters())
     po_2 = griddata(mesh_centers2[:,0:2], porosity_mean[:,10], (x1, y1), method='linear')
     std_2 = griddata(mesh_centers2[:,0:2], porosity_std[:,10], (x1, y1), method='linear')
+    print(f"True saturation along y = 1590 m: {np.nanmin(sat_1):.2f}-{np.nanmax(sat_1):.2f}")
+    print(f"Points with no porosity solution: {np.isnan(po_2).sum()} of {po_2.size}")
 
     fig = plt.figure(figsize=[6, 3])
     plt.plot(x1,po_1,c='k',ls='--',label='True')
@@ -884,30 +812,33 @@ relationships for partially saturated conditions.
     plt.ylim(0, 0.35)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 774-786
+.. GENERATED FROM PYTHON SOURCE LINES 701-716
 
 Saturated Zone Porosity Validation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Saturated zone porosity estimates (y=1590m) demonstrate excellent recovery 
-with narrow uncertainty bounds. Full saturation assumption provides strong 
-constraints, reducing parameter uncertainty and improving estimation reliability 
-compared to partially saturated conditions.
+Below the water table (y = 1590 m, true saturation 1.0 on day 330) the
+S = 1 assumption holds. The estimate is 0.15-0.16 with a standard deviation
+of about 0.03, 0.05-0.07 below the true 0.20-0.23. The inversion places
+610-690 ohm m here where the true model has 500 ohm m, and the estimate
+carries that error. Even at 500 ohm m these parameters give about 0.18,
+because the synthetic model's saturated resistivity does not vary with its
+porosity.
 
 .. image:: /auto_examples/images/Ex_MC_Hydro_fig_06.png
    :align: center
    :width: 700px
 %%
 
-.. GENERATED FROM PYTHON SOURCE LINES 788-796
+.. GENERATED FROM PYTHON SOURCE LINES 718-726
 
 Summary
 ~~~~~~~
 
 This Monte Carlo analysis successfully quantified uncertainty in water content 
 and porosity estimates from ERT data. Key findings include layer-specific 
-uncertainty patterns, temporal monitoring with confidence bounds, and enhanced 
-reliability in saturated zones. The probabilistic framework provides essential 
+uncertainty patterns, temporal monitoring with confidence bounds, and porosity
+estimates that hold only below the water table. The probabilistic framework provides essential
 uncertainty information for water resource management decisions.
 
 

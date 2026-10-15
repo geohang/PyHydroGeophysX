@@ -4,8 +4,8 @@ Agent Workflow: folders, references and MCP
 One place to ask, one place to inspect
 --------------------------------------------------------------------------------
 
-Use AQUAH on the right for the goal, provider, model, API key and execution mode.
-Choose **Auto to report**. In the central Workflow page, choose a data folder or
+Use AQUAH on the right for the goal, provider, model and API key. Send the goal
+and choose **Auto to report**. In the central Workflow page, choose a data folder or
 add individual files. Folder selection is local: files are not moved or copied.
 When you send the goal, the worker scans the folder and sends filenames and short
 text previews to the selected AI provider for classification. Binary file content
@@ -14,7 +14,10 @@ is not decoded for classification. API usage may incur charges.
 The editable classification table shows each file, suggested role, confidence
 and evidence. Review these suggestions and send **continue** in AQUAH. Assign
 unknown files a role or Ignore. Confidence is an AI estimate, not a calibrated
-probability. Multiple surveys are not silently assumed to be time-lapse data.
+probability. If the model cannot be reached, or its answer still cannot be read
+after one retry, the files it did not classify stay unknown with the reason.
+Roles read from the files themselves are kept, and the scan is not lost.
+Multiple surveys are not silently assumed to be time-lapse data.
 Arrange time-lapse files chronologically with the up/down controls after roles
 have been applied. Manual file selection remains available.
 
@@ -31,8 +34,14 @@ coordinates, independent terrain and reference documents. A file being
 classified does not imply every workflow can consume it.
 
 * ERT uses the existing ``electrode_file`` loader for electrode geometry,
-  including elevations. Independent DEM/XYZ terrain must be prepared in the
-  mesh workflow; it is not silently substituted for electrode coordinates.
+  including elevations. A coordinate table with one evenly spaced row for each
+  electrode an ERT survey beside it uses is that survey's electrode file. This
+  is read from the files themselves (the survey's electrode count, the table's
+  rows and spacing), before the model is asked, and also when such a table
+  reaches a run labelled as terrain. Any other DEM/XYZ terrain is left out of an
+  ERT run with a note in the run's record, rather than stopping it. The
+  assistant reads the note and can carry on, ask you, or propose a temporary
+  script for you to approve. Prepare such terrain in the mesh workflow.
 * Raw SEG-Y accepts ``geophone_file`` with exactly three numeric columns:
   ``receiver_id x z`` (the optional header must use those names). IDs must match
   the SEG-Y receiver IDs; row order is not used to guess station identity.
@@ -40,7 +49,8 @@ classified does not imply every workflow can consume it.
   ``x z``. Elevations are interpolated at source/receiver x before travel-time
   export. Coordinates must share units and datum; missing IDs, duplicate profile
   x values, nonfinite values and out-of-profile points cause an error.
-* Existing travel-time files must already contain their sensor geometry.
+* Existing travel-time files must already contain their sensor geometry; a
+  geophone file given with them is left out with a note.
   GeoTIFF/3D XYZ terrain is recognized as a possible input but is not supported
   by this two-dimensional automatic profile adapter.
 
@@ -59,13 +69,14 @@ Downloads are verified against the publisher's SHA-256 checksum before use.
 No administrator privileges, Node.js installation or PATH edits are needed.
 
 If you are already signed in with a subscription, chat becomes ready. Otherwise,
-click **Log In** and complete the official sign-in in your browser; the studio
-checks the saved login and enables chat when you return. **Log In** remains
-visible after sign-in so you can sign in again or use another account. It is
-temporarily disabled during setup, sign-in and active chat or workflow runs.
-**Cancel login** lets
-you stop an unfinished sign-in, and **Retry setup** retries a failed download
-or installation check. The API key and Apply controls are hidden. Your
+click **Log in** and complete the official sign-in in your browser; the studio
+checks the saved login and enables chat when you return. The sign-in status
+line carries one small button for what fits the state: **Log in** when signed
+out, **Log out** when signed in (to use another account, log out, then log in),
+**Cancel** during an unfinished sign-in and **Retry** after a failed download
+or installation check. **Log out** asks first, because it signs the CLI out on
+the whole computer, also where you use it in a terminal. The button is disabled
+during active chat or workflow runs. The API key and Apply controls are hidden. Your
 account must include access to that CLI; subscription usage limits still apply.
 The studio does not copy login tokens or turn a subscription into an API key.
 
@@ -77,12 +88,23 @@ On Windows the default managed directory is
 ``%LOCALAPPDATA%/PyHydroGeophysX/cli``; macOS uses Application Support and Linux
 uses XDG_DATA_HOME (or ``~/.local/share``).
 
-The model value ``default`` leaves selection to the CLI; enter a model ID to
-override it. ``PHGX_CODEX_MODEL`` and ``PHGX_CLAUDE_MODEL`` can set the initial
-model. Codex receives the Reasoning setting; Claude Code uses its own defaults.
+After Codex sign-in, the studio reads the CLI's visible model catalog in the
+background and fills the Model dropdown. It refreshes the list after signing
+in again. The options follow the installed CLI and its account configuration.
+If discovery fails (for example, with an older CLI or a timeout), login stays
+ready and the previous list remains usable. On a first run without a catalog,
+``default`` and manually entered model IDs are still available. Discovery uses
+the same native or npm launcher as model requests on Windows, macOS and Linux.
+
+The model value ``default`` leaves selection to the CLI; choose another entry
+or enter a model ID to override it. ``PHGX_CODEX_MODEL`` and
+``PHGX_CLAUDE_MODEL`` can set the initial model. Codex receives the Reasoning
+setting; Claude Code uses its own defaults.
 
 Both step-by-step assistance and AQUAH's **Auto to report** support CLI access,
-including folder classification. Proposed studio actions follow the existing
+including folder classification. Both also run on an OpenAI-compatible endpoint
+(for example a vLLM server): the Base URL entered in Assistant settings,
+or ``OPENAI_COMPAT_BASE_URL``, reaches every agent of the run. Proposed studio actions follow the existing
 approval and execution mode. This initial bridge supports text and structured
 studio state; screenshot analysis is available with the API providers.
 Each call sends the current bounded conversation to the CLI through stdin, and

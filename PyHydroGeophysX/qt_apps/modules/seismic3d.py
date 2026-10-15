@@ -1,36 +1,44 @@
-"""Seismic -> 3D Model guided wizard.
+"""Seismic → Structure: a 3D velocity model and bedrock surface from 2D seismic lines.
 
-Builds a 3D subsurface model from one or more 2D seismic velocity sections. Each
-section is an inverted velocity model on a pyGIMLi mesh, positioned in map
-coordinates by its line endpoints. The wizard collects the lines, sets the
-bedrock-interface velocity threshold, configures the 3D grid, then interpolates a
-velocity volume and a bedrock-interface surface across the survey area. The heavy
-lifting is reused from ``PyHydroGeophysX.qt_apps.seismic3d_pipeline`` (which in
-turn reuses ``Geophy_modular.seismic_processor`` and ``core.kriging_3d``).
+Laid out like Hydro → Geophysics and ERT → Water Content. The views are in
+the middle: the **Map** of the lines, each placed by its endpoints; the
+**Section** of one line, its velocity with the bedrock top drawn where the
+velocity passes the threshold, redrawn as the threshold changes; and after a
+build the **3D model** and its **Figures**. The settings are on the right in
+the order the work is done - the lines, the bedrock interface, the 3D grid -
+with the Build button pinned under them and what still stops it said above
+it. Before a line is added the middle says what the page does and how to
+start, and afterwards a line above the views says what to do next.
+
+The numerics are reused from ``PyHydroGeophysX.Geophy_modular.structure_integration``
+(which in turn reuses ``seismic_processor`` and ``core.kriging_3d``); the build
+runs in a worker process.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import numpy as np
-
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from matplotlib.collections import PolyCollection
+from matplotlib.figure import Figure
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QComboBox,
     QDialog,
-    QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
+    QFrame,
     QGroupBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QProgressBar,
     QPushButton,
-    QScrollArea,
-    QSpinBox,
     QStackedWidget,
     QTabWidget,
     QTableWidget,
@@ -46,17 +54,30 @@ from PyHydroGeophysX.qt_apps import io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.qt_utils import (
     BusyStateController,
+    ContentWidthScrollArea,
+    Debouncer,
     ReproduceBar,
-    WizardNavigator,
-    make_double_spinbox,
+    make_spinbox,
+    merged_row,
     select_directory,
+    set_rows_visible,
 )
 from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets import length_units
+from PyHydroGeophysX.qt_apps.widgets.color_range import ColorRange
+from PyHydroGeophysX.qt_apps.widgets.guided import (
+    NextStepStrip,
+    fold,
+    hint as _hint,
+    number_box as _number,
+    start_card,
+)
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import VTKVolumeView
+from PyHydroGeophysX.qt_apps.widgets.readout import toolbar_row
 from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
+from PyHydroGeophysX.visualization.axis_units import set_length_axis, set_section_axes
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
     WorkflowRunResult,
@@ -64,10 +85,16 @@ from PyHydroGeophysX.workflows import (
     export_workflow_bundle,
 )
 
+#: The steps the assistant names. Each opens the view and the panel the step is
+#: done in (see _go_to); the page itself no longer pages through them.
 _STEPS = ["Lines", "Structure", "Grid", "Build", "Results"]
-_STEP_ICONS = ["fa5s.wave-square", "fa5s.mountain", "fa5s.th", "fa5s.cubes", "fa5s.chart-area"]
-_P = theme.PALETTE
-_COLUMNS = ["Name", "x0", "y0", "x1", "y1", "Mesh", "Velocity"]
+_MAP_TAB, _SECTION_TAB, _MODEL_TAB, _FIGURES_TAB = range(4)
+#: The lines table: name, then the two endpoints in map coordinates.
+_COLUMNS = ["Name", "Start x", "Start y", "End x", "End y"]
+#: Where a line's mesh and velocity paths are kept, on its name cell.
+_FILES_ROLE = Qt.UserRole
+_INK = "#1d1d1f"
+_INK_MUTED = "#6e6e73"
 
 # Synthetic 3D seismic demo: three non-parallel velocity sections produced by
 # ``examples/generate_synthetic_examples.py``. The folder names and map endpoints
@@ -92,6 +119,119 @@ _INPUT_FORMAT_FALLBACK = (
 )
 
 
+class _LineMapView(QWidget):
+    """The lines in map coordinates: each from its start (distance 0) to its end."""
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self._figure = Figure(figsize=(7, 5), layout="constrained")
+        self._canvas = FigureCanvasQTAgg(self._figure)
+        bar, self._toolbar = toolbar_row(self._canvas, self)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(bar)
+        layout.addWidget(self._canvas, stretch=1)
+        self._lines: List[Dict[str, Any]] = []
+        self._selected = -1
+        length_units.notifier().changed.connect(lambda _unit: self.draw())
+
+    def show_lines(self, lines: List[Dict[str, Any]], selected: int) -> None:
+        self._lines, self._selected = list(lines), int(selected)
+        self.draw()
+
+    def draw(self) -> None:
+        self._figure.clear()
+        ax = self._figure.add_subplot(111)
+        for i, line in enumerate(self._lines):
+            x0, y0, x1, y1 = (float(line[k]) for k in ("x0", "y0", "x1", "y1"))
+            chosen = i == self._selected
+            colour = theme.PALETTE["primary"] if chosen else _INK
+            width = 2.4 if chosen else 1.6
+            # The line itself, so the axes take in both ends; an annotation
+            # alone is left out of the limits and, its end outside them, clipped.
+            ax.plot([x0, x1], [y0, y1], color=colour, lw=width)
+            ax.annotate("", xy=(x1, y1), xytext=(x0, y0), annotation_clip=False,
+                        arrowprops={"arrowstyle": "-|>", "color": colour, "lw": width,
+                                    "mutation_scale": 18})
+            ax.plot([x0], [y0], "o", color=colour, ms=7)
+            ax.annotate(str(line.get("name", i + 1)), (0.5 * (x0 + x1), 0.5 * (y0 + y1)),
+                        textcoords="offset points", xytext=(6, 6), color=colour,
+                        fontsize=10, fontweight="bold" if chosen else "normal")
+        ax.set_aspect("equal", adjustable="datalim")
+        ax.margins(0.12)
+        ax.grid(True, alpha=0.3)
+        unit = length_units.current()
+        set_length_axis(ax, "x", "Easting", unit=unit)
+        set_length_axis(ax, "y", "Northing", unit=unit)
+        ax.set_title("Seismic lines: a dot marks distance 0, the arrow points along the line")
+        self._canvas.draw_idle()
+        self._toolbar.update()
+
+
+class _VelocitySectionView(QWidget):
+    """One line's velocity on its mesh, with the bedrock top at the threshold."""
+
+    def __init__(self, colormaps: Any, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self._colormap = cmaps.ColormapChooser(cmaps.VELOCITY, "turbo", shared=colormaps)
+        self._colormap.colormapChanged.connect(lambda _name: self.draw())
+        self._range = ColorRange(decimals=0, what="the velocity colours")
+        self._range.changed.connect(self.draw)
+        self._figure = Figure(figsize=(8, 4), layout="constrained")
+        self._canvas = FigureCanvasQTAgg(self._figure)
+        bar, self._toolbar = toolbar_row(self._canvas, self)
+        controls = QHBoxLayout()
+        controls.addWidget(QLabel("Line"))
+        self.line_choice = QComboBox()
+        controls.addWidget(self.line_choice)
+        controls.addStretch(1)
+        controls.addWidget(self._colormap)
+        controls.addWidget(self._range)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addLayout(controls)
+        layout.addWidget(bar)
+        layout.addWidget(self._canvas, stretch=1)
+        self._data: Optional[Dict[str, Any]] = None
+        self._message = "Add a seismic line to see its velocity section."
+        length_units.notifier().changed.connect(lambda _unit: self.draw())
+
+    def show_section(self, data: Optional[Dict[str, Any]], message: str = "") -> None:
+        """``data``: name, polygons, velocity, interface (n, 2), threshold, mesh."""
+        self._data, self._message = data, message
+        self.draw()
+
+    def draw(self) -> None:
+        self._figure.clear()
+        ax = self._figure.add_subplot(111)
+        data = self._data
+        if not data:
+            ax.set_axis_off()
+            ax.text(0.5, 0.5, self._message, ha="center", va="center",
+                    transform=ax.transAxes, color=_INK_MUTED)
+        else:
+            velocity = np.asarray(data["velocity"], dtype=float)
+            lo, hi = self._range.limits(float(np.nanpercentile(velocity, 2)),
+                                        float(np.nanpercentile(velocity, 98)))
+            cells = PolyCollection(data["polygons"], array=velocity,
+                                   cmap=self._colormap.colormap(), edgecolors="none")
+            cells.set_clim(lo, hi)
+            ax.add_collection(cells)
+            ax.autoscale_view()
+            self._figure.colorbar(cells, ax=ax, pad=0.01).set_label("Velocity (m/s)")
+            interface = data.get("interface")
+            if interface is not None and len(interface):
+                ax.plot(interface[:, 0], interface[:, 1], color="white", lw=3.2)
+                ax.plot(interface[:, 0], interface[:, 1], color=_INK, lw=1.6,
+                        label=f"Bedrock top ({data['threshold']:.0f} m/s)")
+                ax.legend(loc="lower right", fontsize=8, framealpha=0.9)
+            set_section_axes(ax, mesh=data.get("mesh"), unit=length_units.current())
+            ax.set_title(f"{data['name']}: velocity, and the bedrock top where it passes "
+                         f"{data['threshold']:.0f} m/s")
+        self._canvas.draw_idle()
+        self._toolbar.update()
+
+
 class Seismic3DModule(BaseModule):
     module_key = "seismic3d"
     module_title = "Seismic → Structure"
@@ -99,6 +239,8 @@ class Seismic3DModule(BaseModule):
     def __init__(self, state: Any, log: LogFn, parent=None) -> None:
         super().__init__(state, log, parent)
         self._lines: List[Dict[str, Any]] = []
+        #: Per (mesh, velocity) path pair: the mesh, its velocity and cell outlines.
+        self._line_cache: Dict[tuple, Dict[str, Any]] = {}
         self._worker: Optional[ProcessWorkflowWorker] = None
         self._run_busy: Optional[BusyStateController] = None
         self._workflow_recipe_path = ""
@@ -106,107 +248,293 @@ class Seismic3DModule(BaseModule):
         #: stopped - for the assistant, whose status otherwise still showed
         #: the result before it; "" while a run is under way or succeeded.
         self._run_problem = ""
+        self._has_results = False
+        self._results_tab = _MODEL_TAB
         self._current = 0
-        self._interface_previewed = False
+        self._section_debounced = Debouncer(self._show_section, 250)
 
-        root = QVBoxLayout(self)
-        root.addWidget(self._build_strip())
-        self._stack = QStackedWidget()
-        self._stack.addWidget(self._build_lines_step())      # 0 Lines
-        self._stack.addWidget(self._build_structure_step())  # 1 Structure
-        self._stack.addWidget(self._build_grid_step())       # 2 Grid
-        self._stack.addWidget(self._build_build_step())      # 3 Build
-        self._stack.addWidget(self._build_results_step())    # 4 Results
-        root.addWidget(self._stack, stretch=1)
+        root = QHBoxLayout(self)
+        self._tabs = QTabWidget()
+        self._tabs.addTab(self._build_map_tab(), "Map")
+        self._section_view = _VelocitySectionView(cmaps.colormap_settings(self.state))
+        self._section_view.line_choice.currentIndexChanged.connect(self._on_line_chosen)
+        self._tabs.addTab(self._section_view, "Section")
+        # A velocity volume, so it takes the colour map chosen for velocity
+        # models - the seismic page's sections use the same one.
+        self._volume_view = VTKVolumeView(colormaps=cmaps.colormap_settings(self.state),
+                                          colormap_key=cmaps.VELOCITY)
+        self._tabs.addTab(self._volume_view, "3D model")
+        self._tabs.addTab(self._build_figures_tab(), "Figures")
+        self._tabs.currentChanged.connect(self._on_tab_changed)
+        self._guide = NextStepStrip()
         self._reproduce = ReproduceBar()
-        root.addWidget(self._reproduce)
-        root.addLayout(self._build_nav())
-        self._navigator = WizardNavigator(
-            self._stack,
-            previous_button=self._back_btn,
-            next_button=self._next_btn,
-            on_changed=self._on_wizard_changed,
-            parent=self,
-        )
-        self._go_to(0)
-        # View > Length Units: the interface preview is an image, so it is drawn
-        # again; the figures of a finished build keep the unit they were run in.
-        length_units.notifier().changed.connect(self._on_length_unit_changed)
+        center = QWidget()
+        center_layout = QVBoxLayout(center)
+        center_layout.setContentsMargins(0, 0, 0, 0)
+        center_layout.addWidget(self._guide)
+        center_layout.addWidget(self._tabs, stretch=1)
+        center_layout.addWidget(self._reproduce)
+        root.addWidget(center, stretch=1)
+        root.addWidget(self._build_controls())
+        self._on_lines_changed()
 
-    def _on_length_unit_changed(self, _unit: str) -> None:
-        """Draw the interface preview again in the new length unit."""
-        if self._interface_previewed:
-            self._preview_interface()
+    # -- centre: the map, a section, the 3D model ----------------------------
+    def _build_start_card(self) -> QWidget:
+        example_btn = QPushButton("Use example")
+        example_btn.setProperty("primary", True)
+        example_btn.setIcon(theme.icon("fa5s.box-open", color="#ffffff"))
+        example_btn.setToolTip("Add three synthetic velocity lines that cross one site.")
+        example_btn.clicked.connect(self._use_example)
+        add_btn = QPushButton("Add a line…")
+        add_btn.setIcon(theme.icon("fa5s.folder-plus"))
+        add_btn.clicked.connect(self._add_line_folder)
+        format_btn = QPushButton("Data format")
+        format_btn.setIcon(theme.icon("fa5s.question-circle"))
+        format_btn.clicked.connect(self._show_format_help)
+        return start_card(
+            "Build a 3D model from seismic lines",
+            "Join 2D seismic velocity sections into a 3D velocity model and a bedrock "
+            "surface, for a hydrologic model or to split an ERT model into layers.",
+            ["Add the seismic lines: each line's velocity section, and where it lies "
+             "on the map.",
+             "Choose the velocity that marks the top of bedrock, and check it on each "
+             "line's section.",
+             "Set the 3D grid, and press Build 3D model."],
+            [example_btn, add_btn, format_btn],
+            note="The example is three synthetic lines crossing one site.")
 
-    # -- helpers -------------------------------------------------------------
-    @staticmethod
-    def _dspin(value: float, lo: float, hi: float, step: float, decimals: int) -> QDoubleSpinBox:
-        return make_double_spinbox(value, lo, hi, step, decimals)
+    def _build_map_tab(self) -> QWidget:
+        # The start card until a line is added, then the map of the lines.
+        self._map_stack = QStackedWidget()
+        self._map_stack.addWidget(self._build_start_card())
+        self._map_view = _LineMapView()
+        self._map_stack.addWidget(self._map_view)
+        return self._map_stack
 
-    @staticmethod
-    def _ispin(value: int, lo: int, hi: int) -> QSpinBox:
-        s = QSpinBox(); s.setRange(lo, hi); s.setValue(value)
-        return s
+    def _build_figures_tab(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        header = QHBoxLayout()
+        header.addWidget(QLabel("Show"))
+        self._figure_choice = QComboBox()
+        self._figure_choice.currentIndexChanged.connect(self._show_selected_figure)
+        header.addWidget(self._figure_choice, stretch=1)
+        open_btn = QPushButton("Open output folder")
+        open_btn.setIcon(theme.icon("fa5s.folder-open"))
+        open_btn.clicked.connect(self._open_output_folder)
+        header.addWidget(open_btn)
+        layout.addLayout(header)
+        self._result_summary = QLabel("")
+        self._result_summary.setWordWrap(True)
+        layout.addWidget(self._result_summary)
+        self._figure_view = ZoomableImageView()
+        self._figure_view.setMinimumHeight(380)
+        layout.addWidget(self._figure_view, stretch=1)
+        self._result_files = _hint()
+        layout.addWidget(self._result_files)
+        return page
 
-    def _advanced_box(self, title: str = "Advanced") -> Tuple[QGroupBox, QFormLayout]:
-        box = QGroupBox(title); box.setCheckable(True); box.setChecked(False)
-        inner = QWidget(); form = QFormLayout(inner); form.setContentsMargins(8, 4, 8, 4)
-        outer = QVBoxLayout(box); outer.setContentsMargins(8, 4, 8, 8); outer.addWidget(inner)
-        inner.setVisible(False); box.toggled.connect(inner.setVisible)
-        return box, form
-
-    # -- status strip --------------------------------------------------------
-    def _build_strip(self) -> QWidget:
-        bar = QWidget(); layout = QHBoxLayout(bar)
-        layout.setContentsMargins(4, 2, 4, 6); layout.setSpacing(6)
-        self._chips: List[QPushButton] = []
-        for i, name in enumerate(_STEPS):
-            chip = QPushButton(f"  {i + 1}. {name}")
-            chip.setIcon(theme.icon(_STEP_ICONS[i], color="#ffffff"))
-            chip.clicked.connect(lambda _=False, idx=i: self._go_to(idx))
-            self._chips.append(chip); layout.addWidget(chip)
-            if i < len(_STEPS) - 1:
-                arrow = QLabel("›"); arrow.setStyleSheet(f"color:{_P['muted']}; font-size:16pt;")
-                layout.addWidget(arrow)
+    # -- right: the settings, in the order the work is done ------------------
+    def _build_controls(self) -> QWidget:
+        scroll = ContentWidthScrollArea(minimum=430, maximum=480)
+        panel = QWidget()
+        scroll.setWidget(panel)
+        layout = QVBoxLayout(panel)
+        self._lines_group = self._build_lines_group()
+        self._structure_group = self._build_structure_group()
+        self._grid_group = self._build_grid_group()
+        #: Each numbered step's title; a finished step gets a tick after it.
+        self._step_titles = {
+            self._lines_group: "1  Seismic lines",
+            self._structure_group: "2  Bedrock interface",
+            self._grid_group: "3  3D grid",
+        }
+        for group in self._step_titles:
+            layout.addWidget(group)
         layout.addStretch(1)
-        return bar
+        self._controls_scroll = scroll
 
-    def _chip_style(self, kind: str) -> str:
-        if kind == "active":
-            return f"QPushButton {{ background:{_P['primary']}; color:#fff; border:none; border-radius:14px; padding:6px 14px; font-weight:700; }}"
-        if kind == "done":
-            return f"QPushButton {{ background:{_P['green']}; color:#fff; border:none; border-radius:14px; padding:6px 14px; font-weight:600; }}"
-        return f"QPushButton {{ background:{_P['card']}; color:{_P['muted']}; border:1px solid {_P['border']}; border-radius:14px; padding:6px 14px; }}"
+        # -- run: pinned under the column, as on the ERT page ---------------
+        footer = QWidget()
+        flayout = QVBoxLayout(footer)
+        flayout.setContentsMargins(6, 4, 6, 6)
+        flayout.setSpacing(6)
+        rule = QFrame()
+        rule.setFrameShape(QFrame.HLine)
+        rule.setFrameShadow(QFrame.Plain)
+        flayout.addWidget(rule)
+        self._run_reason = _hint()
+        flayout.addWidget(self._run_reason)
+        self._run_btn = QPushButton("Build 3D model")
+        self._run_btn.setProperty("primary", True)
+        self._run_btn.setIcon(theme.icon("fa5s.cubes", color="#ffffff"))
+        self._run_btn.setToolTip("Interpolate the lines' velocity and their bedrock tops "
+                                 "across the site, onto the 3D grid.")
+        self._run_btn.clicked.connect(self._run_build)
+        flayout.addWidget(self._run_btn)
+        self._progress = QProgressBar()
+        self._progress.setVisible(False)
+        self._stop = self.stop_button("The 3D model build")
+        flayout.addWidget(progress_with_stop(self._progress, self._stop))
+        self._run_status = QLabel("")
+        self._run_status.setWordWrap(True)
+        flayout.addWidget(self._run_status)
 
-    def _update_strip(self) -> None:
-        status = self._step_status()
-        done = [status["lines"], status["lines"], status["lines"], status["all"], status["results"]]
-        for i, chip in enumerate(self._chips):
-            if i == self._current:
-                chip.setStyleSheet(self._chip_style("active"))
-                chip.setIcon(theme.icon(_STEP_ICONS[i], color="#ffffff"))
-            elif done[i]:
-                chip.setStyleSheet(self._chip_style("done"))
-                chip.setIcon(theme.icon("fa5s.check", color="#ffffff"))
-            else:
-                chip.setStyleSheet(self._chip_style("inactive"))
-                chip.setIcon(theme.icon(_STEP_ICONS[i], color=_P["muted"]))
+        column = QWidget()
+        column_layout = QVBoxLayout(column)
+        column_layout.setContentsMargins(0, 0, 0, 0)
+        column_layout.setSpacing(0)
+        column_layout.addWidget(scroll, 1)
+        column_layout.addWidget(footer)
+        return column
 
-    def _build_nav(self) -> QHBoxLayout:
-        nav = QHBoxLayout()
-        self._back_btn = QPushButton("Back"); self._back_btn.setIcon(theme.icon("fa5s.arrow-left"))
-        self._next_btn = QPushButton("Next"); self._next_btn.setIcon(theme.icon("fa5s.arrow-right"))
-        nav.addWidget(self._back_btn); nav.addStretch(1); nav.addWidget(self._next_btn)
-        return nav
+    def _build_lines_group(self) -> QGroupBox:
+        box = QGroupBox("1  Seismic lines")
+        layout = QVBoxLayout(box)
+        add_btn = QPushButton("Add a line…")
+        add_btn.setProperty("primary", True)
+        add_btn.setIcon(theme.icon("fa5s.folder-plus", color="#ffffff"))
+        add_btn.setToolTip("Add a line from a folder with velmesh.bms and Vinvmodel.npy.")
+        add_btn.clicked.connect(self._add_line_folder)
+        example_btn = QPushButton("Use example")
+        example_btn.setIcon(theme.icon("fa5s.box-open"))
+        example_btn.setToolTip("Add three synthetic velocity lines that cross one site.")
+        example_btn.clicked.connect(self._use_example)
+        files_btn = QPushButton()
+        files_btn.setIcon(theme.icon("fa5s.file-medical"))
+        files_btn.setToolTip("Add a line from a mesh file and a velocity file chosen "
+                             "one by one.")
+        files_btn.clicked.connect(self._add_line_files)
+        help_btn = QPushButton()
+        help_btn.setIcon(theme.icon("fa5s.question-circle"))
+        help_btn.setToolTip("What a line needs.")
+        help_btn.clicked.connect(self._show_format_help)
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        for button in (add_btn, example_btn, files_btn, help_btn):
+            row.addWidget(button)
+        row.addStretch(1)
+        layout.addLayout(row)
+        layout.addWidget(_hint("Place each line on the map by its two ends, in metres. "
+                               "Start is where its section's distance 0 lies."))
+        self._table = QTableWidget(0, len(_COLUMNS))
+        self._table.setHorizontalHeaderLabels(_COLUMNS)
+        self._table.verticalHeader().setVisible(False)
+        self._table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self._table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self._table.setMinimumHeight(140)
+        self._table.itemChanged.connect(lambda *_: self._on_lines_changed())
+        self._table.itemSelectionChanged.connect(self._on_table_selection)
+        layout.addWidget(self._table)
+        remove_btn = QPushButton("Remove selected")
+        remove_btn.setIcon(theme.icon("fa5s.trash"))
+        remove_btn.clicked.connect(self._remove_selected)
+        layout.addWidget(merged_row(remove_btn))
+        return box
 
+    def _build_structure_group(self) -> QGroupBox:
+        box = QGroupBox("2  Bedrock interface")
+        form = QFormLayout(box)
+        form.addRow(_hint("The top of bedrock is where the velocity first passes this "
+                          "value going down. The Section tab draws it on each line."))
+        self._threshold = _number(1200.0, 200.0, 8000.0, 50.0, 0, " m/s",
+                                  "About 1200 m/s for the regolith / bedrock boundary.")
+        self._interval = _number(4.0, 0.5, 50.0, 0.5, 1, " m",
+                                 "How often along the line the interface is picked.")
+        for box_ in (self._threshold, self._interval):
+            box_.valueChanged.connect(lambda *_: self._section_debounced.trigger())
+            box_.valueChanged.connect(lambda *_: self._sync_page())
+        form.addRow("Bedrock top at", self._threshold)
+        form.addRow("Pick every", self._interval)
+        handoff = QPushButton("Send to ERT → Water Content")
+        handoff.setIcon(theme.icon("fa5s.share"))
+        handoff.setToolTip("Send the bedrock top of the line on the Section tab to ERT → "
+                           "Water Content, to split its model into regolith and bedrock.")
+        handoff.clicked.connect(self._send_structure_to_hydrology)
+        form.addRow(merged_row(handoff))
+        return box
+
+    def _build_grid_group(self) -> QGroupBox:
+        box = QGroupBox("3  3D grid")
+        form = QFormLayout(box)
+        self._grid_res = make_spinbox(50, 10, 200, tooltip="Cells along each map axis.")
+        self._depth = _number(50.0, 5.0, 500.0, 5.0, 1, " m", "How deep the model goes.")
+        self._n_layers = make_spinbox(19, 2, 100, tooltip="Layers of cells down to that depth.")
+        self._interp = QComboBox()
+        self._interp.addItem("Linear (griddata)", "griddata")
+        self._interp.addItem("Kriging", "kriging")
+        try:
+            from PyHydroGeophysX.core.kriging_3d import GSTOOLS_AVAILABLE
+        except Exception:  # noqa: BLE001
+            GSTOOLS_AVAILABLE = False
+        if not GSTOOLS_AVAILABLE:
+            self._interp.model().item(self._interp.findData("kriging")).setEnabled(False)
+            self._interp.setToolTip("Kriging needs the optional 'gstools' package; "
+                                    "linear interpolation is used otherwise.")
+        self._interp.currentIndexChanged.connect(self._on_interp_changed)
+        form.addRow("Cells across", merged_row(self._grid_res, "× each way"))
+        form.addRow("Depth", self._depth)
+        form.addRow("Layers", self._n_layers)
+        form.addRow("Between lines", self._interp)
+        adv, aform = fold()
+        self._z_scale = _number(1.0, 0.1, 50.0, 0.5, 1, tip=(
+            "Vertical exaggeration during the 3D interpolation, so thin vertical "
+            "structure is not smoothed away."))
+        self._max_points = make_spinbox(
+            40000, 2000, 500000, tooltip="Velocity samples are thinned to this many "
+                                         "before the 3D interpolation, to keep it quick.")
+        self._max_points.setSingleStep(5000)
+        aform.addRow("Vertical scale", self._z_scale)
+        aform.addRow("Velocity samples", self._max_points)
+        d = seismic3d_pipeline.DEFAULT_KRIGING
+        self._krig_model = QComboBox()
+        self._krig_model.addItems(list(seismic3d_pipeline.VARIOGRAM_MODELS))
+        self._krig_model.setCurrentText(d["model"])
+        self._len_x = _number(d["len_scale_x"], 1.0, 100000.0, 10.0, 1, " m")
+        self._len_y = _number(d["len_scale_y"], 1.0, 100000.0, 10.0, 1, " m")
+        self._len_z = _number(d["len_scale_z"], 0.5, 10000.0, 1.0, 1, " m")
+        self._krig_var = _number(d["var"], 0.001, 100.0, 0.1, 3)
+        self._krig_nugget = _number(d["nugget"], 0.0, 100.0, 0.05, 3)
+        self._krig_rows = [self._krig_model, self._len_x, self._len_y, self._len_z,
+                           self._krig_var, self._krig_nugget]
+        aform.addRow("Kriging model", self._krig_model)
+        aform.addRow("Range east", self._len_x)
+        aform.addRow("Range north", self._len_y)
+        aform.addRow("Range down", self._len_z)
+        aform.addRow("Variance (sill)", self._krig_var)
+        aform.addRow("Nugget", self._krig_nugget)
+        export_btn = QPushButton("Save 3D settings")
+        export_btn.setIcon(theme.icon("fa5s.file-export"))
+        export_btn.setToolTip("Write the lines and settings to seismic3d_config.json, "
+                              "without building anything.")
+        export_btn.clicked.connect(self._export_config)
+        aform.addRow(merged_row(export_btn))
+        form.addRow(adv)
+        self._on_interp_changed()
+        return box
+
+    def _on_interp_changed(self, *_args) -> None:
+        """The variogram rows only mean something for kriging."""
+        set_rows_visible(self._krig_rows, self._interp.currentData() == "kriging")
+
+    # -- navigation (the assistant's step names) -----------------------------
     def _go_to(self, step: int) -> None:
-        self._navigator.go_to(step)
-
-    def _on_wizard_changed(self, step: int) -> None:
+        """Show the view and the panel the step is done in."""
+        step = max(0, min(int(step), len(_STEPS) - 1))
+        lines = bool(self._lines)
+        tab = {0: _MAP_TAB, 1: _SECTION_TAB if lines else _MAP_TAB, 2: _MAP_TAB,
+               3: _SECTION_TAB if lines else _MAP_TAB,
+               4: self._results_tab if self._has_results else _MAP_TAB}[step]
+        self._tabs.setCurrentIndex(tab)
         self._current = step
-        if self._current == 3:
-            self._refresh_build_checklist()
-        self._update_strip()
+        group = {0: self._lines_group, 1: self._structure_group,
+                 2: self._grid_group}.get(step)
+        if group is not None:
+            self._controls_scroll.ensureWidgetVisible(group)
+
+    def _on_tab_changed(self, index: int) -> None:
+        self._current = {_MAP_TAB: 0, _SECTION_TAB: 1}.get(index, 4)
 
     def _step_status(self) -> Dict[str, bool]:
         self._sync_lines_from_table()
@@ -214,48 +542,68 @@ class Seismic3DModule(BaseModule):
         ran = self.state.module_results.get(self.module_key, {}).get("status") == "ok"
         return {"lines": lines_ok, "all": lines_ok, "results": ran}
 
-    # -- Step 1: Lines -------------------------------------------------------
-    def _build_lines_step(self) -> QWidget:
-        page = QWidget(); layout = QVBoxLayout(page)
-        layout.addWidget(QLabel("<h3>Step 1 · Add 2D seismic velocity lines</h3>"))
-        layout.addWidget(QLabel(
-            "Each line is an inverted velocity section (mesh + per-cell velocity) "
-            "positioned by its map endpoints (x0, y0) → (x1, y1)."))
-        row = QHBoxLayout()
-        for label, slot, icon in (
-            ("Use example", self._use_example, "fa5s.box-open"),
-            ("Add line (folder)…", self._add_line_folder, "fa5s.folder-plus"),
-            ("Add line (files)…", self._add_line_files, "fa5s.file-medical"),
-            ("Remove selected", self._remove_selected, "fa5s.trash"),
-            ("Data format", self._show_format_help, "fa5s.file-alt"),
-        ):
-            b = QPushButton(label); b.setIcon(theme.icon(icon)); b.clicked.connect(slot)
-            row.addWidget(b)
-        row.addStretch(1)
-        layout.addLayout(row)
+    # -- readiness and guidance ----------------------------------------------
+    def _run_blocker(self) -> str:
+        """What still stops a build, in a sentence; "" when it can run."""
+        if not self._lines:
+            return "Add at least one seismic line (1) to build a 3D model."
+        return ""
 
-        self._table = QTableWidget(0, len(_COLUMNS))
-        self._table.setHorizontalHeaderLabels(_COLUMNS)
-        self._table.horizontalHeader().setStretchLastSection(True)
-        self._table.itemChanged.connect(lambda *_: self._update_strip())
-        layout.addWidget(self._table, stretch=1)
-        self._lines_status = QLabel("No lines added."); self._lines_status.setWordWrap(True)
-        layout.addWidget(self._lines_status)
-        return page
+    def _next_step(self) -> str:
+        """The one thing to do now, for the line above the views."""
+        if self._run_busy is not None:
+            return ("Building the 3D model: interpolating the velocity between the lines. "
+                    "This can take a few minutes.")
+        if not self._lines:
+            return "Start by adding seismic lines: use the example or add a line."
+        if len(self._lines) == 1:
+            return ("One line gives the 3D model no width: add the others (1), placing "
+                    "each by its two ends, then press Build 3D model.")
+        if self._has_results:
+            return (f"Done: the model is on the {self._results_place()} tab. Send a line's "
+                    "bedrock top to ERT → Water Content (2) to split its model into layers.")
+        return ("Ready: check the bedrock top on each line's Section (2), then press Build "
+                "3D model.")
 
+    def _sync_page(self) -> None:
+        """Bring every cue on the page in line with where the work stands."""
+        if not hasattr(self, "_run_reason"):
+            return
+        reason = self._run_blocker()
+        self._run_reason.setText(reason)
+        self._run_reason.setVisible(bool(reason))
+        if self._run_busy is None:
+            self._run_btn.setEnabled(not reason)
+        lines = bool(self._lines)
+        self._map_stack.setCurrentIndex(1 if lines else 0)
+        self._guide.setVisible(lines or self._run_busy is not None)
+        self._guide.setText(self._next_step())
+        for group in (self._structure_group, self._grid_group):
+            group.setEnabled(lines)
+        done = {self._lines_group: lines, self._structure_group: lines,
+                self._grid_group: lines}
+        for group, title in self._step_titles.items():
+            group.setTitle(f"{title}  ✓" if done[group] else title)
+        self._tabs.setTabEnabled(_SECTION_TAB, lines)
+        self._tabs.setTabEnabled(_MODEL_TAB, self._has_results)
+        self._tabs.setTabEnabled(_FIGURES_TAB, self._has_results)
+
+    # -- lines ---------------------------------------------------------------
     def _add_row(self, line: Dict[str, Any]) -> None:
         r = self._table.rowCount()
+        self._table.blockSignals(True)
         self._table.insertRow(r)
-        values = [line.get("name", f"line{r + 1}"), line.get("x0", 0.0), line.get("y0", 0.0),
-                  line.get("x1", 100.0), line.get("y1", 0.0), str(line.get("mesh", "")),
-                  str(line.get("velocity", ""))]
-        for c, val in enumerate(values):
-            item = QTableWidgetItem(str(val))
-            if _COLUMNS[c] in ("Mesh", "Velocity"):
-                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-                item.setToolTip(str(val))
+        values = [line.get("name", f"L{r + 1}"), line.get("x0", 0.0), line.get("y0", 0.0),
+                  line.get("x1", 100.0), line.get("y1", 0.0)]
+        for c, value in enumerate(values):
+            item = QTableWidgetItem(f"{value:g}" if isinstance(value, float) else str(value))
+            if c == 0:
+                item.setData(_FILES_ROLE, (str(line.get("mesh", "")),
+                                           str(line.get("velocity", ""))))
+                item.setToolTip(f"{line.get('mesh', '')}\n{line.get('velocity', '')}")
             self._table.setItem(r, c, item)
-        self._update_lines_status()
+        self._table.blockSignals(False)
+        self._on_lines_changed()
 
     def _sync_lines_from_table(self) -> None:
         lines: List[Dict[str, Any]] = []
@@ -263,21 +611,87 @@ class Seismic3DModule(BaseModule):
             def cell(c, default=""):
                 it = self._table.item(r, c)
                 return it.text() if it is not None else default
+            name_item = self._table.item(r, 0)
+            mesh, velocity = (name_item.data(_FILES_ROLE) if name_item is not None
+                              else ("", "")) or ("", "")
             try:
-                line = {"name": cell(0, f"line{r + 1}"),
+                line = {"name": cell(0, f"L{r + 1}"),
                         "x0": float(cell(1, 0)), "y0": float(cell(2, 0)),
                         "x1": float(cell(3, 0)), "y1": float(cell(4, 0)),
-                        "mesh": cell(5), "velocity": cell(6)}
+                        "mesh": mesh, "velocity": velocity}
             except ValueError:
                 continue
             if line["mesh"] and line["velocity"]:
                 lines.append(line)
         self._lines = lines
 
-    def _update_lines_status(self) -> None:
+    def _on_lines_changed(self) -> None:
+        """A line was added, removed, renamed or moved: redraw what shows them."""
         self._sync_lines_from_table()
-        self._lines_status.setText(f"{len(self._lines)} line(s) ready.")
-        self._update_strip()
+        choice = self._section_view.line_choice
+        current = choice.currentText()
+        choice.blockSignals(True)
+        choice.clear()
+        for line in self._lines:
+            choice.addItem(str(line["name"]))
+        index = choice.findText(current)
+        choice.setCurrentIndex(index if index >= 0 else (0 if self._lines else -1))
+        choice.blockSignals(False)
+        self._map_view.show_lines(self._lines, choice.currentIndex())
+        self._section_debounced.trigger()
+        self._sync_page()
+
+    def _on_table_selection(self) -> None:
+        rows = sorted({i.row() for i in self._table.selectedIndexes()})
+        if rows and rows[0] < self._section_view.line_choice.count():
+            self._section_view.line_choice.setCurrentIndex(rows[0])
+
+    def _on_line_chosen(self, index: int) -> None:
+        self._map_view.show_lines(self._lines, index)
+        self._section_debounced.trigger()
+
+    def _chosen_line(self) -> Optional[Dict[str, Any]]:
+        index = self._section_view.line_choice.currentIndex()
+        return self._lines[index] if 0 <= index < len(self._lines) else None
+
+    def _line_data(self, line: Dict[str, Any]) -> Dict[str, Any]:
+        """The line's mesh, velocity and cell outlines, read once."""
+        key = (line["mesh"], line["velocity"])
+        if key not in self._line_cache:
+            from PyHydroGeophysX.core.mesh_serialization import read_bms
+
+            mesh = read_bms(line["mesh"])
+            velocity = seismic3d_pipeline._load_velocity(Path(line["velocity"]))
+            if velocity.size != mesh.cellCount():
+                raise ValueError(f"the velocity has {velocity.size} values for "
+                                 f"{mesh.cellCount()} mesh cells")
+            polygons = [np.array([[n.pos()[0], n.pos()[1]] for n in cell.nodes()])
+                        for cell in mesh.cells()]
+            self._line_cache[key] = {"mesh": mesh, "velocity": velocity, "polygons": polygons}
+        return self._line_cache[key]
+
+    def _show_section(self) -> None:
+        """Draw the chosen line's velocity and its bedrock top at the threshold."""
+        line = self._chosen_line()
+        if line is None:
+            self._section_view.show_section(None)
+            return
+        try:
+            from PyHydroGeophysX.Geophy_modular.seismic_processor import (
+                extract_velocity_structure,
+            )
+
+            data = self._line_data(line)
+            x, z, _info = extract_velocity_structure(
+                data["mesh"], data["velocity"], self._threshold.value(), self._interval.value())
+            interface = np.column_stack([np.asarray(x, dtype=float), np.asarray(z, dtype=float)])
+        except Exception as exc:  # noqa: BLE001 - the view says why
+            self._section_view.show_section(None, f"{line['name']} could not be drawn: {exc}")
+            return
+        self._section_view.show_section({
+            "name": line["name"], "polygons": data["polygons"], "velocity": data["velocity"],
+            "interface": interface, "threshold": self._threshold.value(), "mesh": data["mesh"],
+        })
 
     def _example_dir(self) -> Optional[Path]:
         """Locate the synthetic seismic demo root holding ``line1/``, ``line2/``, ...
@@ -328,6 +742,8 @@ class Seismic3DModule(BaseModule):
         self._add_row({"name": f"L{r + 1}", "mesh": str(files["mesh"]),
                        "velocity": str(files["velocity"]), "x0": 0.0, "y0": float(r * 50),
                        "x1": 100.0, "y1": float(r * 50)})
+        self.log("Line added at a placeholder position: type its two ends in the table.",
+                 "info")
 
     def _add_line_files(self) -> None:
         mesh, _ = QFileDialog.getOpenFileName(self, "Select mesh", "", "Mesh (*.bms);;All files (*)")
@@ -342,45 +758,19 @@ class Seismic3DModule(BaseModule):
 
     def _remove_selected(self) -> None:
         rows = sorted({i.row() for i in self._table.selectedIndexes()}, reverse=True)
+        self._table.blockSignals(True)
         for r in rows:
             self._table.removeRow(r)
-        self._update_lines_status()
+        self._table.blockSignals(False)
+        self._on_lines_changed()
 
-    # -- Step 2: Structure ---------------------------------------------------
-    def _build_structure_step(self) -> QWidget:
-        page = QWidget(); layout = QVBoxLayout(page)
-        layout.addWidget(QLabel("<h3>Step 2 · Bedrock interface from velocity</h3>"))
-        layout.addWidget(QLabel(
-            "The interface is the depth where velocity crosses the threshold "
-            "(e.g. ~1200 m/s for the regolith / bedrock boundary)."))
-        box = QGroupBox("Interface extraction"); form = QFormLayout(box)
-        self._threshold = self._dspin(1200.0, 200.0, 8000.0, 50.0, 0)
-        self._interval = self._dspin(4.0, 0.5, 50.0, 0.5, 1)
-        form.addRow("Velocity threshold (m/s)", self._threshold)
-        form.addRow("Horizontal sampling (m)", self._interval)
-        layout.addWidget(box)
-        btn_row = QHBoxLayout()
-        prev = QPushButton("Preview interface of first line")
-        prev.setIcon(theme.icon("fa5s.eye")); prev.clicked.connect(self._preview_interface)
-        btn_row.addWidget(prev)
-        handoff = QPushButton("Send bedrock structure → Hydro")
-        handoff.setIcon(theme.icon("fa5s.share"))
-        handoff.setToolTip("Pass the bedrock interface of the first line to the "
-                           "ERT → Water Content module to define its layers.")
-        handoff.clicked.connect(self._send_structure_to_hydrology)
-        btn_row.addWidget(handoff)
-        btn_row.addStretch(1)
-        layout.addLayout(btn_row)
-        self._interface_view = ZoomableImageView(); self._interface_view.setMinimumHeight(320)
-        layout.addWidget(self._interface_view, stretch=1)
-        return page
-
+    # -- bedrock handoff -----------------------------------------------------
     def _send_structure_to_hydrology(self) -> None:
         self._sync_lines_from_table()
-        if not self._lines:
+        line = self._chosen_line()
+        if line is None:
             self.log("Add at least one seismic line first.", "warn")
             return
-        line = self._lines[0]
         try:
             res = seismic3d_pipeline.extract_line_structure(
                 line, self._threshold.value(), self._interval.value(), log=lambda m: None)
@@ -401,208 +791,56 @@ class Seismic3DModule(BaseModule):
                 resource_id="srt:interface:active",
             )
         self.log(f"Sent bedrock structure ({len(raw)} pts, {self._threshold.value():.0f} m/s) "
-                 f"to ERT → Water Content. Use 'Derive markers from structure' in its "
-                 f"Layers step.", "success")
+                 f"to ERT → Water Content. Use 'Layers from a seismic bedrock "
+                 f"interface' under its Layers panel.", "success")
         self.navigateRequested.emit("geo_hydrology")
 
-    def _preview_interface(self) -> None:
-        self._sync_lines_from_table()
-        if not self._lines:
-            self.log("Add at least one line first.", "warn")
-            return
-        line = self._lines[0]
-        try:
-            import matplotlib
-            matplotlib.use("Agg", force=True)
-            import matplotlib.pyplot as plt
-            from PyHydroGeophysX.core.mesh_serialization import read_bms
-            from PyHydroGeophysX.visualization.axis_units import set_section_axes
-            res = seismic3d_pipeline.extract_line_structure(
-                line, self._threshold.value(), self._interval.value(), log=lambda m: None)
-            raw = res["raw_interface"]
-            fig, ax = plt.subplots(figsize=(7.0, 3.4))
-            ax.plot(raw[:, 0], raw[:, 1], "-", color="saddlebrown", lw=2)
-            # The mesh's ground surface decides it: a line inverted without
-            # elevations has its surface at z = 0, and the interface reads as depth.
-            # A mesh that cannot be read only costs that choice, not the preview.
-            try:
-                surface_mesh = read_bms(line["mesh"])
-            except Exception:  # noqa: BLE001 - keeps "Elevation"
-                surface_mesh = None
-            set_section_axes(ax, mesh=surface_mesh)
-            ax.set_title(f"{line['name']}: bedrock interface @ {self._threshold.value():.0f} m/s")
-            ax.grid(True, alpha=0.3); fig.tight_layout()
-            out = self.state.ensure_results_store().scratch_dir(self.module_key)
-            p = out / "interface_preview.png"
-            fig.savefig(p, dpi=160, bbox_inches="tight"); plt.close(fig)
-            self._interface_view.set_image_file(str(p))
-            self._interface_previewed = True
-            self.log(f"Interface preview saved to {p}", "success")
-        except Exception as exc:  # noqa: BLE001
-            self.log(f"Interface preview failed: {exc}", "error")
-
-    # -- Step 3: Grid --------------------------------------------------------
-    def _build_grid_step(self) -> QWidget:
-        page = QWidget(); layout = QVBoxLayout(page)
-        layout.addWidget(QLabel("<h3>Step 3 · 3D grid and interpolation</h3>"))
-        box = QGroupBox("Grid"); form = QFormLayout(box)
-        self._grid_res = self._ispin(50, 10, 200)
-        self._depth = self._dspin(50.0, 5.0, 500.0, 5.0, 1)
-        self._n_layers = self._ispin(19, 2, 100)
-        self._interp = QComboBox(); self._interp.addItems(["griddata", "kriging"])
-        try:
-            from PyHydroGeophysX.core.kriging_3d import GSTOOLS_AVAILABLE
-        except Exception:  # noqa: BLE001
-            GSTOOLS_AVAILABLE = False
-        if not GSTOOLS_AVAILABLE:
-            idx = self._interp.findText("kriging")
-            self._interp.model().item(idx).setEnabled(False)
-            self._interp.setToolTip("Kriging needs the optional 'gstools' package; "
-                                    "griddata is used otherwise.")
-        form.addRow("Grid resolution (nx = ny)", self._grid_res)
-        form.addRow("Model depth (m)", self._depth)
-        form.addRow("Vertical layers", self._n_layers)
-        form.addRow("Interpolation", self._interp)
-        layout.addWidget(box)
-        adv, aform = self._advanced_box()
-        self._z_scale = self._dspin(1.0, 0.1, 50.0, 0.5, 1)
-        self._z_scale.setToolTip("Vertical exaggeration applied during 3D interpolation "
-                                 "so thin vertical structure is not over-smoothed.")
-        self._max_points = self._ispin(40000, 2000, 500000)
-        self._max_points.setSingleStep(5000)
-        self._max_points.setToolTip("Velocity sample points are thinned to this many "
-                                    "before 3D interpolation, to keep the build responsive.")
-        aform.addRow("Vertical scale (interp)", self._z_scale)
-        aform.addRow("Max velocity points", self._max_points)
-
-        # Kriging variogram (used only when Interpolation = kriging).
-        krig_label = QLabel("<b>Kriging variogram</b> (used when interpolation = kriging)")
-        krig_label.setWordWrap(True)
-        aform.addRow(krig_label)
-        d = seismic3d_pipeline.DEFAULT_KRIGING
-        self._krig_model = QComboBox()
-        self._krig_model.addItems(list(seismic3d_pipeline.VARIOGRAM_MODELS))
-        self._krig_model.setCurrentText(d["model"])
-        self._krig_model.setToolTip("Covariance model fitted to the velocity field.")
-        self._len_x = self._dspin(d["len_scale_x"], 1.0, 100000.0, 10.0, 1)
-        self._len_y = self._dspin(d["len_scale_y"], 1.0, 100000.0, 10.0, 1)
-        self._len_z = self._dspin(d["len_scale_z"], 0.5, 10000.0, 1.0, 1)
-        self._len_x.setToolTip("Horizontal (x) correlation length / range in metres.")
-        self._len_y.setToolTip("Horizontal (y) correlation length / range in metres.")
-        self._len_z.setToolTip("Vertical (z) correlation length / range in metres.")
-        self._krig_var = self._dspin(d["var"], 0.001, 100.0, 0.1, 3)
-        self._krig_var.setToolTip("Variance (sill) of the variogram model.")
-        self._krig_nugget = self._dspin(d["nugget"], 0.0, 100.0, 0.05, 3)
-        self._krig_nugget.setToolTip("Nugget (micro-scale variance / noise floor).")
-        aform.addRow("Variogram model", self._krig_model)
-        aform.addRow("Range x (m)", self._len_x)
-        aform.addRow("Range y (m)", self._len_y)
-        aform.addRow("Range z (m)", self._len_z)
-        aform.addRow("Variance (sill)", self._krig_var)
-        aform.addRow("Nugget", self._krig_nugget)
-        layout.addWidget(adv)
-        layout.addStretch(1)
-        return page
-
-    # -- Step 4: Build -------------------------------------------------------
-    def _build_build_step(self) -> QWidget:
-        page = QWidget(); layout = QVBoxLayout(page)
-        layout.addWidget(QLabel("<h3>Step 4 · Build the 3D model</h3>"))
-        self._build_checklist = QGroupBox("Readiness")
-        self._build_checklist_layout = QVBoxLayout(self._build_checklist)
-        layout.addWidget(self._build_checklist)
-        self._run_btn = QPushButton("Build 3D model")
-        self._run_btn.setProperty("primary", True)
-        self._run_btn.setIcon(theme.icon("fa5s.cubes", color="#ffffff"))
-        self._run_btn.clicked.connect(self._run_build)
-        layout.addWidget(self._run_btn)
-        cfg_btn = QPushButton("Export config JSON (no backend needed)")
-        cfg_btn.setIcon(theme.icon("fa5s.file-export")); cfg_btn.clicked.connect(self._export_config)
-        layout.addWidget(cfg_btn)
-        self._progress = QProgressBar(); self._progress.setVisible(False)
-        self._stop = self.stop_button("The 3D model build")
-        layout.addWidget(progress_with_stop(self._progress, self._stop))
-        self._run_status = QLabel(""); self._run_status.setWordWrap(True)
-        layout.addWidget(self._run_status)
-        layout.addStretch(1)
-        return page
-
-    def _refresh_build_checklist(self) -> None:
-        while self._build_checklist_layout.count():
-            item = self._build_checklist_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-        self._sync_lines_from_table()
-        rows = [("Seismic lines", len(self._lines) > 0, f"{len(self._lines)} line(s)")]
-        for label, ok, detail in rows:
-            icon = "fa5s.check-circle" if ok else "fa5s.times-circle"
-            color = _P["green"] if ok else _P["red"]
-            line = QHBoxLayout()
-            badge = QLabel(); badge.setPixmap(theme.icon(icon, color=color).pixmap(16, 16))
-            text = QLabel(f"<b>{label}</b> — {detail}"); text.setWordWrap(True)
-            line.addWidget(badge); line.addWidget(text, stretch=1)
-            wrap = QWidget(); wrap.setLayout(line)
-            self._build_checklist_layout.addWidget(wrap)
-        self._run_btn.setEnabled(len(self._lines) > 0)
-
-    # -- Step 5: Results -----------------------------------------------------
-    def _build_results_step(self) -> QWidget:
-        page = QWidget(); layout = QVBoxLayout(page)
-        header = QHBoxLayout()
-        header.addWidget(QLabel("<h3>Step 5 · Results</h3>")); header.addStretch(1)
-        open_btn = QPushButton("Open output folder")
-        open_btn.setIcon(theme.icon("fa5s.folder-open")); open_btn.clicked.connect(self._open_output_folder)
-        header.addWidget(open_btn)
-        layout.addLayout(header)
-
-        self._results_tabs = QTabWidget()
-        # A velocity volume, so it takes the colour map chosen for velocity
-        # models - the seismic page's sections use the same one.
-        self._volume_view = VTKVolumeView(colormaps=cmaps.colormap_settings(self.state),
-                                          colormap_key=cmaps.VELOCITY)
-        self._results_tabs.addTab(self._volume_view, "3D Volume")
-        self._gallery_scroll = QScrollArea(); self._gallery_scroll.setWidgetResizable(True)
-        self._gallery_host = QWidget(); self._gallery_layout = QVBoxLayout(self._gallery_host)
-        self._gallery_layout.addWidget(QLabel("No results yet. Complete Steps 1–4 and build the model."))
-        self._gallery_scroll.setWidget(self._gallery_host)
-        self._results_tabs.addTab(self._gallery_scroll, "Figures & files")
-        layout.addWidget(self._results_tabs, stretch=1)
-        return page
-
+    # -- results -------------------------------------------------------------
     def _populate_results(self, result: Dict[str, Any]) -> None:
-        while self._gallery_layout.count():
-            item = self._gallery_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-        summary = QLabel(
-            f"<b>Status:</b> {result.get('status')} &nbsp; "
-            f"<b>Lines:</b> {result.get('n_lines', '—')} &nbsp; "
-            f"<b>Grid:</b> {result.get('grid_resolution', '—')} &nbsp; "
-            f"<b>Velocity:</b> {self._fmt_range(result.get('velocity_range'))} m/s &nbsp; "
-            f"<b>Bedrock depth:</b> {self._fmt_range(result.get('bedrock_depth_range'))} m")
-        summary.setWordWrap(True)
-        self._gallery_layout.addWidget(summary)
+        # Settings saved in place of a build leave nothing to show; the line
+        # under the Build button says so.
+        built = result.get("status") != "config_exported"
+        self._result_summary.setText(
+            f"Built from {result.get('n_lines', '—')} lines on a "
+            f"{result.get('grid_resolution', '—')} × {result.get('grid_resolution', '—')} "
+            f"grid: velocity {self._fmt_range(result.get('velocity_range'))} m/s, "
+            f"bedrock {self._fmt_range(result.get('bedrock_depth_range'))} m deep.")
+        self._figure_choice.blockSignals(True)
+        self._figure_choice.clear()
         for fig in result.get("figure_paths", []):
             if Path(fig).exists():
-                self._gallery_layout.addWidget(QLabel(f"<b>{Path(fig).name}</b>"))
-                view = ZoomableImageView(); view.setMinimumHeight(380)
-                if view.set_image_file(fig):
-                    self._gallery_layout.addWidget(view)
+                self._figure_choice.addItem(Path(fig).stem.replace("_", " ").capitalize(),
+                                            str(fig))
+        self._figure_choice.blockSignals(False)
+        if self._figure_choice.count():
+            self._figure_choice.setCurrentIndex(0)
+        self._show_selected_figure()
+        bits = []
         vtk = result.get("vtk_path")
+        rendered = False
         if vtk and Path(vtk).exists():
             rendered = self._volume_view.show_file(
                 vtk, scalar_candidates=("Velocity", "velocity"), opacity=0.65)
-            self._results_tabs.setCurrentWidget(
-                self._volume_view if rendered else self._gallery_scroll)
-            self._gallery_layout.addWidget(QLabel(
-                f"3D velocity volume: <code>{vtk}</code>"))
+            bits.append(f"3D volume: {vtk}")
         elif vtk:
-            self._gallery_layout.addWidget(QLabel(
-                f"3D volume file not found: <code>{vtk}</code>"))
-        cfg = result.get("config_path")
-        if cfg:
-            self._gallery_layout.addWidget(QLabel(f"Config: <code>{cfg}</code>"))
-        self._gallery_layout.addStretch(1)
+            bits.append(f"3D volume file not found: {vtk}")
+        if result.get("config_path"):
+            bits.append(f"3D settings: {result['config_path']}")
+        self._result_files.setText("<br>".join(bits))
+        # Without a 3D view (no OpenGL, no VTK) the figures are the result.
+        self._results_tab = _MODEL_TAB if rendered else _FIGURES_TAB
+        self._has_results = built
+        self._sync_page()
+        if built:
+            self._tabs.setCurrentIndex(self._results_tab)
+
+    def _results_place(self) -> str:
+        return "3D model" if self._results_tab == _MODEL_TAB else "Figures"
+
+    def _show_selected_figure(self) -> None:
+        path = self._figure_choice.currentData()
+        if not (path and Path(path).exists() and self._figure_view.set_image_file(path)):
+            self._figure_view.clear()
 
     @staticmethod
     def _fmt_range(rng) -> str:
@@ -654,7 +892,7 @@ class Seismic3DModule(BaseModule):
             "grid_resolution": self._grid_res.value(),
             "depth": self._depth.value(),
             "n_layers": self._n_layers.value(),
-            "interp_method": self._interp.currentText(),
+            "interp_method": str(self._interp.currentData()),
             "z_scale": self._z_scale.value(),
             "max_velocity_points": self._max_points.value(),
             "kriging": {
@@ -754,7 +992,9 @@ class Seismic3DModule(BaseModule):
         self._run_busy.start()
         self._run_btn.setText("Building…")
         self._progress.setVisible(True); self._progress.setRange(0, 0)
-        self._run_status.setText("Building 3D model…")
+        self._run_status.setText("Building the 3D model…")
+        theme.set_tone(self._run_status, None)
+        self._sync_page()
         self.log("Starting seismic → 3D model build…", "info")
         # In a process of its own, so the window keeps painting through the
         # kriging; the model comes back as the files it writes.
@@ -786,10 +1026,11 @@ class Seismic3DModule(BaseModule):
     def _on_build_ok(self, result: dict) -> None:
         self._progress.setRange(0, 1); self._progress.setValue(1)
         self.log(f"3D model built: {result.get('n_grid_points')} grid points.", "success")
-        self._run_status.setText("3D model built.")
         self.report_result(result)
         self._populate_results(result)
-        self._go_to(4)
+        self._run_status.setText(f"Finished. The model is on the {self._results_place()} tab.")
+        theme.set_tone(self._run_status, "ok")
+        self._current = 4
 
     def _on_build_failed(self, message: str, backend_unavailable: bool) -> None:
         self._run_problem = message
@@ -797,22 +1038,21 @@ class Seismic3DModule(BaseModule):
         self._progress.setRange(0, 1); self._progress.setValue(0)
         if not backend_unavailable:
             # The build itself failed - out of memory, a grid too fine, a bad
-            # line file - and its own reason is what helps, on the Build step
-            # where the settings can be changed and the build tried again.
-            # Exporting the configuration in its place blamed a backend that
-            # was there.
+            # line file - and its own reason is what helps, beside the settings
+            # that can be changed before building again. Exporting the
+            # configuration in its place blamed a backend that was there.
             self.log(f"3D model build failed: {message}", "error")
-            self._run_status.setText(f"The 3D model build failed: {message}")
-            self._go_to(3)
+            self._run_status.setText(f"The build failed: {message}")
+            theme.set_tone(self._run_status, "error")
             return
         self.log(f"3D model build could not run: {message}", "warn")
         config_path = self._export_config()
         note = ("The 3D engine (pygimli) is not installed or could not be loaded. The "
-                f"configuration has been exported to {config_path}.")
+                f"3D settings were saved to {config_path}.")
         self._run_status.setText(note); self.log(note, "warn")
+        theme.set_tone(self._run_status, "warn")
         self._populate_results({"status": "config_exported", "n_lines": len(self._lines),
                                 "config_path": config_path, "figure_paths": []})
-        self._go_to(4)
 
     def _reset_run_button(self) -> None:
         if self._run_busy is not None:
@@ -822,8 +1062,10 @@ class Seismic3DModule(BaseModule):
         self._progress.setVisible(False)
         if self._worker is not None and self._worker.is_cancelled():
             self._run_problem = "Stopped by user"
-            self._run_status.setText("Stopped before it finished. Build it again to start over.")
-        self._update_strip()
+            self._run_status.setText("Stopped before it finished. Press Build 3D model to "
+                                     "start again.")
+            theme.set_tone(self._run_status, "warn")
+        self._sync_page()
 
     # -- AQUAH agent interface ----------------------------------------------
     def agent_describe(self) -> Dict[str, Any]:
@@ -844,11 +1086,11 @@ class Seismic3DModule(BaseModule):
                           "grid_resolution, depth, vertical_layers, interpolation (griddata/kriging), "
                           "z_scale, max_points, kriging_model, range_x, range_y, range_z, variance, nugget.")},
                 {"name": "preview_interface", "args": {},
-                 "desc": "Preview the bedrock interface of the first line."},
+                 "desc": "Show the bedrock interface of the chosen line (the first by default)."},
                 {"name": "send_structure_to_hydro", "args": {},
-                 "desc": "Send the first line's bedrock interface to the Geophysics -> Hydro module."},
+                 "desc": "Send the chosen line's bedrock interface to the ERT -> Water Content module."},
                 {"name": "goto_step", "args": {"step": list(_STEPS)},
-                 "desc": "Jump to a wizard step."},
+                 "desc": "Show the view and panel of a step, by name or index."},
                 {"name": "run", "args": {},
                  "desc": "Build the 3D velocity model from the added lines."},
                 {"name": "get_status", "args": {},
@@ -896,7 +1138,7 @@ class Seismic3DModule(BaseModule):
         return f"the velocity section from this run ({mesh.parent.name})"
 
     def show_run_stage(self, tool):
-        """Follow the run through this page's wizard steps."""
+        """Follow the run through this page's steps."""
         if str(tool) != "derive_structure":
             return ""
         self._agent_goto_step("Structure")
@@ -910,6 +1152,7 @@ class Seismic3DModule(BaseModule):
             "current_step": _STEPS[self._current],
             "lines": len(self._lines),
             "line_names": [ln.get("name") for ln in self._lines],
+            "run_blocked_because": self._run_blocker(),
             "last_result_status": last.get("status"),
             "last_run_problem": self._run_problem,
         }
@@ -928,7 +1171,7 @@ class Seismic3DModule(BaseModule):
                 return {"status": "failed", "error": f"{label} file not found: {path}"}
         try:
             self._add_row({
-                "name": args.get("name") or f"line{self._table.rowCount() + 1}",
+                "name": args.get("name") or f"L{self._table.rowCount() + 1}",
                 "mesh": str(mesh), "velocity": str(velocity),
                 "x0": float(args.get("x0", 0.0)), "y0": float(args.get("y0", 0.0)),
                 "x1": float(args.get("x1", 100.0)), "y1": float(args.get("y1", 0.0)),
@@ -942,7 +1185,8 @@ class Seismic3DModule(BaseModule):
         self._sync_lines_from_table()
         if not self._lines:
             return {"status": "failed", "error": "Add at least one line first."}
-        self._preview_interface()
+        self._go_to(1)
+        self._show_section()
         return {"status": "ok"}
 
     def _agent_send_structure(self) -> Dict[str, Any]:
@@ -950,7 +1194,7 @@ class Seismic3DModule(BaseModule):
         if not self._lines:
             return {"status": "failed", "error": "Add at least one line first."}
         self._send_structure_to_hydrology()
-        return {"status": "ok", "message": "Bedrock structure sent to Geophysics -> Hydro."}
+        return {"status": "ok", "message": "Bedrock structure sent to ERT -> Water Content."}
 
     def _agent_goto_step(self, step: Any) -> Dict[str, Any]:
         names = {name.lower(): i for i, name in enumerate(_STEPS)}
@@ -973,10 +1217,13 @@ class Seismic3DModule(BaseModule):
             return {"status": "failed", "error": "Provide 'params' as a JSON object."}
 
         def set_combo(combo, value):
-            items = [combo.itemText(i) for i in range(combo.count())]
-            if str(value) not in items:
+            index = combo.findData(str(value))
+            if index < 0:
+                index = combo.findText(str(value))
+            if index < 0:
+                items = [combo.itemData(i) or combo.itemText(i) for i in range(combo.count())]
                 raise ValueError(f"must be one of {items}")
-            combo.setCurrentText(str(value))
+            combo.setCurrentIndex(index)
 
         handlers = {
             "velocity_threshold": lambda v: self._threshold.setValue(float(v)),

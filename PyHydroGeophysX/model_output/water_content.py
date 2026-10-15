@@ -2,6 +2,7 @@
 Module for processing MODFLOW model outputs.
 """
 import os
+import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -240,7 +241,14 @@ class MODFLOWWaterContent(HydroModelOutput):
 # MODFLOWPorosity
 # ---------------------------------------------------------------------------
 class MODFLOWPorosity(HydroModelOutput):
-    """Class for processing porosity data from MODFLOW simulations."""
+    """Legacy estimate of porosity from MODFLOW specific yield.
+
+    STO/UPW/LPF specific yield is drainable storage, not total porosity.
+    This compatibility reader retains that proxy with a RuntimeWarning.
+    Specific storage (inverse length) is never used as a porosity. Use an
+    independently supplied porosity for quantitative petrophysical conversion.
+    See the MODFLOW 6 GWF-STO and GWT-MST input guides.
+    """
 
     def __init__(self, model_directory: str, model_name: str):
         """
@@ -264,9 +272,22 @@ class MODFLOWPorosity(HydroModelOutput):
             self.flopy_available = False
             raise ImportError("flopy is required to load MODFLOW porosity data. Please install flopy.")
 
+    @staticmethod
+    def _specific_yield_proxy(values):
+        warnings.warn(
+            "MODFLOW specific yield is being used as a legacy porosity proxy. "
+            "Specific yield is drainable storage, not total porosity; supply "
+            "independent porosity for quantitative petrophysics.",
+            RuntimeWarning, stacklevel=3)
+        return values
+
     def load_porosity(self) -> np.ndarray:
         """
-        Load porosity data from MODFLOW model (supports both MODFLOW 6 and earlier versions).
+        Estimate porosity using the legacy specific-yield proxy, with a warning.
+
+        Supports MODFLOW 6 and earlier versions. A missing storage package keeps
+        the historical uniform 0.3 fallback, also with a RuntimeWarning.
+        Specific storage is not a porosity and is never returned here.
 
         Returns:
             3D array of porosity values (nlay, nrow, ncol)
@@ -309,7 +330,7 @@ class MODFLOWPorosity(HydroModelOutput):
 
                     sto = gwf.get_package("STO")
 
-                    return sto.sy.array
+                    return self._specific_yield_proxy(sto.sy.array)
 
                 except Exception as e:
                     print(f"Error loading MODFLOW 6 model: {str(e)}")
@@ -333,29 +354,24 @@ class MODFLOWPorosity(HydroModelOutput):
                     # Try to get porosity from UPW package first
                     if hasattr(model, 'upw') and model.upw is not None:
                         if hasattr(model.upw, 'sy'):
-                            return model.upw.sy.array
+                            return self._specific_yield_proxy(model.upw.sy.array)
 
                     # Then try LPF package
                     if hasattr(model, 'lpf') and model.lpf is not None:
                         if hasattr(model.lpf, 'sy'):
-                            return model.lpf.sy.array
+                            return self._specific_yield_proxy(model.lpf.sy.array)
 
-                    # If specific yield not found, try specific storage
-                    if hasattr(model, 'upw') and model.upw is not None:
-                        if hasattr(model.upw, 'ss'):
-                            print("WARNING: Using specific storage as substitute for porosity")
-                            return model.upw.ss.array
-
-                    if hasattr(model, 'lpf') and model.lpf is not None:
-                        if hasattr(model.lpf, 'ss'):
-                            print("WARNING: Using specific storage as substitute for porosity")
-                            return model.lpf.ss.array
+                    # Specific storage has inverse-length units (or is a
+                    # storage coefficient), so it cannot substitute for porosity.
 
                 except Exception as e:
                     print(f"Error loading legacy MODFLOW model: {str(e)}")
 
             # If nothing found, use default value
-            print("WARNING: No porosity data found in model. Using default value of 0.3")
+            warnings.warn(
+                "No porosity or specific-yield proxy could be loaded. Using the "
+                "legacy assumed porosity 0.3; this is not a measured model property.",
+                RuntimeWarning, stacklevel=2)
             return np.ones((self.nlay, self.nrow, self.ncol)) * 0.3
 
         except Exception as e:

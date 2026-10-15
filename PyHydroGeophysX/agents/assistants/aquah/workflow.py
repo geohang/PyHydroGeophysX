@@ -37,12 +37,21 @@ def run(payload, progress, *, context_factory=None, run_fn=None, events=None,
         from PyHydroGeophysX.llm.providers import make_provider
         progress('Scanning selected folder', .02, 'Reading bounded file previews')
         catalog = scan_folder(payload['data_folder'])
-        provider = make_provider(_classifier_provider(payload.get('provider')),
-                                 model=payload.get('model'), api_key=payload.get('api_key'),
-                                 base_url=payload.get('base_url'))
-        provider.reasoning_effort = payload.get('reasoning_effort') or 'medium'
-        progress('Classifying files with AI', .1, f"{len(catalog['files'])} files; model {provider.model}")
-        catalog = classify_catalog(catalog, payload['request'], provider, progress)
+        # A model that cannot be set up or reached leaves the table as the
+        # scan read it - roles the files themselves proved, the rest unknown -
+        # with the reason, for the user to complete or retry.
+        try:
+            provider = make_provider(_classifier_provider(payload.get('provider')),
+                                     model=payload.get('model'), api_key=payload.get('api_key'),
+                                     base_url=payload.get('base_url'))
+            provider.reasoning_effort = payload.get('reasoning_effort') or 'medium'
+            progress('Classifying files with AI', .1, f"{len(catalog['files'])} files; model {provider.model}")
+            catalog = classify_catalog(catalog, payload['request'], provider, progress)
+        except Exception as exc:  # noqa: BLE001 - the scan stands on its own
+            catalog = {**catalog, 'warnings': [
+                *(catalog.get('warnings') or []),
+                f'The AI could not classify the files ({type(exc).__name__}: {str(exc)[:300]}); '
+                'give each unknown file a role, or retry.']}
         output = Path(payload['output_dir'])
         output.mkdir(parents=True, exist_ok=True)
         (output / 'classification.json').write_text(json.dumps(catalog, indent=2), encoding='utf-8')
@@ -64,30 +73,46 @@ def run(payload, progress, *, context_factory=None, run_fn=None, events=None,
     progress('Understanding request', 0.02, 'Preparing the workflow configuration')
     inputs = dict(payload.get('inputs', {}))
     sources = list(payload.get('chat_reference_sources') or [])
+    # Nothing before the first step stops the run. A stage that fails falls
+    # back to the plain way (no references, no MCP catalog, the request read
+    # by rules) and leaves a note; the notes reach the controller as warnings,
+    # so the model sees what went wrong at its first decision and can carry
+    # on, ask, or propose a temporary script for the user to approve.
+    input_notes = []
+
+    def setback(stage, exc, fallback):
+        input_notes.append(f'{stage} failed ({type(exc).__name__}: {str(exc)[:300]}); '
+                           f'the run goes on {fallback}.')
+        progress('Carrying on past a problem', .05, input_notes[-1])
+
     from PyHydroGeophysX.llm.runtime_options import retrieved_context
     if payload.get('use_rag'):
-        from PyHydroGeophysX.agents.local_knowledge import retrieve
         progress('Retrieving local references', .03, 'Searching documentation and reference files')
-        refs = inputs.get('reference_file', [])
-        if not sources:
-            sources = retrieve(request, refs if isinstance(refs, list) else [refs])
+        try:
+            from PyHydroGeophysX.agents.local_knowledge import retrieve
+            refs = inputs.get('reference_file', [])
+            if not sources:
+                sources = retrieve(request, refs if isinstance(refs, list) else [refs])
+        except Exception as exc:  # noqa: BLE001 - see setback
+            setback('Retrieving local references', exc, 'without reference excerpts')
         retrieved_context.set(json.dumps(sources))
         progress('References retrieved', .04, f'{len(sources)} source excerpts; citations will be retained')
     if payload.get('use_mcp'):
-        from PyHydroGeophysX.agents.mcp_client import catalog
         progress('Connecting local MCP tools', .05, 'Initializing stdio MCP and requesting workflow catalog')
-        tool_catalog = catalog(output)
-        retrieved_context.set(retrieved_context.get() + '\nAvailable local workflow APIs:\n' + tool_catalog)
-        (output / 'mcp_catalog.json').write_text(tool_catalog, encoding='utf-8')
-    if 'topography_file' in inputs and 'raw_seismic_file' not in inputs:
-        raise ValueError('Independent terrain grids are not yet consumed by this unified workflow. '
-                         'Use an electrode coordinate file for ERT, or a geophone coordinate file for raw seismic. '
-                         'For an XYZ terrain/DEM, use the 3D mesh workflow; do not relabel it as sensor coordinates.')
-    if 'geophone_file' in inputs and 'raw_seismic_file' not in inputs:
-        raise ValueError('Separate geophone coordinates currently require raw SEG-Y; travel-time files must already contain sensor geometry.')
-    config = context_factory(api_key=key, model=model, llm_provider=provider).parse_request(request, available_data=inputs)
-    if not isinstance(config, dict) or config.get('error'):
-        raise ValueError(f'Could not interpret request: {config}')
+        try:
+            from PyHydroGeophysX.agents.mcp_client import catalog
+            tool_catalog = catalog(output)
+            retrieved_context.set(retrieved_context.get() + '\nAvailable local workflow APIs:\n' + tool_catalog)
+            (output / 'mcp_catalog.json').write_text(tool_catalog, encoding='utf-8')
+        except Exception as exc:  # noqa: BLE001 - see setback
+            setback('Connecting the local MCP tools', exc, 'without the MCP workflow catalog')
+    # Inputs this workflow cannot take as given are settled or set aside here,
+    # with a note - not a run that stops at 0 s.
+    try:
+        input_notes.extend(_settle_inputs(inputs))
+    except Exception as exc:  # noqa: BLE001 - see setback
+        setback('Checking the inputs', exc, 'with the files as they were given')
+    config = _read_request(context_factory, request, inputs, key, model, provider, setback)
     config.update(inputs)
     if 'time_lapse_files' in inputs:
         config['timelapse_files'] = inputs['time_lapse_files']
@@ -98,8 +123,25 @@ def run(payload, progress, *, context_factory=None, run_fn=None, events=None,
         config.pop('timelapse_files', None)
     if 'raw_seismic_file' in inputs:
         config['raw_seismic_processing'] = True
+    studio = (payload.get('studio_work') or {}).get('ert')
+    if studio:
+        try:
+            _carry_over_studio_inversion(config, studio, progress)
+        except Exception as exc:  # noqa: BLE001 - see setback
+            setback('Taking over the inversion finished in the studio', exc,
+                    'and inverts the data itself')
     config.update(user_request=request, output_dir=str(output))
-    (output / 'workflow_config.json').write_text(json.dumps(config, indent=2, default=str), encoding='utf-8')
+    if input_notes:
+        config['input_notes'] = input_notes
+        for note in input_notes:
+            progress('Checking the inputs', .05, note)
+    try:
+        (output / 'workflow_config.json').write_text(json.dumps(config, indent=2, default=str),
+                                                     encoding='utf-8')
+    except Exception as exc:  # noqa: BLE001 - a record of the run, not the run
+        input_notes.append(f'workflow_config.json could not be written ({exc}); the run '
+                           'goes on, and its configuration is in the processing audit.')
+        config['input_notes'] = input_notes
     from PyHydroGeophysX.agents.workflow_audit import record_calls, write_report
     # Step-by-step and auto are the same run; the only difference is whether
     # a hook pauses before each step to ask. A run_fn that predates the hook
@@ -141,15 +183,22 @@ def run(payload, progress, *, context_factory=None, run_fn=None, events=None,
     from PyHydroGeophysX.agents._intent import unmet_requests
     from PyHydroGeophysX.agents._uncertainty import result_caveats
     finished = results if isinstance(results, dict) else {}
-    # The run states a missing product with its reason; the same sentence
-    # without one would only repeat it.
-    for sentence in unmet_requests(config, finished):
-        stem = sentence.rstrip('.').split(' (')[0]
-        if not any(str(w).startswith(stem) for w in warnings):
-            warnings.append(sentence)
-    # A product that exists but cannot bear the weight put on it is its own
-    # kind of warning: it will be read, and read at face value.
-    warnings.extend(result_caveats(config, finished))
+    # What follows checks and records a run that has already done its work. A
+    # check or a record that fails is a warning; it used to throw the finished
+    # results away with it.
+    try:
+        # The run states a missing product with its reason; the same sentence
+        # without one would only repeat it.
+        for sentence in unmet_requests(config, finished):
+            stem = sentence.rstrip('.').split(' (')[0]
+            if not any(str(w).startswith(stem) for w in warnings):
+                warnings.append(sentence)
+        # A product that exists but cannot bear the weight put on it is its own
+        # kind of warning: it will be read, and read at face value.
+        warnings.extend(result_caveats(config, finished))
+    except Exception as exc:  # noqa: BLE001 - see above
+        warnings.append(f'The final check of the requested products failed ({type(exc).__name__}: '
+                        f'{exc}); compare the results with the request yourself.')
     # Several sources now raise the same warning - the controller records what
     # a step found, and this function re-derives the same checks as a last line
     # of defence - so the quality summary arrived twice. dict.fromkeys keeps
@@ -160,11 +209,19 @@ def run(payload, progress, *, context_factory=None, run_fn=None, events=None,
     # Reports and numeric products remain in the run directory. The manifest is
     # deliberately small; no pickles or credentials are stored or sent to Qt.
     progress('Writing processing audit', .97, 'Recording input hashes, parameters, software references and uncertainty')
-    files = write_report(output, config, results, plan, interpretation, files or {},
-                         events or [], calls, sources,
-                         {k: payload.get(k) for k in ('model', 'provider', 'reasoning_effort', 'use_rag', 'use_mcp')})
+    try:
+        files = write_report(output, config, results, plan, interpretation, files or {},
+                             events or [], calls, sources,
+                             {k: payload.get(k) for k in ('model', 'provider', 'reasoning_effort', 'use_rag', 'use_mcp')})
+    except Exception as exc:  # noqa: BLE001 - the run's own report and products stand
+        warnings.append(f'The processing audit could not be written ({type(exc).__name__}: {exc}); '
+                        "the run's report and products are unaffected.")
     if payload.get('classification'):
-        (output / 'reviewed_classification.json').write_text(json.dumps(payload['classification'], indent=2), encoding='utf-8')
+        try:
+            (output / 'reviewed_classification.json').write_text(
+                json.dumps(payload['classification'], indent=2, default=str), encoding='utf-8')
+        except Exception as exc:  # noqa: BLE001 - a record, not a result
+            warnings.append(f'reviewed_classification.json could not be written ({exc}).')
     # A run that fell short says so in its status, not only in a warning: the
     # desktop reads the status to decide whether to call the run complete.
     if isinstance(results, dict) and results.get('status') == 'incomplete':
@@ -180,9 +237,127 @@ def run(payload, progress, *, context_factory=None, run_fn=None, events=None,
         if hasattr(value, 'item'):
             return value.item()
         return str(value)
-    (output / 'numerical_results.json').write_text(json.dumps(results, default=encode), encoding='utf-8')
-    (output / 'workflow_result.json').write_text(json.dumps(result, indent=2, default=str), encoding='utf-8')
+    for name, write in (
+            ('numerical_results.json', lambda: json.dumps(results, default=encode)),
+            ('workflow_result.json', lambda: json.dumps(result, indent=2, default=str))):
+        try:
+            (output / name).write_text(write(), encoding='utf-8')
+        except Exception as exc:  # noqa: BLE001 - a record of results already on disk
+            warnings.append(f'{name} could not be written ({type(exc).__name__}: {exc}).')
+            if result['status'] == 'success':
+                result['status'] = 'needs_review'
     return result
+
+
+def _read_request(context_factory, request, inputs, key, model, provider, setback):
+    """The run's configuration from ``request``; never an exception.
+
+    The parser falls back to its rules when the model call fails. When the
+    parser itself fails, or answers with an error or no configuration at all,
+    the rules read the request here instead, with a note; "Could not interpret
+    request" used to end the run before its first step.
+
+    >>> class Broken:
+    ...     def __init__(self, **kw): pass
+    ...     def parse_request(self, request, available_data=None): return {'error': 'bad JSON'}
+    >>> notes = []
+    >>> config = _read_request(Broken, 'Invert line1.ohm', {}, None, None, 'openai',
+    ...                        lambda stage, exc, then: notes.append(f'{stage}: {exc}; {then}'))
+    >>> config['data_file'], notes
+    ('line1.ohm', ['Reading the request: bad JSON; with the request read by rules, not the model'])
+    """
+    from PyHydroGeophysX.agents import ContextInputAgent
+
+    fallback = 'with the request read by rules, not the model'
+    try:
+        config = context_factory(api_key=key, model=model,
+                                 llm_provider=provider).parse_request(request, available_data=inputs)
+        if isinstance(config, dict) and not config.get('error'):
+            return config
+        problem = ValueError(str(config.get('error') if isinstance(config, dict) else
+                                 f'the parser returned {type(config).__name__}, not a configuration'))
+    except Exception as exc:  # noqa: BLE001 - the rules still read the request
+        problem = exc
+    setback('Reading the request', problem, fallback)
+    try:
+        preview = ContextInputAgent(api_key=None).preview_config(request, inputs)
+        return dict(preview.get('workflow_config') or {})
+    except Exception as exc:  # noqa: BLE001 - the run's files and words still say a lot
+        setback('Reading the request by rules', exc, 'with only the files it was given')
+        return {'user_request': request}
+
+
+def _settle_inputs(inputs):
+    """Settle the inputs this workflow cannot take as labelled; return a note on each.
+
+    A terrain table beside ERT data used to stop the run before its first step
+    ("Independent terrain grids are not yet consumed"), and a classifier calls
+    an electrode file terrain often enough - ``electrodes.dat``, 56 rows for 56
+    electrodes, was one. Now a terrain table with one evenly spaced row per
+    electrode of the ERT surveys is used as their electrode file; any other is
+    left out with a note, as are geophone coordinates without raw seismic.
+    ``inputs`` is changed in place.
+
+    >>> notes = _settle_inputs({'data_file': 'a.ohm', 'topography_file': 'dem.xyz'})
+    >>> print(notes[0])  # doctest: +ELLIPSIS
+    dem.xyz was given as terrain / topography, which this workflow does not read...
+    """
+    from PyHydroGeophysX.agents.folder_catalog import electrode_table_match, table_facts
+
+    notes = []
+    raw_seismic = bool(inputs.get('raw_seismic_file'))
+    terrain = inputs.get('topography_file')
+    terrain = (terrain[0] if isinstance(terrain, list) and terrain else terrain) or None
+    if terrain and not raw_seismic:
+        inputs.pop('topography_file', None)
+        ert = list(inputs.get('time_lapse_files') or []) + (
+            [inputs['data_file']] if inputs.get('data_file') else [])
+        match = (electrode_table_match([{'path': str(terrain), 'facts': table_facts(terrain)}],
+                                       [{'path': str(p)} for p in ert]).get(0)
+                 if ert else None)
+        name = Path(str(terrain)).name
+        if match and not inputs.get('electrode_file'):
+            inputs['electrode_file'] = terrain
+            notes.append(f'{name} was given as terrain, but it holds one evenly spaced position '
+                         f'for each of the {match[0]} electrodes of {match[1]}, so the run uses it '
+                         'as the electrode file.')
+        else:
+            notes.append(f'{name} was given as terrain / topography, which this workflow does '
+                         'not read, so the run goes on without it; ERT takes its elevations '
+                         'from the electrode positions. If the file holds positions the run '
+                         'needs, a temporary script can convert it.')
+    if inputs.get('geophone_file') and not raw_seismic:
+        name = Path(str(inputs.pop('geophone_file'))).name
+        notes.append(f'{name} was given as geophone coordinates, which only raw SEG-Y data '
+                     'use; travel-time files carry their own geometry, so the run goes on '
+                     'without it.')
+    return notes
+
+
+def _carry_over_studio_inversion(config, studio, progress):
+    """Let the run take over an ERT inversion finished in the studio, when it fits.
+
+    ``studio`` is what the ERT page wrote when a step-by-step task was handed
+    over (its ``agent_handover``). Only a model made from the very surveys this
+    run loads is taken over: one from other files would be reported as the
+    inversion of data it never saw.
+    """
+    import os
+
+    from PyHydroGeophysX.agents.runtime.catalog import STUDIO_INVERSION_KEY, survey_files
+
+    def same(paths):
+        return [os.path.normcase(os.path.abspath(str(p))) for p in paths]
+
+    run_files = survey_files(config)
+    studio_files = [p for p in studio.get('source_files') or [] if p]
+    if run_files and same(run_files) == same(studio_files) and studio.get('model_dir'):
+        config[STUDIO_INVERSION_KEY] = studio['model_dir']
+        progress('Carrying over the studio inversion', .05,
+                 f'{len(studio_files)} survey(s) were inverted in the studio; the run continues from that model')
+    else:
+        progress('Studio inversion not carried over', .05,
+                 'It was made from other survey files than this run loads, so the run inverts the data itself')
 
 
 def _classifier_provider(name):

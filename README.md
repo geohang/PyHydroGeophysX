@@ -27,7 +27,7 @@ A Python package for integrating hydrological model outputs (MODFLOW, ParFlow) w
 - **ERT engines** — the built-in engine, the optional GPU engine ADTLERT ([Yang et al. 2026](https://arxiv.org/abs/2608.14661)), and the external E4D, R2 and R3t ([where they run](https://geohang.github.io/PyHydroGeophysX/methods/ert.html#ert-e4d)); a-priori resistivity zones work with every engine
 - **ERT data processing** — field data QC, reciprocal errors, temperature correction, export, and ResIPy integration
 - **Magnetotellurics (MT/AMT)** — time-series processing, Occam 1D with TEM static-shift correction, 2D inversion on SimPEG
-- **Petrophysics and uncertainty** — water content ↔ resistivity (Waxman-Smits/Archie) and seismic velocity (Hertz-Mindlin, DEM); Monte Carlo uncertainty
+- **Petrophysics and uncertainty** — water content ↔ resistivity (Waxman-Smits/Archie) and seismic velocity (Hertz-Mindlin, DEM); Monte Carlo uncertainty; [pore-fluid properties](https://geohang.github.io/PyHydroGeophysX/methods/petrophysics.html#petrophysics-fluid-properties)
 - **Multi-agent AI system** — automated workflows via GPT, Gemini, or Claude APIs
 - **GPU acceleration** — optional CuPy/CUDA support for large-scale inversions
 
@@ -247,7 +247,7 @@ On Windows, `PyHydroGeophysX\start_webapp.bat` does the same from a double-click
 PyHydroGeophysX/
 ├── core/               # Interpolation, 2D/3D mesh utilities
 ├── agents/             # Multi-agent AI orchestration
-├── data_processing/    # ERT field data loading, QC, export; mt/ for magnetotellurics
+├── data_processing/    # ERT field data loading, QC, export; mt/ for magnetotellurics; gpr.py for GPR
 ├── model_output/       # MODFLOW, ParFlow, ATS and PFLOTRAN output interfaces
 ├── petrophysics/       # Resistivity and velocity rock-physics models
 ├── forward/            # ERT, SRT, TDEM, FDEM forward modeling
@@ -547,148 +547,8 @@ Please also cite the underlying libraries you use (click to expand):
 <details>
 <summary><b>Magnetotellurics (<code>data_processing.mt</code>)</b></summary>
 
-the processing follows EMTF
-(Egbert & Booker 1986; Egbert 1997) with a remote reference (Gamble et al. 1979)
-and bounded-influence weights (Chave & Thomson 2004); the 1D inversion is Occam's
-(Constable et al. 1987) on Wait's (1954) recursion, jointly with TEM after Meju
-(1996) for the static shift (Sternberg et al. 1988); the phase tensor is Caldwell
-et al.'s (2004); EMTF XML is Kelbert's (2020) format; the 2D inversion runs on
-SimPEG (above). The example site NMX20 is from the USMTArray (IRIS SPUD, CC BY 4.0).
-
-```bibtex
-@article{egbert1986robust,
-  author  = {Egbert, Gary D. and Booker, John R.},
-  title   = {Robust estimation of geomagnetic transfer functions},
-  journal = {Geophysical Journal International},
-  volume  = {87},
-  number  = {1},
-  pages   = {173--194},
-  year    = {1986},
-  doi     = {10.1111/j.1365-246X.1986.tb04552.x}
-}
-
-@article{egbert1997robust,
-  author  = {Egbert, Gary D.},
-  title   = {Robust multiple-station magnetotelluric data processing},
-  journal = {Geophysical Journal International},
-  volume  = {130},
-  number  = {2},
-  pages   = {475--496},
-  year    = {1997},
-  doi     = {10.1111/j.1365-246X.1997.tb05663.x}
-}
-
-@article{gamble1979remote,
-  author  = {Gamble, T. D. and Goubau, W. M. and Clarke, J.},
-  title   = {Magnetotellurics with a remote magnetic reference},
-  journal = {Geophysics},
-  volume  = {44},
-  number  = {1},
-  pages   = {53--68},
-  year    = {1979},
-  doi     = {10.1190/1.1440923}
-}
-
-@article{chave2004bounded,
-  author  = {Chave, Alan D. and Thomson, David J.},
-  title   = {Bounded influence magnetotelluric response function estimation},
-  journal = {Geophysical Journal International},
-  volume  = {157},
-  number  = {3},
-  pages   = {988--1006},
-  year    = {2004},
-  doi     = {10.1111/j.1365-246X.2004.02203.x}
-}
-
-@article{constable1987occam,
-  author  = {Constable, Steven C. and Parker, Robert L. and Constable, Catherine G.},
-  title   = {Occam's inversion: A practical algorithm for generating smooth models
-             from electromagnetic sounding data},
-  journal = {Geophysics},
-  volume  = {52},
-  number  = {3},
-  pages   = {289--300},
-  year    = {1987},
-  doi     = {10.1190/1.1442303}
-}
-
-@article{wait1954relation,
-  author  = {Wait, James R.},
-  title   = {On the relation between telluric currents and the Earth's magnetic field},
-  journal = {Geophysics},
-  volume  = {19},
-  number  = {2},
-  pages   = {281--289},
-  year    = {1954},
-  doi     = {10.1190/1.1437994}
-}
-
-@article{meju1996joint,
-  author  = {Meju, Maxwell A.},
-  title   = {Joint inversion of {TEM} and distorted {MT} soundings: Some effective
-             practical considerations},
-  journal = {Geophysics},
-  volume  = {61},
-  number  = {1},
-  pages   = {56--65},
-  year    = {1996},
-  doi     = {10.1190/1.1443956}
-}
-
-@article{sternberg1988static,
-  author  = {Sternberg, Ben K. and Washburne, James C. and Pellerin, Louise},
-  title   = {Correction for the static shift in magnetotellurics using transient
-             electromagnetic soundings},
-  journal = {Geophysics},
-  volume  = {53},
-  number  = {11},
-  pages   = {1459--1468},
-  year    = {1988},
-  doi     = {10.1190/1.1442426}
-}
-
-@article{caldwell2004phase,
-  author  = {Caldwell, T. Grant and Bibby, Hugh M. and Brown, Colin},
-  title   = {The magnetotelluric phase tensor},
-  journal = {Geophysical Journal International},
-  volume  = {158},
-  number  = {2},
-  pages   = {457--469},
-  year    = {2004},
-  doi     = {10.1111/j.1365-246X.2004.02281.x}
-}
-
-@article{kelbert2020emtf,
-  author  = {Kelbert, Anna},
-  title   = {{EMTF XML}: New data interchange format and conversion tools for
-             electromagnetic transfer functions},
-  journal = {Geophysics},
-  volume  = {85},
-  number  = {1},
-  pages   = {F1--F17},
-  year    = {2020},
-  doi     = {10.1190/geo2018-0679.1}
-}
-
-@misc{schultz2020usmtarray,
-  author    = {Schultz, A. and Pellerin, L. and Bedrosian, P. and Kelbert, A. and
-               Crosbie, J.},
-  title     = {{USMTArray} South Magnetotelluric Transfer Functions},
-  publisher = {Seismological Facility for the Advancement of Geoscience},
-  year      = {2020},
-  note      = {2020--2023},
-  doi       = {10.17611/DP/EMTF/USMTARRAY/SOUTH}
-}
-
-@misc{iris2011emtf,
-  author    = {{Incorporated Research Institutions for Seismology}},
-  title     = {Data Services Products: {EMTF}, The Magnetotelluric Transfer
-               Functions},
-  publisher = {Seismological Facility for the Advancement of Geoscience},
-  year      = {2011},
-  doi       = {10.17611/DP/EMTF.1}
-}
-```
+For MT/AMT methods and complete BibTeX entries, see the
+[MT references](https://geohang.github.io/PyHydroGeophysX/citation.html#mt-references).
 
 </details>
 
@@ -756,6 +616,95 @@ flat-event test follow the pitfalls listed by Steeples & Miller (1998).
   pages   = {1213--1224},
   year    = {1998},
   doi     = {10.1190/1.1444422}
+}
+```
+
+</details>
+
+<details>
+<summary><b>Ground-penetrating radar (<code>data_processing.gpr</code>, the studio's GPR page)</b></summary>
+
+The file readers and the processing steps follow GPRPy, readgssi, ImpDAR and
+RGPR; F-K migration follows Stolt (1978); the example line turns water content
+into permittivity with CRIM (Birchak et al. 1974; Roth et al. 1990).
+
+```bibtex
+@article{plattner2020gprpy,
+  author  = {Plattner, Alain M.},
+  title   = {{GPRPy}: Open-source ground-penetrating radar processing and
+             visualization software},
+  journal = {The Leading Edge},
+  volume  = {39},
+  number  = {5},
+  pages   = {332--337},
+  year    = {2020},
+  doi     = {10.1190/tle39050332.1}
+}
+
+@misc{nesbitt2018readgssi,
+  author       = {Nesbitt, Ian and Simon, Fran{\c{c}}ois-Xavier and Paulin, Thomas
+                  and Hoffmann, Felippe and teshaw},
+  title        = {readgssi: an open-source tool to read and plot {GSSI}
+                  ground-penetrating radar data},
+  howpublished = {Zenodo},
+  year         = {2018},
+  doi          = {10.5281/zenodo.1439119}
+}
+
+@article{lilien2020impdar,
+  author  = {Lilien, David A. and Hills, Benjamin H. and Driscol, Joshua and
+             Jacobel, Robert and Christianson, Knut},
+  title   = {{ImpDAR}: an open-source impulse radar processor},
+  journal = {Annals of Glaciology},
+  volume  = {61},
+  number  = {81},
+  pages   = {114--123},
+  year    = {2020},
+  doi     = {10.1017/aog.2020.44}
+}
+
+@inproceedings{huber2018rgpr,
+  author    = {Huber, Emanuel and Hans, Guillaume},
+  title     = {{RGPR} -- An open-source package to process and visualize {GPR} data},
+  booktitle = {2018 17th International Conference on Ground Penetrating Radar (GPR)},
+  pages     = {1--4},
+  year      = {2018},
+  doi       = {10.1109/ICGPR.2018.8441658}
+}
+
+@article{stolt1978migration,
+  author  = {Stolt, R. H.},
+  title   = {Migration by {Fourier} transform},
+  journal = {Geophysics},
+  volume  = {43},
+  number  = {1},
+  pages   = {23--48},
+  year    = {1978},
+  doi     = {10.1190/1.1440826}
+}
+
+@article{birchak1974high,
+  author  = {Birchak, J. R. and Gardner, C. G. and Hipp, J. E. and Victor, J. M.},
+  title   = {High dielectric constant microwave probes for sensing soil moisture},
+  journal = {Proceedings of the IEEE},
+  volume  = {62},
+  number  = {1},
+  pages   = {93--98},
+  year    = {1974},
+  doi     = {10.1109/PROC.1974.9388}
+}
+
+@article{roth1990calibration,
+  author  = {Roth, Kurt and Schulin, Rainer and Fl{\"u}hler, Hannes and
+             Attinger, Werner},
+  title   = {Calibration of time domain reflectometry for water content
+             measurement using a composite dielectric approach},
+  journal = {Water Resources Research},
+  volume  = {26},
+  number  = {10},
+  pages   = {2267--2273},
+  year    = {1990},
+  doi     = {10.1029/WR026i010p02267}
 }
 ```
 
@@ -927,6 +876,106 @@ the three references PFLOTRAN asks users to cite.
   title  = {{PFLOTRAN} User Manual},
   note   = {http://documentation.pflotran.org},
   year   = {2020}
+}
+```
+
+</details>
+
+<details>
+<summary><b>Batzle-Wang (brine density and elastic modulus)</b></summary>
+
+```bibtex
+@article{batzle1992fluids,
+  author = {Batzle, Michael and Wang, Zhijing},
+  title = {Seismic properties of pore fluids},
+  journal = {Geophysics},
+  volume = {57},
+  number = {11},
+  pages = {1396--1408},
+  year = {1992},
+  doi = {10.1190/1.1443207}
+}
+```
+
+</details>
+
+<details>
+<summary><b>Waxman-Thomas (surface conductivity)</b></summary>
+
+```bibtex
+@article{waxman1974conductivities,
+  author = {Waxman, Monroe H. and Thomas, E. C.},
+  title = {Electrical Conductivities in Shaly Sands: I. The Relation Between Hydrocarbon Saturation and Resistivity Index; II. The Temperature Coefficient of Electrical Conductivity},
+  journal = {Journal of Petroleum Technology},
+  volume = {26},
+  number = {2},
+  pages = {213--225},
+  year = {1974},
+  doi = {10.2118/4094-PA}
+}
+```
+
+</details>
+
+<details>
+<summary><b>ORNL surface-water survey (limiting equivalent ionic conductivities)</b></summary>
+
+```bibtex
+@techreport{kanciruk1986conductance,
+  author = {Kanciruk, Paul and Gentry, Merilyn and McCord, Raymond and Hook, Les and Eilers, Joseph and Best, Mary D.},
+  title = {National Surface Water Survey: Eastern Lake Survey---Phase I, Data Base Dictionary},
+  institution = {Oak Ridge National Laboratory},
+  number = {ORNL/TM-10153},
+  year = {1986},
+  note = {Table 8, CONCAL, page 30},
+  url = {https://archive.epa.gov/emap/archive-emap/web/pdf/elsi_dd-2.pdf}
+}
+```
+
+</details>
+
+<details>
+<summary><b>Metrohm conductometry (Kohlrausch square-root correction)</b></summary>
+
+```bibtex
+@manual{metrohmconductometry,
+  author = {Bruttel, Peter},
+  title = {Conductometry---Conductivity Measurement},
+  organization = {Metrohm},
+  number = {8.109.5021},
+  note = {Revised by Lucia Meier, Sabrina Gschwind and Iris Kalkman; square-root law, page 14},
+  url = {https://www.metrohm.com/content/dam/metrohm/shared/documents/monographs/81095021EN.pdf}
+}
+```
+
+</details>
+
+<details>
+<summary><b>Girault electrochemistry (calcium chloride conductivity benchmark)</b></summary>
+
+```bibtex
+@book{girault2004electrochemistry,
+  author = {Girault, Hubert H.},
+  title = {Analytical and Physical Electrochemistry},
+  publisher = {EPFL Press},
+  year = {2004},
+  doi = {10.55430/6101APEHG}
+}
+```
+
+</details>
+
+<details>
+<summary><b>Rock Physics Handbook (grain contacts and fluid substitution)</b></summary>
+
+```bibtex
+@book{mavko2009handbook,
+  author = {Mavko, Gary and Mukerji, Tapan and Dvorkin, Jack},
+  title = {The Rock Physics Handbook: Tools for Seismic Analysis of Porous Media},
+  publisher = {Cambridge University Press},
+  edition = {2},
+  year = {2009},
+  doi = {10.1017/CBO9780511626753}
 }
 ```
 

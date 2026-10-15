@@ -18,11 +18,12 @@ import pytest
 
 from PyHydroGeophysX.analysis import compute_cumulative_sensitivity, compute_resolution_matrix
 from PyHydroGeophysX.assimilation import ESMDA, EnsembleKalmanFilter, HydroGeophysObsOperator
-from PyHydroGeophysX.core.hydro_profile import interpolate_layer_samples
+from PyHydroGeophysX.core.hydro_profile import interpolate_layer_samples, sample_profile
 from PyHydroGeophysX.core.interpolation import setup_profile_coordinates
 from PyHydroGeophysX.petrophysics.monte_carlo import run_petrophysics_monte_carlo
 from PyHydroGeophysX.petrophysics.resistivity_models import (
-    resistivity_to_saturation, resistivity_to_saturation2, resistivity_to_water_content,
+    resistivity_to_porosity, resistivity_to_saturation, resistivity_to_saturation2,
+    resistivity_to_water_content,
 )
 from PyHydroGeophysX.petrophysics.velocity_models import (
     velocity_to_water_content, water_content_to_velocity,
@@ -112,6 +113,33 @@ def test_seeded_monte_carlo_matches_the_legacy_converter_in_any_chunking():
                 result["params_used"][3]["rho_sat" if name == "rhos" else name], value)
 
 
+@pytest.mark.parametrize("surface", [0., 1e-3, 1 / 200])
+def test_porosity_inverse_is_exact_and_reports_where_no_porosity_exists(surface):
+    phi, S, n, m = np.array([.05, .2, .4]), .7, 2., 1.5
+    rho = 1. / (phi**m * S**n / 20. + surface * S**(n - 1))
+    np.testing.assert_allclose(resistivity_to_porosity(rho, S, m, 20., n, surface), phi, rtol=1e-12)
+    if not surface:
+        return
+    # Surface conduction alone explains resistivity only up to 1/(sigma_sur S**(n-1));
+    # above it no porosity exists, and fsolve's starting guess (~0.05) came back.
+    beyond = 2. / (surface * S**(n - 1))
+    with pytest.warns(RuntimeWarning, match="no porosity"):
+        assert np.isnan(resistivity_to_porosity(beyond, S, m, 20., n, surface))
+    # The Monte Carlo leaves those draws out of the statistics and counts them.
+    layer = dict(marker=1, m=m, rho_fluid=20., n=n, porosity=.3,
+                 sigma_sur=dict(mean=surface, std=surface))
+    with pytest.warns(RuntimeWarning, match="no Waxman-Smits porosity"):
+        result = run_petrophysics_monte_carlo(
+            np.r_[rho, beyond], np.ones(4), [layer], products=("porosity",),
+            n_realizations=40, saturation_value=S, return_realizations=True)
+    draws, stats = result["porosity_all"], result["statistics"]["porosity"]
+    assert result["warnings"] and 0 < stats["no_root_fraction"].max() < 1
+    np.testing.assert_array_equal(stats["no_root_fraction"], np.isnan(draws).mean(axis=0))
+    np.testing.assert_allclose(stats["mean"], np.nanmean(draws, axis=0), rtol=1e-12)
+    np.testing.assert_allclose([stats["p10"], stats["p50"], stats["p90"]],
+                               np.nanpercentile(draws, [10, 50, 90], axis=0), rtol=1e-12)
+
+
 @pytest.mark.parametrize("model", ["linear", "wyllie", "raymer"])
 def test_velocity_inverse_round_trips_with_variable_porosity(model):
     phi = np.array([.25, .3, .4, .5])
@@ -183,7 +211,8 @@ def test_a_single_flat_layer_runs_the_gravity_forward_model():
 
 @pytest.mark.parametrize("bottom", [np.full(4, -10.), np.array([-10., -7., -5., -8.])],
                          ids=["flat_bottom", "variable_bottom"])
-def test_gravity_puts_no_water_mass_below_each_column(monkeypatch, bottom):
+@pytest.mark.parametrize("reverse", [False, True])
+def test_gravity_puts_no_water_mass_below_each_column(monkeypatch, bottom, reverse):
     pytest.importorskip("simpeg")
     from simpeg.potential_fields.gravity.simulation import Simulation3DIntegral
 
@@ -198,9 +227,10 @@ def test_gravity_puts_no_water_mass_below_each_column(monkeypatch, bottom):
         return original(self, model, *args, **kwargs)
 
     monkeypatch.setattr(Simulation3DIntegral, "dpred", capture_and_compute)
+    order = np.arange(4)[::-1] if reverse else np.arange(4)
     hydro_to_gravity(np.full((2, 4), .2), np.full((2, 4), .4),
-                     np.vstack([np.zeros(4), .5 * bottom, bottom]),
-                     station_positions=x, mesh_nx=8, mesh_nz=12, noise_level=0.)
+                     np.vstack([np.zeros(4), .5 * bottom, bottom])[:, order],
+                     station_positions=x[order], mesh_nx=8, mesh_nz=12, noise_level=0.)
     centers, density = captured["centers"], captured["density"]
     outside = (centers[:, 2] < np.interp(centers[:, 0], x, bottom)) | (centers[:, 2] > 0.)
     np.testing.assert_array_equal(density[outside], 0.)
@@ -313,7 +343,9 @@ def test_sparse_cross_gradient_operators_equal_the_dense_assembly(mode):
     ma = np.sin(X[:, 0] / 2.) + X[:, 1] / 3.
     mb = np.cos(X[:, 0] / 3.) * np.exp(X[:, 1] / 4.)
 
-    # The dense assembly the sparse one replaced, with W = diag(RCM[i]) per row.
+    # Independent weighted least squares, minimizing ||sqrt(W) (X beta-m)||.
+    # The historical dense reference squared W on only one side and therefore
+    # reproduced the spatial-mode bug instead of testing the physical gradient.
     if mode == "direct":
         R = (Wm.T @ Wm).toarray()
     else:
@@ -323,8 +355,8 @@ def test_sparse_cross_gradient_operators_equal_the_dense_assembly(mode):
         R = (R != 0).astype(float)
     B1_ref, B2_ref = np.zeros((n, n)), np.zeros((n, n))
     for i in range(n):
-        W = np.diag(R[i])
-        Xbar = np.linalg.solve(X.T.dot(W.T).dot(X), X.T.dot(W.T).dot(W))[:2]
+        sqrt_w = np.sqrt(R[i])
+        Xbar = np.linalg.lstsq(sqrt_w[:, None] * X, np.diag(sqrt_w), rcond=None)[0][:2]
         g1, g2 = Xbar @ ma, Xbar @ mb
         g1[np.abs(g1) < 1e-8] = 0.
         g2[np.abs(g2) < 1e-8] = 0.
@@ -341,6 +373,21 @@ def test_sparse_cross_gradient_operators_equal_the_dense_assembly(mode):
         assert issparse(B1) and issparse(B2)
         for B, ref in ((B1, B1_ref), (B2, B2_ref)):
             np.testing.assert_allclose(B.toarray(), ref, rtol=0., atol=1e-11 * np.abs(ref).max())
+
+    # A pair of affine planes has cross-gradient 2*4-3*(-1) = 11,
+    # regardless of offsets, nonuniform neighborhood weights or their scale.
+    coordinates = np.array([[0., 0.], [1., 0.], [0., 1.], [1., 1.], [2., .5]])
+    aa = coordinates @ [2., 3.] + 5
+    bb = coordinates @ [-1., 4.] + 7
+    for offset in ([0., 0.], [500000., 4500000.]):
+        design = np.column_stack([coordinates + offset, np.ones(5)])
+        for scale in (1., 17.):
+            weights = np.tile([1., .3, .7, .1, .8], (5, 1)) * scale
+            first, second = StructuralConstraint.build_linearized_cross_gradient_blocks(
+                weights, design, aa, bb, mode=mode)
+            np.testing.assert_allclose(first @ aa, 11., atol=1e-11)
+            np.testing.assert_allclose(second @ bb, 11., atol=1e-11)
+            np.testing.assert_allclose(first @ np.ones(5), 0., atol=1e-11)
 
     # The stacked system keeps a dense Jacobian dense and the rest sparse.
     inv = object.__new__(JointERTSRTInversion)
@@ -742,6 +789,19 @@ def test_example_mesh_keeps_the_regolith_on_top():
     assert median[0] < median[3] < median[2]
 
 
+def test_a_profile_leaving_the_model_keeps_its_surface_off_the_zero_top():
+    # MODFLOW writes top = 0 where a cell is inactive (its bottoms are NaN); a
+    # line crossing those cells dropped the ground surface to zero elevation.
+    active = np.arange(6) < 4
+    top = np.where(active, 10.0, 0.0)[np.newaxis].repeat(3, axis=0)
+    bot = np.where(active, 5.0, np.nan)[np.newaxis, np.newaxis].repeat(3, axis=1)
+    water = np.where(np.isnan(bot), np.nan, 0.2)
+    profile = sample_profile(water, np.full_like(bot, 0.3), top, bot, [0, 1], [5, 1], 12)
+    np.testing.assert_allclose(profile["structure"][0], 10.0)
+    np.testing.assert_allclose(profile["structure"][1], 5.0)
+    np.testing.assert_allclose(profile["interpolator"].surface_profile, 10.0)
+
+
 @pytest.mark.parametrize("name", ["site", "site.v2"])
 def test_an_e4d_mesh_reads_back_into_survey_coordinates(tmp_path, name):
     """One-based numbering, the line E4D appends to the .node, and the .trn and
@@ -1107,15 +1167,345 @@ def test_mt_processing_recovers_a_layered_impedance_with_honest_errors(tmp_path)
     tf = mt.process_mt(_mt_run(np.random.default_rng(3)))
     true = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, tf.frequency)
     for (i, j), sign in (((0, 1), 1.0), ((1, 0), -1.0)):
-        miss = np.abs(tf.z[:, i, j] - sign * true)
-        assert np.median(miss / np.abs(true)) < 0.04
-        # Errors neither hide the scatter nor swamp it.
-        assert 0.5 < np.median(miss / tf.z_err[:, i, j]) < 1.6
+        miss = tf.z[:, i, j] - sign * true
+        assert np.median(np.abs(miss) / np.abs(true)) < 0.04
+        # Errors neither hide the scatter nor swamp it, and are those of the real and of the
+        # imaginary part alike (the EDI's convention), not the complex error, sqrt(2) larger.
+        parts = np.r_[miss.real, miss.imag] / np.r_[tf.z_err[:, i, j], tf.z_err[:, i, j]]
+        assert 0.9 < np.sqrt(np.mean(parts ** 2)) < 1.5
     for name, write in (("site.edi", mt.write_edi), ("site.xml", mt.write_emtf_xml)):
         back = mt.read_transfer_function(write(tf, tmp_path / name))
         assert np.allclose(back.frequency, tf.frequency, rtol=1e-6)
         assert np.allclose(back.z, tf.z, rtol=1e-4, atol=1e-12 * np.abs(tf.z).max())
         assert np.allclose(back.z_err, tf.z_err, rtol=1e-3)
+
+
+def test_mt_a_reversed_layout_read_with_its_azimuths_keeps_the_impedance_in_its_quadrants(tmp_path):
+    """Ex laid out south, Ey and Hy pointing west (Manchester, 2026): Zyx comes out with the
+    wrong sign unless the recording is read with the channels' azimuths."""
+    from PyHydroGeophysX.data_processing import mt
+
+    run = _mt_run(np.random.default_rng(5), sample_rate=1.0, n=2 ** 14)
+    sign = {"ex": -1.0, "ey": -1.0, "hx": 1.0, "hy": -1.0}
+    with open(tmp_path / "site.txt", "w") as handle:   # LEMI-424: one line a second
+        for k in range(run["ex"].data.size):
+            hx, hy, ex, ey = (sign[c] * run[c].data[k] for c in ("hx", "hy", "ex", "ey"))
+            handle.write(f"2024 01 01 {k // 3600:02d} {k // 60 % 60:02d} {k % 60:02d} {hx:.7e} "
+                         f"{hy:.7e} 0 20 20 {ex:.7e} {ey:.7e} 0 0 12 250 4139.6 N 9131.8 W 8 1 0\n")
+    reader = {"dipole_lengths": {"ex": 1000.0, "ey": 1000.0}, "components": ["hx", "hy", "ex", "ey"]}
+    as_laid = mt.process_mt(mt.read_timeseries(tmp_path / "site.txt", **reader))
+    turned = mt.process_mt(mt.read_timeseries(tmp_path / "site.txt",
+                                              azimuths={"ex": 180, "ey": 270, "hy": 270}, **reader))
+    true = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, turned.frequency)
+    assert np.median(np.abs(turned.z[:, 0, 1] - true) / np.abs(true)) < 0.05
+    assert np.median(np.abs(turned.z[:, 1, 0] + true) / np.abs(true)) < 0.05
+    assert np.median(np.abs(as_laid.z[:, 1, 0] - true) / np.abs(true)) < 0.05
+    with pytest.raises(ValueError, match="hz"):
+        mt.read_timeseries(tmp_path / "site.txt", azimuths={"hz": 0}, **reader)
+
+
+def test_mt_interference_on_the_receiver_clock_is_found_and_removed_before_the_impedance():
+    """A pulse every 4 s of GPS time in Ey and Hx biases Zyx; found and subtracted, it does not."""
+    from PyHydroGeophysX.data_processing import mt
+
+    run = _mt_run(np.random.default_rng(3))
+    pulse = np.zeros(run.n_samples)
+    pulse[10::256] = 1.0                                   # 64 Hz: every 4 s, starting on the minute
+    pulse = np.convolve(pulse, [1.0, -0.6, 0.2], mode="same")
+    for name in ("ey", "hx"):
+        run[name].data = run[name].data + 10 * run[name].data.std() * pulse
+    # Folded on 30 s the 4 s pulse still shows; it is not taken for a second interference.
+    assert mt.periodic_interference(run, (4.0, 30.0)) == {4.0: ["ey", "hx"]}
+    true = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, mt.process_mt(run).frequency)
+    for periods, worst in (((), None), ((4.0,), 0.04)):
+        tf = mt.process_mt(run, periodic_noise=periods)
+        miss = np.median(np.abs(tf.z[:, 1, 0] + true) / np.abs(true))
+        assert (miss > 0.3) if worst is None else (miss < worst)
+    # A period the run does not hold is left alone (the comb would take the field at its harmonics),
+    # unless asked to remove it anyway.
+    four = mt.process_mt(run, periodic_noise=(4.0,))
+    assert np.allclose(mt.process_mt(run, periodic_noise=(4.0, 30.0)).z, four.z, equal_nan=True)
+    forced = mt.process_mt(run, periodic_noise=(4.0, 30.0), periodic_where_found=False)
+    assert not np.allclose(forced.z, four.z, equal_nan=True)
+    # Removed from a run without it, it changes nothing - below and between its harmonics too. Each
+    # cycle's own mean taken off made the field's drift a staircase: up to 27 % off at 0.2 Hz.
+    clean = _mt_run(np.random.default_rng(3))
+    plain = mt.process_mt(clean)
+    tf = mt.process_mt(clean, periodic_noise=(4.0,), periodic_cycles=5)
+    assert np.max(np.abs(tf.z[:, 0, 1] - plain.z[:, 0, 1]) / np.abs(plain.z[:, 0, 1])) < 0.1
+
+
+def test_mt_receiver_interference_in_bursts_too_short_to_fold_is_removed_with_their_neighbours():
+    """Bursts of 9.4 s every 24 s with a pulse every 4 s: too short to fold, but each burst holds the
+    pulses where its neighbours at the same phase do. They used to be kept as recorded."""
+    from PyHydroGeophysX.data_processing import mt
+
+    run = _mt_run(np.random.default_rng(3))
+    pulse = np.zeros(run.n_samples)
+    pulse[10::256] = 1.0
+    pulse = np.convolve(pulse, [1.0, -0.6, 0.2], mode="same")
+    for name in ("ey", "hx"):
+        run[name].data = run[name].data + 10 * run[name].data.std() * pulse
+    bursts = [run.slice(i, i + 600) for i in range(0, run.n_samples - 600, 1536)]
+    true = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, mt.process_mt(bursts).frequency)
+    for periods, worst in (((), None), ((4.0,), 0.06)):
+        tf = mt.process_mt(bursts, periodic_noise=periods)
+        miss = np.median(np.abs(tf.z[:, 1, 0] + true) / np.abs(true))
+        assert (miss > 0.3) if worst is None else (miss < worst)
+
+
+def test_mt_power_line_hum_below_the_nyquist_is_found_and_notched_before_the_impedance():
+    """60 Hz hum in 150 Hz data, its frequency wandering: it leaks into bands far from it and pulls
+    the phase towards 0; notched out, it does not."""
+    from PyHydroGeophysX.data_processing import mt
+
+    run = _mt_run(np.random.default_rng(3), sample_rate=150.0)
+    t = np.arange(run.n_samples) / 150.0
+    hum = np.cos(2 * np.pi * 60.0 * t + 0.5 * (1 - np.cos(2 * np.pi * t / 80)))   # 60 +- 0.04 Hz
+    for name, a in (("ex", 3000), ("ey", -2000), ("hx", 1000), ("hy", 1500)):
+        run[name].data = run[name].data + a * run[name].data.std() * hum
+    assert mt.powerline_frequency(run) == 60.0
+    for hum_off, worst in ((None, None), (60.0, 0.06)):
+        tf = mt.process_mt(run, powerline=hum_off)
+        true = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, tf.frequency)
+        high = tf.frequency > 5.0
+        miss = np.median(np.abs(tf.z[high, 0, 1] - true[high]) / np.abs(true[high]))
+        assert (miss > 0.5) if worst is None else (miss < worst)
+
+
+def test_mt_power_line_hum_on_a_two_second_burst_is_fitted_out_where_a_notch_leaves_it():
+    """60.07 Hz hum and harmonics, 8000x the field, in a 2 s burst at 2400 Hz: off its 0.5 Hz bins it
+    leaks across the spectrum, so zeroing bins left 5-15 % of it; each line fitted, next to nothing."""
+    from PyHydroGeophysX.data_processing import mt
+
+    rng = np.random.default_rng(5)
+    t = np.arange(4800) / 2400.0
+    field = rng.standard_normal(t.size)
+    hum = sum(1e4 / k * np.cos(2 * np.pi * 60.07 * k * t + 0.7 * k) for k in range(1, 6))
+    run = mt.TimeSeriesRun([mt.Channel("ex", field + hum, "mV/km"), mt.Channel("hx", 0.3 * field - 0.5 * hum, "nT")],
+                           2400.0, "2024-01-01T00:00:13")
+    out = mt.remove_powerline(run, 60.0)
+    assert np.std(out["ex"].data - field) < 1e-3 * np.std(hum)
+    assert np.std(out["hx"].data - 0.3 * field) < 1e-3 * np.std(hum)
+
+
+def test_mt_windows_at_the_recorders_full_scale_are_left_out_of_the_impedance():
+    """10 % of the time the field is 10x stronger and Ex clips: those windows pulled rho_a to 2/3 of the
+    truth with small errors; marked by the reader's full scale, they are left out."""
+    from PyHydroGeophysX.data_processing import mt
+
+    run = _mt_run(np.random.default_rng(3))
+    rng = np.random.default_rng(11)
+    storm = np.zeros(run.n_samples)
+    for start in rng.choice(np.arange(0, run.n_samples - 1024, 1024), int(0.1 * run.n_samples / 1024), replace=False):
+        storm[start:start + 1024] = 1.0
+    for name in ("ex", "ey", "hx", "hy"):
+        run[name].data = run[name].data * (1 + 9 * storm)
+    full = 3 * np.std(run["ex"].data[storm == 0])
+    run["ex"].data = np.clip(run["ex"].data, -full, full)
+    run["ex"].metadata["full_scale"] = full
+    for drop, ok in ((False, False), (True, True)):
+        tf = mt.process_mt(run, drop_saturated=drop)
+        true = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, tf.frequency)
+        miss = np.median(np.abs(tf.z[:, 0, 1] - true) / np.abs(true))
+        assert (miss < 0.03) if ok else (miss > 0.1)
+
+
+def test_mt_remote_reference_marks_the_elements_whose_input_the_remote_does_not_share():
+    """A remote whose Hy is noise leaves Zxy and Zyy a ratio of cross-spectra near zero. Each band reports
+    the reference coherence; with min_reference_coherence those elements, and only they, get errors of
+    100 % or more, while Zyx (from Hx, which the remote shares) keeps its own."""
+    from PyHydroGeophysX.data_processing import mt
+
+    rng = np.random.default_rng(5)
+    run = _mt_run(rng)
+    remote = mt.TimeSeriesRun([mt.Channel("hx", run["hx"].data + 0.1 * rng.standard_normal(run.n_samples), "nT"),
+                               mt.Channel("hy", rng.standard_normal(run.n_samples), "nT")],
+                              run.sample_rate, run.start, station="R1")
+    plain = mt.process_mt(run, remote=remote)
+    coherence = plain.metadata["reference_coherence"]
+    assert min(c["hx"] for c in coherence) > 0.8 and max(c["hy"] for c in coherence) < 0.1
+    assert not any(plain.metadata["reference_too_weak"])
+    marked = mt.process_mt(run, remote=remote, min_reference_coherence=0.3)
+    assert all(weak == ["hy"] for weak in marked.metadata["reference_too_weak"])
+    assert np.all(marked.z_err[:, :, 1] >= np.abs(marked.z[:, :, 1]) * (1 - 1e-9))
+    assert np.allclose(marked.z_err[:, :, 0], plain.z_err[:, :, 0])
+
+
+def test_mt_multitaper_where_noisy_keeps_the_one_taper_estimate_within_its_errors():
+    """Ex as noisy as its signal: the bands where Zxy's error is above 5 % are estimated again with five
+    tapers. Which of the two is right is not known, so the errors hold the one-taper estimate; Zyx, clean,
+    is left as it was, its errors too (they took the other output's signal power)."""
+    from PyHydroGeophysX.data_processing import mt
+
+    run = _mt_run(np.random.default_rng(3))
+    run["ex"].data = run["ex"].data + run["ex"].data.std() * np.random.default_rng(8).standard_normal(run.n_samples)
+    plain = mt.process_mt(run, jackknife=True)
+    tf = mt.process_mt(run, jackknife=True, multitaper_above=0.05, multitaper_tapers=5)
+    tapered = np.array(["ex" in t for t in tf.metadata["tapered"]])
+    clean = np.array(["ey" not in t for t in tf.metadata["tapered"]])
+    assert np.allclose(tf.frequency, plain.frequency) and 10 < tapered.sum() < tapered.size
+    assert np.all(tf.z_err[tapered, 0, 1] >= np.abs(tf.z[tapered, 0, 1] - plain.z[tapered, 0, 1]))
+    assert np.allclose(tf.z[clean, 1, 0], plain.z[clean, 1, 0])
+    assert np.allclose(tf.z_err[clean, 1, 0], plain.z_err[clean, 1, 0], rtol=0.01)
+    true = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, tf.frequency)
+    miss = {name: np.median(np.abs(x.z[:, 0, 1] - true) / np.abs(true)) for name, x in (("one", plain), ("five", tf))}
+    assert miss["five"] < 0.5 * miss["one"]
+    parts = np.r_[(tf.z[:, 0, 1] - true).real, (tf.z[:, 0, 1] - true).imag] / np.r_[tf.z_err[:, 0, 1], tf.z_err[:, 0, 1]]
+    assert np.sqrt(np.mean(parts ** 2)) < 1.0
+
+
+def test_mt_rotation_keeps_what_missing_elements_do_not_enter_and_the_jackknife_errors():
+    """Zxy and Zyx only (Zxx, Zyy missing): 0 x NaN made every element missing, even rotated by 0. And a
+    rotation recomputed jackknife errors from the approximate covariance, changing them by 0.8-1.7x."""
+    from PyHydroGeophysX.data_processing import mt
+
+    tf = mt.process_mt(_mt_run(np.random.default_rng(4)), jackknife=True)
+    assert np.allclose(tf.rotated(0.0).z_err, tf.z_err)
+    assert np.allclose(tf.rotated(30.0).rotated(0.0).z_err, tf.z_err)
+    off = tf.copy()
+    off.z[:, 0, 0] = off.z[:, 1, 1] = np.nan
+    off.z_err[:, 0, 0] = off.z_err[:, 1, 1] = np.nan
+    assert np.allclose(off.rotated(0.0).z[:, 0, 1], off.z[:, 0, 1])
+    assert np.allclose(off.rotated(90.0).z[:, 0, 1], -off.z[:, 1, 0])
+    assert np.isnan(off.rotated(30.0).z[:, 0, 1]).all()
+
+
+def test_mt_determinant_errors_follow_every_element_to_first_order():
+    """The determinant's error used half the off-diagonal errors' rms, which ignores the elements' sizes
+    and the diagonal: here 9x too small. It must match a Monte Carlo of the elements' errors."""
+    from PyHydroGeophysX.data_processing import mt
+    from PyHydroGeophysX.data_processing.mt.inversion1d import sounding_from_tf
+
+    z = np.array([[[0.3 + 0.1j, 2.0 + 1.5j], [-0.5 - 0.4j, 0.2 - 0.3j]]])
+    err = np.array([[[0.05, 0.02], [0.08, 0.04]]])
+    site = mt.TransferFunction(frequency=np.array([1.0]), z=z, z_err=err, station="D")
+    relative = np.radians(sounding_from_tf(site, mode="det", error_floor=1e-6).phase_err[0, 0])
+    rng = np.random.default_rng(1)
+    draws = z + err * (rng.standard_normal((4000, 2, 2)) + 1j * rng.standard_normal((4000, 2, 2)))
+    det = mt.TransferFunction(frequency=np.ones(4000), z=draws, station="D").determinant() - site.determinant()[0]
+    monte_carlo = np.sqrt(np.mean(np.r_[det.real, det.imag] ** 2)) / np.abs(site.determinant()[0])
+    assert abs(relative / monte_carlo - 1) < 0.1
+
+
+def test_mt_short_bursts_with_electrode_offsets_keep_the_deepest_levels_unbiased():
+    """32 bursts of 2048 samples, E offsets 2000x the field and H offsets too: the decimation filter
+    must not ring the offsets' edges into the windows (it used to, by up to 10x)."""
+    from PyHydroGeophysX.data_processing import mt
+
+    run = _mt_run(np.random.default_rng(3))
+    for name, a in (("ex", 2000), ("ey", -1500), ("hx", 300), ("hy", -200)):
+        run[name].data = run[name].data + a * run[name].data.std()
+    bursts = [run.slice(i, i + 2048) for i in range(0, run.n_samples, 2048)]
+    tf = mt.process_mt(bursts)
+    true = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, tf.frequency)
+    deepest = tf.frequency < np.sort(tf.frequency)[5]
+    assert np.max(np.abs(tf.z[deepest, 0, 1] - true[deepest]) / np.abs(true[deepest])) < 0.05
+
+
+def test_mt_bursts_of_magnetic_noise_pull_the_m_estimate_but_not_leverage_weights_or_presorting():
+    """2 % of the windows with 30x noise in Hx, Hy: large leverage, which only BI or presorting resists."""
+    from PyHydroGeophysX.data_processing import mt
+
+    run = _mt_run(np.random.default_rng(3))
+    rng = np.random.default_rng(7)
+    noisy = np.zeros(run.n_samples, bool)
+    for start in rng.choice(np.arange(0, run.n_samples - 256, 256), int(0.02 * run.n_samples / 256), replace=False):
+        noisy[start:start + 256] = True
+    for name in ("hx", "hy"):
+        run[name].data = run[name].data + noisy * 30 * run[name].data.std() * rng.standard_normal(run.n_samples)
+    for options, worst in (({}, None), ({"bounded_influence": True}, 0.06), ({"min_coherence": 0.5}, 0.06)):
+        tf = mt.process_mt(run, **options)
+        true = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, tf.frequency)
+        miss = np.median(np.abs(tf.z[:, 0, 1] - true) / np.abs(true))
+        assert (miss > 0.5) if worst is None else (miss < worst), options
+    # 10 % of the windows with 10x noise: leverage weights recomputed afresh each iteration gave a
+    # point back its full weight once it was downweighted, and settled nowhere (0.9 off).
+    run = _mt_run(np.random.default_rng(3))
+    noisy = np.zeros(run.n_samples, bool)
+    for start in rng.choice(np.arange(0, run.n_samples - 256, 256), int(0.1 * run.n_samples / 256), replace=False):
+        noisy[start:start + 256] = True
+    for name in ("hx", "hy"):
+        run[name].data = run[name].data + noisy * 10 * run[name].data.std() * rng.standard_normal(run.n_samples)
+    tf = mt.process_mt(run, bounded_influence=True)
+    true = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, tf.frequency)
+    assert np.median(np.abs(tf.z[:, 0, 1] - true) / np.abs(true)) < 0.06
+
+
+@pytest.mark.parametrize("options", [{"tapers": 3}, {"multi_window": True}, {"jackknife": True},
+                                     {"noise_classes": 10}, {"bands_per_decade": 10}])
+def test_mt_estimator_options_keep_the_impedance_and_honest_errors(options):
+    """Multitaper, multi-window stacking, jackknife, noise classes, overlapping bands: on 30 % noise."""
+    from PyHydroGeophysX.data_processing import mt
+
+    tf = mt.process_mt(_mt_run(np.random.default_rng(3), noise=0.3), **options)
+    true = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, tf.frequency)
+    miss = np.abs(tf.z[:, 0, 1] - true)
+    assert np.median(miss / np.abs(true)) < 0.2
+    assert 0.5 < np.median(miss / tf.z_err[:, 0, 1]) < 1.6
+    assert np.nanmedian([a["ex"] for a in tf.metadata["residual_alpha"]]) > 1.8   # Gaussian noise: alpha ~ 2
+
+
+def test_mt_noise_that_grows_with_the_signal_is_normalised_by_noise_classes():
+    """E noise following |H|, from two sources: heavy-tailed residuals, which noise classes undo."""
+    from PyHydroGeophysX.data_processing import mt
+
+    run = _mt_run(np.random.default_rng(3))
+    rng = np.random.default_rng(53)
+    envelope = np.convolve(np.abs(run["hx"].data) + np.abs(run["hy"].data), np.ones(256) / 256, mode="same")
+    source = np.where((np.arange(run.n_samples) // 4096) % 3 == 0, 3.0, 0.6)
+    for name in ("ex", "ey"):
+        level = 0.5 * run[name].data.std() / envelope.mean()
+        run[name].data = run[name].data + level * source * envelope * rng.standard_normal(run.n_samples)
+    fits = {k: mt.process_mt(run, noise_classes=k) for k in (0, 10)}
+    true = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, fits[0].frequency)
+    miss = {k: np.median(np.abs(tf.z[:, 0, 1] - true) / np.abs(true)) for k, tf in fits.items()}
+    alpha = {k: np.nanmedian([a["ex"] for a in tf.metadata["residual_alpha"]]) for k, tf in fits.items()}
+    assert alpha[0] < 1.5 and alpha[10] >= 1.8
+    assert miss[10] < 0.9 * miss[0]
+
+
+def test_mt_bursts_are_matched_across_channels_by_time_not_by_order():
+    """A segmented recording's runs: each burst of one channel with the same burst of the others."""
+    from PyHydroGeophysX.data_processing import mt
+    from PyHydroGeophysX.data_processing.mt.timeseries import assemble_runs, shifted
+
+    t0 = np.datetime64("2026-10-11T16:46:43", "ns")
+    start = [shifted(t0, 10.0 * k) for k in range(6)]
+    burst = lambda k, channel, n=200: np.full(n, 10 * k + channel, dtype=np.float32)  # 2 s at 100 Hz
+    # Hy is listed backwards, lacks burst 3, starts burst 4 half a second late,
+    # and has burst 5 in two pieces: the longer overlap is the one kept.
+    hy = [(start[k], burst(k, 1)) for k in (2, 1, 0)] + [(shifted(start[4], 0.5), burst(4, 1))]
+    hy += [(start[5], burst(5, 1, 30)), (shifted(start[5], 0.4), burst(5, 2, 170))]
+    runs = assemble_runs({"ex": [(s, burst(k, 0)) for k, s in enumerate(start)], "hy": hy}, 100.0,
+                         lambda name, data: mt.Channel(name, data, "V"))
+    assert [run.start for run in runs] == [start[0], start[1], start[2], shifted(start[4], 0.5),
+                                           shifted(start[5], 0.4)]
+    assert [run.n_samples for run in runs] == [200, 200, 200, 150, 160]
+    for run, k, hy_value in zip(runs, (0, 1, 2, 4, 5), (1, 11, 21, 41, 52)):
+        assert set(run["ex"].data) == {10 * k} and set(run["hy"].data) == {hy_value}
+
+
+def test_a_phoenix_binary_coil_calibration_reads_as_its_complex_response(tmp_path):
+    """Phoenix's binary .scal: per frequency, the response's real then imaginary part, in mV/nT."""
+    import struct
+
+    from PyHydroGeophysX.data_processing import mt
+
+    f = np.logspace(-3, 3, 7)
+    response = 100 * (1j * f / 0.1) / (1 + 1j * f / 0.1)  # a feedback coil: imaginary below its corner
+    header = bytearray(340)
+    struct.pack_into("<I", header, 8, f.size)
+    header[59:63], header[133:137] = b"4684", b"ANT4"
+    records = b"".join(struct.pack("<4f", fk, rk.real, rk.imag, 0.0) + b"ANT4" + bytes(12)
+                       for fk, rk in zip(f, response))
+    path = tmp_path / "4684_6446B152.scal"
+    path.write_bytes(bytes(header) + records)
+    cal = mt.read_phoenix_calibration(path)
+    stage = cal["channels"]["H"][0]
+    assert (cal["kind"], cal["sensor_serial"], cal["model"]) == ("sensor", "4684", "ANT4")
+    assert (stage.input_units, stage.output_units) == ("nT", "mV")
+    assert np.allclose(stage(f), response.astype(np.complex64), rtol=1e-6)
 
 
 def test_mt_1d_sensitivity_differentiates_the_forward_model():
@@ -1129,6 +1519,24 @@ def test_mt_1d_sensitivity_differentiates_the_forward_model():
         z2 = forward1d.impedance_1d(step, _MT_THICKNESS, f)
         assert np.allclose(d_rho[:, k], 2 * np.log10(np.abs(z2 / z)) / 1e-6, atol=1e-5)
         assert np.allclose(d_phase[:, k], np.angle(z2 / z) / 1e-6, atol=1e-5)
+
+
+def test_mt_anisotropic_1d_finds_the_strike_and_the_layer_that_conducts_along_it():
+    """A layer 10 ohm m along a 30 deg strike and 100 across it: no isotropic model fits both modes."""
+    from PyHydroGeophysX.data_processing import mt
+
+    h = np.array([300.0, 1500.0])
+    f = np.logspace(-3, 2, 26)
+    Z = np.zeros((f.size, 2, 2), complex)
+    Z[:, 0, 1] = mt.impedance_1d(np.array([100.0, 10.0, 1000.0]), h, f)
+    Z[:, 1, 0] = -mt.impedance_1d(np.array([100.0, 100.0, 1000.0]), h, f)
+    tf = mt.TransferFunction(frequency=f, z=Z, z_err=0.02 * np.abs(Z), rotation=np.full(f.size, 30.0),
+                             station="A").rotated(0.0)
+    model = mt.occam1d_anisotropic(tf, n_layers=30, error_floor=0.02)
+    assert abs(model.strike - 30.0) < 1.0 and model.rms < 1.1
+    ratio = lambda depth: model.anisotropy[int(np.searchsorted(model.depth, depth)) - 1]
+    assert ratio(900.0) > 5.0 and 0.7 < ratio(100.0) < 1.4
+    assert mt.occam1d(tf, mode="both", n_layers=30, error_floor=0.02).rms > 4.0
 
 
 def test_a_tem_sounding_fixes_the_mt_static_shift_that_mt_alone_cannot():
@@ -1284,56 +1692,6 @@ def test_the_neighbour_check_corrects_the_stray_pick_and_not_its_neighbour():
     time = {(p.source_x, p.receiver_x): p.time_s for p in kept}
     assert abs(time[(-4.0, 9.0)] - 0.034) <= 2 * dt
     assert time[(-2.0, 9.0)] == pytest.approx(0.030)
-
-
-def test_the_seismic_page_exports_every_shot_at_its_own_geophones(tmp_path, monkeypatch):
-    """The studio's picks file holds every shot, each at its record's own geophones.
-
-    It held only the shot on screen (24 of the example line's 311 picks) and
-    reported success; and on a roll-along line every record's picks were put
-    on the first record's geophones.
-    """
-    pytest.importorskip("PySide6")
-    pytest.importorskip("pyqtgraph")
-    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
-    import csv
-
-    from PySide6.QtCore import QEvent
-    from PySide6.QtWidgets import QApplication, QFileDialog
-
-    from PyHydroGeophysX.data_processing.seismic import (
-        SegyMetadata, SeismicDataset, SeismicTraceHeader)
-    from PyHydroGeophysX.qt_apps.modules.seismic_processing import SeismicProcessingModule
-    from PyHydroGeophysX.qt_apps.state import StudioState
-
-    app = QApplication.instance() or QApplication([])
-    # Three shots on six geophones 2 m apart; the third shot's spread moved on 4 m.
-    headers = [SeismicTraceHeader(field_record=r, trace_number=k + 1, energy_source_point=r,
-                                  source_x=5.0 * r, source_y=0.0, source_z=0.0,
-                                  receiver_x=2.0 * k + (4.0 if r == 3 else 0.0), receiver_y=0.0,
-                                  receiver_z=0.0, offset=0.0)
-               for r in (1, 2, 3) for k in range(6)]
-    line = SeismicDataset("line", np.zeros((200, 18)), np.arange(200) * 2.5e-4, headers,
-                          SegyMetadata(250, 200, 5, 18, 0))
-    page = SeismicProcessingModule(StudioState(output_dir=tmp_path), lambda *args: None)
-    page._set_dataset(line)
-    for index in range(3):
-        page._shot_combo.setCurrentIndex(index)
-        for trace in range(6):
-            page._agent_set_pick({"trace": trace, "time_s": 0.01 + 0.001 * trace})
-    page._shot_combo.setCurrentIndex(0)
-    out = tmp_path / "picks.csv"
-    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *args, **kw: (str(out), ""))
-    page._export_picks()
-    with out.open(encoding="utf-8") as fh:
-        rows = list(csv.DictReader(fh))
-    assert sorted({row["field_record"] for row in rows}) == ["1", "2", "3"] and len(rows) == 18
-    assert [float(row["receiver_x"]) for row in rows if row["field_record"] == "3"] == [
-        4.0, 6.0, 8.0, 10.0, 12.0, 14.0]
-    page.close()
-    page.deleteLater()
-    QApplication.sendPostedEvents(page, QEvent.DeferredDelete)
-    app.processEvents()
 
 
 def _ricker(u, f):
@@ -1910,6 +2268,13 @@ def test_hydro_modular_imports_lazily_and_saves_what_it_is_asked_to(pygimli, tmp
         # and hydro_to_ert says what is missing.
         code = ("import sys; sys.modules['pygimli'] = None\n"
                 "from PyHydroGeophysX.Hydro_modular import hydro_to_geophysics\n"
+                "assert 'simpeg' not in sys.modules\n"
+                "sys.modules['simpeg'] = None\n"
+                "from PyHydroGeophysX.Hydro_modular import hydro_to_tdem\n"
+                "assert callable(hydro_to_tdem) and hydro_to_tdem.unavailable_because\n"
+                "try:\n    hydro_to_tdem()\n"
+                "except ImportError:\n    pass\n"
+                "else:\n    raise AssertionError('Missing backend must raise on use')\n"
                 "try:\n    from PyHydroGeophysX.Hydro_modular import hydro_to_ert\n"
                 "except ImportError as exc:\n    print(exc)\n")
         root = str(Path(PyHydroGeophysX.__file__).resolve().parents[1])
@@ -1943,67 +2308,6 @@ def test_hydro_modular_imports_lazily_and_saves_what_it_is_asked_to(pygimli, tmp
     data, _ = hydro_to_ert(save_path=str(target), **kwargs)
     saved = pg.DataContainerERT(str(target))    # kept: its vectors are views into it
     np.testing.assert_allclose(np.array(saved["rhoa"]), np.array(data["rhoa"]), rtol=1e-5)
-
-
-def test_a_moved_project_still_opens_its_runs(tmp_path):
-    """Runs named their files by absolute path, so a moved Project could not reopen.
-
-    New records are run-relative; an older record's absolute paths are rebased
-    onto the run's new folder, and a path outside the run is still refused.
-    """
-    import json
-    import shutil
-
-    from PyHydroGeophysX.qt_apps.results_store import ResultsStore
-
-    store = ResultsStore(tmp_path / "项目")
-    run = store.begin_run("ert_processing", "ert.single_inversion")
-    model = run.outputs_dir / "model.npy"
-    model.write_bytes(b"0")
-    store.finish_run(run, {"status": "ok", "summary": {"model_bundle": {"model": str(model)}}})
-    store.save_run(run.run_id)
-    record = json.loads(run.record.metadata_path.read_text(encoding="utf-8"))
-    assert record["summary"]["model_bundle"] == {"model": "outputs/model.npy"}
-
-    record["summary"]["model_bundle"] = {"model": str(model)}     # as written before
-    run.record.metadata_path.write_text(json.dumps(record), encoding="utf-8")
-    shutil.move(str(tmp_path / "项目"), str(tmp_path / "moved"))
-    reopened = ResultsStore(tmp_path / "moved")
-    found = reopened.list_runs()[0]
-    assert (reopened.locate_run_artifact(found, found.summary["model_bundle"]["model"])
-            == (found.run_dir / "outputs" / "model.npy").resolve())
-    with pytest.raises(ValueError, match="outside this run's folder"):
-        reopened.locate_run_artifact(found, str(tmp_path / "elsewhere.npy"))
-
-
-def test_a_discard_windows_refuses_leaves_no_run_to_save(tmp_path, monkeypatch):
-    """Windows refused to delete a run folder the next run's process waited in.
-
-    The delete had already emptied the folder and the run stayed unsaved, so the
-    Save that followed put a run without files into the history. The run is now
-    discarded either way, and the folder is marked for the next session to clear.
-    """
-    import shutil
-
-    from PyHydroGeophysX.qt_apps.results_store import ResultsStore
-
-    store = ResultsStore(tmp_path / "project")
-    run = store.begin_run("ert_processing", "ert.single_inversion")
-    (run.outputs_dir / "model.npy").write_bytes(b"0")
-    store.finish_run(run, {"status": "ok"})
-    rmtree = shutil.rmtree
-
-    def refused(path, *args, **kwargs):          # everything but the folder itself
-        for child in Path(path).iterdir():
-            rmtree(child) if child.is_dir() else child.unlink()
-        raise PermissionError(32, "being used by another process", str(path))
-
-    monkeypatch.setattr(shutil, "rmtree", refused)
-    with pytest.raises(OSError, match="run itself is discarded"):
-        store.discard_run(run.run_id)
-    monkeypatch.undo()
-    assert not store.has_unsaved()
-    assert [path.resolve() for path in store.abandoned_run_dirs()] == [run.run_dir]
 
 
 # --------------------------------------------------------------------------
@@ -2299,58 +2603,8 @@ def test_a_030_call_still_runs_as_it_did(case, tmp_path, monkeypatch, request):
 
 
 # --------------------------------------------------------------------------
-# Plot length units: feet, and depth for a survey without elevations
+# Comparing two saved models
 # --------------------------------------------------------------------------
-
-@pytest.mark.parametrize("unit, first, second", [("m", "10", "20"), ("ft", "20", "40")])
-def test_feet_put_round_feet_on_metre_data_and_leave_the_data_alone(unit, first, second):
-    pytest.importorskip("matplotlib")
-    from matplotlib.backends.backend_agg import FigureCanvasAgg
-    from matplotlib.figure import Figure
-
-    from PyHydroGeophysX.visualization.axis_units import set_length_axis
-
-    fig = Figure()
-    FigureCanvasAgg(fig)
-    ax = fig.add_subplot(111)
-    line, = ax.plot([0.0, 40.0], [0.0, 1.0])
-    assert set_length_axis(ax, "x", "Distance", unit=unit) == f"Distance ({unit})"
-    fig.canvas.draw()
-    shown = [t.get_text() for t in ax.get_xticklabels()]
-    assert first in shown and second in shown, shown
-    assert line.get_xdata().tolist() == [0.0, 40.0]        # still metres
-    if unit == "ft":
-        assert ax.format_coord(10.0, 0.5).startswith("(x, y) = (32.81")
-
-
-@pytest.mark.parametrize("top, label, lowest_tick", [
-    (0.0, "Depth (ft)", "0"),            # read without elevations: depth, positive down
-    (300.0, "Elevation (ft)", None),     # real topography keeps its elevations
-])
-def test_a_section_without_elevation_reads_depth(top, label, lowest_tick):
-    pg = pytest.importorskip("pygimli")
-    from matplotlib.backends.backend_agg import FigureCanvasAgg
-    from matplotlib.figure import Figure
-
-    from PyHydroGeophysX.visualization import plot_model_section
-
-    grid = pg.createGrid(x=np.linspace(0, 40, 21), y=np.linspace(-10, 0, 6) + top)
-    fig = Figure()
-    FigureCanvasAgg(fig)
-    ax = fig.add_subplot(111)
-    plot_model_section(grid, np.linspace(10, 100, grid.cellCount()), ax=ax, length_unit="ft")
-    # pyGIMLi's colorbar opens an empty pyplot figure, which its exit handler
-    # would otherwise try to show once the session ends.
-    import matplotlib.pyplot as plt
-    plt.close("all")
-    fig.canvas.draw()
-    shown = [float(t.get_text().replace("−", "-")) for t in ax.get_yticklabels()]
-    assert (ax.get_xlabel(), ax.get_ylabel()) == ("Distance (ft)", label)
-    if lowest_tick is None:
-        assert min(shown) > 900.0        # 300 m is 984 ft
-    else:
-        assert min(shown) == 0.0 and max(shown) >= 30.0    # 10 m of depth is 32.8 ft
-
 
 def test_model_comparison_differences_are_exact_and_refuse_mismatched_grids():
     # The B - A section of two saved models. Unsigned models (uint16 1000 and
@@ -2384,3 +2638,415 @@ def test_model_comparison_differences_are_exact_and_refuse_mismatched_grids():
     broken.cell_data["Susceptibility (SI)"][0] = np.nan
     with pytest.raises(ValueError, match="nonfinite"):
         ModelComparison(grid(), broken)
+
+
+def _gpr_files(tmp_path, truth, kind):
+    """``truth`` (samples x traces) written as a GSSI, pulseEKKO or MALA line."""
+    ns, nt = truth.shape
+    if kind == "dzt":
+        # Two channels, 16-bit offset binary: the second channel interleaved
+        # scan by scan must not leak into the first.
+        header = bytearray(2048)
+        struct.pack_into("<4H", header, 0, 0x00FF, 2048, ns, 16)
+        struct.pack_into("<5f", header, 10, 64.0, 20.0, 0.0, 0.0, 2.0 * ns)
+        struct.pack_into("<H", header, 52, 2)
+        header[98:104] = b"5103A\0"
+        scans = np.stack([truth.T, -truth.T], axis=1) + 32768
+        path = tmp_path / "line.DZT"
+        path.write_bytes(bytes(header) + scans.astype("<u2").tobytes())
+        return path
+    if kind == "dt1":
+        (tmp_path / "ek.HD").write_text(
+            f"1234\nNUMBER OF TRACES   = {nt}\nNUMBER OF PTS/TRC  = {ns}\n"
+            "TIMEZERO AT POINT  = 11\nTOTAL TIME WINDOW  = 128\nNOMINAL FREQUENCY  = 250\n")
+        body = b"".join(struct.pack("<25f", j + 1, 0.1 * j, ns, 0, 0, 2, *[0] * 19) + b" " * 28
+                        + truth[:, j].astype("<i2").tobytes() for j in range(nt))
+        (tmp_path / "ek.DT1").write_bytes(body)
+        return tmp_path / "ek.HD"
+    (tmp_path / "m.rad").write_text(f"SAMPLES:{ns}\nFREQUENCY:500.0\nDISTANCE INTERVAL:0.05\n"
+                                    "ANTENNAS:500MHz Shielded\n")
+    (tmp_path / "m.rd3").write_bytes(truth.T.astype("<i2").tobytes())
+    return tmp_path / "m.rd3"
+
+
+@pytest.mark.parametrize("kind, dt, spacing, t_start, frequency", [
+    ("dzt", 2.0, 0.05, 0.0, 400.0),
+    ("dt1", 2.0, 0.1, -20.0, 250.0),
+    ("mala", 2.0, 0.05, 0.0, 500.0),
+])
+def test_gpr_readers_return_the_samples_and_axes_written(tmp_path, kind, dt, spacing, t_start,
+                                                         frequency):
+    from PyHydroGeophysX.data_processing import gpr
+
+    truth = np.random.default_rng(3).integers(-3000, 3000, size=(64, 9))
+    line = gpr.read_gpr(_gpr_files(tmp_path, truth, kind))
+    # A GSSI scan's first two samples are its number and marks, not radar data.
+    first = 2 if kind == "dzt" else 0
+    np.testing.assert_array_equal(line.data[first:], truth[first:])
+    assert (line.dt_ns, line.trace_spacing, line.t_start_ns, line.frequency_mhz) == \
+        pytest.approx((dt, spacing, t_start, frequency))
+
+
+def test_gpr_migration_collapses_a_diffraction_onto_its_apex_at_the_right_velocity():
+    from PyHydroGeophysX.data_processing import gpr
+
+    x, t = np.arange(300) * 0.05, np.arange(400) * 0.4
+    apex_x, apex_t, v = 7.5, 60.0, 0.1
+    arrival = gpr.hyperbola_time(x, apex_x, apex_t, v)
+    line = gpr.GPRProfile(gpr.ricker(t[:, None] - arrival[None, :], 100.0), 0.4, x)
+
+    def near_apex(data):
+        energy = (data ** 2).sum(axis=0)
+        return energy[np.abs(x - apex_x) <= 0.5].sum() / energy.sum()
+
+    right = gpr.migrate(line, v).data
+    i, j = np.unravel_index(np.argmax(np.abs(right)), right.shape)
+    assert x[j] == pytest.approx(apex_x) and t[i] == pytest.approx(apex_t, abs=2.0)
+    # Focused at the right velocity; a velocity 30 % slow leaves most of it spread.
+    assert near_apex(line.data) < 0.2
+    assert near_apex(gpr.migrate(line, 0.07).data) < 0.5
+    assert near_apex(right) > 0.95
+    # Depth is half the two-way path at the radar velocity.
+    assert gpr.time_to_depth(apex_t, v) == pytest.approx(3.0)
+
+
+@pytest.mark.parametrize("pressure", [0., 5e6])
+@pytest.mark.parametrize("liquid_modulus", [0., 1e-14, 2.26])
+def test_hertz_mindlin_standard_formula_and_compatible_api(pressure, liquid_modulus):
+    from PyHydroGeophysX.petrophysics import HertzMindlinModel, vel_porous
+
+    model = HertzMindlinModel()
+    # Intended results after the Hertz-Mindlin bug fix, NOT bit-identical
+    # compatibility with affected revisions before 962a9ced. Independently
+    # checked against RPHtools/hertzmind.m and rockphypy 0.0.2 (f=1).
+    # Quartz: Km=36.6, Gm=45 GPa, rho=2650, C=4, phi_c=.4, default fluids.
+    phi_ref = np.array([.2, .3, .4, .2])
+    sat_ref = np.array([1., .5, 1., 1.])
+    depths = np.array([5., 5., 5., 400.])
+    legacy = model.calculate_velocity(phi_ref, sat_ref, 36.6, 45., 2650., depths)
+    np.testing.assert_allclose(legacy, [
+        [4004.83975270249, 2788.399322345962, 1603.677381031068, 4079.6984866535813],
+        [2039.1734393581035, 939.1684843219479, 1603.677381031068, 2466.9918013350843],
+    ], rtol=2e-13)
+    historical_low = [2109.7315454692184, 1038.908250448596,
+                      1636.8309897354773, 2683.2702221921813]
+    np.testing.assert_allclose(100 * (legacy[1] / historical_low - 1),
+                               [-3.34441158, -9.60044028, -2.02547538, -8.06025495],
+                               atol=1e-8)
+    rich = model.calculate_velocity(
+        phi_ref, sat_ref, 36.6, 45., 2650., depths, return_moduli=True)
+    np.testing.assert_array_equal(legacy, rich[:2])
+    np.testing.assert_array_equal(
+        vel_porous(phi_ref, 36.6, 45., 2650., sat_ref, depths), legacy)
+
+    # dt_framework notebook 01, section 7.2, x=2.51 m, supplied by owner.
+    # Full-precision reference values independently reproduced with rockphypy
+    # GM.softsand + Gassmann. Pin the physics, not a copy of our formula.
+    baseline_model = HertzMindlinModel(coordination_number=9)
+    baseline = dict(porosity=.2, saturation=1., bulk_modulus=40.39369,
+                    shear_modulus=43.10014, mineral_density=2657.5,
+                    effective_pressure=6.5502e6, fluid_modulus=2.260256,
+                    fluid_density=998.4548)
+    _, vp, elastic = baseline_model.calculate_velocity(**baseline, return_moduli=True)
+    np.testing.assert_allclose([
+        elastic["K_dry_low"], elastic["G_dry_low"], elastic["K_sat_low"],
+        elastic["density"], vp, elastic["Vs_low"],
+    ], [4.663967066344563, 5.103209777668758, 12.084908654648709,
+        2325.69096, 2849.9067257295933, 1481.3091594506275], rtol=2e-12)
+    # At critical porosity the dry bounds equal the independently evaluated
+    # contact moduli; this isolates the shear equation from the HS extension.
+    _, _, contacts = baseline_model.calculate_velocity(
+        **dict(baseline, porosity=.4), return_moduli=True)
+    np.testing.assert_allclose(
+        [contacts["K_dry_low"], contacts["G_dry_low"]],
+        [1.357485099804175, 1.9675340552180711], rtol=2e-13)
+    depth_equivalent = 6.5502e6 / ((2657.5-1000)*9.8)
+    by_depth = dict(baseline)
+    del by_depth["effective_pressure"]
+    np.testing.assert_allclose(
+        baseline_model.calculate_velocity(**by_depth, depth=depth_equivalent),
+        baseline_model.calculate_velocity(**baseline), rtol=2e-13)
+    phi = np.array([[0.], [.2], [.4], [.6], [1.]])
+    sat = np.array([0., .5, 1.])
+    high, low, moduli = model.calculate_velocity(
+        phi, sat, 36.6, 45., 2650., depth=-999., effective_pressure=pressure,
+        fluid_modulus=liquid_modulus, fluid_density=1030., return_moduli=True)
+    assert set(moduli) == {"Vs_low", "Vs_high", "K_dry_low", "K_dry_high",
+                           "G_dry_low", "G_dry_high", "K_sat_low", "K_sat_high", "density"}
+    density = 2650 * (1-phi) + (sat*1030 + (1-sat)*1.225)*phi
+    np.testing.assert_allclose(moduli["density"], density)
+    for bound, vp in (("high", high), ("low", low)):
+        k_dry, g_dry = moduli["K_dry_" + bound], moduli["G_dry_" + bound]
+        k_sat = moduli["K_sat_" + bound]
+        assert vp.shape == (5, 3) and np.isfinite(vp).all()
+        np.testing.assert_allclose(vp**2 * density / 1e9, k_sat + 4/3*g_dry)
+        np.testing.assert_allclose(moduli["Vs_" + bound]**2 * density / 1e9, g_dry)
+        if liquid_modulus <= 1e-12:
+            np.testing.assert_array_equal(k_sat, k_dry)
+        else:
+            # Independent reciprocal Gassmann relation at positive porosity.
+            kf = (liquid_modulus-.01)*sat**3 + .01
+            expected = k_dry[1:] + (1-k_dry[1:]/36.6)**2 / (
+                phi[1:]/kf + (1-phi[1:])/36.6 - k_dry[1:]/36.6**2)
+            np.testing.assert_allclose(k_sat[1:], expected, rtol=2e-13)
+    # Per-cell pressure broadcasting must agree with independent scalar calls.
+    pressures = np.array([0., 1e5, 5e6])
+    vector = model.calculate_velocity(.2, 1., 36.6, 45., 2650.,
+                                      effective_pressure=pressures)
+    scalar = [model.calculate_velocity(.2, 1., 36.6, 45., 2650.,
+                                        effective_pressure=p) for p in pressures]
+    np.testing.assert_allclose(vector, np.array(scalar).T)
+
+
+def test_batzle_wang_brine_reference_and_broadcast_units():
+    from PyHydroGeophysX.petrophysics import batzle_wang_brine
+
+    # Batzle-Wang (1992), density polynomial and water-velocity coefficients.
+    # The empirical density is ~998.20, rather than an independent water EOS.
+    water = batzle_wang_brine(5e6, 25., 0.)
+    assert water.bulk_modulus == pytest.approx(2.25843, rel=3e-6)
+    assert water.density == pytest.approx(998.19925, abs=1e-5)
+    brine = batzle_wang_brine(np.array([[5e6], [10e6]]), 25., [0., .035, .1])
+    assert brine.density.shape == (2, 3)
+    np.testing.assert_allclose(brine.density[0], [998.199253125, 1022.1409375, 1068.888003125])
+    assert np.all(np.diff(brine.bulk_modulus, axis=1) > 0)
+    assert np.all(np.diff(brine.density, axis=0) > 0)
+    for args in ((-1., 25., 0.), (5e6, 25., -.1), (5e6, np.nan, 0.)):
+        with pytest.raises(ValueError):
+            batzle_wang_brine(*args)
+
+
+@pytest.mark.parametrize("composition, expected, measured, tolerance", [
+    ({"Na+": .01, "Cl-": .01}, .12639, None, 0.),
+    ({"Ca++": .005, "Cl-": .01}, .13578, .1279, .065),
+    ({"Na+": .02, "CO3--": .01}, .23876, None, 0.),
+])
+def test_ionic_conductivity_equivalent_convention(composition, expected, measured, tolerance):
+    from PyHydroGeophysX.petrophysics import pore_fluid_conductivity, ion_charge
+
+    sigma, terms = pore_fluid_conductivity(composition)
+    assert sigma == pytest.approx(expected)
+    assert sum(terms.values()) == pytest.approx(sigma)
+    assert pore_fluid_conductivity(composition, return_contributions=False) == sigma
+    # Girault (2004), Analytical and Physical Electrochemistry, CaCl2
+    # conductometry exercise: 0.005 M at 25 C, Lambda=255.8 S cm2/mol.
+    # https://www.epflpress.org/open_access_download/2223/1116
+    # Limiting-ion model overestimates finite-concentration conductivity by
+    # ~6.2%; double-counting Ca charge would overestimate by ~53%.
+    if measured is not None:
+        assert sigma == pytest.approx(measured, rel=tolerance)
+        assert terms["Ca++"] == pytest.approx(.05947)
+    assert [ion_charge(x) for x in ("H+", "OH-", "Ca++", "CO3--", "NH4+")] == [1, -1, 2, -2, 1]
+    for invalid in ("Ca", "Ca+-", ""):
+        with pytest.raises(ValueError):
+            ion_charge(invalid)
+    custom = pore_fluid_conductivity({"X++": .01}, {"X++": .005}, False)
+    assert custom == pytest.approx(.1)
+    with pytest.raises(ValueError):
+        pore_fluid_conductivity({"X++": .01})
+    with pytest.raises(ValueError):
+        pore_fluid_conductivity({"Na+": -.01})
+
+
+def test_kohlrausch_correction_uses_ionic_strength_and_preserves_contributions():
+    from PyHydroGeophysX.petrophysics import pore_fluid_conductivity
+
+    # Deliberately specified calibration coefficient; it is not a universal fit.
+    c = np.array([0., .001, .005])
+    conc = {"Ca++": c, "Cl-": 2*c}
+    uncorrected, _ = pore_fluid_conductivity(conc)
+    corrected, terms = pore_fluid_conductivity(
+        conc, ionic_strength_correction=True, kohlrausch_coefficient=.5)
+    # CaCl2: I = 3*c, not c. Using salt concentration here gives a plausible error.
+    expected = uncorrected * np.array([1., .9726138721247417, .9387627564304205])
+    np.testing.assert_allclose(corrected, expected)
+    np.testing.assert_allclose(sum(terms.values()), corrected)
+    assert np.all(corrected[1:] < uncorrected[1:])
+    assert pore_fluid_conductivity({}) == (0., {})
+    for kwargs in ({"ionic_strength_correction": True},
+                   {"kohlrausch_coefficient": .5},
+                   {"ionic_strength_correction": True, "kohlrausch_coefficient": 100.}):
+        with pytest.raises(ValueError):
+            pore_fluid_conductivity(conc, **kwargs)
+
+
+def test_bulk_cec_surface_conduction_units_and_formation_factor():
+    from PyHydroGeophysX.petrophysics import (
+        bulk_cec_to_qv, waxman_smits_surface_conductivity, WS_Model,
+    )
+
+    qv = bulk_cec_to_qv(10., .2)
+    assert qv == pytest.approx(.05)
+    surface = waxman_smits_surface_conductivity(np.array([0., 1.3, 100.]), qv)
+    np.testing.assert_allclose(surface, [.092, .17923263711854097, .23])
+    # At Sw=1 the entire fluid+surface coefficient must be scaled by 1/F.
+    rho = WS_Model(1., .2, 1.3, 2., 2., surface[1])
+    assert 1/rho == pytest.approx(.04 * (1.3 + surface[1]))
+    with pytest.raises(ValueError):
+        bulk_cec_to_qv(10., 0.)
+    with pytest.raises(ValueError):
+        waxman_smits_surface_conductivity(1., -1.)
+
+
+@pytest.mark.parametrize("saturation,sigma_w,expected", [
+    (-.1, 1., 1e6), (2., 1., 25.), (.5, 1e-12, 1e6),
+    (1., 1e4, .1), (.5, 1., 100.),
+])
+def test_ws_clipping_warning_preserves_resistivity(saturation, sigma_w, expected):
+    import warnings
+    from PyHydroGeophysX.petrophysics import WS_Model
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        actual = WS_Model(np.full(3, saturation), .2, sigma_w, 2., 2.)
+    np.testing.assert_allclose(actual, expected)
+    expected_warnings = 0 if (saturation, sigma_w) == (.5, 1.) else 1
+    assert len(caught) == expected_warnings
+    if caught:
+        assert caught[0].category is RuntimeWarning
+
+
+@pytest.mark.parametrize("angle", [0., 35., 90.])
+def test_cross_gradient_geometry_is_independent_of_cell_numbering(angle):
+    pytest.importorskip("pygimli")
+    from PyHydroGeophysX.inversion.cross_constraints import StructuralConstraint
+
+    xy = np.array([[0., 0.], [1., 0.], [0., 1.], [1., 1.]])
+    a, b = xy @ [2., 3.] + 5, xy @ [-1., 4.] + 7
+    radians = np.radians(angle)
+    rotation = np.array([[np.cos(radians), -np.sin(radians)],
+                         [np.sin(radians), np.cos(radians)]])
+    for order in (np.arange(4), np.array([2, 0, 3, 1])):
+        boundaries = [SimpleNamespace(
+            leftCell=lambda i=i: SimpleNamespace(id=lambda: i),
+            rightCell=lambda j=j: SimpleNamespace(id=lambda: j))
+            for i in range(4) for j in range(i + 1, 4)]
+        mesh = SimpleNamespace(cellCenters=lambda: (xy @ rotation.T)[order],
+                               cellCount=lambda: 4, boundaries=lambda: boundaries)
+        result = StructuralConstraint.build_cross_gradient_operator(mesh, a[order], b[order])
+        # Each corner's signed edge projection has determinant 2; multiply
+        # the analytic plane cross-gradient (11). Rotating/relabeling is inert.
+        np.testing.assert_allclose(result.diagonal(), 22., atol=2e-11)
+
+
+@pytest.mark.parametrize("layout", ["scalar_y", "scalar_x", "grid", "scalar"])
+def test_potential_field_observation_coordinates_broadcast(layout):
+    from PyHydroGeophysX.forward.gravmag import gravity_prism, magnetic_dipole
+
+    x, y = {
+        "scalar_y": (np.array([0., 3., 10.]), 0.),
+        "scalar_x": (0., np.array([0., 3., 10.])),
+        "grid": (np.array([0., 3., 10.]), np.array([[0.], [2.]])),
+        "scalar": (3., 2.),
+    }[layout]
+    xx, yy = np.broadcast_arrays(x, y)
+    body = dict(x1=-1., x2=1., y1=-1., y2=1., z1=9., z2=11., density_contrast=300.)
+    # Independent volume integration of Newton's law, not the prism formula.
+    nodes, weights = np.polynomial.legendre.leggauss(12)
+    X, Y, Z = np.meshgrid(nodes, nodes, nodes + 10., indexing="ij")
+    W = np.einsum("i,j,k->ijk", weights, weights, weights)
+    expected = np.array([6.67430e-11 * 300. * 1e5 * np.sum(
+        W * Z / ((X - xo)**2 + (Y - yo)**2 + Z**2)**1.5)
+        for xo, yo in zip(xx.ravel(), yy.ravel())]).reshape(xx.shape)
+    actual = gravity_prism(x, y, body)
+    assert actual.shape == xx.shape
+    np.testing.assert_allclose(actual, expected, rtol=2e-10, atol=1e-14)
+    # On a vertical ambient field: induced sphere anomaly is B0*chi*R^3/3
+    # times (3*z0^2-r^2)/r^5 (the exterior dipole solution).
+    radius, depth, chi, B0 = 2., 10., .05, 50000.
+    squared = xx**2 + yy**2 + depth**2
+    expected_magnetic = B0 * chi * radius**3 / 3 * (3*depth**2-squared) / squared**2.5
+    actual_magnetic = magnetic_dipole(x, y, dict(radius=radius, z0=depth, susceptibility=chi),
+                                       dict(strength=B0, inclination=90.))
+    assert actual_magnetic.shape == xx.shape
+    np.testing.assert_allclose(actual_magnetic, expected_magnetic, atol=1e-12)
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_profile_interpolation_is_translation_invariant(reverse):
+    from PyHydroGeophysX.core.interpolation import interpolate_to_profile
+
+    x, y = np.meshgrid(np.arange(4.), np.arange(4.))
+    # Affine values on a sheared grid: the answer at (1.6,1.5) is 7.7.
+    x = x + .4*y
+    values = 2*x + 3*y
+    if reverse:
+        x, y, values = (a[::-1, ::-1] for a in (x, y, values))
+    for origin in ([0., 0.], [500000., 4500000.]):
+        got = interpolate_to_profile(values, x+origin[0], y+origin[1],
+                                      [1.6+origin[0]], [1.5+origin[1]])
+        np.testing.assert_allclose(got, [7.7], atol=1e-8)
+    # Truly regular grids still take the fast path, in either axis direction.
+    xx, yy = np.meshgrid(np.arange(4.), np.arange(4.))
+    if reverse:
+        xx, yy = xx[::-1, ::-1], yy[::-1, ::-1]
+    got = interpolate_to_profile(2*xx+3*yy, xx+500000, yy+4500000,
+                                  [500001.6], [4500001.5])
+    np.testing.assert_allclose(got, [7.7], atol=1e-8)
+
+
+@pytest.mark.parametrize("variance", [1e-6, 1e-16])
+def test_covariance_diagonals_preserve_units_and_zero_variance(variance):
+    from PyHydroGeophysX.uncertainty.posterior import propagate_petro_uncertainty
+
+    # Scalar Gaussian conditioning has exact variance c/(1+c).
+    for covariance in ([variance], [[variance]]):
+        result = linearized_posterior([[1.]], covariance, [[1.]])
+        np.testing.assert_allclose(result, [[variance/(1+variance)]], rtol=1e-13, atol=0)
+    # Changing the observation's unit scales both J and C, not the posterior.
+    result = linearized_posterior([[1e-3]], [variance*1e-6], [[1.]])
+    np.testing.assert_allclose(result, [[variance/(1+variance)]], rtol=1e-13, atol=0)
+    diagonal = np.array([0., variance])
+    a = propagate_petro_uncertainty([0., 0.], diagonal, lambda v: v, n_samples=200, seed=9)
+    b = propagate_petro_uncertainty([0., 0.], np.diag(diagonal), lambda v: v, n_samples=200, seed=9)
+    np.testing.assert_array_equal(a["samples"], b["samples"])
+    np.testing.assert_array_equal(a["samples"][:, 0], 0.)
+    for invalid in ([0.], [-variance], [np.nan]):
+        with pytest.raises(ValueError):
+            linearized_posterior([[1.]], invalid, [[1.]])
+
+
+@pytest.mark.parametrize("phi,kdry,kfluid", [
+    (0., 36., 2.), (.2, 36., 2.), (.2, 8., 0.), (.2, 8., 36.), (.2, 8., 2.),
+])
+def test_gassmann_routes_share_endpoint_limits(phi, kdry, kfluid):
+    from PyHydroGeophysX.petrophysics.velocity_models import BrieModel, satK
+
+    if phi == 0 or kdry == 36.:
+        expected = 36.
+    elif kfluid == 0:
+        expected = kdry
+    else:
+        expected = kdry + (1-kdry/36.)**2 / (phi/kfluid+(1-phi)/36.-kdry/36.**2)
+    with np.errstate(all="raise"):
+        result = BrieModel().calculate_saturated_modulus(kdry, 36., phi, 1.,
+                                                         water_modulus=kfluid)
+        np.testing.assert_allclose(result, expected, rtol=1e-14)
+        if kfluid == 2.:
+            np.testing.assert_allclose(satK(kdry, 36., phi, 1.), expected, rtol=1e-14)
+
+
+def test_srt_pygimli_pipeline_applies_requested_regularization(tmp_path, monkeypatch):
+    pytest.importorskip("pygimli")
+    from PyHydroGeophysX.inversion import srt_inversion as srt
+
+    class RecordingManager:
+        def __init__(self, data):
+            self.paraDomain = {}
+            self.velocity = np.array([1500., 1700.])
+            self.used = {}
+
+        def invert(self, data, **kwargs):
+            self.used = kwargs
+
+    data = SimpleNamespace(size=lambda: 2)
+    mesh = object()
+    monkeypatch.setattr(srt.tt, "load", lambda path: data)
+    monkeypatch.setattr(srt.tt, "TravelTimeManager", RecordingManager)
+    monkeypatch.setattr(srt, "build_srt_mesh", lambda *args, **kwargs: mesh)
+    result = srt.run_srt_manager_inversion(tmp_path / "picks.sgt", tmp_path / "out",
+                                   engine="pygimli", lam=73., max_iterations=7,
+                                   secondary_nodes=2)
+    assert result["mgr"].used["lam"] == result["lambda_used"] == 73.
+    assert result["mgr"].used["maxIter"] == 7
+    assert result["mgr"].used["mesh"] is mesh

@@ -35,6 +35,7 @@ _UNSUPPORTED_INPUTS = {
     "mt_files": "magnetotelluric inversion",
     "mt_file": "magnetotelluric inversion",
     "gravmag_file": "gravity / magnetic inversion",
+    "gpr_file": "GPR processing",
 }
 
 #: The keys that name the ERT data of a run.
@@ -464,8 +465,8 @@ class AgentCoordinator:
     def _validate_preview_files(self, config: Dict[str, Any]) -> tuple:
         """Validate file references in a preview configuration."""
         extension_map = {
-            "data_file": {".ohm", ".bin", ".dat", ".stg", ".txt", ".data"},
-            "ert_file": {".ohm", ".bin", ".dat", ".stg", ".txt", ".data"},
+            "data_file": {".ohm", ".bin", ".dat", ".stg", ".txt", ".data", ".tab"},
+            "ert_file": {".ohm", ".bin", ".dat", ".stg", ".txt", ".data", ".tab"},
             "electrode_file": {".dat", ".txt", ".csv"},
             "seismic_file": {".dat", ".txt"},
             "raw_seismic_file": {".sgy", ".segy"},

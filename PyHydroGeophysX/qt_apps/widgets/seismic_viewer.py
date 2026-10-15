@@ -173,6 +173,8 @@ class SeismicViewer(QWidget):
         bar = FlowLayout(spacing=6)
         self._style_combo = QComboBox()
         self._style_combo.addItems(_STYLES)
+        # Opens on the amplitude image with its wiggles drawn over it.
+        self._style_combo.setCurrentText(_STYLE_NAMES["both"])
         self._style_combo.currentTextChanged.connect(lambda *_: self._render())
         # The amplitude image's colour map, beside the display style. Opens on
         # the gather's own blue-white-red.

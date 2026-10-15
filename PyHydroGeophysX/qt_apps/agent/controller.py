@@ -17,16 +17,17 @@ lifts it out into an image message and never lets it reach the text transcript.
 from __future__ import annotations
 
 import base64
+import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, QTimer
 
 from PyHydroGeophysX.qt_apps.agent import capture as capture_mod
 
 #: One-line purpose per module so the agent can route a task to the right one.
 MODULE_PURPOSES: Dict[str, str] = {
-    "one_click": "Workflow workspace for data, progress and reports. To run end-to-end, the user selects Auto to report in the assistant panel and sends their goal there.",
+    "one_click": "Workflow workspace for data, progress and reports. To run a task end to end, call run_to_report; the run is followed here.",
     "home": "Landing page / overview.",
     "seismic": "Process seismic shot gathers, pick first breaks, and run SRT travel-time "
                "tomography to get a velocity model from field data; or stack the shots into "
@@ -50,6 +51,10 @@ MODULE_PURPOSES: Dict[str, str] = {
           "tipper with robust remote-reference processing, then invert: Occam 1D per site "
           "(static shift, optional joint TEM, water content) and a 2D TE/TM profile. Has an "
           "example site (use_example_data).",
+    "gpr": "Ground-penetrating radar: read a GPR line (GSSI DZT, pulseEKKO DT1/HD, MALA "
+           "rd3/rd7/rad, SEG-Y), clean it up (dewow, time zero, band-pass, background "
+           "removal), F-K migrate, gain, fit the velocity on a diffraction hyperbola and show "
+           "it in time, depth or elevation. Has a simulated example line (use_example_data).",
     "hydro_geophysics": "Generate SYNTHETIC geophysical data by 2D-profile FORWARD MODELING (ERT, "
                         "SRT, TDEM, FDEM, gravity) from a hydrologic model along a 2D line / "
                         "cross-section. Use this for forward modeling along a profile. Before loading "
@@ -59,6 +64,62 @@ MODULE_PURPOSES: Dict[str, str] = {
                      "Has built-in example data.",
     "seismic3d": "Build a 3D velocity model from several 2D seismic velocity lines. Has example data.",
 }
+
+
+def _listen_for_errors(page: Any):
+    """Collect the error lines ``page`` logs from now on; ``(lines, stop)``.
+
+    ``stop()`` stops collecting. A page without ``log_listeners`` collects
+    nothing.
+    """
+    errors: List[str] = []
+    listeners = getattr(page, "log_listeners", None)
+
+    def heard(message: Any, level: str) -> None:
+        if str(level).lower() in ("error", "critical"):
+            errors.append(str(message))
+
+    def stop() -> None:
+        if isinstance(listeners, list) and heard in listeners:
+            listeners.remove(heard)
+
+    if isinstance(listeners, list):
+        listeners.append(heard)
+    return errors, stop
+
+
+def _state_failure(state: Any) -> str:
+    """The failure a page's state reports after a job, or "".
+
+    A status field that says failed, or an error field with text in it, at
+    the top of the state or one level down.
+
+    >>> _state_failure({'inversion_status': 'failed', 'inversion_error': 'MemoryError'})
+    'MemoryError'
+    >>> _state_failure({'inversion': {'status': 'failed'}})
+    'the page reports that it failed'
+    >>> _state_failure({'inversion_status': 'completed', 'inversion_error': None})
+    ''
+    """
+    if not isinstance(state, dict):
+        return ""
+    items = list(state.items()) + [(key, value) for sub in state.values()
+                                   if isinstance(sub, dict) for key, value in sub.items()]
+    failed = any(str(key).endswith("status") and str(value).lower() in ("failed", "error")
+                 for key, value in items)
+    if not failed:
+        return ""
+    return next((str(value) for key, value in items
+                 if str(key).endswith("error") and isinstance(value, str) and value.strip()),
+                "the page reports that it failed")
+
+
+def _page_failure(page: Any) -> str:
+    """:func:`_state_failure` of ``page``'s state now; "" when it cannot say."""
+    try:
+        return _state_failure((page.agent_describe() or {}).get("state"))
+    except Exception:  # noqa: BLE001 - a page that cannot say is taken as fine
+        return ""
 
 
 class StudioController(QObject):
@@ -79,6 +140,14 @@ class StudioController(QObject):
         self._window = window
         self._chat_references = {}
         self._pending_chat_files = {}
+        # Errors whose cause the assistant or a run already hears of: a call
+        # being dispatched, a job the assistant follows, a page a run is using.
+        self._dispatching = 0
+        self._assistant_pages: Dict[int, int] = {}
+        self._run_pages: Dict[int, int] = {}
+        # Page errors gathered for watch_page_errors, by page, until reported.
+        self._page_errors: Dict[int, Dict[str, Any]] = {}
+        self._on_page_error: Optional[Callable[[Dict[str, Any]], None]] = None
 
     def queue_chat_files(self, paths):
         paths = list(dict.fromkeys(str(Path(p).resolve()) for p in paths))
@@ -231,9 +300,338 @@ class StudioController(QObject):
             page._chat_connected = True
         return page.submit_request(request, settings)
 
+    def studio_work(self, modules: Optional[List[str]] = None) -> Dict[str, Any]:
+        """What the studio's pages have finished, written out for an automatic run.
+
+        Asked when a step-by-step task is handed to Auto to report: each page
+        that offers ``agent_handover`` writes its result under
+        ``runs/_handover/<time>/<page>`` and says what it wrote. A page that
+        cannot is left out - the run then does that work itself.
+        """
+        state = getattr(self._window, "state", None)
+        root = (Path(getattr(state, "output_dir", None) or Path.home()) / "runs"
+                / "_handover" / time.strftime("%Y%m%d-%H%M%S"))
+        work: Dict[str, Any] = {}
+        for key, page in list(getattr(self._window, "_pages", {}).items()):
+            if modules is not None and key not in modules:
+                continue
+            handover = getattr(page, "agent_handover", None)
+            if not callable(handover):
+                continue
+            try:
+                record = handover(root / key)
+            except Exception as exc:  # noqa: BLE001 - the run can redo the work
+                log = getattr(self._window, "log", None)
+                if callable(log):
+                    log(f"Could not hand the {key} result to the automatic run: {exc}", "warn")
+                continue
+            if record:
+                work[key] = record
+        return work
+
+    # -- studio pages for an automatic run ------------------------------------
+    #: Pages an automatic run may not drive: the Workflow page is where it
+    #: runs, and Home is a landing page.
+    NOT_FOR_RUNS = ("one_click", "home")
+
+    #: How often a long page action is checked for having finished.
+    STUDIO_POLL_MS = 500
+
+    def studio_catalog(self) -> List[Dict[str, str]]:
+        """The pages an automatic run may use, with what each is for."""
+        return [{"key": m["key"], "title": m["title"],
+                 "purpose": MODULE_PURPOSES.get(m["key"], "")}
+                for m in self._module_catalog() if m["key"] not in self.NOT_FOR_RUNS]
+
+    def serve_studio(self, request: Dict[str, Any], reply) -> None:
+        """Carry out one studio request from an automatic run; ``reply`` gets the answer.
+
+        The run works headless in a process of its own; this is how it uses
+        the studio's pages - the same actions the user clicks and the chat
+        drives. ``request["op"]`` is ``catalog``, ``describe`` (a page's
+        actions and state), ``apply`` (run one action) or ``handover`` (the
+        page's finished result, written out for the run: :meth:`studio_work`).
+        A page action that starts background work (an inversion) is answered
+        once the page is idle again, with the page's state then, so the run
+        sees a long action as one call. The page is used without being brought
+        to the front.
+        """
+        op = str(request.get("op") or "")
+        try:
+            if op == "catalog":
+                reply({"status": "ok", "modules": self.studio_catalog()})
+                return
+            key = str(request.get("module") or "").strip()
+            if key not in {m["key"] for m in self.studio_catalog()}:
+                reply({"status": "failed", "error": f"No studio page '{key}' for a run.",
+                       "pages": [m["key"] for m in self.studio_catalog()]})
+                return
+            page = self._window.module_page(key)
+            if op == "describe":
+                desc = page.agent_describe()
+                reply({"status": "ok", "describe": desc, "busy": page.activity()})
+            elif op == "handover":
+                record = self.studio_work(modules=[key]).get(key)
+                reply({"status": "ok", **record} if record else {
+                    "status": "failed",
+                    "error": f"The {key} page has no finished result to hand over."})
+            elif op == "apply":
+                if page.activity():
+                    reply({"status": "failed", "error": f"The page is busy: {page.activity()}."})
+                    return
+                args = request.get("args") if isinstance(request.get("args"), dict) else {}
+                before = _page_failure(page)
+                errors, listening = _listen_for_errors(page)
+                # The run hears of this page's errors itself until it is answered.
+                self._hold(self._run_pages, page)
+
+                def stop() -> None:
+                    listening()
+                    self._release(self._run_pages, page)
+
+                try:
+                    result = page.agent_apply(str(request.get("action") or ""), args)
+                except Exception:
+                    stop()
+                    raise
+                result = result if isinstance(result, dict) else {"status": "ok", "result": result}
+                self._answer_when_idle(page, result, reply, errors, stop, before)
+            else:
+                reply({"status": "failed", "error": f"Unknown studio request '{op}'."})
+        except Exception as exc:  # noqa: BLE001 - a run must get an answer
+            reply({"status": "failed", "error": f"{type(exc).__name__}: {exc}"})
+
+    def _answer_when_idle(self, page: Any, result: Dict[str, Any], reply,
+                          errors: Optional[List[str]] = None, stop=None,
+                          before: str = "") -> None:
+        """Reply once ``page`` has finished what the action started.
+
+        A job the action started in the background (``"started"``) is answered
+        with how it ended. It used to be answered "started" whatever happened,
+        so an inversion that failed on the page was recorded by the run as a
+        step that had worked, and the model went on as if it had. Now a job
+        that logged errors, or whose page reports it failed, is answered
+        "failed" with the reason, which the model reads at its next decision;
+        one that ended cleanly is answered "ok".
+        """
+        from PySide6.QtCore import QTimer
+
+        errors = errors if errors is not None else []
+        # Work the action left running on the page, announced or not.
+        background = bool(page.activity())
+
+        def done() -> None:
+            if callable(stop):
+                stop()
+            try:
+                state = (page.agent_describe() or {}).get("state")
+            except Exception:  # noqa: BLE001
+                state = None
+            answer = dict(result)
+            status = str(answer.get("status") or "").lower()
+            started = status == "started"
+            if status in ("failed", "error", "declined"):
+                pass
+            elif started or background:
+                reported = _state_failure(state) if started else ""
+                failure = "; ".join(errors[-6:]) or (reported if reported != before else "")
+                if failure:
+                    answer.update(status="failed", message="Failed on the page.", error=(
+                        "The page started the work, and it failed: " + failure[:1200]))
+                elif started:
+                    answer.update(status="ok", message="Finished on the page.")
+            elif errors:
+                # The action answered at once; what it logged is for the model to weigh.
+                answer["page_errors"] = errors[-6:]
+            reply({**answer, "page_state": state} if state is not None else answer)
+
+        if not page.activity():
+            done()
+            return
+        timer = QTimer(self)
+        timer.setInterval(self.STUDIO_POLL_MS)
+
+        def check() -> None:
+            if page.activity():
+                return
+            timer.stop()
+            timer.deleteLater()
+            done()
+
+        timer.timeout.connect(check)
+        timer.start()
+
+    def scratch_root(self) -> Path:
+        """Where the chat's approved temporary scripts run, one folder each."""
+        state = getattr(self._window, "state", None)
+        return (Path(getattr(state, "output_dir", None) or Path.home())
+                / "runs" / "_scratch")
+
+    def workflow_awaiting_continue(self) -> bool:
+        """True when the last automatic run stopped to ask for "continue".
+
+        Sorting a data folder ends that way: the run is not over, it waits for
+        the user to check the file roles.
+        """
+        page = getattr(self._window, "_pages", {}).get("one_click")
+        return bool(getattr(page, "awaiting_continue", False))
+
+    def watch_job(self, on_failed: Callable[[Dict[str, Any]], None]) -> bool:
+        """Follow the job the current page has just started, and report it if it fails.
+
+        For an action that answered "started": the assistant's turn ends while
+        the job runs, and a job that failed afterwards - an inversion that ran
+        out of memory, a model file that was not there - was seen only in the
+        page's log. Once the page is idle again, ``on_failed`` gets ``{"module",
+        "title", "errors"}`` when the page logged errors meanwhile; a job that
+        ends cleanly calls nothing. Returns False when there is no page to follow.
+        """
+        page = self._window.current_module()
+        if (page is None or not isinstance(getattr(page, "log_listeners", None), list)
+                or not hasattr(page, "activityChanged")):
+            return False
+        errors, stop = _listen_for_errors(page)
+        # A failure the page reported before this job is not this job's.
+        before = _page_failure(page)
+        # This job's errors come to the assistant from here, not as page errors.
+        self._hold(self._assistant_pages, page)
+        settled = []
+
+        def settle() -> None:
+            # Idle between two parts of one job (a load, then the inversion)
+            # is not the end of it: only an idle that lasts this turn is.
+            if page.activity() or settled:
+                return
+            settled.append(True)
+            stop()
+            self._release(self._assistant_pages, page)
+            try:
+                page.activityChanged.disconnect(changed)
+            except (RuntimeError, TypeError):
+                pass
+            failure = list(errors[-6:])
+            if not failure:
+                # A page that reports the failure in its state, not its log.
+                reason = _page_failure(page)
+                failure = [reason] if reason and reason != before else []
+            if failure:
+                on_failed({"module": self._page_key(page) or getattr(page, "module_key", ""),
+                           "title": getattr(page, "module_title", ""),
+                           "errors": failure})
+
+        def changed(activity: str) -> None:
+            if not activity:
+                QTimer.singleShot(0, page, settle)
+
+        page.activityChanged.connect(changed)
+        if not page.activity():
+            QTimer.singleShot(0, page, settle)
+        return True
+
+    #: Quiet, in ms, after a page's last error line before its errors are
+    #: reported together: one failure often logs several lines.
+    PAGE_ERROR_QUIET_MS = 800
+
+    def watch_page_errors(self, on_error: Callable[[Dict[str, Any]], None]) -> None:
+        """Report errors the pages hit outside the assistant's own work to ``on_error``.
+
+        Something the user did on a page - a file that would not load, an
+        inversion they started that failed, a button whose code raised - was
+        seen only in the log or an error box. Now ``on_error`` gets
+        ``{"module", "title", "errors"}`` once the page is idle and its error
+        lines have stopped coming. Left out, because the assistant or a run
+        already hears of them: errors during a call the assistant is
+        dispatching, from a job it follows (:meth:`watch_job`), from a page an
+        automatic run is using, and anything while an automatic run is going -
+        its own pages and steps report to it, and the Workflow page reports a
+        run that failed.
+        """
+        from PyHydroGeophysX.qt_apps.modules.base import watch_errors
+
+        if self._on_page_error is None:
+            watch_errors(self._heard_page_error)
+        self._on_page_error = on_error
+
+    def _heard_page_error(self, page: Any, message: str) -> None:
+        if page is None:
+            page = self._window.current_module()
+        key = self._page_key(page)
+        if not key:
+            return  # another window's page, or none at all
+        if (key in self.NOT_FOR_RUNS or self._dispatching or id(page) in self._assistant_pages
+                or id(page) in self._run_pages or self._run_going()):
+            return
+        entry = self._page_errors.get(id(page))
+        if entry is None:
+            entry = self._page_errors[id(page)] = {
+                "module": key, "title": str(getattr(page, "module_title", "") or key),
+                "errors": [], "timer": QTimer(self)}
+            entry["timer"].setSingleShot(True)
+            entry["timer"].timeout.connect(lambda p=page: self._report_page_errors(p))
+        if message not in entry["errors"]:
+            entry["errors"].append(str(message))
+        entry["timer"].start(self.PAGE_ERROR_QUIET_MS)
+
+    def _report_page_errors(self, page: Any) -> None:
+        entry = self._page_errors.get(id(page))
+        if entry is None:
+            return
+        activity = getattr(page, "activity", None)
+        if callable(activity) and activity():
+            entry["timer"].start(self.PAGE_ERROR_QUIET_MS)  # still working: wait
+            return
+        self._page_errors.pop(id(page), None)
+        entry["timer"].deleteLater()
+        if callable(self._on_page_error):
+            self._on_page_error({"module": entry["module"], "title": entry["title"],
+                                 "errors": entry["errors"][-6:]})
+
+    def _page_key(self, page: Any) -> str:
+        """The key :meth:`dispatch`'s navigate takes for ``page``; "" if not this window's.
+
+        Not the page's own ``module_key``: the ERT page's is "ert_processing",
+        and an assistant told to navigate there was told of a module that
+        does not exist.
+        """
+        pages = getattr(self._window, "_pages", {}) or {}
+        return next((str(k) for k, p in pages.items() if p is page), "") if page is not None else ""
+
+    def _run_going(self) -> bool:
+        """Whether an automatic run is going on the Workflow page."""
+        page = getattr(self._window, "_pages", {}).get("one_click")
+        return getattr(page, "_worker", None) is not None
+
+    @staticmethod
+    def _hold(held: Dict[int, int], page: Any) -> None:
+        held[id(page)] = held.get(id(page), 0) + 1
+
+    @staticmethod
+    def _release(held: Dict[int, int], page: Any) -> None:
+        count = held.get(id(page), 0) - 1
+        if count > 0:
+            held[id(page)] = count
+        else:
+            held.pop(id(page), None)
+
+    def workflow_outcome(self) -> Dict[str, Any]:
+        """How the last automatic run ended (``status``, ``outcome``, ``warnings``), or {}.
+
+        ``status`` is the run's own - ``success``, ``needs_review``,
+        ``incomplete`` - or ``failed`` / ``stopped`` when it did not finish.
+        """
+        page = getattr(self._window, "_pages", {}).get("one_click")
+        return dict(getattr(page, "_last_result", None) or {})
+
     def dispatch(self, name: str, args: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Execute one tool call by name and return a JSON-friendly result."""
         args = args or {}
+        self._dispatching += 1
+        try:
+            return self._dispatch(name, args)
+        finally:
+            self._dispatching -= 1
+
+    def _dispatch(self, name: str, args: Dict[str, Any]) -> Dict[str, Any]:
         try:
             if name == "list_modules":
                 return self._list_modules()

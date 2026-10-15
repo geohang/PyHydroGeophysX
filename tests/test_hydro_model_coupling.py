@@ -98,16 +98,8 @@ def test_the_shipped_model_reads_as_the_value_by_value_reader_did():
                         grid[layer, i, j] = values[layer * reader.nuzfcells + n]
                 reference.append(grid)
     np.testing.assert_array_equal(wc, np.array(reference))
-
-
-def test_timestep_info_on_the_shipped_three_layer_model():
-    folder = os.path.join(os.path.dirname(__file__), os.pardir, "examples", "data", "modflow")
-    if not os.path.exists(os.path.join(folder, "WaterContent")):
-        pytest.skip("examples/data/modflow is not present")
-    reader = MODFLOWWaterContent(folder, np.loadtxt(os.path.join(folder, "id.txt")))
     info = reader.get_timestep_info()
-    assert len(info) == 2922
-    assert float(info[-1][3]) == 2922.0
+    assert len(info) == 2922 and float(info[-1][3]) == 2922.0
 
 
 def test_hydro_to_ert_keeps_the_callers_layer_markers():
@@ -150,3 +142,31 @@ def test_a_run_that_needs_simpeg_is_refused_before_anything_is_computed(monkeypa
     assert started == [], "the run began before it was refused"
     with pytest.raises(ImportError, match="'simpeg' could not be imported"):
         placeholder()                       # called anyway, it says what is missing
+
+
+@pytest.mark.parametrize("source", ["mf6", "lpf", "upw", "ss_only"])
+def test_modflow_porosity_never_substitutes_specific_storage(tmp_path, monkeypatch, source):
+    flopy = pytest.importorskip("flopy")
+    from PyHydroGeophysX.model_output.water_content import MODFLOWPorosity
+
+    # Deliberately different physical quantities: sy=.18, ss=1e-5 (1/m).
+    sy = np.full((1, 2, 2), .18)
+    storage = SimpleNamespace(ss=SimpleNamespace(array=np.full_like(sy, 1e-5)))
+    if source != "ss_only":
+        storage.sy = SimpleNamespace(array=sy)
+    if source == "mf6":
+        (tmp_path / "mfsim.nam").touch()
+        dis = SimpleNamespace(**{name: SimpleNamespace(data=value)
+                                 for name, value in (("nlay", 1), ("nrow", 2), ("ncol", 2))})
+        model = SimpleNamespace(get_package=lambda name: {"DIS": dis, "STO": storage}[name])
+        simulation = SimpleNamespace(get_model=lambda name: model)
+        monkeypatch.setattr(flopy.mf6.MFSimulation, "load", lambda **kwargs: simulation)
+    else:
+        model = SimpleNamespace(nlay=1, nrow=2, ncol=2, upw=None, lpf=None)
+        setattr(model, "upw" if source == "upw" else "lpf", storage)
+        monkeypatch.setattr(flopy.modflow.Modflow, "load", lambda *args, **kwargs: model)
+    reader = MODFLOWPorosity(str(tmp_path), "aquifer")
+    with pytest.warns(RuntimeWarning):
+        actual = reader.load_porosity()
+    # Retained sy approximation is explicit; ss is NEVER a porosity.
+    np.testing.assert_array_equal(actual, np.full_like(sy, .3) if source == "ss_only" else sy)

@@ -19,7 +19,8 @@ Everything here is written for PyHydroGeophysX on NumPy and SciPy alone.
   Niblett-Bostick depths and static shift;
 - :mod:`.forward1d` - the layered-earth impedance and its derivatives;
 - :mod:`.inversion1d` - Occam's 1D inversion, with static shift and jointly
-  with a TEM sounding, and the water content of the result;
+  with a TEM sounding, an azimuthally anisotropic variant, and the water
+  content of the result;
 - :mod:`.inversion2d` - 2D forward modelling and inversion of a profile on
   SimPEG (an optional dependency, imported when used).
 """
@@ -40,7 +41,15 @@ from .analysis import (
 from .edi import is_edi_file, read_edi, write_edi
 from .emtf_xml import is_emtf_xml_file, read_emtf_xml, write_emtf_xml
 from .forward1d import apparent_resistivity_1d, impedance_1d, sensitivity_1d
-from .inversion1d import Occam1DResult, Sounding1D, occam1d, sounding_from_tf, water_content_profile
+from .inversion1d import (
+    Anisotropic1DResult,
+    Occam1DResult,
+    Sounding1D,
+    occam1d,
+    occam1d_anisotropic,
+    sounding_from_tf,
+    water_content_profile,
+)
 from .io import (
     TIMESERIES_FORMATS,
     TRANSFER_FUNCTION_PATTERNS,
@@ -53,7 +62,7 @@ from .io import (
 from .jfile import is_jfile, read_jfile
 from .lemi import read_lemi424
 from .metronix import read_ats_header, read_metronix, read_metronix_calibration
-from .phoenix import read_phoenix, read_phoenix_calibration, read_phoenix_header
+from .phoenix import phoenix_coil_calibrations, read_phoenix, read_phoenix_calibration, read_phoenix_header
 from .phoenix_legacy import read_phoenix_legacy, read_phoenix_table
 from .processing import ProcessingConfig, process_mt
 from .robust import RegressionConfig, robust_regression
@@ -65,9 +74,15 @@ from .timeseries import (
     gps_leap_seconds,
     gps_seconds_to_utc,
     load_runs,
+    periodic_interference,
+    powerline_frequency,
     read_response_table,
+    remove_periodic,
+    remove_periodic_bursts,
+    remove_powerline,
     runs_from_payload,
     runs_to_payload,
+    saturated,
     save_runs,
 )
 from .transfer_function import (
@@ -81,6 +96,7 @@ from .zfile import is_zfile, read_zfile
 from .zonge import read_z3d_header, read_zonge
 
 __all__ = [
+    "Anisotropic1DResult",
     "Band",
     "Channel",
     "FIELD_TO_OHM",
@@ -115,6 +131,7 @@ __all__ = [
     "load_runs",
     "niblett_bostick",
     "occam1d",
+    "occam1d_anisotropic",
     "phase_tensor",
     "process_mt",
     "read_ats_header",
@@ -128,6 +145,7 @@ __all__ = [
     "read_phoenix",
     "read_phoenix_calibration",
     "read_phoenix_header",
+    "phoenix_coil_calibrations",
     "read_phoenix_legacy",
     "read_phoenix_table",
     "read_response_table",
@@ -142,6 +160,12 @@ __all__ = [
     "runs_from_payload",
     "runs_to_payload",
     "save_runs",
+    "periodic_interference",
+    "powerline_frequency",
+    "remove_periodic",
+    "remove_periodic_bursts",
+    "remove_powerline",
+    "saturated",
     "sensitivity_1d",
     "sounding_from_tf",
     "static_shift_from_layers",

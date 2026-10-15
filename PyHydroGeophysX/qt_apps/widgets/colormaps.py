@@ -94,6 +94,7 @@ EM_STATIONS = "em_stations"                  #: the EM survey QC station map
 GRAVMAG = "gravmag"                          #: gravity / magnetic anomaly maps
 DENSITY = "density"                          #: gravity density-contrast models
 SUSCEPTIBILITY = "susceptibility"            #: magnetic susceptibility models
+GPR = "gpr"                                  #: ground-penetrating radar radargrams
 MAP_LAYER = "map_layer"                      #: Project Map plan layers
 HYDRO = "hydro_model"                        #: hydrological model maps
 ARRAY = "array"                              #: a saved 2-D array
@@ -113,6 +114,7 @@ _WHAT: Dict[str, str] = {
     GRAVMAG: "gravity and magnetic anomaly maps",
     DENSITY: "density-contrast models",
     SUSCEPTIBILITY: "susceptibility models",
+    GPR: "GPR radargrams",
     MAP_LAYER: "Project Map layers",
     HYDRO: "hydrological model maps",
     ARRAY: "saved arrays",

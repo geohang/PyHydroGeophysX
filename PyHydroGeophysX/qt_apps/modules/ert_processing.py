@@ -134,10 +134,12 @@ def _value_name(correction: Optional[Dict[str, Any]]) -> str:
     return f"resistivity_at_{reference:g}C".replace(".", "p")
 
 _ELEC_FILTER = "Electrodes (*.csv *.txt *.dat);;All files (*)"
-_DATA_FILTER = "ERT data (*.dat *.ohm *.txt *.csv *.Data *.bin *.stg *.amp *.udf);;All files (*)"
+_DATA_FILTER = ("ERT data (*.dat *.ohm *.txt *.csv *.Data *.bin *.stg *.amp *.udf *.tab)"
+                ";;All files (*)")
 #: The files of a folder dropped on the page that join the list: the data
 #: filter's extensions, matched without regard to case.
-_DATA_SUFFIXES = (".dat", ".ohm", ".txt", ".csv", ".data", ".bin", ".stg", ".amp", ".udf")
+_DATA_SUFFIXES = (".dat", ".ohm", ".txt", ".csv", ".data", ".bin", ".stg", ".amp", ".udf",
+                  ".tab")
 #: The χ² stopping rule's tooltip, while the engine and mode use it.
 _PLATEAU_TIP = ("The inversion is done when one more iteration lowers χ² by less than "
                 "this. Larger stops sooner; smaller makes sure the fit has really run "
@@ -179,6 +181,7 @@ _INSTRUMENTS: List[Tuple[str, Optional[str]]] = [
     ("Lippmann", "Lippmann"),
     ("Electra", "Electra"),
     ("Subsurface Insights (.csv)", "Subsurface Insights"),
+    ("BGS PRIME / RESIMGR (.tab)", "PRIME/RESIMGR"),
     ("Custom", "Custom"),
 ]
 
@@ -2160,12 +2163,13 @@ class ERTProcessingModule(BaseModule):
         """Parse one ERT file; see :meth:`_parse_ert`."""
         warning = ""
         reader, reason = "ResIPy", ""
+        read_as = instrument
         if instrument is None:  # defensive: the dropdown has no auto/None option
             elec, pseudo, nmeas, data, note = self._load_pygimli(path, elec_file)
             reader = "PyGIMLi"
         else:
             try:
-                elec, pseudo, nmeas, data, note, (reader, reason) = self._load_resipy(
+                elec, pseudo, nmeas, data, note, (reader, reason), read_as = self._load_resipy(
                     path, instrument, out_dir, elec_file, spacing)
             except NotImplementedError:
                 # No reader for this format. PyGIMLi's reader would accept the
@@ -2189,7 +2193,7 @@ class ERTProcessingModule(BaseModule):
                 reader, reason = "PyGIMLi", "ResIPy could not parse this file"
         return {"elec": elec, "pseudo": pseudo, "nmeas": nmeas, "data": data,
                 "warning": warning, "reader": reader, "reader_reason": reason,
-                "data_note": note}
+                "data_note": note, "instrument": read_as or instrument}
 
     def _on_ert_loaded(self, path: str, res: dict) -> None:
         if res.get("warning"):
@@ -2198,6 +2202,15 @@ class ERTProcessingModule(BaseModule):
                                  str(res.get("reader_reason", "")))
         elec, pseudo, nmeas, data = res["elec"], res["pseudo"], res["nmeas"], res["data"]
         self._loaded_format = res.get("instrument")
+        # The loader reads a file whose header names its format as that format
+        # (a PRIME .tab picked as BERT), so the chooser moves to it rather than
+        # naming a reader that never saw the file. Set in code, so the reload
+        # on a hand-picked format does not run.
+        read_as = self._instrument.findData(self._loaded_format) if self._loaded_format else -1
+        if read_as >= 0 and read_as != self._instrument.currentIndex():
+            self.log(f"{Path(path).name} names its own format, so it was read as "
+                     f"{self._instrument.itemText(read_as)}.", "info")
+            self._instrument.setCurrentIndex(read_as)
         # A file read under the wrong format can come back "loaded": a DAS-1
         # file read as BERT gave one electrode and one reading, the log said
         # SUCCESS, and the inversion failed on it a minute later. A survey no
@@ -2353,7 +2366,8 @@ class ERTProcessingModule(BaseModule):
     def _load_pygimli(self, path: str, electrode_file: Optional[str] = None):
         import pygimli.physics.ert as ert
 
-        data = ert.load(path, verbose=False)
+        with ert_load.no_invalid_data_file():
+            data = ert.load(path, verbose=False)
         if not data.haveData("rhoa"):
             try:
                 data["k"] = ert.createGeometricFactors(data, numerical=False)
@@ -2416,7 +2430,11 @@ class ERTProcessingModule(BaseModule):
                     pseudo.append((float(np.mean(xs)),
                                    max(span * ert_load.PSEUDO_DEPTH_FACTOR, 0.01),
                                    float(obs.app_res)))
-        return elec, pseudo, len(std.observations or []), data, note, self._reader_of(std)
+        # The format the loader read it as: a file whose own header names its
+        # format (PRIME, Subsurface Insights) is read as that whatever was chosen.
+        read_as = str(getattr(std, "instrument", "") or instrument)
+        return (elec, pseudo, len(std.observations or []), data, note,
+                self._reader_of(std), read_as)
 
     @staticmethod
     def _reader_of(std) -> Tuple[str, str]:
@@ -5619,6 +5637,10 @@ class ERTProcessingModule(BaseModule):
         # retain the GIL and ADTLERT cannot monopolize the GUI CUDA context.
         # This also covers an unavailable ADTLERT request that falls back to
         # the PyHydro engine inside the workflow process.
+        # What this run inverts, kept with it: the list on the page can change
+        # while it runs, and a hand-over must name the surveys of the model.
+        self._tl_run_sources = [str(source) for source in sources]
+        self._tl_run_params = dict(params)
         self._agent_run_state = "running"
         self._agent_run_error = ""
         self._tl_worker = ProcessWorkflowWorker(
@@ -6823,6 +6845,63 @@ class ERTProcessingModule(BaseModule):
             "models_available": [c["label"] for c in self._inv_choices],
             "last_result_keys": sorted(last.keys()),
         }
+
+    def agent_handover(self, folder: Path) -> Dict[str, Any]:
+        """The model on display, written for an automatic run to carry on from.
+
+        Called when a step-by-step task is handed to Auto to report. The model
+        goes to ``folder`` as the inverted-model bundle the rest of the package
+        reads (``mesh_res.bms``, ``resmodel.npy``, ``all_coverage.npy``), and
+        ``handover.json`` beside it says what it is: the surveys it was made
+        from, the fit and the settings. Returns that record with ``model_dir``,
+        or {} when no model is on display or an inversion is still running.
+        """
+        status = self._agent_result_summary({})
+        if status["inversion_running"] or not status["has_model"]:
+            return {}
+        summary = status["result_summary"]
+
+        def plain(value):
+            if isinstance(value, (np.floating, np.integer)):
+                value = value.item()
+            return None if isinstance(value, float) and not np.isfinite(value) else value
+
+        info: Dict[str, Any] = {key: plain(summary.get(key)) for key in
+                                ("kind", "chi2", "rrms", "iterations", "lambda", "engine")}
+        if summary.get("kind") == "timelapse":
+            record = dict(self._tl_result or {})
+            mesh, coverage = self._tl_mesh, self._tl_coverage
+            models = np.asarray(self._tl_models, dtype=float)
+            sources = list(getattr(self, "_tl_run_sources", None) or self._tl_files)
+            info.update(
+                settings=dict(getattr(self, "_tl_run_params", None) or {}),
+                chi2_history=[plain(c) for c in record.get("chi2_history") or []],
+                time_labels=list(record.get("time_labels") or self._tl_step_titles or []),
+                survey_timing=record.get("survey_timing"),
+                # The sections on display, corrected when a correction is on.
+                temperature_correction=(self._tl_correction or {}).get("note"))
+            if info["lambda"] is None:
+                info["lambda"] = plain(record.get("lambda_used"))
+        else:
+            mesh = self._inv_mgr.paraDomain
+            models = np.asarray(self._inv_mgr.model, dtype=float).reshape(-1, 1)
+            try:
+                coverage = self._inv_mgr.coverage()
+            except Exception:  # noqa: BLE001 - coverage is optional in the bundle
+                coverage = None
+            sources = [summary["data_file"]] if summary.get("data_file") else []
+        info.update(source_files=[str(Path(p).resolve()) for p in sources],
+                    instrument=self._instrument.currentData(),
+                    electrode_file=str(getattr(self, "_electrode_path", None) or ""))
+        folder = Path(folder)
+        folder.mkdir(parents=True, exist_ok=True)
+        np.save(folder / "resmodel.npy", models)
+        if coverage is not None:
+            np.save(folder / "all_coverage.npy", np.asarray(coverage, dtype=float))
+        mesh.save(str(folder / "mesh_res.bms"))
+        (folder / "handover.json").write_text(json.dumps(info, indent=2, default=str),
+                                              encoding="utf-8")
+        return {**info, "model_dir": str(folder)}
 
     def _agent_result_summary(self, last: Dict[str, Any]) -> Dict[str, Any]:
         """Expose the displayed model and its fit independently of Map exports."""

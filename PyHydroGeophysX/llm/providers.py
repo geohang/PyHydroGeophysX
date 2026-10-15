@@ -197,6 +197,17 @@ def _to_anthropic_content(content: Any) -> Any:
 
 
 # -- neutral -> provider messages ---------------------------------------------
+def _arguments_text(arguments: Any) -> str:
+    """A tool call's arguments as the API carries them: JSON text.
+
+    Arguments the model wrote that were not JSON are kept as written.
+
+    >>> _arguments_text({'module': 'ert'}), _arguments_text('{"module": '), _arguments_text(None)
+    ('{"module": "ert"}', '{"module": ', '{}')
+    """
+    return arguments if isinstance(arguments, str) else json.dumps(arguments or {})
+
+
 def to_openai_messages(system: str, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = [{"role": "system", "content": system}]
     for m in messages:
@@ -209,7 +220,7 @@ def to_openai_messages(system: str, messages: List[Dict[str, Any]]) -> List[Dict
             if calls:
                 item["tool_calls"] = [
                     {"id": c["id"], "type": "function",
-                     "function": {"name": c["name"], "arguments": json.dumps(c.get("arguments") or {})}}
+                     "function": {"name": c["name"], "arguments": _arguments_text(c.get("arguments"))}}
                     for c in calls
                 ]
             out.append(item)
@@ -234,7 +245,7 @@ def to_responses_input(messages):
                 items.append({'role': 'assistant', 'content': message['content']})
             for call in message.get('tool_calls') or []:
                 items.append({'type': 'function_call', 'call_id': call['id'],
-                              'name': call['name'], 'arguments': json.dumps(call.get('arguments') or {})})
+                              'name': call['name'], 'arguments': _arguments_text(call.get('arguments'))})
         elif role == 'user':
             content = []
             for block in as_blocks(message.get('content', '')):
@@ -319,8 +330,9 @@ def to_anthropic_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]
                 if m.get("content"):
                     blocks.append({"type": "text", "text": m["content"]})
                 for c in (m.get("tool_calls") or []):
+                    args = c.get("arguments")
                     blocks.append({"type": "tool_use", "id": c["id"], "name": c["name"],
-                                   "input": c.get("arguments") or {}})
+                                   "input": args if isinstance(args, dict) else {}})
             # The Messages API rejects an assistant turn with no content, or with
             # a text block that is empty, anywhere but last - and once one is in
             # the history every later call fails with a 400. Such a turn says
@@ -493,10 +505,12 @@ class OpenAIProvider(Provider):
         message = response.choices[0].message
         out: Dict[str, Any] = {"content": message.content, "tool_calls": []}
         for tc in (getattr(message, "tool_calls", None) or []):
+            # Arguments that are not a JSON object stay as the model wrote them,
+            # so the caller can send the call back rather than run it with none.
             try:
                 args = json.loads(tc.function.arguments or "{}")
             except Exception:
-                args = {}
+                args = str(tc.function.arguments)
             out["tool_calls"].append({"id": tc.id, "name": tc.function.name, "arguments": args})
         return out
 
@@ -608,13 +622,13 @@ PROVIDER_META: Dict[str, Dict[str, Any]] = {
         "label": "Codex CLI (ChatGPT login)", "env_key": "",
         "model_env": "PHGX_CODEX_MODEL", "models": ["default"],
         "default_model": "default", "needs_base_url": False, "vision": False,
-        "login_help": "Setup is automatic. Click Log In when prompted. Subscription limits apply.",
+        "login_help": "Setup is automatic. Click Log in when prompted. Subscription limits apply.",
     },
     "claude_code": {
         "label": "Claude Code CLI (local login)", "env_key": "",
         "model_env": "PHGX_CLAUDE_MODEL", "models": ["default", "sonnet", "opus", "haiku"],
         "default_model": "default", "needs_base_url": False, "vision": False,
-        "login_help": "Setup is automatic. Click Log In when prompted. Subscription limits apply.",
+        "login_help": "Setup is automatic. Click Log in when prompted. Subscription limits apply.",
     },
     "openai": {
         "label": "OpenAI",

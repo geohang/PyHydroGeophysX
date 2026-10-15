@@ -24,8 +24,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from . import catalog  # noqa: F401 - importing registers every tool
 from .catalog import summarise_run
 from .context import RunContext
-from .controller import (DEFAULT_FINISH, DEFAULT_MAX_STEPS, PROCEED, SKIP, STEP_LIMIT,
-                         STOP, STOPPED, route_ahead, run_controller)
+from .controller import (BROKE, DEFAULT_FINISH, DEFAULT_MAX_STEPS, FLEXIBLE_MAX_STEPS, PROCEED, SKIP,
+                         STEP_LIMIT, STOP, STOPPED, route_ahead, run_controller)
 from .modes import announcement, auto, completion
 
 #: Set to 1 to run the pre-controller implementation instead.
@@ -36,8 +36,22 @@ _ERT_KEYS = ("time_lapse_files", "timelapse_files", "data_file", "ert_file")
 
 #: What else a request can state that a run takes, when the caller did not.
 _STATED_KEYS = ("electrode_file", "seismic_file", "raw_seismic_file", "tdem_file",
-                "mt_files", "gravmag_file", "gravmag_kind", "instrument",
-                "petrophysical_params")
+                "mt_files", "gravmag_file", "gravmag_kind", "gpr_file", "gpr_velocity",
+                "gpr_permittivity", "instrument", "petrophysical_params")
+
+#: Of those, the ones that are a reading of the request's meaning rather than a
+#: file it names. Once a model has read the request (``request_read_by``), its
+#: reading stands: the word rules took "not a Syscal" for a Syscal, and the file
+#: header names the instrument better than either. A radar velocity the model
+#: did not keep is one the request does not give for this line.
+_MEANING_KEYS = ("gravmag_kind", "instrument", "petrophysical_params", "gpr_velocity",
+                 "gpr_permittivity")
+
+#: The method a stated file is data for, as the model's reading of the request
+#: names it (``request_methods``). A file for a method the model ruled out is
+#: not taken: the request is about something else.
+_FILE_METHOD = {"tdem_file": "tdem", "seismic_file": "seismic",
+                "raw_seismic_file": "seismic", "gpr_file": "gpr"}
 
 
 def adopt_request_inputs(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
@@ -79,6 +93,18 @@ def adopt_request_inputs(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[s
     []
     >>> adopt_request_inputs({'data_file': 'p.tiw', 'tdem_file': 'p.tiw'})[0]
     {'tdem_file': 'p.tiw'}
+
+    Only the user's words count, and not data for a method the model ruled out:
+
+    >>> request = ('Invert a.ohm and estimate water content.\\n\\nAttached local files (use '
+    ...            'only for their listed roles):\\nchat_reference: notes.txt\\n\\nTDEM '
+    ...            'soundings are read from sounding.csv.')
+    >>> 'tdem_file' in adopt_request_inputs({'user_request': request})[0]
+    False
+    >>> read = {'user_request': 'Invert a.ohm; the TDEM file s.csv is from another site.',
+    ...         'request_read_by': 'model', 'request_methods': {'tdem': False}}
+    >>> 'tdem_file' in adopt_request_inputs(read)[0]
+    False
     """
     from ..context_input_agent import ContextInputAgent, _same_file, drop_borrowed_ert_files
 
@@ -90,7 +116,12 @@ def adopt_request_inputs(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[s
 
     listed = config.get("time_lapse_files") or config.get("timelapse_files") or []
     given = [str(f) for f in (config.get("data_file"), config.get("ert_file"), *listed) if f]
-    stated = ContextInputAgent(api_key=None).request_inputs(request, known_files=given)
+    model_read = config.get("request_read_by") == "model"
+    # The model's reading of the methods decides what an ambiguous file is (a
+    # SEG-Y line: GPR or seismic); the words decide only without one.
+    stated = ContextInputAgent(api_key=None).request_inputs(
+        request, known_files=given,
+        methods=config.get("request_methods") if model_read else None)
     notes: List[str] = []
     named = stated.get("time_lapse_files") or (
         [stated["data_file"]] if stated.get("data_file") else [])
@@ -109,8 +140,23 @@ def adopt_request_inputs(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[s
         if unused:
             notes.append(f"The request names {', '.join(map(str, unused))}, but the run uses "
                          f"the configuration's ERT data ({', '.join(given)}).")
+    ruled_out = {name for name, on in (config.get("request_methods") or {}).items()
+                 if on is False} if model_read else set()
+    used = [str(v) for key, value in config.items() if key.endswith(("_file", "_files"))
+            for v in (value if isinstance(value, (list, tuple)) else [value]) if v]
     for key in _STATED_KEYS:
         if not stated.get(key):
+            continue
+        if model_read and key in _MEANING_KEYS:
+            continue
+        if _FILE_METHOD.get(key) in ruled_out:
+            notes.append(f"The request mentions {stated[key]}, but the model read it as not "
+                         f"asking for {_FILE_METHOD[key].upper()}, so the run leaves it out.")
+            continue
+        if model_read and key.endswith("_file") and any(
+                _same_file(str(stated[key]), u) for u in used):
+            # The model already gave this file a role; a word rule giving it
+            # another would take it away from that one.
             continue
         if not resolved.get(key):
             resolved[key] = stated[key]
@@ -144,13 +190,32 @@ def _make_ask(api_key: Optional[str], model: Optional[str], provider: str
     agent = _Controller("workflow_controller", api_key=api_key, model=model,
                         llm_provider=provider)
 
-    def ask(prompt: str, on_text: Optional[Callable[[str], None]] = None) -> str:
+    def ask(prompt: str, on_text: Optional[Callable[[str], None]] = None,
+            max_tokens: Optional[int] = None) -> str:
         # Low temperature: this is a dispatch decision, not a piece of writing,
         # and a creative answer here means a tool name that does not exist.
-        # ``on_text`` streams the reply as it is written (see `drive`).
-        return agent.query_llm(prompt, temperature=0.0, max_tokens=300, on_text=on_text)
+        # ``on_text`` streams the reply as it is written (see `drive`). No cap
+        # on the reply by default: a decision carries its reasoning and plan, a
+        # proposal its code, and a reply cut short is an unusable one.
+        return agent.query_llm(prompt, temperature=0.0, max_tokens=max_tokens,
+                               on_text=on_text)
 
     return ask
+
+
+def _plan_of(reply: Any) -> List[str]:
+    """The "plan" list of a controller reply, or [] when it has none.
+
+    >>> _plan_of('{"why": "w", "plan": ["evaluate", "convert"], "tool": "x"}')
+    ['evaluate', 'convert']
+    >>> _plan_of('not json')
+    []
+    """
+    from ..._internal.utils import parse_json_object
+
+    answer = parse_json_object(str(reply or ""))
+    plan = answer.get("plan") if isinstance(answer, dict) else None
+    return [str(p)[:80] for p in plan[:6] if str(p).strip()] if isinstance(plan, list) else []
 
 
 def _partial_field(text: str, key: str) -> str:
@@ -268,7 +333,8 @@ def drive(ctx: RunContext, *, tools: Optional[Dict[str, Any]] = None,
           on_step: Optional[Callable[..., Optional[str]]] = None,
           on_event: Optional[Callable[[Dict[str, Any]], None]] = None,
           prompt: Optional[str] = None, finish: str = DEFAULT_FINISH,
-          recovery: bool = True, max_steps: int = DEFAULT_MAX_STEPS) -> RunContext:
+          recovery: bool = True, max_steps: int = DEFAULT_MAX_STEPS,
+          flexible: bool = False) -> RunContext:
     """Run the controller over ``tools``, telling the caller about every step.
 
     This is the agent loop any assistant runs on (see
@@ -301,10 +367,11 @@ def drive(ctx: RunContext, *, tools: Optional[Dict[str, Any]] = None,
         before the first step and after each one. While the model decides,
         ``phase="thought"`` events carry its reasoning as it writes it, when
         ``ask`` takes ``on_text`` (as :func:`make_ask`'s does).
-    prompt, finish, recovery, max_steps
+    prompt, finish, recovery, max_steps, flexible
         Passed to :func:`~.controller.run_controller`: the decision prompt, the
         artifact that has to exist before the run may finish, whether a failed
-        step may be retried with changed settings, and the step limit.
+        step may be retried with changed settings, the step limit, and whether
+        the model may step off the standard route with the user's agreement.
 
     Returns
     -------
@@ -315,7 +382,8 @@ def drive(ctx: RunContext, *, tools: Optional[Dict[str, Any]] = None,
     ------
     None
         Tool failures are recorded as steps; display callbacks that raise are
-        ignored.
+        ignored; an error in the controller's own code becomes a note and the
+        run resumes (:data:`MAX_LOOP_ERRORS`).
 
     Examples
     --------
@@ -391,6 +459,12 @@ def drive(ctx: RunContext, *, tools: Optional[Dict[str, Any]] = None,
 
         reply = ask(question, on_text=on_text)
         why = _partial_field(reply or "", "why")
+        # The plan the model has in mind follows its reasoning, once the reply
+        # is whole: the steps it means to take next, so the user sees where
+        # the run is heading and not only the step it is on.
+        plan = _plan_of(reply)
+        if plan:
+            why = (why + "\n" if why else "") + "Next: " + " → ".join(plan)
         if why and why != sent["text"]:
             emit({"phase": "thought", "text": why})
         return reply
@@ -438,11 +512,76 @@ def drive(ctx: RunContext, *, tools: Optional[Dict[str, Any]] = None,
     # the app follows along either way.
     show_route(ctx)
     streamed = thinking if (ask is not None and on_event is not None and _streams(ask)) else ask
-    run_controller(ctx, ask=streamed, max_steps=max_steps, tools=tools,
-                   on_step=announced(on_step, announce) if on_step else auto(announce),
-                   on_result=report_result, recovery=recovery, prompt=prompt,
-                   finish=finish)
+    hook = announced(on_step, announce) if on_step else auto(announce)
+    # A tool that raises is a failed step (``invoke``), which the model
+    # diagnoses. An error in the loop's own code - a proposal, a look, a
+    # recovery, a studio page - used to end the whole run with a traceback.
+    # Now the step it interrupted is recorded as failed, the error becomes a
+    # note the model reads at its next decision, and the loop picks the run up
+    # where it stood: the run's state is all in ``ctx``. The second time it
+    # resumes on the standard route, where less of that code runs; a third
+    # error ends the loop with what the run has, and says so. A step the error
+    # cut off was not the step's own failure, so it is offered once more.
+    offered_again = set()
+    for crashes in range(MAX_LOOP_ERRORS + 1):
+        taken = len(ctx.steps)
+        try:
+            run_controller(ctx, ask=streamed, max_steps=max_steps, tools=tools,
+                           on_step=hook, on_result=report_result, recovery=recovery,
+                           prompt=prompt, finish=finish, flexible=flexible and crashes < 2,
+                           approves_steps=on_step is not None)
+            break
+        except Exception as exc:  # noqa: BLE001 - see above
+            error = f"{type(exc).__name__}: {str(exc)[:300]}"
+            interrupted = getattr(ctx, "_open", None)
+            again = ""
+            if interrupted is not None:
+                ctx.finish(status="failed", error=error)
+                try:
+                    report_result(ctx, interrupted)
+                except Exception:  # noqa: BLE001 - a display must not stop a run
+                    pass
+                if interrupted.tool not in offered_again:
+                    offered_again.add(interrupted.tool)
+                    ctx.reopen([interrupted.tool])
+                    again = " It is offered again."
+            max_steps = max(1, max_steps - max(1, len(ctx.steps) - taken))
+            if crashes >= MAX_LOOP_ERRORS:
+                ctx.note(f"The run stopped choosing steps after its controller failed "
+                         f"{crashes + 1} times (last in {_where(exc)}: {error}); what it had "
+                         "done by then is kept.")
+                ctx.ended = BROKE
+                break
+            ctx.note(f"The run's controller failed in {_where(exc)} ({error})"
+                     + (f" while running {interrupted.description or interrupted.tool}"
+                        if interrupted is not None else "")
+                     + "; the run carries on from where it stood"
+                     + (", along its standard route." if crashes >= 1 else ".") + again)
     return ctx
+
+
+#: How many times :func:`drive` picks a run up after an error in the loop's own
+#: code before it stops choosing steps.
+MAX_LOOP_ERRORS = 2
+
+
+def _where(exc: BaseException) -> str:
+    """The function an exception came from, as ``module.function``.
+
+    >>> def propose():
+    ...     return {}['x']
+    >>> try:
+    ...     propose()
+    ... except KeyError as exc:
+    ...     _where(exc).rsplit('.', 1)[-1]
+    'propose'
+    """
+    import traceback
+
+    frames = traceback.extract_tb(exc.__traceback__)
+    if not frames:
+        return "the run's controller"
+    return f"{Path(frames[-1].filename).stem}.{frames[-1].name}"
 
 
 def run_workflow(workflow_config: Dict[str, Any], api_key: Optional[str],
@@ -495,10 +634,10 @@ def run_workflow(workflow_config: Dict[str, Any], api_key: Optional[str],
 
     Raises
     ------
-    ValueError
-        Only when steps ran and none of them succeeded. Individual tool
-        failures are recorded and reported rather than raised, so a run that
-        got most of the way still delivers what it has.
+    None
+        Tool failures are recorded and reported rather than raised, so a run
+        that got most of the way still delivers what it has; one where no step
+        succeeded comes back ``"incomplete"`` with every failure in its warnings.
 
     Examples
     --------
@@ -512,8 +651,15 @@ def run_workflow(workflow_config: Dict[str, Any], api_key: Optional[str],
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
 
-    # The files a request names are run even when no parser read it first.
-    config, adopted = adopt_request_inputs(workflow_config)
+    # The files a request names are run even when no parser read it first. If
+    # reading them fails, the run starts from the configuration as given and
+    # the controller is told.
+    try:
+        config, adopted = adopt_request_inputs(workflow_config)
+    except Exception as exc:  # noqa: BLE001 - a note, not a run that never starts
+        config = dict(workflow_config)
+        adopted = [f"Reading the files the request names failed ({type(exc).__name__}: "
+                   f"{str(exc)[:300]}); the run goes on with the inputs it was given."]
     ctx = RunContext(
         goal=str(config.get("user_request") or ""),
         config=config,
@@ -521,13 +667,26 @@ def run_workflow(workflow_config: Dict[str, Any], api_key: Optional[str],
         settings={"api_key": api_key, "model": llm_model,
                   "llm_provider": llm_provider,
                   "progress_callback": progress_callback,
-                  "ask_user": ask_user},
+                  "ask_user": ask_user, "assistant_name": "AQUAH"},
     )
-    for note in adopted:
+    # What the caller settled about the inputs before the run (a file used in
+    # another role, one set aside) is in the record the controller reads, so it
+    # can act on it - carry on, ask, or propose a script.
+    for note in [*adopted, *list(config.pop("input_notes", None) or [])]:
         ctx.note(note)
+    try:
+        ask = _make_ask(api_key, llm_model, llm_provider)
+    except Exception as exc:  # noqa: BLE001 - the standard route needs no model
+        ask = None
+        ctx.note(f"The model could not be set up ({type(exc).__name__}: {str(exc)[:300]}); "
+                 "the run follows its standard route without it.")
 
-    drive(ctx, ask=_make_ask(api_key, llm_model, llm_provider),
-          progress_callback=progress_callback, on_step=on_step, on_event=on_event)
+    # Flexible: the standard route by default, and with a model the latitude
+    # to look, re-run, add a step or write a script - each change of course
+    # put to the user first (runtime.toolbox).
+    drive(ctx, ask=ask,
+          progress_callback=progress_callback, on_step=on_step, on_event=on_event,
+          flexible=True, max_steps=FLEXIBLE_MAX_STEPS)
 
     failed = [s for s in ctx.steps if s.status == "failed"]
     # A step that failed is reported, not hidden: the request may have named the
@@ -541,18 +700,11 @@ def run_workflow(workflow_config: Dict[str, Any], api_key: Optional[str],
         ctx.note(f"A choice was put to the user: {asked['question']} "
                  f"Answered '{asked['answer']}'.")
 
-    # Raise only when nothing at all worked. The previous condition was
-    # `not ctx.has(a, b, c, d)`, and `has` requires *every* named artifact - so
-    # it was true whenever any one was missing, which is nearly always. One
-    # failed step therefore aborted runs that had produced everything else,
-    # which is the opposite of what the loop exists to do: a seismic file with
-    # a malformed geometry header killed a run that had gone on to invert the
-    # ERT surveys successfully.
-    if ctx.steps and not any(step.status == "ok" for step in ctx.steps):
-        raise ValueError(f"The workflow produced no result. {failed[0].tool} failed: "
-                         f"{failed[0].error}" if failed else
-                         "The workflow produced no result.")
-
+    # Nothing is raised, even when no step succeeded: the run comes back
+    # "incomplete" with each failure and what the model made of it among the
+    # warnings, and the processing audit is still written. A ValueError here
+    # ("The workflow produced no result") handed the caller only the first
+    # failure, and the assistant nothing to work from.
     results = ctx.results()
     # The callers read the inversion's own keys off the top level, as they did
     # when the pipeline returned that dictionary directly.
@@ -634,6 +786,8 @@ def _incomplete_because(ctx: RunContext, results: Dict[str, Any]) -> List[str]:
                        "report was written.")
     elif not reported and ctx.ended == STEP_LIMIT:
         reasons.append("The run used all of its steps before its report was written.")
+    elif not reported and ctx.ended == BROKE:
+        reasons.append("The run's controller failed repeatedly before the report was written.")
     # The latest failure of each tool no later attempt recovered.
     broken: Dict[str, Any] = {}
     for step in ctx.steps:

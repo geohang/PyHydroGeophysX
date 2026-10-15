@@ -68,6 +68,16 @@ counted in ``stats['n_masked']``.
    :undoc-members:
    :show-inheritance:
 
+Pore-fluid properties
+---------------------
+
+For units, worked examples and calibration limits, see :doc:`/methods/petrophysics`.
+
+.. automodule:: PyHydroGeophysX.petrophysics.fluid_properties
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

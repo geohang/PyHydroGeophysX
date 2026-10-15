@@ -64,6 +64,19 @@ def _install_excepthook(show_dialog: bool) -> None:
     def _hook(exc_type, exc_value, exc_tb):
         text = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
         _write_diagnostic(text)
+        # The assistant hears of it too, to work out what went wrong with the
+        # user (qt_apps.agent.controller.StudioController.watch_page_errors).
+        try:
+            from pathlib import Path
+
+            from PyHydroGeophysX.qt_apps.modules.base import report_error
+
+            frames = traceback.extract_tb(exc_tb)
+            where = (f" in {Path(frames[-1].filename).name}:{frames[-1].lineno} "
+                     f"({frames[-1].name})" if frames else "")
+            report_error(None, f"Unexpected error{where}: {exc_type.__name__}: {exc_value}")
+        except Exception:
+            pass
         if show_dialog:
             try:
                 from PySide6.QtWidgets import QApplication, QMessageBox
@@ -118,6 +131,11 @@ def _parse_args(argv: Optional[Sequence[str]]) -> argparse.Namespace:
         action="store_true",
         help="Construct the window and exit (headless smoke test).",
     )
+    parser.add_argument(
+        "--maximized",
+        action="store_true",
+        help="Open the window maximized, as the cloud desktop starts it.",
+    )
     return parser.parse_args(argv)
 
 
@@ -154,7 +172,10 @@ def main(argv: Optional[Sequence[str]] = None, *, assistant: Optional[str] = Non
     window.setWindowIcon(theme.window_icon())
     if not getattr(window, "_geometry_restored", False):
         window.resize(1500, 900)
-    window.show()
+    if args.maximized:
+        window.showMaximized()
+    else:
+        window.show()
     _write_diagnostic('Studio window shown\n')
 
     if args.em_data:

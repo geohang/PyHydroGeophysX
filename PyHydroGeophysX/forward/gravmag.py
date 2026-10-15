@@ -33,12 +33,16 @@ def gravity_sphere(xobs: np.ndarray, yobs: np.ndarray, body: Dict[str, Any]) -> 
 
 
 def gravity_prism(xobs: np.ndarray, yobs: np.ndarray, body: Dict[str, Any]) -> np.ndarray:
-    """Vertical gravity (mGal) of a right rectangular prism (Nagy 1966). z down."""
+    """Vertical gravity (mGal) of a right rectangular prism (Nagy 1966). z down.
+
+    Observation x/y coordinates follow NumPy broadcasting, including a scalar
+    coordinate shared by every station. The result has their broadcast shape.
+    """
     drho = float(body.get("density_contrast", 300.0))
     x1 = float(body["x1"]); x2 = float(body["x2"])
     y1 = float(body["y1"]); y2 = float(body["y2"])
     z1 = float(body["z1"]); z2 = float(body["z2"])
-    xo = np.atleast_1d(np.asarray(xobs, float)); yo = np.atleast_1d(np.asarray(yobs, float))
+    xo, yo = np.broadcast_arrays(np.asarray(xobs, float), np.asarray(yobs, float))
     out = np.zeros(xo.shape, dtype=float)
     for k, (xq, yq) in enumerate(zip(xo.ravel(), yo.ravel())):
         X = [x1 - xq, x2 - xq]; Y = [y1 - yq, y2 - yq]; Z = [z1, z2]
@@ -55,7 +59,7 @@ def gravity_prism(xobs: np.ndarray, yobs: np.ndarray, body: Dict[str, Any]) -> n
                             - zk * np.arctan2(xi * yj, zk * r + 1e-30))
                     total += mu * term
         out.ravel()[k] = _G * drho * total * _MGAL
-    return out.reshape(np.asarray(xobs, float).shape)
+    return out
 
 
 def magnetic_dipole(xobs: np.ndarray, yobs: np.ndarray, body: Dict[str, Any],
@@ -72,8 +76,9 @@ def magnetic_dipole(xobs: np.ndarray, yobs: np.ndarray, body: Dict[str, Any],
     H0 = (B0_nt * 1e-9) / (4.0 * np.pi * _MU0_4PI)   # A/m
     moment = chi * H0 * (4.0 / 3.0) * np.pi * R ** 3  # A*m^2
     m_vec = moment * bhat
-    dx = np.asarray(xobs, float) - x0
-    dy = np.asarray(yobs, float) - y0
+    xo, yo = np.broadcast_arrays(np.asarray(xobs, float), np.asarray(yobs, float))
+    dx = xo - x0
+    dy = yo - y0
     dz = -z0 * np.ones_like(dx)   # obs above the body (body at +z down)
     r = np.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
     rhat = np.stack([dx, dy, dz], axis=-1) / np.clip(r[..., None], 1e-12, None)

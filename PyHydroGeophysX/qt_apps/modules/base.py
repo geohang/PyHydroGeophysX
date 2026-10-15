@@ -37,6 +37,35 @@ GENERIC_ACTIVITY = "Working…"
 #: A count such as "12/418" that a progress line already carries.
 _COUNT = re.compile(r"\d+\s*/\s*\d+")
 
+#: Who is told of every error the studio's pages report (:func:`watch_errors`).
+_ERROR_WATCHERS: List[Any] = []
+
+
+def watch_errors(callback: Callable[[Any, str], None]) -> None:
+    """Tell ``callback(page, message)`` of every error a page reports.
+
+    An error line a page logs, and an exception that escaped one of its slots
+    (``page`` None: the launcher's excepthook does not know which). A bound
+    method is held weakly, so a watcher that is gone is simply dropped.
+    """
+    import weakref
+
+    ref = weakref.WeakMethod(callback) if hasattr(callback, "__self__") else (lambda: callback)
+    _ERROR_WATCHERS.append(ref)
+
+
+def report_error(page: Any, message: Any) -> None:
+    """Tell the :func:`watch_errors` watchers of an error; never raises."""
+    for ref in list(_ERROR_WATCHERS):
+        callback = ref()
+        if callback is None:
+            _ERROR_WATCHERS.remove(ref)
+            continue
+        try:
+            callback(page, str(message))
+        except Exception:  # noqa: BLE001 - a watcher must not break the page
+            pass
+
 
 def _reports_progress(worker: Any) -> bool:
     """Whether ``worker`` has a ``progressed(int, int, str)`` signal.
@@ -344,8 +373,9 @@ def _assistant_name() -> str:
 def _split_code(prompt: str) -> Tuple[str, str]:
     """Separate a question's words from the code it is asking about.
 
-    A question that carries source says everything up to the first ``def`` and
-    then the source. Splitting here rather than sending two fields keeps the
+    A question that carries source says everything up to the source's first
+    line - an ``import``, ``from`` or ``def`` at the start of a line - and then
+    the source. Splitting here rather than sending two fields keeps the
     question one string across the process boundary, which is what the desktop
     and the Streamlit app both receive.
 
@@ -358,14 +388,16 @@ def _split_code(prompt: str) -> Tuple[str, str]:
     >>> print(code)
     def adapt(text):
         return []
+    >>> _split_code(chr(10).join(['Read it:', 'import numpy as np', 'def main(i, o):']))[0]
+    'Read it:'
     >>> _split_code('Which origin?')
     ('Which origin?', '')
     """
     text = str(prompt or "")
-    marker = text.find("def ")
-    if marker < 0:
+    found = re.search(r"(?m)^(?:def |import |from \w)", text)
+    if found is None:
         return text.strip(), ""
-    return text[:marker].strip(), text[marker:].strip()
+    return text[:found.start()].strip(), text[found.start():].strip()
 
 
 class _Thumbnail(QLabel):
@@ -428,6 +460,8 @@ class BaseModule(QWidget):
         self._turn_log: deque = deque(maxlen=200)
         self._turn_log_ends = False
         self._run_log_flush_due = False
+        #: ``(message, level)`` callables told every line the page logs.
+        self.log_listeners: List[Callable[[str, str], None]] = []
 
     # -- live workflow activity ---------------------------------------------
     def show_run_activity(self, step: str, details: str = "",
@@ -509,6 +543,14 @@ class BaseModule(QWidget):
         except Exception:
             pass
         self._keep_log_line(message, level)
+        # Whoever follows the page's work - the assistant, for a job it started.
+        for listener in list(getattr(self, "log_listeners", ())):
+            try:
+                listener(message, level)
+            except Exception:  # noqa: BLE001 - a listener must not break the page
+                pass
+        if str(level).lower() in ("error", "critical"):
+            report_error(self, message)
 
     def report_result(self, data: Dict[str, Any]) -> None:
         self.state.update_module_result(self.module_key, data)

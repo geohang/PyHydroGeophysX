@@ -224,11 +224,17 @@ class TransferFunction:
     def rotated(self, angle: Any) -> "TransferFunction":
         """The site with its x axis at azimuth ``angle`` (degrees from north, clockwise).
 
-        ``angle`` is one value or one per frequency. With a full covariance the
-        errors are recomputed from the rotated covariance; otherwise each
-        rotated variance is ``sum (R_ik R_jl)^2 var_kl`` from the errors in the
-        frame the site was read in - which assumes the elements independent, an
-        approximation that does not depend on the path the rotations took.
+        ``angle`` is one value or one per frequency. A missing element (Zxx and
+        Zyy of a site given as Zxy and Zyx only) leaves missing only what it
+        enters: a rotation by 0 or 90 degrees keeps the rest.
+
+        The errors are recomputed from the rotated covariance when the site's
+        errors are the covariance's (EMTF XML, Z-files); otherwise - errors of
+        their own, such as the jackknife's - each rotated variance is
+        ``sum (R_ik R_jl)^2 var_kl`` from the errors in the frame the site was
+        read in. That assumes the elements independent, an approximation that
+        does not depend on the path the rotations took and leaves the errors as
+        they were at the frame they came in.
         """
         target = _as_rotation(angle, self.n_frequencies)
         R = rotation_matrix(target - self.rotation)            # (n, 2, 2)
@@ -236,30 +242,32 @@ class TransferFunction:
         out = self.copy()
         out.rotation = target
         if self.z is not None:
-            out.z = R @ self.z @ RT
+            out.z = _rotate_values(self.z, R, R)
         if self.tipper is not None:
-            out.tipper = self.tipper @ RT
+            out.tipper = _rotate_values(self.tipper, np.ones((R.shape[0], 1, 1)), R)
         if self.inverse_signal_power is not None:
             out.inverse_signal_power = R @ self.inverse_signal_power @ RT
         if self.z_residual_covariance is not None:
             out.z_residual_covariance = R @ self.z_residual_covariance @ RT
         covariance = out.inverse_signal_power is not None
-        # Without a covariance the errors are always rotated from the frame the
-        # site was read in, so rotating there and back returns them unchanged;
-        # chained, each independent-variance rotation would widen them.
+        z_cov = covariance and self.z is not None and _same_errors(
+            self.z_err, self._errors_from_covariance(self.z_residual_covariance))
+        t_cov = covariance and self.tipper is not None and _same_errors(
+            self.tipper_err, self._errors_from_covariance(self.tipper_residual_covariance))
+        # Otherwise the errors are always rotated from the frame the site was
+        # read in, so rotating there and back returns them unchanged; chained,
+        # each independent-variance rotation would widen them.
         base_rotation, base_z_err, base_t_err = self.metadata.get(
             "_error_frame", (self.rotation, self.z_err, self.tipper_err))
         R0 = rotation_matrix(target - base_rotation)
-        if not covariance:
+        if not (z_cov and (t_cov or self.tipper is None)):
             out.metadata["_error_frame"] = (base_rotation, base_z_err, base_t_err)
         if self.z is not None:
-            from_cov = out._errors_from_covariance(out.z_residual_covariance) if covariance else None
-            out.z_err = from_cov if from_cov is not None else _rotate_variance(base_z_err, R0, R0)
+            out.z_err = (out._errors_from_covariance(out.z_residual_covariance) if z_cov
+                         else _rotate_variance(base_z_err, R0, R0))
         if self.tipper is not None:
-            from_cov = (out._errors_from_covariance(out.tipper_residual_covariance)
-                        if covariance else None)
-            out.tipper_err = (from_cov if from_cov is not None else _rotate_variance(
-                base_t_err, np.ones((R0.shape[0], 1, 1)), R0))
+            out.tipper_err = (out._errors_from_covariance(out.tipper_residual_covariance) if t_cov
+                              else _rotate_variance(base_t_err, np.ones((R0.shape[0], 1, 1)), R0))
         return out
 
     def conjugated(self) -> "TransferFunction":
@@ -293,6 +301,28 @@ def _finite_or_none(value: float) -> Optional[float]:
     return float(value) if np.isfinite(value) else None
 
 
+def _rotate_values(value: np.ndarray, left: np.ndarray, right: np.ndarray) -> np.ndarray:
+    """``sum L_ik R_jl v_kl``: missing only where a missing element enters with a weight."""
+    value = np.asarray(value)
+    missing = ~np.isfinite(value)
+    rotated = np.einsum("nik,njl,nkl->nij", left, right, np.where(missing, 0.0, value))
+    if missing.any():
+        reach = np.einsum("nik,njl,nkl->nij", np.abs(left), np.abs(right), missing.astype(float)) > 1e-12
+        rotated[reach] = np.nan
+    return rotated
+
+
+def _same_errors(err: Optional[np.ndarray], implied: Optional[np.ndarray]) -> bool:
+    """Whether a site's errors are those its covariance gives (no errors of their own)."""
+    if implied is None:
+        return False
+    if err is None:
+        return True
+    err, implied = np.asarray(err, dtype=float), np.asarray(implied, dtype=float)
+    both = np.isfinite(err) & np.isfinite(implied)
+    return bool(np.allclose(err[both], implied[both], rtol=1e-3, atol=0.0))
+
+
 def _rotate_variance(err: Optional[np.ndarray], left: np.ndarray, right: np.ndarray):
     """Rotate standard errors as independent variances: ``sum (L_ik R_jl)^2 var_kl``."""
     if err is None:
@@ -304,7 +334,7 @@ def _rotate_variance(err: Optional[np.ndarray], left: np.ndarray, right: np.ndar
     rotated = np.sqrt(rotated)
     if missing.any():
         # An element built from a missing one is missing too.
-        reach = np.einsum("nik,njl,nkl->nij", left ** 2, right ** 2, missing.astype(float)) > 0
+        reach = np.einsum("nik,njl,nkl->nij", left ** 2, right ** 2, missing.astype(float)) > 1e-12
         rotated[reach] = np.nan
     return rotated
 

@@ -27,6 +27,7 @@ from .._chi2 import chi2_history, chi2_summary
 from .._intent import climate_blocker, wants_climate, wants_spatial_map, wants_water_content
 from .._geocode import coords_from_config, geocode_place
 from .._method import IMPLEMENTED_SCHEME
+from . import studio
 from .context import RunContext
 from .tools import TOOLS, Tool, register
 
@@ -412,6 +413,137 @@ register(Tool(
 
 
 # ---------------------------------------------------------------------------
+# 1b. an inversion the user already ran in the studio
+# ---------------------------------------------------------------------------
+#: Config key naming the folder the studio wrote a finished ERT inversion to
+#: (``handover.json`` beside the model bundle) when a step-by-step task was
+#: handed to an automatic run. The run carries on from that model.
+STUDIO_INVERSION_KEY = "studio_inversion_dir"
+
+
+def _studio_inversion_pending(ctx: RunContext) -> bool:
+    """True while a handed-over inversion has not been tried yet."""
+    return bool(ctx.config.get(STUDIO_INVERSION_KEY)) and not ctx.attempted("load_studio_inversion")
+
+
+def _load_studio_inversion(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    import json
+
+    from ...core.mesh_serialization import read_bms
+
+    folder = Path(str(ctx.config[STUDIO_INVERSION_KEY]))
+    info = json.loads((folder / "handover.json").read_text(encoding="utf-8"))
+    mesh = read_bms(folder / "mesh_res.bms")
+    models = np.load(folder / "resmodel.npy")
+    models = models.reshape(-1, 1) if models.ndim == 1 else models
+    if models.shape[0] != mesh.cellCount():
+        raise ValueError(f"The studio model has {models.shape[0]} values for a mesh of "
+                         f"{mesh.cellCount()} cells.")
+    surveys = len(ctx.get("ert_data") or [])
+    if surveys and surveys != models.shape[1]:
+        raise ValueError(f"The studio inversion holds {models.shape[1]} model(s) but the "
+                         f"run loaded {surveys} survey(s).")
+    coverage_file = folder / "all_coverage.npy"
+    coverage = np.load(coverage_file) if coverage_file.is_file() else None
+    settings = dict(info.get("settings") or {})
+    lam = info.get("lambda")
+    params = {key: value for key, value in (("lambda", lam),
+              ("max_iterations", settings.get("max_iterations"))) if value is not None}
+    history = [float(c) for c in (info.get("chi2_history") or []) if c is not None]
+    chi2 = info.get("chi2")
+    results: Dict[str, Any] = {
+        "status": "success", "source": "studio", "mesh": mesh, "coverage": coverage,
+        "chi2": chi2, "chi2_values": history or ([chi2] if chi2 is not None else None),
+        "iterations": info.get("iterations"), "lambda": lam,
+        "engine": info.get("engine"), "inversion_params": params,
+        "processing": {"inversion_params": params}, "output_dir": str(folder),
+    }
+    if models.shape[1] > 1:
+        results.update({
+            "inversion_mode": "time-lapse", "final_models": models,
+            "time_lapse_models": [models[:, k] for k in range(models.shape[1])],
+            "baseline_model": models[:, 0], "n_timesteps": int(models.shape[1]),
+            "timesteps": info.get("time_labels"), "survey_timing": info.get("survey_timing"),
+            "temperature_correction": info.get("temperature_correction"),
+            "max_iterations": settings.get("max_iterations"),
+        })
+        alpha = settings.get("alpha", settings.get("temporal_regularization"))
+        if alpha is not None:
+            results["temporal_regularization"] = alpha
+    else:
+        results.update({"inversion_mode": "standard", "resistivity_model": models[:, 0]})
+    bundle = export_model_bundle(ctx, results)
+    fit = f" chi-squared {float(chi2):.3g}" if isinstance(chi2, (int, float)) else ""
+    engine = f" ({info['engine']})" if info.get("engine") else ""
+    ctx.note(f"The inversion was run in the studio{engine} before this run took over; "
+             "the run evaluates and interprets that model rather than inverting again.")
+    return (f"Took over the inversion finished in the studio{engine}: {models.shape[1]} "
+            f"model(s) over {models.shape[0]} cells,{fit or ' fit not recorded'}.",
+            {"inversion_results": results, "model_directory": bundle or None})
+
+
+register(Tool(
+    name="load_studio_inversion",
+    description="Take over the ERT inversion the user already ran step by step in the "
+                "studio, so the run carries on from that model instead of inverting "
+                "again. Offered only when a step-by-step task was handed to the run; "
+                "use it before any inversion.",
+    handler=_load_studio_inversion,
+    requires=("ert_data",),
+    produces=("inversion_results",),
+    label="Take over the studio inversion",
+    module="ert",
+    when=_studio_inversion_pending,
+))
+
+
+def _take_studio_inversion(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    """The ERT page's finished inversion, brought into this run while it runs.
+
+    For a run that used the ERT page itself (``runtime.studio``) - quality
+    control, zones, another engine - and wants the model it made evaluated,
+    interpreted and reported here. Only a model of the surveys this run loaded.
+    """
+    import os
+
+    answer = studio.call("handover", module="ert")
+    if answer.get("status") != "ok" or not answer.get("model_dir"):
+        raise ValueError(answer.get("error") or "The ERT page has no finished inversion.")
+
+    def same(paths):
+        return [os.path.normcase(os.path.abspath(str(p))) for p in paths]
+
+    loaded = ctx.get("ert_files") or survey_files(ctx.config)
+    made_from = answer.get("source_files") or []
+    if loaded and same(loaded) != same(made_from):
+        raise ValueError("The ERT page's inversion was made from other surveys ("
+                         + ", ".join(Path(str(p)).name for p in made_from)
+                         + ") than this run loaded.")
+    ctx.config[STUDIO_INVERSION_KEY] = answer["model_dir"]
+    try:
+        return _load_studio_inversion(ctx)
+    finally:
+        # Taken once: left set, the route would offer to take it over again.
+        ctx.config.pop(STUDIO_INVERSION_KEY, None)
+
+
+register(Tool(
+    name="take_studio_inversion",
+    description="Bring the inversion finished on the studio's ERT page into this run, "
+                "for example one run there with quality control, zones or another "
+                "engine, so this run evaluates, interprets and reports that model.",
+    handler=_take_studio_inversion,
+    requires=("ert_data",),
+    produces=("inversion_results",),
+    label="Take over the ERT page's inversion",
+    module="ert",
+    # Never on the route: proposed, when the run has used the ERT page.
+    when=lambda ctx: False,
+    applies=lambda ctx: studio.available(),
+))
+
+
+# ---------------------------------------------------------------------------
 # 2. climate, when the request asked for it and a position is known
 # ---------------------------------------------------------------------------
 def _climate_wanted(ctx: RunContext) -> bool:
@@ -497,12 +629,21 @@ def _survey_count(ctx: RunContext) -> int:
     return len(ctx.get("ert_data") or [])
 
 
+def _needs_inversion(ctx: RunContext) -> bool:
+    """False once the run holds a model, or while a studio one is waiting to load.
+
+    A handed-over inversion that fails to load opens the gate again, so the
+    run then inverts the data itself.
+    """
+    return not ctx.has("inversion_results") and not _studio_inversion_pending(ctx)
+
+
 def _is_time_lapse(ctx: RunContext) -> bool:
-    return _survey_count(ctx) >= 2
+    return _survey_count(ctx) >= 2 and _needs_inversion(ctx)
 
 
 def _is_single(ctx: RunContext) -> bool:
-    return _survey_count(ctx) == 1
+    return _survey_count(ctx) == 1 and _needs_inversion(ctx)
 
 
 def _invert_time_lapse(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
@@ -632,10 +773,13 @@ def _evaluate(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
                                   or config.get("time_lapse_method", IMPLEMENTED_SCHEME)),
             "baseline_index": 0,
         })
-    if first.get("structure_constrained"):
+    if first.get("structure_constrained") or first.get("source") == "studio":
         # A retry re-inverts without the seismic interface, so a better score
         # would swap the constrained model for an unconstrained one. Score it,
-        # and leave the model alone.
+        # and leave the model alone. Likewise a model made in the studio: a
+        # retry would re-invert this run's own copy of the data, without the
+        # page's filtering, zones or engine. Running it again with other
+        # settings is the controller's to propose (runtime.toolbox).
         payload["auto_adjust"] = False
     agent = InversionEvaluationAgent(**agent_kwargs(ctx))
     evaluation = agent.execute(payload)
@@ -724,9 +868,14 @@ def plain_error(error: Any) -> str:
 
 
 def _last_failure(ctx: RunContext, tools: Sequence[str]) -> Any:
-    """The latest failed step among ``tools`` that no later attempt recovered."""
+    """The latest failed or skipped step among ``tools`` that no later attempt recovered.
+
+    A skipped step's ``error`` holds why it was left out, which is the reason
+    its product is missing.
+    """
     return next((step for step in reversed(ctx.steps)
-                 if step.tool in tools and step.status == "failed" and not ctx.ran(step.tool)),
+                 if step.tool in tools and step.status in ("failed", "skipped")
+                 and not ctx.ran(step.tool)),
                 None)
 
 
@@ -747,8 +896,9 @@ def _water_content_failure(ctx: RunContext, results: Mapping[str, Any]) -> Optio
         return plain_error(failed.error or failed.summary)
     if not (ctx.has("inversion_results") or ctx.has("tdem_results") or ctx.has("mt_results")):
         broken = _last_failure(ctx, _MODEL_STEPS)
+        verb = "failed" if broken is None or broken.status == "failed" else "was left out"
         return ("no resistivity model was recovered to convert"
-                + (f": {broken.description or broken.tool} failed "
+                + (f": {broken.description or broken.tool} {verb} "
                    f"({plain_error(broken.error)})" if broken is not None else ""))
     return "the conversion step did not run"
 
@@ -800,6 +950,13 @@ def not_delivered_items(ctx: RunContext, delivered: Mapping[str, Any]) -> List[T
     >>> ctx.finish(status='failed', error='ValueError: TDEM data file not found: s.csv')
     >>> not_delivered_items(ctx, {})
     [('Run TDEM inversion', 'TDEM data file not found: s.csv')]
+
+    A step left out is listed with why it was left out:
+
+    >>> _ = ctx.begin('load_gravmag_data', description='Load gravity / magnetic data')
+    >>> ctx.finish(status='skipped', error="Left out with the user's agreement: no gravity data")
+    >>> not_delivered_items(ctx, {})[-1]
+    ('Load gravity / magnetic data', "Left out with the user's agreement: no gravity data")
     """
     from .._intent import PRODUCTS, unmet_products
 
@@ -812,9 +969,11 @@ def not_delivered_items(ctx: RunContext, delivered: Mapping[str, Any]) -> List[T
         covered.update(PRODUCERS.get(product, ()))
     last: Dict[str, Any] = {}
     for step in ctx.steps:
-        if step.status == "failed" and not ctx.ran(step.tool) and step.tool not in covered:
+        if (step.status in ("failed", "skipped") and not ctx.ran(step.tool)
+                and step.tool not in covered):
             last[step.tool] = step
-    items += [(step.description or step.tool, plain_error(step.error) or "the step failed")
+    items += [(step.description or step.tool, plain_error(step.error)
+               or ("the step failed" if step.status == "failed" else "it was left out"))
               for step in last.values()]
     return items
 
@@ -2263,6 +2422,311 @@ register(Tool(
 ))
 
 
+# ---------------------------------------------------------------------------
+# ground-penetrating radar
+# ---------------------------------------------------------------------------
+#: What the GPR example is simulated over: a folder holding these is the MODFLOW
+#: catchment model of ``examples/data``, which stands for the example line.
+_GPR_EXAMPLE_MODEL = ("Watercontent.npy", "Porosity.npy", "bot.npy")
+
+#: Radar velocities a ground can have, m/ns: water (0.033) to air (0.3).
+_GPR_VELOCITY_RANGE = (0.01, 0.3)
+
+
+def read_gpr_input(path: Any) -> Any:
+    """The GPR line ``gpr_file`` names: a radar file, or the simulated example line.
+
+    A folder holding the MODFLOW catchment model of ``examples/data`` stands
+    for the example line simulated over it
+    (:func:`~PyHydroGeophysX.data_processing.gpr.example_profile`), the line
+    the GPR page opens with "Use example"; the profile then says it is
+    simulated. A folder of radar files is refused with their names, since a
+    run processes one line.
+    """
+    from PyHydroGeophysX.data_processing import gpr
+
+    folder = Path(str(path))
+    if folder.is_dir():
+        if all((folder / name).is_file() for name in _GPR_EXAMPLE_MODEL):
+            return gpr.example_profile(str(folder))
+        found = sorted(p.name for p in folder.iterdir()
+                       if p.suffix.lower() in gpr.GPR_ONLY_SUFFIXES)
+        raise ValueError(f"{folder.name} is a folder; a run processes one GPR line, so name "
+                         "one file in it" + (f": {', '.join(found[:8])}" if found else
+                                             " (it holds no .DZT, .DT1, .rd3 or .rd7 file)")
+                         + ".")
+    return gpr.read_gpr(str(folder))
+
+
+def _positive(value: Any) -> Optional[float]:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if np.isfinite(number) and number > 0 else None
+
+
+def gpr_velocity(ctx: RunContext, profile: Any = None) -> Tuple[Optional[float], str]:
+    """The radar velocity a run's depths use, m/ns, and where it came from.
+
+    A depth is ``v t / 2``, so it is only as good as the velocity, and a
+    velocity nobody gave must not become one. In order: ``gpr_velocity``
+    (m/ns) or ``gpr_permittivity`` from the request, then the permittivity a
+    GSSI file's header holds - the value set on the instrument when
+    recording, which is said to be that. Without any, ``(None, reason)``: the
+    line is reported in two-way time and the run says why there is no depth.
+    A value outside water-to-air (0.01-0.3 m/ns) is not used, and noted.
+    """
+    from PyHydroGeophysX.data_processing import gpr
+
+    config = ctx.config
+    given = config.get("gpr_velocity")
+    velocity = _positive(given)
+    low, high = _GPR_VELOCITY_RANGE
+    if given not in (None, "") and (velocity is None or not low <= velocity <= high):
+        ctx.note(f"A radar velocity of {given!r} was given, which is not a number within the "
+                 f"{low:g}-{high:g} m/ns a ground can have (water 0.033, air 0.3); it was not "
+                 "used. Give it in m/ns.")
+        velocity = None
+    if velocity is not None:
+        return velocity, "given for this run"
+    eps = _positive(config.get("gpr_permittivity"))
+    if eps is not None and eps >= 1.0:
+        return (float(gpr.velocity_from_permittivity(eps)),
+                f"from the relative permittivity {eps:g} given for this run")
+    header = (getattr(profile, "metadata", None) or {}).get("permittivity")
+    if (getattr(profile, "instrument", "") == "GSSI DZT"
+            and isinstance(header, (int, float)) and header > 1.0):
+        return (float(gpr.velocity_from_permittivity(header)),
+                f"from the permittivity {float(header):g} in the file header, the value set on "
+                "the instrument when recording rather than a measurement of this ground")
+    return None, "no velocity was given"
+
+
+def gpr_recipe(profile: Any, config: Mapping[str, Any],
+               velocity: Optional[float]) -> Tuple[List[Dict[str, Any]], List[str]]:
+    """The processing steps for a run's GPR line, and a note on each one left out.
+
+    The GPR page's defaults: dewow over three antenna periods, time zero on
+    the first arrival, the mean trace removed and automatic gain control over
+    25 ns. ``gpr_params`` adds a band-pass (``bandpass``: true for a quarter
+    to 2.5 times the antenna frequency, or ``[low, high]`` MHz), migration
+    (``migrate``, with the run's velocity), another gain (``gain``: ``agc``,
+    ``tpow`` or ``none``), or replaces the lot (``steps``, as
+    :func:`~PyHydroGeophysX.data_processing.gpr.process` takes them). Either
+    way a migration uses the run's velocity (:func:`gpr_velocity`) and is
+    left out without one.
+    """
+    params = dict(config.get("gpr_params") or {})
+    notes: List[str] = []
+    unmigrated = ("Migration was asked for, but it needs a radar velocity and none was given, "
+                  "so the line was not migrated.")
+    if params.get("steps"):
+        steps = [dict(step) for step in params["steps"]]
+        if any(step.get("name") == "migrate" for step in steps) and not velocity:
+            notes.append(unmigrated)
+        return [dict(step, velocity=velocity) if step.get("name") == "migrate" else step
+                for step in steps if step.get("name") != "migrate" or velocity], notes
+    steps: List[Dict[str, Any]] = [{"name": "dewow"}, {"name": "time_zero"}]
+    band = params.get("bandpass")
+    if band:
+        frequency = profile.frequency_mhz if np.isfinite(profile.frequency_mhz) else None
+        if isinstance(band, (list, tuple)) and len(band) == 2:
+            low, high = (float(v) for v in band)
+        elif frequency:
+            low, high = 0.25 * frequency, 2.5 * frequency
+        else:
+            low = high = None
+            notes.append("A band-pass was asked for without its band, and the antenna frequency "
+                         "is not known, so the line was not band-passed.")
+        if low is not None:
+            steps.append({"name": "bandpass", "low_mhz": low,
+                          "high_mhz": min(high, 0.9 * 0.5 * profile.sampling_mhz)})
+    steps.append({"name": "background",
+                  "window_traces": int(_positive(params.get("background_window")) or 0)})
+    if params.get("migrate"):
+        if velocity:
+            steps.append({"name": "migrate", "velocity": velocity})
+        else:
+            notes.append(unmigrated)
+    gain = str(params.get("gain") or "agc").lower()
+    if gain == "agc":
+        steps.append({"name": "gain", "kind": "agc",
+                      "window_ns": _positive(params.get("agc_window_ns")) or 25.0})
+    elif gain in ("tpow", "power"):
+        steps.append({"name": "gain", "kind": "tpow",
+                      "power": _positive(params.get("gain_power")) or 1.5})
+    return steps, notes
+
+
+def _gpr_stem(path: Any) -> str:
+    stem = Path(str(path)).stem or "gpr_line"
+    return "".join(c if c.isalnum() or c in "-_" else "_" for c in stem)[:60] or "gpr_line"
+
+
+def _load_gpr(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    """Read the GPR line and draw its radargram as recorded."""
+    from .. import _raw_data as raw
+    from .._figstyle import style_from_config
+
+    config = ctx.config
+    given = config.get("gpr_file")
+    path = resolve_path(given, config.get("project_dir", "."))
+    if not path or not Path(str(path)).exists():
+        raise ValueError(f"GPR data not found: {given}")
+    profile = read_gpr_input(path)
+    params = dict(config.get("gpr_params") or {})
+    spacing = _positive(params.get("trace_spacing"))
+    if spacing:
+        positions = profile.positions[0] + np.arange(profile.n_traces) * spacing
+        profile = profile.with_data(profile.data, positions=positions)
+    frequency = _positive(params.get("frequency_mhz"))
+    if frequency:
+        profile = profile.with_data(profile.data, frequency_mhz=frequency)
+    for warning in profile.metadata.get("warnings") or []:
+        # The readers' own words; a spacing this run sets settles that one.
+        if "until a spacing is set" not in str(warning):
+            ctx.note(str(warning))
+        elif not spacing:
+            ctx.note(f"{warning} Give gpr_params trace_spacing (m) for true distances.")
+    simulated = bool(profile.metadata.get("simulated"))
+    name = "the simulated example line" if simulated else Path(str(path)).name
+    if simulated:
+        ctx.note(f"The GPR line is simulated, not measured: a {profile.frequency_mhz:.0f} MHz "
+                 f"line drawn over the {profile.source}, its permittivity from the model's "
+                 "water content and porosity by CRIM.")
+    try:
+        figure = raw.gpr_radargram(
+            profile, raw.figure_path(ctx.output_dir, "gpr_radargram_raw"),
+            title=f"{name}: as recorded, {profile.n_traces} traces",
+            unit=style_from_config({"figure_style": _figure_style(ctx)}).length_unit)
+    except Exception:  # noqa: BLE001 - a picture of the data must not fail the load
+        figure = None
+    caption = ("The radargram as recorded, before any processing: two-way time down, "
+               "amplitude in grey.")
+    return (f"Read {name}" + (f" ({profile.instrument})" if profile.instrument else "")
+            + f": {profile.describe()}.",
+            {"gpr_data": {"profile": profile, "file": str(path), "name": name,
+                          "simulated": simulated,
+                          "figure": (figure, caption) if figure else None}})
+
+
+register(Tool(
+    name="load_gpr_line",
+    description="Read the ground-penetrating radar line the configuration names (GSSI DZT, "
+                "pulseEKKO DT1/HD, MALA rd3/rd7/rad, SEG-Y or .npz) and draw its radargram as "
+                "recorded. Run before the GPR processing.",
+    handler=_load_gpr,
+    produces=("gpr_data",),
+    agent="data_processing.gpr",
+    label="Load GPR line",
+    module="gpr",
+    when=_configured("gpr_file"),
+))
+
+
+def _process_gpr(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
+    """Run the standard recipe, write the processed line, its figures and the recipe."""
+    import json
+
+    from PyHydroGeophysX.data_processing import gpr
+
+    from .. import _raw_data as raw
+    from .._figstyle import style_from_config
+
+    loaded = ctx.get("gpr_data") or {}
+    profile = loaded.get("profile")
+    if profile is None:
+        raise ValueError("No GPR line has been read.")
+    velocity, source = gpr_velocity(ctx, profile)
+    steps, notes = gpr_recipe(profile, ctx.config, velocity)
+    for note in notes:
+        ctx.note(note)
+    processed = gpr.process(profile, steps)
+    applied = list(processed.history[len(profile.history):])
+    folder = Path(ctx.output_dir) / "gpr"
+    stem = "example_line" if loaded.get("simulated") else _gpr_stem(loaded.get("file"))
+    npz = gpr.save_profile(processed, folder / f"{stem}_processed.npz")
+    recipe = folder / f"{stem}_processing.json"
+    recipe.write_text(json.dumps({
+        "source": profile.source, "instrument": profile.instrument, "steps": steps,
+        "velocity_m_per_ns": velocity, "velocity_source": source, "applied": applied},
+        indent=2, default=float), encoding="utf-8")
+    unit = style_from_config({"figure_style": _figure_style(ctx)}).length_unit
+    name = loaded.get("name") or Path(str(loaded.get("file"))).name
+    done = ", ".join(step["name"].replace("_", " ") for step in gpr.sorted_steps(steps))
+    figures = [(raw.gpr_radargram(
+        processed, folder / f"{stem}_radargram.png",
+        title=f"{name}: {done}" + (f"; depth at {velocity:.3g} m/ns" if velocity
+                                   else "; no velocity given, so no depth"), unit=unit,
+        velocity=velocity),
+        "The processed radargram (" + "; ".join(line.split(" (")[0] for line in applied)
+        + ")" + (f", with depth on the right at {velocity:.3g} m/ns ({source})." if velocity
+                 else ", in two-way time only: no radar velocity was given, so no depth is "
+                      "shown."))]
+    if velocity and processed.elevation is not None:
+        figures.append((raw.gpr_radargram(
+            processed, folder / f"{stem}_elevation.png", unit=unit, velocity=velocity,
+            elevation=True, title=f"{name}: hung from the ground surface at {velocity:.3g} m/ns"),
+            f"The processed line in elevation, each trace hung from the ground surface "
+            f"(red) and converted to depth at {velocity:.3g} m/ns ({source})."))
+    end = float(processed.time_ns[-1])
+    depth = float(gpr.time_to_depth(end, velocity)) if velocity else None
+    if velocity is None:
+        ctx.note("No radar velocity was given, so the GPR line is reported in two-way time and "
+                 "no depth is given. State one (for example 'velocity 0.1 m/ns'), or fit it on "
+                 "a diffraction hyperbola on the GPR page, to put the line in depth.")
+    elif source.startswith("from the permittivity") and "header" in source:
+        ctx.note(f"The GPR depths use {velocity:.3g} m/ns {source}; check it on a diffraction "
+                 "hyperbola before relying on them.")
+    elevation = profile.elevation
+    results = {
+        "source_file": loaded.get("file"), "name": name, "source": profile.source,
+        "instrument": profile.instrument, "simulated": bool(loaded.get("simulated")),
+        "n_traces": profile.n_traces, "n_samples": profile.n_samples, "dt_ns": profile.dt_ns,
+        "raw_window_ns": float(profile.time_ns[-1] - profile.time_ns[0] + profile.dt_ns),
+        "time_window_ns": end, "line_length_m": float(abs(profile.positions[-1]
+                                                          - profile.positions[0])),
+        "trace_spacing_m": profile.trace_spacing,
+        "frequency_mhz": (float(profile.frequency_mhz) if np.isfinite(profile.frequency_mhz)
+                          else None),
+        "antenna_separation_m": (float(profile.antenna_separation)
+                                 if np.isfinite(profile.antenna_separation) else None),
+        "steps": steps, "applied": applied, "not_applied": notes,
+        "velocity_m_per_ns": velocity, "velocity_source": source,
+        "permittivity": (float(gpr.permittivity_from_velocity(velocity)) if velocity else None),
+        "max_depth_m": depth,
+        "elevation_range": ([float(np.min(elevation)), float(np.max(elevation))]
+                            if elevation is not None else None),
+        "figures": [figure for figure in figures if figure[0]],
+        "raw_figures": [loaded["figure"]] if loaded.get("figure") else [],
+        "data_paths": [str(npz), str(recipe)],
+        "warnings": [str(w) for w in profile.metadata.get("warnings") or []],
+        "output_dir": str(folder),
+    }
+    summary = (f"Processed {name} ({done}): the record runs to {end:.0f} ns after time zero"
+               + (f", {depth:.3g} m at {velocity:.3g} m/ns ({source})" if velocity else
+                  "; no radar velocity was given, so it stays in two-way time with no depth")
+               + f". Wrote {npz.name}, the radargram and {recipe.name}.")
+    return summary, {"gpr_results": results}
+
+
+register(Tool(
+    name="process_gpr_line",
+    description="Process the GPR line: dewow, time zero on the first arrival, background "
+                "removal and gain (band-pass and migration when asked), convert time to depth "
+                "with the velocity the request gives, and write the processed line (.npz), "
+                "its radargram and the processing recipe (.json).",
+    handler=_process_gpr,
+    requires=("gpr_data",),
+    produces=("gpr_results",),
+    agent="data_processing.gpr",
+    label="Process GPR line",
+    module="gpr",
+    when=_configured("gpr_file"),
+))
+
+
 def _load_model_output(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     from ..model_output_agent import ModelOutputAgent
 
@@ -2294,8 +2758,10 @@ register(Tool(
     agent="ModelOutputAgent",
     label="Load hydrological model output",
     module="hydro_geophysics",
-    when=_configured("model_directory", "modflow_dir", "parflow_dir",
-                     "hydro_model"),
+    # A folder to read, not merely a model type: "hydro_model" alone offered
+    # this step to an ERT-only run, which then failed with "MODFLOW model
+    # directory not provided".
+    when=_configured("model_directory", "modflow_dir", "parflow_dir"),
 ))
 
 
@@ -2674,7 +3140,8 @@ def fusion_account(ctx: RunContext) -> Tuple[List[str], List[str]]:
     for key, clause in (("tdem_results", "the TDEM sounding was inverted on its own"),
                         ("mt_results", "the MT sites were inverted on their own"),
                         ("gravmag_results", "the gravity / magnetic survey was inverted on "
-                                            "its own")):
+                                            "its own"),
+                        ("gpr_results", "the GPR line was processed on its own")):
         if ctx.has(key):
             apart.append(f"{clause} and not combined with the other methods")
     return combined, apart
@@ -2845,22 +3312,24 @@ _ERT_MODEL_STEPS = ("load_ert_surveys", "invert_ert", "invert_time_lapse")
 
 
 #: The artifacts of the methods a survey report covers, as the report modules name them.
-_SURVEY_RESULTS = ("tdem_results", "seismic_results", "mt_results", "gravmag_results")
+_SURVEY_RESULTS = ("tdem_results", "seismic_results", "mt_results", "gravmag_results",
+                   "gpr_results")
 
 #: Steps whose products the survey report describes, so it waits for them.
 _SURVEY_STEPS = ("load_tdem_data", "invert_tdem", "evaluate_tdem_inversion",
                  "map_tdem_plan_view", "pick_first_breaks", "load_seismic_traveltimes",
                  "invert_seismic", "evaluate_seismic_inversion", "extract_seismic_interfaces",
                  "load_mt_sites", "invert_mt", "evaluate_mt_inversion", "load_gravmag_data",
-                 "invert_gravmag", "evaluate_gravmag_inversion",
-                 "convert_tdem_water_content", "convert_mt_water_content", "fetch_climate")
+                 "invert_gravmag", "evaluate_gravmag_inversion", "load_gpr_line",
+                 "process_gpr_line", "convert_tdem_water_content", "convert_mt_water_content",
+                 "fetch_climate")
 
 
 def _survey_report_due(ctx: RunContext) -> bool:
     """The survey report is this run's report, and what it describes exists.
 
-    A run whose models came only from TDEM, seismic refraction, MT or gravity
-    and magnetics used to end without a report, "success" and all, because
+    A run whose models came only from TDEM, seismic refraction, MT, gravity
+    and magnetics or GPR used to end without a report, "success" and all, because
     ``write_report`` needs an ERT inversion. This report takes its place when
     no ERT model exists or is still coming - an ERT step that failed leaves the
     other surveys to be reported - once every method step and water-content
@@ -2910,8 +3379,8 @@ def _write_survey_report(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
 
 register(Tool(
     name="write_survey_report",
-    description="Write the final report of a run without ERT, from the TDEM, seismic, MT "
-                "and gravity/magnetic results it produced: data, method, fit, the models, "
+    description="Write the final report of a run without ERT, from the TDEM, seismic, MT, "
+                "gravity/magnetic and GPR results it produced: data, method, fit, the models, "
                 "water content if converted, figures, recommendations. Run this last.",
     handler=_write_survey_report,
     produces=("report_files",),
@@ -2947,6 +3416,21 @@ def build_site_info(ctx: RunContext) -> Dict[str, Any]:
             if ctx.has("climate_data") else
             "Time-lapse ERT monitoring of subsurface resistivity change.")),
     }
+
+
+# ---------------------------------------------------------------------------
+# off the standard route (runtime.toolbox)
+# ---------------------------------------------------------------------------
+# What the controller may propose when a tool's gate is closed: not a loader,
+# which reads a file the configuration has to name, and an inversion only for
+# the number of surveys it inverts.
+for _name in ("load_ert_surveys", "load_studio_inversion", "pick_first_breaks",
+              "load_seismic_traveltimes", "invert_seismic", "load_tdem_data",
+              "load_mt_sites", "load_gravmag_data", "load_gpr_line", "load_model_output",
+              "write_survey_report"):
+    TOOLS[_name].proposable = False
+TOOLS["invert_time_lapse"].applies = lambda ctx: _survey_count(ctx) >= 2
+TOOLS["invert_ert"].applies = lambda ctx: _survey_count(ctx) == 1
 
 
 def summarise_run(ctx: RunContext, incomplete: Sequence[str] = ()) -> str:

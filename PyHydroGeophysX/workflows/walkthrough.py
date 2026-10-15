@@ -598,15 +598,20 @@ def _mt_process_parameters(p: Mapping[str, Any]) -> Sequence[str]:
     reader = dict(known.pop("reader", None) or {})
     remote_reader = dict(known.pop("remote_reader", None) or {})
     station = known.pop("station", None)
+    sample_rate = known.pop("sample_rate", None)
     return (
         f"READER = {reader!r}"
-        "   # reader options: format, sample_rate, components, start/end, calibration",
+        "   # reader options: format, sample_rate, components, start/end, calibration, coils,"
+        " azimuths",
         f"REMOTE_READER = {remote_reader!r}"
         "   # the same for the remote reference recording",
+        f"SAMPLE_RATE = {sample_rate!r}"
+        "   # the one stream processed, in Hz; None processes every sample rate",
         f"STATION = {station!r}"
         "   # site name written to the EDI; None keeps the recording's own",
         f"PROCESSING = {known!r}"
-        "   # ProcessingConfig: window length, decimation, Huber/redescending cuts, min_points",
+        "   # ProcessingConfig: window length, decimation, Huber/redescending cuts, min_points,"
+        " tapers, bounded_influence, min_coherence, jackknife, powerline, periodic_noise",
     )
 
 
@@ -1674,6 +1679,8 @@ WALKTHROUGHS["mt.process"] = Walkthrough(
                 "    return mt.read_timeseries(source, **options)\n"
                 "\n"
                 "runs = read_runs(recording, READER)\n"
+                "if SAMPLE_RATE is not None:\n"
+                "    runs = [run for run in runs if run.sample_rate == SAMPLE_RATE]\n"
                 'remote_runs = read_runs(globals().get("remote"), REMOTE_READER)\n'
                 "for run in runs + remote_runs:\n"
                 "    print(run.summary())"

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
-from typing import Any, Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Union
 
 from .edi import is_edi_file, read_edi
 from .emtf_xml import is_emtf_xml_file, read_emtf_xml
@@ -96,7 +97,8 @@ def timeseries_format(path: Any) -> Optional[str]:
     return None
 
 
-def read_timeseries(path: Any, **options: Any) -> List[TimeSeriesRun]:
+def read_timeseries(path: Any, *, azimuths: Optional[Mapping[str, float]] = None,
+                    **options: Any) -> List[TimeSeriesRun]:
     """Read an instrument's MT time series - a file or a recording folder - into runs.
 
     The format is recognized from the files: Phoenix MTU-5C/5P/8A recordings
@@ -104,8 +106,32 @@ def read_timeseries(path: Any, **options: Any) -> List[TimeSeriesRun]:
     (:func:`read_phoenix_legacy`), Metronix ATS (:func:`read_metronix`),
     Zonge Z3D (:func:`read_zonge`) and LEMI-424 text files
     (:func:`read_lemi424`). ``options`` go to that reader; ``format`` forces one.
+
+    ``azimuths`` (``{"ex": 180, "hy": 270, ...}``, degrees clockwise from
+    north) replaces the direction the files give those channels, in every
+    run: for a layout that differs from what the receiver was told, such as a
+    dipole laid out to the south or a coil pointing west. Processing
+    expresses every channel in the frame of Hx, so a reversed channel needs
+    nothing more.
     """
     source = Path(path)
+    wanted = {str(name).lower(): float(value) for name, value in (azimuths or {}).items()}
+    bad = [name for name, value in wanted.items() if not math.isfinite(value)]
+    if bad:
+        raise ValueError(f"azimuths must be numbers of degrees; not for {', '.join(bad)}")
+    runs = _read_runs(source, options)
+    missing = sorted(set(wanted) - {name for run in runs for name in run.channels})
+    if missing:
+        raise ValueError(f"azimuths given for {', '.join(missing)}, which "
+                         f"{'is' if len(missing) == 1 else 'are'} not in {source.name}")
+    for run in runs:
+        for name, value in wanted.items():
+            if name in run.channels:
+                run.channels[name].azimuth = value % 360.0
+    return runs
+
+
+def _read_runs(source: Path, options: Dict[str, Any]) -> List[TimeSeriesRun]:
     kind = options.pop("format", None) or timeseries_format(source)
     if kind == "phoenix":
         return read_phoenix(source, **options)

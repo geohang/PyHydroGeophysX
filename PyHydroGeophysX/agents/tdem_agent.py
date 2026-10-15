@@ -409,8 +409,11 @@ and can interpret conductivity structures in terms of geological and hydrologica
         names = list(dict.fromkeys(lines.tolist()))
         cols = min(3, len(names))
         rows = int(np.ceil(len(names) / cols))
+        # A panel's width per column, not one and a half: at 6.3 inches a
+        # column, three made a 19-inch figure whose 10-point labels came out a
+        # third of that size once the report fitted it to a page or a pane.
         fig = figstyle.detached_figure((
-            min(style.panel_width * 1.5 * cols, figstyle.MAX_FIGURE_WIDTH_IN),
+            min(style.panel_width * cols + 1.2, figstyle.MAX_FIGURE_WIDTH_IN),
             0.6 * style.panel_height * rows + 0.8))
         fig.set_layout_engine('constrained')
         axes = np.atleast_1d(fig.subplots(rows, cols, squeeze=False)).ravel()
@@ -441,7 +444,15 @@ and can interpret conductivity structures in terms of geological and hydrologica
             ax.tick_params(labelsize=style.tick_size)
         for ax in axes[len(names):]:
             ax.set_visible(False)
-        fig.colorbar(image, ax=axes[:len(names)].tolist(), label='Resistivity (ohm-m)')
+        from PyHydroGeophysX.visualization.em_maps import label_log_colorbar
+
+        # About two rows tall and slim, labelled in plain ohm-m: across five
+        # rows it was a column as wide as a tick label is long, marked 10^1
+        # and 10^2 only.
+        bar = fig.colorbar(image, ax=axes[:len(names)].tolist(), shrink=min(0.9, 2.2 / rows),
+                           aspect=18)
+        bar.set_label('Resistivity (ohm-m)', fontsize=style.label_size)
+        label_log_colorbar(bar, fontsize=style.tick_size)
         fig.suptitle(f"{source_name}: TEM resistivity, {result.get('lci_mode', 'off')} LCI, "
                      f"median sounding chi-squared {float(result['chi2_sounding_median']):.2f}",
                      fontsize=style.title_size)

@@ -24,13 +24,10 @@ _CHILD_ICONS = {
     "EM": "fa5s.broadcast-tower",
     "Gravity / Magnetics": "fa5s.magnet",
     "Magnetotellurics": "fa5s.globe-americas",
+    "GPR": "fa5s.broadcast-tower",
     "Boreholes": "fa5s.ruler-vertical",
     "Joint Inversion": "fa5s.project-diagram",
-    "Hydro Data": "fa5s.database",
-    "Profile Selection": "fa5s.route",
-    "Survey Geometry": "fa5s.ruler-combined",
-    "Forward Modeling": "fa5s.play",
-    "Results": "fa5s.chart-area",
+    "Simulate surveys": "fa5s.play-circle",
     "Inverted Model": "fa5s.database",
     "Layers": "fa5s.layer-group",
     "Target": "fa5s.bullseye",
@@ -45,8 +42,8 @@ _CHILD_ICONS = {
     "Map": "fa5s.map-marked-alt",
 }
 
-# (group label, [(child label, module key), ...]). Several Hydro children map to
-# the same module page; that page exposes the corresponding section internally.
+# (group label, [(child label, module key), ...]). One entry per page: the
+# stages of a page are on the page, not in the tree.
 TREE_STRUCTURE: List[Tuple[str, List[Tuple[str, str]]]] = [
     ("Workflow", [("Data & reports", "one_click")]),
     (
@@ -58,6 +55,7 @@ TREE_STRUCTURE: List[Tuple[str, List[Tuple[str, str]]]] = [
             ("EM", "em"),
             ("Gravity / Magnetics", "gravmag"),
             ("Magnetotellurics", "mt"),
+            ("GPR", "gpr"),
             ("Boreholes", "boreholes"),
             ("Joint Inversion", "joint_inversion"),
         ],
@@ -65,11 +63,7 @@ TREE_STRUCTURE: List[Tuple[str, List[Tuple[str, str]]]] = [
     (
         "Hydro → Geophysics",
         [
-            ("Hydro Data", "hydro_geophysics"),
-            ("Profile Selection", "hydro_geophysics"),
-            ("Survey Geometry", "hydro_geophysics"),
-            ("Forward Modeling", "hydro_geophysics"),
-            ("Results", "hydro_geophysics"),
+            ("Simulate surveys", "hydro_geophysics"),
         ],
     ),
     (

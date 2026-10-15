@@ -48,6 +48,11 @@ nothing downstream depends on which instrument wrote the file.
        versions. Electrode positions are rebuilt from the instrument's own
        geometric factors when they describe a straight, evenly spaced line;
        otherwise the surveyed electrode file supplies them.
+   * - BGS PRIME / RESIMGR ``.tab``
+     - Read by column name, with units from the file's own ``#Units`` row. The
+       file numbers electrodes by channel and carries no positions, so they are
+       a 1 m placeholder until the surveyed electrode file is loaded. Each
+       reading's time, potential, current and contact resistance come along.
    * - ``.ohm``, ``.dat``
      - E4D and pyGIMLi/BERT files. ResIPy adds further instrument formats when
        it is installed.

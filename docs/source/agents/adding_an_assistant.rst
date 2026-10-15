@@ -183,6 +183,17 @@ What the studio does with it
   (:mod:`PyHydroGeophysX.agents.runtime.steering`): a note is added to
   ``ctx.guidance`` and the transcript, and the next decision may change the
   settings in :data:`~PyHydroGeophysX.agents.runtime.recovery.ADJUSTABLE`.
+- ``drive(..., flexible=True)`` lets the controller leave the standard route
+  when the evidence calls for it (:mod:`PyHydroGeophysX.agents.runtime.toolbox`).
+  It can look at a product, add a step whose ``when`` gate is closed, run a
+  finished step again with changed settings, leave route steps out, write a
+  temporary script, or ask the user. Leaving a step out is the model's call,
+  refused only when ``finish`` or a requested product would then not be made;
+  every other change of course is put to the user with the model's reason.
+  Mark a tool ``proposable=False`` when it must never be proposed (a loader
+  that reads a configured file), and give it ``applies`` when it fits only some
+  runs. AQUAH runs flexibly; flexibility needs the default decision prompt, so
+  an assistant with a ``prompt`` of its own keeps its fixed route.
 - The route across the top of the Live tab comes from your tools'
   ``requires`` and ``produces``: :func:`~PyHydroGeophysX.agents.runtime.controller.route_ahead`
   works out, from what the run has, which tools still stand between it and

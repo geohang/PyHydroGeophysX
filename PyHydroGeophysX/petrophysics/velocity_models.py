@@ -4,7 +4,6 @@ Seismic velocity models for relating rock properties to elastic wave velocities.
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-from scipy.optimize import fsolve, root
 
 
 # ---------------------------------------------------------------------------
@@ -232,6 +231,26 @@ class VRHModel(BaseVelocityModel):
 # ---------------------------------------------------------------------------
 # Brie Model
 # ---------------------------------------------------------------------------
+def _gassmann_bulk_modulus(dry_modulus, mineral_modulus, porosity, fluid_modulus):
+    """Gassmann substitution in GPa, including dry-fluid and mineral endpoints.
+
+    Algebraically equivalent to Kdry + (1-Kdry/Km)**2 /
+    (phi/Kfluid + (1-phi)/Km - Kdry/Km**2), without division by Kfluid
+    or Km-Kdry. All public substitution routes use this implementation.
+    """
+    kd, km, phi, kf = np.broadcast_arrays(*(
+        np.asarray(value, dtype=float)
+        for value in (dry_modulus, mineral_modulus, porosity, fluid_modulus)))
+    alpha = 1 - kd / km
+    denominator = phi + (alpha - phi) * kf / km
+    # A pore-free solid has Kdry=Km, hence alpha=denominator=0 and no
+    # substitution increment. Do not hide other singular, inconsistent inputs.
+    mineral_limit = (alpha == 0) & (denominator == 0)
+    increment = np.divide(alpha**2 * kf, denominator,
+                          out=np.zeros_like(phi), where=~mineral_limit)
+    return kd + increment
+
+
 class BrieModel:
     """
     Brie's model for calculating the effective bulk modulus of a partially saturated medium.
@@ -289,11 +308,7 @@ class BrieModel:
             saturation, water_modulus, gas_modulus
         )
         
-        # Apply Gassmann's equation
-        numerator = dry_modulus / (mineral_modulus - dry_modulus) + fluid_modulus / (porosity * (mineral_modulus - fluid_modulus))
-        denominator = 1 + (dry_modulus / (mineral_modulus - dry_modulus) + fluid_modulus / (porosity * (mineral_modulus - fluid_modulus)))
-        
-        return (numerator / denominator) * mineral_modulus
+        return _gassmann_bulk_modulus(dry_modulus, mineral_modulus, porosity, fluid_modulus)
 
 
 # ---------------------------------------------------------------------------
@@ -330,6 +345,8 @@ class DEMModel(BaseVelocityModel):
         Returns:
             Effective bulk modulus (GPa), effective shear modulus (GPa), and P-wave velocity (m/s)
         """
+        from scipy.optimize import root
+
         # Initialize arrays for calculated values
         Keff = np.zeros(len(porosity))
         Geff = np.zeros(len(porosity))
@@ -412,118 +429,149 @@ class HertzMindlinModel(BaseVelocityModel):
         
         Args:
             critical_porosity: Critical porosity at which the rock loses matrix connectivity
-            coordination_number: Average number of contacts per grain
+            coordination_number: Average number of contacts per grain; default 4.
+                About 9 is a common idealized random-packing choice, requiring
+                calibration (Mavko et al., 2009, The Rock Physics Handbook).
         """
         super().__init__()
         self.critical_porosity = critical_porosity
         self.coordination_number = coordination_number
     
-    def calculate_velocity(self, 
-                         porosity: np.ndarray,
-                         saturation: np.ndarray,
-                         bulk_modulus: float,
-                         shear_modulus: float,
-                         mineral_density: float,
-                         depth: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
+    def calculate_velocity(self,
+                           porosity: np.ndarray,
+                           saturation: np.ndarray,
+                           bulk_modulus: float,
+                           shear_modulus: float,
+                           mineral_density: float,
+                           depth: float = 1.0, *,
+                           effective_pressure=None,
+                           fluid_modulus=None,
+                           fluid_density=None,
+                           return_moduli: bool = False):
+        """Calculate high/low P-wave bounds, optionally with elastic moduli.
+
+        Parameters
+        ----------
+        porosity, saturation : array-like
+            Fractions in [0, 1]. All numerical inputs broadcast together.
+        bulk_modulus, shear_modulus : array-like
+            Positive mineral moduli in GPa.
+        mineral_density : array-like
+            Positive mineral density in kg/m3.
+        depth : array-like
+            Depth in metres, default 1. Ignored when effective_pressure is set.
+        effective_pressure : array-like, optional
+            Nonnegative grain-contact pressure in Pa, replacing the historical
+            (mineral_density - 1000) * 9.8 * depth estimate. This is distinct
+            from the pore-fluid pressure passed to batzle_wang_brine.
+        fluid_modulus : array-like, optional
+            Liquid bulk modulus in GPa, replacing water's default 2.0 in
+            Brie's liquid/gas mixture (gas=0.01 GPa, exponent=3). An explicit
+            value <= 1e-12 GPa selects the dry-frame limit at any saturation,
+            bypassing fluid mixing and substitution.
+        fluid_density : array-like, optional
+            Liquid density in kg/m3, default 1000; used in bulk density only.
+            The historical pressure estimate is unchanged by this parameter.
+        return_moduli : bool
+            False preserves (Vp_high, Vp_low). True adds a dictionary with
+            Vs_low, Vs_high, K_dry_low, K_dry_high, G_dry_low, G_dry_high,
+            K_sat_low, K_sat_high and density. Moduli are GPa, velocities m/s,
+            density kg/m3. Output arrays have the broadcast input shape.
+
+        Notes
+        -----
+        Coordination number remains 4. A value around 9 is commonly used
+        for idealized random packings, but should be calibrated to the rock
+        (Mavko, Mukerji and Dvorkin, 2009, The Rock Physics Handbook, ch. 5).
+        Zero effective pressure is handled by the zero-contact-stiffness
+        limit. No change is made to the caller's saturation or porosity.
         """
-        Calculate P-wave velocity for porous rocks.
-        
-        Args:
-            porosity: Porosity values (array)
-            saturation: Saturation values (array)
-            bulk_modulus: Bulk modulus of the solid matrix (GPa)
-            shear_modulus: Shear modulus of the solid matrix (GPa)
-            mineral_density: Density of the solid matrix (kg/m³)
-            depth: Depth for pressure estimation (m, default: 1.0)
-            
-        Returns:
-            Tuple of high-bound P-wave velocity (m/s) and low-bound P-wave velocity (m/s)
-        """
-        # Poisson's ratio
-        v = (3 * bulk_modulus - 2 * shear_modulus) / (2 * (3 * bulk_modulus + shear_modulus))
-        
-        # Pressure estimation
-        P = (mineral_density - 1000) * 9.8 * depth / 1e9  # GPa
-        
-        # Hertz-Mindlin model at critical porosity
-        C = self.coordination_number
-        phi_c = self.critical_porosity
-        
-        # Calculate Hertz-Mindlin bulk modulus
-        K_HM = (C**2 * (1 - phi_c)**2 * shear_modulus**2 / 
-               (18 * np.pi**2 * (1 - v)**2) * P)**(1/3)
-        
-        # Calculate Hertz-Mindlin shear modulus (Mavko et al., The Rock
-        # Physics Handbook): the prefactor is (5 - 4v) / (5 (2 - v)) and sits
-        # outside the cube root. This had (10 - 2v) and took the root of the
-        # prefactor too, which overstated G_HM by 60% (0.428 against 0.268
-        # GPa for quartz at 5 m) and disagreed with vel_porous below.
-        G_HM = ((5 - 4 * v) / (5 * (2 - v)) *
-               ((3 * C**2 * (1 - phi_c)**2 * shear_modulus**2) * P / 
-                (2 * np.pi**2 * (1 - v)**2))**(1/3))
-        
-        # Initialize velocity arrays
-        Vp_high = np.zeros(len(porosity))
-        Vp_low = np.zeros(len(porosity))
-        
-        # Create Brie model for fluid substitution
-        brie_model = BrieModel()
-        
-        # Calculate velocities for each porosity/saturation point
-        for i in range(len(porosity)):
-            if porosity[i] < phi_c:
-                # Below critical porosity, use modified Hashin-Shtrikman bounds
-                
-                # Lower bound for bulk modulus
-                K_eff_L = (porosity[i] / phi_c / (K_HM + 4/3 * G_HM) + 
-                          (1 - porosity[i] / phi_c) / (bulk_modulus + 4/3 * G_HM))**(-1) - 4/3 * G_HM
-                
-                # Lower bound for shear modulus
-                zeta = G_HM / 6 * (9 * K_HM + 8 * G_HM) / (K_HM + 2 * G_HM)
-                G_eff_L = (porosity[i] / phi_c / (G_HM + zeta) + 
-                          (1 - porosity[i] / phi_c) / (shear_modulus + zeta))**(-1) - zeta
-                
-                # Upper bound for bulk modulus
-                K_eff_H = (porosity[i] / phi_c / (K_HM + 4/3 * shear_modulus) + 
-                          (1 - porosity[i] / phi_c) / (bulk_modulus + 4/3 * shear_modulus))**(-1) - 4/3 * shear_modulus
-                
-                # Upper bound for shear modulus
-                zeta = shear_modulus / 6 * (9 * bulk_modulus + 8 * shear_modulus) / (bulk_modulus + 2 * shear_modulus)
-                G_eff_H = (porosity[i] / phi_c / (G_HM + zeta) + 
-                          (1 - porosity[i] / phi_c) / (shear_modulus + zeta))**(-1) - zeta
-                
-                # Apply fluid substitution
-                K_sat_H = brie_model.calculate_saturated_modulus(
-                    K_eff_H, bulk_modulus, porosity[i], saturation[i]
-                )
-                K_sat_L = brie_model.calculate_saturated_modulus(
-                    K_eff_L, bulk_modulus, porosity[i], saturation[i]
-                )
-                
-            else:
-                # Above critical porosity, suspension model
-                K_eff = ((1 - porosity[i]) / (1 - phi_c) / (K_HM + 4/3 * G_HM) + 
-                        (porosity[i] - phi_c) / (1 - phi_c) / (4/3 * G_HM))**(-1) - 4/3 * G_HM
-                
-                zeta = G_HM / 6 * (9 * K_HM + 8 * G_HM) / (K_HM + 2 * G_HM)
-                G_eff = ((1 - porosity[i]) / (1 - phi_c) / (G_HM + zeta) + 
-                        (porosity[i] - phi_c) / (1 - phi_c) / zeta)**(-1) - zeta
-                
-                K_sat_H = K_sat_L = brie_model.calculate_saturated_modulus(
-                    K_eff, bulk_modulus, porosity[i], saturation[i]
-                )
-                G_eff_H = G_eff_L = G_eff
-            
-            # Calculate total density
-            rho_air = 1.225
-            rho_water = 1000
-            rho_total = mineral_density * (1 - porosity[i]) + (saturation[i] * rho_water + (1 - saturation[i]) * rho_air) * porosity[i]
-            
-            # Calculate velocities
-            Vp_high[i] = np.sqrt((K_sat_H + 4/3 * G_eff_H) * 1e9 / rho_total)
-            Vp_low[i] = np.sqrt((K_sat_L + 4/3 * G_eff_L) * 1e9 / rho_total)
-        
-        return Vp_high, Vp_low
+        pressure = ((np.asarray(mineral_density) - 1000) * 9.8 * np.asarray(depth)
+                    if effective_pressure is None else effective_pressure)
+        inputs = np.broadcast_arrays(*[
+            np.asarray(value, dtype=float) for value in (
+                porosity, saturation, bulk_modulus, shear_modulus,
+                mineral_density, pressure,
+                2.0 if fluid_modulus is None else fluid_modulus,
+                1000.0 if fluid_density is None else fluid_density)
+        ])
+        phi, sat, km, gm, rho_m, pressure, k_liquid, rho_liquid = inputs
+        if any(np.any(~np.isfinite(value)) for value in inputs):
+            raise ValueError("Model inputs must be finite.")
+        if np.any((phi < 0) | (phi > 1) | (sat < 0) | (sat > 1)):
+            raise ValueError("Porosity and saturation must be in [0, 1].")
+        if np.any((km <= 0) | (gm <= 0) | (rho_m <= 0) | (rho_liquid <= 0)):
+            raise ValueError("Mineral moduli and densities must be positive.")
+        if np.any((pressure < 0) | (k_liquid < 0)):
+            raise ValueError("Effective pressure and fluid modulus must be nonnegative.")
+        phi_c, contacts = self.critical_porosity, self.coordination_number
+        if not np.isfinite(phi_c) or not 0 < phi_c < 1:
+            raise ValueError("critical_porosity must be in (0, 1).")
+        if not np.isfinite(contacts) or contacts <= 0:
+            raise ValueError("coordination_number must be positive.")
+
+        v = (3 * km - 2 * gm) / (2 * (3 * km + gm))
+        p_gpa = pressure / 1e9
+        k_hm = (contacts**2 * (1 - phi_c)**2 * gm**2
+                / (18 * np.pi**2 * (1 - v)**2) * p_gpa)**(1/3)
+        # Mavko, Mukerji & Dvorkin (2009), RPHtools/hertzmind.m;
+        # independently agrees with rockphypy.GM.hertzmindlin(..., f=1).
+        # The prefactor MUST stay outside the cube root. Historical versions
+        # used (10 - 2*v) and cubed-rooted the prefactor, overstating stiffness.
+        shear_prefactor = (5 - 4*v) / (5 * (2 - v))
+        shear_contact_term = (3 * contacts**2 * (1 - phi_c)**2 * gm**2 * p_gpa
+                              / (2 * np.pi**2 * (1 - v)**2))
+        g_hm = shear_prefactor * shear_contact_term**(1/3)
+        z_hm = np.divide(g_hm * (9*k_hm + 8*g_hm), 6*(k_hm + 2*g_hm),
+                         out=np.zeros_like(g_hm), where=(k_hm + 2*g_hm) > 0)
+        z_m = gm / 6 * (9*km + 8*gm) / (km + 2*gm)
+        k_low, k_high, g_low, g_high = [np.zeros_like(phi) for _ in range(4)]
+
+        below = phi < phi_c
+        f = phi[below] / phi_c
+        # Positive contact stiffness uses the original modified HS equations.
+        contact = below & (pressure > 0)
+        fc = phi[contact] / phi_c
+        k_low[contact] = (fc / (k_hm[contact] + 4/3*g_hm[contact])
+                         + (1-fc) / (km[contact] + 4/3*g_hm[contact]))**-1 - 4/3*g_hm[contact]
+        g_low[contact] = (fc / (g_hm[contact] + z_hm[contact])
+                         + (1-fc) / (gm[contact] + z_hm[contact]))**-1 - z_hm[contact]
+        k_high[below] = (f / (k_hm[below] + 4/3*gm[below])
+                        + (1-f) / (km[below] + 4/3*gm[below]))**-1 - 4/3*gm[below]
+        g_high[below] = (f / (g_hm[below] + z_m[below])
+                        + (1-f) / (gm[below] + z_m[below]))**-1 - z_m[below]
+
+        suspension = ~below & (pressure > 0)
+        f = (1-phi[suspension]) / (1-phi_c)
+        k_low[suspension] = (f / (k_hm[suspension] + 4/3*g_hm[suspension])
+                            + (1-f) / (4/3*g_hm[suspension]))**-1 - 4/3*g_hm[suspension]
+        g_low[suspension] = (f / (g_hm[suspension] + z_hm[suspension])
+                            + (1-f) / z_hm[suspension])**-1 - z_hm[suspension]
+        k_high[~below], g_high[~below] = k_low[~below], g_low[~below]
+        # Exact endpoints avoid cancellation and the zero-pressure 0/0 limit.
+        for value, mineral in ((k_low, km), (k_high, km), (g_low, gm), (g_high, gm)):
+            value[phi == 0] = mineral[phi == 0]
+            value[phi == 1] = 0.0
+
+        k_fluid = BrieModel().calculate_fluid_modulus(sat, water_modulus=k_liquid)
+        if fluid_modulus is not None:
+            k_fluid = np.where(k_liquid <= 1e-12, 0.0, k_fluid)
+
+        k_sat_low = _gassmann_bulk_modulus(k_low, km, phi, k_fluid)
+        k_sat_high = _gassmann_bulk_modulus(k_high, km, phi, k_fluid)
+        density = rho_m * (1-phi) + (sat*rho_liquid + (1-sat)*1.225) * phi
+        vp_high = np.sqrt((k_sat_high + 4/3*g_high) * 1e9 / density)
+        vp_low = np.sqrt((k_sat_low + 4/3*g_low) * 1e9 / density)
+        if not return_moduli:
+            return vp_high, vp_low
+        return vp_high, vp_low, {
+            "Vs_low": np.sqrt(g_low * 1e9 / density),
+            "Vs_high": np.sqrt(g_high * 1e9 / density),
+            "K_dry_low": k_low, "K_dry_high": k_high,
+            "G_dry_low": g_low, "G_dry_high": g_high,
+            "K_sat_low": k_sat_low, "K_sat_high": k_sat_high,
+            "density": density,
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -593,11 +641,7 @@ def satK(
     Returns:
     float: Saturated bulk modulus (GPa).
     """
-    Kw = 2  # Bulk modulus of water (GPa)
-    Ka = 0.01  # Bulk modulus of air (GPa)
-    Kfl = (Kw - Ka) * Sat ** 3 + Ka  # Effective fluid bulk modulus
-    K_sat = (Keff / (Km - Keff) + Kfl / (phi * (Km - Kfl))) * Km / (1 + (Keff / (Km - Keff) + Kfl / (phi * (Km - Kfl))))
-    return K_sat
+    return BrieModel().calculate_saturated_modulus(Keff, Km, phi, Sat)
 
 
 # ---------------------------------------------------------------------------
@@ -629,6 +673,8 @@ def velDEM(
     Geff1 (np.array): Effective shear modulus for each porosity value (GPa).
     Vp (np.array): P-wave velocity for each porosity value (m/s).
     """
+    from scipy.optimize import root
+
     # Initialize arrays for the calculated values
     Keff1 = np.zeros(len(phi))
     Geff1 = np.zeros(len(phi))
@@ -704,57 +750,25 @@ def vel_porous(
     Calculate P-wave velocity (Vp) for a rock with varying porosity (phi) based on the 
     Hertz-Mindlin model and Hashin-Shtrikman bounds, taking into account the saturation (Sat).
 
+    Compatibility wrapper over HertzMindlinModel.calculate_velocity with
+    critical porosity 0.4 and coordination number 4. Both return modes of
+    that method and this function share the contact, HS and Gassmann
+    implementation, including the corrected Hertz-Mindlin shear prefactor.
+    Historical incorrect shear values are intentionally not preserved.
+
     Parameters:
     phi (np.array): Array of porosities.
     Km (float): Bulk modulus of the solid phase (GPa).
     Gm (float): Shear modulus of the solid phase (GPa).
     rho_b (float): Density of the solid phase (kg/m^3).
-    Sat (array): Saturation fractions with one entry per phi value; scalars are not broadcast here.
+    Sat (array): Saturation fractions; scalars and arrays broadcast with phi.
     depth (float): depth for pressure estimation (m)
 
     Returns:
     Vp_h (np.array): P-wave velocity for each porosity value (upper Hashin-Shtrikman bound) (m/s).
     Vp_l (np.array): P-wave velocity for each porosity value (lower Hashin-Shtrikman bound) (m/s).
     """
-    # Hertz-Mindlin model in critical porosity
-    C = 4  # The number of contacts
-    phi_c = 0.4  # The critical porosity
-    v = (3 * Km - 2 * Gm) / (2 * (3 * Km + Gm))  # Poisson's ratio
-    P = (rho_b - 1000) * 9.8 * depth / (1e9)
-    K_HM = (C ** 2 * (1 - phi_c) ** 2 * Gm ** 2 / (18 * np.pi ** 2 * (1 - v) ** 2) * P) ** (1 / 3)
-    # Mavko et al.: the shear prefactor is (5 - 4v) / (5 (2 - v)); this had
-    # (10 - 2v), the same slip HertzMindlinModel had.
-    G_HM = (5 - 4 * v) / (5 * (2 - v)) * ((3 * C ** 2 * (1 - phi_c) ** 2 * Gm ** 2) * P / (2 * np.pi ** 2 * (1 - v) ** 2)) ** (1 / 3)
-
-    Vp_h = []
-    Vp_l = []
-
-    for ii in range(len(phi)):
-        if phi[ii] < phi_c:
-            Keff_L = (phi[ii] / phi_c / (K_HM + 4 / 3 * G_HM) + (1 - phi[ii] / phi_c) / (Km + 4 / 3 * G_HM)) ** (-1) - 4 / 3 * G_HM
-            onede = G_HM / 6 * (9 * K_HM + 8 * G_HM) / (K_HM + 2 * G_HM)
-            Geff_L = (phi[ii] / phi_c / (G_HM + onede) + (1 - phi[ii] / phi_c) / (Gm + onede)) ** (-1) - onede
-
-            Keff_H = (phi[ii] / phi_c / (K_HM + 4 / 3 * Gm) + (1 - phi[ii] / phi_c) / (Km + 4 / 3 * Gm)) ** (-1) - 4 / 3 * Gm
-            onede = Gm / 6 * (9 * Km + 8 * Gm) / (Km + 2 * Gm)
-            Geff_H = (phi[ii] / phi_c / (G_HM + onede) + (1 - phi[ii] / phi_c) / (Gm + onede)) ** (-1) - onede
-
-            Sh = satK(Keff_H, Km, phi[ii], Sat[ii])
-            Sl = satK(Keff_L, Km, phi[ii], Sat[ii])
-        else:
-            Keff = ((1 - phi[ii]) / (1 - phi_c) / (K_HM + 4 / 3 * G_HM) + (phi[ii] - phi_c) / (1 - phi_c) / (4 / 3 * G_HM)) ** (-1) - 4 / 3 * G_HM
-            onede = G_HM / 6 * (9 * K_HM + 8 * G_HM) / (K_HM + 2 * G_HM)
-            Geff = ((1 - phi[ii]) / (1 - phi_c) / (G_HM + onede) + (phi[ii] - phi_c) / (1 - phi_c) / (onede)) ** (-1) - onede
-
-            Sh = satK(Keff, Km, phi[ii], Sat[ii])
-            Sl = satK(Keff, Km, phi[ii], Sat[ii])
-            Geff_L = Geff
-            Geff_H = Geff
-
-        rho_a = 1.225
-        rho_w = 1000
-        rhototal = rho_b * (1 - phi[ii]) + (Sat[ii] * rho_w + (1 - Sat[ii]) * rho_a) * phi[ii]
-        Vp_h.append(np.sqrt((Sh + 4 / 3 * Geff_H) * 1e9 / rhototal))
-        Vp_l.append(np.sqrt((Sl + 4 / 3 * Geff_L) * 1e9 / rhototal))
-
-    return np.array(Vp_h), np.array(Vp_l)
+    return HertzMindlinModel().calculate_velocity(
+        porosity=phi, saturation=Sat, bulk_modulus=Km, shear_modulus=Gm,
+        mineral_density=rho_b, depth=depth,
+    )

@@ -188,7 +188,8 @@ def run_srt_manager_inversion(
         )
 
     manager = tt.TravelTimeManager(data)
-    manager.invert(data, mesh=inversion_mesh,
+    manager.invert(data, mesh=inversion_mesh, lam=float(lam),
+                   maxIter=int(max_iterations),
                    secNodes=int(max(1, secondary_nodes)), verbose=False)
     metrics, convergence = metrics_from_manager(
         manager, n_data=int(data.size()), method="SRT"

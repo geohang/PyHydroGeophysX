@@ -25,6 +25,10 @@ class OneClickWorker(ProcessProbeWorker):
     #: ended (``phase == 'done'``, with its summary and status). The fields the
     #: progress line flattens into one string, for the live timeline.
     stepped = Signal(dict)
+    #: The run asks the studio to describe a page, run one of its actions or
+    #: hand over its result (``runtime.studio``). Carries the request; reply
+    #: with :meth:`reply_studio`.
+    studio_requested = Signal(dict)
 
     def __init__(self, payload, parent=None):
         super().__init__('PyHydroGeophysX.qt_apps.agent.one_click_runner',
@@ -68,6 +72,11 @@ class OneClickWorker(ProcessProbeWorker):
         """
         return self._write(
             (json.dumps({'decision': str(decision)}) + '\n').encode('utf-8'))
+
+    def reply_studio(self, answer):
+        """Answer the run's pending studio request."""
+        return self._write(
+            (json.dumps({'studio': answer}, default=str) + '\n').encode('utf-8'))
 
     def steer(self, text):
         """Send the running workflow a note, read before its next decision."""
@@ -132,6 +141,8 @@ class OneClickWorker(ProcessProbeWorker):
                 self.asked.emit(event)
             elif isinstance(event, dict) and event.get('event') == 'step':
                 self.stepped.emit(event)
+            elif isinstance(event, dict) and event.get('event') == 'studio':
+                self.studio_requested.emit(dict(event.get('request') or {}))
             elif not isinstance(event, dict) or 'ok' not in event:
                 self.logged.emit(line)
 

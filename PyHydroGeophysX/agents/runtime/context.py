@@ -134,6 +134,14 @@ class RunContext:
         #: run. A run the user or the step limit cut off did not run out of
         #: work, and whether it is complete depends on which it was.
         self.ended = ""
+        #: Tool name -> index of the first step that counts as an attempt of it.
+        #: A step run again with other settings changes what the steps after
+        #: it read; those are reopened (:meth:`reopen`), so they can run again
+        #: on the new result instead of being refused as already tried.
+        self.reopened: Dict[str, int] = {}
+        #: Off-route actions put to the user (:mod:`.toolbox`): what was
+        #: proposed and whether it was accepted, in order.
+        self.proposals: List[Dict[str, Any]] = []
         self._open: Optional[Step] = None
         self._started = time.monotonic()
 
@@ -266,7 +274,28 @@ class RunContext:
         a premature choice permanent - a conversion named before the evaluation
         existed was never offered again once the evaluation did exist.
         """
-        return sum(1 for s in self.steps if s.tool == tool and s.status != "blocked")
+        since = self.reopened.get(tool, 0)
+        return sum(1 for index, s in enumerate(self.steps)
+                   if index >= since and s.tool == tool and s.status != "blocked")
+
+    def reopen(self, names: Iterable[str]) -> None:
+        """Let ``names`` run again: their earlier attempts no longer count.
+
+        For the steps downstream of one that was run again with other settings:
+        what they read has changed, so what they made is out of date.
+
+        Examples
+        --------
+        >>> ctx = RunContext('x')
+        >>> _ = ctx.begin('evaluate'); ctx.finish()
+        >>> ctx.attempted('evaluate')
+        1
+        >>> ctx.reopen(['evaluate'])
+        >>> ctx.attempted('evaluate')
+        0
+        """
+        for name in names:
+            self.reopened[str(name)] = len(self.steps)
 
     # -- views -------------------------------------------------------------
     def transcript(self, limit: int = 40) -> str:
@@ -305,6 +334,11 @@ class RunContext:
             lines.append("What the user told you during the run, oldest first "
                          "(follow it where the actions and settings allow):")
             lines.extend(f"  - {note}" for note in self.guidance)
+        if self.proposals:
+            lines.append("Changes of course you put to the user:")
+            lines.extend(f"  - {p['title']}: "
+                         f"{'accepted' if p.get('accepted') else 'declined - do not propose again'}"
+                         for p in self.proposals)
         return "\n".join(lines)
 
     def plan(self) -> List[Dict[str, Any]]:

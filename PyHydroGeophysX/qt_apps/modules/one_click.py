@@ -3,7 +3,7 @@ from pathlib import Path
 import time
 
 from PySide6.QtCore import Qt, QUrl, Signal, QTimer, QElapsedTimer
-from PySide6.QtGui import QDesktopServices, QImage, QTextCursor
+from PySide6.QtGui import QDesktopServices, QImage, QTextCursor, QTextDocument
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QHBoxLayout,
     QLabel, QListWidget, QListWidgetItem, QPlainTextEdit, QProgressBar,
     QPushButton, QScrollArea, QSplitter, QTabWidget, QTextBrowser, QVBoxLayout, QWidget,
@@ -77,7 +77,18 @@ class _FittedReportBrowser(QTextBrowser):
     non-breakable, so a single long line - a JSON string holding the request,
     or a Windows path - drags the whole report sideways. They are allowed to
     wrap here for the same reason the figures are scaled.
+
+    Shrinking is done here, smoothly, not left to the document. Given only a
+    smaller width, Qt draws the full-size picture into it sampling the nearest
+    pixel: a 5690-pixel section shown 1300 wide kept one pixel in four and a
+    half, and its axis labels came out broken and jagged though the file was
+    sharp. Each figure is now scaled with filtering to the width it is shown
+    at, in device pixels on a high-DPI screen. While a resize drag goes on, the
+    previous copy is stretched; the sharp one follows once it pauses.
     """
+
+    #: How long a resize must pause before the figures are scaled again (ms).
+    SHARPEN_DELAY_MS = 150
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -86,18 +97,28 @@ class _FittedReportBrowser(QTextBrowser):
         # within a report.
         self._native_sizes = {}
         self._fitting = False
+        # The scaled copies in the document: (file, device width) -> its name,
+        # and back from a copy's name to the file it was made from.
+        self._scaled = {}
+        self._source_of = {}
+        self._sharpen_timer = QTimer(self)
+        self._sharpen_timer.setSingleShot(True)
+        self._sharpen_timer.timeout.connect(lambda: self._fit_images(sharpen=True))
 
     def setMarkdown(self, text):  # noqa: N802 - Qt naming
         # A re-run writes new figures under the same filenames, and a section
         # with a different number of time steps is a different width.
         self._native_sizes.clear()
+        self._scaled.clear()
+        self._source_of.clear()
         super().setMarkdown(text)
         self._wrap_code_blocks()
-        self._fit_images()
+        self._fit_images(sharpen=True)
 
     def resizeEvent(self, event):  # noqa: N802 - Qt event override
         super().resizeEvent(event)
         self._fit_images()
+        self._sharpen_timer.start(self.SHARPEN_DELAY_MS)
 
     def _wrap_code_blocks(self):
         """Let pre-formatted blocks wrap instead of widening the document.
@@ -117,17 +138,45 @@ class _FittedReportBrowser(QTextBrowser):
             block = block.next()
         cursor.endEditBlock()
 
+    def _path_of(self, name):
+        """The file the document's image ``name`` was read from."""
+        return self.document().baseUrl().resolved(QUrl(name)).toLocalFile()
+
     def _native_size(self, name):
         """Pixel size of the image ``name`` refers to, or None."""
         if name not in self._native_sizes:
-            path = self.document().baseUrl().resolved(QUrl(name)).toLocalFile()
-            image = QImage(path)
+            image = QImage(self._path_of(name))
             self._native_sizes[name] = (
                 (image.width(), image.height()) if not image.isNull() else None)
         return self._native_sizes[name]
 
-    def _fit_images(self):
-        """Hold every image to the pane width, keeping its aspect ratio."""
+    def _scaled_copy(self, name, width):
+        """The name of ``name`` scaled smoothly to ``width`` logical pixels; None if unreadable.
+
+        One copy per figure, rewritten in place when the width changes, so a
+        resized pane does not collect a copy for every width it passed through.
+        """
+        ratio = max(1.0, float(self.devicePixelRatioF()))
+        pixels = max(1, int(round(width * ratio)))
+        held, copy = self._scaled.get(name, (None, f'phgx-fitted:{len(self._scaled)}/'
+                                                   f'{Path(name).name}'))
+        if held != pixels:
+            image = QImage(self._path_of(name))
+            if image.isNull():
+                return None
+            image = image.scaledToWidth(pixels, Qt.SmoothTransformation)
+            image.setDevicePixelRatio(ratio)
+            self.document().addResource(QTextDocument.ImageResource, QUrl(copy), image)
+            self._scaled[name] = (pixels, copy)
+            self._source_of[copy] = name
+        return copy
+
+    def _fit_images(self, sharpen=False):
+        """Hold every image to the pane width, keeping its aspect ratio.
+
+        With ``sharpen``, a figure shown smaller than its file is swapped for a
+        copy scaled smoothly to that size (see the class notes).
+        """
         # Narrowing an image can retire the horizontal scrollbar, which resizes
         # the viewport, which lands back here.
         if self._fitting:
@@ -143,13 +192,20 @@ class _FittedReportBrowser(QTextBrowser):
                     image = fragment.charFormat().toImageFormat()
                     if not image.isValid() or not image.name():
                         continue
-                    native = self._native_size(image.name())
+                    source = self._source_of.get(image.name(), image.name())
+                    native = self._native_size(source)
                     width, height = native or (image.width(), image.height())
                     if width <= 0 or height <= 0:
                         continue
                     target = min(float(width), float(available))
-                    if abs(image.width() - target) < 1.0:
+                    name = image.name()
+                    if sharpen and native and target < width:
+                        name = self._scaled_copy(source, target) or name
+                    elif sharpen and target >= width:
+                        name = source
+                    if abs(image.width() - target) < 1.0 and name == image.name():
                         continue
+                    image.setName(name)
                     image.setWidth(target)
                     image.setHeight(height * target / width)
                     cursor.setPosition(fragment.position())
@@ -158,6 +214,9 @@ class _FittedReportBrowser(QTextBrowser):
                     cursor.setCharFormat(image)
                 block = block.next()
             cursor.endEditBlock()
+            if sharpen:
+                # A copy rewritten under its old name changes no format.
+                self.viewport().update()
         finally:
             self._fitting = False
 
@@ -198,6 +257,9 @@ class OneClickModule(BaseModule):
         self._data_folder = None
         self._catalog = None
         self._last_catalog_roles = None
+        # A run that ended asking for "continue" (a sorted folder to check)
+        # rather than finishing; the chat keeps Auto to report for the reply.
+        self.awaiting_continue = False
         self._catalog_inputs = {}
         self._elapsed = QElapsedTimer()
         # What the run is doing and when it started, so a module it visits can
@@ -519,7 +581,7 @@ class OneClickModule(BaseModule):
 
     def _goal_hint(self):
         return (f'Describe your goal to {self._name()} in the assistant panel on the '
-                'right and select Auto to report.')
+                'right and choose Auto to report.')
 
     def set_assistant(self, assistant):
         """Work for ``assistant``: its input roles, its name, its folder sorting.
@@ -972,8 +1034,11 @@ class OneClickModule(BaseModule):
             payload = dict(assistant=self._assistant.key,
                            request=request, inputs=dict(self._inputs), provider=provider,
                            model=settings.get('model'), api_key=key, use_ai=not offline,
-                           output_dir=self._output)
+                           base_url=settings.get('base_url'), output_dir=self._output)
             payload.update({k: settings.get(k) for k in ('reasoning_effort', 'use_rag', 'use_mcp')})
+            # Work finished step by step in the studio, for the run to carry on from.
+            if settings.get('studio_work'):
+                payload['studio_work'] = settings['studio_work']
             payload['step_mode'] = bool(step_mode)
             if self._workflow_setup is not None:
                 payload = self._workflow_setup.prepare_payload(payload)
@@ -993,6 +1058,7 @@ class OneClickModule(BaseModule):
             worker.progress.connect(self._on_progress)
             worker.stepped.connect(self._on_step_event)
             worker.asked.connect(self._on_asked)
+            worker.studio_requested.connect(self._on_studio_request)
             worker.logged.connect(self._on_log)
             worker.succeeded.connect(self._succeeded)
             worker.failed.connect(self._failed)
@@ -1003,6 +1069,7 @@ class OneClickModule(BaseModule):
             self.stop.setEnabled(True)
             self.stop.show()
             self.folder.setEnabled(True)
+            self.awaiting_continue = False
             self.details.clear()
             self.files.clear()
             self.report.setPlainText('Workflow running. Follow it in the Live tab, or the raw events in Raw log.')
@@ -1696,6 +1763,25 @@ class OneClickModule(BaseModule):
         self.pause_buttons.addStretch(1)
         self.pause_box.setVisible(True)
 
+    def _on_studio_request(self, request):
+        """The run wants to use a studio page: the studio's controller carries it out.
+
+        The answer goes back to the run that asked, and to no other: a page
+        action can outlast the run that started it (the user pressed Stop).
+        """
+        worker = self._worker
+
+        def reply(answer, asked_by=worker):
+            if asked_by is not None and self._worker is asked_by:
+                asked_by.reply_studio(answer)
+
+        controller = getattr(self.window(), '_controller', None)
+        serve = getattr(controller, 'serve_studio', None)
+        if not callable(serve):
+            reply({'status': 'failed', 'error': 'The studio is not available to this run.'})
+            return
+        serve(dict(request or {}), reply)
+
     def _answer(self, decision):
         """Send the user's decision back to the running workflow."""
         step = getattr(self, '_asked_step', None)
@@ -1767,6 +1853,7 @@ class OneClickModule(BaseModule):
                            f'Check the roles in Data, then send \u201ccontinue\u201d to {self._name()}.',
                            glow_state=presence.DONE)
             message = 'File classification ready. Review/edit the roles in Workflow, then send “continue”. Unknown files must be assigned or ignored.'
+            self.awaiting_continue = True
             if result['catalog'].get('warnings'):
                 message += '\n' + '\n'.join(result['catalog']['warnings'])
             self.status.setText(message)
@@ -2021,8 +2108,8 @@ class OneClickModule(BaseModule):
                  'desc': 'Play a finished run back in the Live tab; the last run by default.'},
             ] + setup_actions,
             'note': ('Runs are started from the assistant panel (Auto to report, or '
-                     'Step-by-step); this page holds their inputs, follows them live and '
-                     'shows the report.'),
+                     'run_to_report from step by step); this page holds their inputs, '
+                     'follows them live and shows the report.'),
         }
 
     def agent_apply(self, action, args):

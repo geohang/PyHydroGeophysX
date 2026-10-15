@@ -237,6 +237,22 @@ def _fit_array_start(start: float, spacing: float, count: int, l_max: float) -> 
     return float(min(max(0.0, start), l_max - span))
 
 
+def sensor_positions(start: float, spacing: float, count: int, l_max: float) -> np.ndarray:
+    """Distances along the profile of a spread's electrodes or geophones.
+
+    Where the forward run puts them: the spread is moved back onto a profile of
+    length ``l_max`` if it would run off the end.
+    """
+    first = _fit_array_start(float(start), float(spacing), int(count), float(l_max))
+    return first + float(spacing) * np.arange(int(count))
+
+
+def station_indices(n_profile: int, stations: int) -> np.ndarray:
+    """The profile samples the EM and gravity stations sit on, both ends included."""
+    step = max(1, int(n_profile) // max(1, int(stations)))
+    return np.unique(np.r_[np.arange(0, int(n_profile), step), int(n_profile) - 1])
+
+
 # ---------------------------------------------------------------------------
 # Full forward run (requires pygimli)
 # ---------------------------------------------------------------------------
@@ -442,9 +458,7 @@ def run_hydro_forward(
     # Pseudo-2D EM / gravity along the same profile.
     em_methods = [m for m in methods if m in ("TDEM", "FDEM", "Gravity")]
     if em_methods:
-        target_stations = int(params.get("em_stations", 24))
-        step = max(1, n_profile // max(1, target_stations))
-        station_idx = np.unique(np.r_[np.arange(0, n_profile, step), n_profile - 1])
+        station_idx = station_indices(n_profile, int(params.get("em_stations", 24)))
         x_station = L_profile[station_idx]
         wc_station = wc_profile[:, station_idx]
         por_station = por_profile[:, station_idx]

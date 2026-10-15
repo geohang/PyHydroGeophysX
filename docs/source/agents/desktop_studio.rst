@@ -27,7 +27,7 @@ Home opens with the active Project: its folder, **Saved Results**, **Map**,
 **New Project** and **Open Project**. Below it, the active assistant's
 **Agentic AI** workflow: plan, process, evaluate, and report. Choose **Start an
 AI workflow** to open Workflow, where you add data, and describe the goal in
-the assistant panel. The assistant offers step-by-step approval or execution
+the assistant panel. The assistant works with you step by step, or runs
 through to a report.
 
 The research task cards follow the model–data loop. **Forward**: simulate a
@@ -53,10 +53,128 @@ that assistant takes and the glow its colours, and is remembered. Adding an
 assistant is described in :doc:`adding_an_assistant`.
 
 Use the panel to enter goals and configure the request level,
-provider, and session API key. Choose **Step-by-step assistance** to approve
-individual operations, or **Auto to report** to execute a complete analysis
-workflow. Auto mode supports OpenAI and Claude and may incur provider API
-charges.
+provider, and session API key. When you send a request, the panel asks how to
+carry it out: **Step by step** does the routine actions itself and asks you at
+the decisions, and **Auto to report** runs the whole analysis and writes the
+report. Auto mode supports OpenAI and Claude and may incur provider API charges.
+
+.. _step-by-step-approval:
+
+Step by step, the assistant decides, action by action, whether to ask you.
+Routine actions run at once and are listed in the chat as they run, each with
+its result: looking at a page, opening a module, loading the data you named,
+setting values you gave, and the next step of a plan you have agreed to. An
+action waits for **Approve** / **Reject** when your judgement matters: a long
+computation such as an inversion, a forward run or picking every shot, whose
+settings you have not confirmed; a value, data source or method the assistant
+chose itself; and a change of plan. Some rules hold whatever the assistant
+decides. Looking never asks. Clearing picks, electrodes or inputs, and running
+a temporary script, always ask. When the model does not say, actions that start
+a long computation ask. After 25 actions in a row without you, the next one
+asks. **Stop**, beside **Send** while the assistant works, ends its turn after
+the action in hand. An inversion already running on a page carries on there.
+
+When an action fails, the assistant reads the error and adjusts. The error may
+come from the page or from the studio's handling of the call, or be arguments it
+wrote that could not be read; nothing runs with arguments it could not read. A
+reply of the model's that cannot be used is asked for once more, unless the
+cause is sign-in, quota or a usage limit. A job it started in the background,
+such as an inversion or a mesh, can fail after its turn has ended. The
+assistant is then told what the page logged, as soon as it is free. It looks
+at the page, says what went wrong and fixes what it can, asking you before it
+runs the job again. It looks into at most two problems in a row before waiting
+for you.
+
+Your own work on the pages is covered too. If something you do on a page fails,
+such as a file that will not load or an inversion you started, the assistant is
+told what the page reported. The same goes for a button that ends in an
+unexpected error. It says what went wrong and how to put it right, and offers to
+do it, asking before it changes your settings or runs anything. Before any
+conversation this opens one, step by step. The error is told once the page has
+finished and its error lines have stopped. Nothing is passed on while an
+automatic run is going, since the run handles its own problems. If no model is
+ready, or two problems in a row have gone unanswered, the chat only notes the
+error.
+
+You can change your mind while working step by step. Ask for the end result in
+your own words, for example "give me the final result directly", and the
+assistant hands the rest of the task to Auto to report. Since you asked for it,
+this needs no further click. It passes on the data, the choices made so far and any finished work, so a
+completed ERT inversion is taken over and evaluated rather than run again. The
+evaluation scores that model as it is: the automatic retry with another
+regularization is off for it, since a retry would re-invert the data without
+what was done on the page. If the fit is poor, the assistant can propose running
+it again with other settings. When the run ends, the conversation continues step
+by step, and the assistant can start another automatic run when you ask.
+
+.. _auto-to-report-latitude:
+
+Auto to report follows a standard route: load, invert, evaluate, derive (for
+example water content) and report. When it decides, the assistant reasons
+about what the run has shown so far and writes down the steps it intends next,
+and which of their results it wants to see before going on. Those steps then
+run without asking the model again. It is asked again only when it wanted to
+look, when a step fails or raises a warning, when you send a note, or when its
+plan runs out. A run whose route holds no surprises therefore needs only a few
+model calls. The reasoning and the plan appear in the Live tab. If the evidence
+gives it a concrete reason, it can leave the route. It may:
+
+- look at a product's numbers before deciding (without asking);
+- use a studio page, through the same actions you click and the chat drives.
+  For example, it can filter the ERT data, set zones, choose another engine or
+  run the page's own inversion, then bring the page's model into the run with
+  *Take over the ERT page's inversion* so the run evaluates and reports it.
+  Looking at a page's actions and state is free. The first action on a page is
+  put to you; once you agree, the run may use that page. The page works in the
+  background, without being brought to the front, and a long action such as an
+  inversion counts as one step that ends when the page has finished. If the work
+  fails on the page, the step is recorded as failed with what the page logged
+  or reported, not as done. The assistant then decides what to do next: other
+  arguments, another action or page, a script, or the standard route.
+- run a finished step again with other settings, such as a different
+  regularization when the fit is poor; the steps after it run again on the new
+  result, and so does the report;
+- add a step the route had not planned, such as the climate series that would
+  explain a change, or a water-content estimate that was not asked for;
+- leave out route steps that do not serve the goal, such as a method the
+  request never asked for whose data were misread. This is the assistant's own
+  call and is not put to you. The steps that need their results drop out too,
+  and the Live tab and the report say what was left out and why. A step is
+  never left out when the report or a product you asked for, such as water
+  content, still needs it;
+- write a temporary script (see :ref:`assistant-temporary-scripts`);
+- ask you a question whose answer is yours to give.
+
+Every other change of course is put to you first, in the Workflow page,
+with the assistant's reason as its recommendation: **Yes** does it, **No** keeps
+to the standard route. A declined suggestion is not offered again. A run makes at
+most four such proposals, and with nobody there to answer it keeps to the route.
+The report lists what was proposed and what you chose. Without a model the route
+is followed exactly, as before.
+
+A problem before the first step does not stop the run. If the reference
+search, the MCP connection, reading the request, taking over the studio's
+inversion or setting up the model fails, the run carries on without it (the
+request is then read by rules rather than the model). An input it cannot use as
+labelled is handled the same way. The run's record notes what failed, and the
+assistant reads the note at its first decision. It can carry on, ask you, or
+propose a temporary script for you to approve.
+
+Errors while the run goes are handled in the same spirit. A step that fails is
+diagnosed by the assistant, which may change a setting and run it again or
+propose a script. An error in the run's own controller rather than in a step is
+noted, the step it cut off is offered again, and the run carries on from where
+it stood. After a second such error it keeps to the standard route; after a
+third it stops choosing steps and keeps what it has. A run in which no step
+succeeded comes back as not complete, with every failure and its diagnosis
+listed, rather than as a bare error.
+
+When a run fails or does not complete, the assistant looks into it in the chat
+without waiting to be asked. It reads the run's record on the Workflow page,
+says what went wrong and fixes what it can, by correcting an input or setting,
+finishing the missing part step by step, or proposing a script. It asks you
+before running the task again. It does this for at most two runs in a row, then
+waits for you.
 
 The central **Workflow → Data & reports** page shows inputs, survey ordering,
 progress, results, report preview and activity. It contains no second prompt or
@@ -151,9 +269,8 @@ Watch the updated Qt interface walkthrough:
 The main window has six working areas:
 
 1. **Project tree** -- select Seismic, ERT, 3D Mesh Builder, EM,
-   Gravity / Magnetics, Magnetotellurics, Hydro -> Geophysics, Seismic -> Structure, or
-   ERT -> Water Content. Multiple tree entries under Hydro -> Geophysics open
-   different stages of the same guided module.
+   Gravity / Magnetics, Magnetotellurics, GPR, Hydro -> Geophysics, Seismic -> Structure,
+   or ERT -> Water Content.
 2. **Module workspace** -- plots, maps, model viewers, and step-by-step controls
    for the selected method.
 3. **AQUAH Chat / Properties** -- ask the assistant to prepare an action, or
@@ -878,7 +995,11 @@ own process instead.
      - Each view tab brings up the side panel for its step, as on the Seismic
        page. **Time series:** open a recording folder or file (Phoenix MTU-5C
        and legacy MTU, Metronix ATS, Zonge Z3D, LEMI-424), optionally a remote
-       reference and a calibration override; set the sample rates, window,
+       reference and a calibration override; under **Directions**, say which
+       way a channel points when the layout differs from what the receiver
+       recorded (Ex laid out to the south is 180°). The view draws one run at a time:
+       pick the stream (one per sample rate) and the run number within it, and
+       zoom in to see the samples themselves. Set the sample rates, window,
        decimation and robust cuts; click **Process time series**, or add sites
        processed elsewhere. **Sounding** and **Dimensionality:** the site list
        (processed sites, or EDI / EMTF XML / Z- / J-files from disk), the
@@ -891,26 +1012,72 @@ own process instead.
      - EDI and EMTF XML transfer functions, apparent resistivity and phase
        CSV, the 1D model and fit CSV, the 2D section (NPZ and CSV), and a
        Project Map layer of either model.
+   * - **GPR**
+     - One page, laid out like the ERT page. **1 Load:** open a GSSI ``.DZT``,
+       pulseEKKO ``.DT1``/``.HD``, MALA ``.rd3``/``.rd7``/``.rad`` or SEG-Y
+       line, or **Use example** (a simulated 100 MHz line over the MODFLOW
+       catchment model); under **Line geometry**, set the trace spacing of a
+       line recorded by time. **2 Clean up:** dewow, time zero, band-pass and
+       background removal. **3 Velocity and depth:** press **Fit a
+       hyperbola**, click the top of a hyperbola and change the velocity until
+       the dashed curve lies on it; load ground elevations for the Elevation
+       view. **4 Migration**, **5 Gain**. Every change is applied at once; the
+       views are the **Radargram** (processed or as recorded, in time, depth
+       or elevation), one **Trace** and the **Spectrum**.
+     - The processed line (``.npz``), the radargram (``.png``) and the
+       processing recipe (``.json``), from **6 Save**. See
+       :doc:`/methods/gpr`.
    * - **Hydro -> Geophysics**
-     - **Data:** use example/context data or select the hydrologic-output folder.
-       **Profile:** pick two map points. **Methods:** select ERT, SRT, EM, or
-       gravity. **Parameters:** review petrophysics and survey settings.
-       **Run:** confirm the readiness checklist and run forward modeling.
-     - Extracted profile, survey configurations, synthetic responses, models,
-       and figures for each selected method.
+     - One page, laid out like the ERT page; the line above its views always
+       says what to do next. **1 Hydrologic model:** open the model-output
+       folder, or **Use example** (the MODFLOW catchment model of
+       ``Ex_ERT_workflow``, opened on that example's time step and line), and
+       choose the time step. **2 Survey line:** click its start and end on the
+       **Map**, or type the grid cells; the **Section** tab shows the ground
+       under it, its regolith, fractured-rock and bedrock zones, and where each
+       survey's electrodes, geophones and stations go. **3 Surveys:** tick ERT,
+       seismic refraction, TDEM, FDEM or gravity; each shows its settings in
+       one line, and unfolds to change them. Click **Simulate surveys**; what
+       still stops it is said above the button.
+     - Each method's model and synthetic data on the **Results** tab, the
+       synthetic data files, the survey configuration and the figures.
    * - **Seismic -> Structure**
-     - Load velocity sections and line coordinates; set interface threshold;
-       preview the first interface; configure interpolation/grid options; check
-       Readiness; click **Build 3D model**.
-     - Bedrock surface, 3D velocity/structure volume, configuration JSON, and a
-       direct handoff to ERT -> Water Content.
+     - One page, laid out like Hydro -> Geophysics; the line above its views
+       says what to do next. **1 Seismic lines:** add a folder with
+       ``velmesh.bms`` and ``Vinvmodel.npy`` per line, or **Use example**
+       (three synthetic lines crossing one site), and type each line's start
+       (its section's distance 0) and end; the **Map** tab draws them.
+       **2 Bedrock interface:** the velocity at the top of bedrock; the
+       **Section** tab shows the chosen line's velocity with that interface
+       on it, and **Send to ERT -> Water Content** hands it on. **3 3D grid:**
+       cells, depth, layers and the interpolation between the lines, with
+       kriging's variogram folded. Click **Build 3D model**.
+     - The velocity volume on the **3D model** tab, the bedrock depth map and
+       3D figures on **Figures**, the configuration JSON, and the bedrock
+       interface handed to ERT -> Water Content.
    * - **ERT -> Water Content**
-     - Load a model folder containing ``mesh_res.bms``, ``resmodel.npy``, and
-       ``index_marker.npy``; verify layers; choose water-content/porosity
-       products and targets; set Monte Carlo parameters; check Readiness; click
-       **Run water-content estimation**.
-     - Mean, standard deviation, percentile models, layer summaries,
-       monitoring-point time series, and petrophysics configuration JSON.
+     - One page, laid out like Hydro -> Geophysics; the line above its views
+       says what to do next. **1 Inverted ERT model:** open an ERT inversion's
+       output folder as the ERT page wrote it (``final_models.npy`` and
+       ``timelapse_mesh.bms`` for a time-lapse series, ``resistivity_model.npy``
+       and ``resistivity_mesh.bms`` for one survey), or a folder with
+       ``mesh_res.bms``, ``resmodel.npy`` and ``index_marker.npy``, or **Use
+       example** (the Treeline time-lapse model of ``Ex_MC_Hydro``). The
+       assistant can also take the model the ERT page shows. The
+       **Model** tab shows each survey's resistivity, and its "Hide below"
+       sets the coverage the result maps keep. **2 Layers:** tick and name the
+       layers to estimate in; the **Layers** tab shows where they are, and a
+       seismic bedrock interface can redraw them. Layers come from
+       ``index_marker.npy`` only when its markers group the cells, with at
+       least 10 cells in each. An inversion mesh numbers its cells one by one,
+       and such a file is read as one layer, with the reason in the log.
+       Without the file the model is one layer too. **3 Rock physics:** each
+       layer's values in one line, unfolded to change them. **4 Estimate:**
+       water content and/or porosity, and the number of samples. Click
+       **Estimate water content**.
+     - Mean, uncertainty (1σ) and percentile maps on the **Results** tab, the
+       water content through the surveys at two points on **Time series**, the
+       arrays and the rock-physics configuration JSON.
 
 Using AQUAH Chat Safely
 --------------------------------------------------------------------------------
@@ -921,11 +1088,16 @@ change parameters, and start supported actions.
 Copy files in your file manager and paste them into the chat input with
 **Ctrl+V**, or drag files and model folders into it. AQUAH and the selected
 GeoSAGE assistant receive their local paths; file names appear above the input.
-Describe your task and send it. The AI uses file names, bounded content previews
-and the task to identify survey data, model configurations and RAG reference
-documents. Data are added to **Workflow → Data & reports**, and literature is
-made available for local retrieval. You do not need to choose roles manually.
-Ambiguous files prompt a clarification before any classification is applied.
+Describe your task and send it. The AI identifies survey data, model
+configurations and RAG reference documents the way the Workflow page sorts a
+folder. It weighs the file names, bounded content previews, the shape of each
+numeric table (rows, columns, whether the first column is evenly spaced), the
+other files in the same folder, and the task. A file named for electrodes with
+one evenly spaced row per electrode, beside ERT surveys, is an electrode file.
+Data are added to **Workflow → Data & reports**, and literature is made
+available for local retrieval. You do not need to choose roles manually. A file
+the AI cannot place prompts a question before any classification is applied:
+say what it is, or reply **continue** to let the AI decide from the evidence.
 Select a file and click **Remove** to detach it without deleting its source.
 
 Identifying a reference enables the **RAG** setting. With RAG enabled, each request
@@ -952,11 +1124,50 @@ in this session.
    variable before launch.
 3. Describe one concrete task, for example: ``Open ERT, load the bundled BERT
    line, set lambda to 20, and prepare an inversion``.
-4. Review every proposed tool action. Click **Approve** only when the file,
-   parameters, output directory, and operation are correct; otherwise click
-   **Reject** and revise the request.
+4. Follow the actions the chat lists as they run. When an action waits for you,
+   click **Approve** only when the file, parameters, output directory, and
+   operation are correct; otherwise click **Reject** and revise the request.
+   Click **Stop** to cut in at any time (see
+   :ref:`what step by step asks <step-by-step-approval>`).
 5. Confirm completion in the module itself and in the Log. Chat does not replace
    inspection of the data or inversion-quality plots.
+
+.. _assistant-temporary-scripts:
+
+Temporary scripts
+~~~~~~~~~~~~~~~~~
+
+When a step fails, or the studio has no action for what is needed, the assistant
+first looks for a way with the studio's own actions. If none works and a few
+lines of Python would solve the problem, it can propose a temporary script.
+Examples are a file in a layout no reader handles, or one module's result in a
+format another module needs. The card says what went wrong and what the script
+will do, and shows the code. The script runs only after you click **Run this
+script**. **Reject** leaves everything as it was.
+
+An approved script runs in a separate process with a time limit. It reads only
+the files the assistant names, and writes only to a new folder under
+``runs/_scratch`` (``scratch/`` in an automatic run's folder), never to your own
+files. Before you are asked, the code is checked. It may import only a short
+list of scientific libraries and this package, and may not use ``os``, ``sys``,
+``subprocess``, the network, ``exec`` or ``eval``. While it runs, any attempt to
+start a process, open a connection or write outside its folder is refused. These
+checks are a guard rail against mistakes; the protection that counts is reading
+the code before you approve it. The script, its inputs, what it printed and what
+it wrote stay in its folder.
+
+**Auto to report** can do the same when a step fails for a reason no setting can
+fix. It asks you in the Workflow page, with the code. If you approve and the
+script writes a corrected copy of an input, the step runs again on that copy.
+With nobody there to answer, the run declines.
+
+An approved script that fails goes back to the assistant with its error and
+what it printed. It fixes the cause and asks you again, saying what was wrong.
+The fixed script, like the first, runs only on your yes. In the chat it may
+propose a second version; if that fails too, it says so and offers another way.
+An automatic run tries one fix, and so does a generated reader for a coordinate
+file. If no fix can be written, or you decline it, the failure is recorded and
+the run carries on.
 
 .. _choosing-a-request-level:
 
@@ -1160,10 +1371,13 @@ Modules
        process them into impedances with robust remote-reference processing,
        read dimensionality and strike from the phase tensor, and invert the
        sites in 1D (static shift, joint TEM, water content) and in 2D.
+   * - GPR
+     - Read a GPR line, clean it up, migrate it, fit the velocity on a
+       diffraction hyperbola and see it in time, depth or elevation.
    * - Hydro -> Geophysics
-     - Load hydrologic model outputs (water content, porosity, surfaces), pick a
-       profile, set petrophysical parameters, and run forward modeling for the
-       selected geophysical methods.
+     - Load hydrologic model outputs (water content, porosity, surfaces), draw a
+       survey line on the map, see the section under it, and simulate the
+       selected geophysical surveys along it.
    * - ERT -> Water Content
      - Invert ERT results into water content estimates.
    * - Seismic -> Structure
@@ -1171,8 +1385,9 @@ Modules
 
 The studio also includes **AQUAH Chat**, an in-app assistant that can drive the
 modules through natural language (OpenAI, Anthropic, or any OpenAI-compatible
-provider; bring your own API key). Every proposed action shows an Approve / Reject
-button before it runs.
+provider; bring your own API key). Routine actions run at once and are listed in
+the chat; decisions, such as starting an inversion with settings you have not
+confirmed, wait for Approve / Reject.
 
 Managing Surveys in Project Map
 --------------------------------------------------------------------------------

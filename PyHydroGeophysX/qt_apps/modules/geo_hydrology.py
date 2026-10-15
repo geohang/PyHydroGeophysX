@@ -1,23 +1,33 @@
-"""Geophysics -> Hydro guided wizard.
+"""ERT → Water Content: water content and porosity from an inverted ERT model.
 
-The inverse counterpart to the Hydro -> Geophysics module. A six-step workflow
-(Data -> Layers -> Target -> Parameters -> Run -> Results) that turns an
-already-inverted (time-lapse) ERT resistivity model into probabilistic water
-content (and, optionally, saturated-zone porosity) via Monte Carlo sampling of
-per-layer petrophysics. The inverted model is loaded first, its geological layers
-are detected and named, the hydrologic target is chosen, then per-layer parameter
-distributions are set before the run. The heavy lifting is reused from
-``PyHydroGeophysX.qt_apps.geo_pipeline`` (a numpy-only model summary plus the real
-pygimli-backed Monte Carlo run with a config-export fallback).
+The inverse counterpart of Hydro → Geophysics, laid out the same way and like
+the ERT page. The views are in the middle: the inverted **Model** on its mesh
+(one survey of a time-lapse series at a time, poorly covered cells blanked),
+the **Layers** the rock physics is set for, and, after a run, the **Results**
+maps and the water-content **Time series** at two points. The settings are on
+the right in the order the work is done - the inverted model, the layers to
+estimate in, each layer's rock physics, what to estimate - with the Estimate
+button pinned under them and what still stops it said above it. Before a model
+is loaded the middle says what the page does and how to start, and afterwards
+a line above the views says what to do next.
+
+The estimate is a Monte Carlo over per-layer petrophysics (Waxman-Smits /
+Archie), so every map comes with its spread. The numerics are reused from
+``PyHydroGeophysX.Geophy_modular.ERT_to_WC``, run in a worker process.
 """
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-from PySide6.QtCore import Qt, QUrl
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from matplotlib.collections import PolyCollection
+from matplotlib.figure import Figure
+from matplotlib.patches import Patch
+from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -26,6 +36,7 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
+    QFrame,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -33,7 +44,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QProgressBar,
     QPushButton,
-    QScrollArea,
     QSpinBox,
     QStackedWidget,
     QTabWidget,
@@ -48,15 +58,28 @@ from PyHydroGeophysX.qt_apps import io_utils, theme
 from PyHydroGeophysX.qt_apps.modules.base import BaseModule, LogFn
 from PyHydroGeophysX.qt_apps.qt_utils import (
     BusyStateController,
+    ContentWidthScrollArea,
     ReproduceBar,
-    WizardNavigator,
-    make_double_spinbox,
+    make_spinbox,
+    merged_row,
     select_directory,
+    set_rows_visible,
 )
+from PyHydroGeophysX.qt_apps.widgets import colormaps as cmaps
 from PyHydroGeophysX.qt_apps.widgets import length_units
+from PyHydroGeophysX.qt_apps.widgets.guided import (
+    NextStepStrip,
+    fold,
+    hint as _hint,
+    number_box as _number,
+    start_card,
+)
 from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
+from PyHydroGeophysX.qt_apps.widgets.mesh_view import MeshResultView
+from PyHydroGeophysX.qt_apps.widgets.readout import toolbar_row
 from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
 from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
+from PyHydroGeophysX.visualization.axis_units import set_section_axes
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
     WorkflowRunResult,
@@ -64,22 +87,19 @@ from PyHydroGeophysX.workflows import (
     export_workflow_bundle,
 )
 
-_PRODUCTS = [("water_content", "Water content"), ("porosity", "Porosity (saturated zone)")]
+_PRODUCTS = [("water_content", "Water content"), ("porosity", "Porosity (where saturated)")]
+#: The steps the assistant names. Each opens the view and the panel the step is
+#: done in (see _go_to); the page itself no longer pages through them.
 _STEPS = ["Data", "Layers", "Target", "Parameters", "Run", "Results"]
-_STEP_ICONS = [
-    "fa5s.database",
-    "fa5s.layer-group",
-    "fa5s.bullseye",
-    "fa5s.sliders-h",
-    "fa5s.dice",
-    "fa5s.chart-area",
-]
-_P = theme.PALETTE
-#: The "Use example" model bundle, under the source repository's examples/,
-#: written there by examples/generate_synthetic_examples.py.
-_EXAMPLE_MODEL = "results/synthetic_Structure_WC"
+_MODEL_TAB, _LAYERS_TAB, _RESULTS_TAB, _SERIES_TAB = range(4)
+#: The "Use example" model bundle, under the source repository's examples/: the
+#: Treeline time-lapse ERT model of Ex_MC_Hydro, whose two layers the default
+#: rock physics (ERT_to_WC.DEFAULT_LAYER_DISTRIBUTIONS) was set for.
+_EXAMPLE_MODEL = "results/Structure_WC"
+#: The coverage (log10) under which cells are blanked, on the view and in the maps.
+_DEFAULT_COVERAGE_CUT = -1.0
 
-# Per-parameter spin configuration: (lo, hi, step, decimals) for mean and std.
+# Per-parameter box configuration: (lo, hi, step, decimals) for mean and spread.
 _PARAM_SPECS = {
     "m": ((1.0, 3.0, 0.1, 2), (0.0, 1.0, 0.05, 3)),
     "rho_fluid": ((0.1, 1000.0, 1.0, 2), (0.0, 500.0, 1.0, 2)),
@@ -88,11 +108,11 @@ _PARAM_SPECS = {
     "porosity": ((0.01, 0.9, 0.01, 3), (0.0, 0.5, 0.01, 3)),
 }
 _PARAM_LABELS = {
-    "m": "Cementation m",
-    "rho_fluid": "Fluid resistivity (Ω·m)",
+    "m": "Cementation exponent m",
+    "rho_fluid": "Pore-water resistivity (Ω·m)",
     "n": "Saturation exponent n",
-    "sigma_sur": "Surface cond. (S/m)",
-    "porosity": "Porosity φ",
+    "sigma_sur": "Surface conductivity (S/m)",
+    "porosity": "Porosity",
 }
 
 _GENERIC_LAYER = {
@@ -102,9 +122,10 @@ _GENERIC_LAYER = {
     "sigma_sur": {"mean": 0.0, "std": 0.0},
     "porosity": {"mean": 0.30, "std": 0.05},
 }
-
-#: Marks a wizard step that has not been built yet.
-_UNBUILT = object()
+#: Fill of the layers on the Layers view, in marker order; a layer that is not
+#: estimated is drawn in the last, neutral one.
+_LAYER_FILLS = ["#d4a373", "#8d99ae", "#90be6d", "#577590", "#f4a261", "#b5838d"]
+_NOT_ESTIMATED = "#e5e5ea"
 
 _INPUT_FORMAT_FALLBACK = (
     "# ERT → Water Content input format\n\n"
@@ -117,6 +138,79 @@ _INPUT_FORMAT_FALLBACK = (
 )
 
 
+def _clear(layout) -> None:
+    """Empty ``layout``, hiding each widget at once: deleteLater alone left the
+    old rows drawn under the new ones until the event loop came round."""
+    while layout.count():
+        item = layout.takeAt(0)
+        widget = item.widget()
+        if widget is not None:
+            widget.hide()
+            widget.deleteLater()
+
+
+class _LayerMapView(QWidget):
+    """The model's cells coloured by layer, the estimated ones named in the legend."""
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self._figure = Figure(figsize=(8, 4), layout="constrained")
+        self._canvas = FigureCanvasQTAgg(self._figure)
+        bar, self._toolbar = toolbar_row(self._canvas, self)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(bar)
+        layout.addWidget(self._canvas, stretch=1)
+        self._polygons: Optional[List[np.ndarray]] = None
+        self._markers: Optional[np.ndarray] = None
+        self._names: Dict[int, str] = {}
+        self._estimated: set = set()
+        self._order: List[int] = []
+        self._message = ""
+        length_units.notifier().changed.connect(lambda _unit: self.draw())
+
+    def set_mesh(self, polygons: Optional[List[np.ndarray]], message: str = "") -> None:
+        self._polygons, self._message = polygons, message
+        self.draw()
+
+    def set_layers(self, markers: Optional[np.ndarray], names: Dict[int, str],
+                   estimated: set, order: List[int]) -> None:
+        """``order`` lists the markers from the top down; they are filled in that order."""
+        self._markers, self._names, self._estimated = markers, dict(names), set(estimated)
+        self._order = list(order)
+        self.draw()
+
+    def draw(self) -> None:
+        self._figure.clear()
+        ax = self._figure.add_subplot(111)
+        if (self._polygons is None or self._markers is None
+                or len(self._polygons) != len(self._markers)):
+            ax.set_axis_off()
+            ax.text(0.5, 0.5, self._message or "Load an inverted ERT model to see its layers.",
+                    ha="center", va="center", transform=ax.transAxes, color="#6e6e73")
+        else:
+            present = np.unique(self._markers).tolist()
+            order = [m for m in self._order if m in present] + [
+                m for m in sorted(present) if m not in self._order]
+            fills = {m: _LAYER_FILLS[i % len(_LAYER_FILLS)] for i, m in enumerate(order)}
+            colours = [fills[int(m)] if int(m) in self._estimated else _NOT_ESTIMATED
+                       for m in self._markers]
+            ax.add_collection(PolyCollection(self._polygons, facecolors=colours,
+                                             edgecolors="none"))
+            ax.autoscale_view()
+            ax.set_aspect("equal", adjustable="datalim")
+            handles = [Patch(facecolor=fills[m], label=f"{self._names.get(m, m)} (marker {m})")
+                       for m in order if m in self._estimated]
+            if len(handles) < len(order):
+                handles.append(Patch(facecolor=_NOT_ESTIMATED, label="Not estimated"))
+            ax.legend(handles=handles, loc="lower right", fontsize=8, framealpha=0.9)
+            z = np.concatenate([p[:, 1] for p in self._polygons])
+            set_section_axes(ax, z=z, unit=length_units.current())
+            ax.set_title("Layers the rock physics is set for")
+        self._canvas.draw_idle()
+        self._toolbar.update()
+
+
 class GeoHydrologyModule(BaseModule):
     module_key = "geo_hydrology"
     module_title = "ERT → Water Content"
@@ -125,19 +219,22 @@ class GeoHydrologyModule(BaseModule):
         super().__init__(state, log, parent)
         self._manual_dir: Optional[Path] = None
         self._summary: Optional[Dict[str, Any]] = None
+        #: The model drawn on the Model and Layers views: its pyGIMLi mesh, the
+        #: resistivity (n_cells, n_time), markers, coverage and cell outlines.
+        self._mesh = None
+        self._resistivity: Optional[np.ndarray] = None
+        self._markers: Optional[np.ndarray] = None
+        self._coverage: Optional[np.ndarray] = None
         self._layer_rows: List[Dict[str, Any]] = []
         self._param_widgets: Dict[int, Dict[str, Tuple[QDoubleSpinBox, QDoubleSpinBox]]] = {}
-        # The Layers and Parameters steps hold the user's choices, so each is
-        # rebuilt only when what it was built from changes, not on every visit:
-        # rebuilt from the defaults, Next -> Back put back every tick, name and
-        # value, and Run then used the defaults. These say what they show.
-        self._layer_rows_for: Any = _UNBUILT          # the summary the rows came from
-        self._param_summary: Any = _UNBUILT           # ... and the panels
-        self._param_layout: Optional[List[Tuple[int, str]]] = None
         #: Per marker, the (mean, std) last set in a panel; kept for a layer
         #: switched off, so switching it back on restores them.
         self._param_values: Dict[int, Dict[str, Tuple[float, float]]] = {}
+        self._param_layout: Optional[List[int]] = None
+        self._param_summaries: Dict[int, QLabel] = {}
+        self._param_titles: Dict[int, QLabel] = {}
         self._last_result: Optional[Dict[str, Any]] = None
+        self._has_results = False
         self._markers_override: Optional[List[int]] = None
         self._worker: Optional[ProcessWorkflowWorker] = None
         self._run_busy: Optional[BusyStateController] = None
@@ -148,127 +245,321 @@ class GeoHydrologyModule(BaseModule):
         self._run_problem = ""
         self._current = 0
 
-        root = QVBoxLayout(self)
-        root.addWidget(self._build_strip())
-        self._stack = QStackedWidget()
-        self._stack.addWidget(self._build_data_step())        # 0 Data
-        self._stack.addWidget(self._build_layers_step())      # 1 Layers
-        self._stack.addWidget(self._build_target_step())      # 2 Target
-        self._stack.addWidget(self._build_parameters_step())  # 3 Parameters
-        self._stack.addWidget(self._build_run_step())         # 4 Run
-        self._stack.addWidget(self._build_results_step())     # 5 Results
-        root.addWidget(self._stack, stretch=1)
+        root = QHBoxLayout(self)
+        self._tabs = QTabWidget()
+        self._tabs.addTab(self._build_model_tab(), "Model")
+        self._layer_view = _LayerMapView()
+        self._tabs.addTab(self._layer_view, "Layers")
+        self._tabs.addTab(self._build_results_tab(), "Results")
+        self._tabs.addTab(self._build_series_tab(), "Time series")
+        self._tabs.currentChanged.connect(self._on_tab_changed)
+        self._guide = NextStepStrip()
         self._reproduce = ReproduceBar()
-        root.addWidget(self._reproduce)
-        root.addLayout(self._build_nav())
-        self._navigator = WizardNavigator(
-            self._stack,
-            previous_button=self._back_btn,
-            next_button=self._next_btn,
-            on_changed=self._on_wizard_changed,
-            parent=self,
-        )
-
+        center = QWidget()
+        center_layout = QVBoxLayout(center)
+        center_layout.setContentsMargins(0, 0, 0, 0)
+        center_layout.addWidget(self._guide)
+        center_layout.addWidget(self._tabs, stretch=1)
+        center_layout.addWidget(self._reproduce)
+        root.addWidget(center, stretch=1)
+        root.addWidget(self._build_controls())
         self._reload()
-        self._go_to(0)
 
-    # -- small widget helpers -----------------------------------------------
-    @staticmethod
-    def _dspin(value: float, lo: float, hi: float, step: float, decimals: int) -> QDoubleSpinBox:
-        return make_double_spinbox(value, lo, hi, step, decimals)
+    # -- centre: the model, its layers, the results ---------------------------
+    def _example_button(self) -> QPushButton:
+        """"Use example", or "Use project data" when the studio was opened on a project's."""
+        context = self._context_dir() is not None
+        button = QPushButton("Use project data" if context else "Use example")
+        button.setIcon(theme.icon("fa5s.box-open"))
+        button.setToolTip(
+            "Load this project's inverted ERT model." if context else
+            "Load the Treeline time-lapse ERT model of the Ex_MC_Hydro example: "
+            "12 surveys over regolith and bedrock.")
+        button.clicked.connect(self._use_context_data)
+        return button
 
-    @staticmethod
-    def _ispin(value: int, lo: int, hi: int) -> QSpinBox:
-        s = QSpinBox()
-        s.setRange(lo, hi)
-        s.setValue(value)
-        return s
+    def _build_start_card(self) -> QWidget:
+        example_btn = self._example_button()
+        example_btn.setProperty("primary", True)
+        example_btn.setIcon(theme.icon("fa5s.box-open", color="#ffffff"))
+        open_btn = QPushButton("Open folder…")
+        open_btn.setIcon(theme.icon("fa5s.folder-open"))
+        open_btn.clicked.connect(self._select_folder)
+        format_btn = QPushButton("Data format")
+        format_btn.setIcon(theme.icon("fa5s.question-circle"))
+        format_btn.clicked.connect(self._show_format_help)
+        return start_card(
+            "Estimate water content from an ERT model",
+            "Turn an inverted, time-lapse ERT resistivity model into water content, "
+            "with its uncertainty, through rock physics sampled many times over.",
+            ["Load an inverted ERT model: its mesh, resistivity and layers.",
+             "Tick the layers to estimate in, and check each one's rock physics.",
+             "Press Estimate water content."],
+            [example_btn, open_btn, format_btn],
+            note=("The example is the Treeline time-lapse ERT model of the Ex_MC_Hydro "
+                  "example." if self._context_dir() is None else ""))
 
-    def _advanced_box(self, title: str = "Advanced") -> Tuple[QGroupBox, QFormLayout]:
-        box = QGroupBox(title)
-        box.setCheckable(True)
-        box.setChecked(False)
-        inner = QWidget()
-        form = QFormLayout(inner)
-        form.setContentsMargins(8, 4, 8, 4)
-        outer = QVBoxLayout(box)
-        outer.setContentsMargins(8, 4, 8, 8)
-        outer.addWidget(inner)
-        inner.setVisible(False)
-        box.toggled.connect(inner.setVisible)
-        return box, form
+    def _build_model_tab(self) -> QWidget:
+        # The start card until a model is loaded, then the model.
+        self._model_stack = QStackedWidget()
+        self._model_stack.addWidget(self._build_start_card())
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        row = QHBoxLayout()
+        self._survey = QSpinBox()
+        self._survey.setRange(0, 0)
+        self._survey.setToolTip("The survey of the time-lapse series shown here and in "
+                                "the result maps. Every survey is estimated.")
+        self._survey.valueChanged.connect(self._show_model)
+        self._survey_range = QLabel("")
+        row.addWidget(QLabel("Survey"))
+        row.addWidget(self._survey)
+        row.addWidget(self._survey_range)
+        row.addStretch(1)
+        layout.addLayout(row)
+        self._model_view = MeshResultView(colormaps=cmaps.colormap_settings(self.state))
+        self._model_view.set_hide_below(_DEFAULT_COVERAGE_CUT)
+        layout.addWidget(self._model_view, stretch=1)
+        self._model_note = _hint()
+        layout.addWidget(self._model_note)
+        self._model_stack.addWidget(page)
+        return self._model_stack
 
-    # -- status strip --------------------------------------------------------
-    def _build_strip(self) -> QWidget:
-        bar = QWidget()
-        layout = QHBoxLayout(bar)
-        layout.setContentsMargins(4, 2, 4, 6)
-        layout.setSpacing(6)
-        self._chips: List[QPushButton] = []
-        for i, name in enumerate(_STEPS):
-            chip = QPushButton(f"  {i + 1}. {name}")
-            chip.setIcon(theme.icon(_STEP_ICONS[i], color="#ffffff"))
-            chip.clicked.connect(lambda _=False, idx=i: self._go_to(idx))
-            self._chips.append(chip)
-            layout.addWidget(chip)
-            if i < len(_STEPS) - 1:
-                arrow = QLabel("›")
-                arrow.setStyleSheet(f"color:{_P['muted']}; font-size:16pt;")
-                layout.addWidget(arrow)
+    def _build_results_tab(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        header = QHBoxLayout()
+        header.addWidget(QLabel("Show"))
+        self._result_figure = QComboBox()
+        self._result_figure.currentIndexChanged.connect(self._show_selected_result_map)
+        header.addWidget(self._result_figure, stretch=1)
+        open_btn = QPushButton("Open output folder")
+        open_btn.setIcon(theme.icon("fa5s.folder-open"))
+        open_btn.clicked.connect(self._open_output_folder)
+        header.addWidget(open_btn)
+        layout.addLayout(header)
+        self._result_summary = QLabel("")
+        self._result_summary.setWordWrap(True)
+        layout.addWidget(self._result_summary)
+        self._result_map_view = ZoomableImageView()
+        self._result_map_view.setMinimumHeight(420)
+        layout.addWidget(self._result_map_view, stretch=1)
+        self._result_files = _hint()
+        layout.addWidget(self._result_files)
+        return page
+
+    def _build_series_tab(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(_hint("Water content through the surveys at two points, with "
+                               "the ±1σ band the rock-physics uncertainty gives it."))
+        self._mx1 = _number(30.0, -1e6, 1e6, 1.0, 1, " m")
+        self._my1 = _number(1610.0, -1e6, 1e6, 1.0, 1, " m")
+        self._mx2 = _number(65.0, -1e6, 1e6, 1.0, 1, " m")
+        self._my2 = _number(1613.0, -1e6, 1e6, 1.0, 1, " m")
+        plot_btn = QPushButton("Plot")
+        plot_btn.setIcon(theme.icon("fa5s.chart-line"))
+        plot_btn.clicked.connect(self._plot_points)
+        row = QHBoxLayout()
+        row.addWidget(merged_row("Point 1: x", self._mx1, "z", self._my1))
+        row.addWidget(merged_row("Point 2: x", self._mx2, "z", self._my2))
+        row.addWidget(plot_btn)
+        row.addStretch(1)
+        layout.addLayout(row)
+        self._monitor_view = ZoomableImageView()
+        self._monitor_view.setMinimumHeight(380)
+        layout.addWidget(self._monitor_view, stretch=1)
+        return page
+
+    # -- right: the settings, in the order the work is done ------------------
+    def _build_controls(self) -> QWidget:
+        scroll = ContentWidthScrollArea(minimum=430, maximum=480)
+        panel = QWidget()
+        scroll.setWidget(panel)
+        layout = QVBoxLayout(panel)
+        self._data_group = self._build_data_group()
+        self._layers_group = self._build_layers_group()
+        self._physics_group = self._build_physics_group()
+        self._estimate_group = self._build_estimate_group()
+        #: Each numbered step's title; a finished step gets a tick after it.
+        self._step_titles = {
+            self._data_group: "1  Inverted ERT model",
+            self._layers_group: "2  Layers",
+            self._physics_group: "3  Rock physics",
+            self._estimate_group: "4  Estimate",
+        }
+        for group in self._step_titles:
+            layout.addWidget(group)
         layout.addStretch(1)
-        return bar
+        self._controls_scroll = scroll
 
-    def _chip_style(self, kind: str) -> str:
-        if kind == "active":
-            return f"QPushButton {{ background:{_P['primary']}; color:#fff; border:none; border-radius:14px; padding:6px 14px; font-weight:700; }}"
-        if kind == "done":
-            return f"QPushButton {{ background:{_P['green']}; color:#fff; border:none; border-radius:14px; padding:6px 14px; font-weight:600; }}"
-        return f"QPushButton {{ background:{_P['card']}; color:{_P['muted']}; border:1px solid {_P['border']}; border-radius:14px; padding:6px 14px; }}"
+        # -- run: pinned under the column, as on the ERT page ---------------
+        footer = QWidget()
+        flayout = QVBoxLayout(footer)
+        flayout.setContentsMargins(6, 4, 6, 6)
+        flayout.setSpacing(6)
+        rule = QFrame()
+        rule.setFrameShape(QFrame.HLine)
+        rule.setFrameShadow(QFrame.Plain)
+        flayout.addWidget(rule)
+        self._run_reason = _hint()
+        flayout.addWidget(self._run_reason)
+        self._run_btn = QPushButton("Estimate water content")
+        self._run_btn.setProperty("primary", True)
+        self._run_btn.setIcon(theme.icon("fa5s.play", color="#ffffff"))
+        self._run_btn.setToolTip(
+            "Sample each layer's rock physics many times, turn every survey's "
+            "resistivity into water content with each sample, and map the mean and "
+            "the spread.")
+        self._run_btn.clicked.connect(self._run_inverse)
+        flayout.addWidget(self._run_btn)
+        self._progress = QProgressBar()
+        self._progress.setVisible(False)
+        self._stop = self.stop_button("The water-content estimation")
+        flayout.addWidget(progress_with_stop(self._progress, self._stop))
+        self._run_status = QLabel("")
+        self._run_status.setWordWrap(True)
+        flayout.addWidget(self._run_status)
 
-    def _update_strip(self) -> None:
-        status = self._step_status()
-        done = [
-            status["data"],
-            status["layers"],
-            status["target"],
-            status["target"],
-            status["all"],
-            status["results"],
-        ]
-        for i, chip in enumerate(self._chips):
-            if i == self._current:
-                chip.setStyleSheet(self._chip_style("active"))
-                chip.setIcon(theme.icon(_STEP_ICONS[i], color="#ffffff"))
-            elif done[i]:
-                chip.setStyleSheet(self._chip_style("done"))
-                chip.setIcon(theme.icon("fa5s.check", color="#ffffff"))
-            else:
-                chip.setStyleSheet(self._chip_style("inactive"))
-                chip.setIcon(theme.icon(_STEP_ICONS[i], color=_P["muted"]))
+        column = QWidget()
+        column_layout = QVBoxLayout(column)
+        column_layout.setContentsMargins(0, 0, 0, 0)
+        column_layout.setSpacing(0)
+        column_layout.addWidget(scroll, 1)
+        column_layout.addWidget(footer)
+        return column
 
-    def _build_nav(self) -> QHBoxLayout:
-        nav = QHBoxLayout()
-        self._back_btn = QPushButton("Back")
-        self._back_btn.setIcon(theme.icon("fa5s.arrow-left"))
-        self._next_btn = QPushButton("Next")
-        self._next_btn.setIcon(theme.icon("fa5s.arrow-right"))
-        nav.addWidget(self._back_btn)
-        nav.addStretch(1)
-        nav.addWidget(self._next_btn)
-        return nav
+    def _build_data_group(self) -> QGroupBox:
+        box = QGroupBox("1  Inverted ERT model")
+        form = QFormLayout(box)
+        open_btn = QPushButton("Open folder…")
+        open_btn.setProperty("primary", True)
+        open_btn.setIcon(theme.icon("fa5s.folder-open", color="#ffffff"))
+        open_btn.setToolTip("Open an ERT inversion's output folder, or a folder with "
+                            "mesh_res.bms, resmodel.npy and index_marker.npy "
+                            "(all_coverage.npy is optional).")
+        open_btn.clicked.connect(self._select_folder)
+        reload_btn = QPushButton()
+        reload_btn.setIcon(theme.icon("fa5s.sync"))
+        reload_btn.setToolTip("Read the folder again, after its files changed.")
+        reload_btn.clicked.connect(self._reload)
+        help_btn = QPushButton()
+        help_btn.setIcon(theme.icon("fa5s.question-circle"))
+        help_btn.setToolTip("What the folder must contain.")
+        help_btn.clicked.connect(self._show_format_help)
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        for button in (open_btn, self._example_button(), reload_btn, help_btn):
+            row.addWidget(button)
+        row.addStretch(1)
+        form.addRow(row)
+        self._data_status = QLabel("")
+        self._data_status.setWordWrap(True)
+        form.addRow(self._data_status)
+        return box
 
+    def _build_layers_group(self) -> QGroupBox:
+        box = QGroupBox("2  Layers")
+        layout = QVBoxLayout(box)
+        layout.addWidget(_hint("Tick the layers to estimate water content in, and name "
+                               "them as you like. The Layers tab shows where they are."))
+        self._layers_host = QWidget()
+        self._layers_form = QGridLayout(self._layers_host)
+        self._layers_form.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self._layers_host)
+        adv, aform = fold()
+        struct_btn = QPushButton("Layers from a seismic bedrock interface…")
+        struct_btn.setIcon(theme.icon("fa5s.mountain"))
+        struct_btn.setToolTip(
+            "Split the model into regolith (above) and bedrock (below) along a bedrock "
+            "interface: the one sent from Seismic → Structure, or one read from a file.")
+        struct_btn.clicked.connect(self._derive_markers_from_structure)
+        reset_btn = QPushButton("Back to the layers in the file")
+        reset_btn.setIcon(theme.icon("fa5s.undo"))
+        reset_btn.setToolTip("Use the model's own index_marker.npy again, with its "
+                             "layers ticked and named as they start.")
+        reset_btn.clicked.connect(self._reset_layers)
+        aform.addRow(merged_row(struct_btn))
+        aform.addRow(merged_row(reset_btn))
+        layout.addWidget(adv)
+        return box
+
+    def _build_physics_group(self) -> QGroupBox:
+        box = QGroupBox("3  Rock physics")
+        layout = QVBoxLayout(box)
+        layout.addWidget(_hint(
+            "How resistivity becomes water content in each ticked layer. Each value "
+            "is a mean ± spread, sampled many times so the result carries its "
+            "uncertainty. Unfold a layer to change them."))
+        self._physics_host = QWidget()
+        self._physics_layout = QVBoxLayout(self._physics_host)
+        self._physics_layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self._physics_host)
+        return box
+
+    def _build_estimate_group(self) -> QGroupBox:
+        box = QGroupBox("4  Estimate")
+        form = QFormLayout(box)
+        self._product_boxes: Dict[str, QCheckBox] = {}
+        products = QWidget()
+        prow = QVBoxLayout(products)
+        prow.setContentsMargins(0, 0, 0, 0)
+        for key, label in _PRODUCTS:
+            check = QCheckBox(label)
+            check.setChecked(key == "water_content")
+            check.toggled.connect(self._on_products_changed)
+            self._product_boxes[key] = check
+            prow.addWidget(check)
+        self._product_boxes["porosity"].setToolTip(
+            "Porosity instead of water content, for ground of known saturation "
+            "(1 = saturated).")
+        form.addRow(products)
+        self._saturation = _number(1.0, 0.01, 1.0, 0.05, 2,
+                                   tip="The saturation assumed for the porosity estimate.")
+        form.addRow("Assumed saturation", self._saturation)
+        self._n_real = make_spinbox(
+            100, 2, 5000, tooltip="How many times the rock physics is sampled. More "
+                                  "gives a steadier mean and spread, and a longer run.")
+        form.addRow("Samples", self._n_real)
+        adv, aform = fold()
+        self._seed = make_spinbox(7, 0, 10_000_000,
+                                  tooltip="The same seed gives the same samples.")
+        self._tortuosity = _number(1.0, 0.1, 5.0, 0.1, 2, tip="Archie's tortuosity factor a.")
+        self._wc_cmin = _number(0.0, 0.0, 1.0, 0.01, 2)
+        self._wc_cmax = _number(0.32, 0.01, 1.0, 0.01, 2)
+        aform.addRow("Random seed", self._seed)
+        aform.addRow("Tortuosity a", self._tortuosity)
+        aform.addRow("Map colours", merged_row(self._wc_cmin, "to", self._wc_cmax))
+        export_btn = QPushButton("Save rock-physics settings")
+        export_btn.setIcon(theme.icon("fa5s.file-export"))
+        export_btn.setToolTip("Write the layers and their rock physics to "
+                              "petro_config.json, without estimating anything.")
+        export_btn.clicked.connect(self._export_config)
+        aform.addRow(merged_row(export_btn))
+        form.addRow(adv)
+        self._on_products_changed()
+        return box
+
+    # -- navigation (the assistant's step names) -----------------------------
     def _go_to(self, step: int) -> None:
-        self._navigator.go_to(step)
-
-    def _on_wizard_changed(self, step: int) -> None:
+        """Show the view and the panel the step is done in."""
+        step = max(0, min(int(step), len(_STEPS) - 1))
+        loaded = self._summary is not None
+        tab = {0: _MODEL_TAB, 1: _LAYERS_TAB if loaded else _MODEL_TAB,
+               2: _MODEL_TAB, 3: _LAYERS_TAB if loaded else _MODEL_TAB, 4: _MODEL_TAB,
+               5: _RESULTS_TAB if self._has_results else _MODEL_TAB}[step]
+        self._tabs.setCurrentIndex(tab)
         self._current = step
-        if self._current == 1 and self._layer_rows_for is not self._summary:  # Layers
-            self._refresh_layer_rows()
-        if self._current == 3:  # Parameters
-            self._refresh_parameter_panels()
-        if self._current == 4:  # Run
-            self._refresh_run_checklist()
-        self._update_strip()
+        group = {0: self._data_group, 1: self._layers_group, 2: self._estimate_group,
+                 3: self._physics_group}.get(step)
+        if group is not None:
+            self._controls_scroll.ensureWidgetVisible(group)
+
+    def _on_tab_changed(self, index: int) -> None:
+        self._current = {_MODEL_TAB: 0, _LAYERS_TAB: 1}.get(index, 5)
 
     def _step_status(self) -> Dict[str, bool]:
         data_ok = self._summary is not None
@@ -278,149 +569,287 @@ class GeoHydrologyModule(BaseModule):
         return {"data": data_ok, "layers": layers_ok, "target": target_ok,
                 "all": data_ok and layers_ok and target_ok, "results": ran}
 
-    # -- Step 1: Data --------------------------------------------------------
-    def _build_data_step(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.addWidget(QLabel("<h3>Step 1 · Load an inverted ERT model</h3>"))
-        layout.addWidget(QLabel(
-            "Choose a folder containing <code>mesh_res.bms</code>, "
-            "<code>resmodel.npy</code>, <code>index_marker.npy</code> "
-            "(and optionally <code>all_coverage.npy</code>)."))
-        row = QHBoxLayout()
-        ex_btn = QPushButton("Use example / context data")
-        ex_btn.setIcon(theme.icon("fa5s.box-open"))
-        ex_btn.clicked.connect(self._use_context_data)
-        sel_btn = QPushButton("Select folder…")
-        sel_btn.setIcon(theme.icon("fa5s.folder-open"))
-        sel_btn.clicked.connect(self._select_folder)
-        reload_btn = QPushButton("Reload")
-        reload_btn.setIcon(theme.icon("fa5s.sync"))
-        reload_btn.clicked.connect(self._reload)
-        help_btn = QPushButton("Data format")
-        help_btn.setIcon(theme.icon("fa5s.file-alt"))
-        help_btn.clicked.connect(self._show_format_help)
-        for b in (ex_btn, sel_btn, reload_btn, help_btn):
-            row.addWidget(b)
-        row.addStretch(1)
-        layout.addLayout(row)
-
-        self._checklist = QGroupBox("Required files")
-        self._checklist_layout = QVBoxLayout(self._checklist)
-        layout.addWidget(self._checklist)
-        self._data_status = QLabel("No folder selected.")
-        self._data_status.setWordWrap(True)
-        layout.addWidget(self._data_status)
-        layout.addStretch(1)
-        return page
-
-    def _refresh_checklist(self) -> None:
-        while self._checklist_layout.count():
-            item = self._checklist_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-        data_dir = self._data_dir()
-        if data_dir is None:
-            self._checklist_layout.addWidget(QLabel("Select a model folder to validate."))
-            return
-        files = geo_pipeline.find_model_files(Path(data_dir))
-        optional = {"coverage"}
-        for key, name in geo_pipeline.MODEL_FILES.items():
-            present = files.get(key) is not None
-            opt = key in optional
-            icon = "fa5s.check-circle" if present else ("fa5s.minus-circle" if opt else "fa5s.times-circle")
-            color = _P["green"] if present else (_P["muted"] if opt else _P["red"])
-            line = QHBoxLayout()
-            badge = QLabel(); badge.setPixmap(theme.icon(icon, color=color).pixmap(16, 16))
-            label = name + ("  (optional)" if opt else "")
-            text = QLabel(label)
-            line.addWidget(badge); line.addWidget(text); line.addStretch(1)
-            wrap = QWidget(); wrap.setLayout(line)
-            self._checklist_layout.addWidget(wrap)
-
-    # -- Step 2: Layers ------------------------------------------------------
-    def _build_layers_step(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.addWidget(QLabel("<h3>Step 2 · Detect and name geological layers</h3>"))
-        layout.addWidget(QLabel(
-            "Layer ids come from <code>index_marker.npy</code>. Enable the layers "
-            "to estimate and give each a name; these drive the petrophysics in "
-            "Step 4. You can also derive the layers from a seismic bedrock "
-            "interface handed over from the Seismic structure module."))
-        detect_btn = QPushButton("Re-detect from data")
-        detect_btn.setIcon(theme.icon("fa5s.sync"))
-        detect_btn.clicked.connect(self._refresh_layer_rows)
-        struct_btn = QPushButton("Derive markers from structure…")
-        struct_btn.setIcon(theme.icon("fa5s.mountain"))
-        struct_btn.setToolTip("Classify the model mesh into regolith / bedrock using a "
-                              "seismic bedrock interface (from the Seismic module handoff "
-                              "or an interface file).")
-        struct_btn.clicked.connect(self._derive_markers_from_structure)
-        top = QHBoxLayout(); top.addWidget(detect_btn); top.addWidget(struct_btn)
-        top.addStretch(1)
-        layout.addLayout(top)
-
-        self._layers_box = QGroupBox("Detected layers")
-        self._layers_layout = QVBoxLayout(self._layers_box)
-        layout.addWidget(self._layers_box)
-        self._layers_status = QLabel("")
-        self._layers_status.setWordWrap(True)
-        layout.addWidget(self._layers_status)
-        layout.addStretch(1)
-        return page
-
-    def _refresh_layer_rows(self) -> None:
-        """Build the layer rows from the loaded model, at their defaults."""
-        while self._layers_layout.count():
-            item = self._layers_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-        self._layer_rows = []
-        self._layer_rows_for = self._summary
+    # -- readiness and guidance ----------------------------------------------
+    def _run_blocker(self) -> str:
+        """What still stops a run, in a sentence; "" when it can run."""
         if self._summary is None:
-            self._layers_layout.addWidget(QLabel("Load a model in Step 1 first."))
-            self._layers_status.setText("")
-            self._refresh_parameter_panels()
+            return "Load an inverted ERT model (1) to estimate water content."
+        if not self._enabled_layers():
+            return "Tick at least one layer (2)."
+        if not self._collect_products():
+            return "Tick what to estimate (4)."
+        return ""
+
+    def _next_step(self) -> str:
+        """The one thing to do now, for the line above the views."""
+        if self._run_busy is not None:
+            return (f"Estimating: {self._n_real.value()} samples of the rock physics "
+                    "for every survey. This can take a few minutes.")
+        if self._summary is None:
+            return "Start by loading an inverted ERT model: use the example or open a folder."
+        if not self._enabled_layers():
+            return "Next: tick at least one layer to estimate water content in (2, on the right)."
+        if not self._collect_products():
+            return "Next: tick what to estimate (4, on the right)."
+        if self._has_results:
+            return ("Done: the maps are on the Results tab, and Time series follows two "
+                    "points through the surveys. Change the rock physics and estimate "
+                    "again to compare.")
+        return ("Ready: check each layer's rock physics (3), then press Estimate water "
+                "content.")
+
+    def _sync_page(self) -> None:
+        """Bring every cue on the page in line with where the work stands."""
+        if not hasattr(self, "_run_reason"):
             return
-        header = QHBoxLayout()
-        for txt, w in (("Use", 40), ("Marker", 70), ("Cells", 80), ("Name", 200)):
-            lbl = QLabel(f"<b>{txt}</b>"); lbl.setMinimumWidth(w); header.addWidget(lbl)
-        header.addStretch(1)
-        hwrap = QWidget(); hwrap.setLayout(header)
-        self._layers_layout.addWidget(hwrap)
-        for layer in self._summary["layers"]:
-            marker = int(layer["marker"])
-            row = QHBoxLayout()
-            enabled = QCheckBox()
-            # Enable by default the layers that have known petrophysics defaults.
-            enabled.setChecked(marker in geo_pipeline.DEFAULT_LAYER_DISTRIBUTIONS)
-            enabled.toggled.connect(self._update_strip)
-            mlbl = QLabel(str(marker)); mlbl.setMinimumWidth(70)
-            clbl = QLabel(str(int(layer["n_cells"]))); clbl.setMinimumWidth(80)
-            name = QLineEdit(str(layer.get("name", f"Layer {marker}")))
-            name.setMinimumWidth(200)
-            for w in (enabled, mlbl, clbl, name):
-                row.addWidget(w)
-            row.addStretch(1)
-            wrap = QWidget(); wrap.setLayout(row)
-            self._layers_layout.addWidget(wrap)
-            self._layer_rows.append({"marker": marker, "n_cells": int(layer["n_cells"]),
-                                     "enabled": enabled, "name": name})
-        self._layers_status.setText(
-            f"{len(self._summary['layers'])} marker(s) from {self._summary['markers_source']}; "
-            f"{self._summary['n_cells']} cells × {self._summary['n_timesteps']} timesteps.")
-        # The panels follow the rows, so a run started before Step 4 is visited
-        # uses this model's layers rather than the last model's panels.
-        self._refresh_parameter_panels()
-        self._update_strip()
+        reason = self._run_blocker()
+        self._run_reason.setText(reason)
+        self._run_reason.setVisible(bool(reason))
+        if self._run_busy is None:
+            self._run_btn.setEnabled(not reason)
+        loaded = self._summary is not None
+        self._model_stack.setCurrentIndex(1 if loaded else 0)
+        self._guide.setVisible(loaded or self._run_busy is not None)
+        self._guide.setText(self._next_step())
+        for group in (self._layers_group, self._physics_group, self._estimate_group):
+            group.setEnabled(loaded)
+        layers = bool(self._enabled_layers())
+        done = {self._data_group: loaded, self._layers_group: layers,
+                self._physics_group: layers,
+                self._estimate_group: layers and bool(self._collect_products())}
+        for group, title in self._step_titles.items():
+            group.setTitle(f"{title}  ✓" if done[group] else title)
+        self._tabs.setTabEnabled(_LAYERS_TAB, loaded)
+        self._tabs.setTabEnabled(_RESULTS_TAB, self._has_results)
+        self._tabs.setTabEnabled(_SERIES_TAB, self._last_result is not None
+                                 and self._last_result.get("_wc_mean") is not None)
+
+    # -- data loading --------------------------------------------------------
+    def _context_dir(self) -> Optional[Path]:
+        geo_dir = self.state.context.get("geo_data_dir") if self.state.context else None
+        return Path(geo_dir) if geo_dir else None
+
+    def _data_dir(self) -> Optional[Path]:
+        if self._manual_dir is not None:
+            return self._manual_dir
+        return self._context_dir()
+
+    def _use_context_data(self) -> None:
+        self._manual_dir = None
+        self._markers_override = None
+        if self._data_dir() is None:
+            self._manual_dir = self._example_data_dir()
+            if self._manual_dir is None:
+                self.log(io_utils.missing_example_message(
+                    "The Treeline ERT model example", _EXAMPLE_MODEL), "warn")
+        self._reload()
+
+    def _example_data_dir(self) -> Optional[Path]:
+        """Locate the bundled inverted-model example for standalone launches.
+
+        The Treeline time-lapse model ``examples/Ex_MC_Hydro`` estimates water
+        content from, in a clone of the source repository; the pip package
+        carries no example data. The synthetic bundle
+        ``examples/generate_synthetic_examples.py`` writes to
+        ``examples/results/synthetic_Structure_WC`` can still be opened via
+        "Open folder...".
+        """
+        def usable(folder: Path) -> bool:
+            files = geo_pipeline.find_model_files(folder)
+            return files.get("resistivity") is not None and files.get("mesh") is not None
+
+        return io_utils.find_example(_EXAMPLE_MODEL, self.state.project_root, usable)
+
+    def _show_format_help(self) -> None:
+        doc_path = Path(__file__).with_name("geo_input_format.md")
+        try:
+            text = doc_path.read_text(encoding="utf-8")
+        except Exception:  # noqa: BLE001
+            text = _INPUT_FORMAT_FALLBACK
+        dlg = QDialog(self)
+        dlg.setWindowTitle("ERT → Water Content input format")
+        dlg.resize(760, 640)
+        lay = QVBoxLayout(dlg)
+        browser = QTextBrowser(); browser.setOpenExternalLinks(True)
+        try:
+            browser.setMarkdown(text)
+        except Exception:  # noqa: BLE001
+            browser.setPlainText(text)
+        lay.addWidget(browser)
+        close_btn = QPushButton("Close"); close_btn.clicked.connect(dlg.accept)
+        lay.addWidget(close_btn)
+        dlg.exec()
+
+    def _select_folder(self) -> None:
+        start = str(self._data_dir() or Path.cwd())
+        path = select_directory(self, "Select inverted-model folder", start)
+        if path:
+            self._manual_dir = path
+            self._markers_override = None
+            self._reload()
+
+    def _reload(self) -> None:
+        data_dir = self._data_dir()
+        self._summary = None
+        self._load_problem = ""
+        self._mesh = self._resistivity = self._markers = self._coverage = None
+        if data_dir is None or not Path(data_dir).exists():
+            self._load_problem = (f"Folder not found: {data_dir}" if data_dir is not None
+                                  else "No model folder set.")
+            self._data_status.setText(
+                "No model loaded. Open an ERT inversion's output folder, or a folder "
+                "with mesh_res.bms, resmodel.npy and index_marker.npy, or use the example.")
+            theme.set_tone(self._data_status, None)
+            self._refresh_layer_rows()
+            return
+        context = {"geo_data_dir": str(data_dir)}
+        summary_params: Dict[str, Any] = {"model_data_dir": str(data_dir)}
+        if self._markers_override is not None:
+            summary_params["markers_override"] = self._markers_override
+        try:
+            self._summary = geo_pipeline.extract_model_summary(
+                context, summary_params, log=lambda m: self.log(m, "debug"))
+        except Exception as exc:  # noqa: BLE001
+            self._summary = None
+            self._load_problem = str(exc)
+            self._data_status.setText(f"Could not read the model: {exc}")
+            theme.set_tone(self._data_status, "warn")
+            self.log(f"Failed to read inverted model: {exc}", "error")
+            self._refresh_layer_rows()
+            return
+        self._load_model_arrays(Path(data_dir))
+        s = self._summary
+        example = self._example_data_dir()
+        same = example is not None and Path(example).resolve() == Path(data_dir).resolve()
+        name = "Example: Treeline time-lapse ERT" if same else f"Folder: {Path(data_dir).name}"
+        n_time = int(s["n_timesteps"])
+        self._data_status.setText(
+            f"<b>{name}</b><br>{n_time} survey{'s' if n_time != 1 else ''} · "
+            f"{s['n_cells']:,} cells · {len(s['layers'])} layer"
+            f"{'s' if len(s['layers']) != 1 else ''}")
+        self._data_status.setToolTip(str(data_dir) + (f"\n{s['layering_note']}"
+                                                      if s.get("layering_note") else ""))
+        if s.get("layering_note"):
+            self.log(s["layering_note"], "info")
+        theme.set_tone(self._data_status, None)
+        self._survey.blockSignals(True)
+        self._survey.setRange(0, max(0, n_time - 1))
+        self._survey.blockSignals(False)
+        self._survey.setEnabled(n_time > 1)
+        self._survey_range.setText(f"of 0–{n_time - 1}" if n_time > 1 else "(one survey)")
+        self.log(f"Loaded inverted model from {data_dir}", "success")
+        self._refresh_layer_rows()
+        self._show_model()
+
+    def _load_model_arrays(self, data_dir: Path) -> None:
+        """The arrays the Model and Layers views draw, and the mesh they draw on."""
+        files = geo_pipeline.find_model_files(data_dir)
+        try:
+            self._resistivity = geo_pipeline._load_resistivity(files["resistivity"])
+            # As the summary and the estimate read them: markers that number
+            # cells rather than group them are one layer.
+            if self._markers_override is not None or files["markers"] is not None:
+                self._markers = geo_pipeline.layer_markers(
+                    files, self._resistivity.shape[0], self._markers_override)[0]
+            if files["coverage"] is not None:
+                self._coverage = np.asarray(np.load(files["coverage"]), dtype=float)
+        except Exception as exc:  # noqa: BLE001 - the views say what is missing
+            self.log(f"Could not read the model arrays: {exc}", "warn")
+        message = ""
+        polygons = None
+        try:
+            import pygimli as pg
+
+            self._mesh = pg.load(str(files["mesh"]))
+            polygons = [np.array([[n.pos()[0], n.pos()[1]] for n in cell.nodes()])
+                        for cell in self._mesh.cells()]
+        except Exception as exc:  # noqa: BLE001 - pyGIMLi missing or the mesh unreadable
+            self._mesh = None
+            message = f"The model's mesh could not be read ({exc}); the estimate needs it too."
+        self._model_note.setText(message)
+        self._layer_view.set_mesh(polygons, message)
+
+    def _show_model(self, *_args) -> None:
+        """Draw the shown survey's resistivity, blanked where coverage is poor."""
+        if self._mesh is None or self._resistivity is None:
+            return
+        t = min(self._survey.value(), self._resistivity.shape[1] - 1)
+        coverage = None
+        if self._coverage is not None:
+            coverage = (self._coverage[min(t, self._coverage.shape[0] - 1)]
+                        if self._coverage.ndim == 2 else self._coverage)
+        try:
+            self._model_view.show_field(
+                self._mesh, self._resistivity[:, t], kind="ert", coverage=coverage,
+                title=f"Inverted resistivity, survey {t}")
+        except Exception as exc:  # noqa: BLE001
+            self._model_note.setText(f"The model could not be drawn: {exc}")
+
+    # -- layers --------------------------------------------------------------
+    def _refresh_layer_rows(self) -> None:
+        """One row per layer in the model: a tick, a name, and its size."""
+        _clear(self._layers_form)
+        self._layer_rows = []
+        if self._summary is not None:
+            for i, layer in enumerate(self._layers_top_down()):
+                marker = int(layer["marker"])
+                enabled = QCheckBox()
+                # Ticked when the layer has known petrophysics defaults.
+                enabled.setChecked(marker in geo_pipeline.DEFAULT_LAYER_DISTRIBUTIONS)
+                enabled.toggled.connect(self._on_layers_changed)
+                name = QLineEdit(str(layer.get("name", f"Layer {marker}")))
+                name.editingFinished.connect(self._on_layers_changed)
+                size = _hint(f"marker {marker} · {int(layer['n_cells']):,} cells")
+                self._layers_form.addWidget(enabled, i, 0)
+                self._layers_form.addWidget(name, i, 1)
+                self._layers_form.addWidget(size, i, 2)
+                self._layer_rows.append({"marker": marker, "n_cells": int(layer["n_cells"]),
+                                         "enabled": enabled, "name": name})
+        # A new (or re-read) model's layers start from the defaults.
+        self._param_values = {}
+        self._param_widgets = {}
+        self._param_layout = None
+        self._on_layers_changed()
+
+    def _layers_top_down(self) -> List[Dict[str, Any]]:
+        """The model's layers from the surface down, by the mean height of their cells.
+
+        In marker order the bedrock (2) came before the regolith (3) above it.
+        """
+        layers = list(self._summary["layers"]) if self._summary else []
+        if self._mesh is None or self._markers is None:
+            return layers
+        try:
+            z = np.asarray(self._mesh.cellCenters(), dtype=float)[:, 1]
+            if z.size != self._markers.size:
+                return layers
+            height = {int(m): float(np.mean(z[self._markers == m]))
+                      for m in np.unique(self._markers)}
+        except Exception:  # noqa: BLE001 - marker order is still an order
+            return layers
+        return sorted(layers, key=lambda layer: -height.get(int(layer["marker"]), 0.0))
 
     def _enabled_layers(self) -> List[Dict[str, Any]]:
         return [r for r in self._layer_rows if r["enabled"].isChecked()]
 
+    def _layer_names(self) -> Dict[int, str]:
+        return {int(r["marker"]): r["name"].text().strip() or f"Layer {r['marker']}"
+                for r in self._layer_rows}
+
+    def _on_layers_changed(self, *_args) -> None:
+        self._refresh_parameter_panels()
+        self._layer_view.set_layers(self._markers, self._layer_names(),
+                                    {int(r["marker"]) for r in self._enabled_layers()},
+                                    [int(r["marker"]) for r in self._layer_rows])
+        self._sync_page()
+
+    def _reset_layers(self) -> None:
+        self._markers_override = None
+        self._reload()
+
     def _derive_markers_from_structure(self) -> None:
         if self._summary is None or self._data_dir() is None:
-            self.log("Load an inverted-model bundle in Step 1 first.", "warn")
+            self.log("Load an inverted ERT model first.", "warn")
             return
         interface = None
         source = ""
@@ -462,128 +891,45 @@ class GeoHydrologyModule(BaseModule):
         self._reload()
         self._go_to(1)
 
-    # -- Step 3: Target ------------------------------------------------------
-    def _build_target_step(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.addWidget(QLabel("<h3>Step 3 · Choose the hydrologic target</h3>"))
-        layout.addWidget(QLabel(
-            "Pick the product(s) to estimate. Water content samples all five "
-            "petrophysics parameters; porosity assumes a known saturation."))
-
-        prod_box = QGroupBox("Products")
-        pform = QVBoxLayout(prod_box)
-        self._product_boxes: Dict[str, QCheckBox] = {}
-        for key, label in _PRODUCTS:
-            box = QCheckBox(label)
-            box.setChecked(key == "water_content")
-            box.toggled.connect(self._on_products_changed)
-            self._product_boxes[key] = box
-            pform.addWidget(box)
-        layout.addWidget(prod_box)
-
-        opts = QGroupBox("Options")
-        form = QFormLayout(opts)
-        self._saturation = self._dspin(1.0, 0.01, 1.0, 0.05, 2)
-        self._saturation.setToolTip("Assumed saturation for porosity estimation "
-                                    "(1.0 = saturated zone).")
-        self._preview_t = self._ispin(0, 0, 0)
-        self._coverage_thr = self._dspin(-1.0, -100.0, 100.0, 0.1, 2)
-        form.addRow("Saturation (porosity mode)", self._saturation)
-        form.addRow("Preview timestep", self._preview_t)
-        form.addRow("Coverage threshold", self._coverage_thr)
-        layout.addWidget(opts)
-        layout.addStretch(1)
-        self._on_products_changed()
-        return page
-
-    def _on_products_changed(self) -> None:
-        self._saturation.setEnabled(self._product_boxes["porosity"].isChecked())
-        self._update_strip()
-
-    def _collect_products(self) -> List[str]:
-        if not hasattr(self, "_product_boxes"):
-            return []
-        return [k for k, b in self._product_boxes.items() if b.isChecked()]
-
-    # -- Step 4: Parameters --------------------------------------------------
-    def _build_parameters_step(self) -> QWidget:
-        page = QWidget()
-        outer = QVBoxLayout(page)
-        outer.addWidget(QLabel("<h3>Step 4 · Set per-layer petrophysics</h3>"))
-        outer.addWidget(QLabel(
-            "Each enabled layer gets mean and standard deviation for the "
-            "Waxman-Smits / Archie parameters. Monte Carlo samples these."))
-
-        scroll = QScrollArea(); scroll.setWidgetResizable(True)
-        inner = QWidget(); ilayout = QVBoxLayout(inner)
-        ilayout.addWidget(self._build_shared_group())
-        self._param_host = QWidget()
-        self._param_host_layout = QVBoxLayout(self._param_host)
-        self._param_host_layout.setContentsMargins(0, 0, 0, 0)
-        ilayout.addWidget(self._param_host)
-        ilayout.addStretch(1)
-        scroll.setWidget(inner)
-        outer.addWidget(scroll, stretch=1)
-        return page
-
-    def _build_shared_group(self) -> QGroupBox:
-        box = QGroupBox("Monte Carlo settings")
-        form = QFormLayout(box)
-        self._n_real = self._ispin(100, 2, 5000)
-        self._seed = self._ispin(7, 0, 10_000_000)
-        form.addRow("Realizations", self._n_real)
-        form.addRow("Random seed", self._seed)
-        adv, aform = self._advanced_box()
-        self._tortuosity = self._dspin(1.0, 0.1, 5.0, 0.1, 2)
-        self._wc_cmin = self._dspin(0.0, 0.0, 1.0, 0.01, 2)
-        self._wc_cmax = self._dspin(0.32, 0.01, 1.0, 0.01, 2)
-        aform.addRow("Tortuosity a", self._tortuosity)
-        aform.addRow("WC color min", self._wc_cmin)
-        aform.addRow("WC color max", self._wc_cmax)
-        form.addRow(adv)
-        return box
-
+    # -- rock physics ---------------------------------------------------------
     def _layer_default(self, marker: int) -> Dict[str, Dict[str, float]]:
         src = geo_pipeline.DEFAULT_LAYER_DISTRIBUTIONS.get(marker, _GENERIC_LAYER)
         return {k: dict(src[k]) for k in _PARAM_SPECS}
 
     def _refresh_parameter_panels(self) -> None:
-        """One panel per enabled layer, keeping the values already set in them.
+        """One panel per ticked layer, keeping the values already set in them.
 
-        Rebuilt only when the enabled layers or their names changed; a marker's
-        values carry across the rebuild. A different model starts again from
-        the defaults.
+        Rebuilt only when the ticked layers change; a marker's values carry
+        across the rebuild, and its name is updated in place.
         """
         enabled = self._enabled_layers()
-        layout = [(int(row["marker"]), row["name"].text().strip()) for row in enabled]
-        same_model = self._param_summary is self._summary
-        if same_model and layout == self._param_layout:
+        markers = [int(row["marker"]) for row in enabled]
+        names = self._layer_names()
+        if markers == self._param_layout:
+            for marker, label in self._param_titles.items():
+                label.setText(f"<b>{names.get(marker, marker)}</b>")
             return
-        if same_model:
-            for marker, widgets in self._param_widgets.items():
-                self._param_values[marker] = {
-                    key: (mean.value(), std.value()) for key, (mean, std) in widgets.items()}
-        else:
-            self._param_values = {}
-        self._param_summary, self._param_layout = self._summary, layout
-        while self._param_host_layout.count():
-            item = self._param_host_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
+        for marker, widgets in self._param_widgets.items():
+            self._param_values[marker] = {
+                key: (mean.value(), std.value()) for key, (mean, std) in widgets.items()}
+        self._param_layout = markers
+        _clear(self._physics_layout)
         self._param_widgets = {}
+        self._param_summaries = {}
+        self._param_titles = {}
         if not enabled:
-            self._param_host_layout.addWidget(
-                QLabel("Enable at least one layer in Step 2."))
+            self._physics_layout.addWidget(_hint("Tick a layer in 2 to set its rock physics."))
             return
         for row in enabled:
             marker = int(row["marker"])
-            name = row["name"].text().strip() or f"Layer {marker}"
-            panel = QGroupBox(f"{name}  (marker {marker})")
-            grid = QGridLayout(panel)
-            grid.addWidget(QLabel("<b>Parameter</b>"), 0, 0)
+            title = QLabel(f"<b>{names.get(marker, marker)}</b>")
+            summary = _hint()
+            adv, aform = fold("Change")
+            grid_host = QWidget()
+            grid = QGridLayout(grid_host)
+            grid.setContentsMargins(0, 0, 0, 0)
             grid.addWidget(QLabel("<b>Mean</b>"), 0, 1)
-            grid.addWidget(QLabel("<b>Std</b>"), 0, 2)
+            grid.addWidget(QLabel("<b>± spread</b>"), 0, 2)
             defaults = self._layer_default(marker)
             kept = self._param_values.get(marker, {})
             self._param_widgets[marker] = {}
@@ -591,171 +937,75 @@ class GeoHydrologyModule(BaseModule):
                 (mlo, mhi, mstep, mdec), (slo, shi, sstep, sdec) = _PARAM_SPECS[key]
                 mean, std = kept.get(key, (float(defaults[key]["mean"]),
                                            float(defaults[key]["std"])))
-                mean_spin = self._dspin(float(mean), mlo, mhi, mstep, mdec)
-                std_spin = self._dspin(float(std), slo, shi, sstep, sdec)
+                mean_box = _number(float(mean), mlo, mhi, mstep, mdec)
+                std_box = _number(float(std), slo, shi, sstep, sdec)
+                for box in (mean_box, std_box):
+                    box.valueChanged.connect(lambda _v, m=marker: self._update_param_summary(m))
                 grid.addWidget(QLabel(_PARAM_LABELS[key]), r, 0)
-                grid.addWidget(mean_spin, r, 1)
-                grid.addWidget(std_spin, r, 2)
-                self._param_widgets[marker][key] = (mean_spin, std_spin)
-            self._param_host_layout.addWidget(panel)
+                grid.addWidget(mean_box, r, 1)
+                grid.addWidget(std_box, r, 2)
+                self._param_widgets[marker][key] = (mean_box, std_box)
+            aform.addRow(grid_host)
+            for widget in (title, summary, adv):
+                self._physics_layout.addWidget(widget)
+            self._param_titles[marker] = title
+            self._param_summaries[marker] = summary
+            self._update_param_summary(marker)
 
-    # -- Step 5: Run ---------------------------------------------------------
-    def _build_run_step(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.addWidget(QLabel("<h3>Step 5 · Review and run the estimation</h3>"))
-        self._run_checklist = QGroupBox("Readiness")
-        self._run_checklist_layout = QVBoxLayout(self._run_checklist)
-        layout.addWidget(self._run_checklist)
+    def _update_param_summary(self, marker: int) -> None:
+        """A layer's rock physics in one line."""
+        widgets = self._param_widgets.get(marker)
+        label = self._param_summaries.get(marker)
+        if not widgets or label is None:
+            return
 
-        self._run_btn = QPushButton("Run water-content estimation")
-        self._run_btn.setProperty("primary", True)
-        self._run_btn.setIcon(theme.icon("fa5s.play", color="#ffffff"))
-        self._run_btn.clicked.connect(self._run_inverse)
-        layout.addWidget(self._run_btn)
-        cfg_btn = QPushButton("Export petrophysics config JSON (no backend needed)")
-        cfg_btn.setIcon(theme.icon("fa5s.file-export"))
-        cfg_btn.clicked.connect(self._export_config)
-        layout.addWidget(cfg_btn)
+        def value(key: str) -> str:
+            mean, std = (box.value() for box in widgets[key])
+            return f"{mean:g} ± {std:g}" if std else f"{mean:g}"
 
-        self._progress = QProgressBar(); self._progress.setVisible(False)
-        self._stop = self.stop_button("The water-content estimation")
-        layout.addWidget(progress_with_stop(self._progress, self._stop))
-        self._run_status = QLabel(""); self._run_status.setWordWrap(True)
-        layout.addWidget(self._run_status)
-        layout.addStretch(1)
-        return page
+        label.setText(f"porosity {value('porosity')}, m {value('m')}, n {value('n')}, "
+                      f"pore water {value('rho_fluid')} Ω·m")
 
-    def _refresh_run_checklist(self) -> None:
-        while self._run_checklist_layout.count():
-            item = self._run_checklist_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-        status = self._step_status()
-        enabled = self._enabled_layers()
-        rows = [
-            ("Model loaded", status["data"], str(self._data_dir() or "—")),
-            ("Layers enabled", status["layers"],
-             ", ".join(f"{r['name'].text().strip() or r['marker']}" for r in enabled) or "none"),
-            ("Target chosen", status["target"], ", ".join(self._collect_products()) or "none"),
-        ]
-        for label, ok, detail in rows:
-            icon = "fa5s.check-circle" if ok else "fa5s.times-circle"
-            color = _P["green"] if ok else _P["red"]
-            line = QHBoxLayout()
-            badge = QLabel(); badge.setPixmap(theme.icon(icon, color=color).pixmap(16, 16))
-            text = QLabel(f"<b>{label}</b> — {detail}"); text.setWordWrap(True)
-            line.addWidget(badge); line.addWidget(text, stretch=1)
-            wrap = QWidget(); wrap.setLayout(line)
-            self._run_checklist_layout.addWidget(wrap)
-        self._run_btn.setEnabled(status["all"])
+    # -- what to estimate ----------------------------------------------------
+    def _on_products_changed(self, *_args) -> None:
+        set_rows_visible([self._saturation], self._product_boxes["porosity"].isChecked())
+        self._sync_page()
 
-    # -- Step 6: Results -----------------------------------------------------
-    def _build_results_step(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        header = QHBoxLayout()
-        header.addWidget(QLabel("<h3>Step 6 · Results</h3>"))
-        header.addStretch(1)
-        open_btn = QPushButton("Open output folder")
-        open_btn.setIcon(theme.icon("fa5s.folder-open"))
-        open_btn.clicked.connect(self._open_output_folder)
-        header.addWidget(open_btn)
-        layout.addLayout(header)
+    def _collect_products(self) -> List[str]:
+        if not hasattr(self, "_product_boxes"):
+            return []
+        return [k for k, b in self._product_boxes.items() if b.isChecked()]
 
-        self._result_summary = QLabel(
-            "No results yet. Complete Steps 1–5 and run the estimation.")
-        self._result_summary.setWordWrap(True)
-        layout.addWidget(self._result_summary)
-
-        self._result_tabs = QTabWidget()
-
-        maps_page = QWidget()
-        maps_layout = QVBoxLayout(maps_page)
-        picker = QHBoxLayout()
-        picker.addWidget(QLabel("Result map:"))
-        self._result_figure = QComboBox()
-        self._result_figure.currentIndexChanged.connect(self._show_selected_result_map)
-        picker.addWidget(self._result_figure, stretch=1)
-        maps_layout.addLayout(picker)
-        self._result_map_caption = QLabel(
-            "Run the estimation to view spatial products and uncertainty.")
-        self._result_map_caption.setWordWrap(True)
-        maps_layout.addWidget(self._result_map_caption)
-        self._result_map_view = ZoomableImageView()
-        self._result_map_view.setMinimumHeight(480)
-        maps_layout.addWidget(self._result_map_view, stretch=1)
-        self._result_tabs.addTab(maps_page, "Maps")
-
-        self._monitor_page = QWidget()
-        monitor_layout = QVBoxLayout(self._monitor_page)
-        mon = QGroupBox("Monitoring points (water content time series)")
-        mform = QFormLayout(mon)
-        self._mx1 = self._dspin(30.0, -1e6, 1e6, 1.0, 1)
-        self._my1 = self._dspin(1610.0, -1e6, 1e6, 1.0, 1)
-        self._mx2 = self._dspin(65.0, -1e6, 1e6, 1.0, 1)
-        self._my2 = self._dspin(1613.0, -1e6, 1e6, 1.0, 1)
-        r1 = QHBoxLayout(); r1.addWidget(QLabel("P1 x")); r1.addWidget(self._mx1)
-        r1.addWidget(QLabel("P1 y")); r1.addWidget(self._my1)
-        r2 = QHBoxLayout(); r2.addWidget(QLabel("P2 x")); r2.addWidget(self._mx2)
-        r2.addWidget(QLabel("P2 y")); r2.addWidget(self._my2)
-        w1 = QWidget(); w1.setLayout(r1); w2 = QWidget(); w2.setLayout(r2)
-        mform.addRow(w1); mform.addRow(w2)
-        plot_btn = QPushButton("Plot time series at points")
-        plot_btn.setIcon(theme.icon("fa5s.chart-line"))
-        plot_btn.clicked.connect(self._plot_points)
-        mform.addRow(plot_btn)
-        monitor_layout.addWidget(mon)
-        self._monitor_caption = QLabel(
-            "Choose two locations and plot their water-content time series.")
-        self._monitor_caption.setWordWrap(True)
-        monitor_layout.addWidget(self._monitor_caption)
-        self._monitor_view = ZoomableImageView()
-        self._monitor_view.setMinimumHeight(420)
-        monitor_layout.addWidget(self._monitor_view, stretch=1)
-        self._result_tabs.addTab(self._monitor_page, "Monitoring")
-
-        self._result_files = QTextBrowser()
-        self._result_files.setReadOnly(True)
-        self._result_files.setPlainText("Output files will be listed after a run.")
-        self._result_tabs.addTab(self._result_files, "Files")
-
-        layout.addWidget(self._result_tabs, stretch=1)
-        return page
-
+    # -- results -------------------------------------------------------------
     def _populate_results(self, result: Dict[str, Any]) -> None:
-        product_labels = {
-            "water_content": "Water content",
-            "porosity": "Porosity",
-        }
-        products = ", ".join(
-            product_labels.get(str(product), str(product).replace("_", " ").title())
-            for product in result.get("products", [])
-        )
-        self._result_summary.setText(
-            f"<b>Status:</b> {result.get('status')} &nbsp; "
-            f"<b>Products:</b> {products or '—'} &nbsp; "
-            f"<b>Realizations:</b> {result.get('n_realizations', '—')} &nbsp; "
-            f"<b>Mesh cells:</b> {result.get('mesh_cells', '—')} &nbsp; "
-            f"<b>Timesteps:</b> {result.get('n_timesteps', '—')} &nbsp; "
-            f"<b>Displayed timestep:</b> {result.get('preview_timestep', '—')}")
+        self._has_results = True
+        products = [dict(_PRODUCTS).get(str(p), str(p)) for p in result.get("products", [])]
+        if result.get("status") == "config_exported":
+            self._result_summary.setText(
+                "Nothing was estimated; the rock-physics settings were saved instead.")
+        else:
+            self._result_summary.setText(
+                f"Estimated {', '.join(products).lower() or 'nothing'} from "
+                f"{result.get('n_realizations', '—')} samples of the rock physics, for "
+                f"{result.get('n_timesteps', '—')} surveys. The maps show survey "
+                f"{result.get('preview_timestep', '—')}.")
 
         entries: List[Tuple[str, str]] = []
-        display_paths = result.get("display_paths", {})
-        for product, statistics in display_paths.items():
+        # The estimate and its uncertainty first, then the percentiles.
+        rank = {"mean": 0, "std": 1, "p50": 2, "p10": 3, "p90": 4}
+        for product, statistics in (result.get("display_paths") or {}).items():
             if not isinstance(statistics, dict):
                 continue
-            for statistic, path in statistics.items():
+            for statistic, path in sorted(statistics.items(),
+                                          key=lambda item: rank.get(item[0], 9)):
                 if path and Path(path).exists():
-                    entries.append((
-                        self._result_map_label(str(product), str(statistic)), str(path)))
-
+                    entries.append((self._result_map_label(str(product), str(statistic)),
+                                    str(path)))
         # Backward-compatible fallback for results produced before display_paths.
         known_paths = {path for _, path in entries}
         for path in result.get("figure_paths", []):
             if path and Path(path).exists() and str(path) not in known_paths:
                 entries.append((self._legacy_result_map_label(Path(path)), str(path)))
-
         self._result_figure.blockSignals(True)
         self._result_figure.clear()
         for label, path in entries:
@@ -765,37 +1015,27 @@ class GeoHydrologyModule(BaseModule):
             self._result_figure.setCurrentIndex(0)
         self._show_selected_result_map()
 
-        file_lines = []
-        figures = [str(path) for path in result.get("figure_paths", [])]
-        stats = [str(path) for path in result.get("stats_paths", [])]
-        if figures:
-            file_lines.append("Map figures:\n" + "\n".join(f"  - {path}" for path in figures))
-        if stats:
-            file_lines.append("Derived arrays:\n" + "\n".join(f"  - {path}" for path in stats))
-        cfg = result.get("config_path")
-        if cfg:
-            file_lines.append(f"Petrophysics config:\n  - {cfg}")
-        output_dir = result.get("output_dir")
-        if output_dir:
-            file_lines.append(f"Output directory:\n  - {output_dir}")
-        self._result_files.setPlainText(
-            "\n\n".join(file_lines) if file_lines else "No output files were produced.")
+        files = [Path(p).name for p in result.get("stats_paths", [])]
+        bits = [f"Arrays: {', '.join(files)}" if files else ""]
+        if result.get("config_path"):
+            bits.append(f"Rock-physics settings: {result['config_path']}")
+        if result.get("output_dir"):
+            bits.append(f"Folder: {result['output_dir']}")
+        self._result_files.setText("<br>".join(bit for bit in bits if bit))
+        self._sync_page()
 
     @staticmethod
     def _result_map_label(product: str, statistic: str) -> str:
-        products = {
-            "water_content": "Water content",
-            "porosity": "Porosity",
-        }
+        products = {"water_content": "Water content", "porosity": "Porosity"}
         statistics = {
-            "mean": "Mean",
-            "std": "Standard deviation (1σ)",
+            "mean": "mean",
+            "std": "uncertainty (1σ)",
             "p10": "P10",
-            "p50": "P50 (median)",
+            "p50": "median (P50)",
             "p90": "P90",
         }
-        return f"{products.get(product, product.replace('_', ' ').title())} — " \
-               f"{statistics.get(statistic, statistic.upper())}"
+        return (f"{products.get(product, product.replace('_', ' ').title())} — "
+                f"{statistics.get(statistic, statistic.upper())}")
 
     @classmethod
     def _legacy_result_map_label(cls, path: Path) -> str:
@@ -809,19 +1049,13 @@ class GeoHydrologyModule(BaseModule):
 
     def _show_selected_result_map(self) -> None:
         path = self._result_figure.currentData()
-        if path and Path(path).exists() and self._result_map_view.set_image_file(path):
-            self._result_map_caption.setText(
-                f"<b>{self._result_figure.currentText()}</b> &nbsp; "
-                f"<code>{Path(path).name}</code> &nbsp; · drag to pan, wheel to zoom")
-        else:
+        if not (path and Path(path).exists() and self._result_map_view.set_image_file(path)):
             self._result_map_view.clear()
-            self._result_map_caption.setText(
-                "No map figures were produced. Check the Files tab for exported configuration or arrays.")
 
     def _plot_points(self) -> None:
         res = self._last_result
         if not res or res.get("_wc_mean") is None:
-            self.log("Run a water-content estimation first.", "warn")
+            self.log("Estimate water content first.", "warn")
             return
         cc = res.get("_cell_centers")
         wc_mean = res.get("_wc_mean")
@@ -834,33 +1068,24 @@ class GeoHydrologyModule(BaseModule):
             if wc_std is not None:
                 stds, _ = geo_pipeline.extract_point_series(cc, wc_std, positions)
             t = res.get("_timestep_indices") or list(range(series.shape[1]))
-            import matplotlib
-            matplotlib.use("Agg", force=True)
-            import matplotlib.pyplot as plt
-            fig, axes = plt.subplots(1, len(positions), figsize=(5.0 * len(positions), 3.4),
-                                     squeeze=False)
+            figure = Figure(figsize=(5.0 * len(positions), 3.4), layout="constrained")
+            axes = figure.subplots(1, len(positions), squeeze=False)
             for i in range(len(positions)):
                 ax = axes[0][i]
                 ax.plot(t, series[i], "o-", color="tab:blue", label="mean")
                 if stds is not None:
                     ax.fill_between(t, series[i] - stds[i], series[i] + stds[i],
                                     color="tab:blue", alpha=0.2, label="±1σ")
-                ax.set_xlabel("Timestep"); ax.set_ylabel("Water content (-)")
-                ax.set_title(f"P{i + 1} (cell {idx[i]})"); ax.grid(True, alpha=0.3)
+                ax.set_xlabel("Survey"); ax.set_ylabel("Water content (-)")
+                ax.set_title(f"Point {i + 1} (cell {idx[i]})"); ax.grid(True, alpha=0.3)
                 if i == 0:
                     ax.legend(frameon=False)
-            fig.tight_layout()
             out = Path(res.get("output_dir", ".")) / "monitoring_series.png"
-            fig.savefig(out, dpi=170, bbox_inches="tight")
-            plt.close(fig)
+            figure.savefig(out, dpi=170, bbox_inches="tight")
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not plot monitoring series: {exc}", "error")
             return
-        if self._monitor_view.set_image_file(str(out)):
-            self._monitor_caption.setText(
-                f"<b>Water-content time series</b> &nbsp; <code>{out.name}</code> &nbsp; "
-                "±1σ shading shows propagated petrophysical uncertainty.")
-            self._result_tabs.setCurrentWidget(self._monitor_page)
+        self._monitor_view.set_image_file(str(out))
         self.log(f"Saved monitoring series to {out}", "success")
 
     def _open_output_folder(self) -> None:
@@ -871,126 +1096,31 @@ class GeoHydrologyModule(BaseModule):
         else:
             self.log("Output folder not available yet.", "warn")
 
-    # -- data loading --------------------------------------------------------
-    def _data_dir(self) -> Optional[Path]:
-        if self._manual_dir is not None:
-            return self._manual_dir
-        geo_dir = self.state.context.get("geo_data_dir") if self.state.context else None
-        if geo_dir:
-            return Path(geo_dir)
-        return None
-
-    def _use_context_data(self) -> None:
-        self._manual_dir = None
-        self._markers_override = None
-        if self._data_dir() is None:
-            self._manual_dir = self._example_data_dir()
-            if self._manual_dir is None:
-                self.log(io_utils.missing_example_message(
-                    "The synthetic inverted-model example", _EXAMPLE_MODEL, generated=True),
-                    "warn")
-        self._reload()
-
-    def _example_data_dir(self) -> Optional[Path]:
-        """Locate the synthetic inverted-model demo for standalone launches.
-
-        The dataset ``examples/generate_synthetic_examples.py`` writes in a clone
-        of the source repository; the pip package carries no example data. The
-        real Treeline demo in ``examples/results/Structure_WC`` can still be
-        opened via "Select folder...".
-        """
-        def usable(folder: Path) -> bool:
-            files = geo_pipeline.find_model_files(folder)
-            return files.get("resistivity") is not None and files.get("mesh") is not None
-
-        return io_utils.find_example(_EXAMPLE_MODEL, self.state.project_root, usable)
-
-    def _show_format_help(self) -> None:
-        doc_path = Path(__file__).with_name("geo_input_format.md")
-        try:
-            text = doc_path.read_text(encoding="utf-8")
-        except Exception:  # noqa: BLE001
-            text = _INPUT_FORMAT_FALLBACK
-        dlg = QDialog(self)
-        dlg.setWindowTitle("ERT → Water Content input format")
-        dlg.resize(760, 640)
-        lay = QVBoxLayout(dlg)
-        browser = QTextBrowser(); browser.setOpenExternalLinks(True)
-        try:
-            browser.setMarkdown(text)
-        except Exception:  # noqa: BLE001
-            browser.setPlainText(text)
-        lay.addWidget(browser)
-        close_btn = QPushButton("Close"); close_btn.clicked.connect(dlg.accept)
-        lay.addWidget(close_btn)
-        dlg.exec()
-
-    def _select_folder(self) -> None:
-        start = str(self._data_dir() or Path.cwd())
-        path = select_directory(self, "Select inverted-model folder", start)
-        if path:
-            self._manual_dir = path
-            self._markers_override = None
-            self._reload()
-
-    def _reload(self) -> None:
-        data_dir = self._data_dir()
-        if hasattr(self, "_checklist_layout"):
-            self._refresh_checklist()
-        self._summary = None
-        if data_dir is None or not Path(data_dir).exists():
-            if hasattr(self, "_data_status"):
-                self._data_status.setText("No model folder set. Use 'Select folder…'.")
-            self._update_strip()
-            return
-        context = {"geo_data_dir": str(data_dir)}
-        summary_params: Dict[str, Any] = {"model_data_dir": str(data_dir)}
-        if self._markers_override is not None:
-            summary_params["markers_override"] = self._markers_override
-        try:
-            self._summary = geo_pipeline.extract_model_summary(
-                context, summary_params, log=lambda m: self.log(m, "debug"))
-        except Exception as exc:  # noqa: BLE001
-            self._summary = None
-            if hasattr(self, "_data_status"):
-                self._data_status.setText(f"Could not read model: {exc}")
-            self.log(f"Failed to read inverted model: {exc}", "error")
-            self._update_strip()
-            return
-        s = self._summary
-        if hasattr(self, "_data_status"):
-            self._data_status.setText(
-                f"Folder: {data_dir}<br>Cells: {s['n_cells']} · Timesteps: "
-                f"{s['n_timesteps']} · Markers: "
-                f"{', '.join(str(l['marker']) for l in s['layers'])}")
-        if hasattr(self, "_preview_t"):
-            self._preview_t.setRange(0, max(0, s["n_timesteps"] - 1))
-        self.log(f"Loaded inverted model from {data_dir}", "success")
-        self._refresh_layer_rows()
-        self._update_strip()
-
     # -- params / run --------------------------------------------------------
     def _collect_layers(self) -> List[Dict[str, Any]]:
         layers: List[Dict[str, Any]] = []
+        names = self._layer_names()
         for row in self._enabled_layers():
             marker = int(row["marker"])
-            entry: Dict[str, Any] = {"marker": marker,
-                                     "name": row["name"].text().strip() or f"Layer {marker}"}
+            entry: Dict[str, Any] = {"marker": marker, "name": names[marker]}
             widgets = self._param_widgets.get(marker)
-            # A layer switched back on since Step 4 was built has no panel yet,
-            # but may still have the values set in it before it was switched off.
             kept = self._param_values.get(marker, {})
             defaults = self._layer_default(marker)
             for key in _PARAM_SPECS:
                 if widgets and key in widgets:
-                    mean_spin, std_spin = widgets[key]
-                    entry[key] = {"mean": mean_spin.value(), "std": std_spin.value()}
+                    mean_box, std_box = widgets[key]
+                    entry[key] = {"mean": mean_box.value(), "std": std_box.value()}
                 elif key in kept:
                     entry[key] = {"mean": kept[key][0], "std": kept[key][1]}
                 else:
                     entry[key] = dict(defaults[key])
             layers.append(entry)
         return layers
+
+    def _coverage_threshold(self) -> float:
+        """The view's "Hide below" cut, which the maps follow; off shows every cell."""
+        cut = self._model_view.hide_below()
+        return float(cut) if cut is not None else -1.0e9
 
     def _collect_params(self) -> Dict[str, Any]:
         out_dir = self.state.output_dir
@@ -1002,8 +1132,8 @@ class GeoHydrologyModule(BaseModule):
             "products": self._collect_products(),
             "saturation_value": self._saturation.value(),
             "tortuosity_a": self._tortuosity.value(),
-            "coverage_threshold": self._coverage_thr.value(),
-            "preview_timestep": self._preview_t.value(),
+            "coverage_threshold": self._coverage_threshold(),
+            "preview_timestep": self._survey.value(),
             "wc_cmin": self._wc_cmin.value(),
             "wc_cmax": self._wc_cmax.value(),
             "layers": self._collect_layers(),
@@ -1032,9 +1162,9 @@ class GeoHydrologyModule(BaseModule):
         return str(config_path)
 
     def _run_inverse(self) -> None:
-        status = self._step_status()
-        if not status["all"]:
-            self.log("Complete Data, Layers and Target first.", "warn")
+        reason = self._run_blocker()
+        if reason:
+            self.log(reason, "warn")
             return
         params = self._collect_params()
         seed = int(params.pop("seed"))
@@ -1054,15 +1184,13 @@ class GeoHydrologyModule(BaseModule):
         # arrays instead of adding four more files to the run.
         inputs: Dict[str, Any] = {"context": {}}
         if data_dir is not None:
+            # Under the bundle's own names, whichever layout the folder holds
+            # (an ERT page's output folder names them its own way).
+            found = geo_pipeline.find_model_files(data_dir)
             present = {
-                filename: data_dir / filename
-                for filename in (
-                    "mesh_res.bms",
-                    "resmodel.npy",
-                    "index_marker.npy",
-                    "all_coverage.npy",
-                )
-                if (data_dir / filename).is_file()
+                geo_pipeline.MODEL_FILES[key]: path
+                for key, path in found.items()
+                if path is not None and path.is_file()
             }
             if present:
                 try:
@@ -1100,10 +1228,12 @@ class GeoHydrologyModule(BaseModule):
         self._workflow_recipe_path = str(recipe_path)
         self._run_busy = BusyStateController([self._run_btn])
         self._run_busy.start()
-        self._run_btn.setText("Running…")
+        self._run_btn.setText("Estimating…")
         self._progress.setVisible(True)
         self._progress.setRange(0, 0)
-        self._run_status.setText("Starting Monte Carlo estimation…")
+        self._run_status.setText("Starting the estimate…")
+        theme.set_tone(self._run_status, None)
+        self._sync_page()
         self.log("Starting geophysics → hydrology estimation…", "info")
         # In a process of its own, so the window keeps painting through the
         # Monte Carlo; the point series plot needs the cell centres and the
@@ -1138,7 +1268,8 @@ class GeoHydrologyModule(BaseModule):
     def _on_run_ok(self, result: dict) -> None:
         self._progress.setRange(0, 1); self._progress.setValue(1)
         self.log(f"Estimation complete: {result.get('products')}.", "success")
-        self._run_status.setText("Water content estimated.")
+        self._run_status.setText("Finished. The maps are on the Results tab.")
+        theme.set_tone(self._run_status, "ok")
         self._last_result = result
         # Strip the in-process numpy payload before publishing to the bridge JSON.
         published = {k: v for k, v in result.items() if not k.startswith("_")}
@@ -1153,18 +1284,19 @@ class GeoHydrologyModule(BaseModule):
         self._last_result = None
         if not backend_unavailable:
             # The run itself failed - out of memory, arrays of the wrong shape -
-            # and its own reason is what helps, on the Run step where the
-            # settings can be changed and the run tried again. Exporting the
-            # configuration in its place blamed a backend that was there.
+            # and its own reason is what helps, beside the settings that can be
+            # changed before trying again. Exporting the configuration in its
+            # place blamed a backend that was there.
             self.log(f"Estimation failed: {message}", "error")
-            self._run_status.setText(f"The estimation failed: {message}")
-            self._go_to(4)
+            self._run_status.setText(f"The estimate failed: {message}")
+            theme.set_tone(self._run_status, "error")
             return
         self.log(f"Estimation could not run: {message}", "warn")
         config_path = self._export_config()
         note = ("The Monte Carlo engine (pygimli) is not installed or could not be loaded. "
-                f"The petrophysics configuration has been exported to {config_path}.")
+                f"The rock-physics settings were saved to {config_path}.")
         self._run_status.setText(note)
+        theme.set_tone(self._run_status, "warn")
         self.log(note, "warn")
         self._populate_results({"status": "config_exported",
                                 "products": self._collect_products(),
@@ -1175,12 +1307,14 @@ class GeoHydrologyModule(BaseModule):
         if self._run_busy is not None:
             self._run_busy.finish()
             self._run_busy = None
-        self._run_btn.setText("Run water-content estimation")
+        self._run_btn.setText("Estimate water content")
         self._progress.setVisible(False)
         if self._worker is not None and self._worker.is_cancelled():
             self._run_problem = "Stopped by user"
-            self._run_status.setText("Stopped before it finished. Run it again to start over.")
-        self._update_strip()
+            self._run_status.setText("Stopped before it finished. Press Estimate water "
+                                     "content to start again.")
+            theme.set_tone(self._run_status, "warn")
+        self._sync_page()
 
     # -- AQUAH agent interface ----------------------------------------------
     def agent_describe(self) -> Dict[str, Any]:
@@ -1190,10 +1324,15 @@ class GeoHydrologyModule(BaseModule):
             "current_step": _STEPS[self._current],
             "state": self._agent_status(),
             "actions": [
+                {"name": "use_ert_model", "args": {},
+                 "desc": ("Load the model shown on the ERT Processing page (single or "
+                          "time-lapse), as it is displayed there. Use this after an "
+                          "inversion in the studio.")},
                 {"name": "use_example_data", "args": {},
                  "desc": "Load the bundled / context inverted-ERT model bundle."},
                 {"name": "set_data_dir", "args": {"path": "str"},
-                 "desc": "Load an inverted model folder (mesh_res.bms, resmodel.npy, index_marker.npy)."},
+                 "desc": ("Load an inverted model folder: an ERT inversion's output folder, "
+                          "or a bundle (mesh_res.bms, resmodel.npy, index_marker.npy).")},
                 {"name": "detect_layers", "args": {},
                  "desc": "Re-detect geological layers from the loaded model markers."},
                 {"name": "select_products", "args": {"products": [k for k, _ in _PRODUCTS]},
@@ -1202,7 +1341,7 @@ class GeoHydrologyModule(BaseModule):
                  "desc": ("Set parameters. Keys: n_realizations, seed, saturation, "
                           "coverage_threshold, preview_timestep, tortuosity, wc_cmin, wc_cmax.")},
                 {"name": "goto_step", "args": {"step": list(_STEPS)},
-                 "desc": "Jump to a wizard step."},
+                 "desc": "Show the view and panel of a step, by name or index."},
                 {"name": "run", "args": {},
                  "desc": "Run the Monte Carlo water-content / porosity estimation."},
                 {"name": "get_status", "args": {},
@@ -1213,6 +1352,7 @@ class GeoHydrologyModule(BaseModule):
     def agent_apply(self, action: str, args: Dict[str, Any]) -> Dict[str, Any]:
         args = args or {}
         handlers = {
+            "use_ert_model": lambda: self._agent_use_ert_model(),
             "use_example_data": lambda: self._agent_use_example_data(),
             "set_data_dir": lambda: self._agent_set_data_dir(args.get("path")),
             "detect_layers": lambda: self._agent_detect_layers(),
@@ -1248,14 +1388,12 @@ class GeoHydrologyModule(BaseModule):
         result = self._agent_set_data_dir(str(folder))
         if not result.get("loaded"):
             return ""
-        # Layers come from the markers the inversion mesh carries, so the page
-        # arrives at the step the run is actually on rather than at step 1.
-        self._agent_detect_layers()
+        self._go_to(1)
         layers = len(self._enabled_layers())
         return f"the inverted model from this run ({layers} layer(s))"
 
     def show_run_stage(self, tool: str) -> str:
-        """Follow the run through this page's wizard steps."""
+        """Follow the run through this page's steps."""
         views = {"fetch_climate": "Data", "convert_water_content": "Run"}
         step = views.get(str(tool), "")
         if not step:
@@ -1273,6 +1411,7 @@ class GeoHydrologyModule(BaseModule):
             "data_dir": str(self._data_dir() or ""),
             "products": self._collect_products(),
             "enabled_layers": [r["marker"] for r in self._enabled_layers()],
+            "run_blocked_because": self._run_blocker(),
             "last_result_status": last.get("status"),
             "last_run_problem": self._run_problem,
         }
@@ -1288,8 +1427,48 @@ class GeoHydrologyModule(BaseModule):
         self._manual_dir = Path(str(path))
         self._markers_override = None
         self._reload()
-        return {"status": "ok", "data_dir": str(self._data_dir() or ""),
-                "loaded": self._summary is not None}
+        if self._summary is None:
+            # Said, not just "loaded": false - the assistant has to know why.
+            folder = Path(str(path))
+            holds = sorted(p.name for p in folder.iterdir())[:20] if folder.is_dir() else []
+            return {"status": "failed", "data_dir": str(folder), "loaded": False,
+                    "error": getattr(self, "_load_problem", "") or "The model could not be read.",
+                    "folder_holds": holds,
+                    "hint": ("After an inversion on the ERT page, use_ert_model loads the "
+                             "model it shows.")}
+        return {"status": "ok", "data_dir": str(self._data_dir() or ""), "loaded": True,
+                "n_cells": self._summary["n_cells"],
+                "n_timesteps": self._summary["n_timesteps"],
+                "layers": [layer["marker"] for layer in self._summary["layers"]],
+                "layers_from": self._summary.get("markers_source"),
+                "layering_note": self._summary.get("layering_note") or ""}
+
+    def _agent_use_ert_model(self) -> Dict[str, Any]:
+        """Load the model the ERT page shows, written out as this page's bundle."""
+        pages = getattr(self.window(), "_pages", None) or {}
+        ert = pages.get("ert")
+        handover = getattr(ert, "agent_handover", None)
+        if not callable(handover):
+            return {"status": "failed", "error": (
+                "The ERT Processing page has not been opened, so it has no model. Run an "
+                "inversion there first, or load a model folder with set_data_dir.")}
+        try:
+            folder = (self.state.ensure_results_store().scratch_dir(self.module_key)
+                      / f"ert_model_{time.strftime('%Y%m%d-%H%M%S')}")
+            record = handover(folder)
+        except Exception as exc:  # noqa: BLE001 - say why, the user can open a folder
+            return {"status": "failed", "error": f"Could not take the ERT page's model: {exc}"}
+        if not record:
+            return {"status": "failed", "error": (
+                "The ERT page shows no finished model (none run yet, or an inversion "
+                "is still running). Check its status, then try again.")}
+        result = self._agent_set_data_dir(record["model_dir"])
+        if result.get("loaded"):
+            self.log(f"Loaded the ERT page's {record.get('kind') or 'single'} model "
+                     f"(chi2 {record.get('chi2')}).", "success")
+            result.update(source="ERT Processing page", kind=record.get("kind"),
+                          chi2=record.get("chi2"), source_files=record.get("source_files"))
+        return result
 
     def _agent_detect_layers(self) -> Dict[str, Any]:
         if self._summary is None:
@@ -1317,8 +1496,9 @@ class GeoHydrologyModule(BaseModule):
             "n_realizations": lambda v: self._n_real.setValue(int(v)),
             "seed": lambda v: self._seed.setValue(int(v)),
             "saturation": lambda v: self._saturation.setValue(float(v)),
-            "coverage_threshold": lambda v: self._coverage_thr.setValue(float(v)),
-            "preview_timestep": lambda v: self._preview_t.setValue(int(v)),
+            # The cut lives on the Model view ("Hide below"), which the maps follow.
+            "coverage_threshold": lambda v: self._model_view.set_hide_below(float(v)),
+            "preview_timestep": lambda v: self._survey.setValue(int(v)),
             "tortuosity": lambda v: self._tortuosity.setValue(float(v)),
             "wc_cmin": lambda v: self._wc_cmin.setValue(float(v)),
             "wc_cmax": lambda v: self._wc_cmax.setValue(float(v)),

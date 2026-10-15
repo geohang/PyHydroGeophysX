@@ -1,9 +1,17 @@
 """Petrophysical models for resistivity and seismic velocity relationships."""
 
 from .resistivity_models import (
+    WS_Model,
     resistivity_to_saturation,
     resistivity_to_water_content,
     water_content_to_resistivity,
+)
+from .fluid_properties import (
+    batzle_wang_brine,
+    pore_fluid_conductivity,
+    ion_charge,
+    bulk_cec_to_qv,
+    waxman_smits_surface_conductivity,
 )
 from .velocity_models import (
     BaseVelocityModel,
@@ -20,6 +28,12 @@ from .velocity_models import (
 )
 
 __all__ = [
+    "WS_Model",
+    "batzle_wang_brine",
+    "pore_fluid_conductivity",
+    "ion_charge",
+    "bulk_cec_to_qv",
+    "waxman_smits_surface_conductivity",
     "water_content_to_resistivity",
     "resistivity_to_water_content",
     "resistivity_to_saturation",

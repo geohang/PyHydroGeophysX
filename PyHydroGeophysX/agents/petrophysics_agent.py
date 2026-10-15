@@ -12,15 +12,17 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from PyHydroGeophysX.petrophysics.monte_carlo import (  # noqa: F401 - re-exported
+    MIN_CELLS_PER_LAYER,
+    resolve_layers,
+)
+
 from .base_agent import BaseAgent
 
 
 # ---------------------------------------------------------------------------
 # Petrophysics Agent
 # ---------------------------------------------------------------------------
-#: A layer has to hold enough cells for its own parameters to mean anything.
-#: Below this a "layer" is a handful of cells whose statistics are noise.
-MIN_CELLS_PER_LAYER = 10
 
 #: The parameters of the relationship a user can supply.
 _RELATIONSHIP_KEYS = ("rho_sat", "m", "rho_fluid", "n", "porosity")
@@ -76,82 +78,6 @@ def _as_range(value: Any) -> Optional[Tuple[float, float]]:
     if not (np.isfinite(low) and np.isfinite(high)):
         return None
     return (low, high) if low <= high else (high, low)
-
-
-def resolve_layers(cell_markers, n_cells: int,
-                   min_cells: int = MIN_CELLS_PER_LAYER):
-    """Group cells into geological layers, or into one unit when there is none.
-
-    Cell markers mean different things depending on where the mesh came from. A
-    mesh built with regions carries a handful of markers that genuinely separate
-    soil from weathered rock from bedrock. An inversion parameter mesh often
-    carries one marker per cell, which identifies cells and says nothing about
-    geology. Reading the second as layering gives every cell its own
-    petrophysical parameter set estimated from one sample.
-
-    The test applied here is whether the markers *group* the mesh: at least two
-    values, each covering enough cells to estimate parameters from. When they do
-    not, the section is one unit - which is the honest description of a model
-    with no structural information, not a failure to find any.
-
-    Parameters
-    ----------
-    cell_markers : array-like
-        One marker per cell, as the mesh reports them.
-    n_cells : int
-        Number of model cells.
-    min_cells : int, optional
-        Fewest cells a layer may hold and still be treated as one.
-
-    Returns
-    -------
-    tuple
-        ``(markers, unique_layers, description)`` - the markers to use (all
-        zeros for a single unit), their distinct values, and a sentence for the
-        log and the report saying which case this is and why.
-
-    Raises
-    ------
-    None
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> markers, unique, why = resolve_layers(np.arange(832), 832)
-    >>> len(unique), 'single unit' in why
-    (1, True)
-    >>> markers, unique, why = resolve_layers(np.r_[np.zeros(400), np.ones(432)], 832)
-    >>> len(unique), 'layers' in why
-    (2, True)
-    """
-    markers = np.asarray(cell_markers).ravel()
-    if markers.size != n_cells:
-        markers = np.zeros(n_cells, dtype=int)
-        return markers, np.array([0]), (
-            "Cell markers did not match the model, so the section is treated as a "
-            "single unit with one petrophysical parameter set.")
-
-    unique, counts = np.unique(markers, return_counts=True)
-    if unique.size < 2:
-        return (markers.astype(int), unique,
-                "The mesh reports one region, so the section is a single unit with "
-                "one petrophysical parameter set.")
-    if counts.min() >= min_cells:
-        sizes = ", ".join(str(int(c)) for c in counts)
-        return (markers.astype(int), unique,
-                f"Using {unique.size} geological layers from the mesh markers "
-                f"(cells per layer: {sizes}).")
-
-    # Markers exist but do not group the mesh - typically one per cell, which
-    # identifies cells rather than geology.
-    detail = (f"{unique.size} markers for {n_cells} cells"
-              if unique.size > n_cells // 2 else
-              f"the smallest of {unique.size} marker groups holds {int(counts.min())} "
-              f"cell(s)")
-    return (np.zeros(n_cells, dtype=int), np.array([0]),
-            f"The cell markers do not describe geological structure ({detail}), so the "
-            f"section is treated as a single unit with one petrophysical parameter set. "
-            f"Supplying a layered model is what would let parameters vary with depth.")
 
 
 class PetrophysicsAgent(BaseAgent):

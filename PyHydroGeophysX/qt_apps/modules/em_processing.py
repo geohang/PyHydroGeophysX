@@ -69,7 +69,7 @@ from PyHydroGeophysX.qt_apps.widgets.image_view import ZoomableImageView
 from PyHydroGeophysX.qt_apps.widgets.model3d_view import Model3DView
 from PyHydroGeophysX.qt_apps.widgets.quality_view import InversionQualityView
 from PyHydroGeophysX.qt_apps.widgets.run_controls import progress_with_stop
-from PyHydroGeophysX.qt_apps.workers import ProcessWorkflowWorker
+from PyHydroGeophysX.qt_apps.workers import ProcessProbeWorker, ProcessWorkflowWorker
 from PyHydroGeophysX.visualization.axis_units import set_length_axis, to_display_length
 from PyHydroGeophysX.workflows import (
     ArtifactRef,
@@ -179,6 +179,8 @@ class EMProcessingModule(BaseModule):
         self._last_result: Optional[Dict[str, Any]] = None
         self._last_section: Optional[Dict[str, Any]] = None
         self._inv_worker: Optional[ProcessWorkflowWorker] = None
+        self._backend_statuses = None
+        self._backend_probe = None
         self._inv_busy: Optional[BusyStateController] = None
         self._project_start_res = 100.0   # fallback when auto is off
         self._line_worker: Optional[ProcessWorkflowWorker] = None
@@ -1431,19 +1433,45 @@ class EMProcessingModule(BaseModule):
     def _select_ttem_tfi(self) -> None:
         self._select_ttem_calibration("tfi")
 
+    def _backend_status(self) -> Dict[str, Any]:
+        if self._backend_statuses is None:
+            return {"available": False, "pending": True,
+                    "error": "Checking SimPEG in a separate process; retry when the check finishes."}
+        return self._backend_statuses[self._method.currentText()]
+
+    def _backend_checked(self, result) -> None:
+        self._backend_statuses = result["methods"]
+        self._refresh_backend_state()
+
+    def _backend_check_failed(self, error: str) -> None:
+        self._backend_statuses = {
+            method: {"available": False, "error": error} for method in ("FDEM", "TDEM")}
+        self._refresh_backend_state()
+
     def _refresh_backend_state(self) -> bool:
-        """Reflect the method-specific SimPEG availability in the run controls."""
-        status = em_line.backend_status(self._method.currentText())
+        """Check native dependencies outside the GUI process, once per page."""
+        if self._backend_statuses is None and self._backend_probe is None:
+            worker = ProcessProbeWorker("PyHydroGeophysX.qt_apps.em_probe", parent=self)
+            self._backend_probe = worker
+            worker.succeeded.connect(self._backend_checked)
+            worker.failed.connect(self._backend_check_failed)
+            self.register_worker(worker, "Checking EM backend").start()
+        status = self._backend_status()
         available = bool(status["available"])
-        if available:
+        if status.get("pending"):
+            self._backend_label.setText("Checking SimPEG backend… You can keep using the studio.")
+            theme.set_tone(self._backend_label, None)
+        elif available:
             self._backend_label.setText("Ready: SimPEG backend available.")
             theme.set_tone(self._backend_label, "ok")
         else:
             self._backend_label.setText(
-                "Unavailable: install the geophysics extra (SimPEG + discretize). "
+                "Unavailable: check the geophysics extra (SimPEG + discretize). "
                 f"{status['error']}")
-            self._backend_label.setStyleSheet("color:#9b5a00; font-size:8pt;")
-        if not self._inv_progress.isVisible():
+            theme.set_tone(self._backend_label, "warn")
+        running = any(worker is not None and worker.isRunning()
+                      for worker in (self._inv_worker, self._line_worker))
+        if not running:
             self._inv_btn.setEnabled(available)
         return available
 
@@ -2275,7 +2303,7 @@ class EMProcessingModule(BaseModule):
             self.log("Load a sounding first.", "warn")
             return
         method = self._method.currentText()
-        status = em_line.backend_status(method)
+        status = self._backend_status()
         if not status["available"]:
             self.log(f"{method} inversion unavailable: {status['error']}", "warn")
             self._refresh_backend_state()
@@ -3109,7 +3137,7 @@ class EMProcessingModule(BaseModule):
                 self._tem_moment.currentText()
                 if self._data and self._data.get("temcompany") else None
             ),
-            "backend": em_line.backend_status(self._method.currentText()),
+            "backend": self._backend_status(),
             "last_result_keys": sorted(last.keys()),
         }
 
@@ -3333,7 +3361,9 @@ class EMProcessingModule(BaseModule):
     def _agent_run_inversion(self) -> Dict[str, Any]:
         if self._data is None:
             return {"status": "failed", "error": "Load a sounding first."}
-        backend = em_line.backend_status(self._method.currentText())
+        backend = self._backend_status()
+        if backend.get("pending"):
+            return {"status": "pending", "message": backend["error"], "backend": backend}
         if not backend["available"]:
             self._refresh_backend_state()
             return {"status": "failed", "error": f"EM backend unavailable: {backend['error']}",

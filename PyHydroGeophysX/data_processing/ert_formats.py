@@ -27,6 +27,7 @@ import pandas as pd
 __all__ = ["parse_das1", "parse_res2dinv_general", "looks_like_res2dinv_general",
            "parse_sting", "parse_tx0", "looks_like_tx0",
            "parse_subsurface_insights", "looks_like_subsurface_insights",
+           "parse_bgs_prime", "looks_like_bgs_prime",
            "guess_ert_format", "implausible_survey",
            "reciprocal_errors"]
 
@@ -1050,6 +1051,291 @@ def parse_subsurface_insights(path: str | Path) -> Tuple[np.ndarray, pd.DataFram
 
 
 # ---------------------------------------------------------------------------
+# BGS PRIME / RESIMGR (.tab)
+# ---------------------------------------------------------------------------
+
+#: Names in the column row that opens a PRIME table, which no other format here
+#: writes: the reading number, its resistance and two of its electrodes. Every
+#: name in that row ends in a colon.
+_PRIME_KEYS = ("pt_line_number:", "pt_calc_res:", "pt_c1_no:", "pt_p1_no:")
+
+#: The columns read, by their name in the export (colon dropped).
+_PRIME_COLUMNS = {
+    "pt_line_number": "line",
+    "pt_calc_res": "resist",
+    "pt_calc_res_error": "error",
+    "pt_c1_no": "a", "pt_c2_no": "b", "pt_p1_no": "m", "pt_p2_no": "n",
+    "pt_meas_voltage_mean": "u",
+    "pt_meas_current_mag": "i",
+    "pt_meas_applied_voltage": "v_applied",
+    "pt_meas_contact_resistance": "contact_r",
+    "pt_calc_phase_mag": "phase_deg",
+    "pt_meas_channel": "channel",
+    "pt_cmd_line_no": "sequence_line",
+    "pt_time": "time",
+    "pt_error_code": "error_code",
+}
+
+#: The unit each read column is in when the export has no ``#Units`` row: the
+#: ones the PRIME firmware writes there.
+_PRIME_DEFAULT_UNITS = {"resist": "Ohm", "error": "Tenths %", "u": "mV", "i": "mA",
+                        "v_applied": "V", "contact_r": "Ohm", "phase_deg": "Degrees"}
+
+#: Each unit as a factor to SI, and each error unit as a factor to a fraction.
+#: A column in a unit not listed here is left out rather than guessed at.
+_PRIME_UNIT_FACTORS = {"ohm": 1.0, "v": 1.0, "mv": 1e-3, "uv": 1e-6, "a": 1.0,
+                       "ma": 1e-3, "ua": 1e-6, "%": 1e-2, "tenths %": 1e-3,
+                       "degrees": 1.0}
+
+#: The PRIME placeholder spacing, used when the file carries no electrode table.
+_PRIME_SPACING = 1.0
+
+
+def looks_like_bgs_prime(path: str | Path, max_lines: int = 1000) -> bool:
+    """True when the file holds a BGS PRIME (or RESIMGR) ``.tab`` table.
+
+    Found by the column row under ``data:``, whose names - ``pt_line_number:``,
+    ``pt_calc_res:``, ``pt_c1_no:`` ... - no other format read here writes. The
+    header above it can carry an electrode table, so the search runs further
+    down than the other signatures'.
+    """
+    try:
+        with open(path, "r", encoding="utf-8", errors="ignore") as handle:
+            for _ in range(int(max_lines)):
+                line = handle.readline()
+                if not line:
+                    break
+                if "pt_calc_res:" not in line:
+                    continue
+                cells = {cell.strip().lower() for cell in line.split()}
+                if all(key in cells for key in _PRIME_KEYS):
+                    return True
+    except OSError:
+        return False
+    return False
+
+
+def _prime_factor(unit: str) -> Optional[float]:
+    """A PRIME unit label as a factor, None for a label not known here."""
+    return _PRIME_UNIT_FACTORS.get(re.sub(r"\s+", " ", str(unit).strip().lower()))
+
+
+def parse_bgs_prime(path: str | Path) -> Tuple[np.ndarray, pd.DataFrame]:
+    """Read a BGS PRIME ``.tab`` export (RESIMGR writes the same layout).
+
+    The file is a block of ``key:<tab>value`` settings (the command file, the
+    start time, the measurement count), a ``#Units`` row, ``data:``, and then a
+    tab-separated table whose column row names every column with a trailing
+    colon. Columns are looked up by those names (see ``_PRIME_COLUMNS``).
+
+    ``pt_c1_no``/``pt_c2_no`` are the current electrodes and ``pt_p1_no``/
+    ``pt_p2_no`` the potential ones, so they become ``a``, ``b``, ``m``, ``n``
+    in that order. A row that leaves the current electrodes blank keeps the
+    previous row's, as the firmware writes repeated injections. Rows the
+    firmware writes as ``**Error`` lines, or with no numeric resistance, are
+    skipped and counted.
+
+    Units come from the ``#Units`` row (or the firmware's own when it is
+    missing): ``resist`` is in ohm, ``u`` in V and ``i`` in A, ``v_applied`` in
+    V, ``contact_r`` in ohm and ``phase_deg`` in degrees. ``error`` is the
+    instrument's stacking error of the resistance as a fraction, from
+    ``pt_calc_res_error`` in the unit that row gives it ("Tenths %" on the
+    firmware seen so far, so a value of 1 is 0.1 %). The phase is kept apart
+    and ``ip`` is left empty: on a resistivity-only measurement it is the
+    quadrature of the cables, not chargeability. ``pt_error_code`` is kept as
+    written (``error_code``); its flags are not documented, so no reading is
+    dropped for one. Each reading's own ``time`` is kept too.
+
+    The table numbers electrodes as the system's channels do (113-160 on a
+    48-electrode line), and the export carries no positions unless its header
+    has a ``no_of_electrodes:`` table of ``label x y z`` rows. With that table
+    the positions are the file's own. Without it they are a placeholder - one
+    metre per electrode number from the lowest - and ``geometry_note`` says so;
+    the surveyed positions then come from an electrode file, in the same
+    electrode order. Gaps in the numbering are kept as gaps, and
+    ``survey_electrodes`` lists the electrodes the readings use.
+
+    Written against a 48-electrode Trail Creek export (firmware RX 1.00.5974).
+    Three things that file does not show - blank current electrodes, the
+    ``**Error`` lines and the ``no_of_electrodes:`` table of ``label x y z``
+    rows after one header line - follow ResIPy's ``primeParserTab``
+    (Blanchy et al. 2020).
+    """
+    source = Path(path)
+    meta: Dict[str, str] = {}
+    units: List[str] = []
+    header: Optional[List[str]] = None
+    rows: List[List[str]] = []
+    table: List[Tuple[str, float, float, float]] = []
+    table_size: Optional[int] = None
+    with open(source, "r", encoding="utf-8", errors="ignore") as handle:
+        for raw in handle:
+            line = raw.rstrip("\r\n")
+            if not line.strip():
+                continue
+            cells = [cell.strip() for cell in line.split("\t")]
+            if header is not None:
+                rows.append(cells)
+                continue
+            lowered = [cell.lower() for cell in cells]
+            if all(key in lowered for key in _PRIME_KEYS):
+                header = [cell.rstrip(":").strip().lower() for cell in cells]
+                continue
+            if table_size is not None and len(table) < table_size:
+                tokens = line.split()
+                if len(tokens) >= 4 and all(_is_number(token) for token in tokens[:4]):
+                    table.append((tokens[0], float(tokens[1]), float(tokens[2]),
+                                  float(tokens[3])))
+                    continue
+            first = cells[0]
+            if first.lower().startswith("#units"):
+                units = cells
+            elif first.startswith("#"):
+                if first.lower().lstrip("# ").startswith(("prime", "resimgr")):
+                    meta["firmware"] = " ".join(cells[1:]).strip()
+            elif first.endswith(":"):
+                key = first[:-1].strip().lower()
+                meta[key] = " ".join(cell for cell in cells[1:] if cell).strip()
+                if key == "no_of_electrodes":
+                    try:
+                        table_size = int(float(meta[key].split()[0]))
+                    except (ValueError, IndexError):
+                        table_size = None
+    if header is None:
+        raise ValueError(
+            f"{source.name}: no 'pt_line_number: pt_calc_res: pt_c1_no: ...' row "
+            "opens a measurement table, so this is not a BGS PRIME .tab file.")
+
+    columns: Dict[str, int] = {}
+    for index, name in enumerate(header):
+        target = _PRIME_COLUMNS.get(name)
+        if target is not None and target not in columns:
+            columns[target] = index
+    missing = [name for name in ("a", "b", "m", "n", "resist") if name not in columns]
+    if missing:
+        spelled = {target: column for column, target in _PRIME_COLUMNS.items()}
+        raise ValueError(
+            f"{source.name}: the measurement table has no "
+            + ", ".join(repr(spelled[name] + ":") for name in missing) + " column.")
+
+    factors: Dict[str, Optional[float]] = {}
+    unit_text: Dict[str, str] = {}
+    for name, default in _PRIME_DEFAULT_UNITS.items():
+        if name not in columns:
+            continue
+        index = columns[name]
+        written = units[index].strip() if units and index < len(units) else ""
+        unit = written if written and written != "-" else default
+        unit_text[name] = unit
+        factors[name] = _prime_factor(unit)
+
+    def cell(row: List[str], name: str) -> str:
+        index = columns.get(name)
+        return row[index].strip() if index is not None and index < len(row) else ""
+
+    records: List[Dict[str, Any]] = []
+    error_lines = 0
+    skipped = 0
+    current: Tuple[str, str] = ("", "")
+    for row in rows:
+        if "error" in cell(row, "line").lower():
+            error_lines += 1                    # the firmware's "**Error" lines
+            continue
+        c1, c2 = cell(row, "a"), cell(row, "b")
+        if not c1 and not c2:
+            c1, c2 = current                    # a repeated injection
+        current = (c1, c2)
+        labels = [c1, c2, cell(row, "m"), cell(row, "n")]
+        resist = _as_float(cell(row, "resist"))
+        if not all(_WHOLE.match(label) for label in labels) or not np.isfinite(resist):
+            skipped += 1
+            continue
+        record: Dict[str, Any] = {"labels": [int(label) for label in labels],
+                                  "resist": resist * (factors.get("resist") or 1.0)}
+        for name in ("error", "u", "i", "v_applied", "contact_r", "phase_deg"):
+            if name in columns and factors.get(name) is not None:
+                record[name] = _as_float(cell(row, name)) * factors[name]
+        for name in ("time", "error_code", "channel", "sequence_line"):
+            if name in columns:
+                record[name] = cell(row, name)
+        records.append(record)
+    if not records:
+        raise ValueError(f"{source.name}: the measurement table holds no readable row.")
+
+    used = sorted({label for record in records for label in record["labels"]})
+    by_label = {label: index for index, (label, *_rest) in enumerate(table, start=1)}
+    try:
+        on_table = {int(float(label)): index for label, index in by_label.items()}
+    except ValueError:
+        on_table = {}
+    from_table = bool(table) and all(label in on_table for label in used)
+    if from_table:
+        index_of = on_table
+        elec = np.asarray([[x, y, z] for _label, x, y, z in table], dtype=float)
+        geometry_note = (f"positions from the electrode table in the file's header "
+                         f"({len(table)} electrodes)")
+    else:
+        lowest, highest = used[0], used[-1]
+        index_of = {label: label - lowest + 1 for label in used}
+        count = highest - lowest + 1
+        elec = np.column_stack([np.arange(count, dtype=float) * _PRIME_SPACING,
+                                np.zeros(count), np.zeros(count)])
+        why = ("the header's electrode table does not list every electrode the "
+               "readings use" if table else "the file carries no electrode coordinates")
+        geometry_note = (
+            f"placeholder positions at {_PRIME_SPACING:g} m spacing for electrodes "
+            f"{lowest}-{highest}, because {why}; load the surveyed electrode file "
+            f"for real coordinates")
+
+    quads = np.asarray([[index_of[label] for label in record["labels"]]
+                        for record in records], dtype=int)
+    df = pd.DataFrame({"a": quads[:, 0], "b": quads[:, 1],
+                       "m": quads[:, 2], "n": quads[:, 3],
+                       "resist": [record["resist"] for record in records]})
+    for name in ("error", "u", "i", "v_applied", "contact_r", "phase_deg"):
+        if name in columns and factors.get(name) is not None:
+            df[name] = [record.get(name, np.nan) for record in records]
+    if "error" in df.columns:
+        df["error"] = df["error"].abs().where(df["error"] > 0)
+    df["ip"] = np.nan
+    for name in ("time", "error_code", "channel", "sequence_line"):
+        if name in columns:
+            df[name] = [record.get(name, "") for record in records]
+    for index, role in enumerate(("a", "b", "m", "n")):
+        df[f"label_{role}"] = [str(record["labels"][index]) for record in records]
+
+    try:
+        declared = int(float(meta.get("set_no_of_meas", "")))
+    except ValueError:
+        declared = None
+    codes: Dict[str, int] = {}
+    if "error_code" in df.columns:
+        codes = {str(code): int(count)
+                 for code, count in df["error_code"].value_counts().sort_index().items()}
+    df.attrs.update({
+        "instrument": "PRIME/RESIMGR",
+        "firmware": meta.get("firmware", ""),
+        "sequence_file": meta.get("cmd_file", ""),
+        "survey_name": meta.get("set_name", "") or meta.get("site_name", ""),
+        "site_name": meta.get("site_name", ""),
+        "acquired": meta.get("set_actual_start_time", ""),
+        "measurement_type": meta.get("set_meas_type", ""),
+        "units": dict(unit_text),
+        "electrode_numbers": f"{used[0]}-{used[-1]}",
+        "electrode_spacing": None if from_table else _PRIME_SPACING,
+        "geometry_note": geometry_note,
+        "error_codes": codes,
+        "records_declared": declared,
+        "records_read": len(records),
+        "rows_skipped": skipped,
+        "error_lines": error_lines,
+        # A tuple, not an array: pandas compares attrs when frames are combined.
+        "survey_electrodes": tuple(sorted(index_of[label] for label in used)),
+    })
+    return elec, df
+
+
+# ---------------------------------------------------------------------------
 # Which format a file is in
 # ---------------------------------------------------------------------------
 
@@ -1294,6 +1580,8 @@ def guess_ert_format(path) -> Optional[str]:
     * ``"ResInv"`` - a Res2DInv general-array header, by
       :func:`looks_like_res2dinv_general`.
     * ``"Subsurface Insights"`` - by :func:`looks_like_subsurface_insights`.
+    * ``"PRIME/RESIMGR"`` - the ``pt_line_number: pt_calc_res: pt_c1_no: ...``
+      column row of a BGS PRIME ``.tab``, by :func:`looks_like_bgs_prime`.
     * ``"BERT"`` - the unified layout: a count, ``# x ...``, that many
       electrodes, a count, ``# a b m n ...``.
     * ``"E4D"`` - E4D's survey layout: a count, numbered ``i x y z [flag]``
@@ -1307,7 +1595,8 @@ def guess_ert_format(path) -> Optional[str]:
     look as one - and neither is ``"Custom"``.
 
     Reads the first 60 lines (16 KB); a count-prefixed file is followed to its
-    second header, never past 256 KB. Never raises: a missing, unreadable or
+    second header, never past 256 KB, and PRIME's column row is looked for in
+    the first 1000 lines, below any electrode table in its header. Never raises: a missing, unreadable or
     binary file gives None.
     """
     try:
@@ -1318,6 +1607,8 @@ def guess_ert_format(path) -> Optional[str]:
         found = set()
         if looks_like_subsurface_insights(path):
             found.add("Subsurface Insights")
+        if looks_like_bgs_prime(path):
+            found.add("PRIME/RESIMGR")
         if looks_like_tx0(path, max_lines=_GUESS_HEAD_LINES):
             found.add("Lippmann")
         if looks_like_res2dinv_general(path):

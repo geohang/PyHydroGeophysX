@@ -20,7 +20,10 @@ class ClipboardClassificationWorker(_FileWorker):
         self.paths, self.roles, self.provider = tuple(paths), dict(roles), provider
 
     def run(self):
-        from PyHydroGeophysX.agents.folder_catalog import classify_catalog, TEXT_SUFFIXES
+        # The Workflow page's classifier, with the evidence it gets there: each
+        # table's shape and spacing, and the other files in the same folder.
+        from PyHydroGeophysX.agents.folder_catalog import (
+            classify_catalog, nearby_files, table_facts, TEXT_SUFFIXES)
         from PyHydroGeophysX.agents.local_knowledge import _document_parts
         rows = []
         try:
@@ -44,10 +47,18 @@ class ClipboardClassificationWorker(_FileWorker):
                     preview = '[binary]' if b'\x00' in raw else raw.decode('utf-8', errors='replace')
                 else:
                     preview = '[binary file; use filename, format and task evidence]'
-                rows.append({'path': filename, 'name': path.name, 'preview': preview,
-                             'is_folder': path.is_dir()})
-            roles = {**self.roles, 'unknown': 'Ambiguous: ask the user', 'ignore': 'Unrelated to this task'}
-            catalog = classify_catalog({'files': rows}, self.query, self.provider, roles=roles)
+                row = {'path': filename, 'name': path.name, 'preview': preview,
+                       'is_folder': path.is_dir()}
+                facts = table_facts(path) if path.is_file() else ''
+                if facts:
+                    row['facts'] = facts
+                rows.append(row)
+            roles = {**self.roles,
+                     'unknown': 'No role is plausible even after weighing all the evidence: ask the user',
+                     'ignore': 'Unrelated to this task'}
+            files = [p for p in self.paths if Path(p).is_file()]
+            catalog = classify_catalog({'files': rows}, self.query, self.provider, roles=roles,
+                                       nearby=nearby_files(files) if files else None)
             result = {'query': self.query, 'scope': self.scope, 'files': catalog['files']}
         except Exception as exc:
             result = {'query': self.query, 'scope': self.scope, 'error': str(exc)}

@@ -102,13 +102,99 @@ def _resolve_model_dir(context: Dict[str, Any], params: Dict[str, Any]) -> Path:
     return Path(candidate)
 
 
+#: The same model as the ERT Processing page writes it, so its output folder
+#: opens as it is: (mesh, resistivity, coverage) for a time-lapse series and
+#: for a single inversion. Tried in this order after the bundle's own names;
+#: the files of one layout are taken together, never mixed across layouts.
+ERT_PAGE_LAYOUTS = (
+    ("timelapse_mesh.bms", "final_models.npy", "all_coverage.npy"),
+    ("resistivity_mesh.bms", "resistivity_model.npy", "resistivity_coverage.npy"),
+)
+
+
 def find_model_files(data_dir: Path) -> Dict[str, Optional[Path]]:
-    """Return the resolved path for each expected bundle file (or None)."""
-    found: Dict[str, Optional[Path]] = {}
-    for key, name in MODEL_FILES.items():
+    """Return the resolved path for each expected bundle file (or None).
+
+    A folder without the bundle's ``resmodel.npy`` is read in the layout the
+    ERT page writes (:data:`ERT_PAGE_LAYOUTS`), so an inversion's output folder
+    needs no conversion. ``index_marker.npy`` keeps its one name.
+
+    Examples
+    --------
+    >>> import tempfile
+    >>> folder = Path(tempfile.mkdtemp())
+    >>> for name in ("timelapse_mesh.bms", "final_models.npy", "all_coverage.npy"):
+    ...     _ = (folder / name).write_bytes(b"")
+    >>> {key: path.name if path else None for key, path in find_model_files(folder).items()}
+    {'mesh': 'timelapse_mesh.bms', 'resistivity': 'final_models.npy', 'markers': None, 'coverage': 'all_coverage.npy'}
+    """
+    def present(name: str) -> Optional[Path]:
         candidate = Path(data_dir) / name
-        found[key] = candidate if candidate.exists() else None
+        return candidate if candidate.exists() else None
+
+    found: Dict[str, Optional[Path]] = {key: present(name) for key, name in MODEL_FILES.items()}
+    if found["resistivity"] is not None:
+        return found
+    for mesh, resistivity, coverage in ERT_PAGE_LAYOUTS:
+        if present(resistivity) is not None:
+            found.update(mesh=present(mesh), resistivity=present(resistivity),
+                         coverage=present(coverage))
+            break
     return found
+
+
+def layer_markers(
+    files: Dict[str, Optional[Path]],
+    n_cells: int,
+    override: Any = None,
+) -> Tuple[np.ndarray, str, str]:
+    """The layer of each cell, where it came from, and a note when it is one layer.
+
+    Markers derived from a structural interface are layers by construction and
+    are used as given. Markers read from ``index_marker.npy`` are judged first
+    (:func:`~PyHydroGeophysX.petrophysics.monte_carlo.resolve_layers`): an
+    inversion mesh numbers its cells, and a file of those numbers made the page
+    offer 1181 "layers" of one cell each. Markers that do not group the mesh,
+    and a folder without the file, give a single layer.
+
+    Examples
+    --------
+    >>> import tempfile
+    >>> folder = Path(tempfile.mkdtemp())
+    >>> np.save(folder / "index_marker.npy", np.arange(50))
+    >>> markers, source, note = layer_markers({"markers": folder / "index_marker.npy"}, 50)
+    >>> int(np.unique(markers).size), source, 'single unit' in note
+    (1, 'one layer (the markers in index_marker.npy are not layers)', True)
+    >>> np.save(folder / "index_marker.npy", np.r_[np.full(20, 3), np.full(30, 2)])
+    >>> markers, source, note = layer_markers({"markers": folder / "index_marker.npy"}, 50)
+    >>> sorted(np.unique(markers).tolist()), source, note
+    ([2, 3], 'index_marker.npy', '')
+    """
+    from PyHydroGeophysX.petrophysics.monte_carlo import resolve_layers
+
+    if override is not None:
+        markers = np.asarray(override, dtype=int).ravel()
+        source, note = "derived from structure", ""
+    elif files.get("markers") is not None:
+        raw = np.asarray(np.load(files["markers"]), dtype=int).ravel()
+        if raw.size != n_cells:
+            raise ValueError(
+                f"Marker count ({raw.size}) does not match resistivity cell count "
+                f"({n_cells}).")
+        markers, unique, why = resolve_layers(raw, n_cells)
+        grouped = np.unique(raw).size == unique.size
+        source = (MODEL_FILES["markers"] if grouped
+                  else f"one layer (the markers in {MODEL_FILES['markers']} are not layers)")
+        note = "" if grouped else why
+    else:
+        markers = np.zeros(n_cells, dtype=int)
+        source, note = "fallback (single layer)", ""
+    if markers.size != n_cells:
+        raise ValueError(
+            f"Marker count ({markers.size}) does not match resistivity cell count "
+            f"({n_cells})."
+        )
+    return markers.astype(int), source, note
 
 
 def derive_markers_from_interface(
@@ -199,36 +285,26 @@ def extract_model_summary(
     """Inspect the inverted-model bundle without loading the mesh.
 
     Returns shapes, the unique layer markers with per-marker cell counts, and a
-    few resistivity statistics. Powers the Data and Layers steps with no pygimli
+    few resistivity statistics. Powers the page's model and Layers panels with no pygimli
     dependency (the inverse analog of ``hydro_pipeline.extract_profile``).
     """
     data_dir = _resolve_model_dir(context, params)
     files = find_model_files(data_dir)
     if files["resistivity"] is None:
+        accepted = ", ".join([MODEL_FILES["resistivity"]]
+                             + [layout[1] for layout in ERT_PAGE_LAYOUTS])
         raise ValueError(
-            f"Missing {MODEL_FILES['resistivity']} in {data_dir}."
+            f"No inverted resistivity model in {data_dir} (looked for {accepted})."
         )
 
     log(f"Reading inverted resistivity from {data_dir}")
     resistivity = _load_resistivity(files["resistivity"])
     n_cells, n_time = resistivity.shape
 
-    override = params.get("markers_override")
-    if override is not None:
-        markers = np.asarray(override, dtype=int).ravel()
-        markers_source = "derived from structure"
-    elif files["markers"] is not None:
-        markers = np.asarray(np.load(files["markers"]), dtype=int).ravel()
-        markers_source = MODEL_FILES["markers"]
-    else:
-        # Fallback: a single layer covering every cell.
-        markers = np.zeros(n_cells, dtype=int)
-        markers_source = "fallback (single layer)"
-    if markers.size != n_cells:
-        raise ValueError(
-            f"Marker count ({markers.size}) does not match resistivity cell count "
-            f"({n_cells})."
-        )
+    markers, markers_source, layering_note = layer_markers(
+        files, n_cells, params.get("markers_override"))
+    if layering_note:
+        log(layering_note)
 
     unique, counts = np.unique(markers, return_counts=True)
     layers = [
@@ -258,6 +334,7 @@ def extract_model_summary(
         "n_cells": int(n_cells),
         "n_timesteps": int(n_time),
         "markers_source": markers_source,
+        "layering_note": layering_note,
         "layers": layers,
         "coverage_shape": coverage_shape,
         "resistivity_stats": res_stats,
@@ -363,13 +440,16 @@ def _run_monte_carlo(
     tortuosity_a: float,
     timestep_indices: Optional[Sequence[int]],
     log: LogFn,
-) -> Dict[str, Dict[str, np.ndarray]]:
-    """Compatibility wrapper around the canonical seeded implementation."""
+) -> Dict[str, Any]:
+    """Compatibility wrapper around the canonical seeded implementation.
+
+    Returns its ``statistics`` and ``warnings``.
+    """
     from PyHydroGeophysX.petrophysics.monte_carlo import (
         run_petrophysics_monte_carlo,
     )
 
-    return run_petrophysics_monte_carlo(
+    result = run_petrophysics_monte_carlo(
         resistivity,
         markers,
         layers,
@@ -380,7 +460,8 @@ def _run_monte_carlo(
         tortuosity_a=tortuosity_a,
         timestep_indices=timestep_indices,
         progress=log,
-    )["statistics"]
+    )
+    return {"statistics": result["statistics"], "warnings": result["warnings"]}
 
 
 # ---------------------------------------------------------------------------
@@ -411,6 +492,8 @@ def run_ert_to_wc(
     data_dir = _resolve_model_dir(context, params)
     files = find_model_files(data_dir)
     missing = [MODEL_FILES[k] for k in ("mesh", "resistivity") if files[k] is None]
+    if files["resistivity"] is not None and files["mesh"] is None:
+        missing = [f"the mesh beside {files['resistivity'].name}"]
     if missing:
         raise ValueError(f"Missing required file(s) in {data_dir}: {', '.join(missing)}.")
 
@@ -424,13 +507,10 @@ def run_ert_to_wc(
             f"({n_cells})."
         )
 
-    override = params.get("markers_override")
-    if override is not None:
-        markers = np.asarray(override, dtype=int).ravel()
-    elif files["markers"] is not None:
-        markers = np.asarray(np.load(files["markers"]), dtype=int).ravel()
-    else:
-        markers = np.zeros(n_cells, dtype=int)
+    markers, _source, layering_note = layer_markers(
+        files, n_cells, params.get("markers_override"))
+    if layering_note:
+        log(layering_note)
     coverage = None
     if files["coverage"] is not None:
         try:
@@ -454,10 +534,11 @@ def run_ert_to_wc(
 
     log(f"Monte Carlo: {n_real} realizations, products={products}, "
         f"{len(layers)} layer(s)")
-    stats = _run_monte_carlo(
+    monte_carlo = _run_monte_carlo(
         resistivity, markers, layers, products, n_real, seed, sat_value, a,
         timestep_indices, log,
     )
+    stats = monte_carlo["statistics"]
 
     out_dir = _output_root(context, params)
     figure_paths: List[str] = []
@@ -511,7 +592,7 @@ def run_ert_to_wc(
             vmax = float(max(1e-3, np.nanmax(values))) if is_std else cmax
             display_paths["water_content"][key] = _mesh_map(
                 values,
-                f"Water content ({title}), t={preview_t}",
+                f"Water content ({title}), survey {preview_t}",
                 "Std water content (-)" if is_std else "Water content (-)",
                 f"wc_{key}_map.png",
                 "magma" if is_std else "viridis",
@@ -534,7 +615,7 @@ def run_ert_to_wc(
             vmax = float(max(1e-3, np.nanmax(values))) if is_std else 0.5
             display_paths["porosity"][key] = _mesh_map(
                 values,
-                f"Porosity ({title}), t={preview_t}",
+                f"Porosity ({title}), survey {preview_t}",
                 "Std porosity (-)" if is_std else "Porosity (-)",
                 f"porosity_{key}_map.png",
                 "magma" if is_std else "viridis",
@@ -543,6 +624,10 @@ def run_ert_to_wc(
             )
             p = out_dir / f"porosity_{key}.npy"
             np.save(p, por[key]); stats_paths.append(str(p))
+        # Share of draws per cell whose porosity has no Waxman-Smits root;
+        # those draws are left out above and the run's warnings say why.
+        p = out_dir / "porosity_no_root_fraction.npy"
+        np.save(p, por["no_root_fraction"]); stats_paths.append(str(p))
 
     # Always write the petrophysics config alongside the figures.
     config = build_petro_config(context, params)
@@ -565,6 +650,7 @@ def run_ert_to_wc(
         "stats_paths": stats_paths,
         "config_path": str(config_path),
         "output_dir": str(out_dir),
+        "warnings": list(monte_carlo["warnings"]),
         # In-process payload for the Results monitoring-point feature (numpy
         # arrays; not serialized into module_results JSON).
         "_cell_centers": cell_centers,

@@ -20,9 +20,12 @@ import pandas as pd
 
 from PyHydroGeophysX.data_processing.table_io import read_electrode_table
 from PyHydroGeophysX.data_processing.ert_formats import (
+    implausible_survey,
+    looks_like_bgs_prime,
     looks_like_res2dinv_general,
     looks_like_subsurface_insights,
     looks_like_tx0,
+    parse_bgs_prime,
     parse_das1,
     parse_res2dinv_general,
     parse_sting,
@@ -116,6 +119,7 @@ def resipy_install_hint(*, verbose: bool = True) -> str:
 # Try full resipy package first
 try:
     from resipy import Project
+    from resipy.Survey import Survey as _ResIPySurvey
     _HAS_RESIPY = True
     _notify("[PyHydroGeophysX] RESIPY loaded successfully")
 except ModuleNotFoundError as e:
@@ -156,6 +160,31 @@ def quiet_resipy(func):
             )
             return func(*args, **kwargs)
     return wrapper
+
+
+if _HAS_RESIPY:
+    class _FastSurvey(_ResIPySurvey):
+        """ResIPy's ``Survey``, with its electrode-label lookup made per column.
+
+        ``Survey.setSeqIds`` turns the four label columns into electrode numbers
+        one cell at a time through ``DataFrame.__getitem__``, and a survey runs it
+        three times while it is built: on a 3.7k-reading E4D file that was most
+        of the load. This is the same lookup - the same label table, the later of
+        two equal labels winning, a ``KeyError`` for a label the table lacks -
+        over the columns at once. Everything else is ResIPy's own.
+        """
+
+        def setSeqIds(self):
+            ndata = self.df.shape[0]
+            if ndata == 0:
+                self.isequence = None
+                return
+            if self.hasDataString() != self.hasElecString():
+                return
+            lookup = {label: number for number, label in enumerate(self.elec.label, start=1)}
+            labels = self.df[['a', 'b', 'm', 'n']].to_numpy().ravel()
+            self.isequence = np.array([lookup[label] for label in labels],
+                                      dtype=int).reshape(ndata, 4)
 
 
 # Try pygimli as additional fallback
@@ -593,6 +622,10 @@ _INSTRUMENT_ALIAS_MAP = {
     "sub insights": "Subsurface Insights",
     "si": "Subsurface Insights",
     "ssi": "Subsurface Insights",
+    "prime": "PRIME/RESIMGR",
+    "bgs prime": "PRIME/RESIMGR",
+    "prime resimgr": "PRIME/RESIMGR",
+    "resimgr": "PRIME/RESIMGR",
     "abem": "ABEM-Lund",
     "abem lund": "ABEM-Lund",
     "abem-lund": "ABEM-Lund",
@@ -626,6 +659,8 @@ def _normalize_instrument_name(instrument: str) -> str:
         return "Syscal"
     if "subsurface" in token or "subinsight" in token.replace(" ", ""):
         return "Subsurface Insights"
+    if "prime" in token.split() or "resimgr" in token:
+        return "PRIME/RESIMGR"
     return instrument
 
 
@@ -808,12 +843,15 @@ _EMBEDDED_PARSER_MAP = {
     "Lippmann": _lippmann_parser,
     "ARES": _bertParser,       # same unified layout
     "Subsurface Insights": parse_subsurface_insights,
+    "PRIME/RESIMGR": parse_bgs_prime,
 }
 
-#: Formats only this package reads. They go to its own reader even when ResIPy
-#: is installed, since ResIPy would reject them - or, worse, accept the file
-#: under some other layout.
-_EMBEDDED_ONLY = ("Subsurface Insights",)
+#: Formats that go to this package's own reader even when ResIPy is installed.
+#: ResIPy rejects a Subsurface Insights export - or, worse, accepts it under
+#: some other layout. It reads a PRIME ``.tab``, but with the potential
+#: electrodes in the current electrodes' place and the error column taken as a
+#: percentage where the file gives it in tenths of one.
+_EMBEDDED_ONLY = ("Subsurface Insights", "PRIME/RESIMGR")
 
 #: Formats PyGIMLi's own loader reads - its unified format, Res2DInv, and ASCII
 #: column exports such as Terrameter LS ones - so that it is a second reader of
@@ -838,6 +876,43 @@ def _electrode_rows(table) -> List[List[float]]:
         if rows.shape[1] < 3:
             rows = np.hstack([rows, np.zeros((len(rows), 3 - rows.shape[1]))])
     return rows[:, :3].tolist()
+
+
+def _electrode_list(electrodes_df: pd.DataFrame) -> List[Electrode]:
+    """One :class:`Electrode` per table row, numbered by its row label plus one.
+
+    Read column by column: ``DataFrame.iterrows`` built a Series per row, and
+    the loaders' row loops cost more than the rest of a load together.
+    """
+    return [Electrode(label + 1, float(x), float(y), float(z))
+            for label, x, y, z in zip(electrodes_df.index,
+                                      electrodes_df['x'].to_numpy(),
+                                      electrodes_df['y'].to_numpy(),
+                                      electrodes_df['z'].to_numpy())]
+
+
+def _values_at(series: Optional[pd.Series], labels) -> List[Optional[float]]:
+    """``series`` at each row label, as a float, or None where it has no finite value.
+
+    By label, not position: the reciprocal filter can drop rows, and a
+    positional lookup then hands every later reading the value of the one
+    before it.
+    """
+    labels = list(labels)
+    if series is None:
+        return [None] * len(labels)
+    if not series.index.is_unique:
+        return [_value_at(series, label) for label in labels]
+    values = series.reindex(labels).to_numpy(dtype=float)
+    return [float(value) if np.isfinite(value) else None for value in values]
+
+
+def _value_at(series: pd.Series, label) -> Optional[float]:
+    """:func:`_values_at` for one label."""
+    if label not in series.index:
+        return None
+    value = float(series.loc[label])
+    return value if np.isfinite(value) else None
 
 
 def _survey_electrodes_only(electrodes_df: pd.DataFrame, df: pd.DataFrame,
@@ -942,6 +1017,12 @@ def _load_ert_embedded_parsers(
     try:
         _notify(f"[PyHydroGeophysX] Attempting to parse ERT data with {parser_name} parser...")
         elec_array, df = parser_func(str(data_file_path))
+        # A reader handed the wrong format can "succeed": the unified reader
+        # takes a DAS-1 file for one electrode and one reading. That is a
+        # failure to read the file, and is answered as one.
+        implausible = implausible_survey(len(elec_array), len(df))
+        if implausible:
+            raise ValueError(implausible)
         _notify(f"[PyHydroGeophysX] Successfully parsed {len(df)} measurements and {len(elec_array)} electrodes")
     except NotImplementedError:
         # "This format has no reader here" is a statement about the format, not a
@@ -1214,10 +1295,7 @@ def _load_ert_embedded_parsers(
     observations['valid'] = True
 
     # Convert to dataclass lists for downstream compatibility
-    electrodes_list = [
-        Electrode(i + 1, float(row['x']), float(row['y']), float(row['z']))
-        for i, row in electrodes_df.iterrows()
-    ]
+    electrodes_list = _electrode_list(electrodes_df)
 
     # Carry the file's own geometric factors. When the file reported apparent
     # resistivity, those are the factors rhoa was built with, and the inversion
@@ -1248,29 +1326,26 @@ def _load_ert_embedded_parsers(
     spread = (pd.to_numeric(df['stack'], errors='coerce')
               if 'stack' in df.columns else None)
 
-    def _value_at(series, idx):
-        if series is None or idx not in series.index:
-            return None
-        value = float(series.loc[idx])
-        return value if np.isfinite(value) else None
-
+    labels = observations.index
     obs_list: List[Observation] = []
-    for idx, row in observations.iterrows():
-        app_res_val = float(row['rhoa']) if np.isfinite(row['rhoa']) else None
-        rel_err_val = float(row['error']) if np.isfinite(row['error']) else 0.05
-        k_val = _value_at(file_k, idx)
+    for idx, a, b, m, n, rhoa, error, k_val, dV, current, contact_r, stack in zip(
+            labels, observations['a'].to_numpy(), observations['b'].to_numpy(),
+            observations['m'].to_numpy(), observations['n'].to_numpy(),
+            observations['rhoa'].to_numpy(), observations['error'].to_numpy(),
+            _values_at(file_k, labels), _values_at(volts, labels), _values_at(amps, labels),
+            _values_at(contact, labels), _values_at(spread, labels)):
         if k_val is None or k_val == 0.0:
             k_val = 1.0
         obs_list.append(Observation(
-            quad=Quadruplet(int(row['a']), int(row['b']), int(row['m']), int(row['n'])),
-            app_res=app_res_val,
-            dV=_value_at(volts, idx),
-            I=_value_at(amps, idx),
-            rel_err=rel_err_val,
+            quad=Quadruplet(int(a), int(b), int(m), int(n)),
+            app_res=float(rhoa) if np.isfinite(rhoa) else None,
+            dV=dV,
+            I=current,
+            rel_err=float(error) if np.isfinite(error) else 0.05,
             K=k_val,
             fid=str(idx),
-            contact_r=_value_at(contact, idx),
-            stack=_value_at(spread, idx),
+            contact_r=contact_r,
+            stack=stack,
         ))
     
     # Build metadata
@@ -1352,13 +1427,17 @@ def _load_ert_pygimli(
         raise FileNotFoundError(f"Data file not found: {data_file_path}")
     
     # Load data with pygimli
+    from PyHydroGeophysX.data_processing.ert_io import no_invalid_data_file
+
     try:
-        data = pg.load(str(data_file_path))
+        with no_invalid_data_file():
+            data = pg.load(str(data_file_path))
     except Exception as e:
         # Try loading as unified data format
         try:
             from pygimli.physics import ert as pgert
-            data = pgert.load(str(data_file_path))
+            with no_invalid_data_file():
+                data = pgert.load(str(data_file_path))
         except Exception:
             raise ValueError(f"Could not load ERT data file with PyGIMLi: {e}")
     
@@ -1505,23 +1584,24 @@ def _load_ert_pygimli(
     })
 
     # Convert to dataclass lists for consistency
-    electrodes_list = [
-        Electrode(i + 1, float(row['x']), float(row['y']), float(row['z']))
-        for i, row in electrodes_df.iterrows()
-    ]
+    electrodes_list = _electrode_list(electrodes_df)
+    spreads = spread if spread is not None else [None] * n_data
     observations_list = [
         Observation(
-            quad=Quadruplet(int(row['a']), int(row['b']), int(row['m']), int(row['n'])),
-            app_res=float(row['rhoa']) if np.isfinite(row['rhoa']) else None,
+            quad=Quadruplet(int(qa), int(qb), int(qm), int(qn)),
+            app_res=float(value) if np.isfinite(value) else None,
             dV=None,
             I=None,
-            rel_err=float(row['error']) if np.isfinite(row['error']) else 0.05,
+            rel_err=float(err) if np.isfinite(err) else 0.05,
             K=1.0,
             fid=str(idx),
-            stack=(float(spread[idx]) if spread is not None and np.isfinite(spread[idx])
-                   else None),
+            stack=(float(sample) if sample is not None and np.isfinite(sample) else None),
         )
-        for idx, row in observations_df.iterrows()
+        for idx, qa, qb, qm, qn, value, err, sample in zip(
+            observations_df.index, observations_df['a'].to_numpy(),
+            observations_df['b'].to_numpy(), observations_df['m'].to_numpy(),
+            observations_df['n'].to_numpy(), observations_df['rhoa'].to_numpy(),
+            observations_df['error'].to_numpy(), spreads)
     ]
     
     # Build metadata
@@ -1552,6 +1632,96 @@ def _load_ert_pygimli(
         instrument=instrument,
         metadata=metadata
     )
+
+
+# ---------------------------
+# A ResIPy survey without a ResIPy Project
+# ---------------------------
+#: Formats whose survey is built without a ResIPy ``Project`` (see
+#: _survey_without_project). Others keep ``Project.createSurvey``, whose handling
+#: of line and number labels and of protocol line numbers they can need.
+_SURVEY_ONLY_FTYPES = ("E4D", "DAS-1", "BERT")
+
+#: Electrode x positions ResIPy's ``Project._findRemote`` takes for a remote
+#: electrode, as it does an infinite coordinate.
+_RESIPY_REMOTE_X = (-9999999, -999999, -99999, -9999, -999,
+                    9999999, 999999, 99999, 9999, 999)
+
+
+def _project_would_change(elec: pd.DataFrame) -> bool:
+    """Whether a ResIPy ``Project`` would alter these electrodes, or fail on them.
+
+    ``Project.setElec`` relabels a table with line and number columns, merges
+    electrodes at one position and renumbers the readings that use them, and
+    flags remote electrodes, which its fine-mesh depth then looks up past the
+    end of the table.
+    """
+    if len(elec) == 0 or {'line', 'number'} <= set(elec.columns):
+        return True
+    xyz = elec[['x', 'y', 'z']]
+    remote = (np.isin(elec['x'].to_numpy(), _RESIPY_REMOTE_X)
+              | np.isinf(xyz.to_numpy(dtype=float)).any(axis=1))
+    return bool(remote.any() or xyz.duplicated(keep=False).any())
+
+
+def _resipy_electrode_table(coords) -> Optional[pd.DataFrame]:
+    """Electrode positions tabled as ``Project.setElec`` tables them (``Project._num2elec``).
+
+    One column is x, two are x and z, three are x, y and z, and the labels run
+    1..n. None for any other layout, which is left to ResIPy.
+    """
+    coords = np.asarray(coords)
+    columns = {1: ['x'], 2: ['x', 'z'], 3: ['x', 'y', 'z']}.get(
+        coords.shape[1] if coords.ndim == 2 else 0)
+    if columns is None:
+        return None
+    table = pd.DataFrame(coords, columns=columns)
+    for name, default in (('y', 0), ('z', 0), ('remote', False), ('buried', False)):
+        if name not in table.columns:
+            table.insert(len(table.columns), name, default)
+    table.insert(0, 'label', (1 + np.arange(len(table))).astype(str))
+    return table.astype({'x': float, 'y': float, 'z': float,
+                         'buried': bool, 'remote': bool, 'label': str})
+
+
+def _survey_without_project(fname: str, ftype: str, electrode_file=None):
+    """ResIPy's survey of one file as ``Project.createSurvey`` leaves it, built without the Project.
+
+    ``createSurvey`` spent four fifths of a 3.7k-reading E4D load in per-cell
+    pandas lookups and in ``Project.computeFineMeshDepth``, a meshing setting
+    this loader never reads. :class:`_FastSurvey` makes the lookups per column,
+    and leaving out the Project leaves the survey's table and electrodes as
+    the Project would have, except where :func:`_project_would_change` says
+    otherwise. There, and wherever ``electrode_file`` does not lay onto the
+    survey as ``Project.setElec`` requires, this returns None and the caller
+    takes ResIPy's own route, which meets the same case and answers it as it
+    always has. Reading the data file raises what ``createSurvey`` raises.
+
+    Returns ``(survey, header_electrodes)``: the second is the data file's own
+    electrode rows when ``electrode_file`` replaced them, else None.
+    """
+    survey = _FastSurvey(fname, ftype, debug=True)
+    try:
+        if len(survey.df) == 0 or _project_would_change(survey.elec):
+            return None
+        if electrode_file is None:
+            return survey, None
+        coords, _, _ = read_electrode_table(electrode_file)
+        placed = _resipy_electrode_table(coords)
+        if (placed is None or survey.hasElecString() or survey.hasDataString()
+                or _project_would_change(placed)):
+            return None
+        # Project.setElec's own check: every electrode a reading names is in the table.
+        named = np.unique(survey.df[['a', 'b', 'm', 'n']].astype(float).astype(int).to_numpy())
+        if not np.isin(named, np.arange(1, len(placed) + 1)).all():
+            return None
+        header = _electrode_rows(survey.elec)
+        survey.elec = placed
+        survey.setSeqIds()
+        survey.computeK()
+        return survey, header
+    except Exception:  # noqa: BLE001 - ResIPy's route meets it again and reports it
+        return None
 
 
 # ---------------------------
@@ -1607,13 +1777,16 @@ def load_ert_resipy(
     if instrument != requested_instrument:
         _notify(f"[PyHydroGeophysX] Normalized instrument '{requested_instrument}' -> '{instrument}'")
 
-    # A Subsurface Insights export says what it is in its first rows, and no
-    # other reader can make sense of it, so it is read as one whatever was
-    # picked - the same guard the ABEM-Lund exports get below.
-    if instrument not in _EMBEDDED_ONLY and looks_like_subsurface_insights(data_file):
-        _notify(f"[PyHydroGeophysX] Detected a Subsurface Insights export; "
-                f"reading it as one rather than as '{instrument}'")
-        instrument = "Subsurface Insights"
+    # A Subsurface Insights export or a PRIME .tab says what it is in its own
+    # header, and no other reader can make sense of it, so it is read as one
+    # whatever was picked - the same guard the ABEM-Lund exports get below.
+    for name, looks_like in (("Subsurface Insights", looks_like_subsurface_insights),
+                             ("PRIME/RESIMGR", looks_like_bgs_prime)):
+        if instrument != name and looks_like(data_file):
+            _notify(f"[PyHydroGeophysX] Detected a {name} file; "
+                    f"reading it as one rather than as '{instrument}'")
+            instrument = name
+            break
     if instrument in _EMBEDDED_ONLY:
         return _load_ert_embedded_parsers(
             data_file=data_file,
@@ -1740,8 +1913,15 @@ def load_ert_resipy(
 
     # Use explicit ftype for robust parsing. RESIPY's Project class uses
     # method name 'createSurvey' to load data files and create a survey object.
+    # For the formats in _SURVEY_ONLY_FTYPES the survey is built without the
+    # Project wherever that leaves it the same (see _survey_without_project),
+    # in a tenth of the time; its errors are createSurvey's, answered below.
+    standalone = None
     try:
-        prj.createSurvey(fname=str(data_file_path), ftype=ftype)
+        if ftype in _SURVEY_ONLY_FTYPES:
+            standalone = _survey_without_project(str(data_file_path), ftype, electrode_file)
+        if standalone is None:
+            prj.createSurvey(fname=str(data_file_path), ftype=ftype)
     except Exception as e:
         # Check for NumPy compatibility issues with pyGIMLi
         if isinstance(e, ValueError) and (
@@ -1838,11 +2018,14 @@ def load_ert_resipy(
             )
         raise
     
-    # After createSurvey, data is stored in prj.surveys[0] (the first/only survey)
-    if not prj.surveys:
-        raise RuntimeError("No survey was created. Check that the data file format matches the specified instrument.")
-    
-    survey = prj.surveys[0]  # Get the first survey object
+    if standalone is not None:
+        survey, header_electrodes = standalone
+    else:
+        # After createSurvey, data is stored in prj.surveys[0] (the first/only survey)
+        if not prj.surveys:
+            raise RuntimeError("No survey was created. Check that the data file format matches the specified instrument.")
+        survey = prj.surveys[0]  # Get the first survey object
+        header_electrodes = None
 
     # Step 1: Load raw resistance values from DAS data (before any K computation)
     # Get the raw dataframe with resistance values (R = V/I)
@@ -1856,7 +2039,6 @@ def load_ert_resipy(
     print(f"   Loaded {len(df)} raw resistance measurements from {instrument}")
 
     # Step 2: Update electrode positions from external file
-    header_electrodes = None
     if electrode_file is not None:
         electrode_file_path = Path(electrode_file)
         if not electrode_file_path.is_absolute():
@@ -1865,20 +2047,23 @@ def load_ert_resipy(
         if not electrode_file_path.exists():
             raise FileNotFoundError(f"Electrode file not found: {electrode_file_path}")
 
-        # Load electrode coordinates from file
-        try:
-            # Columns by meaning, not position: a vendor table's ID column was
-            # read as a coordinate, and a header row made loadtxt fail.
-            elec_data, _, _ = read_electrode_table(electrode_file_path)
-            if survey.elec is not None and len(survey.elec):
-                header_electrodes = _electrode_rows(survey.elec)
-
-            # Set electrode positions in survey
-            prj.setElec(elec_data)
+        if standalone is not None:
+            # Placed as the survey was built, by Project.setElec's rules.
             print(f"   Updated electrode positions from {electrode_file_path.name}")
-        except Exception as e:
-            raise RuntimeError(f"Failed to load electrode file '{electrode_file_path}': {e}") from e
-    
+        else:
+            try:
+                # Columns by meaning, not position: a vendor table's ID column was
+                # read as a coordinate, and a header row made loadtxt fail.
+                elec_data, _, _ = read_electrode_table(electrode_file_path)
+                if survey.elec is not None and len(survey.elec):
+                    header_electrodes = _electrode_rows(survey.elec)
+
+                # Set electrode positions in survey
+                prj.setElec(elec_data)
+                print(f"   Updated electrode positions from {electrode_file_path.name}")
+            except Exception as e:
+                raise RuntimeError(f"Failed to load electrode file '{electrode_file_path}': {e}") from e
+
     # If no electrode coordinates, generate a simple line for quick testing
     elif spacing is not None and (survey.elec is None or len(survey.elec) == 0):
         n_elec = int(np.max(df[['a','b','m','n']].values)) + 1
@@ -2011,10 +2196,7 @@ def load_ert_resipy(
     if electrode_file is None:
         electrodes_df = _normalize_elevation_axis(electrodes_df)
 
-    electrodes = [
-        Electrode(i + 1, float(row['x']), float(row['y']), float(row['z']))
-        for i, row in electrodes_df.iterrows()
-    ]
+    electrodes = _electrode_list(electrodes_df)
 
     # Observations
     idx_to_pos = {idx: k for k, idx in enumerate(df.index)}
@@ -2037,39 +2219,48 @@ def load_ert_resipy(
     # input; the "stack" error model reads it back from here.
     stack_col = 'stack' if instrument == 'BERT' and 'stack' in df.columns else None
 
-    for idx, row in df.iterrows():
+    # Read column by column (see _electrode_list); a column the file lacks
+    # reads as None and its branch below is never taken.
+    def _column(name):
+        return df[name].to_numpy() if name is not None else [None] * len(df)
+
+    k_col = 'k' if 'k' in df.columns else None
+    fids = df['id'].to_numpy() if 'id' in df.columns else df.index
+    for idx, fid, qa, qb, qm, qn, rhoa, k, resist, volts, amps, spread in zip(
+            df.index, fids, df['a'].to_numpy(), df['b'].to_numpy(), df['m'].to_numpy(),
+            df['n'].to_numpy(), _column(rhoa_col), _column(k_col), _column(r_col),
+            _column(v_col), _column(i_col), _column(stack_col)):
         app_resistivity = None
         k_value = 1.0
-        
+
         # For BERT format, rhoa column contains apparent resistivity directly
-        if rhoa_col and rhoa_col in row and np.isfinite(row[rhoa_col]):
-            app_resistivity = float(row[rhoa_col])
+        if rhoa_col and np.isfinite(rhoa):
+            app_resistivity = float(rhoa)
             # If K column exists, use it
-            if 'k' in row and np.isfinite(row['k']):
-                k_value = float(row['k'])
+            if k_col and np.isfinite(k):
+                k_value = float(k)
         # Get raw resistance (V/I from instrument) for other formats
-        elif r_col and r_col in row and np.isfinite(row[r_col]):
-            app_resistivity = float(row[r_col])
-        elif v_col and i_col and v_col in row and i_col in row:
+        elif r_col and np.isfinite(resist):
+            app_resistivity = float(resist)
+        elif v_col and i_col:
             # Calculate from V and I if resistance column not available
-            if row[i_col] != 0:
-                app_resistivity = float(row[v_col] / row[i_col])
+            if amps != 0:
+                app_resistivity = float(volts / amps)
             else:
                 continue  # Skip if current is zero
-        
+
         if app_resistivity is None:
             continue  # Skip if no resistance/rhoa data
-        
+
         observations.append(Observation(
-            quad=Quadruplet(int(row['a']), int(row['b']), int(row['m']), int(row['n'])),
+            quad=Quadruplet(int(qa), int(qb), int(qm), int(qn)),
             app_res=app_resistivity,  # Apparent resistivity (or raw resistance with k=1)
-            dV=float(row[v_col]) if v_col and v_col in row and np.isfinite(row[v_col]) else None,
-            I=float(row[i_col]) if i_col and i_col in row and np.isfinite(row[i_col]) else None,
+            dV=float(volts) if v_col and np.isfinite(volts) else None,
+            I=float(amps) if i_col and np.isfinite(amps) else None,
             rel_err=float(rel_err[idx_to_pos[idx]]),
             K=k_value,  # Geometric factor if available
-            fid=str(row['id']) if 'id' in row else str(idx),
-            stack=(float(row[stack_col]) if stack_col and np.isfinite(row[stack_col])
-                   else None),
+            fid=str(fid),
+            stack=(float(spread) if stack_col and np.isfinite(spread) else None),
         ))
 
     crs_out = ("EPSG:%d" % epsg) if (crs != "local" and epsg) else crs

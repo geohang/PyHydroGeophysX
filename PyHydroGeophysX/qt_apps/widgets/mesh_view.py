@@ -342,6 +342,23 @@ class MeshResultView(QWidget):
             return float(self._cov_threshold.value())
         return None
 
+    def hide_below(self) -> float | None:
+        """The coverage under which cells are blanked, or None when "Hide below" is off.
+
+        A page whose own figures mask poorly covered cells takes the cut from
+        here, so the view and the figures agree and the page has no second
+        threshold to set.
+        """
+        if self._mask_low.isChecked():
+            return float(self._cov_threshold.value())
+        return None
+
+    def set_hide_below(self, threshold: float | None) -> None:
+        """Blank the cells with coverage under ``threshold``; None shows every cell."""
+        if threshold is not None:
+            self._cov_threshold.setValue(float(threshold))
+        self._mask_low.setChecked(threshold is not None)
+
     def set_color_range(self, vmin: float, vmax: float, lock: bool = True) -> None:
         """Fix the colour limits — e.g. to the range over every time step.
 
@@ -506,11 +523,11 @@ class MeshResultView(QWidget):
 
     def _redraw_now(self) -> None:
         import numpy as np
-        import pygimli as pg
-
         mesh, values, coverage, scalar_cov = self._cached("source", self._resolve_source)
         if mesh is None or values is None:
             return
+
+        import pygimli as pg
 
         srt = self._kind == "srt"
         self._sync_controls()

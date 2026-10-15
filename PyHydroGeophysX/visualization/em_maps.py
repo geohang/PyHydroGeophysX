@@ -317,6 +317,38 @@ def _scale_bar(ax, unit: str) -> None:
             bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.75))
 
 
+def label_log_colorbar(bar: Any, fontsize: Optional[float] = None) -> None:
+    """Label a logarithmic colorbar with plain values at 1, 2 and 5 per decade.
+
+    matplotlib labels only the decades, as 10^1 and 10^2: a resistivity bar
+    from 3 to 400 ohm-m carried two labels, written as powers. This gives it
+    5, 10, 20, 50, 100, 200 - fewer per decade over a wide range.
+
+    Examples
+    --------
+    >>> from matplotlib.figure import Figure
+    >>> from matplotlib.colors import LogNorm
+    >>> fig = Figure()
+    >>> image = fig.add_subplot().imshow([[3.0, 400.0]], norm=LogNorm(3.0, 400.0))
+    >>> bar = fig.colorbar(image)
+    >>> label_log_colorbar(bar)
+    >>> [bar.ax.yaxis.get_major_formatter()(t) for t in bar.ax.get_yticks() if 3.0 <= t <= 400.0]
+    ['5', '10', '20', '50', '100', '200']
+    """
+    from matplotlib.ticker import FuncFormatter, LogLocator, NullFormatter
+
+    norm = bar.mappable.norm
+    low, high = float(norm.vmin or 1.0), float(norm.vmax or 10.0)
+    decades = np.log10(max(high, 1e-12) / max(low, 1e-12))
+    subs = (1.0,) if decades > 4 else (1.0, 3.0) if decades > 2.5 else (1.0, 2.0, 5.0)
+    axis = bar.ax.yaxis if bar.orientation == "vertical" else bar.ax.xaxis
+    axis.set_major_locator(LogLocator(base=10.0, subs=subs))
+    axis.set_major_formatter(FuncFormatter(lambda value, _pos: f"{value:g}"))
+    axis.set_minor_formatter(NullFormatter())
+    if fontsize:
+        bar.ax.tick_params(labelsize=fontsize)
+
+
 def _plan_panels(grids: Dict[str, Any], stack: Sequence[np.ndarray], x: Sequence[float],
                  y: Sequence[float], path: Any, *, basemap, unit: str, norm, cmap: str,
                  label: str, notes: Sequence[str], title: str, panel_size: float,
@@ -381,6 +413,10 @@ def _plan_panels(grids: Dict[str, Any], stack: Sequence[np.ndarray], x: Sequence
     for ax in axes[count:]:
         ax.set_visible(False)
     bar = fig.colorbar(image, ax=axes[:count].tolist(), label=label, shrink=0.85)
+    from matplotlib.colors import LogNorm
+
+    if isinstance(norm, LogNorm):
+        label_log_colorbar(bar)
     if secondary is not None:
         secondary(bar)
     fig.text(0.01, 0.004, footer, fontsize=7, ha="left", va="bottom")

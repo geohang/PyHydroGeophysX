@@ -5,7 +5,7 @@ magnetics, without ERT, ended "success" with no report, because the report step
 needed an ERT inversion; and an ERT report described the ERT survey alone. Each
 method now writes its own sections from its step's results, in a module with
 one interface - :mod:`._tdem_report`, :mod:`._seismic_report`,
-:mod:`._mt_report`, :mod:`._gravmag_report`::
+:mod:`._mt_report`, :mod:`._gravmag_report`, :mod:`._gpr_report`::
 
     KEY, ARTIFACT, TITLE, FIGURE_TAG
     describe(results)        -> {"data", "instrument", "survey", "scope"[, "title"]}
@@ -34,12 +34,12 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from . import _gravmag_report, _mt_report, _seismic_report, _tdem_report
+from . import _gpr_report, _gravmag_report, _mt_report, _seismic_report, _tdem_report
 from ._document import control_block, facts, numbered, renumber, table
 from ._report_text import length_unit, relative
 
 #: In the order a report presents them.
-METHODS = (_seismic_report, _tdem_report, _mt_report, _gravmag_report)
+METHODS = (_seismic_report, _tdem_report, _mt_report, _gravmag_report, _gpr_report)
 
 #: The artifact each method's results are kept under in a run.
 ARTIFACTS = tuple(module.ARTIFACT for module in METHODS)
@@ -204,8 +204,9 @@ def survey_report(artifacts: Mapping[str, Any], config: Optional[Mapping[str, An
              ("Status", "Automated output - technical review required")]
     narratives = [(module, results, module.interpretation(results)) for module, results in methods]
     written = any(text for _, _, text in narratives)
-    title = (f"{_title(*methods[0])}: Inversion Report" if single
-             else "Geophysical Survey: Inversion Report")
+    # A method that is processed rather than inverted (GPR) says so.
+    title = (f"{_title(*methods[0])}: {getattr(methods[0][0], 'REPORT', 'Inversion Report')}"
+             if single else "Geophysical Survey: Inversion Report")
     front = control_block(title, [row for row in rows if row[1] not in (None, "", "N/A")],
                           notice=notices[0] if written else notices[1])
 
@@ -299,8 +300,9 @@ def ert_sections(artifacts: Mapping[str, Any], config: Optional[Mapping[str, Any
         items = "\n".join(f"- {item}" for item in module.findings(results, config, unit))
         parts = [f"## {_title(module, results)}",
                  module.describe(results)["scope"] + " "
-                 + (combined.get(module.KEY) or "Its model is reported on its own and is not "
-                                                "combined with the ERT model."),
+                 + (combined.get(module.KEY)
+                    or getattr(module, "ALONE", "Its model is reported on its own and is not "
+                                                "combined with the ERT model.")),
                  items,
                  module.method_section(results, unit, "###"),
                  module.results_section(results, unit, "###"),

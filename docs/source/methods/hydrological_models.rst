@@ -100,9 +100,9 @@ Desktop support
 ---------------
 
 :doc:`Desktop Studio </agents/desktop_studio>` carries the hydrological side in
-its project tree: **Hydro → Geophysics** for the forward direction, in several
-guided stages, and **ERT → Water Content** for the interpretation that feeds
-back.
+its project tree: **Hydro → Geophysics** for the forward direction - a survey
+line drawn on the model's map, the section under it, and the simulated surveys -
+and **ERT → Water Content** for the interpretation that feeds back.
 
 Python examples
 ---------------

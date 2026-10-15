@@ -12,10 +12,12 @@ from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple
 
 from PyHydroGeophysX._internal.utils import parse_json_object
 
-from ._intent import (MAX_CONCURRENT_STAGES, ask_concurrently, infer_instrument, names_gravmag,
-                      names_mt, names_tdem, names_unnegated, read_request, stage_enabled)
+from ._intent import (MAX_CONCURRENT_STAGES, ask_concurrently, infer_instrument, names_gpr,
+                      names_gravmag, names_mt, names_tdem, names_unnegated, read_request,
+                      stage_enabled)
 from ._method import IMPLEMENTED_SCHEME
 from .base_agent import AgentResult, BaseAgent
+from .local_knowledge import user_words
 
 
 #: What ends a file name in running text: white space, the ASCII separators the
@@ -203,7 +205,7 @@ def _named_tem_survey(text: str) -> Optional[str]:
 #: The keys that name another method's input. A file under one of them is
 #: that method's data, not also an ERT survey.
 _OTHER_METHOD_KEYS = ("tdem_file", "em_file", "seismic_file", "raw_seismic_file",
-                      "mt_files", "mt_file", "gravmag_file")
+                      "mt_files", "mt_file", "gravmag_file", "gpr_file")
 #: The keys that name ERT data.
 _ERT_FILE_KEYS = ("data_file", "ert_file", "time_lapse_files", "timelapse_files")
 #: TEMcompany / TEM2Go project files, which no ERT reader takes.
@@ -392,6 +394,68 @@ def drop_unstated_petrophysics(config, request):
     return dropped
 
 
+#: What the GPR stage may set under ``gpr_params``. Not a velocity: that is
+#: ``gpr_velocity``, and only when the request states it.
+_GPR_PARAM_KEYS = ("bandpass", "migrate", "gain", "gain_power", "agc_window_ns",
+                   "background_window", "trace_spacing", "frequency_mhz")
+
+
+def gpr_from_reply(reply: Any, request: str) -> Tuple[Dict[str, Any], List[str]]:
+    """The GPR configuration in the model's answer, and a note on each value set aside.
+
+    The line (``gpr_file``), the velocity in m/ns or the permittivity it stands
+    for, and the processing options. A velocity or permittivity the request
+    does not contain is the model's own - a "typical" 0.1 m/ns - and every
+    depth would rest on it unsaid, so it is dropped and the run told; a
+    velocity converted from cm/ns counts as stated.
+
+    Examples
+    --------
+    >>> gpr_from_reply({"gpr_file": "a.DZT", "gpr_velocity": 0.1,
+    ...                 "gpr_params": {"migrate": True, "velocity": 0.1}}, "migrate a.DZT")
+    ({'gpr_file': 'a.DZT', 'gpr_params': {'migrate': True}}, ['The model read a radar velocity of 0.1 m/ns that the request does not state; it was not used.'])
+    >>> gpr_from_reply({"gpr_file": "a.DZT", "gpr_velocity": 0.09}, "a.DZT at 9 cm/ns")[0]
+    {'gpr_file': 'a.DZT', 'gpr_velocity': 0.09}
+    """
+    if not isinstance(reply, dict):
+        return {}, []
+    numbers = _stated_numbers(request)
+    config: Dict[str, Any] = {}
+    notes: List[str] = []
+    if reply.get("gpr_file"):
+        config["gpr_file"] = str(reply["gpr_file"])
+    for key, what, unit in (("gpr_velocity", "radar velocity", " m/ns"),
+                            ("gpr_permittivity", "relative permittivity", "")):
+        value = reply.get(key)
+        if value in (None, "", False):
+            continue
+        if _is_stated(value, numbers):
+            config[key] = float(value)
+        else:
+            notes.append(f"The model read a {what} of {value}{unit} that the request does not "
+                         "state; it was not used.")
+    params = reply.get("gpr_params")
+    if isinstance(params, dict):
+        kept = {}
+        for key, value in params.items():
+            if key not in _GPR_PARAM_KEYS or value is None:
+                continue
+            # A number is the request's only when it says it: a trace spacing
+            # or antenna frequency the model supplied would move every trace.
+            numeric = not isinstance(value, (bool, str))
+            if numeric and not _is_stated(value, numbers):
+                what = {"frequency_mhz": "antenna frequency (MHz)",
+                        "agc_window_ns": "gain window (ns)",
+                        "bandpass": "band-pass band (MHz)"}.get(key, key.replace("_", " "))
+                notes.append(f"The model read a GPR {what} of {value} that the request does not "
+                             "state; it was not used.")
+                continue
+            kept[key] = value
+        if kept:
+            config["gpr_params"] = kept
+    return config, notes
+
+
 class ContextInputAgent(BaseAgent):
     """
     Agent that interprets natural language requests and generates workflow configurations.
@@ -428,12 +492,12 @@ class ContextInputAgent(BaseAgent):
             "parameters, and petrophysical parameters from user descriptions."
         )
 
-    def request_inputs(self, user_request: str,
-                       known_files: Sequence[Any] = ()) -> Dict[str, Any]:
+    def request_inputs(self, user_request: str, known_files: Sequence[Any] = (),
+                       methods: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """What a request states, read by deterministic rules, without defaults.
 
-        The files it names (ERT surveys, an electrode file, seismic and TDEM
-        data), the instrument and petrophysical parameters written into it.
+        The files it names (ERT surveys, an electrode file, seismic, TDEM and
+        GPR data), the instrument and petrophysical parameters written into it.
         :meth:`preview_config` completes this with defaults into a runnable
         configuration; a caller that has a configuration of its own takes only
         this, so the parser's defaults cannot replace the caller's.
@@ -445,6 +509,11 @@ class ContextInputAgent(BaseAgent):
         known_files : sequence of str, optional
             Files the caller already uses as ERT data. The request naming them
             does not make them seismic or TDEM data.
+        methods : dict, optional
+            A model's reading of which methods the request is about
+            (``request_methods``: ``{"gpr": True, "seismic": False}``). Where
+            it says yes or no, it decides what an ambiguous file is - a SEG-Y
+            line is GPR or seismic - in place of the words of the request.
 
         Returns
         -------
@@ -463,9 +532,15 @@ class ContextInputAgent(BaseAgent):
         >>> agent.request_inputs("Invert survey.dat with the seismic structure from srt.dat",
         ...                      known_files=["survey.dat"])["seismic_file"]
         'srt.dat'
+        >>> agent.request_inputs("Process the GPR line line1.sgy at 0.08 m/ns")
+        {'gpr_file': 'line1.sgy', 'gpr_velocity': 0.08}
+        >>> agent.request_inputs("Process line1.sgy", methods={"gpr": True, "seismic": False})
+        {'gpr_file': 'line1.sgy'}
         """
         config: Dict[str, Any] = {}
-        text = user_request or ""
+        # The user's own words: the attached-file list and reference excerpts
+        # the chat appends are not the user naming data.
+        text = user_words(user_request)
         lower = text.lower()
 
         extracted_files = self._extract_files_regex(text)
@@ -485,7 +560,14 @@ class ContextInputAgent(BaseAgent):
         # the seismic or TDEM data: taking the first .dat named made an ERT
         # survey.dat the travel-time file whenever seismic was mentioned.
         taken = [str(f) for f in (*extracted_files, *known_files, electrode_file) if f]
-        raw_seismic_file = self._extract_file_by_extension(text, [".sgy", ".segy"])
+
+        # Ground-penetrating radar: a .DZT, .DT1/.HD or .rd3/.rd7/.rad file is a
+        # GPR line whatever the request calls it, as an EDI file is MT; a SEG-Y
+        # or .npz file only when the request is about GPR and not seismic.
+        gpr = self._gpr_inputs(text, taken, methods)
+        config.update(gpr)
+        taken += [gpr["gpr_file"]] if gpr.get("gpr_file") else []
+        raw_seismic_file = self._extract_file_by_extension(text, [".sgy", ".segy"], exclude=taken)
         seismic_file = self._extract_file_by_extension(text, [".dat", ".txt"], exclude=taken)
         # As for TDEM below: "no seismic" rules seismic out, and must not turn
         # the ERT .dat file into a travel-time file.
@@ -498,7 +580,8 @@ class ContextInputAgent(BaseAgent):
                 config["raw_seismic_file"] = raw_seismic_file
             elif seismic_file and (seismic_named or travel_times):
                 config["seismic_file"] = seismic_file
-            config["seismic_only"] = "ert" not in lower and "resistivity" not in lower
+            # As words: "desert" and "convert" contain "ert".
+            config["seismic_only"] = not re.search(r"\b(?:ert|resistivity)\b", lower)
 
         # A TEM survey named by its path is TDEM data whatever the request calls it.
         tem_survey = _named_tem_survey(text)
@@ -707,7 +790,10 @@ class ContextInputAgent(BaseAgent):
     def _parse_with_model(self, user_request: str,
                           available_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """:meth:`parse_request` with a model: the multi-stage extraction."""
-        user_request_lower = user_request.lower()
+        # The model reads the whole request, context included; the keyword
+        # gates and regex fallbacks below read only the user's own words.
+        words = user_words(user_request)
+        user_request_lower = words.lower()
         print("Parsing request with multi-stage extraction:")
         
         # Build context for LLM
@@ -757,8 +843,8 @@ class ContextInputAgent(BaseAgent):
         tdem_keywords = ['tdem', 'tem ', 'time-domain electromagnetic', 'electromagnetic sounding',
                         'loop source', 'transient electromagnetic', 'simpeg']
         if stage_enabled(aspects, 'tdem',
-                         names_tdem(user_request)
-                         or any(names_unnegated(user_request, kw.strip()) for kw in tdem_keywords)):
+                         names_tdem(words)
+                         or any(names_unnegated(words, kw.strip()) for kw in tdem_keywords)):
             stages.append(('tdem', "  Stage 5: Extracting TDEM configuration...",
                            self._create_tdem_prompt(user_request)))
 
@@ -774,6 +860,11 @@ class ContextInputAgent(BaseAgent):
             stages.append(('seismic', "  Stage 6: Extracting seismic configuration...",
                            self._create_seismic_prompt(user_request)))
 
+        # STAGE 7: a ground-penetrating radar line, its velocity and processing
+        if stage_enabled(aspects, 'gpr', names_gpr(words)):
+            stages.append(('gpr', "  Stage 7: Extracting GPR configuration...",
+                           self._create_gpr_prompt(user_request)))
+
         for _, announcement, _ in stages:
             print(announcement)
         replies = ask_concurrently([prompt for _, _, prompt in stages], self.query_llm,
@@ -786,16 +877,40 @@ class ContextInputAgent(BaseAgent):
         hydro_config = extracted.get('hydro', {})
         tdem_config = extracted.get('tdem', {})
         seismic_config = extracted.get('seismic', {})
+        gpr_config, gpr_notes = gpr_from_reply(extracted.get('gpr', {}), words)
 
         # Merge configurations
         workflow_config = {**inversion_config, **fusion_config, **climate_config, **hydro_config, **tdem_config, **seismic_config}
+        if gpr_config.get('gpr_file'):
+            # A SEG-Y line the GPR stage took is radar data, not seismic records.
+            for key in ('raw_seismic_file', 'seismic_file'):
+                if _same_file(str(workflow_config.get(key) or ''), gpr_config['gpr_file']):
+                    workflow_config.pop(key)
+                    workflow_config.pop('seismic_only', None)
+        workflow_config.update(gpr_config)
+        if gpr_notes:
+            workflow_config.setdefault('input_notes', []).extend(gpr_notes)
         # The ERT stage runs on every request and takes a data file wherever
         # it finds one, the TDEM project the user selected included.
         workflow_config = drop_borrowed_ert_files(workflow_config, available_data)
 
         # What stage 0 read from the request wins over the per-topic extractions.
         if deliverables:
+            deliverables = dict(deliverables)
+            unit = deliverables.pop('length_unit', None)
+            if unit:
+                # The model's reading of the unit, so the feet pattern that
+                # reads the request when no model did is not consulted again.
+                workflow_config['figure_style'] = {
+                    **(workflow_config.get('figure_style') or {}), 'length_unit': unit}
             workflow_config.update(deliverables)
+        # Read by a model: the keyword rules that fill gaps afterwards
+        # (runtime.entry.adopt_request_inputs) then only add files it missed.
+        workflow_config['request_read_by'] = 'model'
+        # Its yes / no on each method, so those rules do not add data for a
+        # method it ruled out.
+        workflow_config['request_methods'] = {
+            name: on for name, on in aspects.items() if isinstance(on, bool)}
         # The router's "no meteorology" is the model's decision and is recorded
         # as one. Nothing else writes use_climate=False: a False nobody decided
         # would now silence the keyword fallback that runs without a model.
@@ -810,20 +925,21 @@ class ContextInputAgent(BaseAgent):
         
         # Fallback: Extract petrophysical parameters using regex if LLM missed them
         if not workflow_config.get('petrophysical_params') or len(workflow_config.get('petrophysical_params', {})) == 0:
-            params = self._extract_params_regex(user_request)
+            params = self._extract_params_regex(words)
             if params:
                 workflow_config['petrophysical_params'] = params
         
         # Fallback: Extract electrode file using regex if LLM missed it
         if not workflow_config.get('electrode_file'):
-            electrode_file = self._extract_electrode_file_regex(user_request)
+            electrode_file = self._extract_electrode_file_regex(words)
             if electrode_file:
                 workflow_config['electrode_file'] = electrode_file
                 print(f"  [WARN] LLM did not extract electrode file. Using regex fallback: {electrode_file}")
 
         # Fallback: Extract hydrological model config using regex if LLM missed it
-        if any(kw in user_request_lower for kw in ['modflow', 'parflow', 'par flow']):
-            hydro_regex = self._extract_hydro_model_regex(user_request)
+        if (aspects.get('hydro_model') is not False
+                and any(kw in user_request_lower for kw in ['modflow', 'parflow', 'par flow'])):
+            hydro_regex = self._extract_hydro_model_regex(words)
             for key, value in hydro_regex.items():
                 if value is not None and key not in workflow_config:
                     workflow_config[key] = value
@@ -833,7 +949,7 @@ class ContextInputAgent(BaseAgent):
         
         # Fallback: Extract ERT data files using regex if LLM missed them
         # Also detect time-lapse mode if multiple files are found
-        extracted_files = self._extract_files_regex(user_request)
+        extracted_files = self._extract_files_regex(words)
         if extracted_files and len(extracted_files) > 1:
             # Multiple files suggest time-lapse workflow
             if workflow_config.get('inversion_mode') != 'time-lapse':
@@ -864,7 +980,7 @@ class ContextInputAgent(BaseAgent):
         
         # Only petrophysical values the request actually contains are the
         # user's; one the parser supplied itself would be reported as theirs.
-        dropped = drop_unstated_petrophysics(workflow_config, user_request)
+        dropped = drop_unstated_petrophysics(workflow_config, words)
         if dropped:
             workflow_config['petrophysics_dropped'] = dropped
 
@@ -1014,6 +1130,54 @@ class ContextInputAgent(BaseAgent):
                 return name
         return None
 
+    def _gpr_inputs(self, text: str, taken: Sequence[Any] = (),
+                    methods: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """The GPR line a request names, and the velocity or permittivity it states.
+
+        A file with a suffix only radar data has is the line. A SEG-Y or
+        ``.npz`` file is when the request is about GPR and not seismic: the
+        model's reading (``methods``) where it gave one, the words otherwise.
+        A velocity is taken only as written with its unit (m/ns, cm/ns); a
+        depth must never rest on one the request does not state.
+
+        Examples
+        --------
+        >>> agent = ContextInputAgent(api_key=None)
+        >>> agent._gpr_inputs("Process LINE01.DZT; the velocity is 9 cm/ns")
+        {'gpr_file': 'LINE01.DZT', 'gpr_velocity': 0.09}
+        >>> agent._gpr_inputs("Pick the first breaks in shot.sgy")
+        {}
+        >>> agent._gpr_inputs("Process the georadar line in a.sgy, permittivity of 9")
+        {'gpr_file': 'a.sgy', 'gpr_permittivity': 9.0}
+        """
+        from PyHydroGeophysX.data_processing.gpr import GPR_ONLY_SUFFIXES
+
+        def decided(method: str, words: bool) -> bool:
+            stated = (methods or {}).get(method)
+            return stated if isinstance(stated, bool) else words
+
+        wanted = decided("gpr", names_gpr(text))
+        seismic = decided("seismic", names_unnegated(text, "seismic", prefix=True)
+                          or names_unnegated(text, "srt"))
+        found: Dict[str, Any] = {}
+        line = self._extract_file_by_extension(text, list(GPR_ONLY_SUFFIXES), exclude=taken)
+        if not line and wanted and not seismic:
+            line = self._extract_file_by_extension(text, [".sgy", ".segy", ".npz"], exclude=taken)
+        if line:
+            found["gpr_file"] = line
+        if not (line or wanted):
+            return found
+        velocity = re.search(r"(?<![\w.])(\d*\.?\d+)\s*(c?m)\s*/\s*ns\b", text, re.IGNORECASE)
+        if velocity:
+            value = float(velocity.group(1))
+            found["gpr_velocity"] = round(value / 100.0 if velocity.group(2).lower() == "cm"
+                                          else value, 6)
+        permittivity = re.search(r"(?:permittivity|dielectric constant|介电常数|ε_?r?)\s*"
+                                 r"(?:of|is|=|:|为|：)?\s*(\d+(?:\.\d+)?)", text, re.IGNORECASE)
+        if permittivity and not velocity:
+            found["gpr_permittivity"] = float(permittivity.group(1))
+        return found
+
     def _infer_instrument_from_text(self, text: str) -> Optional[str]:
         """Infer ERT instrument name from text.
 
@@ -1076,8 +1240,8 @@ class ContextInputAgent(BaseAgent):
         missing: List[str] = []
 
         wants_ert = (
-            "ert" in lower
-            or "resistivity" in lower
+            # As words: "convert" and "desert" contain "ert".
+            bool(re.search(r"\b(?:ert|resistivity)\b", lower))
             or bool(workflow_config.get("ert_file") or workflow_config.get("data_file"))
             or bool(workflow_config.get("time_lapse_files") or workflow_config.get("timelapse_files"))
         )
@@ -1094,6 +1258,7 @@ class ContextInputAgent(BaseAgent):
         wants_tdem = names_unnegated(lower, "tdem") or bool(workflow_config.get("tdem_file"))
         wants_mt = names_mt(user_request or "") or bool(workflow_config.get("mt_files")
                                                          or workflow_config.get("mt_file"))
+        wants_gpr = names_gpr(user_request or "") or bool(workflow_config.get("gpr_file"))
         instrument_is_explicit = any(
             token in lower
             for token in [
@@ -1139,7 +1304,10 @@ class ContextInputAgent(BaseAgent):
         if wants_mt and not (workflow_config.get("mt_files") or workflow_config.get("mt_file")):
             missing.append("mt_files")
 
-        if not any([wants_ert, wants_time_lapse, wants_seismic, wants_tdem, wants_mt]):
+        if wants_gpr and not workflow_config.get("gpr_file"):
+            missing.append("gpr_file")
+
+        if not any([wants_ert, wants_time_lapse, wants_seismic, wants_tdem, wants_mt, wants_gpr]):
             missing.append("workflow type")
 
         # Keep order stable and remove duplicates.
@@ -1256,13 +1424,14 @@ Extract ONLY ERT inversion configuration in JSON format:
 1. **Data source**:
    - data_file: Path to the ERT data file, when the request has ERT data (extract
      from text). Leave it out when it has none: a file selected for another
-     method (tdem_file, seismic_file, mt_files, gravmag_file) is that method's
-     data, never data_file.
+     method (tdem_file, seismic_file, mt_files, gravmag_file, gpr_file) is that
+     method's data, never data_file.
    - project_dir: Project directory path (extract folder path, e.g., "data/ERT/E4D")
-   - instrument: One of ['DAS-1', 'Syscal', 'ABEM-Lund', 'Protocol DC', 'BERT', 'Sting', 'ARES', 'E4D', 'Subsurface Insights', 'Custom']
+   - instrument: One of ['DAS-1', 'Syscal', 'ABEM-Lund', 'Protocol DC', 'BERT', 'Sting', 'ARES', 'E4D', 'Subsurface Insights', 'PRIME/RESIMGR', 'Custom']
      * Match EXACT instrument name from request
      * "E4D" → use "E4D", "DAS" → use "DAS-1", "Syscal" → use "Syscal"
      * "Subsurface Insights" / "SubInsights" (results_processed_*.csv exports) → use "Subsurface Insights"
+     * "BGS PRIME" / "RESIMGR" (.tab exports) → use "PRIME/RESIMGR"
    - crs: Coordinate system ('local' or 'EPSG:XXXX')
 
 2. **Inversion type**:
@@ -1659,7 +1828,42 @@ Example output (no seismic):
 
 Generate JSON now:"""
         return prompt
-    
+
+    def _create_gpr_prompt(self, user_request: str) -> str:
+        """Create focused prompt for ground-penetrating radar configuration extraction."""
+        return f"""You are extracting ground-penetrating radar (GPR) configuration from a request.
+
+User Request:
+{user_request}
+
+Extract ONLY GPR settings in JSON format:
+
+1. gpr_file: the GPR line, exactly as the request writes it: a GSSI .DZT, a
+   pulseEKKO .DT1 or its .HD header, a MALA .rd3/.rd7 or its .rad header, a
+   SEG-Y (.sgy/.segy) the request says is radar, or a PyHydroGeophysX .npz. A
+   folder holding the MODFLOW example model (Watercontent.npy, Porosity.npy)
+   stands for the simulated example line. null when none is named.
+2. gpr_velocity: the radar velocity in m/ns, ONLY if the request states one
+   (convert cm/ns to m/ns). Never supply a typical value: every depth rests on
+   this number, and a missing velocity is reported as missing.
+3. gpr_permittivity: the relative permittivity, ONLY if the request states one
+   and no velocity.
+4. gpr_params, only what the request asks for:
+   - bandpass: true, or [low_mhz, high_mhz] when a band is given
+   - migrate: true to migrate (collapse hyperbolas)
+   - gain: "agc", "tpow" or "none"
+   - trace_spacing: metres between traces, if stated
+   - frequency_mhz: antenna frequency, if stated
+
+Return ONLY valid JSON, no explanatory text. Example:
+{{
+  "gpr_file": "LINE001.DZT",
+  "gpr_velocity": 0.08,
+  "gpr_params": {{"migrate": true}}
+}}
+
+Generate JSON now:"""
+
     def _extract_config_from_response(self, response: str) -> Dict[str, Any]:
         """Extract JSON configuration from LLM response."""
         # Try to find JSON in response
@@ -1873,7 +2077,8 @@ Keep it brief (3-5 sentences) and avoid technical jargon where possible."""
             parts.append(f"Standard ERT inversion of {single}")
         for key, label in (("seismic_file", "seismic travel times"),
                            ("raw_seismic_file", "raw seismic records"),
-                           ("tdem_file", "a TDEM sounding")):
+                           ("tdem_file", "a TDEM sounding"),
+                           ("gpr_file", "a GPR line")):
             if config.get(key):
                 parts.append(f"{label} from {config[key]}")
         sites = config.get("mt_files") or ([config["mt_file"]] if config.get("mt_file") else [])

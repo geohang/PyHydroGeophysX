@@ -9,9 +9,29 @@ tools, and so PyGIMLi, when it is called.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Sequence, Tuple
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 import numpy as np
+
+
+def inactive_cells(bot: Any) -> Optional[np.ndarray]:
+    """Map cells outside the model domain: no layer has a bottom there.
+
+    A MODFLOW export leaves the layer bottoms (and water content) NaN in its
+    inactive cells but writes 0 for their top and each layer's porosity, so
+    the top cannot tell them apart by itself. ``None`` when every cell is
+    active or ``bot`` is not ``(n_layers, ny, nx)``.
+
+    Examples
+    --------
+    >>> inactive_cells([[[1.0, np.nan]], [[0.5, np.nan]]]).tolist()
+    [[False, True]]
+    """
+    bot = np.asarray(bot, dtype=float)
+    if bot.ndim != 3:
+        return None
+    inactive = np.isnan(bot).all(axis=0)
+    return inactive if inactive.any() else None
 
 
 def fill_profile_nans(values: Any) -> np.ndarray:
@@ -217,6 +237,13 @@ def sample_profile(
     """
     from PyHydroGeophysX.core.interpolation import ProfileInterpolator
 
+    # The 0 a MODFLOW export writes for the top of an inactive cell would pull
+    # the surface down to zero elevation wherever the line leaves the model.
+    # NaN there, like the bottoms, so it is filled along the profile instead.
+    inactive = inactive_cells(bot)
+    if inactive is not None and inactive.shape == np.shape(top):
+        top = np.where(inactive, np.nan, np.asarray(top, dtype=float))
+
     if clip_to_grid:
         n_rows, n_cols = np.shape(top)
         p1_col = int(np.clip(round(float(point1[0])), 0, n_cols - 1))
@@ -273,14 +300,34 @@ def sample_profile(
                     p1_col, p1_row, p2_col, p2_row = line
                     break
 
+    structure = fill_profile_nans(structure)
+    # The electrodes and geophones are placed on surface_profile, the same
+    # samples as the structure's first row; give it the filled surface too.
+    interpolator.surface_profile = structure[0].copy()
     return {
         "interpolator": interpolator,
         "L_profile": np.asarray(interpolator.L_profile, dtype=float),
-        "structure": fill_profile_nans(structure),
+        "structure": structure,
         "water_content_profile": np.clip(fill_profile_nans(water_content_profile), 0.0, 0.8),
         "porosity_profile": np.clip(fill_profile_nans(porosity_profile), 0.01, 0.6),
         "points": [(int(p1_col), int(p1_row)), (int(p2_col), int(p2_row))],
     }
+
+
+def zone_boundaries(n_bounds: int) -> Tuple[int, int]:
+    """The structure rows :func:`build_profile_mesh` splits its three zones at.
+
+    Of ``n_bounds`` layer boundaries (surface first), the base of the upper
+    zone and the base of the middle one; below that is the lower zone.
+
+    Examples
+    --------
+    >>> zone_boundaries(15)
+    (4, 12)
+    """
+    mid_idx = max(1, min(4, int(n_bounds) // 3))
+    bot_idx = max(mid_idx + 1, min(12, int(n_bounds) - 2))
+    return mid_idx, bot_idx
 
 
 def build_profile_mesh(
@@ -320,9 +367,7 @@ def build_profile_mesh(
     from PyHydroGeophysX.core.interpolation import create_surface_lines
     from PyHydroGeophysX.core.mesh_utils import MeshCreator
 
-    n_bounds = structure.shape[0]
-    mid_idx = max(1, min(4, n_bounds // 3))
-    bot_idx = max(mid_idx + 1, min(12, n_bounds - 2))
+    mid_idx, bot_idx = zone_boundaries(structure.shape[0])
     surface, line1, line2 = create_surface_lines(
         L_profile=L_profile, structure=structure, top_idx=0, mid_idx=mid_idx, bot_idx=bot_idx
     )
@@ -342,11 +387,13 @@ def build_profile_mesh(
 
 
 __all__ = [
+    "inactive_cells",
     "fill_profile_nans",
     "get_mesh_xy",
     "assign_three_layer_markers",
     "interpolate_layer_samples",
     "interpolate_profile_to_mesh",
     "sample_profile",
+    "zone_boundaries",
     "build_profile_mesh",
 ]

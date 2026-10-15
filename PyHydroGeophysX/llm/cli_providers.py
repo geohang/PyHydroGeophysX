@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -32,6 +33,36 @@ def _reply_schema():
             }},
         }, "required": ["content", "tool_calls"],
     }
+
+
+def cli_failure(label, stdout, stderr, login_hint=""):
+    """What went wrong in a failed CLI call, in a sentence the user can act on.
+
+    The Claude Code CLI answers a failed call with a JSON envelope. A usage limit
+    (HTTP 429) used to come out as the whole envelope followed by "sign in",
+    which sent the user to fix a login that was fine.
+
+    >>> envelope = ('{"is_error": true, "api_error_status": 429, "result": '
+    ...             '"You have hit your session limit - resets 8:10pm"}')
+    >>> print(cli_failure("Claude Code CLI", envelope, "", "Run claude and sign in."))
+    Claude Code CLI: usage limit reached. You have hit your session limit - resets 8:10pm
+    >>> print(cli_failure("Codex CLI", "", "Not logged in", "Run codex login."))
+    Codex CLI: Not logged in
+    Run codex login.
+    """
+    text = (stderr or stdout or "CLI failed").strip()
+    try:
+        envelope = json.loads(stdout or "")
+    except ValueError:
+        envelope = None
+    status = None
+    if isinstance(envelope, dict) and envelope.get("result"):
+        text, status = str(envelope["result"]).strip(), envelope.get("api_error_status")
+    if status == 429 or "usage_limit" in str((envelope or {}).get("api_error", "")):
+        return f"{label}: usage limit reached. {text}"
+    signed_out = status in (401, 403) or (status is None and re.search(
+        r"log(?:ged)?[\s-]*in|sign(?:ed)?[\s-]*in|auth|credential", text, re.IGNORECASE))
+    return f"{label}: {text[-3000:]}" + (f"\n{login_hint}" if signed_out and login_hint else "")
 
 
 def _normalise_reply(reply, specs):
@@ -120,8 +151,8 @@ class CliProvider(Provider):
                 f"{self.label} timed out after {REQUEST_TIMEOUT_S:g}s. "
                 "You can increase PHGX_LLM_TIMEOUT_S.") from exc
         if result.returncode:
-            diagnostic = (result.stderr or result.stdout or "CLI failed").strip()[-3000:]
-            raise RuntimeError(f"{self.label}: {diagnostic}\n{self.login_hint}")
+            raise RuntimeError(cli_failure(self.label, result.stdout, result.stderr,
+                                           self.login_hint))
         return result.stdout
 
     def complete(self, system, messages, specs, max_tokens=0):
@@ -202,9 +233,10 @@ class ClaudeCodeProvider(CliProvider):
                           "--no-session-persistence"]
         if self.model != "default":
             args += ["--model", self.model]
-        envelope = json.loads(self._run(args, prompt, str(directory)))
+        output = self._run(args, prompt, str(directory))
+        envelope = json.loads(output)
         if envelope.get("is_error"):
-            raise RuntimeError(f"Claude Code CLI: {envelope.get('result', envelope)}")
+            raise RuntimeError(cli_failure(self.label, output, "", self.login_hint))
         reply = envelope.get("structured_output")
         if reply is None:
             raise ValueError("Claude Code returned no structured_output; update the CLI.")

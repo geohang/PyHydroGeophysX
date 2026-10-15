@@ -151,8 +151,11 @@ def hydro_to_gravity(
     # samples lie on one line, is interpolated along it (it raised QhullError).
     rho_kgm3 = interpolate_layer_samples(points, values, query)
 
-    surface_z = np.interp(centers[:, 0], x, boundaries[0, :])
-    bottom_z = np.interp(centers[:, 0], x, boundaries[-1, :])
+    # Interpolation requires increasing abscissae; profiles may be surveyed
+    # in either direction. Preserve station order in the returned response.
+    order = np.argsort(x)
+    surface_z = np.interp(centers[:, 0], x[order], boundaries[0, order])
+    bottom_z = np.interp(centers[:, 0], x[order], boundaries[-1, order])
     outside_domain = (centers[:, 2] > surface_z) | (centers[:, 2] < bottom_z)
     rho_kgm3[outside_domain] = 0.0
 

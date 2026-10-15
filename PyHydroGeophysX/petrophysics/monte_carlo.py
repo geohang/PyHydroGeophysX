@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import Any, Callable, Dict, Mapping, Optional, Sequence
 
 import numpy as np
@@ -9,6 +10,86 @@ import numpy as np
 from PyHydroGeophysX._internal.utils import noop as _noop
 
 ProgressFn = Callable[[str], None]
+
+#: A layer has to hold enough cells for its own parameters to mean anything.
+#: Below this a "layer" is a handful of cells whose statistics are noise.
+MIN_CELLS_PER_LAYER = 10
+
+
+def resolve_layers(cell_markers, n_cells: int,
+                   min_cells: int = MIN_CELLS_PER_LAYER):
+    """Group cells into geological layers, or into one unit when there is none.
+
+    Cell markers mean different things depending on where the mesh came from. A
+    mesh built with regions carries a handful of markers that genuinely separate
+    soil from weathered rock from bedrock. An inversion parameter mesh often
+    carries one marker per cell, which identifies cells and says nothing about
+    geology. Reading the second as layering gives every cell its own
+    petrophysical parameter set estimated from one sample.
+
+    The test applied here is whether the markers *group* the mesh: at least two
+    values, each covering enough cells to estimate parameters from. When they do
+    not, the section is one unit - which is the honest description of a model
+    with no structural information, not a failure to find any.
+
+    Parameters
+    ----------
+    cell_markers : array-like
+        One marker per cell, as the mesh reports them.
+    n_cells : int
+        Number of model cells.
+    min_cells : int, optional
+        Fewest cells a layer may hold and still be treated as one.
+
+    Returns
+    -------
+    tuple
+        ``(markers, unique_layers, description)`` - the markers to use (all
+        zeros for a single unit), their distinct values, and a sentence for the
+        log and the report saying which case this is and why.
+
+    Raises
+    ------
+    None
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> markers, unique, why = resolve_layers(np.arange(832), 832)
+    >>> len(unique), 'single unit' in why
+    (1, True)
+    >>> markers, unique, why = resolve_layers(np.r_[np.zeros(400), np.ones(432)], 832)
+    >>> len(unique), 'layers' in why
+    (2, True)
+    """
+    markers = np.asarray(cell_markers).ravel()
+    if markers.size != n_cells:
+        markers = np.zeros(n_cells, dtype=int)
+        return markers, np.array([0]), (
+            "Cell markers did not match the model, so the section is treated as a "
+            "single unit with one petrophysical parameter set.")
+
+    unique, counts = np.unique(markers, return_counts=True)
+    if unique.size < 2:
+        return (markers.astype(int), unique,
+                "The mesh reports one region, so the section is a single unit with "
+                "one petrophysical parameter set.")
+    if counts.min() >= min_cells:
+        sizes = ", ".join(str(int(c)) for c in counts)
+        return (markers.astype(int), unique,
+                f"Using {unique.size} geological layers from the mesh markers "
+                f"(cells per layer: {sizes}).")
+
+    # Markers exist but do not group the mesh - typically one per cell, which
+    # identifies cells rather than geology.
+    detail = (f"{unique.size} markers for {n_cells} cells"
+              if unique.size > n_cells // 2 else
+              f"the smallest of {unique.size} marker groups holds {int(counts.min())} "
+              f"cell(s)")
+    return (np.zeros(n_cells, dtype=int), np.array([0]),
+            f"The cell markers do not describe geological structure ({detail}), so the "
+            f"section is treated as a single unit with one petrophysical parameter set. "
+            f"Supplying a layered model is what would let parameters vary with depth.")
 
 
 def _distribution(layer: Mapping[str, Any], key: str, default: float) -> tuple[float, float]:
@@ -70,6 +151,8 @@ def _sample_layer(
 
 
 def _statistics(values: np.ndarray) -> Dict[str, np.ndarray]:
+    if np.isnan(values).any():
+        return _statistics_of_solved_draws(values)
     percentiles = np.percentile(values, [10, 50, 90], axis=0)
     return {
         "mean": np.mean(values, axis=0),
@@ -78,6 +161,59 @@ def _statistics(values: np.ndarray) -> Dict[str, np.ndarray]:
         "p50": percentiles[1],
         "p90": percentiles[2],
     }
+
+
+def _statistics_of_solved_draws(values: np.ndarray) -> Dict[str, np.ndarray]:
+    """Statistics over the draws that have a value; NaN where no draw has one.
+
+    A porosity draw with no Waxman-Smits root is NaN. ``np.percentile`` would
+    make the whole cell NaN, and ``np.nanpercentile`` loops over cells in
+    Python, so the percentiles come from the sorted draws (NaN sorts last),
+    with NumPy's default linear interpolation.
+    """
+    count = np.sum(~np.isnan(values), axis=0)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        mean = np.nansum(values, axis=0) / count
+        std = np.sqrt(np.nansum((values - mean) ** 2, axis=0) / count)
+    ordered = np.sort(values, axis=0)
+    quantiles = np.array([0.1, 0.5, 0.9]).reshape((-1,) + (1,) * (values.ndim - 1))
+    position = np.maximum(count - 1, 0) * quantiles
+    lower = np.floor(position).astype(np.intp)
+    upper = np.minimum(lower + 1, np.maximum(count - 1, 0))
+    low = np.take_along_axis(ordered, lower, axis=0)
+    high = np.take_along_axis(ordered, upper, axis=0)
+    percentiles = np.where(count > 0, low + (high - low) * (position - lower), np.nan)
+    return {
+        "mean": mean,
+        "std": std,
+        "p10": percentiles[0],
+        "p50": percentiles[1],
+        "p90": percentiles[2],
+    }
+
+
+def _no_porosity_warning(marker: int, failed: Mapping[str, Any], params: Mapping[str, np.ndarray],
+                         saturation: float, cells_without: int) -> str:
+    """One sentence group per layer for the draws whose porosity has no root."""
+    draws = sorted(failed["draws"])
+    sigma_sur, n = params["sigma_sur"][draws], params["n"][draws]
+    limit = 1.0 / (sigma_sur * saturation ** (n - 1.0))
+
+    def span(values) -> str:
+        low, high = float(np.min(values)), float(np.max(values))
+        return f"{low:.4g}" if np.isclose(low, high) else f"{low:.4g}-{high:.4g}"
+
+    share = 100.0 * failed["count"] / failed["evaluated"]
+    return (
+        f"Porosity, layer {marker}: {failed['count']} of {failed['evaluated']} cell-survey "
+        f"values over the draws ({share:.3g}%) have no Waxman-Smits porosity at the assumed "
+        f"saturation S = {saturation:g}. In {len(draws)} of {len(params['n'])} draws the "
+        f"surface conductivity (sigma_sur {span(sigma_sur)} S/m, n {span(n)}) alone explains "
+        f"resistivity only up to {span(limit)} ohm m, below the measured "
+        f"{span(failed['rho'])} ohm m, and porosity only adds conduction; the sigma_sur prior "
+        f"is too high for these resistivities. The porosity statistics use the draws with a "
+        f"solution (the share without one is statistics['porosity']['no_root_fraction']); "
+        f"{cells_without} cell-survey value(s) with no solution in any draw are NaN.")
 
 
 def run_petrophysics_monte_carlo(
@@ -137,8 +273,13 @@ def run_petrophysics_monte_carlo(
     -------
     dict
         ``statistics`` maps products to mean, population std, p10, p50, p90
-        arrays shaped (cells, selected times). Also includes ``params_used``,
-        ``seed`` and ``timestep_indices``.
+        arrays shaped (cells, selected times). Porosity draws with no
+        Waxman-Smits root (surface conduction alone exceeds the measured
+        conductivity) are NaN, left out of the porosity statistics, and
+        counted in ``statistics["porosity"]["no_root_fraction"]``; a cell
+        with no solved draw is NaN. ``warnings`` lists one message per layer
+        that had such draws (each also issued as a RuntimeWarning). Also
+        includes ``params_used``, ``seed`` and ``timestep_indices``.
 
     Raises
     ------
@@ -147,7 +288,7 @@ def run_petrophysics_monte_carlo(
         layer labels, invalid distributions, or unsupported products.
     """
     from .resistivity_models import (
-        resistivity_to_porosity,
+        _waxman_smits_porosity,
         resistivity_to_saturation,
         resistivity_to_saturation2,
     )
@@ -243,6 +384,11 @@ def run_petrophysics_monte_carlo(
         product: {key: np.empty(shape[1:]) for key in ("mean", "std", "p10", "p50", "p90")}
         for product in sorted(wanted)
     }
+    if want_porosity:
+        statistics["porosity"]["no_root_fraction"] = np.empty(shape[1:])
+    # Per layer: values evaluated, values with no porosity root, the draws
+    # they came from and their resistivity range, for one warning per layer.
+    no_root: Dict[int, Dict[str, Any]] = {}
     # Draw parameters before chunking, preserving the historical RNG sequence.
     # Only exact per-cell statistics are reduced; no approximate quantiles.
     for start in range(0, marker_array.size, chunk_size):
@@ -280,11 +426,22 @@ def run_petrophysics_monte_carlo(
                     if bool(parameters["use_rho_sat"]):
                         porosity = np.full(local_shape, float(parameters["porosity"]))
                     else:
-                        porosity = np.asarray(resistivity_to_porosity(
+                        porosity, missing_root = _waxman_smits_porosity(
                             rho, float(saturation_value), float(parameters["m"]),
                             float(parameters["rho_fluid"]), float(parameters["n"]),
                             float(parameters["sigma_sur"]), a=float(tortuosity_a),
-                        )).reshape(local_shape)
+                        )
+                        porosity = porosity.reshape(local_shape)
+                        failed = no_root.setdefault(marker, {
+                            "evaluated": 0, "count": 0, "draws": set(),
+                            "rho": [np.inf, -np.inf]})
+                        failed["evaluated"] += rho.size
+                        if missing_root.any():
+                            failed["count"] += int(missing_root.sum())
+                            failed["draws"].add(realization)
+                            unsolved = rho[missing_root]
+                            failed["rho"] = [min(failed["rho"][0], unsolved.min()),
+                                             max(failed["rho"][1], unsolved.max())]
                     porosity_block[realization, indices, :] = porosity
         for product, values, full in (
             ("water_content", water, water_all),
@@ -295,11 +452,24 @@ def run_petrophysics_monte_carlo(
                     statistics[product][key][start:stop] = value
                 if full is not None:
                     full[:, start:stop, :] = values
+        if porosity_block is not None:
+            statistics["porosity"]["no_root_fraction"][start:stop] = (
+                np.isnan(porosity_block).mean(axis=0))
+    messages = []
+    for marker, failed in sorted(no_root.items()):
+        if failed["count"]:
+            fraction = statistics["porosity"]["no_root_fraction"][marker_array == marker]
+            messages.append(_no_porosity_warning(
+                marker, failed, params_used[marker], float(saturation_value),
+                int(np.sum(fraction == 1.0))))
+    for message in messages:
+        warnings.warn(message, RuntimeWarning, stacklevel=2)
     result: Dict[str, Any] = {
         "statistics": statistics,
         "params_used": params_used,
         "seed": int(seed),
         "timestep_indices": time_indices,
+        "warnings": messages,
     }
     if return_realizations:
         result.update({

@@ -54,6 +54,10 @@ class ArrayViewer(QWidget):
     pointPicked = Signal(float, float, float)
     #: Emitted once a second profile point is set: ([col1, row1], [col2, row2]).
     profileSelected = Signal(list, list)
+    #: Emitted when the first point of a new profile is clicked: [col, row].
+    profileStarted = Signal(list)
+    #: Emitted when the "Clear profile" button removes the profile.
+    profileCleared = Signal()
 
     def __init__(self, parent=None, *, colormaps=None, colormap_key: str = cmaps.ARRAY,
                  colormap_control: bool = True) -> None:
@@ -62,6 +66,8 @@ class ArrayViewer(QWidget):
         self._extent: Optional[Tuple[float, float, float, float]] = None
         self._pick_mode = False
         self._profile_mode = False
+        #: Profile drawing as the page set it, given back when picking stops.
+        self._profile_wanted = False
         self._markers: List[Tuple[float, float]] = []
         self._profile_pts: List[List[float]] = []
         self._value_label = "Value"
@@ -143,7 +149,7 @@ class ArrayViewer(QWidget):
         bar.addWidget(self._readout, stretch=1)
         for label, slot, icon_name in (
             ("Clear markers", self.clear_markers, "fa5s.times-circle"),
-            ("Clear profile", self.clear_profile, "fa5s.eraser"),
+            ("Clear profile", self._on_clear_profile_clicked, "fa5s.eraser"),
             ("Export PNG", self._export_png_dialog, "fa5s.camera"),
         ):
             btn = QPushButton(label)
@@ -326,11 +332,12 @@ class ArrayViewer(QWidget):
     # -- interaction modes ---------------------------------------------------
     def set_pick_mode(self, enabled: bool) -> None:
         self._pick_mode = bool(enabled)
-        if enabled:
-            self._profile_mode = False
+        # Picking (the studio's Pick tool) takes the clicks from profile drawing
+        # while it is on, and gives them back when it is turned off.
+        self._profile_mode = self._profile_wanted and not self._pick_mode
 
     def set_profile_mode(self, enabled: bool) -> None:
-        self._profile_mode = bool(enabled)
+        self._profile_wanted = self._profile_mode = bool(enabled)
         if enabled:
             self._pick_mode = False
 
@@ -355,6 +362,11 @@ class ArrayViewer(QWidget):
         self._profile_pts = []
         self._profile_scatter.setData([], [])
         self._profile_line.setData([], [])
+
+    def _on_clear_profile_clicked(self) -> None:
+        """The button: clear, and tell the page, which keeps the profile's points."""
+        self.clear_profile()
+        self.profileCleared.emit()
 
     def set_profile_points(self, p1: List[float], p2: List[float]) -> None:
         self._profile_pts = [list(map(float, p1)), list(map(float, p2))]
@@ -429,7 +441,9 @@ class ArrayViewer(QWidget):
                 self._profile_pts = []
             self._profile_pts.append([float(col), float(row)])
             self._refresh_profile()
-            if len(self._profile_pts) == 2:
+            if len(self._profile_pts) == 1:
+                self.profileStarted.emit(self._profile_pts[0])
+            elif len(self._profile_pts) == 2:
                 self.profileSelected.emit(self._profile_pts[0], self._profile_pts[1])
 
     # -- export --------------------------------------------------------------

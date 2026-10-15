@@ -66,7 +66,15 @@ def _mode_impedance(tf: TransferFunction, mode: str) -> Tuple[np.ndarray, np.nda
     if mode == "det":
         z = tf.determinant()
         if tf.z_err is not None:
-            err = 0.5 * np.sqrt(tf.z_err[:, 0, 1] ** 2 + tf.z_err[:, 1, 0] ** 2)
+            # First order: Zdet^2 = Zxx Zyy - Zxy Zyx, so dZdet = (Zyy dZxx + Zxx dZyy - Zyx dZxy
+            # - Zxy dZyx) / (2 Zdet), the elements' errors independent. A missing diagonal error
+            # counts as none where its element is there.
+            Z = tf.z
+            weight = np.abs(np.stack([Z[:, 1, 1], Z[:, 0, 0], Z[:, 1, 0], Z[:, 0, 1]], axis=1)) ** 2
+            var = np.stack([tf.z_err[:, 0, 0], tf.z_err[:, 1, 1], tf.z_err[:, 0, 1], tf.z_err[:, 1, 0]], axis=1) ** 2
+            with np.errstate(divide="ignore", invalid="ignore"):
+                err = np.sqrt(np.nansum(weight * var, axis=1)) / (2 * np.abs(z))
+            err = np.where(np.isfinite(tf.z_err[:, 0, 1]) & np.isfinite(tf.z_err[:, 1, 0]), err, np.nan)
         else:
             err = np.full(z.shape, np.nan)
         return z, err
@@ -95,9 +103,14 @@ def sounding_from_tf(tf: TransferFunction, *, mode: str = "det", error_floor: fl
     for name in modes:
         z, err = _mode_impedance(tf, name)
         z, err = z[keep], err[keep]
-        relative = np.fmax(np.nan_to_num(err / np.abs(z), nan=error_floor), error_floor)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            relative = err / np.abs(z)
+        # No error of its own: the floor stands in; with no floor either, the datum is left out
+        # rather than given an infinite weight.
+        missing = ~(np.isfinite(relative) & (relative > 0))
+        relative = np.where(missing, error_floor, np.fmax(relative, error_floor))
         phase = np.degrees(np.angle(z))
-        good = np.isfinite(z) & (phase > 0) & (phase < 90)
+        good = np.isfinite(z) & (phase > 0) & (phase < 90) & (relative > 0)
         rows["log_rho"].append(np.where(good, np.log10(np.abs(z) ** 2 / (omega * MU0)), np.nan))
         rows["phase"].append(np.where(good, phase, np.nan))
         rows["log_rho_err"].append(2 * relative / _LN10)
@@ -185,6 +198,73 @@ def _occam_choice(trials: List[Tuple[float, float]], target: float) -> int:
     return min(range(len(trials)), key=lambda i: trials[i][1])
 
 
+def _occam_iterations(evaluate: Callable, x: np.ndarray, D: np.ndarray, prior: np.ndarray, n_model: int,
+                      bounds: Tuple[float, float], target_rms: float, max_iterations: int, cheap: bool,
+                      log: Optional[Callable[[str], None]], roughness: Callable[[np.ndarray], float]):
+    """Occam's iterations from ``x``: each linearizes, sweeps ``mu`` and keeps Occam's choice.
+
+    ``evaluate(x)`` gives ``(rms, residual, jacobian, predicted)``; ``D`` holds
+    the roughness rows (``mu`` times its square is the regularization), ``prior``
+    rows added as they are; the first ``n_model`` entries of ``x`` are log10
+    resistivities, kept within ``bounds``. With ``cheap`` false (a TEM forward)
+    the true forward judges a coarse sweep of ``mu`` and the neighbours of the
+    linearized choice rather than every candidate.
+    """
+    lo, hi = bounds
+    rms, residual, jac, predicted = evaluate(x)
+    history = [{"iteration": 0, "rms": rms, "mu": float("nan"), "roughness": 0.0}]
+    mus = np.logspace(-4, 6, 41)
+    mu_used, converged, iterations = float("nan"), False, 0
+    for iterations in range(1, max_iterations + 1):
+        rhs_data = residual + jac @ x
+        JtJ, Jtd = jac.T @ jac, jac.T @ rhs_data
+        candidates = []
+        for mu in mus:
+            A = JtJ + mu * D.T @ D + prior.T @ prior
+            try:
+                candidate = np.linalg.solve(A, Jtd)
+            except np.linalg.LinAlgError:
+                continue
+            candidate[:n_model] = np.clip(candidate[:n_model], lo, hi)
+            linear = float(np.sqrt(np.mean((rhs_data - jac @ candidate) ** 2)))
+            candidates.append((mu, linear, candidate))
+        if not candidates:
+            break
+        # The true forward decides among the candidates - all of them when it is
+        # cheap; with a TEM forward, a coarse sweep of mu plus the neighbours of
+        # the linearized choice.
+        if cheap:
+            chosen = range(len(candidates))
+        else:
+            guess = _occam_choice([(c[0], c[1]) for c in candidates], target_rms)
+            chosen = sorted(set(range(0, len(candidates), 5)) | {
+                min(max(guess + k, 0), len(candidates) - 1) for k in (-2, -1, 0, 1, 2)})
+        trials = [(candidates[i][0], evaluate(candidates[i][2])[0], candidates[i][2]) for i in chosen]
+        best = _occam_choice([(t[0], t[1]) for t in trials], target_rms)
+        mu_used, new_rms, x_new = trials[best]
+        step = 1.0
+        while new_rms > rms and step > 1 / 16:
+            # Occam's safeguard: a step that makes things worse is shortened.
+            step /= 2
+            x_try = x + step * (trials[best][2] - x)
+            try_rms = evaluate(x_try)[0]
+            if try_rms < new_rms:
+                new_rms, x_new = try_rms, x_try
+        rough_new = roughness(x_new)
+        rough_old = roughness(x)
+        x = x_new
+        rms, residual, jac, predicted = evaluate(x)
+        history.append({"iteration": iterations, "rms": rms, "mu": float(mu_used), "roughness": rough_new})
+        if log is not None:
+            log(f"  Occam iteration {iterations}: RMS {rms:.3f}, mu {mu_used:.3g}")
+        if rms <= target_rms * 1.01 and abs(rough_new - rough_old) <= 1e-3 * max(rough_old, 1e-6):
+            converged = True
+            break
+        if len(history) > 3 and rms > target_rms and abs(history[-2]["rms"] - rms) < 1e-3 * rms:
+            break
+    return x, rms, predicted, history, mu_used, converged, iterations
+
+
 def _tem_block(tem: Dict[str, Any], thickness: np.ndarray):
     from PyHydroGeophysX.inversion.em1d import DEFAULT_INVERSION, build_sounding_block
 
@@ -258,57 +338,9 @@ def occam1d(data: Any, *, mode: str = "det", n_layers: int = 50,
         return rms, residual, jac, {"log_rho_a": log_rho_a, "phase": phase, **extra}
 
     x = np.r_[np.full(n, np.log10(start)), np.zeros(n_shift)]
-    rms, residual, jac, predicted = evaluate(x)
-    history = [{"iteration": 0, "rms": rms, "mu": float("nan"), "roughness": 0.0}]
-    mus = np.logspace(-4, 6, 41)
-    mu_used, converged, iterations = float("nan"), False, 0
-    for iterations in range(1, max_iterations + 1):
-        rhs_data = residual + jac @ x
-        JtJ, Jtd = jac.T @ jac, jac.T @ rhs_data
-        candidates = []
-        for mu in mus:
-            A = JtJ + mu * D.T @ D + prior.T @ prior
-            try:
-                candidate = np.linalg.solve(A, Jtd)
-            except np.linalg.LinAlgError:
-                continue
-            candidate[:n] = np.clip(candidate[:n], lo, hi)
-            linear = float(np.sqrt(np.mean((rhs_data - jac @ candidate) ** 2)))
-            candidates.append((mu, linear, candidate))
-        if not candidates:
-            break
-        # The true forward decides among the candidates - all of them when it is
-        # cheap; with a TEM forward, a coarse sweep of mu plus the neighbours of
-        # the linearized choice.
-        if block is None:
-            chosen = range(len(candidates))
-        else:
-            guess = _occam_choice([(c[0], c[1]) for c in candidates], target_rms)
-            chosen = sorted(set(range(0, len(candidates), 5)) | {
-                min(max(guess + k, 0), len(candidates) - 1) for k in (-2, -1, 0, 1, 2)})
-        trials = [(candidates[i][0], evaluate(candidates[i][2])[0], candidates[i][2]) for i in chosen]
-        best = _occam_choice([(t[0], t[1]) for t in trials], target_rms)
-        mu_used, new_rms, x_new = trials[best]
-        step = 1.0
-        while new_rms > rms and step > 1 / 16:
-            # Occam's safeguard: a step that makes things worse is shortened.
-            step /= 2
-            x_try = x + step * (trials[best][2] - x)
-            try_rms = evaluate(x_try)[0]
-            if try_rms < new_rms:
-                new_rms, x_new = try_rms, x_try
-        rough_new = float(np.sum(np.diff(x_new[:n]) ** 2))
-        rough_old = float(np.sum(np.diff(x[:n]) ** 2))
-        x = x_new
-        rms, residual, jac, predicted = evaluate(x)
-        history.append({"iteration": iterations, "rms": rms, "mu": float(mu_used), "roughness": rough_new})
-        if log is not None:
-            log(f"  Occam iteration {iterations}: RMS {rms:.3f}, mu {mu_used:.3g}")
-        if rms <= target_rms * 1.01 and abs(rough_new - rough_old) <= 1e-3 * max(rough_old, 1e-6):
-            converged = True
-            break
-        if len(history) > 3 and rms > target_rms and abs(history[-2]["rms"] - rms) < 1e-3 * rms:
-            break
+    x, rms, predicted, history, mu_used, converged, iterations = _occam_iterations(
+        evaluate, x, D, prior, n, (lo, hi), target_rms, max_iterations, block is None, log,
+        lambda v: float(np.sum(np.diff(v[:n]) ** 2)))
     shifts = {name: float(10 ** x[n + k]) for k, name in enumerate(sounding.modes)} if n_shift else {}
     tem_out = None
     if block is not None:
@@ -319,6 +351,155 @@ def occam1d(data: Any, *, mode: str = "det", n_layers: int = 50,
         roughness=float(np.sum(np.diff(x[:n]) ** 2)), mu=float(mu_used), static_shift=shifts,
         predicted={"log_rho_a": predicted["log_rho_a"], "phase": predicted["phase"]},
         sounding=sounding, iterations=iterations, history=history, tem=tem_out,
+        converged=converged or rms <= target_rms * 1.01)
+
+
+@dataclass
+class Anisotropic1DResult:
+    """Occam's azimuthally anisotropic layered model: two resistivities per layer on one strike.
+
+    ``resistivity[0]`` is each layer's resistivity along the axis at azimuth
+    ``strike`` (degrees clockwise from north), which Zxy fits in that frame;
+    ``resistivity[1]`` along the axis a quarter turn on, which Zyx fits.
+    """
+
+    strike: float
+    resistivity: np.ndarray            # (2, n_layers)
+    thickness: np.ndarray
+    rms: float
+    mu: float
+    static_shift: Dict[str, float]
+    predicted: Dict[str, Dict[str, np.ndarray]]
+    sounding: Sounding1D
+    iterations: int
+    history: List[Dict[str, float]] = field(default_factory=list)
+    converged: bool = False
+
+    @property
+    def depth(self) -> np.ndarray:
+        """Each layer's top, m (the half-space last)."""
+        return np.r_[0.0, np.cumsum(self.thickness)]
+
+    @property
+    def anisotropy(self) -> np.ndarray:
+        """Each layer's resistivity across the strike over along it."""
+        return self.resistivity[1] / self.resistivity[0]
+
+    def axis(self, k: int) -> Occam1DResult:
+        """One axis's model as an :class:`Occam1DResult`, for the plots and conversions that take one."""
+        mode = self.sounding.modes[k]
+        part = Sounding1D(self.sounding.frequency, [mode], *(getattr(self.sounding, name)[k:k + 1] for name in
+                                                             ("log_rho", "phase", "log_rho_err", "phase_err")),
+                          station=self.sounding.station)
+        return Occam1DResult(
+            resistivity=self.resistivity[k], thickness=self.thickness, rms=self.rms,
+            roughness=float(np.sum(np.diff(np.log10(self.resistivity[k])) ** 2)), mu=self.mu,
+            static_shift={m: v for m, v in self.static_shift.items() if m == mode},
+            predicted=self.predicted[mode], sounding=part, iterations=self.iterations,
+            history=self.history, converged=self.converged)
+
+
+def _mean_strike(tf: TransferFunction, period_range: Optional[Tuple[float, float]] = None) -> float:
+    """The phase tensor's strike over the periods used, in [0, 90): the mean of 4 x strike, so the
+    quarter-turn ambiguity does not split it."""
+    from .analysis import phase_tensor
+
+    strike = np.asarray(phase_tensor(tf)["strike"], dtype=float)
+    keep = np.isfinite(strike)
+    if period_range is not None:
+        keep &= (tf.period >= min(period_range)) & (tf.period <= max(period_range))
+    if not keep.any():
+        raise ValueError("no phase-tensor strike in the period range; give the strike")
+    mean = np.angle(np.mean(np.exp(4j * np.radians(strike[keep]))))
+    return float(np.degrees(mean) / 4.0 % 90.0)
+
+
+def occam1d_anisotropic(data: TransferFunction, *, strike: Optional[float] = None, n_layers: int = 50,
+                        thickness: Optional[Sequence[float]] = None, target_rms: float = 1.0,
+                        max_iterations: int = 30, starting_resistivity: Optional[float] = None,
+                        static_shift: bool = False, static_shift_prior: float = 0.3,
+                        anisotropy_weight: float = 1.0, error_floor: float = 0.05,
+                        period_range: Optional[Tuple[float, float]] = None,
+                        log: Optional[Callable[[str], None]] = None,
+                        resistivity_bounds: Tuple[float, float] = (0.01, 1e5)) -> Anisotropic1DResult:
+    """Occam's smoothest azimuthally anisotropic layered model with one strike.
+
+    Each layer conducts differently along two horizontal axes, the same two
+    in every layer: along ``strike`` (degrees clockwise from north; by default
+    the phase tensor's, averaged over the periods used) and across it. In that
+    frame the layered earth's impedance has no diagonal, and Zxy and Zyx are
+    each a 1D isotropic response - Zxy of the resistivities along the strike,
+    Zyx of those across it (Pek & Santos 2002, the case of horizontal principal
+    axes sharing one azimuth). The two models share the layers and are found
+    together: Occam's roughness of each, plus ``anisotropy_weight`` times the
+    difference of their ``log10`` resistivities layer by layer, so a layer is
+    made anisotropic only where the data ask for it.
+
+    Why the modes differ cannot be told from one site: a 2D structure with the
+    same strike, or galvanic distortion, splits them too. A static shift moves
+    ``rho_a`` and not the phase, so with ``static_shift`` the difference in
+    level between the modes is put down to the shifts and the anisotropy comes
+    from the phases' split alone.
+
+    Pek, J. & Santos, F. A. M. (2002). Magnetotelluric impedances and
+    parametric sensitivities for 1-D anisotropic layered media. Computers &
+    Geosciences, 28(8), 939-950. https://doi.org/10.1016/S0098-3004(02)00014-6
+    """
+    angle = _mean_strike(data, period_range) if strike is None else float(strike) % 180.0
+    sounding = sounding_from_tf(data.rotated(angle), mode="both", error_floor=error_floor,
+                                period_range=period_range)
+    for k, mode in enumerate(sounding.modes):
+        if np.count_nonzero(np.isfinite(sounding.log_rho[k])) < 2:
+            raise ValueError(f"too few Z{mode} data in the strike frame for an anisotropic model")
+    values = sounding.log_rho[np.isfinite(sounding.log_rho)]
+    start = float(starting_resistivity or 10 ** np.median(values))
+    order = np.argsort(sounding.frequency)
+    ends = []
+    for columns in (order[-3:], order[:3]):
+        picked = sounding.log_rho[:, columns]
+        picked = picked[np.isfinite(picked)]
+        ends.append(10 ** float(np.median(picked)) if picked.size else start)
+    h = np.asarray(thickness, dtype=float) if thickness is not None else layer_thicknesses(
+        sounding.frequency, n_layers, resistivity_guess=ends)
+    n = h.size + 1
+    n_shift = 2 if static_shift else 0
+    width = 2 * n + n_shift
+    rough = np.diff(np.eye(n), axis=0)
+    D = np.zeros((2 * (n - 1) + n, width))
+    D[:n - 1, :n] = rough
+    D[n - 1:2 * (n - 1), n:2 * n] = rough
+    D[2 * (n - 1):, :n] = anisotropy_weight * np.eye(n)
+    D[2 * (n - 1):, n:2 * n] = -anisotropy_weight * np.eye(n)
+    prior = np.zeros((n_shift, width))
+    if n_shift:
+        prior[:, 2 * n:] = np.eye(n_shift) / static_shift_prior
+    parts = [Sounding1D(sounding.frequency, [mode], *(getattr(sounding, name)[k:k + 1] for name in
+                                                      ("log_rho", "phase", "log_rho_err", "phase_err")),
+                        station=sounding.station) for k, mode in enumerate(sounding.modes)]
+
+    def evaluate(x):
+        shifts = x[2 * n:] if n_shift else np.zeros(2)
+        rows, predicted = [], {}
+        for k, part in enumerate(parts):
+            obs, err, pred, J, S, log_rho_a, phase = _mt_rows(part, x[k * n:(k + 1) * n], h, shifts[k:k + 1])
+            jac = np.zeros((obs.size, width))
+            jac[:, k * n:(k + 1) * n] = J
+            if n_shift:
+                jac[:, 2 * n + k] = S[:, 0]
+            rows.append(((obs - pred) / err, jac / err[:, None]))
+            predicted[part.modes[0]] = {"log_rho_a": log_rho_a, "phase": phase}
+        residual = np.concatenate([r for r, _ in rows])
+        return float(np.sqrt(np.mean(residual ** 2))), residual, np.vstack([j for _, j in rows]), predicted
+
+    lo, hi = np.log10(resistivity_bounds[0]), np.log10(resistivity_bounds[1])
+    x = np.r_[np.full(2 * n, np.log10(start)), np.zeros(n_shift)]
+    roughness = lambda v: float(np.sum(np.diff(v[:n]) ** 2) + np.sum(np.diff(v[n:2 * n]) ** 2))
+    x, rms, predicted, history, mu_used, converged, iterations = _occam_iterations(
+        evaluate, x, D, prior, 2 * n, (lo, hi), target_rms, max_iterations, True, log, roughness)
+    shifts = {mode: float(10 ** x[2 * n + k]) for k, mode in enumerate(sounding.modes)} if n_shift else {}
+    return Anisotropic1DResult(
+        strike=angle, resistivity=10.0 ** x[:2 * n].reshape(2, n), thickness=h, rms=rms, mu=float(mu_used),
+        static_shift=shifts, predicted=predicted, sounding=sounding, iterations=iterations, history=history,
         converged=converged or rms <= target_rms * 1.01)
 
 

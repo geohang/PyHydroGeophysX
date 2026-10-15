@@ -14,10 +14,10 @@ where:
 
 The resistivity is the reciprocal of conductivity: ρ = 1/σ
 """
+import warnings
 from typing import Any
 
 import numpy as np
-from scipy.optimize import fsolve
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +48,16 @@ def WS_Model(
 
     Returns:
         array: Resistivity in ohm-m, clipped to [0.1, 1e6].
+
+    Warns:
+        RuntimeWarning: Once per call if saturation, the conductivity floor
+            (1e-6 S/m), or resistivity is clipped. Bounds and numerical outputs
+            are unchanged. NaN values propagate; they are not repaired.
     """
+    clipped = []
+    raw_saturation = np.asarray(saturation)
+    if np.any((raw_saturation < 0.001) | (raw_saturation > 1)):
+        clipped.append("saturation to [0.001, 1]")
     # Clip saturation to physically meaningful range (avoid division by zero)
     saturation = np.clip(saturation, 0.001, 1.0)
 
@@ -61,13 +70,20 @@ def WS_Model(
 
     # Add minimum conductivity threshold to prevent division by zero
     sigma_min = 1e-6
+    if np.any(sigma < sigma_min):
+        clipped.append("conductivity to >= 1e-6 S/m (resistivity <= 1e6 ohm-m)")
     sigma = np.maximum(sigma, sigma_min)
 
     # Convert conductivity to resistivity
     resistivity = 1.0 / sigma
 
     # Clip resistivity to physically reasonable range
+    if np.any((resistivity < 0.1) | (resistivity > 1e6)):
+        clipped.append("resistivity to [0.1, 1e6] ohm-m")
     resistivity = np.clip(resistivity, 0.1, 1e6)
+    if clipped:
+        warnings.warn("WS_Model clipped " + "; ".join(clipped) + ".",
+                      RuntimeWarning, stacklevel=2)
 
     return resistivity
 
@@ -369,7 +385,14 @@ def resistivity_to_porosity(
     where sigma_sat = 1/rhos and rhos = a * rho_fluid * porosity^(-m)
     
     Rearranging: porosity = [(1/rho - sigma_sur * S^(n-1)) * (a * rho_fluid) / S^n]^(1/m)
-    
+
+    Porosity only adds conduction, so where ``1/rho <= sigma_sur * S**(n-1)``
+    the surface term alone conducts at least as well as the rock is measured
+    to and no porosity satisfies the equation. Those values are NaN, with a
+    RuntimeWarning naming the parameters and the resistivity range a porosity
+    can explain. They used to be whatever ``fsolve`` stopped at near its
+    starting guess, about 0.05.
+
     Args:
         resistivity (array): Resistivity values (ohm-m)
         saturation (array): Saturation values (fraction, 0-1)
@@ -378,98 +401,75 @@ def resistivity_to_porosity(
         n (float): Saturation exponent (typically 1.8-2.2)
         sigma_sur (float): Surface conductivity (S/m). Default is 0 (no surface effects)
         a (float): Tortuosity factor. Default is 1.0
-        
-    Returns:
-        array: Porosity values (fraction, 0-1)
-    """
-    # Convert inputs to arrays
-    resistivity_array = np.atleast_1d(resistivity).astype(float)
-    saturation_array = np.atleast_1d(saturation)
-    sigma_sur_array = np.atleast_1d(sigma_sur)
-    n_array = np.atleast_1d(n)
-    m_array = np.atleast_1d(m)
-    
-    # Ensure all arrays have compatible shapes
-    max_length = max(len(resistivity_array), len(saturation_array))
-    
-    if len(saturation_array) == 1 and max_length > 1:
-        saturation_array = np.full(max_length, saturation_array[0])
-    if len(sigma_sur_array) == 1 and max_length > 1:
-        sigma_sur_array = np.full(max_length, sigma_sur_array[0])
-    if len(n_array) == 1 and max_length > 1:
-        n_array = np.full(max_length, n_array[0])
-    if len(m_array) == 1 and max_length > 1:
-        m_array = np.full(max_length, m_array[0])
-    if len(resistivity_array) == 1 and max_length > 1:
-        resistivity_array = np.full(max_length, resistivity_array[0])
-    
-    # Validate saturation values
-    saturation_array = np.clip(saturation_array, 0.001, 1.0)  # Avoid extreme values
-    
-    # Initialize porosity array
-    porosity = np.zeros_like(resistivity_array)
 
-    if np.all(sigma_sur_array == 0):
-        # Same Archie formula as the scalar loop; no root solving is needed.
-        porosity = np.clip(((a * rho_fluid) / (resistivity_array * saturation_array**n_array))
-                           ** (1.0 / m_array), 0.001, 0.99)
-        return float(porosity[0]) if np.isscalar(resistivity) and np.isscalar(saturation) else porosity
-    
-    # Solve for each resistivity-saturation pair
-    for i in range(len(resistivity_array)):
-        rho_val = resistivity_array[i]
-        S_val = saturation_array[i]
-        sigma_sur_val = sigma_sur_array[i]
-        n_val = n_array[i]
-        m_val = m_array[i]
-        
-        if sigma_sur_val == 0:
-            # Without surface conductivity, use simplified Archie's law
-            # 1/rho = (1/rhos) * S^n = (porosity^m / (a * rho_fluid)) * S^n
-            # porosity^m = (a * rho_fluid) / (rho * S^n)
-            # porosity = [(a * rho_fluid) / (rho * S^n)]^(1/m)
-            
-            porosity_val = ((a * rho_fluid) / (rho_val * S_val**n_val))**(1.0/m_val)
-            
-        else:
-            # With surface conductivity, solve numerically
-            # 1/rho = (porosity^m / (a * rho_fluid)) * S^n + sigma_sur * S^(n-1)
-            # Rearranging: porosity^m = (1/rho - sigma_sur * S^(n-1)) * (a * rho_fluid) / S^n
-            
-            conductivity_term = 1.0/rho_val - sigma_sur_val * S_val**(n_val-1)
-            
-            if conductivity_term > 0:
-                # Direct calculation if the term is positive
-                porosity_val = (conductivity_term * a * rho_fluid / S_val**n_val)**(1.0/m_val)
-            else:
-                # If negative (which shouldn't happen physically), use numerical solver
-                def func(phi):
-                    if phi <= 0:
-                        return 1e10  # Large penalty for non-physical values
-                    rhos = a * rho_fluid * phi**(-m_val)
-                    sigma_sat = 1.0 / rhos
-                    return sigma_sat * S_val**n_val + sigma_sur_val * S_val**(n_val-1) - 1.0/rho_val
-                
-                # Initial guess using simplified formula
-                initial_guess = max(0.05, ((a * rho_fluid) / (rho_val * S_val**n_val))**(1.0/m_val))
-                
-                try:
-                    solution = fsolve(func, initial_guess)
-                    porosity_val = solution[0]
-                except Exception:
-                    # If numerical solution fails, use simplified formula
-                    porosity_val = ((a * rho_fluid) / (rho_val * S_val**n_val))**(1.0/m_val)
-        
-        porosity[i] = porosity_val
-    
-    # Ensure porosity is physically meaningful
-    porosity = np.clip(porosity, 0.001, 0.99)
-    
+    Returns:
+        array: Porosity values (fraction), clipped to [0.001, 0.99], shaped
+        like the inputs broadcast together; NaN where no porosity exists. A
+        float when resistivity and saturation are scalars.
+    """
+    porosity, no_root = _waxman_smits_porosity(
+        resistivity, saturation, m, rho_fluid, n, sigma_sur, a)
+    if no_root.any():
+        warnings.warn(_no_porosity_message(
+            resistivity, saturation, m, rho_fluid, n, sigma_sur, a, no_root),
+            RuntimeWarning, stacklevel=2)
+
     # Return scalar if input was scalar
-    if np.isscalar(resistivity) and np.isscalar(saturation):
-        return float(porosity[0])
-    
+    if np.isscalar(resistivity) and np.isscalar(saturation) and porosity.size == 1:
+        return float(porosity.reshape(-1)[0])
+
     return porosity
+
+
+def _waxman_smits_porosity(resistivity, saturation, m, rho_fluid, n,
+                           sigma_sur=0, a=1.0):
+    """Closed-form porosity and the mask of values with no porosity root.
+
+    Returns ``(porosity, no_root)`` broadcast together, without warning; the
+    Monte Carlo collects ``no_root`` over its draws and reports it once.
+    """
+    rho, saturation, m, rho_fluid, n, sigma_sur, a = np.broadcast_arrays(*(
+        np.atleast_1d(value).astype(float)
+        for value in (resistivity, saturation, m, rho_fluid, n, sigma_sur, a)))
+    saturation = np.clip(saturation, 0.001, 1.0)  # Avoid extreme values
+
+    # 1/rho = (porosity^m / (a * rho_fluid)) * S^n + sigma_sur * S^(n-1), so
+    # porosity^m = (1/rho - sigma_sur * S^(n-1)) * (a * rho_fluid) / S^n.
+    # With sigma_sur = 0 this is Archie's law.
+    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+        term = 1.0 / rho - sigma_sur * saturation ** (n - 1)
+        porosity = (term * a * rho_fluid / saturation ** n) ** (1.0 / m)
+    no_root = ~(term > 0) & ~np.isnan(term)
+    porosity = np.where(no_root, np.nan, np.clip(porosity, 0.001, 0.99))
+    return porosity, no_root
+
+
+def _span(values) -> str:
+    """One value, or the range the values cover."""
+    values = np.asarray(values, dtype=float)
+    low, high = float(np.nanmin(values)), float(np.nanmax(values))
+    return f"{low:.4g}" if np.isclose(low, high) else f"{low:.4g}-{high:.4g}"
+
+
+def _no_porosity_message(resistivity, saturation, m, rho_fluid, n, sigma_sur, a,
+                         no_root) -> str:
+    rho, saturation, m, rho_fluid, n, sigma_sur, a = (
+        np.broadcast_to(np.atleast_1d(value).astype(float), no_root.shape)[no_root]
+        for value in (resistivity, saturation, m, rho_fluid, n, sigma_sur, a))
+    saturation = np.clip(saturation, 0.001, 1.0)
+    with np.errstate(divide="ignore"):
+        surface = sigma_sur * saturation ** (n - 1)
+        limit = 1.0 / surface
+        lowest = 1.0 / (saturation ** n / (a * rho_fluid) + surface)
+    return (
+        f"Waxman-Smits has no porosity for {int(no_root.sum())} of {no_root.size} "
+        f"resistivity value(s) ({_span(rho)} ohm m): with saturation S = {_span(saturation)}, "
+        f"n = {_span(n)} and sigma_sur = {_span(sigma_sur)} S/m, surface conduction "
+        f"sigma_sur * S**(n-1) alone explains resistivity only up to {_span(limit)} ohm m, "
+        f"and porosity adds conduction. With m = {_span(m)}, rho_fluid = {_span(rho_fluid)} "
+        f"ohm m and a = {_span(a)}, porosities in (0, 1] explain {_span(lowest)} to "
+        f"{_span(limit)} ohm m. These porosities are NaN; the surface conductivity is too "
+        f"high for this resistivity at this saturation.")
 
 
 

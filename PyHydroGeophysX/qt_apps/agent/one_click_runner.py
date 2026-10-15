@@ -12,6 +12,7 @@ for how an assistant plugs in.
 from __future__ import annotations
 
 import json
+import os
 import sys
 import threading
 import time
@@ -116,6 +117,38 @@ def ask_via_stdio(event, out=None, inp=None):
         return 'stop'
 
 
+def studio_via_stdio(request, out=None, inp=None):
+    """Have the desktop carry out a studio request, and wait for its answer.
+
+    How a run uses the studio's pages (:mod:`PyHydroGeophysX.agents.runtime.studio`):
+    one line out saying what it needs, then the desktop's answer on the next
+    line in - after a long page action, once that action has finished. End of
+    input or an unreadable reply is a failed request.
+
+    Examples
+    --------
+    >>> import io
+    >>> out = io.StringIO()
+    >>> studio_via_stdio({'op': 'catalog'}, out, io.StringIO('{"studio": {"status": "ok"}}\\n'))
+    {'status': 'ok'}
+    >>> json.loads(out.getvalue())['event']
+    'studio'
+    """
+    out = out if out is not None else sys.stdout
+    inp = inp if inp is not None else sys.stdin
+    out.write(json.dumps({'event': 'studio', 'request': request}, default=str) + '\n')
+    out.flush()
+    line = inp.readline()
+    if not line:
+        return {'status': 'failed', 'error': 'The studio is no longer there.'}
+    try:
+        answer = json.loads(line).get('studio')
+    except ValueError:
+        answer = None
+    return answer if isinstance(answer, dict) else {
+        'status': 'failed', 'error': 'The studio sent no usable answer.'}
+
+
 def main():
     # This child exports figures; a GUI backend may block pg.show on Windows.
     import matplotlib
@@ -141,9 +174,17 @@ def main():
         # written back to this process while it runs. Nothing reads it in the
         # background (see steering.ControlFile for why).
         payload = json.loads(sys.stdin.readline())
+        # An OpenAI-compatible endpoint typed in the studio, for every agent
+        # in this run: the agents read it from the environment, which reaches
+        # their worker threads, and this process exists only for the run.
+        if payload.get('base_url'):
+            os.environ['OPENAI_COMPAT_BASE_URL'] = str(payload['base_url'])
         control = payload.get('control_file')
         steering.current.set(steering.Steering(
             notify=step_event, source=steering.ControlFile(control) if control else None))
+        # The studio's pages, for the run to use as tools (runtime.studio).
+        from PyHydroGeophysX.agents.runtime import studio
+        studio.current.set(studio_via_stdio)
         result = execute(payload, progress, approve=ask_via_stdio, on_event=step_event)
         print(json.dumps({'ok': True, 'result': result}, default=str), flush=True)
         return 0

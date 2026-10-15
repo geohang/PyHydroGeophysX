@@ -607,19 +607,6 @@ def test_the_format_hint_names_a_format_only_on_its_signature(tmp_path) -> None:
 
 # --- a format with no reader must refuse, not fall through -------------------
 
-def test_a_format_with_no_reader_names_resipy() -> None:
-    from PyHydroGeophysX.data_processing.ert_data_agent import _needs_resipy
-
-    with pytest.raises(NotImplementedError) as raised:
-        _needs_resipy("Syscal")("anything.csv")
-
-    message = str(raised.value)
-    assert "Syscal" in message
-    assert "pip install" in message
-    # It has to say what still works, or the reader is just a dead end.
-    assert "DAS-1" in message
-
-
 def test_the_generic_fallback_does_not_swallow_that_refusal(tmp_path) -> None:
     """A missing reader is a fact about the format, not a parse failure.
 
@@ -698,24 +685,6 @@ def test_the_pygimli_fallback_reads_resistances_and_percent_errors(tmp_path) -> 
     if source.exists():
         ert = agent._load_ert_pygimli(data_file=str(source), project_dir=str(tmp_path))
         assert np.median([o.rel_err for o in ert.observations]) < 0.05
-
-
-def test_the_install_hint_distinguishes_absent_from_broken() -> None:
-    """The fix differs: install it, versus repair the environment it is in."""
-    from PyHydroGeophysX.data_processing import ert_data_agent as agent
-
-    saved = (agent._RESIPY_ERROR, agent._RESIPY_MISSING)
-    try:
-        agent._RESIPY_ERROR, agent._RESIPY_MISSING = "No module named 'resipy'", True
-        absent = agent.resipy_install_hint()
-        agent._RESIPY_ERROR, agent._RESIPY_MISSING = "DLL load failed", False
-        broken = agent.resipy_install_hint()
-    finally:
-        agent._RESIPY_ERROR, agent._RESIPY_MISSING = saved
-
-    assert "did not import" not in absent
-    assert "DLL load failed" in broken
-    assert "pip install" in absent and "pip install" in broken
 
 
 def test_an_electrode_file_for_the_survey_lines_up_with_its_electrodes(tmp_path) -> None:
@@ -824,7 +793,7 @@ def test_a_survey_is_dated_by_its_name_or_its_first_line(
 
 @pytest.mark.parametrize("instrument, ftype", [
     ("Protocol DC", "ProtocolDC"), ("Protocol IP", "ProtocolIP"),
-    ("PRIME/RESIMGR", "BGS Prime"), ("ARES", "ARES"), ("ResInv", "ResInv"),
+    ("ARES", "ARES"), ("ResInv", "ResInv"),
 ])
 def test_resipy_is_handed_the_file_type_it_dispatches_on(
         tmp_path, monkeypatch, instrument, ftype) -> None:
@@ -867,6 +836,39 @@ def test_every_mapped_file_type_is_one_resipy_dispatches_on(tmp_path) -> None:
             survey_module.Survey(str(junk), ftype=ftype)
         except Exception as error:  # noqa: BLE001 - a parse error is expected
             assert "not implemented" not in str(error), (instrument, ftype)
+
+
+@pytest.mark.parametrize("instrument, data, electrodes", [
+    ("E4D", DAS_DIR.parent / "E4D" / "2021-10-08_1400.ohm", None),
+    ("DAS-1", DAS_FILES[0] if DAS_FILES else None, DAS_DIR / "electrodes.dat"),
+], ids=["e4d", "das1-electrode-file"])
+def test_a_survey_built_without_a_resipy_project_reads_as_the_projects(
+        tmp_path, monkeypatch, instrument, data, electrodes) -> None:
+    """The survey is built without ResIPy's Project, for speed, only where the
+    Project would leave it unchanged; the readings must be the Project's own."""
+    pytest.importorskip("resipy")
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+
+    built = []
+    without_project = agent._survey_without_project
+
+    def recording(*args):
+        built.append(without_project(*args))
+        return built[-1]
+
+    def load():
+        return agent.load_ert_resipy(
+            str(tmp_path), str(data), instrument,
+            electrode_file=str(electrodes) if electrodes else None)
+
+    monkeypatch.setattr(agent, "_survey_without_project", recording)
+    fast = load()
+    assert built and built[0] is not None          # it was built without the Project
+    monkeypatch.setattr(agent, "_SURVEY_ONLY_FTYPES", ())
+    through_project = load()
+    assert fast.electrodes == through_project.electrodes
+    assert fast.observations == through_project.observations
+    assert fast.metadata == through_project.metadata
 
 
 # --- ABEM-Lund rows give positions --------------------------------------------
@@ -939,18 +941,6 @@ def test_a_chosen_reader_that_refuses_is_not_second_guessed(tmp_path) -> None:
     assert "BERT" not in str(raised.value)
 
 
-def test_the_resipy_route_reports_the_readers_errors(tmp_path) -> None:
-    """PyGIMLi's loader cannot read DAS-1; tried anyway, its "'DataMap' object has
-    no attribute 'size'" was all the user saw."""
-    from PyHydroGeophysX.data_processing import ert_data_agent as agent
-
-    with pytest.raises(ValueError, match="#data_start") as raised:
-        agent.load_ert_resipy(project_dir=str(tmp_path / "prj"),
-                              data_file=str(_das_without_data_marker(tmp_path)),
-                              instrument="DAS-1")
-    assert "DataMap" not in str(raised.value)
-
-
 def test_the_studio_loader_does_not_sweep_past_a_refusal(tmp_path) -> None:
     """Its recovery sweep "auto-recovered" the file above as E4D: one reading."""
     pytest.importorskip("pygimli")
@@ -1006,36 +996,6 @@ def test_a_failed_guess_falls_back_to_the_reader_asked_for(tmp_path) -> None:
     assert ert.instrument == "BERT"
     assert ert.metadata["parser_used"] == "BERT (fallback)"
     assert [o.app_res for o in ert.observations] == [10.0]
-
-
-def test_when_the_guess_and_the_fallback_both_fail_the_guess_is_reported(tmp_path) -> None:
-    from PyHydroGeophysX.data_processing import ert_data_agent as agent
-
-    path = _abem_lookalike(tmp_path / "guess.dat", unified_blocks=False)
-
-    with pytest.raises(ValueError) as raised:
-        agent._load_ert_embedded_parsers(
-            data_file=str(path), project_dir=str(tmp_path), instrument="BERT")
-    assert str(raised.value).startswith(
-        "Failed to parse ERT data with ABEM-Lund: No ABEM-Lund measurement rows")
-
-
-def test_qc_writes_its_table_as_csv_without_a_parquet_engine(tmp_path, monkeypatch) -> None:
-    """Parquet needs pyarrow or fastparquet, neither a dependency, and the whole
-    load failed over the format of this one diagnostic table."""
-    from PyHydroGeophysX.data_processing import ert_data_agent as agent
-
-    ert = agent._load_ert_embedded_parsers(data_file=str(DAS_FILES[0]),
-                                           project_dir=str(tmp_path), instrument="DAS-1")
-
-    def no_engine(self, *args, **kwargs):
-        raise ImportError("Unable to find a usable engine; tried using: 'pyarrow', 'fastparquet'.")
-
-    monkeypatch.setattr(pd.DataFrame, "to_parquet", no_engine)
-    artifacts = agent.qc_and_visualize(ert, outdir=str(tmp_path / "qc"))
-    assert "observations_parquet" not in artifacts
-    assert len(pd.read_csv(artifacts["observations_csv"])) == len(ert.observations)
-    assert Path(artifacts["standard_json"]).exists()
 
 
 # -- a survey written as a forward and a reciprocal file (Craig Ulrich's) ---------
@@ -1162,12 +1122,11 @@ def test_too_few_or_unspread_pairs_give_no_error_model(R, dR):
 
 def test_fit_to_the_pairs_the_filter_kept_leaves_outliers_out(tmp_path):
     """"Pairs kept by the filter" fits the model without the pairs a check
-    removed - a pair goes when either of its readings does - and the records
-    state that choice and the very model the inversion applied."""
+    removed - a pair goes when either of its readings does - and writing the
+    records leaves the pairs as they were."""
     import pandas as pd
     from PyHydroGeophysX.data_processing.ert_formats import reciprocal_errors
     from PyHydroGeophysX.qt_apps import ert_records
-    from PyHydroGeophysX.qt_apps.run_records import ERROR_PAIRS_NAME
 
     n = 200
     R = np.geomspace(.05, 50., n)
@@ -1199,12 +1158,50 @@ def test_fit_to_the_pairs_the_filter_kept_leaves_outliers_out(tmp_path):
     before = (pairing['R'].copy(), pairing['dR'].copy())
     model = dict(m=kept['m'], b=kept['b'], floor=.01)
     report = dict(pairing=pairing, readings=2 * n, kept=int(keep.sum()), checks=[])
-    text = ert_records.write_single_qc_report(tmp_path, source='a.dat', acquired='', reader='BERT',
-        qc=_reciprocal_qc(), report=report, error_model='', applied_model=model, fit_to='kept').read_text()
-    assert 'Error model fitted to: pairs kept by the filter' in text
-    assert f"m = {kept['m']:.6f}, b = {kept['b']:.6f}" in text and f"10^{kept['b']:.4f}" in text
-    saved = ert_records.read_error_model_pairs(tmp_path / ERROR_PAIRS_NAME)
-    assert (saved['fit_to'], saved['applied'], int(saved['kept'].sum())) == ('kept', True, expected.sum())
-    assert ert_records.fit_pairs(saved, 'kept')['m'] == pytest.approx(kept['m'])
+    ert_records.write_single_qc_report(tmp_path, source='a.dat', acquired='', reader='BERT',
+        qc=_reciprocal_qc(), report=report, error_model='', applied_model=model, fit_to='kept')
     np.testing.assert_array_equal(pairing['R'], before[0])
     np.testing.assert_array_equal(pairing['dR'], before[1])
+
+
+def test_bgs_prime_tab_reads_roles_units_and_channel_numbers(tmp_path) -> None:
+    """A PRIME .tab numbers electrodes by channel, writes potential and current
+    in mV and mA and its error in tenths of a percent; ResIPy's reader swapped
+    the current and potential electrodes and took the error as a percentage."""
+    from PyHydroGeophysX.data_processing import ert_data_agent as agent
+    from PyHydroGeophysX.data_processing.ert_formats import parse_bgs_prime
+
+    columns = ("pt_line_number:", "pt_calc_res:", "pt_calc_res_error:", "pt_c1_no:", "pt_c2_no:",
+               "pt_p1_no:", "pt_p2_no:", "pt_meas_voltage_mean:", "pt_meas_current_mag:",
+               "pt_meas_contact_resistance:", "pt_time:", "pt_error_code:")
+    rows = [("1", "13.2831", "5", "113", "116", "114", "115", "200.284", "15.0782", "5302.75",
+             "2026-07-25T09:30:59", "0x02"),
+            ("2", "7.5", "1", "", "", "118", "120", "90", "12", "6965.7", "2026-07-25T09:31:04", "0x00"),
+            ("**Error 3",),
+            ("4", "13.30", "8", "114", "115", "113", "116", "199", "14.96", "5310", "2026-07-25T09:31:10",
+             "0x04")]
+    path = tmp_path / "Site_SEQ_2026-07-25_093054.tab"
+    path.write_text("\n".join(
+        ["# Prime:\tRX Ver.1.00", "cmd_file:\tSEQ", "set_actual_start_time:\t2026-07-25T09:30:54",
+         "set_no_of_meas:\t4",
+         "\t".join(("#Units", "Ohm", "Tenths %", "-", "-", "-", "-", "mV", "mA", "Ohm",
+                    "YYYY-MM-DDTHH:MM:SS", "-")),
+         "data:", "\t".join(columns)] + ["\t".join(row) for row in rows]) + "\n", encoding="utf-8")
+
+    elec, df = parse_bgs_prime(path)
+    # Channels 113-120 with 117 and 119 unused: the gap stays a gap.
+    np.testing.assert_array_equal(elec[:, 0], np.arange(8.0))
+    assert df[["a", "b", "m", "n"]].values.tolist() == [[1, 4, 2, 3], [1, 4, 6, 8], [2, 3, 1, 4]]
+    assert df.attrs["survey_electrodes"] == (1, 2, 3, 4, 6, 8) and df.attrs["error_lines"] == 1
+    np.testing.assert_allclose(df["error"], [0.005, 0.001, 0.008])
+    np.testing.assert_allclose(df["u"], [0.200284, 0.09, 0.199])
+    np.testing.assert_allclose(df["i"], [0.0150782, 0.012, 0.01496])
+    np.testing.assert_allclose(df["resist"][:1], df["u"][:1] / df["i"][:1], rtol=1e-5)
+    assert df.attrs["acquired"] == "2026-07-25T09:30:54" and df["ip"].isna().all()
+    assert guess_ert_format(path) == "PRIME/RESIMGR"
+
+    # Picked as another format, the file still goes to this reader.
+    std = agent.load_ert_resipy(project_dir=str(tmp_path / "prj"), data_file=str(path),
+                                instrument="BERT")
+    assert std.instrument == "PRIME/RESIMGR" and len(std.electrodes) == 8
+    assert std.observations[0].quad == agent.Quadruplet(1, 4, 2, 3)

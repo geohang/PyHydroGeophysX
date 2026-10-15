@@ -62,6 +62,13 @@ class Tool:
     #: Tools that make no sense to run twice. The controller will not re-offer
     #: one that has already been *attempted* unless it is marked repeatable.
     repeatable: bool = False
+    #: Whether the controller may propose this tool off the standard route
+    #: (:mod:`.toolbox`) when its ``when`` gate is closed. Not for a loader,
+    #: which reads a file the configuration has to name.
+    proposable: bool = True
+    #: For an off-route proposal: whether the tool applies to this run at all,
+    #: whatever its gate says (a time-lapse inversion needs two surveys).
+    applies: Optional[Callable[[RunContext], bool]] = None
 
     def available(self, ctx: RunContext) -> bool:
         """Whether this tool can run against the context as it stands."""

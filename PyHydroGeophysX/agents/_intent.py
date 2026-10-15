@@ -229,6 +229,31 @@ def names_gravmag(text: str) -> Optional[str]:
     return "gravity" if gravity else "magnetics"
 
 
+def names_gpr(text: str) -> bool:
+    """Whether ``text`` asks for ground-penetrating radar, under the names a request uses.
+
+    The fallback for a request no model read; with a model, its ``gpr`` aspect
+    decides. "Radar" alone is not enough: radar rainfall is climate data.
+
+    Examples
+    --------
+    >>> names_gpr("process the GPR line in line1.sgy")
+    True
+    >>> names_gpr("a ground-penetrating radar survey"), names_gpr("探地雷达数据处理")
+    (True, True)
+    >>> names_gpr("ERT only, no GPR")
+    False
+    >>> names_gpr("use the radar rainfall for the site")
+    False
+    """
+    return (names_unnegated(text, "gpr") or names_unnegated(text, "georadar", prefix=True)
+            or names_unnegated(text, "radargram", prefix=True)
+            or any(names_unnegated(text, term, prefix=True)
+                   for term in ("ground-penetrating radar", "ground penetrating radar",
+                                "ground probing radar"))
+            or any(names_unnegated(text, term) for term in ("探地雷达", "地质雷达", "雷达剖面")))
+
+
 #: Words that ask for the survey in plan view rather than along its lines.
 _SPATIAL_TERMS = ("spatial", "plan view", "plan-view", "map view", "depth slice", "depth-slice",
                   "horizontal slice", "lateral distribution", "distribution map")
@@ -348,6 +373,10 @@ def infer_instrument(text: str) -> Optional[str]:
         return "ARES"
     if named(r"protocol\s*dc"):
         return "Protocol DC"
+    # The word "prime" alone is ordinary English; BGS's name, a PRIME .tab's
+    # own header line or RESIMGR is not.
+    if named(r"bgs[\s-]*prime") or named("resimgr") or re.search(r"#\s*prime\s*:", lower):
+        return "PRIME/RESIMGR"
     return None
 
 
@@ -646,8 +675,9 @@ DELIVERABLES_PROMPT = """You decide which products a geophysics user is asking f
 
 Read the request and answer with JSON only - no prose, no code fence:
 {"water_content": true, "resistivity_only": false, "site_location": null,
+ "spatial_map": false, "length_unit": null,
  "aspects": {"climate": false, "fusion": false, "tdem": false,
-             "seismic": false, "hydro_model": false}}
+             "seismic": false, "hydro_model": false, "gpr": false}}
 
 Fields:
 - water_content: true if they want water content, moisture, saturation or a
@@ -655,6 +685,12 @@ Fields:
   do not want it. null if the request does not say either way.
 - resistivity_only: true if they explicitly want to stop at the resistivity
   model and not convert it. Otherwise false.
+- spatial_map: true if they want a property shown in plan view - its spatial
+  distribution on a map, depth slices, how it varies across the area. false if
+  they want sections along the lines only, or do not ask for maps.
+- length_unit: "ft" if they want lengths and depths in feet, "m" if they ask for
+  metres, null if they do not say. A place name such as "Imperial Valley" is not
+  a request for feet.
 - site_location: the place the survey is from, as a NAME a map service could
   look up - "Medicine Bow, Wyoming", "Reynolds Creek, Idaho". null if the
   request does not say where. Do NOT give latitude or longitude: a name that is
@@ -667,6 +703,8 @@ Fields:
     tdem        - time-domain or transient electromagnetic soundings
     seismic     - seismic refraction, travel times, velocity models
     hydro_model - outputs of a hydrological model such as MODFLOW or ParFlow
+    gpr         - ground-penetrating radar (GPR, georadar) lines or radargrams
+                  (radar rainfall is climate, not GPR)
   Mark one false only when the request clearly does not involve it. If in doubt,
   mark it true: an extra question costs a moment, a missed one loses settings the
   user asked for.
@@ -728,12 +766,33 @@ def llm_deliverables(user_request, query) -> Dict[str, Any]:
 
 
 def _config_from(answer: Dict[str, Any]) -> Dict[str, Any]:
-    """Workflow-configuration keys implied by the model's answer."""
+    """Workflow-configuration keys implied by the model's answer.
+
+    A field the model answered is its decision, recorded as an explicit value
+    so the keyword fallbacks (:func:`wants_spatial_map`, the feet pattern of
+    ``_figures.length_unit_from_text``) do not read the request again behind it.
+    A field it left out entirely leaves those fallbacks in charge.
+
+    Examples
+    --------
+    >>> _config_from({"spatial_map": None, "length_unit": None})
+    {'spatial_maps': False, 'length_unit': 'm'}
+    >>> _config_from({"length_unit": "ft"})
+    {'length_unit': 'ft'}
+    >>> _config_from({})
+    {}
+    """
     out: Dict[str, Any] = {}
     if answer.get("resistivity_only") is True:
         out["convert_to_water_content"] = False
     elif isinstance(answer.get("water_content"), bool):
         out["convert_to_water_content"] = answer["water_content"]
+    if "spatial_map" in answer:
+        out["spatial_maps"] = answer["spatial_map"] is True
+    if "length_unit" in answer:
+        # Read, and not feet: metres, the default, as the model's own answer.
+        out["length_unit"] = "ft" if str(answer["length_unit"] or "").lower() in (
+            "ft", "feet", "foot") else "m"
     place = answer.get("site_location")
     if isinstance(place, str) and place.strip():
         # A name, to be resolved by a gazetteer. Anything that parses as a pair
@@ -758,6 +817,7 @@ ROUTABLE_ASPECTS = {
     "tdem": "time-domain or transient electromagnetic soundings",
     "seismic": "seismic refraction, travel times, velocity models",
     "hydro_model": "outputs of a hydrological model such as MODFLOW or ParFlow",
+    "gpr": "ground-penetrating radar lines or radargrams",
 }
 
 
@@ -829,12 +889,13 @@ def stage_enabled(aspects: Dict[str, Any], name: str,
                   keyword_hit: Optional[bool] = None) -> bool:
     """Whether an extraction stage should run, from the router and its keywords.
 
-    Composed so neither signal can quietly outvote the other. A keyword gate
-    that matches always runs its stage - "modflow" in the request means the
-    request is about MODFLOW, whatever the model thought - and the router can
-    only skip stages that have no keyword gate of their own. When the model said
-    nothing, the keyword gate decides alone, which is the behaviour that existed
-    before the router.
+    The router decides whenever it answered: it reads what the request means,
+    in any language and spelling, where a keyword list matches words - "desert"
+    contains "ert", and "saturation" named the hydrological-model stage on every
+    water-content request. The keyword gate is the fallback for a router that
+    said nothing (no model, an unusable reply), which is the behaviour that
+    existed before the router. The router is told to answer true when in doubt,
+    so a false is a confident no.
 
     Parameters
     ----------
@@ -858,24 +919,22 @@ def stage_enabled(aspects: Dict[str, Any], name: str,
     --------
     >>> stage_enabled({"climate": False}, "climate")          # router skips it
     False
-    >>> stage_enabled({"tdem": False}, "tdem", keyword_hit=True)   # keywords win
-    True
-    >>> stage_enabled({"tdem": None}, "tdem", keyword_hit=False)   # model silent
+    >>> stage_enabled({"tdem": False}, "tdem", keyword_hit=True)   # the model decides
     False
+    >>> stage_enabled({"tdem": None}, "tdem", keyword_hit=True)    # model silent
+    True
     >>> stage_enabled({}, "fusion")                            # nothing known
     True
     """
     stated = aspects.get(name)
-    if keyword_hit is None:
-        return stated is not False
-    if stated is None:
-        return bool(keyword_hit)
-    return bool(stated) or bool(keyword_hit)
+    if stated is not None:
+        return bool(stated)
+    return True if keyword_hit is None else bool(keyword_hit)
 
 
 #: At most this many extraction questions are in flight at once. The router
-#: leaves at most six stages running, usually two to four; four asks those in
-#: one wait without putting a burst of six on a provider's concurrency limit.
+#: leaves at most seven stages running, usually two to four; four asks those in
+#: one wait without putting a burst of seven on a provider's concurrency limit.
 MAX_CONCURRENT_STAGES = 4
 
 

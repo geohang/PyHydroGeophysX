@@ -74,7 +74,8 @@ def _text(raw: bytes) -> str:
 
 def read_phoenix_header(path: Any) -> Dict[str, Any]:
     """The 128-byte header of a Phoenix time-series file, decoded."""
-    raw = Path(path).read_bytes()[:128]
+    with Path(path).open("rb") as stream:
+        raw = stream.read(128)
     if len(raw) < 128:
         raise ValueError(f"{Path(path).name} is shorter than a Phoenix header")
     u = lambda fmt, offset: struct.unpack_from("<" + fmt, raw, offset)[0]
@@ -187,13 +188,16 @@ def _load_json(path: Path) -> Dict[str, Any]:
 
 
 def read_phoenix_calibration(path: Any) -> Dict[str, Any]:
-    """A Phoenix ``rxcal.json`` or ``scal.json``: each channel's response tables.
+    """A Phoenix ``rxcal.json``, ``scal.json`` or binary ``.scal``: each channel's response tables.
 
     Returns ``{"kind": "receiver" | "sensor", "instrument_serial", "sensor_serial",
-    "channels": {tag: [ResponseStage, ...]}}``; a receiver file has one table
-    per low-pass setting.
+    "model", "channels": {tag: [ResponseStage, ...]}}``; a receiver file has one
+    table per low-pass setting.
     """
     source = Path(path)
+    raw = source.read_bytes()
+    if source.suffix.lower() == ".scal" and not raw.lstrip()[:1] == b"{":
+        return _read_binary_scal(source, raw)
     content = _load_json(source)
     kind = "sensor" if "sensor" in str(content.get("file_type", "")).lower() else "receiver"
     channels: Dict[str, List[ResponseStage]] = {}
@@ -208,21 +212,102 @@ def read_phoenix_calibration(path: Any) -> Dict[str, Any]:
             channels.setdefault(tag, []).append(stage)
     return {"kind": kind, "instrument_serial": str(content.get("inst_serial", "")),
             "sensor_serial": str(content.get("sensor_serial", "")),
+            "model": str(content.get("sensor_type", "") or content.get("instrument_type", "")),
             "channels": channels, "source_file": str(source)}
 
 
+#: A binary ``.scal`` record: frequency (Hz), the response's real and
+#: imaginary parts (mV/nT), and 20 bytes the files leave unset.
+_SCAL_RECORD = 32
+
+
+def _read_binary_scal(source: Path, raw: bytes) -> Dict[str, Any]:
+    """A coil calibration in Phoenix's binary ``.scal`` layout.
+
+    Phoenix documents only the JSON form; this layout was read off the files
+    (``<serial>_<time>.scal``): the number of frequencies is a uint32 at byte
+    8, the sensor's serial is text at byte 59 and its model at byte 133, and
+    the file ends with one 32-byte record per frequency - float32 frequency,
+    then the real and imaginary parts of the response in mV/nT. A coil's table
+    shows which part is which: below its corner the response is imaginary and
+    grows with frequency, above it real and flat.
+    """
+    count = struct.unpack_from("<I", raw, 8)[0] if len(raw) >= 12 else 0
+    start = len(raw) - _SCAL_RECORD * count
+    if count < 2 or start < 64:
+        raise ValueError(f"{source.name} is not a Phoenix sensor calibration")
+    table = np.frombuffer(raw, dtype="<f4", count=count * _SCAL_RECORD // 4, offset=start)
+    table = table.reshape(count, _SCAL_RECORD // 4).astype(float)
+    frequency = table[:, 0]
+    if not (np.all(np.isfinite(table[:, :3])) and np.all(frequency > 0) and np.all(np.diff(frequency) > 0)):
+        raise ValueError(f"{source.name}: the calibration table does not read as one "
+                         "(frequencies not positive and increasing)")
+    serial = _text(raw[59:69])
+    if not re.fullmatch(r"[0-9A-Za-z-]+", serial):
+        serial = source.name.split("_")[0].split(".")[0]
+    stage = ResponseStage("phoenix_sensor_h", "nT", "mV", frequency=frequency,
+                          values=table[:, 1] + 1j * table[:, 2],
+                          metadata={"source_file": str(source), "max_frequency": float(frequency.max())})
+    return {"kind": "sensor", "instrument_serial": "", "sensor_serial": serial,
+            "model": _text(raw[133:149]), "channels": {"H": [stage]}, "source_file": str(source)}
+
+
+def _calibration_time(cal: Dict[str, Any]) -> int:
+    """When a calibration was made, from its file name ``<serial>_<hex time>``; 0 if unknown."""
+    parts = Path(cal["source_file"]).name.split(".")[0].split("_")
+    try:
+        return int(parts[1], 16) if len(parts) > 1 else 0
+    except ValueError:
+        return 0
+
+
+#: Calibration files: Phoenix's JSON and its binary coil tables.
+_CALIBRATION_PATTERNS = ("*rxcal.json", "*scal.json", "*.scal")
+
+
 def _calibration_files(recording: Path, calibration: Any) -> List[Path]:
+    """Calibration files given (files, or folders searched through), or found near the recording.
+
+    Without ``calibration``, the recording's folder and the two above it are
+    searched, with any folder in them named for calibrations (``Calibration``,
+    ``cal_files``...), which is where a survey keeps its coils' tables.
+    """
     if calibration is not None:
         items = [calibration] if isinstance(calibration, (str, Path)) else list(calibration)
         found = []
         for item in map(Path, items):
-            found += sorted(item.glob("*cal.json")) if item.is_dir() else [item]
-        return found
+            found += ([p for pattern in _CALIBRATION_PATTERNS for p in sorted(item.rglob(pattern))]
+                      if item.is_dir() else [item])
+        return list(dict.fromkeys(found))
     found = []
     for folder in (recording, recording.parent, recording.parent.parent):
-        if folder.is_dir():
-            found += sorted(folder.glob("*rxcal.json")) + sorted(folder.glob("*scal.json"))
+        if not folder.is_dir():
+            continue
+        found += [p for pattern in _CALIBRATION_PATTERNS for p in sorted(folder.glob(pattern))]
+        for sub in sorted(p for p in folder.iterdir()
+                          if p.is_dir() and re.search(r"(^|[^a-z])cal", p.name.lower())):
+            found += [p for pattern in _CALIBRATION_PATTERNS for p in sorted(sub.rglob(pattern))]
     return list(dict.fromkeys(found))
+
+
+def phoenix_coil_calibrations(path: Any, calibration: Any = None) -> List[Dict[str, Any]]:
+    """The coil calibrations a Phoenix recording would use: ``{"serial", "model", "file"}`` each.
+
+    ``calibration`` is as :func:`read_phoenix` takes it. One entry per serial,
+    its newest file. Files that do not read as calibrations are left out.
+    """
+    newest: Dict[str, Dict[str, Any]] = {}
+    for file in _calibration_files(_recording_folder(Path(path)), calibration):
+        try:
+            cal = read_phoenix_calibration(file)
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+        serial = cal["sensor_serial"] or Path(file).name.split("_")[0].split(".")[0]
+        if cal["kind"] != "sensor" or not serial:
+            continue
+        if serial not in newest or _calibration_time(cal) > _calibration_time(newest[serial]["cal"]):
+            newest[serial] = {"serial": serial, "model": cal.get("model", ""), "file": str(file), "cal": cal}
+    return [{k: v for k, v in item.items() if k != "cal"} for _, item in sorted(newest.items())]
 
 
 def _match_low_pass(stages: List[ResponseStage], low_pass: float) -> Optional[ResponseStage]:
@@ -283,7 +368,7 @@ def _channel_layout(recmeta: Dict[str, Any], config: Dict[str, Any]) -> Dict[int
 
 def read_phoenix(path: Any, *, sample_rate: Union[None, float, Sequence[float]] = None,
                  components: Optional[Iterable[str]] = None, start: Any = None, end: Any = None,
-                 calibration: Any = None) -> List[TimeSeriesRun]:
+                 calibration: Any = None, coils: Optional[Dict[str, str]] = None) -> List[TimeSeriesRun]:
     """Read a Phoenix MTU-5C-family recording into runs.
 
     ``path`` is the recording folder, one of its channel folders, or a file
@@ -292,8 +377,14 @@ def read_phoenix(path: Any, *, sample_rate: Union[None, float, Sequence[float]] 
     by default every rate present is read, highest first.
     ``start`` and ``end`` (UTC) limit what is read, which matters for long
     native recordings. ``calibration`` is a calibration file, a folder of them
-    or a list; by default ``*rxcal.json`` and ``*scal.json`` are looked for in
-    the recording folder and the two above it.
+    (searched through) or a list; by default ``*rxcal.json``, ``*scal.json``
+    and binary ``*.scal`` files are looked for in the recording folder and the
+    two above it, and in any folder there named for calibrations.
+
+    ``coils`` says which coil was on which magnetic channel, ``{"H1": "4684",
+    ...}`` (or ``"hx"``...), by serial or calibration file. A receiver whose
+    coils were not detected records serial 0, so without it their responses
+    are not known and the magnetic channels stay in volts.
 
     Continuous streams come out as one run per gap-free stretch, segmented
     ones as one run per burst.
@@ -334,11 +425,14 @@ def read_phoenix(path: Any, *, sample_rate: Union[None, float, Sequence[float]] 
     if not files:
         raise ValueError(f"no Phoenix time series found in {recording}"
                          + (f" at {sorted(rates)} Hz" if rates else ""))
+    recorded = {component for by_component in files.values() for component in by_component}
+    not_recorded = _not_recorded(layout, recorded, wanted)
 
     calibrations = [read_phoenix_calibration(p) for p in _calibration_files(recording, calibration)]
     receiver_cal = next((c for c in calibrations if c["kind"] == "receiver"
                          and c["instrument_serial"] in ("", str(recmeta.get("instid", "")))), None)
     sensor_cals = [c for c in calibrations if c["kind"] == "sensor"]
+    coil_of = _coil_choices(layout, recorded, coils, sensor_cals)
 
     runs: List[TimeSeriesRun] = []
     for (extension, rate), by_component in sorted(files.items(), key=lambda item: -item[0][1]):
@@ -369,12 +463,15 @@ def read_phoenix(path: Any, *, sample_rate: Union[None, float, Sequence[float]] 
                 else:
                     blocks += _decimated_blocks(item, header, start_utc, extension in _CONTINUOUS, leap, late)
             pieces[component] = contiguous_blocks(blocks, rate)
+            # Both kinds of file hold volts at the input, where the A/D's +-5 V is +-5 V / gain.
             info[component] = {"header": first, "gain": gain if native else 1.0, "kind": kind,
+                               "full_scale": _AD_RANGE_VOLTS / gain,
                                "saturated_frames": saturated, "files": [str(p) for p in paths],
                                "late_stamp_corrected": bool(late), "leap_seconds": leap}
 
         def make_channel(component: str, data: np.ndarray) -> Channel:
-            return _phoenix_channel(component, data, layout, info[component], receiver_cal, sensor_cals)
+            return _phoenix_channel(component, data, layout, info[component], receiver_cal,
+                                    coil_of.get(component))
 
         layout_meta = recmeta.get("layout", {})
         found = assemble_runs(
@@ -387,7 +484,10 @@ def read_phoenix(path: Any, *, sample_rate: Union[None, float, Sequence[float]] 
             serial=str(recmeta.get("instid", first["instrument_serial"])),
             metadata={"source_format": "phoenix", "recording": str(recording),
                       "stream": extension, "survey": layout_meta.get("Survey_Name", ""),
-                      "notes": _calibration_notes(info, receiver_cal, sensor_cals)})
+                      "not_recorded": not_recorded,
+                      "notes": _recording_notes(not_recorded, layout)
+                      + _saturation_notes(layout, recorded, recmeta.get("acqtime"))
+                      + _calibration_notes(info, receiver_cal, sensor_cals, coil_of)})
         for run in found:
             if start_limit is not None or end_limit is not None:
                 run = run.window(start_limit, end_limit)
@@ -396,19 +496,71 @@ def read_phoenix(path: Any, *, sample_rate: Union[None, float, Sequence[float]] 
     return runs
 
 
-def _calibration_notes(info, receiver_cal, sensor_cals) -> List[str]:
+def _not_recorded(layout: Dict[int, Dict[str, Any]], recorded: set,
+                  wanted: Optional[set]) -> Dict[str, str]:
+    """The receiver's channels with no data, and why: switched off, or no files.
+
+    A receiver set to record only the coils still lists E1 and E2 in its
+    metadata; saying so keeps a recording without its electric field from
+    passing for a complete one.
+    """
+    missing = {}
+    for entry in layout.values():
+        component = normalize_component(entry["tag"])
+        if component in recorded or (wanted is not None and component not in wanted):
+            continue
+        missing[component] = ("switched off on the receiver" if entry.get("on", 1) in (0, "0")
+                              else "no files in the recording")
+    return missing
+
+
+def _recording_notes(not_recorded: Dict[str, str], layout: Dict[int, Dict[str, Any]]) -> List[str]:
+    tags = {normalize_component(e["tag"]): e["tag"] for e in layout.values()}
+    by_reason: Dict[str, List[str]] = {}
+    for component, reason in not_recorded.items():
+        by_reason.setdefault(reason, []).append(f"{tags.get(component, component.upper())} ({component})")
+    return [f"not recorded, {reason}: {', '.join(names)}" for reason, names in by_reason.items()]
+
+
+def _saturation_notes(layout: Dict[int, Dict[str, Any]], recorded: set, acquisition_s: Any) -> List[str]:
+    """The receiver's own count of native frames (20 samples) at full scale, per channel.
+
+    It covers the whole recording, whichever streams were kept, so it says
+    whether a channel clipped even when only decimated files are read.
+    """
+    parts = []
+    for entry in layout.values():
+        component = normalize_component(entry["tag"])
+        count = int(entry.get("frameSat", 0) or 0)
+        if component not in recorded or count <= 0:
+            continue
+        frames = float(acquisition_s or 0) * float(entry.get("sampleRate", 0) or 0) / 20.0
+        share = f" ({100.0 * count / frames:.2g} % of the recording)" if frames > 0 else ""
+        parts.append(f"{entry['tag']} ({component}) {count} frames{share}")
+    return [f"the receiver counted analog saturation: {', '.join(parts)}"] if parts else []
+
+
+def _calibration_notes(info, receiver_cal, sensor_cals, coil_of) -> List[str]:
     notes = []
     if receiver_cal is None:
         notes.append("no receiver calibration (rxcal.json): the anti-alias filters are not removed")
     if any(item["kind"] == "H" for item in info.values()) and not sensor_cals:
-        notes.append("no coil calibration (scal.json): magnetic channels stay in volts")
+        notes.append("no coil calibration (scal.json or .scal): magnetic channels stay in volts")
+    unknown = [coil["tag"] for coil in coil_of.values() if coil["stage"] is None and not coil["serial"]]
+    if unknown and sensor_cals:
+        notes.append(f"the receiver did not record which coil was on {', '.join(unknown)}: choose "
+                     "each one's calibration (coils); until then they stay in volts")
+    missing = [f"{coil['tag']} (coil {coil['serial']})" for coil in coil_of.values()
+               if coil["stage"] is None and coil["serial"]]
+    if missing:
+        notes.append(f"no calibration found for {', '.join(missing)}: it stays in volts")
     saturated = {c: item["saturated_frames"] for c, item in info.items() if item["saturated_frames"]}
     if saturated:
         notes.append(f"frames with analog saturation: {saturated}")
     return notes
 
 
-def _phoenix_channel(component, data, layout, info, receiver_cal, sensor_cals) -> Channel:
+def _phoenix_channel(component, data, layout, info, receiver_cal, coil) -> Channel:
     header = info["header"]
     entry = next((e for e in layout.values() if normalize_component(e["tag"]) == component), {})
     tag = entry.get("tag", component.upper())
@@ -429,11 +581,10 @@ def _phoenix_channel(component, data, layout, info, receiver_cal, sensor_cals) -
             response += [dipole_stage(dipole), unit_stage("mV", "V")]
         sensor = "electrode dipole"
     else:
-        sensor = str(entry.get("type_name", ""))
-        serial = str(entry.get("serial", ""))
-        coil = _coil_stage(serial, tag, sensor_cals)
-        if coil is not None:
-            response += [coil, unit_stage("mV", "V")]
+        sensor = (coil or {}).get("model") or str(entry.get("type_name", ""))
+        serial = (coil or {}).get("serial") or str(entry.get("serial", ""))
+        if coil is not None and coil["stage"] is not None:
+            response += [coil["stage"], unit_stage("mV", "V")]
     low_pass = float(entry.get("lp", _low_pass(header)))
     if receiver_cal is not None:
         stage = _match_low_pass(receiver_cal["channels"].get(tag, []), low_pass)
@@ -443,19 +594,67 @@ def _phoenix_channel(component, data, layout, info, receiver_cal, sensor_cals) -
                    azimuth=azimuth, dipole_length=dipole, sensor=sensor, sensor_serial=serial,
                    metadata={"tag": tag, "board": header["board_model"].strip(),
                              "board_gain": info["gain"], "low_pass_hz": low_pass,
+                      "full_scale": info["full_scale"],
+                      "receiver_saturated_frames": int(entry.get("frameSat", 0) or 0),
                              "saturated_frames": info["saturated_frames"], "files": info["files"],
                              "late_stamp_corrected": info["late_stamp_corrected"],
                              "leap_seconds": info["leap_seconds"]})
 
 
-def _coil_stage(serial: str, tag: str, sensor_cals: List[Dict[str, Any]]) -> Optional[ResponseStage]:
-    """The coil's response: the scal file named for its serial, else one stating it."""
+def _same_serial(a: str, b: str) -> bool:
+    """Serials that differ only in leading zeros are one: field notes write coil 447, files 0447."""
+    return str(a).lstrip("0") == str(b).lstrip("0") != ""
+
+
+def _coil_calibration(serial: str, sensor_cals: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """The newest calibration named for coil ``serial`` (``<serial>_...``), else the newest stating it."""
     if not serial or serial == "0":
         return None
-    named = [c for c in sensor_cals if Path(c["source_file"]).name.split("_")[0].split(".")[0] == serial]
-    stated = [c for c in sensor_cals if c["sensor_serial"] == serial]
-    for cal in named + stated:
-        stages = cal["channels"].get(tag) or next(iter(cal["channels"].values()), [])
-        if stages:
-            return replace(stages[0], name=f"phoenix_coil_{serial}")
+    named = [c for c in sensor_cals
+             if _same_serial(Path(c["source_file"]).name.split("_")[0].split(".")[0], serial)]
+    stated = [c for c in sensor_cals if _same_serial(c["sensor_serial"], serial)]
+    for group in (named, stated):
+        usable = [c for c in group if any(c["channels"].values())]
+        if usable:
+            return max(usable, key=_calibration_time)
     return None
+
+
+def _coil_choices(layout: Dict[int, Dict[str, Any]], recorded: set, coils: Optional[Dict[str, str]],
+                  sensor_cals: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """Each recorded coil's serial, model and response, by component.
+
+    A coil named in ``coils`` (by serial, or by its calibration file) is that
+    one; any other is the serial the receiver recorded. The response is found
+    once for the recording and shared by all its runs.
+    """
+    chosen: Dict[str, str] = {}
+    for key, value in (coils or {}).items():
+        if value in (None, ""):
+            continue
+        value = str(value)
+        if Path(value).is_file():
+            cal = read_phoenix_calibration(value)
+            sensor_cals = sensor_cals + [cal]
+            value = cal["sensor_serial"] or Path(value).name.split("_")[0].split(".")[0]
+        chosen[normalize_component(key)] = value
+    found = {}
+    for entry in layout.values():
+        component = normalize_component(entry["tag"])
+        if not component.startswith("h") or component not in recorded:
+            continue
+        serial = chosen.get(component, str(entry.get("serial", "") or ""))
+        cal = _coil_calibration(serial, sensor_cals)
+        if component in chosen and cal is None:
+            known = sorted({c["sensor_serial"] for c in sensor_cals if c["sensor_serial"]})
+            raise ValueError(f"no calibration for coil {serial}, given for {entry['tag']}; "
+                             + (f"the coil calibrations found are for {', '.join(known)}" if known
+                                else "no coil calibration was found"))
+        stage = None
+        if cal is not None:
+            stages = cal["channels"].get(entry["tag"]) or next(iter(cal["channels"].values()), [])
+            stage = replace(stages[0], name=f"phoenix_coil_{serial}") if stages else None
+        found[component] = {"tag": entry["tag"], "serial": "" if serial == "0" else serial,
+                            "model": (cal or {}).get("model", ""), "stage": stage,
+                            "file": (cal or {}).get("source_file", "")}
+    return found

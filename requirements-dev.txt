@@ -6,7 +6,7 @@ flake8
 twine
 build
 wheel
-setuptools>=45
+setuptools>=77
 
 # Documentation
 sphinx>=5.0

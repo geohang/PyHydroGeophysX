@@ -5,8 +5,9 @@ which left the user nothing to look at and nothing to check. The studio's Live
 tab shows every image a run writes the moment it appears, so each step that
 reads a method's data now draws what it read, under ``raw_data/`` in the run
 folder: an apparent-resistivity pseudosection per ERT survey, the travel-time
-curves of a seismic line, the decay curves of TEM soundings, and the apparent
-resistivity and phase of MT sites. The same figures open the method's section
+curves of a seismic line, the decay curves of TEM soundings, the apparent
+resistivity and phase of MT sites, and the radargram of a GPR line as
+recorded. The same figures open the method's section
 of the report, as the data the models were fitted to.
 
 Every function here draws on a detached figure (see
@@ -394,6 +395,60 @@ def gravmag_stations(x: Any, y: Any, value: Any, path: Path, *, title: str, labe
     set_length_axis(ax, "x", "Easting", unit=unit)
     set_length_axis(ax, "y", "Northing", unit=unit)
     ax.grid(True, alpha=0.25)
+    ax.set_title(title, fontsize=10)
+    figure.tight_layout()
+    return _save(figure, path)
+
+
+# ---------------------------------------------------------------------------
+# Ground-penetrating radar
+# ---------------------------------------------------------------------------
+def gpr_radargram(profile: Any, path: Path, *, title: str, velocity: Optional[float] = None,
+                  unit: Optional[str] = None, elevation: bool = False) -> str:
+    """A GPR line as a grey-scale radargram, as a PNG.
+
+    Two-way time down the left. With ``velocity`` (m/ns) a depth axis,
+    ``depth = v t / 2``, is added on the right; without one there is none,
+    since a depth needs a velocity. With ``elevation`` (and a velocity and the
+    profile's ground elevations) the traces are hung from the ground surface
+    instead (:func:`~PyHydroGeophysX.data_processing.gpr.elevation_section`).
+    Amplitudes are clipped symmetrically at the 98th percentile, as the GPR
+    page shows them.
+    """
+    from PyHydroGeophysX.data_processing import gpr
+    from PyHydroGeophysX.visualization.axis_units import set_length_axis
+
+    x = np.asarray(profile.positions, dtype=float)
+    figure = detached_figure((9.0, 4.4))
+    ax = figure.add_subplot(111)
+    if elevation and velocity and profile.elevation is not None:
+        data, z = gpr.elevation_section(profile, velocity)
+        extent = [x[0], x[-1], z[-1], z[0]]
+    else:
+        data, elevation = profile.data, False
+        t = profile.time_ns
+        half = 0.5 * profile.dt_ns
+        extent = [x[0], x[-1], t[-1] + half, t[0] - half]
+    finite = np.abs(data[np.isfinite(data)])
+    clip = float(np.percentile(finite, 98)) if finite.size else 1.0
+    clip = clip if clip > 0 else 1.0
+    shown = ax.imshow(data, aspect="auto", extent=extent, interpolation="nearest",
+                      cmap="gray", vmin=-clip, vmax=clip)
+    set_length_axis(ax, "x", "Distance", unit=unit)
+    if elevation:
+        ax.set_ylim(extent[2], extent[3])
+        set_length_axis(ax, "y", "Elevation", unit=unit)
+        ax.plot(x, profile.elevation, color="#c0392b", lw=0.8)
+    else:
+        ax.set_ylabel("Two-way time (ns)")
+        if velocity:
+            v = float(velocity)
+            # In metres; the axis is ticked in ``unit`` as every length axis is.
+            depth = ax.secondary_yaxis("right", functions=(
+                lambda t: gpr.time_to_depth(t, v), lambda d: gpr.depth_to_time(d, v)))
+            set_length_axis(depth, "y", f"Depth at {v:.3g} m/ns", unit=unit)
+    figure.colorbar(shown, ax=ax, pad=0.09 if velocity and not elevation else 0.02,
+                    fraction=0.035, label="Amplitude")
     ax.set_title(title, fontsize=10)
     figure.tight_layout()
     return _save(figure, path)

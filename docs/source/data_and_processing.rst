@@ -53,6 +53,21 @@ does not care which instrument produced the survey.
        a diagnostic but is not used as a data error: it describes the samples
        within one reading, not the reading.
    * - ERT
+     - BGS PRIME / RESIMGR ``.tab``
+     - Read by column name, with every unit taken from the file's own
+       ``#Units`` row: resistance in ohm, potential and current converted from
+       mV and mA, and the instrument's error from tenths of a percent. A row
+       that leaves the current electrodes blank repeats the previous ones, and
+       the firmware's ``**Error`` lines are skipped and counted. Electrodes
+       are numbered by channel (113-160 on a 48-electrode line) and the export
+       carries no positions unless its header holds an electrode table, so
+       they are a 1 m placeholder, numbering gaps kept, until the surveyed
+       electrode file is loaded. The phase is kept apart, not read as IP, and
+       ``pt_error_code`` is kept as written: its flags are undocumented, so no
+       reading is dropped for one. ResIPy reads the format too, but swaps the
+       current and potential electrodes, so this reader is used even when
+       ResIPy is installed.
+   * - ERT
      - ``.ohm``, ``.dat``
      - E4D and pyGIMLi/BERT files, plus ResIPy for processing.
    * - Seismic

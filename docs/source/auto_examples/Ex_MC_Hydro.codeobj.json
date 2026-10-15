@@ -71,6 +71,15 @@
    "name": "asarray"
   }
  ],
+ "np.isnan": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "isnan"
+  }
+ ],
  "np.load": [
   {
    "is_class": false,
@@ -114,6 +123,24 @@
    "module": "numpy",
    "module_short": "numpy",
    "name": "min"
+  }
+ ],
+ "np.nanmax": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "nanmax"
+  }
+ ],
+ "np.nanmin": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "nanmin"
   }
  ],
  "np.percentile": [
@@ -350,15 +377,6 @@
    "name": "update"
   }
  ],
- "resistivity_to_porosity": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "PyHydroGeophysX.petrophysics.resistivity_models",
-   "module_short": "PyHydroGeophysX.petrophysics.resistivity_models",
-   "name": "resistivity_to_porosity"
-  }
- ],
  "resistivity_to_saturation": [
   {
    "is_class": false,
@@ -366,6 +384,15 @@
    "module": "PyHydroGeophysX.petrophysics.resistivity_models",
    "module_short": "PyHydroGeophysX.petrophysics.resistivity_models",
    "name": "resistivity_to_saturation"
+  }
+ ],
+ "run_petrophysics_monte_carlo": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.petrophysics.monte_carlo",
+   "module_short": "PyHydroGeophysX.petrophysics.monte_carlo",
+   "name": "run_petrophysics_monte_carlo"
   }
  ],
  "sys.path": [

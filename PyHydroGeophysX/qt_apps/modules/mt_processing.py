@@ -22,12 +22,12 @@ from __future__ import annotations
 import shutil
 import warnings
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -78,7 +78,86 @@ _RECORDING_FILTER = ("MT time series (*.bin *.td_* *.ats *.z3d *.Z3D *.tbl *.TBL
                      "All files (*)")
 _TF_FILTER = "MT transfer functions (*.edi *.EDI *.xml *.zss *.zrr *.zmm *.j);;All files (*)"
 _TEM_FILTER = "TEM sounding (*.csv *.txt *.dat *.npz);;All files (*)"
+#: Periods (s) looked for as a receiver's own interference when a recording is
+#: read: Phoenix MTU-5Cs at Manchester, Iowa (October 2026) carried a pulse
+#: every 4 s of GPS time and a disturbance with every 30 s burst schedule.
+_RECEIVER_PERIODS = (4.0, 30.0)
 _EXAMPLE_SITE = "data/MT/NMX20.xml"
+#: Share of a channel's full scale read as clipped: a decimated stream's
+#: filter rounds the flat top of a clipped stretch off a little below it.
+_CLIP_LEVEL = 0.995
+#: Most points a time-series panel draws across its width: a longer stretch is
+#: drawn as the range of each block of samples, and zooming in redraws it finer.
+_MAX_POINTS = 5000
+#: A Directions box at this value keeps the direction the files give; one step
+#: up is north, and the arrows then step through east, south and west.
+_AS_RECORDED = -90.0
+
+
+def _at_full_scale(channel: Any) -> Optional[np.ndarray]:
+    """Which samples sit at the recorder's full scale, where the reader knows it."""
+    full = channel.metadata.get("full_scale")
+    if not full:
+        return None
+    return np.abs(np.asarray(channel.data, dtype=float)) >= _CLIP_LEVEL * float(full)
+
+
+def _saturation_summary(runs: Sequence[Any]) -> str:
+    """Which channels reach full scale, and in how many of the runs."""
+    counts: Dict[str, int] = {}
+    for run in runs:
+        for name, channel in run.channels.items():
+            clipped = _at_full_scale(channel)
+            if clipped is not None and clipped.any():
+                counts[name] = counts.get(name, 0) + 1
+    return ", ".join(f"{name} in {counts[name]} of {len(runs)} runs" for name in sorted(counts))
+
+
+def _read_with_saturation(path: Path, **options: Any) -> Dict[str, Any]:
+    """A recording's runs, their saturation and the coil calibrations at hand, read off the UI thread."""
+    runs = mt.read_timeseries(path, **options)
+    coils = (mt.phoenix_coil_calibrations(path, options.get("calibration"))
+             if mt.timeseries_format(path) == "phoenix" else [])
+    # Looked for on the longest run: a burst of a few seconds holds no cycles to fold.
+    periodic = mt.periodic_interference(max(runs, key=lambda r: r.duration), _RECEIVER_PERIODS) if runs else {}
+    # Hum shows only below a run's Nyquist: the longest run, then the longest at the highest rate.
+    hum = None
+    if runs:
+        fastest = max(r.sample_rate for r in runs)
+        for run in (max(runs, key=lambda r: r.duration),
+                    max((r for r in runs if r.sample_rate == fastest), key=lambda r: r.duration)):
+            hum = hum or mt.powerline_frequency(run)
+    return {"runs": runs, "saturated": _saturation_summary(runs), "coils": coils, "periodic": periodic,
+            "powerline": hum}
+
+
+def _streams(runs: Sequence[Any]) -> List[Tuple[float, List[int]]]:
+    """Each sample rate's runs, as indices into ``runs``, the highest rate first."""
+    by_rate: Dict[float, List[int]] = {}
+    for k, run in enumerate(runs):
+        by_rate.setdefault(float(run.sample_rate), []).append(k)
+    return sorted(by_rate.items(), key=lambda item: -item[0])
+
+
+def _span(seconds: float) -> str:
+    """A duration in the unit that reads best: 2 s, 28.3 min, 7.09 h."""
+    if seconds < 120:
+        return f"{seconds:.3g} s"
+    return f"{seconds / 60:.3g} min" if seconds < 7200 else f"{seconds / 3600:.3g} h"
+
+
+def _stream_label(rate: float, runs: Sequence[Any]) -> str:
+    durations = [run.duration for run in runs]
+    if len(runs) == 1:
+        return f"{rate:g} Hz · one run, {_span(durations[0])}"
+    if max(durations) - min(durations) <= 0.01 * max(durations):
+        return f"{rate:g} Hz · {len(runs)} runs of {_span(durations[0])}"
+    return f"{rate:g} Hz · {len(runs)} runs, {_span(sum(durations))} in all"
+
+
+def _share(fraction: float) -> str:
+    percent = 100.0 * float(fraction)
+    return f"{np.floor(percent):.0f} %" if percent >= 1 else f"{percent:.2g} %"
 
 
 class _FigurePane(QWidget):
@@ -152,6 +231,23 @@ class MTProcessingModule(BaseModule):
         self._remote_runs: List[Any] = []
         self._recording_path: Optional[Path] = None
         self._remote_path: Optional[Path] = None
+        #: The reader options each recording was read with: processing reads
+        #: it again, from where it is, with the same ones.
+        self._recording_options: Dict[str, Any] = {}
+        self._remote_options: Dict[str, Any] = {}
+        self._saturation = ""
+        #: Interference found repeating on the receiver's clock: {period: [channel, ...]}.
+        self._periodic_found: Dict[float, List[str]] = {}
+        self._periodic_autofill = ""
+        #: The grid frequency set on Power line because the recording held its hum.
+        self._powerline_autofill: Optional[float] = None
+        #: Each sample rate's runs as indices into ``self._runs``, one row of
+        #: the Stream list per entry; the Run number picks within it, since a
+        #: segmented recording has hundreds of bursts - too many for one list.
+        self._streams: List[Tuple[float, List[int]]] = []
+        #: What the Time series tab draws: its run, the channels' axes and
+        #: traces, and the samples and block size the traces cover.
+        self._series_view: Dict[str, Any] = {}
         #: Sites in list order: ``{"tf": TransferFunction, "source": Path | None}``.
         #: The Sites list, the 1D panel's site choice and the profile list all
         #: hold one row per entry, in this order.
@@ -169,12 +265,32 @@ class MTProcessingModule(BaseModule):
         root = QHBoxLayout(self)
         self._tabs = QTabWidget()
         self._series_pane = _FigurePane((9, 6))
-        self._series_run = QComboBox()
-        self._series_run.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
-        self._series_run.setMinimumContentsLength(24)
-        self._series_run.currentIndexChanged.connect(lambda _i: self._draw_series())
-        self._series_pane.controls.addWidget(QLabel("Run:"))
-        self._series_pane.controls.addWidget(self._series_run, 1)
+        self._series_stream = QComboBox()
+        self._series_stream.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self._series_stream.setToolTip("The recording's streams, one per sample rate.")
+        self._series_stream.currentIndexChanged.connect(lambda _i: self._on_stream_changed())
+        self._series_index = QSpinBox()
+        self._series_index.setPrefix("Run ")
+        self._series_index.setKeyboardTracking(False)
+        self._series_index.setToolTip("Which run of the stream to draw. The arrow keys and "
+                                      "Page Up / Page Down step through them.")
+        self._series_when = QLabel()
+        theme.set_tone(self._series_when, "hint")
+        # Holding an arrow asks for runs faster than they draw: the last one asked for is drawn.
+        self._series_timer = QTimer(self)
+        self._series_timer.setSingleShot(True)
+        self._series_timer.setInterval(120)
+        self._series_timer.timeout.connect(self._draw_series)
+        self._series_index.valueChanged.connect(lambda _v: self._series_timer.start())
+        # Zooming or panning redraws the stretch in view once it settles.
+        self._zoom_timer = QTimer(self)
+        self._zoom_timer.setSingleShot(True)
+        self._zoom_timer.setInterval(150)
+        self._zoom_timer.timeout.connect(self._on_series_zoom)
+        self._series_pane.controls.addWidget(QLabel("Stream:"))
+        self._series_pane.controls.addWidget(self._series_stream)
+        self._series_pane.controls.addWidget(self._series_index)
+        self._series_pane.controls.addWidget(self._series_when, 1)
         self._sounding_pane = _FigurePane((7, 7))
         self._dimension_pane = _FigurePane((7, 7))
         self._model_pane = _FigurePane((8, 6))
@@ -270,22 +386,69 @@ class MTProcessingModule(BaseModule):
 
     # -- panel: time series and processing (Time series tab) --------------------
     def _build_data_panel(self) -> ContentWidthScrollArea:
-        recording = QGroupBox("Recording"); form = QFormLayout(recording)
+        # Wrapped text sits in the box layout, not in form rows: a form row
+        # keeps the height its text first had and cuts the lines after it.
+        recording = QGroupBox("Recording"); outer = QVBoxLayout(recording)
         row = QHBoxLayout()
         row.addWidget(self._primary("Open folder…", "fa5s.folder-open",
                                     lambda: self._browse_recording(folder=True)))
         row.addWidget(self._button("Open file…", "fa5s.file", lambda: self._browse_recording(folder=False)))
         row.addWidget(self._button("Data format", "fa5s.file-alt", self._show_format_help))
-        form.addRow(row)
-        form.addRow(self._hint(
+        outer.addLayout(row)
+        outer.addWidget(self._hint(
             "Phoenix MTU-5C and legacy MTU, Metronix ATS, Zonge Z3D and LEMI-424 are "
             "recognised from the files. Open a recording folder, or one file to read only "
             "that stream."))
+        form = QFormLayout(); outer.addLayout(form)
         self._calibration = QLineEdit(); self._calibration.setPlaceholderText("found by the reader")
         self._calibration.setToolTip(
-            "Phoenix and Metronix: a calibration file or a folder of them, used instead of "
-            "what the reader finds beside the recording.")
+            "Phoenix and Metronix: a calibration file or a folder of them (searched through), "
+            "used instead of what the reader finds near the recording - its folder, the two "
+            "above it, and any folder there named for calibrations.")
         form.addRow("Calibration", self._path_row(self._calibration, self._browse_calibration))
+        # A Phoenix receiver that did not detect its coils records serial 0, so
+        # which coil was on which connector has to be said here.
+        self._coil_boxes: Dict[str, QComboBox] = {}
+        for tag, component in (("H1", "Hx"), ("H2", "Hy"), ("H3", "Hz")):
+            box = QComboBox()
+            box.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            box.setMinimumContentsLength(14)
+            box.addItem("as recorded", None)
+            box.setEnabled(False)
+            box.setToolTip(f"The coil on {tag}. Phoenix receivers record it only when they detect "
+                           "the coil; otherwise choose its calibration here. The list holds the coil "
+                           "calibrations in the Calibration folder, or found near the recording.")
+            box.currentIndexChanged.connect(lambda _i: self._calibration_timer.start())
+            self._coil_boxes[tag] = box
+            form.addRow(f"{component} coil ({tag})", box)
+        # A changed calibration or coil means reading the recording again: its
+        # channels' responses are set as it is read.
+        self._calibration_timer = QTimer(self)
+        self._calibration_timer.setSingleShot(True)
+        self._calibration_timer.setInterval(600)
+        self._calibration_timer.timeout.connect(self._reread_recording)
+        self._calibration.textChanged.connect(lambda _t: self._calibration_timer.start())
+        # Which way each channel points, when the layout is not what the
+        # receiver was told; read again on a change, like the coils.
+        self._azimuth_boxes: Dict[str, QDoubleSpinBox] = {}
+        for component in ("ex", "ey", "hx", "hy"):
+            box = self._dspin(_AS_RECORDED, _AS_RECORDED, 360.0, 90.0, 0)
+            box.setSpecialValueText("as recorded")
+            box.setSuffix("°")
+            box.setKeyboardTracking(False)
+            name = component.capitalize()
+            box.setToolTip(f"Which way {name} points, in degrees clockwise from north: 0 north, "
+                           "90 east, 180 south, 270 west. Leave it as recorded unless the layout "
+                           f"differs from what the receiver was told - {name} laid out to the "
+                           f"{'south' if component.endswith('x') else 'west'} is "
+                           f"{'180' if component.endswith('x') else '270'}. Processing turns every "
+                           "channel into the frame of Hx. A remote reference keeps its own "
+                           "directions, which do not change the impedance.")
+            box.valueChanged.connect(lambda _v: self._calibration_timer.start())
+            self._azimuth_boxes[component] = box
+        form.addRow("Directions", merged_row("Ex", self._azimuth_boxes["ex"],
+                                             "Ey", self._azimuth_boxes["ey"]))
+        form.addRow("", merged_row("Hx", self._azimuth_boxes["hx"], "Hy", self._azimuth_boxes["hy"]))
         self._dipole_ex = self._dspin(100.0, 0.1, 10000.0, 10.0, 1)
         self._dipole_ey = self._dspin(100.0, 0.1, 10000.0, 10.0, 1)
         self._dipole_row = merged_row(self._dipole_ex, "Ex ×", self._dipole_ey, "Ey (m)")
@@ -293,7 +456,7 @@ class MTProcessingModule(BaseModule):
                                     "the dipole lengths convert it. Other formats store them.")
         form.addRow("LEMI dipoles", self._dipole_row)
         self._recording_info = QLabel("No recording loaded."); self._recording_info.setWordWrap(True)
-        form.addRow(self._recording_info)
+        outer.addWidget(self._recording_info)
 
         remote = QGroupBox("Remote reference"); rv = QVBoxLayout(remote)
         rv.addWidget(self._hint(
@@ -332,6 +495,46 @@ class MTProcessingModule(BaseModule):
         self._huber.setToolTip("Huber cut, in residual standard deviations.")
         self._redescend.setToolTip("Redescending cut: residuals well past it get no weight.")
         form.addRow("Robust cuts", merged_row(self._huber, "Huber,", self._redescend, "redescend"))
+        self._tapers = self._ispin(defaults.tapers, 1, 7)
+        self._tapers.setSpecialValueText("1 (Hamming)")
+        self._tapers.setToolTip(
+            "Tapers per window. 3 or 5 Slepian tapers (multitaper) give a band several "
+            "independent estimates from each window: smaller errors at the longest periods of "
+            "each level, where windows are few, for a little frequency smoothing.")
+        form.addRow("Tapers", self._tapers)
+        self._bounded = QCheckBox("Limit the pull of noisy Hx, Hy (bounded influence)")
+        self._bounded.setChecked(defaults.bounded_influence)
+        self._bounded.setToolTip(
+            "Also downweight windows whose magnetic fields are unusually large - a burst of "
+            "noise in Hx or Hy - which the usual robust weights let through.")
+        form.addRow(self._bounded)
+        self._coherence = self._dspin(defaults.min_coherence, 0.0, 0.99, 0.05, 2)
+        self._coherence.setSpecialValueText("off")
+        self._coherence.setToolTip(
+            "Coherence presorting: in each band, leave out stretches of 10 windows where E "
+            "and H are less coherent than this. Helps a single site; with a remote reference "
+            "it can drop good data.")
+        form.addRow("Min coherence", self._coherence)
+        self._jackknife = QCheckBox("Error bars from the data's spread (jackknife)")
+        self._jackknife.setChecked(defaults.jackknife)
+        self._jackknife.setToolTip(
+            "Estimate each band again without each twentieth of the record; the spread of "
+            "those estimates is the error. Makes no assumption about the noise.")
+        form.addRow(self._jackknife)
+        self._multi_window = QCheckBox("Stack windows of several lengths (multi-window)")
+        self._multi_window.setChecked(defaults.multi_window)
+        self._multi_window.setToolTip(
+            "Each band also uses the windows four times longer or shorter at its frequencies "
+            "(multi-window stacking, Ernst et al. 2001). Error bars then come from the "
+            "jackknife, since those windows share the same stretch of record.")
+        form.addRow(self._multi_window)
+        self._noise_classes = self._ispin(defaults.noise_classes, 0, 10)
+        self._noise_classes.setSpecialValueText("off")
+        self._noise_classes.setToolTip(
+            "For noise that grows with the signal, from more than one source: sort the "
+            "points into up to this many noise classes, weight each by its own noise level, "
+            "and stop once the residuals are close to Gaussian (stable index 1.8).")
+        form.addRow("Noise classes", self._noise_classes)
         self._min_points = self._ispin(defaults.min_points, 3, 1000)
         self._min_points.setToolTip("Bands with fewer independent estimates than this are dropped.")
         form.addRow("Min estimates", self._min_points)
@@ -343,9 +546,40 @@ class MTProcessingModule(BaseModule):
         form.addRow(self._prewhiten)
         form.addRow(self._tipper)
         form.addRow(self._uncalibrated)
+        self._per_decade = self._ispin(10, 0, 20)
+        self._per_decade.setSpecialValueText("EMTF bands")
+        self._per_decade.setToolTip(
+            "Frequencies per decade, each band spanning about a factor of 2 so that "
+            "neighbours share data: continuous curves, as commercial processing gives. "
+            "EMTF bands do not overlap: independent points, better for inversion.")
+        form.addRow("Frequencies / decade", self._per_decade)
         self._band_setup = QLineEdit(); self._band_setup.setPlaceholderText("EMTF default bands")
         self._band_setup.setToolTip("An EMTF band-setup file (bs_*.cfg) to use its bands.")
         form.addRow("Band setup", self._path_row(self._band_setup, self._browse_band_setup))
+        self._periodic = QLineEdit(); self._periodic.setPlaceholderText("none")
+        self._periodic.setToolTip(
+            "Interference that repeats exactly on the receiver's clock, in seconds (e.g. 4, 30): "
+            "its waveform is averaged over the cycles around each one and subtracted before "
+            "processing. That removes only the narrow lines at its harmonics. Filled in when "
+            "the recording is read and such interference is found; clear it to keep the data "
+            "as recorded.")
+        form.addRow("Periodic noise (s)", self._periodic)
+        self._periodic.textChanged.connect(lambda _t: self._update_recording_info())
+        self._periodic_cycles = self._ispin(defaults.periodic_cycles, 3, 201)
+        self._periodic_cycles.setToolTip(
+            "How many repeats of the periodic noise are averaged into the waveform taken off each "
+            "one. Fewer follow interference whose shape drifts (each line removed is then a little "
+            "wider); more keep more of the field.")
+        form.addRow("Repeats averaged", self._periodic_cycles)
+        self._powerline = QComboBox()
+        for label, value in (("off", None), ("50 Hz", 50.0), ("60 Hz", 60.0)):
+            self._powerline.addItem(label, value)
+        self._powerline.setToolTip(
+            "Notch the grid's hum and its harmonics out of every run before processing. When the "
+            "sample rate puts the hum inside the record (60 Hz in 150 Hz data) it leaks into bands "
+            "far from it and passes for a phase near 0, which a remote site on the same grid does "
+            "not remove. Set when the recording is read and hum is found.")
+        form.addRow("Power line", self._powerline)
 
         run = QGroupBox("Run"); rv = QVBoxLayout(run)
         self._process_btn = self._primary("Process time series", "fa5s.wave-square", self._run_processing)
@@ -580,7 +814,7 @@ class MTProcessingModule(BaseModule):
             self._read_recording(Path(path), remote=True)
 
     def _clear_remote(self) -> None:
-        self._remote_runs, self._remote_path = [], None
+        self._remote_runs, self._remote_path, self._remote_options = [], None, {}
         self._update_recording_info()
 
     def _browse_calibration(self) -> None:
@@ -614,63 +848,174 @@ class MTProcessingModule(BaseModule):
             self._go_to(self._sounding_pane)
 
     # -- time series ---------------------------------------------------------
-    def _reader_options(self, path: Path) -> Dict[str, Any]:
+    def _reader_options(self, path: Path, *, remote: bool = False) -> Dict[str, Any]:
         options: Dict[str, Any] = {}
         kind = mt.timeseries_format(path)
         calibration = self._calibration.text().strip()
         if calibration and kind in ("phoenix", "metronix"):
             options["calibration"] = calibration
+        # The coils chosen are this site's; a remote reference had its own.
+        coils = {tag: box.currentData() for tag, box in self._coil_boxes.items() if box.currentData()}
+        if kind == "phoenix" and coils and not remote:
+            options["coils"] = coils
+        # So are the directions: processing reads the recording again with them.
+        azimuths = self._azimuths_set()
+        if azimuths and not remote:
+            options["azimuths"] = azimuths
         if kind == "lemi424":
             options["dipole_lengths"] = {"ex": float(self._dipole_ex.value()),
                                          "ey": float(self._dipole_ey.value())}
         return options
 
+    def _azimuths_set(self) -> Dict[str, float]:
+        """The directions set in Directions, ``{"ex": 180.0, ...}``; the others stay as recorded."""
+        return {component: float(box.value()) % 360.0 for component, box in self._azimuth_boxes.items()
+                if box.value() > box.minimum()}
+
+    def _reread_recording(self) -> None:
+        """Read the recording again with the calibration, coils and directions now set."""
+        calibration = self._calibration.text().strip()
+        if self._recording_path is None or (calibration and not Path(calibration).exists()):
+            return
+        if self._reader is not None and self._reader.isRunning():
+            self._calibration_timer.start()   # once the read under way is done
+            return
+        self.log("Calibration, coils or directions changed: reading the recording again.", "info")
+        self._read_recording(self._recording_path, remote=False)
+
+    def _forget_coils_unless(self, path: Path) -> None:
+        """Another recording, other coils and layout: the previous one's choices do not carry over.
+
+        Nor do Periodic noise and Power line filled in from what that
+        recording held; a value set by the user stays. Directions set before
+        the first recording is opened are for it, and stay.
+        """
+        if self._recording_path is None or path == self._recording_path:
+            return
+        for box in self._coil_boxes.values():
+            box.blockSignals(True)
+            box.setCurrentIndex(0)
+            box.blockSignals(False)
+        for box in self._azimuth_boxes.values():
+            box.blockSignals(True)
+            box.setValue(box.minimum())
+            box.blockSignals(False)
+        if self._periodic_autofill and self._periodic.text().strip() == self._periodic_autofill:
+            self._periodic.clear()
+        self._periodic_autofill = ""
+        if self._powerline_autofill is not None and self._powerline.currentData() == self._powerline_autofill:
+            self._powerline.setCurrentIndex(0)
+        self._powerline_autofill = None
+
+    def _set_coil_choices(self, coils: Sequence[Dict[str, Any]]) -> None:
+        """List the coil calibrations at hand, keeping each connector's choice where it still is one."""
+        for box in self._coil_boxes.values():
+            chosen = box.currentData()
+            box.blockSignals(True)
+            box.clear()
+            box.addItem("as recorded", None)
+            for coil in coils:
+                box.addItem(f"{coil['serial']} ({coil['model']})" if coil.get("model") else coil["serial"],
+                            coil["serial"])
+                box.setItemData(box.count() - 1, coil["file"], Qt.ToolTipRole)
+            box.setCurrentIndex(max(box.findData(chosen), 0) if chosen else 0)
+            box.setEnabled(bool(coils))
+            box.blockSignals(False)
+
     def _read_recording(self, path: Path, *, remote: bool) -> None:
         if self._reader is not None and self._reader.isRunning():
             self.log("A recording is still being read.", "warn")
             return
+        if not remote:
+            self._forget_coils_unless(path)
         try:
-            options = self._reader_options(path)
+            options = self._reader_options(path, remote=remote)
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not inspect {path.name}: {exc}", "error")
             return
         self.log(f"Reading {'remote ' if remote else ''}recording {path} …", "info")
         (self._remote_info if remote else self._recording_info).setText(f"Reading {path.name} …")
-        worker = TaskWorker(mt.read_timeseries, path, **options)
-        worker.succeeded.connect(lambda runs: self._on_recording_read(path, runs, remote))
+        worker = TaskWorker(_read_with_saturation, path, **options)
+        worker.succeeded.connect(lambda read: self._on_recording_read(
+            path, read["runs"], remote, options=options, saturated=read["saturated"],
+            coils=read["coils"], periodic=read["periodic"], powerline=read.get("powerline")))
         worker.failed.connect(lambda message: self._on_recording_failed(path, message))
-        self._reader = self.register_worker(worker)
+        self._reader = self.register_worker(worker, f"Reading {path.name}")
         worker.start()
 
     def _on_recording_failed(self, path: Path, message: str) -> None:
         self.log(f"Could not read {path.name}: {message}", "error")
         self._update_recording_info()
 
-    def _on_recording_read(self, path: Path, runs: List[Any], remote: bool) -> None:
+    def _on_recording_read(self, path: Path, runs: List[Any], remote: bool, *,
+                           options: Optional[Dict[str, Any]] = None,
+                           saturated: Optional[str] = None,
+                           coils: Optional[Sequence[Dict[str, Any]]] = None,
+                           periodic: Optional[Dict[float, List[str]]] = None,
+                           powerline: Optional[float] = None) -> None:
         if not runs:
             self._on_recording_failed(path, "no runs in it")
             return
         if remote:
             self._remote_runs, self._remote_path = list(runs), path
+            self._remote_options = dict(options or {})
         else:
             self._runs, self._recording_path = list(runs), path
+            self._recording_options = dict(options or {})
+            self._set_coil_choices(coils or [])
+            self._periodic_found = dict(periodic or {})
+            if self._periodic_found and not self._periodic.text().strip():
+                # Found, so removed unless the user clears it: what it does is said below.
+                self._periodic_autofill = ", ".join(f"{p:g}" for p in sorted(self._periodic_found))
+                self._periodic.setText(self._periodic_autofill)
+            if self._periodic_found:
+                self.log("Interference repeating exactly every "
+                         + " and ".join(f"{p:g} s ({', '.join(c)})" for p, c in sorted(self._periodic_found.items()))
+                         + " - the receiver's own, timed by its GPS clock. It is subtracted before "
+                         "processing (Periodic noise); clear that field to keep it.", "warn")
+            if powerline and self._powerline.currentData() is None:
+                self._powerline_autofill = float(powerline)
+                self._powerline.setCurrentIndex(max(self._powerline.findData(float(powerline)), 0))
+            if powerline:
+                self.log(f"Power-line hum at {powerline:g} Hz in the recording. It is notched out before "
+                         "processing (Power line); set that to off to keep it.", "warn")
+            self._saturation = _saturation_summary(self._runs) if saturated is None else saturated
+            self._streams = _streams(self._runs)
             self._rates.clear()
             self._rates.addItem("All sample rates", None)
-            for rate in sorted({float(r.sample_rate) for r in runs}, reverse=True):
-                count = sum(1 for r in runs if float(r.sample_rate) == rate)
-                self._rates.addItem(f"{rate:g} Hz ({count} run{'s' if count > 1 else ''})", rate)
-            self._series_run.blockSignals(True)
-            self._series_run.clear()
-            for k, run in enumerate(runs):
-                self._series_run.addItem(f"{k + 1}: {run.sample_rate:g} Hz, {run.duration:g} s from "
-                                         f"{str(run.start)[:19]}")
-            self._series_run.blockSignals(False)
-            self._draw_series()
+            for rate, indices in self._streams:
+                self._rates.addItem(f"{rate:g} Hz ({len(indices)} run{'s' if len(indices) > 1 else ''})",
+                                    rate)
+            self._series_stream.blockSignals(True)
+            self._series_stream.clear()
+            for rate, indices in self._streams:
+                self._series_stream.addItem(_stream_label(rate, [self._runs[k] for k in indices]))
+            # The stream with the longest run comes up first: on a segmented
+            # recording that is the continuous low rate, which spans all of it.
+            self._series_stream.setCurrentIndex(max(
+                range(len(self._streams)),
+                key=lambda s: max(self._runs[k].duration for k in self._streams[s][1])))
+            self._series_stream.blockSignals(False)
+            self._on_stream_changed()
             self._go_to(self._series_pane)
-        for run in runs:
-            self.log(run.summary(), "info")
+        # One line per stream: a segmented recording has hundreds of runs.
+        for rate, indices in _streams(runs):
+            group = [runs[k] for k in indices]
+            if len(group) == 1:
+                self.log(group[0].summary(), "info")
+                continue
+            start = min(run.start for run in group)
+            end = max(run.end for run in group)
+            self.log(f"{len(group)} runs at {rate:g} Hz from {str(start)[:19]} to {str(end)[:19]}; "
+                     f"the first: {group[0].summary()}", "info")
         self._update_recording_info()
         self.log(f"Read {len(runs)} run(s) from {path.name}.", "success")
+        if not remote and self._saturated():
+            self.log(f"Saturated (at full scale): {self._saturated()}. The clipped stretches are "
+                     "shaded on the Time series tab; they are the recorder's limit, not the field, "
+                     "and processing leaves out the windows that hold them.", "warn")
+        if not remote and self._missing_electric():
+            self.log(self._missing_electric(), "warn")
 
     def _update_recording_info(self) -> None:
         if self._runs:
@@ -680,8 +1025,54 @@ class MTProcessingModule(BaseModule):
             lines = [f"<b>{first.station or self._recording_path.name}</b> · "
                      f"{first.instrument or 'recording'} · {len(self._runs)} run(s), "
                      f"{', '.join(first.components)}"]
+            coils = sorted((ch.metadata.get("tag", name), ch.sensor_serial, ch.sensor)
+                           for name, ch in first.channels.items() if ch.kind == "magnetic" and ch.is_calibrated)
+            if coils:
+                # One model for all three is said once, so the line fits the panel.
+                models = sorted({model for _, _, model in coils if model})
+                shared = models[0] if len(models) == 1 else ""
+                listed = ", ".join(f"{tag} {serial}" + ("" if shared or not model else f" ({model})")
+                                   for tag, serial, model in coils)
+                lines.append(f"Coils: {listed}" + (f" ({shared})" if shared else ""))
+            # Said whenever a channel does not point the usual way, so the frame
+            # the impedance comes out in is never a surprise.
+            pointing = [(name, first.channels[name].azimuth) for name in ("ex", "ey", "hx", "hy")
+                        if name in first.channels]
+            if self._recording_options.get("azimuths") or any(
+                    abs((azimuth - (90.0 if name.endswith("y") else 0.0) + 180.0) % 360.0 - 180.0) > 0.5
+                    for name, azimuth in pointing):
+                lines.append("Directions: " + ", ".join(f"{name.capitalize()} {round(azimuth) % 360}°"
+                                                        for name, azimuth in pointing)
+                             + (" (set here)" if self._recording_options.get("azimuths") else
+                                " (as recorded)"))
             if uncalibrated:
                 lines.append(f"<span style='color:#9b5a00'>Uncalibrated: {', '.join(uncalibrated)}</span>")
+            coils_unknown = [n for n in uncalibrated if first.channels.get(n) is not None
+                             and first.channels[n].kind == "magnetic"]
+            if coils_unknown:
+                listed = any(box.count() > 1 for box in self._coil_boxes.values())
+                lines.append("<span style='color:#9b5a00'>"
+                             + ("The receiver did not record which coil was on each connector: "
+                                "choose the coils above." if listed else
+                                "No coil calibration found near the recording: set Calibration to "
+                                "the folder with the coils' .scal or .scal.json files.") + "</span>")
+            if self._periodic_found:
+                try:
+                    removed = set(self._periodic_periods())
+                except ValueError:
+                    removed = set()
+                kept = [p for p in sorted(self._periodic_found) if p not in removed]
+                lines.append("<span style='color:#9b5a00'>Receiver interference every "
+                             + " and ".join(f"{p:g} s" for p in sorted(self._periodic_found))
+                             + (f": {' and '.join(f'{p:g} s' for p in kept)} kept, as Periodic noise "
+                                "does not list it." if kept else ": removed before processing "
+                                "(Periodic noise).") + "</span>")
+            saturated = self._saturated()
+            if saturated:
+                lines.append(f"<span style='color:#9b5a00'>Saturated (at full scale): {saturated}</span>")
+            no_electric = self._missing_electric()
+            if no_electric:
+                lines.append(f"<span style='color:#9b5a00'>{no_electric}</span>")
             self._recording_info.setText("<br>".join(lines))
         else:
             self._recording_info.setText("No recording loaded.")
@@ -696,33 +1087,150 @@ class MTProcessingModule(BaseModule):
         rate = self._rates.currentData()
         return [r for r in self._runs if rate is None or float(r.sample_rate) == float(rate)]
 
+    @staticmethod
+    def _not_recorded(run: Any, name: str) -> str:
+        """Why ``run`` has no ``name`` channel, as its reader found it."""
+        return (run.metadata.get("not_recorded") or {}).get(name, "not in this recording")
+
+    def _missing_electric(self) -> str:
+        """A sentence when the recording has no Ex or Ey, else an empty string."""
+        absent = [c for c in ("ex", "ey") if not any(c in run for run in self._runs)]
+        if not self._runs or not absent:
+            return ""
+        return (f"No electric field: {' and '.join(c.capitalize() for c in absent)} "
+                f"{self._not_recorded(self._runs[0], absent[0])}. The impedance needs Ex and Ey, "
+                "so this recording gives no sounding; its magnetic fields can still serve as a "
+                "remote reference.")
+
+    def _stream_runs(self) -> List[int]:
+        """The shown stream's runs, as indices into ``self._runs``."""
+        index = self._series_stream.currentIndex()
+        return self._streams[index][1] if 0 <= index < len(self._streams) else []
+
+    def _on_stream_changed(self) -> None:
+        count = len(self._stream_runs())
+        self._series_index.blockSignals(True)
+        self._series_index.setRange(1, max(count, 1))
+        self._series_index.setValue(1)
+        self._series_index.setSuffix(f" of {count}")
+        self._series_index.setEnabled(count > 1)
+        self._series_index.blockSignals(False)
+        self._draw_series()
+
     def _draw_series(self) -> None:
-        index = self._series_run.currentIndex()
-        if not (0 <= index < len(self._runs)):
+        self._series_timer.stop()
+        indices = self._stream_runs()
+        position = self._series_index.value() - 1
+        if not (0 <= position < len(indices)):
             return
-        run = self._runs[index]
-        names = list(run.components)
+        run = self._runs[indices[position]]
+        self._series_when.setText(f"{str(run.start)[:19]} UTC, {_span(run.duration)}")
+        # Ex, Ey, Hx and Hy are always drawn, in that order: one the run lacks
+        # gets an empty panel saying why, so a recording without its electric
+        # field does not pass for a complete one.
+        order = ("ex", "ey", "hx", "hy", "hz")
+        missing = run.metadata.get("not_recorded") or {}
+        names = ([c for c in order if c in run or c in missing or c != "hz"]
+                 + [c for c in run.components if c not in order])
         figure = self._series_pane.reset()
         axes = figure.subplots(len(names), 1, sharex=True, squeeze=False)[:, 0]
-        # A long run is drawn as the range of each block of samples: every
-        # n-th sample alone aliases a signal above the drawing's resolution.
-        block = max(1, run.n_samples // 5000)
-        n_blocks = run.n_samples // block
-        t = (np.arange(n_blocks) * block + 0.5 * block) / run.sample_rate
+        self._series_view = {"run": run, "axes": {}, "traces": {}, "title": axes[0]}
         for ax, name in zip(axes, names):
+            if name not in run:
+                ax.text(0.5, 0.5, f"Not recorded: {self._not_recorded(run, name)}",
+                        transform=ax.transAxes, ha="center", va="center", color="#6e6e73", fontsize=9)
+                ax.set_yticks([])
+                ax.set_ylabel(name, fontsize=8)
+                continue
             channel = run.channels[name]
-            data = np.asarray(channel.data, dtype=float)
-            if block > 1:
-                blocks = data[: n_blocks * block].reshape(n_blocks, block)
-                ax.fill_between(t, blocks.min(axis=1), blocks.max(axis=1), lw=0, color="#007aff")
-            else:
-                ax.plot(t, data, lw=0.6, color="#007aff")
+            self._series_view["axes"][name] = ax
+            self._mark_saturation(ax, channel, run.sample_rate)
             ax.set_ylabel(f"{name}\n({channel.units})", fontsize=8)
             ax.grid(True, alpha=0.25)
-        axes[0].set_title(f"{run.station or 'run'} · {run.sample_rate:g} Hz from {str(run.start)[:19]}"
-                          + (f" (range of every {block} samples)" if block > 1 else ""), fontsize=9)
+        self._draw_traces(0, run.n_samples, max(1, run.n_samples // _MAX_POINTS))
         axes[-1].set_xlabel("Time (s)")
+        for ax in axes:
+            ax.callbacks.connect("xlim_changed", lambda _ax: self._zoom_timer.start())
         self._series_pane.finish()
+
+    def _draw_traces(self, first: int, last: int, block: int) -> None:
+        """Draw samples ``first:last`` of each channel, as the range of every ``block`` of them.
+
+        The range rather than every n-th sample: that alone aliases a signal
+        above the drawing's resolution. One block is the samples themselves.
+        """
+        view = self._series_view
+        run = view["run"]
+        n_blocks = (last - first) // block
+        t = (first + np.arange(n_blocks) * block + 0.5 * block) / run.sample_rate
+        for name, ax in view["axes"].items():
+            old = view["traces"].pop(name, None)
+            if old is not None:
+                old.remove()
+            data = np.asarray(run.channels[name].data[first:first + n_blocks * block], dtype=float)
+            if block > 1:
+                blocks = data.reshape(n_blocks, block)
+                # The edge keeps a flat (clipped) stretch visible: its range is zero wide.
+                trace = ax.fill_between(t, blocks.min(axis=1), blocks.max(axis=1), lw=0.6, color="#007aff")
+            else:
+                trace, = ax.plot(t, data, lw=0.6, color="#007aff")
+            view["traces"][name] = trace
+        view.update(first=first, last=last, block=block)
+        view["title"].set_title(f"{run.station or 'run'} · {run.sample_rate:g} Hz from {str(run.start)[:19]}"
+                                + (f" (range of every {block} samples)" if block > 1 else ""), fontsize=9)
+
+    def _on_series_zoom(self) -> None:
+        """Redraw the traces for the stretch in view, at the resolution it now has.
+
+        Half a view more is drawn on each side, so a small pan shows samples
+        straight away; zooming back out draws the whole run coarse again.
+        """
+        view = self._series_view
+        axes = list(view.get("axes", {}).values())
+        if not axes or axes[0] not in self._series_pane.figure.axes:
+            return
+        run = view["run"]
+        x0, x1 = axes[0].get_xlim()
+        first = max(0, int(np.floor(x0 * run.sample_rate)))
+        last = min(run.n_samples, int(np.ceil(x1 * run.sample_rate)))
+        if last - first < 2:
+            return
+        block = max(1, (last - first) // _MAX_POINTS)
+        if block == view["block"] and view["first"] <= first and last <= view["last"]:
+            return
+        margin = (last - first) // 2
+        self._draw_traces(max(0, first - margin), min(run.n_samples, last + margin), block)
+        self._series_pane.canvas.draw_idle()
+
+    @staticmethod
+    def _mark_saturation(ax: Any, channel: Any, sample_rate: float) -> None:
+        """Shade where the channel sits at full scale, and draw the rail it hits.
+
+        A clipped stretch is the recorder's limit, not the field: it is shown
+        so it is not read as signal, nor processed as one unawares.
+        """
+        clipped = _at_full_scale(channel)
+        if clipped is None or not clipped.any():
+            return
+        full = float(channel.metadata["full_scale"])
+        block = max(1, clipped.size // _MAX_POINTS)
+        n_blocks = clipped.size // block
+        t = (np.arange(n_blocks) * block + 0.5 * block) / sample_rate
+        hit = clipped[: n_blocks * block].reshape(n_blocks, block).any(axis=1)
+        ax.fill_between(t, 0, 1, where=hit, step="mid", transform=ax.get_xaxis_transform(),
+                        color="#ff9500", alpha=0.3, lw=0, zorder=0)
+        data = np.asarray(channel.data, dtype=float)
+        for rail in (full, -full):
+            if (data * np.sign(rail) >= _CLIP_LEVEL * full).any():
+                ax.axhline(rail, color="#9b5a00", ls="--", lw=0.8)
+        ax.text(0.01, 0.95, f"Saturated: {_share(clipped.mean())} of this run at the "
+                f"±{full:.3g} {channel.units} full scale", transform=ax.transAxes, ha="left", va="top",
+                fontsize=8, color="#9b5a00",
+                bbox={"boxstyle": "round,pad=0.2", "fc": ax.get_facecolor(), "ec": "none", "alpha": 0.85})
+
+    def _saturated(self) -> str:
+        """Which channels reach full scale, and in how many of the runs (found on reading)."""
+        return self._saturation if self._runs else ""
 
     # -- sites ---------------------------------------------------------------
     def _add_site(self, tf: Any, source: Optional[Path] = None, *, select: bool = True) -> None:
@@ -1017,6 +1525,17 @@ class MTProcessingModule(BaseModule):
             self._active_progress.setVisible(False)
             self._active_progress = None
 
+    def _periodic_periods(self) -> List[float]:
+        """The Periodic noise field's periods in seconds; an empty field is none."""
+        text = self._periodic.text().replace(";", ",").replace(" ", ",")
+        try:
+            periods = [float(part) for part in text.split(",") if part.strip()]
+        except ValueError:
+            raise ValueError(f"Periodic noise should be periods in seconds, such as '4, 30', not {text!r}")
+        if any(p <= 0 for p in periods):
+            raise ValueError("Periodic noise periods must be positive")
+        return periods
+
     def _processing_parameters(self) -> Dict[str, Any]:
         parameters: Dict[str, Any] = {
             "window_length": int(self._window.value()),
@@ -1028,9 +1547,23 @@ class MTProcessingModule(BaseModule):
             "prewhiten": bool(self._prewhiten.isChecked()),
             "tipper": bool(self._tipper.isChecked()),
             "allow_uncalibrated": bool(self._uncalibrated.isChecked()),
+            "tapers": int(self._tapers.value()),
+            "bounded_influence": bool(self._bounded.isChecked()),
+            "min_coherence": float(self._coherence.value()),
+            "jackknife": bool(self._jackknife.isChecked()),
+            "multi_window": bool(self._multi_window.isChecked()),
+            "noise_classes": int(self._noise_classes.value()),
         }
+        if self._per_decade.value() > 0:
+            parameters["bands_per_decade"] = int(self._per_decade.value())
         if self._levels.value() > 0:
             parameters["n_levels"] = int(self._levels.value())
+        periods = self._periodic_periods()
+        if periods:
+            parameters["periodic_noise"] = periods
+            parameters["periodic_cycles"] = int(self._periodic_cycles.value())
+        if self._powerline.currentData():
+            parameters["powerline"] = float(self._powerline.currentData())
         return parameters
 
     def _run_processing(self) -> Dict[str, Any]:
@@ -1038,24 +1571,36 @@ class MTProcessingModule(BaseModule):
         if not runs:
             self.log("Open a recording first.", "warn")
             return {"status": "failed", "error": "No recording is loaded."}
+        if self._missing_electric():
+            self.log(self._missing_electric(), "warn")
+            return {"status": "failed", "error": self._missing_electric()}
         if self._running():
             return {"status": "failed", "error": "A run is in progress."}
         try:
             run = self.begin_persisted_run("mt.process", "mt.process")
+            # The workflow reads the recording where it is, with the options it
+            # was read with here. Saving the runs into the run instead took
+            # longer than the processing - most of a minute for a night of
+            # 24 kHz bursts, on the UI thread - and doubled the data on disk.
+            parameters = self._processing_parameters()
+            parameters["reader"] = dict(self._recording_options)
+            if self._rates.currentData() is not None:
+                parameters["sample_rate"] = float(self._rates.currentData())
             inputs = {"recording": ArtifactRef.from_path(
-                Path(mt.save_runs(run.inputs_dir / "recording_runs.npz", runs)),
-                artifact_id="mt:recording", kind="mt_timeseries", format="npz", base_dir=run.run_dir)}
+                Path(self._recording_path), artifact_id="mt:recording", kind="mt_timeseries",
+                base_dir=run.run_dir, checksum=False)}
             if self._remote_runs:
                 inputs["remote"] = ArtifactRef.from_path(
-                    Path(mt.save_runs(run.inputs_dir / "remote_runs.npz", self._remote_runs)),
-                    artifact_id="mt:remote", kind="mt_timeseries", format="npz", base_dir=run.run_dir)
+                    Path(self._remote_path), artifact_id="mt:remote", kind="mt_timeseries",
+                    base_dir=run.run_dir, checksum=False)
+                parameters["remote_reader"] = dict(self._remote_options)
             band_setup = self._band_setup.text().strip()
             if band_setup:
                 copied = Path(shutil.copy2(band_setup, run.inputs_dir / Path(band_setup).name))
                 inputs["band_setup"] = ArtifactRef.from_path(copied, artifact_id="mt:band_setup",
                                                              kind="mt_band_setup", base_dir=run.run_dir)
             spec = WorkflowSpec(
-                workflow_id="mt.process", inputs=inputs, parameters=self._processing_parameters(),
+                workflow_id="mt.process", inputs=inputs, parameters=parameters,
                 metadata={"source": str(self._recording_path or ""),
                           "remote": str(self._remote_path or "")})
             rates = ", ".join(sorted({f"{r.sample_rate:g} Hz" for r in runs}))
@@ -1377,8 +1922,25 @@ class MTProcessingModule(BaseModule):
                                                         "1d_model", "phase_tensors", "2d_section"]},
                  "desc": "Bring up a view, with the side panel for its step."},
                 {"name": "set_params", "args": {"params": {"<key>": "value"}},
-                 "desc": ("Processing: window_length, overlap, decimation_factor, n_levels, huber, "
-                          "redescend, min_points, prewhiten, tipper, allow_uncalibrated. 1D: mode "
+                 "desc": ("Reading: calibration (file or folder), coils ({'H1': serial, 'H2': ..., "
+                          "'H3': ...} for a Phoenix receiver that did not record its coils; the "
+                          "recording is read again), azimuths ({'ex': 180, 'ey': 270, 'hx': 0, "
+                          "'hy': 270}: degrees clockwise from north, for channels laid out "
+                          "differently from what the receiver recorded; null keeps the recorded "
+                          "direction; the recording is read again). "
+                          "Processing: window_length, overlap, decimation_factor, n_levels, huber, "
+                          "redescend, min_points, prewhiten, tipper, allow_uncalibrated, "
+                          "periodic_noise (periods in s of interference on the receiver's clock "
+                          "to subtract, e.g. [4, 30]; [] for none), periodic_cycles (repeats "
+                          "averaged into that waveform, 31 by default; fewer follow interference "
+                          "that drifts), powerline (50 or 60: notch the grid's hum and its "
+                          "harmonics; null for off), tapers (1 Hamming; 3 or 5 "
+                          "Slepian tapers, multitaper), bounded_influence (downweight bursts in "
+                          "Hx, Hy), min_coherence (presorting, 0 off), jackknife (error bars "
+                          "from the data's spread), multi_window (stack windows of several "
+                          "lengths), noise_classes (0 off, up to 10: weight noise that grows "
+                          "with the signal), bands_per_decade (overlapping bands, 10 by "
+                          "default on this page; 0 for EMTF's). 1D: mode "
                           "(det/xy/yx/both), n_layers, target_rms, error_floor, static_shift, "
                           "tem_file, tem_loop_radius, tem_error, water_content, rhos, n, porosity, "
                           "sigma_sur. 2D: modes (te/tm/both), strike (number or 'auto'), "
@@ -1447,11 +2009,17 @@ class MTProcessingModule(BaseModule):
             source = Path(str(source))
             if not source.exists():
                 return {"status": "failed", "error": f"Not found: {source}"}
+            if not is_remote:
+                self._forget_coils_unless(source)
             try:
-                runs = mt.read_timeseries(source, **self._reader_options(source))
+                options = self._reader_options(source, remote=is_remote)
+                read = _read_with_saturation(source, **options)
             except Exception as exc:  # noqa: BLE001
                 return {"status": "failed", "error": f"Could not read {source.name}: {exc}"}
-            self._on_recording_read(source, runs, is_remote)
+            runs = read["runs"]
+            self._on_recording_read(source, runs, is_remote, options=options,
+                                    saturated=read["saturated"], coils=read["coils"],
+                                    periodic=read["periodic"])
             result["remote_runs" if is_remote else "runs"] = len(runs)
         result["sample_rates"] = sorted({float(r.sample_rate) for r in self._runs}, reverse=True)
         return result
@@ -1523,6 +2091,29 @@ class MTProcessingModule(BaseModule):
                     return
             raise ValueError(f"unknown choice {value!r}")
 
+        def coil_choice(value: Any) -> None:
+            """``{"H1": "4684", ...}``: each connector's coil, among those the list offers."""
+            for tag, serial in dict(value or {}).items():
+                box = self._coil_boxes.get(str(tag).upper())
+                index = box.findData(str(serial)) if box is not None and serial else 0
+                if box is None or index < 0:
+                    listed = [box.itemData(k) for k in range(1, box.count())] if box is not None else []
+                    raise ValueError(f"no coil {serial!r} listed for {tag!r}"
+                                     + (f"; listed: {', '.join(listed)}" if listed else ""))
+                box.setCurrentIndex(index)
+
+        def directions(value: Any) -> None:
+            """``{"ex": 180, "hy": 270}``: each channel's direction; null keeps the recorded one."""
+            wanted = {str(k).lower(): v for k, v in dict(value or {}).items()}
+            unknown = sorted(set(wanted) - set(self._azimuth_boxes))
+            if unknown:
+                raise ValueError(f"no direction for {', '.join(unknown)}; "
+                                 f"set: {', '.join(self._azimuth_boxes)}")
+            for component, azimuth in wanted.items():
+                box = self._azimuth_boxes[component]
+                box.setValue(box.minimum() if azimuth is None or str(azimuth).lower() == "as recorded"
+                             else float(azimuth) % 360.0)
+
         def strike(value: Any) -> None:
             if str(value).lower() == "auto":
                 self._strike_auto.setChecked(True)
@@ -1541,8 +2132,23 @@ class MTProcessingModule(BaseModule):
             "prewhiten": lambda v: self._prewhiten.setChecked(bool(v)),
             "tipper": lambda v: self._tipper.setChecked(bool(v)),
             "allow_uncalibrated": lambda v: self._uncalibrated.setChecked(bool(v)),
+            "tapers": lambda v: self._tapers.setValue(int(v or 1)),
+            "bounded_influence": lambda v: self._bounded.setChecked(bool(v)),
+            "min_coherence": lambda v: self._coherence.setValue(float(v or 0.0)),
+            "jackknife": lambda v: self._jackknife.setChecked(bool(v)),
+            "multi_window": lambda v: self._multi_window.setChecked(bool(v)),
+            "noise_classes": lambda v: self._noise_classes.setValue(int(v or 0)),
+            "bands_per_decade": lambda v: self._per_decade.setValue(int(v or 0)),
             "band_setup": lambda v: self._band_setup.setText(str(v or "")),
             "calibration": lambda v: self._calibration.setText(str(v or "")),
+            "coils": coil_choice,
+            "azimuths": directions,
+            "periodic_noise": lambda v: self._periodic.setText(
+                ", ".join(f"{float(p):g}" for p in (v if isinstance(v, (list, tuple)) else [v]) if p)
+                if v else ""),
+            "periodic_cycles": lambda v: self._periodic_cycles.setValue(int(v or 31)),
+            "powerline": lambda v: self._powerline.setCurrentIndex(
+                max(self._powerline.findData(float(v)), 0) if v else 0),
             "mode": lambda v: combo(self._mode, v),
             "n_layers": lambda v: self._layers.setValue(int(v)),
             "target_rms": lambda v: self._target_rms.setValue(float(v)),

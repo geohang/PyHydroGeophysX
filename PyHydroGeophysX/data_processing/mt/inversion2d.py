@@ -363,7 +363,10 @@ def invert_profile(tfs: Sequence[TransferFunction], station_x: Sequence[float], 
                 log(f"  2D iteration {int(self.opt.iter)}: phi_d {float(self.invProb.phi_d):.4g}, "
                     f"beta {float(self.invProb.beta):.3g}")
 
-    target = directives.TargetMisfit(chifact=target_chifact)
+    # The target counts the data actually there: missing ones carry an infinite
+    # error and no weight, but the survey still counts their slots.
+    n_valid = sum(int(np.isfinite(observed[m]).sum()) * 2 for m in modes)
+    target = directives.TargetMisfit(chifact=target_chifact, phi_d_star=float(max(n_valid, 1)))
     steps = [directives.BetaEstimate_ByEig(beta0_ratio=beta0_ratio, random_seed=seed),
              directives.BetaSchedule(coolingFactor=cooling_factor, coolingRate=1),
              target, _Record()]

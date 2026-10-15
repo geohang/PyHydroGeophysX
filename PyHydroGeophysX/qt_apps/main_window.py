@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Callable, Dict, Optional
 
 import pyqtgraph as pg
-from PySide6.QtCore import QSettings, QTimer, Qt
+from PySide6.QtCore import QEvent, QSettings, QTimer, Qt
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import (
     QDialog,
@@ -134,6 +134,8 @@ class PyHydroGeophysXStudio(QMainWindow):
         self._restore_assistant()
         self._properties = QTextEdit()
         self._properties.setReadOnly(True)
+        self._properties.installEventFilter(self)
+        self._properties_text = None
         self._controller = StudioController(self)
         self._chat = AssistantChatPanel(self._controller, self.log)
         right_tabs = QTabWidget()
@@ -501,6 +503,24 @@ class PyHydroGeophysXStudio(QMainWindow):
         return action
 
     # -- navigation ----------------------------------------------------------
+    def module_page(self, key: str) -> QWidget:
+        """The page for ``key``, built if it has not been yet, without showing it.
+
+        An automatic run works on studio pages through this
+        (``StudioController.serve_studio``): the user stays on the page they
+        are looking at while the run uses another.
+        """
+        current = self._stack.currentWidget()
+        if key not in self._pages:
+            self.show_module(key)
+            if current is not None and current is not self._pages[key]:
+                self._stack.setCurrentWidget(current)
+                previous = next((k for k, page in self._pages.items() if page is current), None)
+                if previous:
+                    self.state.selected_module = previous
+                    self._tree.select_module(previous)
+        return self._pages[key]
+
     def show_module(self, key: str) -> None:
         key = key or "home"
         if key not in self._pages:
@@ -1194,14 +1214,26 @@ class PyHydroGeophysXStudio(QMainWindow):
         )
 
     # -- properties panel ----------------------------------------------------
+    def eventFilter(self, watched, event) -> bool:  # noqa: N802 - Qt override
+        if watched is getattr(self, "_properties", None) and event.type() == QEvent.Show:
+            QTimer.singleShot(0, self, self._refresh_properties)
+        return super().eventFilter(watched, event)
+
     def _refresh_properties(self) -> None:
+        # Switching tools should not format all results for a hidden tab.
+        # Its Show event refreshes from current state when it is actually read.
+        if not self._properties.isVisible():
+            return
         key = self.state.selected_module
         payload = {
             "current_module": key,
             "context": self.state.context_summary(),
             "module_results": self.state.module_results,
         }
-        self._properties.setPlainText(json.dumps(payload, indent=2, default=str))
+        text = json.dumps(payload, indent=2, default=str)
+        if text != self._properties_text:
+            self._properties_text = text
+            self._properties.setPlainText(text)
 
     # -- logging -------------------------------------------------------------
     def log(self, message: str, level: str = "info") -> None:

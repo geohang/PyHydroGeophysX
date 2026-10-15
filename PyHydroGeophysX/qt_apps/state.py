@@ -8,6 +8,7 @@ Streamlit polls. Nothing here imports PySide6 so it stays easy to test.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -18,6 +19,20 @@ from PyHydroGeophysX._internal.utils import utc_now as _utc_now
 
 RESULT_FILENAME = "full_studio_result.json"
 APP_NAME = "PyHydroGeophysX Professional Studio"
+#: Names the folder used when no Project is open. The cloud image sets it to a
+#: folder its file browser shows, since ``~/.pyhydrogeophysx`` is hidden there.
+PROJECT_DIR_ENV = "PHGX_PROJECT_DIR"
+
+
+def default_project_root() -> Path:
+    """The folder results go to when no Project was chosen.
+
+    ``PHGX_PROJECT_DIR`` when set, otherwise ``~/.pyhydrogeophysx``.
+    """
+    configured = os.environ.get(PROJECT_DIR_ENV, "").strip()
+    if configured:
+        return Path(configured).expanduser()
+    return Path.home() / ".pyhydrogeophysx"
 
 
 @dataclass
@@ -98,10 +113,12 @@ class StudioState:
             # per-user location instead of scattering qt_bridge dirs around
             # whatever directory the app happened to start in.
             cwd = Path.cwd()
-            if (cwd / "PyHydroGeophysX").is_dir() and (cwd / "examples").is_dir():
+            if os.environ.get(PROJECT_DIR_ENV):
+                base = default_project_root()
+            elif (cwd / "PyHydroGeophysX").is_dir() and (cwd / "examples").is_dir():
                 base = cwd / "results" / "streamlit_workflow"
             else:
-                base = Path.home() / ".pyhydrogeophysx"
+                base = default_project_root()
             state.output_dir = base
             state.default_project = True
             state.result_path = base / "qt_bridge" / RESULT_FILENAME
@@ -214,7 +231,7 @@ class StudioState:
 
     def ensure_results_store(self) -> ResultsStore:
         if self.results_store is None:
-            fallback = Path.home() / ".pyhydrogeophysx" / "results"
+            fallback = default_project_root() / "results"
             self.set_results_store(self.output_dir or fallback)
         assert self.results_store is not None
         return self.results_store

@@ -833,6 +833,13 @@ def run_mt_process(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult
     runs = _mt_runs(spec.inputs.get("recording"), context, parameters.pop("reader", None) or {})
     if not runs:
         raise ValueError("mt.process needs a 'recording' input (an instrument's files or a runs container).")
+    # One stream of a recording that has several: every reader takes this, not
+    # only those that can pick a rate as they read.
+    rate = parameters.pop("sample_rate", None)
+    if rate is not None:
+        runs = [run for run in runs if float(run.sample_rate) == float(rate)]
+        if not runs:
+            raise ValueError(f"the recording has no runs at {float(rate):g} Hz")
     remote = _mt_runs(spec.inputs.get("remote"), context, parameters.pop("remote_reader", None) or {})
     band_setup = spec.inputs.get("band_setup")
     if band_setup is not None:

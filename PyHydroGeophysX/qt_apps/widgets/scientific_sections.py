@@ -73,13 +73,13 @@ class ScientificSections(QWidget):
         # Six decimals: a susceptibility in SI is a few thousandths.
         self.color_range = ColorRange(decimals=6, what='the colours of the sections' if comparison is None
                                       else 'the colours of A and B')
-        self.color_range.changed.connect(self.draw)
+        self.color_range.changed.connect(self._draw_frame)
         self.difference_range = None
         if comparison is None:
             ranges.addWidget(self.color_range)
         else:
             self.difference_range = ColorRange(decimals=6, what='the colours of the difference')
-            self.difference_range.changed.connect(self.draw)
+            self.difference_range.changed.connect(self._draw_frame)
             ranges.addWidget(group('A, B', self.color_range))
             ranges.addWidget(group('B − A', self.difference_range))
         layout.addLayout(ranges)
@@ -91,6 +91,8 @@ class ScientificSections(QWidget):
         layout.addWidget(bar)
         layout.addWidget(self.canvas, 1)
         self.canvas.mpl_connect('button_press_event', self._clicked)
+        self.canvas.mpl_connect('resize_event', self._request_layout)
+        self.canvas.mpl_connect('draw_event', self._layout_finished)
         self.draw()
 
     def set_field(self, field, metadata=None, cmap='viridis'):
@@ -118,7 +120,7 @@ class ScientificSections(QWidget):
             spin.blockSignals(True)
             spin.setValue(float(centers[index]))
             spin.blockSignals(False)
-        self.draw()
+        self._draw_frame()
         self.pointChanged.emit([float(c[i]) for c, i in zip(self.centers, self.indices)])
 
     def _clicked(self, event):
@@ -132,40 +134,69 @@ class ScientificSections(QWidget):
         coords[x], coords[y] = event.xdata * self.axis_scales[x], event.ydata * self.axis_scales[y]
         self.select_point(coords)
 
+    def _request_layout(self, event=None):
+        # Solve layout after construction, resize or new colour limits, not
+        # every time a slice moves. Keep the allocated axes between frames.
+        self.figure.set_layout_engine('constrained')
+        self._layout_pending = True
+
+    def _layout_finished(self, event):
+        if self._layout_pending and not self.canvas.is_saving():
+            self.figure.set_layout_engine('none')
+            self._layout_pending = False
+
     def draw(self):
+        """Reload the field and rebuild; call after changing model data in place."""
         shape = tuple(len(c) for c in self.centers)
         values = np.asarray(self.mesh.cell_data[self.field]).reshape(shape, order='F')
         if not np.isfinite(values).all():
             raise ValueError(f'{self.field} contains nonfinite model values.')
-        x, y, z = self.indices
-        xyz = [float(c[i]) for c, i in zip(self.centers, self.indices)]
-        value = values[x, y, z]
-        label = self.metadata.get('names', {}).get(str(int(value)), '') if self.metadata.get('colors') else ''
-        self.readout.setText(f'{self.field}: {value:.6g} {label} · E {xyz[0]:,.3f}, N {xyz[1]:,.3f}, Z {xyz[2]:,.3f} m · Z is elevation, not depth')
+        self._values = values
+        self._limits = self.metadata.get('limits') or [float(values.min()), float(values.max())]
+        if self.comparison is not None:
+            other = np.asarray(self.comparison.cell_data[self.field]).reshape(shape, order='F')
+            if not np.isfinite(other).all():
+                raise ValueError(f'{self.field} contains nonfinite comparison values.')
+            self._other = other
+            # Convert before subtracting, so unsigned values cannot wrap.
+            self._difference = np.subtract(other, values, dtype=np.float64)
+            self._difference_bound = max(float(np.abs(self._difference).max()), 1e-12)
+            self._limits = [float(min(values.min(), other.min())),
+                            float(max(values.max(), other.max()))]
+            if 'Density' in self.field:
+                total = max(abs(self._limits[0]), abs(self._limits[1]), 1e-12)
+                self._limits = [-total, total]
         self.figure.clear()
+        self._artists = []
+        self._artist_limits = []
+        self._crosshairs = []
+        self._request_layout()
         if self.comparison is None:
             grid = self.figure.add_gridspec(2, 2, width_ratios=(1, 1.25))
             self.axes = [self.figure.add_subplot(grid[:, 0]), self.figure.add_subplot(grid[0, 1]),
                          self.figure.add_subplot(grid[1, 1])]
         else:
             self.axes = list(self.figure.subplots(1, 3))
-        limits = self.metadata.get('limits') or [float(values.min()), float(values.max())]
+        self._draw_frame()
+        self.toolbar.update()   # new axes: Home and Back go to this drawing
+
+    def _draw_frame(self):
+        """Update slices and cursors without rescanning the volume or rebuilding axes."""
+        values = self._values
+        x, y, z = self.indices
+        xyz = [float(c[i]) for c, i in zip(self.centers, self.indices)]
+        value = values[x, y, z]
+        label = self.metadata.get('names', {}).get(str(int(value)), '') if self.metadata.get('colors') else ''
+        self.readout.setText(f'{self.field}: {value:.6g} {label} · E {xyz[0]:,.3f}, N {xyz[1]:,.3f}, Z {xyz[2]:,.3f} m · Z is elevation, not depth')
+        limits = self._limits
         categorical = self.metadata.get('colors')
         common = dict(cmap=self.cmap, vmin=limits[0], vmax=limits[1])
         panels = [(values[:, :, z].T, 0, 1, f'Plan · Z {xyz[2]:,.1f} m'),
                   (values[:, y, :].T, 0, 2, f'E–Z · N {xyz[1]:,.0f} m'),
                   (values[x, :, :].T, 1, 2, f'N–Z · E {xyz[0]:,.0f} m')]
         if self.comparison is not None:
-            other = np.asarray(self.comparison.cell_data[self.field]).reshape(shape, order='F')
-            if not np.isfinite(other).all():
-                raise ValueError(f'{self.field} contains nonfinite comparison values.')
-            # Unsigned/integer storage must not wrap a negative physical change.
-            difference = other.astype(np.float64) - values.astype(np.float64)
-            bound = max(float(np.abs(difference).max()), 1e-12)
-            common.update(vmin=float(min(values.min(), other.min())), vmax=float(max(values.max(), other.max())))
-            if 'Density' in self.field:
-                total = max(abs(common['vmin']), abs(common['vmax']), 1e-12)
-                common.update(vmin=-total, vmax=total)
+            other, difference = self._other, self._difference
+            bound = self._difference_bound
             panels = [(values[:, :, z].T, 0, 1, 'A'), (other[:, :, z].T, 0, 1, 'B'), (difference[:, :, z].T, 0, 1, 'B − A')]
             self.readout.setText(self.readout.text() + f' · B: {other[x,y,z]:.6g} · Δ: {difference[x,y,z]:.6g}')
             # Typed limits replace the symmetric ones; unlocked, they stay symmetric.
@@ -175,7 +206,7 @@ class ScientificSections(QWidget):
         self.color_range.setEnabled(not categorical)
         if not categorical:
             common['vmin'], common['vmax'] = self.color_range.limits(common['vmin'], common['vmax'])
-        artists = []
+        building = not self._artists
         for n, (ax, (plane, i, j, title)) in enumerate(zip(self.axes, panels)):
             style = dict(common)
             if categorical:
@@ -184,10 +215,27 @@ class ScientificSections(QWidget):
                 style = dict(cmap=ListedColormap([categorical[str(v)] for v in labels]), norm=BoundaryNorm(np.arange(len(labels)+1)-.5, len(labels)))
             if self.comparison is not None and n == 2:
                 style = dict(cmap='RdBu_r', vmin=difference_limits[0], vmax=difference_limits[1])
+            if not building:
+                artist = self._artists[n]
+                artist.set_array(plane)
+                limits = (style.get('vmin'), style.get('vmax'))
+                if 'vmin' in style and self._artist_limits[n] != limits:
+                    artist.set_clim(*limits)
+                    self._artist_limits[n] = limits
+                    self._request_layout()
+                vertical, horizontal = self._crosshairs[n]
+                vertical.set_xdata([xyz[i] / self.axis_scales[i]] * 2)
+                horizontal.set_ydata([xyz[j] / self.axis_scales[j]] * 2)
+                ax.set_title(title, fontsize=10)
+                continue
             artist = ax.pcolormesh(self.edges[i] / self.axis_scales[i], self.edges[j] / self.axis_scales[j], plane, shading='flat', **style)
-            artists.append(artist)
-            ax.axvline(xyz[i] / self.axis_scales[i], color='black', lw=.6)
-            ax.axhline(xyz[j] / self.axis_scales[j], color='black', lw=.6)
+            self._artists.append(artist)
+            # A constant field's colorbar expands equal limits. Compare the
+            # requested pair so moving a slice does not reset that expansion.
+            self._artist_limits.append((style.get('vmin'), style.get('vmax')))
+            self._crosshairs.append((
+                ax.axvline(xyz[i] / self.axis_scales[i], color='black', lw=.6),
+                ax.axhline(xyz[j] / self.axis_scales[j], color='black', lw=.6)))
             axis_labels = [f'{name} ({"km" if scale == 1000 else "m"})' for name, scale in zip(('E', 'N', 'Z'), self.axis_scales)]
             ax.set(xlabel=axis_labels[i], ylabel=axis_labels[j])
             ax.set_title(title, fontsize=10)
@@ -196,14 +244,15 @@ class ScientificSections(QWidget):
             ax.xaxis.set_major_locator(MaxNLocator(nbins=3))
             ax.yaxis.set_major_locator(MaxNLocator(nbins=3))
             ax.tick_params(labelsize=8)
-        groups = [(artists[0], self.axes)] if self.comparison is None else [(artists[0], self.axes[:2]), (artists[2], self.axes[2:])]
-        for artist, axes in groups:
-            bar = self.figure.colorbar(artist, ax=axes, shrink=.7, fraction=.04, pad=.04)
-            bar.ax.tick_params(labelsize=8)
-            if categorical:
-                bar.set_ticks(range(len(labels)), labels=[str(v) for v in labels])
+        if building:
+            artists = self._artists
+            groups = [(artists[0], self.axes)] if self.comparison is None else [(artists[0], self.axes[:2]), (artists[2], self.axes[2:])]
+            for artist, axes in groups:
+                bar = self.figure.colorbar(artist, ax=axes, shrink=.7, fraction=.04, pad=.04)
+                bar.ax.tick_params(labelsize=8)
+                if categorical:
+                    bar.set_ticks(range(len(labels)), labels=[str(v) for v in labels])
         self.canvas.draw_idle()
-        self.toolbar.update()   # new axes: Home and Back go to this drawing
 
 
 class ModelComparison(QWidget):

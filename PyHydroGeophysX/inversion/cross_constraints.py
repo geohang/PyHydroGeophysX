@@ -221,17 +221,23 @@ class StructuralConstraint:
                 continue
             cols = indices[lo:hi]
 
-            # X^T W X and X^T W W on the neighbourhood: the columns of
-            # X^T W W outside it are zero, and so are those of Xbar.
-            Xi = X_arr[cols]
+            # Minimize sum_j cc_j * (X_j beta - m_j)**2:
+            # beta = (X.T W X)^-1 X.T W m, with ONE W on the RHS.
+            # Squaring only the RHS weights creates gradients even for a
+            # constant field and changes the answer when weights are rescaled.
+            Xi = X_arr[cols].copy()
+            if Xi.shape[1] == 3 and np.all(Xi[:, 2] == 1):
+                # With an intercept, translate to this cell before forming
+                # normal equations; UTM offsets must not swamp local spacing.
+                Xi[:, :2] -= X_arr[i, :2]
             XW = Xi * cc[:, None]
             XtWX = XW.T.dot(Xi)
-            XtWW = (XW * cc[:, None]).T
+            XtW = XW.T
 
             try:
-                Xbar = np.linalg.solve(XtWX, XtWW)
+                Xbar = np.linalg.solve(XtWX, XtW)
             except np.linalg.LinAlgError:
-                Xbar = np.linalg.pinv(XtWX).dot(XtWW)
+                Xbar = np.linalg.pinv(XtWX).dot(XtW)
 
             Xbar1 = Xbar[0:2, :]
             g1 = Xbar1.dot(ma[cols])
@@ -324,8 +330,10 @@ class StructuralConstraint:
             da = (m_a[j] - m_a[i]) / dist
             db = (m_b[j] - m_b[i]) / dist
 
-            wx = abs(d[0]) / dist
-            wz = abs(d[1]) / dist
+            # Project along the SIGNED edge direction. Absolute components
+            # make the gradient depend on cell numbering and mesh rotation.
+            wx = d[0] / dist
+            wz = d[1] / dist
 
             grad_ax[i] += da * wx
             grad_ax[j] += da * wx

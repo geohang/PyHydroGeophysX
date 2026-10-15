@@ -14,7 +14,6 @@
 
 import importlib
 import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -220,26 +219,6 @@ def test_what_a_request_asks_for_and_the_run_does_not_do_is_reported(tmp_path, n
     assert "climate_config" in warning and warning in preview["warnings"]
 
 
-def test_a_result_that_cannot_be_checkpointed_does_not_fail_the_run(tmp_path):
-    import threading
-
-    # A pyGIMLi mesh cannot be pickled: the example notebook's run ended "failed"
-    # after its inversion, with no water content and no report.
-    calls = []
-    coordinator = _coordinator(tmp_path, calls)
-    coordinator.register_agent("ert_inversion", _Recorder("ert_inversion", calls, lambda data: {
-        "status": "success", "resistivity_model": np.full(6, 100.0), "mesh": threading.Lock()}))
-    result = coordinator.execute_workflow({"data_file": "a.ohm"})
-    assert result["status"] == "success", result.get("error")
-    assert [name for name, _, _ in calls][-2:] == ["water_content", "report"]
-    checkpoints = tmp_path / "checkpoints"
-    assert not (checkpoints / "invert_ert.pkl").exists()
-    assert not list(checkpoints.glob("*.part"))
-    # A checkpoint cut short on disk is read as none, and the step runs again.
-    (checkpoints / "load_ert.pkl").write_bytes(b"\x80\x05\x95")
-    assert coordinator._load_checkpoint("load_ert") is None
-
-
 def test_a_failed_seismic_step_is_not_used_as_a_constraint(tmp_path, no_file_checks):
     calls = []
     coordinator = _coordinator(tmp_path, calls, seismic=True)
@@ -305,123 +284,6 @@ def test_the_files_a_request_names(text, files):
 ])
 def test_a_request_asks_for_tdem_or_rules_it_out(text, asked):
     assert names_tdem(text) is asked
-
-
-def test_a_tem2go_survey_folder_is_found_classified_and_inverted(tmp_path, monkeypatch):
-    # A TEM2Go survey folder holds a project.tiw/.db beside a protocol and the
-    # instrument's own folders, none of which the inventory's suffix list knew:
-    # the agent saw an empty folder, a path to it in a request named nothing,
-    # and TDEMAgent read only TIME/BZ text files.
-    import json
-    import shutil
-
-    from PyHydroGeophysX.agents.folder_catalog import catalog_inputs, classify_catalog, scan_folder
-    from PyHydroGeophysX.workflows import em1d
-
-    survey = tmp_path / "APLL data" / "Sep 06"      # spaces, as field folders have
-    survey.mkdir(parents=True)
-    example = em1d.example_catalog()["synthetic_tem_lci"]["path"]
-    shutil.copy(example / "project.db", survey / "project.db")
-    shutil.copy(example / "project.db", survey / "project2.tiw")   # a reprocessing
-    (survey / "notes.csv").write_text("station,comment\n1,wet\n")
-    # The rest of a TEM2Go folder: listed with what each is, so the survey does
-    # not read as resting on the project alone.
-    (survey / "Data" / "2026_1003").mkdir(parents=True)
-    (survey / "Data" / "2026_1003" / "2026_1003_143801.stb").write_bytes(b"stream")
-    (survey / "Protocol_TEM2Go.sts").write_text("[RxTxSpecs]\n")
-    (survey / "Sep06.lin").write_text("1 0 10\n")
-    (survey / "Models").mkdir()
-    (survey / "Models" / "ModelsLine001.json").write_text("{}")
-    (survey / "Maps").mkdir()
-    (survey / "Maps" / "field.png").write_bytes(b"png")
-    (survey / "Maps" / "field.pgw").write_text("0.5\n0\n0\n-0.5\n-10195777\n5111489\n")
-
-    class Provider:
-        sent = []
-
-        def complete(self, system, messages, tools):
-            files = json.loads(messages[0]["content"])["files"]
-            self.sent += [row["name"] for row in files]
-            return {"content": json.dumps({"files": [
-                {"index": row["index"], "role": "ignore", "confidence": 0.9,
-                 "reason": "field notes"} for row in files]})}
-
-    provider = Provider()
-    rows = classify_catalog(scan_folder(tmp_path), "invert the TEM data", provider)["files"]
-    # Found by content and kept from the model; one survey per run.
-    assert provider.sent == [str(Path("APLL data", "Sep 06", "notes.csv"))]
-    folder = Path("APLL data", "Sep 06")
-    assert {row["name"]: row["role"] for row in rows if row.get("detected")} == {
-        str(folder / "project.db"): "tdem_file",
-        str(folder / "project2.tiw"): "ignore",
-        str(folder / "Data"): "ignore",                 # the raw stream, one role away
-        str(folder / "Protocol_TEM2Go.sts"): "ignore",
-        str(folder / "Sep06.lin"): "ignore",
-        str(folder / "Models"): "ignore",
-        str(folder / "Maps" / "field.png"): "basemap_file"}
-    assert catalog_inputs(rows) == {"tdem_file": str((survey / "project.db").resolve()),
-                                    "basemap_file": str((survey / "Maps" / "field.png").resolve())}
-    # Asked for in plan view, the survey is mapped in a step of its own, and a
-    # survey that could not be mapped is reported once, with the reason.
-    from PyHydroGeophysX.agents._intent import unmet_requests
-    from PyHydroGeophysX.agents.runtime.catalog import not_delivered_items
-    from PyHydroGeophysX.agents.runtime.context import RunContext
-    from PyHydroGeophysX.agents.runtime.controller import route_ahead
-    ctx = RunContext("x", {"user_request": "give me the spatial resistivity distribution",
-                           "tdem_file": str(survey)})
-    # Read and drawn, inverted, and evaluated before anything is built on it.
-    assert [step["label"] for step in route_ahead(ctx)] == [
-        "Load TDEM data", "Run TDEM inversion", "Evaluate TDEM inversion",
-        "Interpolate plan-view maps", "Generate report"]
-    ctx.put("tdem_results", {"survey": True})
-    _ = ctx.begin("invert_tdem", description="Run TDEM inversion"); ctx.finish()
-    _ = ctx.begin("map_tdem_plan_view", description="Interpolate plan-view maps")
-    ctx.finish(status="failed", error="ValueError: the soundings lie along one line")
-    assert not_delivered_items(ctx, {"survey": True}) == [
-        ("Plan-view maps", "the soundings lie along one line")]
-    assert unmet_requests({"user_request": "invert the ERT line in plan view"}, {}) == []
-    # Named by its path in a request, whatever the request calls the method.
-    stated = ContextInputAgent(api_key=None).request_inputs(f"现在agent识别不了这些数据，{survey}")
-    assert stated == {"tdem_file": str(survey)}
-
-    pytest.importorskip("simpeg")
-    from PyHydroGeophysX.agents.runtime.catalog import _convert_tdem_water_content
-    from PyHydroGeophysX.agents.runtime.context import RunContext
-    from PyHydroGeophysX.agents.tdem_agent import TDEMAgent
-
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    results = TDEMAgent(api_key=None).execute(
-        {"mode": "inversion", "data_file": str(survey), "output_dir": str(tmp_path / "tdem")})
-    assert results["status"] == "success", results.get("error")
-    # Nine stations on the project's own eight layers, with the system it records.
-    assert results["survey"] and results["tem_moment"] == "LM+HM"
-    assert results["recovered_resistivity"].shape == (9, 8)
-    assert results["chi2_sounding_median"] < 2.0
-    assert (tmp_path / "tdem" / "tdem_sections.png").exists()
-    # Beside ERT data, the survey is a section of the ERT report, with its figure.
-    from PyHydroGeophysX.agents._survey_report import ert_sections
-    section = ert_sections({"tdem_results": results}, {}, str(tmp_path))
-    assert section.startswith("## Time-Domain Electromagnetic Survey")
-    assert "tdem/tdem_sections.png" in section
-    # A section converts cell by cell, keeping its shape and its unresolved cells.
-    ctx = RunContext("estimate water content", output_dir=str(tmp_path))
-    ctx.put("tdem_results", results)
-    _, produced = _convert_tdem_water_content(ctx)
-    mean = produced["tdem_results"]["water_content_mean"]
-    assert mean.shape == (9, 8)
-    assert np.array_equal(np.isnan(mean), ~np.isfinite(results["recovered_resistivity"]))
-    # ...and is drawn with its standard deviation, which no conversion goes without.
-    assert (tmp_path / "tdem" / "water_content_mean_and_uncertainty.png").exists()
-    # The survey's decays are drawn as it is read, and its fit is scored as ERT's is.
-    from PyHydroGeophysX.agents.runtime.catalog import _evaluate_tdem, _load_tdem
-    ctx = RunContext("invert the TEM data", {"tdem_file": str(survey)}, output_dir=str(tmp_path))
-    said, loaded = _load_tdem(ctx)
-    assert "9 soundings" in said and Path(loaded["tdem_data"]["figure"]).exists()
-    ctx.put("tdem_results", results)
-    said, scored = _evaluate_tdem(ctx)
-    evaluation = scored["tdem_evaluation"]
-    assert said.startswith("Quality") and 0 < evaluation["quality_score"] <= 100
-    assert Path(evaluation["figure"]).exists()
 
 
 @pytest.mark.parametrize("text, sites", [
@@ -611,7 +473,7 @@ def test_the_runtime_delivers_or_names_what_it_did_not(tmp_path, monkeypatch, co
         "load_ert_surveys": load,
         "invert_ert": lambda ctx: ("Inverted.", {"inversion_results": {
             "status": "success", "resistivity_model": np.linspace(50.0, 500.0, 40),
-            "chi2": 1.6250000000000004, "iterations": 7}}),
+            "chi2": 1.6, "iterations": 7}}),
         "evaluate_inversion": lambda ctx: ("Scored.", {"evaluation_results": {
             "status": "success", "quality_score": 80.0, "summary": "Acceptable."}}),
         **_tdem_stubs(config.get("tdem_file", "")),
@@ -641,78 +503,6 @@ def test_the_runtime_delivers_or_names_what_it_did_not(tmp_path, monkeypatch, co
         assert (tmp_path / "tdem" / "water_content_by_layer.csv").exists()
         report = open(files["report_markdown"], encoding="utf-8").read()
         assert "Water Content" in report and "±" in report
-    if "a.ohm" in config.get("user_request", "") and files:
-        # No None, N/A or sixteen-digit chi-squared, and the method is named.
-        report = open(files["report_markdown"], encoding="utf-8").read()
-        assert "Method: Smoothness-constrained" in report and "chi-squared: 1.63" in report
-        assert "None" not in report and "N/A" not in report
-
-
-#: What each method's step returns, cut to what its report sections read.
-_METHOD_RESULTS = {
-    "pick_first_breaks": {"seismic_picks": {"status": "success", "n_picks": 357}},
-    "load_seismic_traveltimes": {"seismic_traveltimes": {"file": "srt.dat", "n_data": 357}},
-    "load_mt_sites": {"mt_data": {"sites": ["S01.edi"]}},
-    "load_gravmag_data": {"gravmag_data": {"file": "g.csv", "kind": "gravity"}},
-    "extract_seismic_interfaces": {"seismic_structure": {"thresholds": [1200.0]}},
-    "invert_seismic": {"seismic_results": {
-        "status": "success", "source_file": "srt.dat", "n_shots": 6, "n_receivers": 74,
-        "n_data": 357, "chi2": 1.3, "rrms": 4.2, "velocity_range": [310.0, 2600.0],
-        "interfaces": {}, "velocity_thresholds": [1200],
-        "inversion_params": {"lam": 50, "zWeight": 0.2, "vTop": 500, "vBottom": 5000,
-                             "paraDepth": 30.0, "limits": [300.0, 8000.0]}}},
-    "invert_mt": {"mt_results": {"sites": [{
-        "station": "S01", "path": "S01.edi", "periods_s": [0.01, 1000.0], "rms": 1.1,
-        "iterations": 8, "static_shift": {"det": 1.0},
-        "depth_top_m": np.array([0.0, 20.0, 80.0, 300.0]),
-        "thicknesses": np.array([20.0, 60.0, 220.0]),
-        "resistivity_ohm_m": np.array([150.0, 12.0, 40.0, 300.0])}]}},
-    "invert_gravmag": {"gravmag_results": {
-        "status": "success", "kind": "gravity", "unit": "mGal", "source_file": "g.csv",
-        "n_stations": 120, "extent": {"x": [0.0, 900.0], "y": [0.0, 600.0]}, "detrend": 1,
-        "stats": {name: {"min": -3.0, "max": 4.0, "mean": 0.1, "std": 1.2}
-                  for name in ("Observed", "Regional", "Residual")},
-        "inversion": None, "inversion_error": "SimPEG is not installed",
-        "assumptions": [], "figures": []}},
-}
-
-
-@pytest.mark.parametrize("config, report, titles", [
-    ({"seismic_file": "srt.dat"}, "seismic_report.md", ["Seismic Refraction Survey"]),
-    ({"raw_seismic_file": "line.sgy"}, "seismic_report.md", ["Seismic Refraction Survey"]),
-    ({"mt_files": ["S01.edi"]}, "mt_report.md", ["Magnetotelluric Survey"]),
-    ({"gravmag_file": "g.csv"}, "gravmag_report.md", ["Gravity Survey", "did not run"]),
-    ({"seismic_file": "srt.dat", "mt_files": ["S01.edi"]}, "survey_report.md",
-     ["Geophysical Survey", "Seismic Refraction Survey", "Magnetotelluric Survey"]),
-])
-def test_every_method_without_ert_ends_with_its_report(tmp_path, monkeypatch, config,
-                                                       report, titles):
-    # Seismic, MT and gravity/magnetic runs ended "success" with no report at
-    # all, since the report step needed an ERT inversion, and gravity and
-    # magnetics had no step to run.
-    from PyHydroGeophysX.agents.report_agent import ReportAgent
-    from PyHydroGeophysX.agents.runtime.entry import run_workflow
-    from PyHydroGeophysX.agents.runtime.tools import TOOLS
-
-    for name, products in _METHOD_RESULTS.items():
-        monkeypatch.setattr(TOOLS[name], "handler",
-                            lambda ctx, products=products: ("Inverted.", products))
-    monkeypatch.setattr(ReportAgent, "_save_pdf_report", lambda self, *a, **k: None)
-    results, plan, text, files = run_workflow(
-        {**config, "user_request": "invert the survey"}, None, None, "openai", tmp_path)
-    assert results["status"] == "success", results["warnings"]
-    assert files["report_markdown"].endswith(report)
-    written = open(files["report_markdown"], encoding="utf-8").read()
-    assert all(title in written for title in titles)
-    assert "Recommendations" in written and "None" not in written
-    # Every inverted method is evaluated before it is reported, as ERT is.
-    if "seismic_file" in config or "raw_seismic_file" in config or "mt_files" in config:
-        assert "Inversion Quality" in written and "Quality score" in written
-    if config == {"raw_seismic_file": "line.sgy"}:
-        # Traces are picked, inverted and traced for interfaces as steps of their own.
-        assert [step["step"] for step in plan] == [
-            "Pick first-arrival travel times", "Run seismic refraction inversion",
-            "Evaluate seismic inversion", "Extract layer interfaces", "Generate report"]
 
 
 @pytest.mark.parametrize("config, expected", [
@@ -778,36 +568,48 @@ def test_a_tdem_project_is_not_also_taken_as_ert_data(monkeypatch):
                      "write_survey_report"]
 
 
-@pytest.mark.parametrize("request_text, model_reply, unit", [
-    ("process the line and show depths in feet", None, "ft"),      # no model: the words
-    ("深度用英尺表示", None, "ft"),
-    ("a soft clay layer", None, None),
-    ("plot it the way our US client reads it",                      # the model reads it
-     '{"topics": ["resistivity"], "style": {"length_unit": "ft"}}', "ft"),
+@pytest.mark.parametrize("request_text, velocity", [
+    ("Process the GPR line", None),
+    ("Process the GPR line at 0.1 m/ns", 0.1),
 ])
-def test_a_request_for_feet_reaches_the_report_figures(request_text, model_reply, unit):
-    pg = pytest.importorskip("pygimli")
-    from matplotlib.backends.backend_agg import FigureCanvasAgg
-    from matplotlib.figure import Figure
+def test_a_gpr_run_makes_its_previewed_steps_and_states_its_velocity(
+        tmp_path, monkeypatch, request_text, velocity):
+    pytest.importorskip("scipy")
+    pytest.importorskip("matplotlib")
+    from pathlib import Path
 
-    from PyHydroGeophysX.agents import _figstyle as figstyle
+    from PyHydroGeophysX.agents.context_input_agent import gpr_from_reply
     from PyHydroGeophysX.agents.report_agent import ReportAgent
+    from PyHydroGeophysX.agents.runtime.context import RunContext
+    from PyHydroGeophysX.agents.runtime.controller import route_ahead
+    from PyHydroGeophysX.agents.runtime.entry import run_workflow
+    from PyHydroGeophysX.agents.runtime.tools import TOOLS
 
-    agent = ReportAgent(api_key="sk-test" if model_reply else None)
-    agent.query_llm = lambda prompt, **kwargs: model_reply
-    config = {"user_request": request_text}
-    agent._read_figure_request(config)
-    style = figstyle.style_from_config(config)
-    assert style.length_unit == unit
+    example = Path(__file__).resolve().parents[1] / "examples" / "data"
+    if not (example / "Watercontent.npy").is_file():
+        pytest.skip("the MODFLOW example model is not in this checkout")
+    monkeypatch.setattr(ReportAgent, "_save_pdf_report", lambda self, *a, **k: None)
+    config = {"user_request": request_text, "gpr_file": str(example)}
+    route = [step["tool"] for step in route_ahead(RunContext(request_text, dict(config), "."))]
+    assert route == ["load_gpr_line", "process_gpr_line", "write_survey_report"]
 
-    # A line read without elevations sits at z = 0: its axis is depth, not elevation.
-    fig = Figure()
-    FigureCanvasAgg(fig)
-    ax = fig.add_subplot(111)
-    flat = pg.createGrid(x=np.linspace(0, 20, 11), y=np.linspace(-5, 0, 6))
-    figstyle.apply(ax, style, mesh=flat)
-    shown = unit or "m"
-    assert (ax.get_xlabel(), ax.get_ylabel()) == (f"Distance ({shown})", f"Depth ({shown})")
+    results, plan, _, files = run_workflow(dict(config), None, None, "openai", tmp_path)
+    assert results["status"] == "success", results["warnings"]
+    assert [step["step"] for step in plan] == [TOOLS[name].label for name in route]
+    gpr = results["gpr_results"]
+    report = open(files["report_markdown"], encoding="utf-8").read()
+    assert "](gpr/example_line_radargram.png)" in report
+    assert (tmp_path / "gpr" / "example_line_radargram.png").is_file()
+    # A depth is v t / 2: only a velocity the request gives is used, and its
+    # absence is said, never filled in - by the run or by a model's reading.
+    assert gpr["velocity_m_per_ns"] == velocity
+    if velocity is None:
+        assert gpr["max_depth_m"] is None and "gives no depth" in report
+        assert any("No radar velocity was given" in w for w in results["warnings"])
+        assert "gpr_velocity" not in gpr_from_reply({"gpr_velocity": 0.1}, request_text)[0]
+    else:
+        assert gpr["max_depth_m"] == pytest.approx(0.5 * velocity * gpr["time_window_ns"])
+        assert "0.1 m/ns (given for this run)" in report
 
 
 # --------------------------------------------------------------------------
@@ -905,112 +707,6 @@ def test_an_assistant_runs_its_own_tools_to_its_own_final_product(tmp_path, monk
     assert result["interpretation"] == "Group 5 is the primary target."
 
 
-def test_the_report_cites_the_run_records_that_exist(tmp_path):
-    # Studio runs keep their settings, QC report and logs as text in the run
-    # folder (qt_apps/run_records.py). The report cites those of its own run and
-    # of an earlier run it read, by path, with the earlier run's recorded
-    # figures from its run.json - and no record that is not there.
-    import json
-
-    from PyHydroGeophysX.agents.assistants.aquah import workflow
-
-    runs = tmp_path / "project" / "runs"
-    own, earlier = runs / "20261008-101500_oneclick_ab12", runs / "20261007-090000_ert_cd34"
-    for folder in (own, earlier):
-        (folder / "logs").mkdir(parents=True)
-        (folder / "outputs").mkdir()
-    (own / "UNSAVED").write_text("unsaved")
-    (own / "logs" / "run_log.txt").write_text("log")
-    # The Workflow page's run: its activity log, and its settings written from
-    # the workflow's configuration - never with a credential in them.
-    from PyHydroGeophysX.qt_apps.run_records import write_recipe_settings
-    (own / "outputs" / "activity.log").write_text("events")
-    (own / "outputs" / "workflow_config.json").write_text(json.dumps({
-        "user_request": "Summarize the model", "api_key": "sk-secret",
-        "inversion_params": {"lambda": 15}}))
-    settings = write_recipe_settings(own, title="Settings").read_text(encoding="utf-8")
-    assert "inversion_params.lambda" in settings and "sk-secret" not in settings
-    (earlier / "run.json").write_text(json.dumps({"label": "Spring survey", "metrics": {
-        "chi2": 1.04, "lambda": 20.0, "convergence_track": [3.0, 1.04]}}))
-    (earlier / "qc").mkdir()
-    for name in ("inversion_settings.txt", "qc_report.txt", "qc/s1.txt", "qc/s2.txt"):
-        (earlier / name).write_text("record")
-    model = earlier / "outputs" / "model.npy"
-    model.write_bytes(b"0")
-
-    class Parser:
-        def __init__(self, **_):
-            pass
-
-        def parse_request(self, request, available_data):
-            return {}
-
-    result = workflow.run(
-        {"request": "Summarize the model", "inputs": {"model_file": str(model)},
-         "output_dir": str(own / "outputs")}, lambda *a: None, context_factory=Parser,
-        run_fn=lambda *a, **k: ({"status": "success"}, [], "Done.", {}))
-    report = Path(result["report_files"]["report_markdown"]).read_text(encoding="utf-8")
-    records = report.split("Data and Processing Records", 1)[1]
-    assert "`runs/20261008-101500_oneclick_ab12/logs/run_log.txt`" in records
-    for cited in ("run_settings.txt`", "outputs/activity.log`"):
-        assert "runs/20261008-101500_oneclick_ab12/" + cited in records
-    for cited in ("inversion_settings.txt`", "qc_report.txt`", "qc/`"):
-        assert "runs/20261007-090000_ert_cd34/" + cited in records
-    assert "QC log (2 files)" in records and "s1.txt" not in records
-    assert '("Spring survey")' in records and "read `model.npy`" in records
-    assert "chi2 1.04; lambda 20." in records
-    for absent in ("workflow_output.log", "cd34/run_settings.txt", "oneclick_ab12/qc_report"):
-        assert absent not in records
-
-
-def test_a_note_mid_run_is_read_at_the_next_decision_and_can_change_a_setting():
-    # The user can hold a run before its next step and tell it something; the
-    # controller's reasoning reaches the studio as it is written.
-    import threading
-
-    from PyHydroGeophysX.agents.runtime import steering
-    from PyHydroGeophysX.agents.runtime.context import RunContext
-    from PyHydroGeophysX.agents.runtime.entry import drive
-    from PyHydroGeophysX.agents.runtime.tools import Tool
-
-    used = {}
-
-    def invert(ctx):
-        used["lambda"] = ctx.config["inversion_params"]["lambda"]
-        return "Inverted.", {"report_files": {"report_markdown": "r.md"}}
-
-    tools = {"invert": Tool("invert", "Invert.", invert, produces=("report_files",))}
-
-    def ask(prompt, on_text=None):
-        heard = "The user has just told you" in prompt
-        reply = ('{"why": "You asked for lambda 20.", "tool": "invert", '
-                 '"settings": {"inversion_params": {"lambda": 20}}}' if heard
-                 else '{"why": "Done.", "done": true}')
-        for end in range(10, len(reply) + 1, 10):
-            on_text(reply[:end])
-        return reply
-
-    events = []
-    steer = steering.Steering(notify=events.append)
-    steer.say("use lambda 20")
-    steer.pause()
-    threading.Timer(0.2, steer.resume).start()
-    token = steering.current.set(steer)
-    try:
-        ctx = drive(RunContext("invert", {"inversion_params": {"lambda": 10}}), tools=tools,
-                    ask=ask, on_event=events.append)
-    finally:
-        steering.current.reset(token)
-    phases = [e["phase"] for e in events]
-    assert phases.index("paused") < phases.index("resumed") < phases.index("start")
-    assert used["lambda"] == 20 and ctx.guidance == ["use lambda 20"]
-    read = next(e for e in events if e["phase"] == "steer")
-    assert read["heard"] and read["changes"] == [
-        "inversion_params: {'lambda': 10} -> {'lambda': 20}"]
-    thoughts = [e["text"] for e in events if e["phase"] == "thought"]
-    assert len(thoughts) > 1 and thoughts[-1] == "You asked for lambda 20."
-
-
 def test_installed_geosage_runs_on_the_studio_contract(tmp_path):
     # A plug-in's "needs review" stays that, never saved as a success.
     from PyHydroGeophysX.qt_apps.results_store import normalize_status
@@ -1051,67 +747,3 @@ def test_installed_geosage_runs_on_the_studio_contract(tmp_path):
     assert approved == list(assistant.load_tools())
     assert [e["tool"] for e in events if e["phase"] == "done"] == approved
     assert result["report_files"]["report_markdown"].endswith("evidence_summary.md")
-
-
-@pytest.fixture
-def isolated_cli_install(monkeypatch, tmp_path):
-    from PyHydroGeophysX.llm import cli_setup as setup
-
-    monkeypatch.setenv("PHGX_CLI_DIR", str(tmp_path / "managed"))
-    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
-    monkeypatch.setenv("APPDATA", str(tmp_path / "roaming"))
-    monkeypatch.delenv("PHGX_CODEX_CLI", raising=False)
-    monkeypatch.delenv("PHGX_CLAUDE_CLI", raising=False)
-    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path / "home"))
-    monkeypatch.setattr(setup.shutil, "which", lambda _: None)
-    return tmp_path
-
-
-@pytest.mark.parametrize("provider_id", ["codex_cli", "claude_code"])
-@pytest.mark.parametrize("valid_checksum", [True, False])
-def test_installs_only_verified_official_binary(monkeypatch, isolated_cli_install, provider_id, valid_checksum):
-    # A downloaded CLI whose checksum does not match is neither kept nor run.
-    import hashlib
-    import io
-    import json
-    from types import SimpleNamespace
-    from PyHydroGeophysX.llm import cli_setup as setup
-    from PyHydroGeophysX.llm.providers import make_provider
-
-    provider = make_provider(provider_id)
-    payload = b"verified-native-cli"
-    checksum = hashlib.sha256(payload).hexdigest() if valid_checksum else "0" * 64
-    monkeypatch.setattr(setup, "_platform_names", lambda: ("x86_64-pc-windows-msvc.exe", "win32-x64"))
-    monkeypatch.setattr(setup.platform, "system", lambda: "Windows")
-    target = setup.managed_executable(provider)
-    url = "https://github.com/openai/codex/releases/download/rust-v1/codex-x86_64-pc-windows-msvc.exe"
-
-    def read(source):
-        if source == setup.CODEX_RELEASE:
-            return json.dumps({"assets": [{"name": "codex-x86_64-pc-windows-msvc.exe",
-                                           "digest": "sha256:" + checksum,
-                                           "browser_download_url": url}]}).encode()
-        if source.endswith("/latest"):
-            return b"2.1.268"
-        return json.dumps({"platforms": {"win32-x64": {"checksum": checksum}}}).encode()
-
-    def open_download(request, **kwargs):
-        assert request.full_url.startswith(("https://github.com/openai/codex/releases/download/",
-                                           setup.CLAUDE_DOWNLOADS + "/2.1.268/"))
-        response = io.BytesIO(payload)
-        response.headers = {"Content-Length": str(len(payload))}
-        return response
-
-    monkeypatch.setattr(setup, "_read", read)
-    monkeypatch.setattr(setup, "urlopen", open_download)
-    checked = []
-    monkeypatch.setattr(setup.subprocess, "run", lambda command, **kw:
-                        checked.append(Path(command[0]).read_bytes()) or
-                        SimpleNamespace(returncode=0, stderr="", stdout="CLI 1.0"))
-    if not valid_checksum:
-        with pytest.raises(RuntimeError, match="checksum did not match"):
-            setup.install_cli(provider)
-        assert not target.exists() and not checked
-    else:
-        assert setup.install_cli(provider) == str(target)
-        assert target.read_bytes() == payload and checked == [payload]

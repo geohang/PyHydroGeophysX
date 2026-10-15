@@ -26,13 +26,21 @@ def _detect_regular_grid(X_grid: np.ndarray, Y_grid: np.ndarray):
         y = Y_grid[:, 0]
         if x.size < 2 or y.size < 2:
             return None
-        if not (np.allclose(X_grid, x[np.newaxis, :]) and np.allclose(Y_grid, y[:, np.newaxis])):
-            return None
         dx = np.diff(x)
         dy = np.diff(y)
-        if not (np.allclose(dx, dx[0]) and np.allclose(dy, dy[0])):
+        if not np.isfinite(X_grid).all() or not np.isfinite(Y_grid).all():
             return None
         if dx[0] == 0 or dy[0] == 0:
+            return None
+        # Tolerance follows cell spacing, not the coordinate origin: allclose's
+        # default rtol allows metres of shear at typical UTM eastings/northings.
+        # Include a few ulps to tolerate subtraction at large map coordinates.
+        xtol = max(abs(dx[0]) * 1e-8, 8 * np.spacing(np.max(np.abs(X_grid))))
+        ytol = max(abs(dy[0]) * 1e-8, 8 * np.spacing(np.max(np.abs(Y_grid))))
+        if not (np.allclose(X_grid, x[np.newaxis, :], rtol=0, atol=xtol)
+                and np.allclose(Y_grid, y[:, np.newaxis], rtol=0, atol=ytol)
+                and np.allclose(dx, dx[0], rtol=0, atol=xtol)
+                and np.allclose(dy, dy[0], rtol=0, atol=ytol)):
             return None
         return float(x[0]), float(dx[0]), float(y[0]), float(dy[0])
     except Exception:

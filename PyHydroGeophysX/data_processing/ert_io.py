@@ -17,6 +17,7 @@ across loaders so a file never silently loads empty.
 
 from __future__ import annotations
 
+import contextlib
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -27,6 +28,42 @@ import numpy as np
 from PyHydroGeophysX._internal.utils import noop as _noop
 
 LogFn = Callable[[str], None]
+
+
+@contextlib.contextmanager
+def no_invalid_data_file():
+    """Remove the ``invalid.data`` a PyGIMLi read leaves in the working folder.
+
+    PyGIMLi's ``DataContainer::load`` writes the indices of the rows it found
+    invalid to ``./invalid.data``: every row of an E4D survey file, whose
+    numbered rows it misreads. Trying a file with PyGIMLi therefore left one in
+    whatever folder the studio or a script ran from. A file of that name that
+    was there before is left alone.
+    """
+    stray = Path.cwd() / "invalid.data"
+    existed = stray.exists()
+    try:
+        yield
+    finally:
+        if not existed:
+            with contextlib.suppress(OSError):
+                stray.unlink(missing_ok=True)
+
+
+def analytic_geometric_factors(data) -> np.ndarray:
+    """PyGIMLi's analytic geometric factors for ``data``, without its disk cache.
+
+    ``createGeometricFactors`` stores every result on disk under a hash of the
+    whole container. For analytic factors, hashing and restoring took longer
+    than computing them (about 20 ms of a 3.7k-reading load), and every survey
+    read added a cache file.
+    """
+    from pygimli.physics import ert as pg_ert
+
+    try:
+        return pg_ert.createGeometricFactors(data, numerical=False, skipCache=True)
+    except TypeError:  # a PyGIMLi without the switch
+        return pg_ert.createGeometricFactors(data, numerical=False)
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +159,6 @@ def _header_ratio(std, valid) -> Optional[np.ndarray]:
     if not header:
         return None
     import pygimli as pg
-    from pygimli.physics import ert as pg_ert
 
     keys = ("A", "B", "M", "N")
 
@@ -137,7 +173,7 @@ def _header_ratio(std, valid) -> Optional[np.ndarray]:
         placed.resize(len(valid))
         for name, key in zip(("a", "b", "m", "n"), keys):
             placed.set(name, [index[int(getattr(o.quad, key))] for o in valid])
-        return np.asarray(pg_ert.createGeometricFactors(placed, numerical=False), dtype=float)
+        return np.asarray(analytic_geometric_factors(placed), dtype=float)
 
     try:
         before = factors([SimpleNamespace(id=number, x=row[0], y=row[1], z=row[2])
@@ -162,7 +198,7 @@ def standard_to_pg(std):
     """
     try:
         import pygimli as pg
-        from pygimli.physics import ert as pg_ert
+        from pygimli.physics import ert as pg_ert  # noqa: F401 - needed by analytic_geometric_factors
     except Exception:  # noqa: BLE001
         return None
     data = pg.DataContainerERT()
@@ -219,7 +255,7 @@ def standard_to_pg(std):
     vals = np.array([float(o.app_res) for o in valid], dtype=float)
     data.set("err", [float(o.rel_err) if o.rel_err else 0.05 for o in valid])
     try:
-        data["k"] = pg_ert.createGeometricFactors(data, numerical=False)
+        data["k"] = analytic_geometric_factors(data)
         k = np.asarray(data["k"], dtype=float)
     except Exception:  # noqa: BLE001
         k = np.ones(len(valid))
@@ -366,11 +402,25 @@ _NATIVE_RETRY = ("BERT", "E4D", "ARES", "ResInv", "ABEM-Lund", "Custom")
 _SWEEP_RETRY = ("BERT", "E4D", "ARES", "Custom")
 
 
-def _usable(data) -> bool:
+def _usable(data, log: LogFn = _noop) -> bool:
+    """Whether a reader's container is a survey: readings on four electrodes or more.
+
+    A reader handed the wrong format can return one electrode and one reading
+    without an error, and a DAS-1 file was "auto-recovered" that way as an E4D
+    survey of one reading (see ``ert_formats.implausible_survey``).
+    """
+    from PyHydroGeophysX.data_processing.ert_formats import implausible_survey
+
     try:
-        return data is not None and int(data.size()) > 0
+        if data is None:
+            return False
+        size = int(data.size())
+        reason = implausible_survey(int(data.sensorCount()), size)
     except Exception:  # noqa: BLE001
         return False
+    if reason and size:
+        log(f"{reason} Not taken.")
+    return reason is None
 
 
 def _ensure_rhoa(data, log: LogFn = _noop) -> None:
@@ -424,7 +474,8 @@ def _canonical_instrument(instrument: str) -> str:
 def _via_native(path: str, log: LogFn):
     try:
         from pygimli.physics import ert as pg_ert
-        data = pg_ert.load(str(path), verbose=False)
+        with no_invalid_data_file():
+            data = pg_ert.load(str(path), verbose=False)
     except Exception as exc:  # noqa: BLE001
         log(f"pygimli native load failed: {exc}")
         return None
@@ -459,7 +510,7 @@ def load_ert_container(path: str, instrument: Optional[str] = None,
     # 1. explicit instrument
     if not is_auto:
         data = _via_instrument(path, inst, electrode_file, spacing, log, failures)
-        if _usable(data):
+        if _usable(data, log):
             return data
         if failures:
             picked = _canonical_instrument(inst)
@@ -476,7 +527,7 @@ def load_ert_container(path: str, instrument: Optional[str] = None,
     # and it used to return the header's positions without a word.
     if retry_native:
         data = _via_native(path, log)
-        if _usable(data):
+        if _usable(data, log):
             if electrode_file:
                 place_electrodes(data, electrode_file, log=log)
             return data
@@ -486,16 +537,21 @@ def load_ert_container(path: str, instrument: Optional[str] = None,
         if cand.lower() == inst.lower():
             continue
         data = _via_instrument(path, cand, electrode_file, spacing, log, failures)
-        if _usable(data):
+        if _usable(data, log):
             log(f"Auto-recovered '{Path(path).name}' using instrument='{cand}'.")
             return data
 
     # The first reader's error is the one worth reading: it ran on the pick, or on
     # the file's own header when a detector redirected it.
     first = f" First error: {failures[0]}" if failures else ""
+    # A hint for the person picking, not a reader choice (see guess_ert_format).
+    from PyHydroGeophysX.data_processing.ert_formats import guess_ert_format
+
+    guess = guess_ert_format(path)
+    looks = f" It looks like a {guess} file." if guess and guess.lower() != inst.lower() else ""
     raise ValueError(
         f"No ERT measurements could be parsed from '{Path(path).name}'. "
-        f"Pick the matching instrument/format in the loader.{first}")
+        f"Pick the matching instrument/format in the loader.{looks}{first}")
 
 
 # ---------------------------------------------------------------------------

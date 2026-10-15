@@ -22,7 +22,7 @@ import sys
 import time
 
 # Modules safe to construct on a headless/offscreen display (no GL viewer).
-_NAV_SAFE = ["seismic", "ert", "em", "gravmag", "mt", "boreholes", "hydro_geophysics", "geo_hydrology", "seismic3d"]
+_NAV_SAFE = ["seismic", "ert", "em", "gravmag", "mt", "gpr", "boreholes", "hydro_geophysics", "geo_hydrology", "seismic3d"]
 
 
 def _build_app():
@@ -183,9 +183,20 @@ def main() -> int:
     )
 
     # 7. Chat panel loop with a scripted fake provider (no network, no clicks).
+    #    A call the model asks about waits on the card; Approve runs it.
+    def settle(chat):
+        for _ in range(200):
+            if not chat._busy:
+                break
+            app.processEvents()
+            time.sleep(0.01)
+        if chat._worker is not None:
+            chat._worker.wait(2000)
+
     first_turn = {
         "content": "I'll open the seismic module.",
-        "tool_calls": [{"id": "c1", "name": "navigate", "arguments": {"module": "seismic"}}],
+        "tool_calls": [{"id": "c1", "name": "navigate",
+                        "arguments": {"module": "seismic", "ask_user": True}}],
     }
     continuation = {"content": "Opened the Seismic Processing module.", "tool_calls": []}
     panel = AquahChatPanel(controller, provider=_FakeProvider([continuation]))
@@ -193,23 +204,42 @@ def main() -> int:
     panel._on_llm_ok(first_turn)
     gated = panel._current_call is not None and panel._busy
     panel._on_approve()
-    for _ in range(200):
-        if not panel._busy:
-            break
-        app.processEvents()
-        time.sleep(0.01)
-    if panel._worker is not None:
-        panel._worker.wait(2000)
+    settle(panel)
     ok &= _check(
         "panel approve executes + continues",
         gated and window.state.selected_module == "seismic" and not panel._busy,
         f"gated={gated} module={window.state.selected_module} busy={panel._busy}",
     )
 
+    # 7b. A routine call runs with no card, and the turn still continues.
+    routine = {"content": "Opening ERT.",
+               "tool_calls": [{"id": "r1", "name": "navigate",
+                               "arguments": {"module": "ert", "ask_user": False}}]}
+    panel_r = AquahChatPanel(controller, provider=_FakeProvider([continuation]))
+    panel_r._set_busy(True)
+    panel_r._on_llm_ok(routine)
+    settle(panel_r)
+    answered = any(m.get("role") == "tool" and m.get("id") == "r1" for m in panel_r._messages)
+    ok &= _check(
+        "panel runs a routine call without asking",
+        answered and panel_r._confirm.isHidden() and window.state.selected_module == "ert"
+        and not panel_r._busy,
+        f"answered={answered} module={window.state.selected_module} busy={panel_r._busy}",
+    )
+
     # 8. Panel pauses on an 'awaiting_user' tool result (ends the turn, no re-request).
     class _StubController:
         def capabilities_summary(self, modules=()):
             return "stub"
+
+        def attachment_scope(self):
+            return ("stub", "")
+
+        def chat_attachments(self):
+            return []
+
+        def chat_attachment_roles(self):
+            return []
 
         def dispatch(self, name, args):
             return {"status": "awaiting_user", "message": "Correct picks then continue.",
@@ -218,7 +248,7 @@ def main() -> int:
     pause_turn = {
         "content": "Auto-picked; please review.",
         "tool_calls": [{"id": "p1", "name": "apply_action",
-                        "arguments": {"action": "review_picks", "args": {}}}],
+                        "arguments": {"action": "review_picks", "args": {}, "ask_user": True}}],
     }
     panel2 = AquahChatPanel(_StubController(), provider=_FakeProvider([]))
     panel2._set_busy(True)
@@ -291,12 +321,13 @@ def main() -> int:
                  "capture_view" not in text_tools and "capture_view" in vision_tools,
                  f"text={sorted(text_tools)} vision={sorted(vision_tools)}")
 
+    # capture_view only looks, so it runs without the card.
     vision_panel._set_busy(True)
     vision_panel._on_llm_ok({
         "content": "Let me look at the gather.",
         "tool_calls": [{"id": "v1", "name": "capture_view", "arguments": {}}],
     })
-    vision_panel._on_approve()
+    settle(vision_panel)
     msgs = vision_panel._messages
     tool_msg = next((m for m in msgs if m.get("role") == "tool" and m.get("id") == "v1"), None)
     img_msg = next((m for m in msgs if m.get("role") == "user"
