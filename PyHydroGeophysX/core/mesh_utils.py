@@ -38,10 +38,12 @@ def create_mesh_from_layers(surface: np.ndarray,
         area: Maximum cell area
         
     Returns:
-        mesh: PyGIMLI mesh
-        mesh_centers: Array of cell center coordinates
-        markers: Array of cell markers
-        geom: Geometry used to generate the mesh (fourth tuple element).
+        tuple: ``(mesh, mesh_centers, markers, geom)``:
+
+        - mesh: PyGIMLI mesh
+        - mesh_centers: Array of cell center coordinates
+        - markers: Array of cell markers
+        - geom: Geometry used to generate the mesh
     """
     if bottom_depth is not None and bottom_elevation is not None:
         raise ValueError("Supply only one of bottom_depth and bottom_elevation")

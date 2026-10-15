@@ -5,6 +5,10 @@ Before 1.0, minor releases may change the API.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Documentation:** the website builds without its 67 long-standing Sphinx warnings: example-gallery text blocks, docstring formatting, duplicate API entries, and an ambiguous `mesh` link.
+
 ## [0.5.0] - 2026-10-15
 
 First release after 0.3.0; 0.4.0 was not published. These notes cover every change since 0.3.0.

@@ -10,11 +10,11 @@ Neutral shapes used throughout:
 - tool spec:        ``{"name", "description", "parameters"(JSON schema)}``
 - message (user):   ``{"role": "user", "content": str | [block]}``
 - message (asst):   ``{"role": "assistant", "content": str|None,
-                       "tool_calls": [{"id", "name", "arguments"(dict)}],
-                       "_anthropic_content"(optional, opaque)}``
+  "tool_calls": [{"id", "name", "arguments"(dict)}],
+  "_anthropic_content"(optional, opaque)}``
 - message (tool):   ``{"role": "tool", "id": str, "name": str, "content": any}``
 - complete() reply: ``{"content": str|None, "tool_calls": [...],
-                       "_anthropic_content"(optional)}``
+  "_anthropic_content"(optional)}``
 - block (text):     ``{"type": "text", "text": str}``
 - block (image):    ``{"type": "image", "media_type": str, "data": str(base64)}``
 

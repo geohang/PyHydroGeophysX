@@ -23,7 +23,11 @@ PyHydroGeophysX.Hydro\_modular.hydro\_to\_srt module
 Module contents
 ---------------
 
+.. hydro_to_ert and hydro_to_srt are documented in their submodules above, whose
+   names they share; listing them again here would describe each name twice.
+
 .. automodule:: PyHydroGeophysX.Hydro_modular
    :members:
    :undoc-members:
    :show-inheritance:
+   :exclude-members: hydro_to_ert, hydro_to_srt

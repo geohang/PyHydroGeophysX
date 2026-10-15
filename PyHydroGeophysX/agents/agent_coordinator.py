@@ -861,6 +861,7 @@ class AgentCoordinator:
         
         Args:
             config: Configuration dictionary containing:
+
                 - user_request: Optional natural-language request. It is read
                   as the preview reads it: the ERT files it names are run
                   when this dictionary names none, the instrument,
@@ -883,6 +884,7 @@ class AgentCoordinator:
                 - use_climate: Whether to include climate data (default: False)
                 - climate_config: Climate data configuration (coords/geometry, dates, etc.)
                 - ert_timestamps: Timestamps for ERT acquisitions (for climate alignment)
+
                 A configuration naming ``tdem_file``, ``em_file``,
                 ``seismic_file`` or ``raw_seismic_file``, or a request that
                 asks for TDEM, is refused: this pipeline has no step for them,

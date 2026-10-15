@@ -276,7 +276,7 @@ Visualize the result
     plt.tight_layout()
     plt.show()
 
-.. GENERATED FROM PYTHON SOURCE LINES 204-217
+.. GENERATED FROM PYTHON SOURCE LINES 204-215
 
 Profile Setup and Topographic Analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -289,14 +289,16 @@ and geological structure definition.
 .. image:: /auto_examples/images/Ex_ERT_workflow_fig_01.png
    :align: center
    :width: 800px
-%% [markdown]
+
+.. GENERATED FROM PYTHON SOURCE LINES 217-218
+
 ## Interpolating data to mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 219-220
+.. GENERATED FROM PYTHON SOURCE LINES 220-221
 
 Step 6: Interpolate data to mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 220-280
+.. GENERATED FROM PYTHON SOURCE LINES 221-281
 
 .. code-block:: Python
 
@@ -361,7 +363,7 @@ Step 6: Interpolate data to mesh
     saturation = wc_mesh / porosity_mesh
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 281-352
+.. GENERATED FROM PYTHON SOURCE LINES 282-353
 
 .. code-block:: Python
 
@@ -437,7 +439,7 @@ Step 6: Interpolate data to mesh
     plt.savefig(os.path.join(output_dir, "topography_and_properties.tiff"), dpi=300)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 353-365
+.. GENERATED FROM PYTHON SOURCE LINES 354-365
 
 Mesh Properties and Interpolation Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -450,9 +452,8 @@ boundaries while providing appropriate resolution for ERT modeling.
 .. image:: /auto_examples/images/Ex_ERT_workflow_fig_02.png
    :align: center
    :width: 900px
-%%
 
-.. GENERATED FROM PYTHON SOURCE LINES 365-369
+.. GENERATED FROM PYTHON SOURCE LINES 367-371
 
 .. code-block:: Python
 
@@ -461,15 +462,15 @@ boundaries while providing appropriate resolution for ERT modeling.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 370-371
+.. GENERATED FROM PYTHON SOURCE LINES 372-373
 
 ## Calculating saturation
 
-.. GENERATED FROM PYTHON SOURCE LINES 373-374
+.. GENERATED FROM PYTHON SOURCE LINES 375-376
 
 Ensure porosity is not zero to avoid division by zero
 
-.. GENERATED FROM PYTHON SOURCE LINES 374-377
+.. GENERATED FROM PYTHON SOURCE LINES 376-379
 
 .. code-block:: Python
 
@@ -477,15 +478,15 @@ Ensure porosity is not zero to avoid division by zero
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 378-379
+.. GENERATED FROM PYTHON SOURCE LINES 380-381
 
 ## Converting to resistivity
 
-.. GENERATED FROM PYTHON SOURCE LINES 381-382
+.. GENERATED FROM PYTHON SOURCE LINES 383-384
 
 Convert to resistivity using petrophysical model
 
-.. GENERATED FROM PYTHON SOURCE LINES 382-427
+.. GENERATED FROM PYTHON SOURCE LINES 384-429
 
 .. code-block:: Python
 
@@ -535,7 +536,7 @@ Convert to resistivity using petrophysical model
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 428-502
+.. GENERATED FROM PYTHON SOURCE LINES 430-504
 
 .. code-block:: Python
 
@@ -614,7 +615,7 @@ Convert to resistivity using petrophysical model
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, "resistivity_porosity_saturation.tiff"), dpi=300)
 
-.. GENERATED FROM PYTHON SOURCE LINES 503-516
+.. GENERATED FROM PYTHON SOURCE LINES 505-516
 
 Petrophysical Relationship Validation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -627,10 +628,12 @@ theoretical curves, confirming realistic petrophysical transformations.
 .. image:: /auto_examples/images/Ex_ERT_workflow_fig_03.png
    :align: center
    :width: 800px
-%% [markdown]
+
+.. GENERATED FROM PYTHON SOURCE LINES 518-519
+
 ## ERT forward modeling simulation
 
-.. GENERATED FROM PYTHON SOURCE LINES 518-546
+.. GENERATED FROM PYTHON SOURCE LINES 521-549
 
 .. code-block:: Python
 
@@ -663,7 +666,7 @@ theoretical curves, confirming realistic petrophysical transformations.
     synth_data.save(os.path.join(output_dir, "synthetic_data.dat"))
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 547-574
+.. GENERATED FROM PYTHON SOURCE LINES 550-577
 
 .. code-block:: Python
 
@@ -695,7 +698,7 @@ theoretical curves, confirming realistic petrophysical transformations.
     plt.show()
     plt.savefig(os.path.join(output_dir, "res_model_and_synth_data.tiff"), dpi=300)
 
-.. GENERATED FROM PYTHON SOURCE LINES 575-588
+.. GENERATED FROM PYTHON SOURCE LINES 578-589
 
 Forward Modeling Results
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -708,10 +711,12 @@ geological structure in the apparent resistivity data.
 .. image:: /auto_examples/images/Ex_ERT_workflow_fig_04.png
    :align: center
    :width: 800px
-%%
+
+.. GENERATED FROM PYTHON SOURCE LINES 591-592
+
 Step 11: Run ERT inversion on synthetic data
 
-.. GENERATED FROM PYTHON SOURCE LINES 588-603
+.. GENERATED FROM PYTHON SOURCE LINES 592-607
 
 .. code-block:: Python
 
@@ -731,11 +736,11 @@ Step 11: Run ERT inversion on synthetic data
     inversion_result = inversion.run()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 604-605
+.. GENERATED FROM PYTHON SOURCE LINES 608-609
 
 # Using Pygimili default to the inversion
 
-.. GENERATED FROM PYTHON SOURCE LINES 605-608
+.. GENERATED FROM PYTHON SOURCE LINES 609-612
 
 .. code-block:: Python
 
@@ -743,7 +748,7 @@ Step 11: Run ERT inversion on synthetic data
     inv = mgr.invert(lam=10, verbose=True,quality=34)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 609-629
+.. GENERATED FROM PYTHON SOURCE LINES 613-633
 
 .. code-block:: Python
 
@@ -768,7 +773,7 @@ Step 11: Run ERT inversion on synthetic data
     # Adjust layout
     plt.tight_layout()
 
-.. GENERATED FROM PYTHON SOURCE LINES 630-641
+.. GENERATED FROM PYTHON SOURCE LINES 634-645
 
 Inversion Results Comparison
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -782,7 +787,7 @@ validating the complete hydro-to-geophysical workflow.
    :align: center
    :width: 900px
 
-.. GENERATED FROM PYTHON SOURCE LINES 641-646
+.. GENERATED FROM PYTHON SOURCE LINES 645-650
 
 .. code-block:: Python
 
@@ -792,19 +797,19 @@ validating the complete hydro-to-geophysical workflow.
     # the difference is that the chi2 value for stop inversion is not the same, we chose 1.5 while Pygimli is 1.0
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 647-648
+.. GENERATED FROM PYTHON SOURCE LINES 651-652
 
 # One step approach
 
-.. GENERATED FROM PYTHON SOURCE LINES 650-651
+.. GENERATED FROM PYTHON SOURCE LINES 654-655
 
 ## ERT one step from HM to GM
 
-.. GENERATED FROM PYTHON SOURCE LINES 653-654
+.. GENERATED FROM PYTHON SOURCE LINES 657-658
 
 Set up directories
 
-.. GENERATED FROM PYTHON SOURCE LINES 654-738
+.. GENERATED FROM PYTHON SOURCE LINES 658-742
 
 .. code-block:: Python
 
@@ -893,7 +898,7 @@ Set up directories
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 739-750
+.. GENERATED FROM PYTHON SOURCE LINES 743-754
 
 One-Step Integrated Workflow Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -907,7 +912,7 @@ suitable for inversion and interpretation.
    :align: center
    :width: 700px
 
-.. GENERATED FROM PYTHON SOURCE LINES 752-759
+.. GENERATED FROM PYTHON SOURCE LINES 756-763
 
 Summary
 ~~~~~~~

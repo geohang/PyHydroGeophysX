@@ -31,6 +31,7 @@ LocalRef
 ^^^^^^^^
 
 .. py:class:: LocalRef
+   :no-index:
 
    Named tuple for local coordinate reference system parameters.
 
@@ -45,6 +46,7 @@ Electrode
 ^^^^^^^^^
 
 .. py:class:: Electrode
+   :no-index:
 
    Dataclass representing a single electrode.
 
@@ -61,6 +63,7 @@ Quadruplet
 ^^^^^^^^^^
 
 .. py:class:: Quadruplet
+   :no-index:
 
    Dataclass representing a 4-electrode measurement configuration.
 
@@ -77,6 +80,7 @@ Observation
 ^^^^^^^^^^^
 
 .. py:class:: Observation
+   :no-index:
 
    Dataclass representing a single ERT measurement.
 
@@ -101,6 +105,7 @@ StandardERT
 ^^^^^^^^^^^
 
 .. py:class:: StandardERT
+   :no-index:
 
    Dataclass representing a complete ERT survey dataset.
 
@@ -123,6 +128,7 @@ load_ert_resipy
 ^^^^^^^^^^^^^^^
 
 .. py:function:: load_ert_resipy(project_dir: str, data_file: str, instrument: str, crs: str = "local", local_ref: LocalRef | None = None, epsg: int | None = None) -> StandardERT
+   :no-index:
 
    Load ERT field data from multiple instruments: through ResIPy when it is
    installed, otherwise with this package's own readers.
@@ -203,6 +209,7 @@ qc_and_visualize
 ^^^^^^^^^^^^^^^^
 
 .. py:function:: qc_and_visualize(ert: StandardERT, outdir: str = "examples/results/ert") -> Dict[str, str]
+   :no-index:
 
    Write quality-control plots and the dataset's standardized tables.
 
@@ -246,6 +253,7 @@ export_for_inversion
 ^^^^^^^^^^^^^^^^^^^^
 
 .. py:function:: export_for_inversion(ert: StandardERT, outdir: str = "examples/results/ert", fmt: str = "pgimli", use_source_error: bool = False, export_strategy: str = "default", default_relative_error: float = 0.01, default_absolute_error: float = 0.001, default_rhoa_limits: tuple[float, float] = (0.1, 10000.0), default_reciprocal_percent: float = 10.0, default_fit_error_lin: bool = True) -> str
+   :no-index:
 
    Export ERT dataset to format suitable for inversion codes.
 

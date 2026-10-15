@@ -37,10 +37,16 @@ Core Inversion Classes
 EM Inversion
 ------------
 
+.. The TDEMInversionResult docstring's Attributes section already describes
+   every field; excluding them here keeps autodoc from listing them twice.
+
 .. automodule:: PyHydroGeophysX.inversion.tdem_inversion
    :members:
    :undoc-members:
    :show-inheritance:
+   :exclude-members: recovered_model, recovered_conductivity, l2_model, l2_conductivity,
+                     predicted_data, mesh, thicknesses, chi2, iterations,
+                     convergence_history
 
 .. automodule:: PyHydroGeophysX.inversion.fdem_inversion
    :members:

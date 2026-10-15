@@ -39,6 +39,7 @@ constraints, structural constraints, and convergence criteria."""
         
         Args:
             input_data: Dictionary containing:
+
                 - ert_data: Loaded ERT data (for standard inversion)
                 - inversion_mode: 'standard' or 'time-lapse'
                 - time_lapse_data: List of ERT datasets (for time-lapse)

@@ -346,7 +346,7 @@ sphinx_gallery_thumbnail_path = 'auto_examples/images/Ex_MC_Hydro_fig_01.png'
     plt.tight_layout()
     plt.savefig(os.path.join(structure_output_dir, "timelapse_sat.tiff"), dpi=300, bbox_inches='tight')
 
-.. GENERATED FROM PYTHON SOURCE LINES 299-312
+.. GENERATED FROM PYTHON SOURCE LINES 299-310
 
 Time-Lapse Water Content with Uncertainty
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -359,10 +359,12 @@ temporal changes track seasonal hydrological processes with confidence intervals
 .. image:: /auto_examples/images/Ex_MC_Hydro_fig_01.png
    :align: center
    :width: 900px
-%% [markdown]
+
+.. GENERATED FROM PYTHON SOURCE LINES 312-313
+
 ### Extract the true water content values
 
-.. GENERATED FROM PYTHON SOURCE LINES 314-323
+.. GENERATED FROM PYTHON SOURCE LINES 315-324
 
 .. code-block:: Python
 
@@ -376,11 +378,11 @@ temporal changes track seasonal hydrological processes with confidence intervals
     print(WC_true.shape)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 324-325
+.. GENERATED FROM PYTHON SOURCE LINES 325-326
 
 ### Pick up the comparison locations
 
-.. GENERATED FROM PYTHON SOURCE LINES 327-350
+.. GENERATED FROM PYTHON SOURCE LINES 328-351
 
 .. code-block:: Python
 
@@ -408,7 +410,7 @@ temporal changes track seasonal hydrological processes with confidence intervals
     ax.plot([40],[1590],'*')
     ax.plot([55],[1590],'*')
 
-.. GENERATED FROM PYTHON SOURCE LINES 351-364
+.. GENERATED FROM PYTHON SOURCE LINES 352-363
 
 Monitoring Point Selection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -421,14 +423,16 @@ layer-specific uncertainty patterns in water content estimates.
 .. image:: /auto_examples/images/Ex_MC_Hydro_fig_02.png
    :align: center
    :width: 600px
-%% [markdown]
+
+.. GENERATED FROM PYTHON SOURCE LINES 365-366
+
 ### Function for analyze the time-series data
 
-.. GENERATED FROM PYTHON SOURCE LINES 366-367
+.. GENERATED FROM PYTHON SOURCE LINES 368-369
 
 Extract a time series at the selected horizontal position and elevation.
 
-.. GENERATED FROM PYTHON SOURCE LINES 367-444
+.. GENERATED FROM PYTHON SOURCE LINES 369-446
 
 .. code-block:: Python
 
@@ -510,11 +514,11 @@ Extract a time series at the selected horizontal position and elevation.
 
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 445-446
+.. GENERATED FROM PYTHON SOURCE LINES 447-448
 
 ### Pick up the locations
 
-.. GENERATED FROM PYTHON SOURCE LINES 448-460
+.. GENERATED FROM PYTHON SOURCE LINES 450-462
 
 .. code-block:: Python
 
@@ -531,15 +535,15 @@ Extract a time series at the selected horizontal position and elevation.
     Pos1_true
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 461-462
+.. GENERATED FROM PYTHON SOURCE LINES 463-464
 
 ### Comparisons of water content
 
-.. GENERATED FROM PYTHON SOURCE LINES 464-465
+.. GENERATED FROM PYTHON SOURCE LINES 466-467
 
 Plot time series with uncertainty bands
 
-.. GENERATED FROM PYTHON SOURCE LINES 465-496
+.. GENERATED FROM PYTHON SOURCE LINES 467-498
 
 .. code-block:: Python
 
@@ -575,23 +579,25 @@ Plot time series with uncertainty bands
     plt.tight_layout()
     plt.savefig(os.path.join(structure_output_dir, "regolith_WC.tiff"), dpi=300, bbox_inches='tight')
 
-.. GENERATED FROM PYTHON SOURCE LINES 497-510
+.. GENERATED FROM PYTHON SOURCE LINES 499-510
 
 Regolith Layer Water Content Uncertainty
- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
- Time series at regolith monitoring points show excellent agreement between 
- estimated (solid lines) and true (dashed lines) water content. Uncertainty 
- bands (shaded areas) capture parameter variability while maintaining 
- reasonable confidence intervals for practical applications.
+Time series at regolith monitoring points show excellent agreement between 
+estimated (solid lines) and true (dashed lines) water content. Uncertainty 
+bands (shaded areas) capture parameter variability while maintaining 
+reasonable confidence intervals for practical applications.
 
- .. image:: /auto_examples/images/Ex_MC_Hydro_fig_03.png
-   :align: center
-   :width: 800px
- %%
-## Fractured bedrock layer
+.. image:: /auto_examples/images/Ex_MC_Hydro_fig_03.png
+  :align: center
+  :width: 800px
 
-.. GENERATED FROM PYTHON SOURCE LINES 510-522
+.. GENERATED FROM PYTHON SOURCE LINES 512-513
+
+### Fractured bedrock layer
+
+.. GENERATED FROM PYTHON SOURCE LINES 515-527
 
 .. code-block:: Python
 
@@ -608,11 +614,11 @@ Regolith Layer Water Content Uncertainty
     Pos2_true
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 523-524
+.. GENERATED FROM PYTHON SOURCE LINES 528-529
 
 Plot time series with uncertainty bands
 
-.. GENERATED FROM PYTHON SOURCE LINES 524-556
+.. GENERATED FROM PYTHON SOURCE LINES 529-561
 
 .. code-block:: Python
 
@@ -649,7 +655,7 @@ Plot time series with uncertainty bands
 
     plt.savefig(os.path.join(structure_output_dir, "Fracture_WC.tiff"), dpi=300, bbox_inches='tight')
 
-.. GENERATED FROM PYTHON SOURCE LINES 557-570
+.. GENERATED FROM PYTHON SOURCE LINES 562-573
 
 Fractured Bedrock Water Content Uncertainty
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -662,10 +668,12 @@ reduced ERT sensitivity in low-porosity environments.
 .. image:: /auto_examples/images/Ex_MC_Hydro_fig_04.png
    :align: center
    :width: 800px
-%% [markdown]
+
+.. GENERATED FROM PYTHON SOURCE LINES 575-576
+
 ### Estimate Porosity
 
-.. GENERATED FROM PYTHON SOURCE LINES 572-579
+.. GENERATED FROM PYTHON SOURCE LINES 578-585
 
 Below the water table the pores are full, so with saturation known (S = 1)
 the Waxman-Smits relation can be solved for porosity instead of saturation.
@@ -675,7 +683,7 @@ A draw whose surface conductivity alone conducts more than the measured
 resistivity allows has no porosity solution: it is left out of the
 statistics, counted in ``no_root_fraction`` and reported in a warning.
 
-.. GENERATED FROM PYTHON SOURCE LINES 579-627
+.. GENERATED FROM PYTHON SOURCE LINES 585-633
 
 .. code-block:: Python
 
@@ -728,7 +736,7 @@ statistics, counted in ``no_root_fraction`` and reported in a warning.
               f"solution; {100 * np.mean(share == 1.0):.1f}% of cell-surveys have none in any draw")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 628-639
+.. GENERATED FROM PYTHON SOURCE LINES 634-645
 
 Where Porosity Has No Solution
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -742,11 +750,11 @@ model (true saturation at most 0.57 over the 12 surveys), so S = 1 does not
 hold there. Both comparisons below lie in the bedrock layer, where
 sigma_sur is zero and every draw has a solution.
 
-.. GENERATED FROM PYTHON SOURCE LINES 641-642
+.. GENERATED FROM PYTHON SOURCE LINES 647-648
 
 ### Unsaturated zone comparison
 
-.. GENERATED FROM PYTHON SOURCE LINES 644-668
+.. GENERATED FROM PYTHON SOURCE LINES 650-674
 
 .. code-block:: Python
 
@@ -775,7 +783,7 @@ sigma_sur is zero and every draw has a solution.
     plt.ylabel('Porosity (-)')
     plt.legend(frameon=False)
 
-.. GENERATED FROM PYTHON SOURCE LINES 669-683
+.. GENERATED FROM PYTHON SOURCE LINES 675-687
 
 Unsaturated Zone Porosity Estimation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -789,10 +797,12 @@ resistivity at S = 1 holds only below the water table.
 .. image:: /auto_examples/images/Ex_MC_Hydro_fig_05.png
    :align: center
    :width: 700px
-%% [markdown]
+
+.. GENERATED FROM PYTHON SOURCE LINES 689-690
+
 ### Saturated zone comparison
 
-.. GENERATED FROM PYTHON SOURCE LINES 685-700
+.. GENERATED FROM PYTHON SOURCE LINES 692-707
 
 .. code-block:: Python
 
@@ -812,7 +822,7 @@ resistivity at S = 1 holds only below the water table.
     plt.ylim(0, 0.35)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 701-716
+.. GENERATED FROM PYTHON SOURCE LINES 708-722
 
 Saturated Zone Porosity Validation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -828,9 +838,8 @@ porosity.
 .. image:: /auto_examples/images/Ex_MC_Hydro_fig_06.png
    :align: center
    :width: 700px
-%%
 
-.. GENERATED FROM PYTHON SOURCE LINES 718-726
+.. GENERATED FROM PYTHON SOURCE LINES 726-734
 
 Summary
 ~~~~~~~

@@ -102,6 +102,7 @@ ax, cbar = TT.showResult(cMap='jet',coverage=TT.standardizedCoverage(),cMin=500,
 # .. image:: /auto_examples/images/Ex_Structure_resinv_fig_01.png
 #    :align: center
 #    :width: 700px
+
 # %% [markdown]
 # ### 4. Get the structure interface
 
@@ -125,6 +126,7 @@ ax1.plot(smooth_x, smooth_z)
 # .. image:: /auto_examples/images/Ex_Structure_resinv_fig_02.png
 #    :align: center
 #    :width: 600px
+
 # %% [markdown]
 # ### 4. Put structure interface into mesh for inversion
 
@@ -151,6 +153,7 @@ mesh_with_interface
 # .. image:: /auto_examples/images/Ex_Structure_resinv_fig_03.png
 #    :align: center
 #    :width: 700px
+
 # %% [markdown]
 # ### 5. Inversion with the updated mesh
 

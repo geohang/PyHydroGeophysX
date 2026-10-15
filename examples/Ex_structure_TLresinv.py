@@ -277,6 +277,7 @@ plt.savefig(
 # .. image:: /auto_examples/images/Ex_structure_TLresinv_fig_01.png
 #    :align: center
 #    :width: 900px
+
 # %%
 # plot the true resistivity model
 fixed_cmap = BlueDarkRed18_18.mpl_colormap

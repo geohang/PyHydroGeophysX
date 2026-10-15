@@ -333,6 +333,7 @@ ert.show(syn_data)
 # .. image:: /auto_examples/images/Ex_Time_lapse_measurement_fig_01.png
 #    :align: center
 #    :width: 700px
+
 # %%
 # Load the consolidated daily apparent-resistivity responses.
 syn_data_array = np.asarray(apparent_resistivity)
@@ -384,6 +385,7 @@ plt.savefig(os.path.join(figure_dir, "apparent_resistivity.tiff"), dpi=300)
 # .. image:: /auto_examples/images/Ex_Time_lapse_measurement_fig_02.png
 #    :align: center
 #    :width: 800px
+
 # %%
 plt.figure(figsize=(12, 6))
 plt.subplot(211)
@@ -393,6 +395,7 @@ plt.colorbar(label='Apparent Resistivity (Ω·m)')
 # .. image:: /auto_examples/images/Ex_Time_lapse_measurement_fig_03.png
 #    :align: center
 #    :width: 800px
+
 # %%
 
 
@@ -445,6 +448,7 @@ plt.savefig(os.path.join(figure_dir, "water_content_model.tiff"), dpi=300)
 # .. image:: /auto_examples/images/Ex_Time_lapse_measurement_fig_04.png
 #    :align: center
 #    :width: 900px
+
 # %%
 # ## Showing the water content model for the differnent timesteps
 fig, axes = plt.subplots(1, 4, figsize=(16, 14))
@@ -499,6 +503,7 @@ plt.savefig(os.path.join(figure_dir, "resistivity_model.tiff"), dpi=300)
 # .. image:: /auto_examples/images/Ex_Time_lapse_measurement_fig_05.png
 #    :align: center
 #    :width: 900px
+
 # %%
 import numpy as np
 import matplotlib.pyplot as plt

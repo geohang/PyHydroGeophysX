@@ -307,6 +307,7 @@ plt.savefig(os.path.join(structure_output_dir, "timelapse_sat.tiff"), dpi=300, b
 # .. image:: /auto_examples/images/Ex_MC_Hydro_fig_01.png
 #    :align: center
 #    :width: 900px
+
 # %% [markdown]
 # ### Extract the true water content values
 
@@ -359,6 +360,7 @@ ax.plot([55],[1590],'*')
 # .. image:: /auto_examples/images/Ex_MC_Hydro_fig_02.png
 #    :align: center
 #    :width: 600px
+
 # %% [markdown]
 # ### Function for analyze the time-series data
 
@@ -505,8 +507,11 @@ plt.savefig(os.path.join(structure_output_dir, "regolith_WC.tiff"), dpi=300, bbo
 # .. image:: /auto_examples/images/Ex_MC_Hydro_fig_03.png
 #   :align: center
 #   :width: 800px
+
+# %% [markdown]
+# ### Fractured bedrock layer
+
 # %%
-### Fractured bedrock layer
 
 # Define positions to sample (x,y coordinates)
 positions = [
@@ -565,6 +570,7 @@ plt.savefig(os.path.join(structure_output_dir, "Fracture_WC.tiff"), dpi=300, bbo
 # .. image:: /auto_examples/images/Ex_MC_Hydro_fig_04.png
 #    :align: center
 #    :width: 800px
+
 # %% [markdown]
 # ### Estimate Porosity
 
@@ -678,6 +684,7 @@ plt.legend(frameon=False)
 # .. image:: /auto_examples/images/Ex_MC_Hydro_fig_05.png
 #    :align: center
 #    :width: 700px
+
 # %% [markdown]
 # ### Saturated zone comparison
 
@@ -712,6 +719,7 @@ plt.ylim(0, 0.35)
 # .. image:: /auto_examples/images/Ex_MC_Hydro_fig_06.png
 #    :align: center
 #    :width: 700px
+
 # %%
 
 ###############################################################################

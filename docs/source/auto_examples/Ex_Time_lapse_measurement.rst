@@ -377,7 +377,7 @@ example to load and show the synthetic data
     syn_data = pg.load(monthly_ert_paths[30])
     ert.show(syn_data)
 
-.. GENERATED FROM PYTHON SOURCE LINES 324-338
+.. GENERATED FROM PYTHON SOURCE LINES 324-336
 
 Synthetic ERT Data Visualization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -391,21 +391,23 @@ distribution at this particular time.
 .. image:: /auto_examples/images/Ex_Time_lapse_measurement_fig_01.png
    :align: center
    :width: 700px
-%%
+
+.. GENERATED FROM PYTHON SOURCE LINES 338-339
+
 Load the consolidated daily apparent-resistivity responses.
 
-.. GENERATED FROM PYTHON SOURCE LINES 338-340
+.. GENERATED FROM PYTHON SOURCE LINES 339-341
 
 .. code-block:: Python
 
     syn_data_array = np.asarray(apparent_resistivity)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 341-342
+.. GENERATED FROM PYTHON SOURCE LINES 342-343
 
 ## plot the apparent resitivity
 
-.. GENERATED FROM PYTHON SOURCE LINES 342-373
+.. GENERATED FROM PYTHON SOURCE LINES 343-374
 
 .. code-block:: Python
 
@@ -441,7 +443,7 @@ Load the consolidated daily apparent-resistivity responses.
     plt.tight_layout()
     plt.savefig(os.path.join(figure_dir, "apparent_resistivity.tiff"), dpi=300)
 
-.. GENERATED FROM PYTHON SOURCE LINES 374-388
+.. GENERATED FROM PYTHON SOURCE LINES 375-388
 
 Time-Lapse Apparent Resistivity Response
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -456,9 +458,8 @@ events, indicating increased water content in the subsurface.
 .. image:: /auto_examples/images/Ex_Time_lapse_measurement_fig_02.png
    :align: center
    :width: 800px
-%%
 
-.. GENERATED FROM PYTHON SOURCE LINES 388-392
+.. GENERATED FROM PYTHON SOURCE LINES 390-394
 
 .. code-block:: Python
 
@@ -467,18 +468,17 @@ events, indicating increased water content in the subsurface.
     plt.imshow(syn_data_array.T, aspect='auto', cmap=pg.utils.cMap('rhoa'), vmin=200, vmax=2000)
     plt.colorbar(label='Apparent Resistivity (Ω·m)')
 
-.. GENERATED FROM PYTHON SOURCE LINES 393-397
+.. GENERATED FROM PYTHON SOURCE LINES 395-398
 
 .. image:: /auto_examples/images/Ex_Time_lapse_measurement_fig_03.png
    :align: center
    :width: 800px
-%%
 
-.. GENERATED FROM PYTHON SOURCE LINES 400-401
+.. GENERATED FROM PYTHON SOURCE LINES 403-404
 
 ## Showing the water content model for the differnent timesteps
 
-.. GENERATED FROM PYTHON SOURCE LINES 401-434
+.. GENERATED FROM PYTHON SOURCE LINES 404-437
 
 .. code-block:: Python
 
@@ -516,7 +516,7 @@ events, indicating increased water content in the subsurface.
     fig.tight_layout()
     plt.savefig(os.path.join(figure_dir, "water_content_model.tiff"), dpi=300)
 
-.. GENERATED FROM PYTHON SOURCE LINES 435-450
+.. GENERATED FROM PYTHON SOURCE LINES 438-451
 
 Water Content Evolution Over Time
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -531,10 +531,12 @@ and gradually saturates deeper layers (fractured and fresh bedrock).
 .. image:: /auto_examples/images/Ex_Time_lapse_measurement_fig_04.png
    :align: center
    :width: 900px
-%%
+
+.. GENERATED FROM PYTHON SOURCE LINES 453-454
+
 ## Showing the water content model for the differnent timesteps
 
-.. GENERATED FROM PYTHON SOURCE LINES 450-487
+.. GENERATED FROM PYTHON SOURCE LINES 454-491
 
 .. code-block:: Python
 
@@ -576,7 +578,7 @@ and gradually saturates deeper layers (fractured and fresh bedrock).
     fig.tight_layout()
     plt.savefig(os.path.join(figure_dir, "resistivity_model.tiff"), dpi=300)
 
-.. GENERATED FROM PYTHON SOURCE LINES 488-503
+.. GENERATED FROM PYTHON SOURCE LINES 492-506
 
 Resistivity Model Evolution 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -592,9 +594,8 @@ modeling synthetic ERT measurements.
 .. image:: /auto_examples/images/Ex_Time_lapse_measurement_fig_05.png
    :align: center
    :width: 900px
-%%
 
-.. GENERATED FROM PYTHON SOURCE LINES 503-593
+.. GENERATED FROM PYTHON SOURCE LINES 508-598
 
 .. code-block:: Python
 
@@ -689,7 +690,7 @@ modeling synthetic ERT measurements.
     print(f"GIF saved successfully to {gif_path}")
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 594-606
+.. GENERATED FROM PYTHON SOURCE LINES 599-611
 
 Animation and Advanced Visualization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -704,7 +705,7 @@ of water content throughout the year. This animation provides insights into:
 
 The animation is saved as 'WCanimation.gif' in the results directory.
 
-.. GENERATED FROM PYTHON SOURCE LINES 608-639
+.. GENERATED FROM PYTHON SOURCE LINES 613-644
 
 Summary and Applications
 ~~~~~~~~~~~~~~~~~~~~~~~~

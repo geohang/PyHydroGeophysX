@@ -70,14 +70,15 @@ class TDEMInversion:
     
     Example (``dobs`` and ``uncertainties`` are your sounding's data, one
     value per time gate):
-        >>> times = np.logspace(-5, -2, 31)
-        >>> inv = TDEMInversion(  # doctest: +SKIP
-        ...     times=times,
-        ...     dobs=dobs,
-        ...     uncertainties=uncertainties,
-        ...     source_radius=10.0
-        ... )
-        >>> result = inv.run()  # doctest: +SKIP
+
+    >>> times = np.logspace(-5, -2, 31)
+    >>> inv = TDEMInversion(  # doctest: +SKIP
+    ...     times=times,
+    ...     dobs=dobs,
+    ...     uncertainties=uncertainties,
+    ...     source_radius=10.0
+    ... )
+    >>> result = inv.run()  # doctest: +SKIP
     """
     
     def __init__(

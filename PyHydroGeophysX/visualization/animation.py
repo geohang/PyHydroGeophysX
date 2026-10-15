@@ -163,7 +163,8 @@ def create_timelapse_mp4(
 ) -> str:
     """Create an MP4 video of time-lapse model snapshots using matplotlib.
 
-    Requires ``ffmpeg`` to be available on the system path.
+    Requires ``ffmpeg`` to be available on the system path. Parameters not
+    listed below are the same as in :func:`create_timelapse_gif`.
 
     Parameters
     ----------
@@ -173,7 +174,6 @@ def create_timelapse_mp4(
         Output ``.mp4`` path.
     fps : int
         Frames per second.
-    (other parameters same as :func:`create_timelapse_gif`)
 
     Returns
     -------
@@ -244,6 +244,9 @@ def create_difference_gif(
 ) -> str:
     """Create a GIF animation showing model changes relative to a reference.
 
+    Parameters not listed below are the same as in
+    :func:`create_timelapse_gif`.
+
     Parameters
     ----------
     mesh : pygimli.Mesh
@@ -254,7 +257,6 @@ def create_difference_gif(
     mode : ``'difference'`` | ``'ratio'`` | ``'percent_change'``
     symmetric : bool
         Center colorbar at zero / one.
-    (other parameters same as :func:`create_timelapse_gif`)
 
     Returns
     -------

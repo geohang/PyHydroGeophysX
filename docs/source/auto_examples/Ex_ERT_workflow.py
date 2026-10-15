@@ -212,6 +212,7 @@ plt.show()
 # .. image:: /auto_examples/images/Ex_ERT_workflow_fig_01.png
 #    :align: center
 #    :width: 800px
+
 # %% [markdown]
 # ## Interpolating data to mesh
 
@@ -361,6 +362,7 @@ plt.savefig(os.path.join(output_dir, "topography_and_properties.tiff"), dpi=300)
 # .. image:: /auto_examples/images/Ex_ERT_workflow_fig_02.png
 #    :align: center
 #    :width: 900px
+
 # %%
 print("Water Content min/max:", np.min(wc_mesh), np.max(wc_mesh))
 print("Saturation min/max:", np.min(saturation), np.max(saturation))
@@ -511,6 +513,7 @@ plt.savefig(os.path.join(output_dir, "resistivity_porosity_saturation.tiff"), dp
 # .. image:: /auto_examples/images/Ex_ERT_workflow_fig_03.png
 #    :align: center
 #    :width: 800px
+
 # %% [markdown]
 # ## ERT forward modeling simulation
 
@@ -583,6 +586,7 @@ plt.savefig(os.path.join(output_dir, "res_model_and_synth_data.tiff"), dpi=300)
 # .. image:: /auto_examples/images/Ex_ERT_workflow_fig_04.png
 #    :align: center
 #    :width: 800px
+
 # %%
 # Step 11: Run ERT inversion on synthetic data
 

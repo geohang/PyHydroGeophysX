@@ -147,17 +147,19 @@ using ERT data to create a mesh to take care of the boundary
     ax, cbar = TT.showResult(cMap='jet',coverage=TT.standardizedCoverage(),cMin=500,cMax=5000)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 100-107
+.. GENERATED FROM PYTHON SOURCE LINES 100-105
 
 Seismic Velocity Inversion Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. image:: /auto_examples/images/Ex_Structure_resinv_fig_01.png
    :align: center
    :width: 700px
-%% [markdown]
+
+.. GENERATED FROM PYTHON SOURCE LINES 107-108
+
 ### 4. Get the structure interface
 
-.. GENERATED FROM PYTHON SOURCE LINES 109-119
+.. GENERATED FROM PYTHON SOURCE LINES 110-120
 
 .. code-block:: Python
 
@@ -172,7 +174,7 @@ Seismic Velocity Inversion Results
     ax1.set_title('Original Velocity Data')
     ax1.plot(smooth_x, smooth_z)
 
-.. GENERATED FROM PYTHON SOURCE LINES 120-130
+.. GENERATED FROM PYTHON SOURCE LINES 121-129
 
 Velocity Interface Extraction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -182,10 +184,12 @@ inversion and preserve sharp geological boundaries.
 .. image:: /auto_examples/images/Ex_Structure_resinv_fig_02.png
    :align: center
    :width: 600px
-%% [markdown]
+
+.. GENERATED FROM PYTHON SOURCE LINES 131-132
+
 ### 4. Put structure interface into mesh for inversion
 
-.. GENERATED FROM PYTHON SOURCE LINES 132-135
+.. GENERATED FROM PYTHON SOURCE LINES 134-137
 
 .. code-block:: Python
 
@@ -193,11 +197,11 @@ inversion and preserve sharp geological boundaries.
     mesh_with_interface
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 136-137
+.. GENERATED FROM PYTHON SOURCE LINES 138-139
 
 # chceck the mesh with interface
 
-.. GENERATED FROM PYTHON SOURCE LINES 137-142
+.. GENERATED FROM PYTHON SOURCE LINES 139-144
 
 .. code-block:: Python
 
@@ -207,7 +211,7 @@ inversion and preserve sharp geological boundaries.
     plt.show()
     mesh_with_interface
 
-.. GENERATED FROM PYTHON SOURCE LINES 143-156
+.. GENERATED FROM PYTHON SOURCE LINES 145-156
 
 Mesh with Structural Constraints
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -220,10 +224,12 @@ while applying smoothing constraints within each geological unit.
 .. image:: /auto_examples/images/Ex_Structure_resinv_fig_03.png
    :align: center
    :width: 700px
-%% [markdown]
+
+.. GENERATED FROM PYTHON SOURCE LINES 158-159
+
 ### 5. Inversion with the updated mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 158-161
+.. GENERATED FROM PYTHON SOURCE LINES 161-164
 
 .. code-block:: Python
 
@@ -231,7 +237,7 @@ while applying smoothing constraints within each geological unit.
     mgrConstrained.invert(data=ertData, verbose=True, lam=10, mesh=mesh_with_interface,limits=[1., 10000.])
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 162-169
+.. GENERATED FROM PYTHON SOURCE LINES 165-172
 
 .. code-block:: Python
 
@@ -243,7 +249,7 @@ while applying smoothing constraints within each geological unit.
     mgrConstrained.showResult(xlabel="Distance (m)", ylabel="Elevation (m)",coverage = res_cov,cMap=fixed_cmap)
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 170-179
+.. GENERATED FROM PYTHON SOURCE LINES 173-182
 
 Structure-Constrained ERT Inversion Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -255,11 +261,11 @@ from seismic data
    :align: center
    :width: 800px
 
-.. GENERATED FROM PYTHON SOURCE LINES 182-183
+.. GENERATED FROM PYTHON SOURCE LINES 185-186
 
 ### 6. Save the mesh
 
-.. GENERATED FROM PYTHON SOURCE LINES 185-188
+.. GENERATED FROM PYTHON SOURCE LINES 188-191
 
 .. code-block:: Python
 

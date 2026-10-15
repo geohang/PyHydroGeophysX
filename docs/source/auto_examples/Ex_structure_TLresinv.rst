@@ -296,7 +296,7 @@ plays a critical role in subsurface flow patterns.
     )
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 254-282
+.. GENERATED FROM PYTHON SOURCE LINES 254-280
 
 Structure-Constrained Time-Lapse Inversion Results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -324,10 +324,12 @@ the 12-month monitoring period.
 .. image:: /auto_examples/images/Ex_structure_TLresinv_fig_01.png
    :align: center
    :width: 900px
-%%
+
+.. GENERATED FROM PYTHON SOURCE LINES 282-283
+
 plot the true resistivity model
 
-.. GENERATED FROM PYTHON SOURCE LINES 282-328
+.. GENERATED FROM PYTHON SOURCE LINES 283-329
 
 .. code-block:: Python
 
@@ -378,7 +380,7 @@ plot the true resistivity model
             cbar.remove()
 
 
-.. GENERATED FROM PYTHON SOURCE LINES 329-351
+.. GENERATED FROM PYTHON SOURCE LINES 330-352
 
 True Resistivity Model Comparison
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -403,7 +405,7 @@ the value of integrating geophysical constraints in time-lapse monitoring.
    :align: center
    :width: 900px
 
-.. GENERATED FROM PYTHON SOURCE LINES 354-363
+.. GENERATED FROM PYTHON SOURCE LINES 355-364
 
 Summary and Best Practices
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

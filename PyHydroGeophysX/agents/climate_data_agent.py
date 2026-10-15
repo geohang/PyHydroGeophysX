@@ -117,6 +117,7 @@ class ClimateDataAgent(BaseAgent):
 
         Args:
             input_data: Dictionary containing:
+
                 - coords: (x, y) in ``crs`` - longitude, latitude by default - or
                   a list of pairs, which are averaged: an ERT line spans far less
                   than one reanalysis cell
