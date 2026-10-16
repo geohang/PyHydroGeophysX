@@ -47,7 +47,11 @@ if variant not in ("light", "full"):
 print(f"[studio spec] building the '{variant}' variant")
 
 hiddenimports = []
-hiddenimports += collect_submodules("PyHydroGeophysX.qt_apps")
+# The whole package, in both variants. Much of it is imported by name at run
+# time, out of PyInstaller's sight: the assistants (BUILTIN in
+# agents/assistants), their workflows and tools ("module:attribute"), and the
+# package's lazy exports. Engines a module needs stay out through `excludes`.
+hiddenimports += collect_submodules("PyHydroGeophysX")
 # pyqtgraph.examples initializes Qt when imported, which aborts PyInstaller's
 # isolated collection child on headless CI runners; the app uses neither the
 # examples nor pyqtgraph.opengl, so keep both out of the collection.
@@ -109,7 +113,6 @@ else:
     # Bundle whichever engines the build environment provides. collect_all picks
     # up their compiled extensions and data files; anything not installed is
     # skipped (the app shows its usual install hint for that engine).
-    hiddenimports += collect_submodules("PyHydroGeophysX")
     for _pkg in (
         "pygimli", "pgcore",
         "simpeg", "discretize", "pymatsolver", "geoana",
