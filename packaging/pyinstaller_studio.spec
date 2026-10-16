@@ -51,7 +51,21 @@ hiddenimports = []
 # time, out of PyInstaller's sight: the assistants (BUILTIN in
 # agents/assistants), their workflows and tools ("module:attribute"), and the
 # package's lazy exports. Engines a module needs stay out through `excludes`.
+#
+# collect_submodules imports the package to list it, in a child process that
+# starts from this sys.path. The build environment need not have the package
+# installed (CI installs only its dependencies), so put the checkout first;
+# otherwise the list comes back empty without a warning.
+if repo_root not in sys.path:
+    sys.path.insert(0, repo_root)
 hiddenimports += collect_submodules("PyHydroGeophysX")
+# Stop here rather than ship a studio without its assistants.
+_must_bundle = ("PyHydroGeophysX.agents.assistants.aquah",
+                "PyHydroGeophysX.agents.assistants.aquah.workflow")
+_missing = [name for name in _must_bundle if name not in hiddenimports]
+if _missing:
+    raise SystemExit("[studio spec] PyHydroGeophysX submodules were not collected "
+                     f"(missing {', '.join(_missing)}); is {repo_root} importable?")
 # pyqtgraph.examples initializes Qt when imported, which aborts PyInstaller's
 # isolated collection child on headless CI runners; the app uses neither the
 # examples nor pyqtgraph.opengl, so keep both out of the collection.
