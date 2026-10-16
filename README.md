@@ -4,7 +4,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17025139.svg)](https://doi.org/10.5281/zenodo.17025139)
 
 <div align="center">
-  <img src="logo.png" alt="PyHydroGeophysX Logo" width="400">
+  <img src="https://raw.githubusercontent.com/geohang/PyHydroGeophysX/main/logo.png" alt="PyHydroGeophysX Logo" width="400">
 </div>
 
 # PyHydroGeophysX
@@ -12,7 +12,7 @@
 A Python package for integrating hydrological model outputs (MODFLOW, ParFlow) with geophysical forward modeling and inversion — ERT, SRT, TDEM, FDEM, MT — for watershed monitoring and critical zone science. Includes a multi-agent AI system for automated geophysical workflows.
 
 <div align="center">
-  <img src="frame.png" alt="HydroGeophysX Framework" width="600">
+  <img src="https://raw.githubusercontent.com/geohang/PyHydroGeophysX/main/frame.png" alt="HydroGeophysX Framework" width="600">
 </div>
 
 **Links:** [Documentation](https://geohang.github.io/PyHydroGeophysX/) · [Examples gallery](https://geohang.github.io/PyHydroGeophysX/auto_examples/index.html) · [Live demo app](https://pyhydrogeophysx.streamlit.app/) · [Issues](https://github.com/geohang/PyHydroGeophysX/issues)
@@ -435,17 +435,7 @@ Please also cite the underlying libraries you use (click to expand):
   doi       = {10.1007/1-4020-3102-5_5}
 }
 
-@article{labrecque2001difference,
-  author  = {LaBrecque, Douglas J. and Yang, Xianjin},
-  title   = {Difference Inversion of {ERT} Data: a Fast Inversion Method for
-             {3-D} In Situ Monitoring},
-  journal = {Journal of Environmental and Engineering Geophysics},
-  volume  = {6},
-  number  = {2},
-  pages   = {83--89},
-  year    = {2001},
-  doi     = {10.4133/JEEG6.2.83}
-}
+
 ```
 
 </details>
@@ -477,16 +467,7 @@ Please also cite the underlying libraries you use (click to expand):
   url          = {https://e4d-userguide.pnnl.gov}
 }
 
-@article{si2015tetgen,
-  author  = {Si, Hang},
-  title   = {{TetGen}, a {Delaunay}-Based Quality Tetrahedral Mesh Generator},
-  journal = {ACM Transactions on Mathematical Software},
-  volume  = {41},
-  number  = {2},
-  pages   = {1--36},
-  year    = {2015},
-  doi     = {10.1145/2629697}
-}
+
 ```
 
 </details>

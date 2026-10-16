@@ -5,10 +5,6 @@ Before 1.0, minor releases may change the API.
 
 ## [Unreleased]
 
-### Fixed
-
-- **Documentation:** the website builds without its 67 long-standing Sphinx warnings: example-gallery text blocks, docstring formatting, duplicate API entries, and an ambiguous `mesh` link.
-
 ## [0.5.0] - 2026-10-15
 
 First release after 0.3.0; 0.4.0 was not published. These notes cover every change since 0.3.0.
@@ -43,7 +39,7 @@ First release after 0.3.0; 0.4.0 was not published. These notes cover every chan
 - **Package layout:** scientific pipelines moved out of the Qt package; optional dependency groups updated.
 - **Climate data:** Open-Meteo ERA5 replaces Daymet.
 - **Monte Carlo example:** `Ex_MC_Hydro` estimates porosity with the package's Monte Carlo and says where porosity has no solution and where the S = 1 assumption fails.
-- **Documentation:** concise README and changelog; detailed methods, references and setup guidance on the documentation website.
+- **Documentation:** concise README and changelog, with README images that also show on PyPI; detailed methods, references and setup guidance on the documentation website.
 
 ### Upgrade notes
 
@@ -67,6 +63,7 @@ First release after 0.3.0; 0.4.0 was not published. These notes cover every chan
 - **Seismic and TEM:** corrected SEG-2 decoding, acquisition timing, shot geometry, picking, sounding signs, and failed-sounding reporting; SRT now honors requested solver settings.
 - **Agent workflows:** corrected method selection, file classification, missing products, background-job failures, recovery, and reporting of the parameters actually used.
 - **Projects and reports:** improved workflow reports, project portability, Unicode paths, run cleanup, and example reproducibility.
+- **Documentation:** the website builds without its 67 long-standing Sphinx warnings: example-gallery text blocks, docstring formatting, duplicate API entries, and an ambiguous `mesh` link.
 
 ## [0.3.0] - 2026-07-09
 
