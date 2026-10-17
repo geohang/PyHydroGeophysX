@@ -349,6 +349,8 @@ def fetch(url, dest=None, timeout=120, tries=3):
 
 def url_ok(url, timeout=60, tries=2):
     """Does the URL answer? A server that times out gets a second try."""
+    if not re.match(r"(https?|ftp)://", url or ""):
+        return False
     for attempt in range(tries):
         for method in ("HEAD", "GET"):
             headers = {"User-Agent": "PyHydroGeophysX-release-audit"}
@@ -414,9 +416,19 @@ def gcc_build(path):
     """(GCC version, who built it) from the compiler notes in a GCC runtime
     library: ('12.2.0', 'Rev4, Built by MSYS2 project; Rev6, ...')."""
     try:
-        found = re.findall(rb"GCC: \(([^)]*)\) (\d+\.\d+\.\d+)", Path(path).read_bytes())
+        data = Path(path).read_bytes()
     except OSError:
         return "", ""
+    found = re.findall(rb"GCC: \(([^)]*)\) (\d+\.\d+\.\d+)", data)
+    if not found:
+        # Mach-O keeps no compiler note, but its debug paths name the source
+        # folder; Homebrew builds in /private/tmp/<formula, @ as A>-<date>-...
+        m = re.search(rb"/tmp/(gcc[A-Za-z0-9]*)-\d{8}-\d+-\w+/gcc-(\d+\.\d+\.\d+)/", data)
+        if m:
+            formula = m.group(1).decode().replace("A", "@", 1)
+            return m.group(2).decode(), f"Homebrew (its {formula} build folder)"
+        m = re.search(rb"/gcc-(\d+\.\d+\.\d+)/", data)
+        return (m.group(1).decode(), "") if m else ("", "")
     versions = sorted({v.decode() for _, v in found})
     builders = sorted({b.decode("latin-1") for b, _ in found})
     return (versions[-1] if versions else ""), "; ".join(builders)
@@ -670,10 +682,21 @@ def conda_details(meta):
                 text = (recipe / name).read_text(encoding="utf-8", errors="replace")
                 break
         block = recipe_source_block(text)
-        urls = re.findall(r"^\s*-?\s*url:\s*(\S+)", block, re.M)
+        urls, in_list = [], False
+        for line in block.splitlines():      # "url: X", or "url:" with "- X" items below
+            m = re.match(r"^\s*-?\s*url:[ \t]*(\S*)", line)
+            if m:
+                in_list = not m.group(1)
+                if m.group(1):
+                    urls.append(m.group(1))
+            elif in_list and re.match(r"^\s*-\s+\S", line):
+                urls.append(line.split("-", 1)[1].strip())
+            else:
+                in_list = False
         shas = re.findall(r"^\s*-?\s*sha256:\s*([0-9a-fA-F]{64})", block, re.M)
-        source["upstream"] = [(u.strip("'\""), shas[i] if i < len(shas) else "") for i, u in enumerate(urls)
-                              if "{{" not in u]
+        urls = [u.strip("'\"") for u in urls]
+        source["upstream"] = [(u, shas[i] if i < len(shas) else "") for i, u in enumerate(urls)
+                              if "{{" not in u and re.match(r"(https?|ftp)://", u)]
         source["patches"] = sorted({p.name for p in recipe.rglob("*") if p.suffix in (".patch", ".diff")})
         host = re.search(r"^(\s*)host:\s*$((?:\n\1\s+-.*|\n\1-.*)+)", text, re.M)
         names = set(re.findall(r"-\s+([A-Za-z0-9_.+-]+)", host.group(2))) if host else set()
@@ -1665,10 +1688,15 @@ class Audit:
         src, out = comp.source, []
         if src.get("package_url"):
             out.append(f"{indent}- package: {src['package_url']}")
-        for u, s in src.get("upstream") or []:
+        answered = set()
+        for u, s in sorted(src.get("upstream") or [], key=lambda x: not url_ok(x[0])):
             digest = f" (SHA-256 `{s}`)" if s else ""
+            name = u.rstrip("/").rsplit("/", 1)[-1]
+            if name in answered:
+                continue        # another mirror the recipe lists for the same file
             if url_ok(u):
                 out.append(f"{indent}- upstream source: {u}{digest}")
+                answered.add(name)
                 continue
             # The recipe's download mirror has gone: the same file where its
             # publisher keeps it, if it is there.
