@@ -1825,9 +1825,9 @@ def replacement_instructions(osname, qt):
                      f"`{APP}/{APP}.exe`; the program checks no signature or checksum of these files.")
     else:
         lines.append("Copy your builds over the files of the same name there, keeping the layout. A build made for "
-                     "another layout looks for its libraries elsewhere: give each copied file the rpath entries of "
-                     "the file it replaces (`otool -l` lists them as LC_RPATH; `install_name_tool -delete_rpath` and "
-                     "`-add_rpath` change them). Then re-sign the application so macOS loads it: "
+                     "another layout looks for its libraries elsewhere: add to each copied file the rpath entries of "
+                     "the file it replaces that it lacks (`otool -l` lists them as LC_RPATH; "
+                     "`install_name_tool -add_rpath` adds one). Then re-sign the application so macOS loads it: "
                      "`codesign --force --deep --sign - PyHydroGeophysX-Studio.app`. The archive's own check does "
                      "exactly this with copies of the same release.")
     lines += ["", "Build replacements from the sources above: Qt's build instructions are in its source archive "
@@ -1928,17 +1928,16 @@ def cmd_replace(args):
             before = sha256_of(target)
             rpaths = macho_rpaths(target) if sys.platform == "darwin" else []
             shutil.copyfile(src, target)
-            if sys.platform == "darwin" and macho_rpaths(target) != rpaths:
-                # As a user would: the replacement looks for its libraries
-                # where the file it replaces did.
-                for r in macho_rpaths(target):
-                    subprocess.run(["install_name_tool", "-delete_rpath", r, str(target)], check=True)
-                for r in rpaths:
-                    subprocess.run(["install_name_tool", "-add_rpath", r, str(target)], check=True)
+            added = []
+            if sys.platform == "darwin":
+                # As a user would: the replacement also looks for its
+                # libraries where the file it replaces did.
+                added = [r for r in rpaths if r not in macho_rpaths(target)]
+                for r in added:     # a failure shows in --self-test below
+                    subprocess.run(["install_name_tool", "-add_rpath", r, str(target)], check=False)
             swapped += 1
             lines.append(f"- {target.relative_to(work).as_posix()}: {before[:16]} -> {sha256_of(target)[:16]}"
-                         + (f" (rpaths set to the replaced file's: {', '.join(rpaths) or 'none'})"
-                            if sys.platform == "darwin" else ""))
+                         + (f" (rpaths added from the replaced file: {', '.join(added)})" if added else ""))
     if sys.platform != "darwin":
         core = next((p for name in ("Qt6Core.dll", "libQt6Core.so.6") for p in in_app.get(name, [])), None)
         if core:
