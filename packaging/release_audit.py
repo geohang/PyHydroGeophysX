@@ -1808,8 +1808,12 @@ def replacement_instructions(osname, qt):
         lines.append("Copy your builds over the files of the same name there, keeping the folder layout, and start "
                      f"`{APP}/{APP}.exe`; the program checks no signature or checksum of these files.")
     else:
-        lines.append("Copy your builds over the files of the same name there, keeping the layout, then re-sign the "
-                     "application so macOS loads it: `codesign --force --deep --sign - PyHydroGeophysX-Studio.app`.")
+        lines.append("Copy your builds over the files of the same name there, keeping the layout. A build made for "
+                     "another layout looks for its libraries elsewhere: give each copied file the rpath entries of "
+                     "the file it replaces (`otool -l` lists them as LC_RPATH; `install_name_tool -delete_rpath` and "
+                     "`-add_rpath` change them). Then re-sign the application so macOS loads it: "
+                     "`codesign --force --deep --sign - PyHydroGeophysX-Studio.app`. The archive's own check does "
+                     "exactly this with copies of the same release.")
     lines += ["", "Build replacements from the sources above: Qt's build instructions are in its source archive "
               "(README and `configure --help`), PySide6's in `README.pyside6.md` of pyside-setup. A replacement "
               "must be interface-compatible with the Qt and PySide6 versions in BUILD_INFO.txt."]
@@ -1893,15 +1897,32 @@ def cmd_replace(args):
     in_app = defaultdict(list)
     for p in iter_files(app):
         in_app[p.name].append(p)
+    # Every name a library goes by in the fresh copy, its symlinks included:
+    # the archive holds libQt6Core.6.dylib, the package the file
+    # libQt6Core.6.9.2.dylib with libQt6Core.6.dylib linking to it.
+    fresh_by_name = {}
+    for folder, _dirs, files in os.walk(fresh):
+        for name in files:
+            real = (Path(folder) / name).resolve()
+            if real.is_file() and re.match(r"^(lib)?(Qt6|Qt[A-Z]|pyside6|shiboken6)", name, re.I) and is_native(real):
+                fresh_by_name.setdefault(name, real)
     swapped = 0
-    for src in sorted(iter_files(fresh)):
-        if not is_native(src) or not re.match(r"^(lib)?(Qt6|Qt[A-Z]|pyside6|shiboken6)", src.name, re.I):
-            continue
-        for target in in_app.get(src.name, []):
+    for name, src in sorted(fresh_by_name.items()):
+        for target in in_app.get(name, []):
             before = sha256_of(target)
+            rpaths = macho_rpaths(target) if sys.platform == "darwin" else []
             shutil.copyfile(src, target)
+            if sys.platform == "darwin":
+                # As a user would: the replacement looks for its libraries
+                # where the file it replaces did.
+                for r in macho_rpaths(target):
+                    subprocess.run(["install_name_tool", "-delete_rpath", r, str(target)], check=True)
+                for r in rpaths:
+                    subprocess.run(["install_name_tool", "-add_rpath", r, str(target)], check=True)
             swapped += 1
-            lines.append(f"- {target.relative_to(work).as_posix()}: {before[:16]} -> {sha256_of(target)[:16]}")
+            lines.append(f"- {target.relative_to(work).as_posix()}: {before[:16]} -> {sha256_of(target)[:16]}"
+                         + (f" (rpaths set to the replaced file's: {', '.join(rpaths) or 'none'})"
+                            if sys.platform == "darwin" else ""))
     if sys.platform != "darwin":
         core = next((p for name in ("Qt6Core.dll", "libQt6Core.so.6") for p in in_app.get(name, [])), None)
         if core:
@@ -1926,6 +1947,12 @@ def cmd_replace(args):
     shutil.rmtree(work, ignore_errors=True)
     shutil.rmtree(fresh, ignore_errors=True)
     return 0 if ok else 1
+
+
+def macho_rpaths(path):
+    """A Mach-O file's LC_RPATH entries, in order."""
+    out = subprocess.run(["otool", "-l", str(path)], capture_output=True, text=True).stdout
+    return re.findall(r"cmd LC_RPATH\s+cmdsize \d+\s+path (.+?) \(offset \d+\)", out)
 
 
 def obtain_fresh_qt(args, dest):
