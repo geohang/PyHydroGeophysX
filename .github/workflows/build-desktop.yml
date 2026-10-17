@@ -40,17 +40,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # full runs a login shell so the conda environment is active; light
+        # must not, as a macOS login shell puts the runner's own Python ahead
+        # of setup-python's.
         include:
-          - { os: windows-latest, os-name: windows, variant: light }
-          - { os: windows-latest, os-name: windows, variant: full }
-          - { os: macos-latest, os-name: macos, variant: light }
-          - { os: macos-latest, os-name: macos, variant: full }
+          - { os: windows-latest, os-name: windows, variant: light, shell: "bash -e {0}" }
+          - { os: windows-latest, os-name: windows, variant: full, shell: "bash -el {0}" }
+          - { os: macos-latest, os-name: macos, variant: light, shell: "bash -e {0}" }
+          - { os: macos-latest, os-name: macos, variant: full, shell: "bash -el {0}" }
     env:
       ARCHIVE: PyHydroGeophysX-Studio-${{ matrix.os-name }}-${{ matrix.variant }}.zip
       RELEASE_TAG: ${{ inputs.release_tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name || '') }}
     defaults:
       run:
-        shell: bash -el {0}
+        shell: ${{ matrix.shell }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -65,6 +68,7 @@ jobs:
       - name: Install dependencies (light)
         if: matrix.variant == 'light'
         run: |
+          python -c "import sys; assert sys.version_info[:2] == (3, 11), sys.version"
           python -m pip install --upgrade pip
           python -m pip install --report pip-report.json -r requirements-desktop.txt scipy matplotlib pyinstaller pillow
 
@@ -88,6 +92,7 @@ jobs:
           conda install -y -c gimli -c conda-forge pygimli pyvista vtk-base pyside6 pyqtgraph qtawesome \
             numpy pandas scipy matplotlib pyproj pypdf pillow "libblas=*=*openblas"
           python -m pip install --report pip-report.json simpeg pymatsolver pyinstaller
+          python -c "import sys; assert sys.version_info[:2] == (3, 11), sys.version"
           conda list --explicit --md5 > conda-explicit.txt
 
       # ---- build, smoke-test ----

@@ -510,26 +510,34 @@ def bundle_roots(bundle):
 def collected(workpath, bundle, stage):
     """[(archive path, source path)] for every file PyInstaller put in the
     bundle, and for the pure modules embedded in the executable."""
-    work = Path(workpath)
-    roots = bundle_roots(bundle)
-    entries, missing = [], []
+    # Real paths throughout: a macOS .app reaches many files through
+    # symlinks (Resources -> Frameworks), and the archive path recorded is
+    # the file's own.
+    work, stage = Path(workpath), Path(stage).resolve()
+    roots = bundle_roots(Path(bundle).resolve())
+    entries, missing, seen = [], [], set()
     for dest, src, _typecode in load_toc(work / "COLLECT-00.toc")[0]:
         dest = dest.replace("\\", "/")
         found = next((root / dest for root in roots
                       if (root / dest).is_file() and not (root / dest).is_symlink()), None)
         if found is None:
-            found = next(((root / dest).resolve() for root in roots if (root / dest).exists()), None)
+            found = next((root / dest for root in roots if (root / dest).exists()), None)
         if found is None:
             missing.append(dest)
             continue
-        entries.append((Path(found).relative_to(stage).as_posix(), src))
+        apath = Path(found).resolve().relative_to(stage).as_posix()
+        if apath not in seen:           # two table entries may reach one file
+            seen.add(apath)
+            entries.append((apath, src))
     exe_dir = roots[0]
     exe = next((p for p in exe_dir.iterdir() if p.is_file() and p.name.startswith(APP)), None)
     holder = exe.relative_to(stage).as_posix() if exe else f"{Path(bundle).name}/{APP}"
+    # A source of "-" marks a namespace package, which has no file.
     pure = [(f"{holder} (embedded archive: {name})", src)
-            for name, src, _t in load_toc(work / "PYZ-00.toc")[1] if src]
+            for name, src, _t in load_toc(work / "PYZ-00.toc")[1] if src and src != "-"]
     pure += [(f"{holder} (embedded archive: {name})", src)
-             for name, src, t in load_toc(work / "PKG-00.toc")[2] if t in ("PYMODULE", "PYSOURCE") and src]
+             for name, src, t in load_toc(work / "PKG-00.toc")[2]
+             if t in ("PYMODULE", "PYSOURCE") and src and src != "-"]
     return entries, pure, missing
 
 
@@ -798,8 +806,8 @@ def as_list(value):
 class Audit:
     def __init__(self, args):
         self.args = args
-        self.stage = Path(args.stage)
-        self.bundle = Path(args.bundle)
+        self.stage = Path(args.stage).resolve()
+        self.bundle = Path(args.bundle).resolve()
         self.findings, self.components = [], {}
         self.cache = Path(args.cache)
         self.cache.mkdir(parents=True, exist_ok=True)
