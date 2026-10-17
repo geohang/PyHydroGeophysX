@@ -130,7 +130,9 @@ if not _bundle_tetgen:
 # environment either (THIRD_PARTY_NOTICES.md, "Gmsh").
 excludes += ["gmsh", "pygmsh"]
 # Python's readline module serves the interactive prompt, which the studio does
-# not have; conda's links GNU Readline (GPL-3.0).
+# not have; conda's links GNU Readline (GPL-3.0). The libraries themselves get
+# collected on macOS even so, loaded by nothing (release_audit.py checks), and
+# are left out after Analysis below.
 excludes += ["readline"]
 
 # Qt modules the studio does not use, kept out of every archive. Five are
@@ -155,7 +157,7 @@ _LEFT_OUT_PATHS = [re.compile(
     r"^(lib)?qt6?(datavisualization|charts|graphs|quick3d|virtualkeyboard|pdf)"
     r"|^(virtualkeyboard|pdf)$|^(lib)?qpdf\.|^opengl32sw\.dll$",
     re.IGNORECASE,
-)]
+), re.compile(r"^lib(readline|history)\.[\d.]*(dylib|so)", re.IGNORECASE)]
 # The Universal CRT (ucrtbase.dll and its api-ms-win-*.dll forwarders) is part
 # of Windows 10 and later, which always loads its own copy; a conda
 # environment carries one for older systems. Qt 6, and so the studio, needs
