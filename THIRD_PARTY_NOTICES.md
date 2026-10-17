@@ -1,8 +1,7 @@
 # Third-party code, data and desktop distributions
 
 PyHydroGeophysX's own code is licensed under Apache-2.0; see LICENSE.
-Third-party packages and data retain their own licenses. This document does not
-relicense them or establish permissions that have not been verified.
+Third-party packages and data keep their own licences, set out below.
 
 ## Geophysics-informed MODFLOW example data
 
@@ -44,6 +43,20 @@ PyHydroGeophysX does not include or redistribute TetGen. E4D-style meshes
 but whose compiled-in TetGen 1.6 library is AGPL-3.0. Without either, the same
 geometry is meshed with Gmsh.
 
+## Gmsh
+
+The meshing fallback mentioned above uses Gmsh, which is licensed under
+GPL-2.0-or-later with an upstream exception for specified third-party projects.
+That exception is not a general permission to combine Gmsh with arbitrary
+software under any licence. See the
+[Gmsh licence](https://gmsh.info/LICENSE.txt).
+
+Gmsh's terms apply independently of the Apache-2.0 licence on PyHydroGeophysX's
+own code. Any distribution of its executable, Python API or native libraries
+requires a review of the actual integration and applicable source-code and
+redistribution obligations. This notice does not establish that Gmsh is bundled;
+that must be determined from the individual archive and its build records.
+
 ## geoana
 
 `forward/_tdem_kernels.py` holds numba versions of the TE reflection
@@ -56,52 +69,168 @@ not carry this document.
 
 ## Desktop builds
 
-The default light/full builds exclude ResIPy, even if installed in the build
-environment. A distributor can explicitly enable it for a full build with
-`PHGX_BUNDLE_RESIPY=1`, after reviewing the GPL obligations of that distribution.
-An optional dependency declaration alone does not resolve those obligations.
-The `tetgen` Python package is excluded the same way, and only
-`PHGX_BUNDLE_TETGEN=1` bundles it, after reviewing the AGPL obligations.
+The desktop studio is built with `packaging/pyinstaller_studio.spec` in two
+variants. **Light** contains the package, its Qt interface (PySide6, pyqtgraph,
+qtawesome) and its scientific Python dependencies. **Full** adds pyGIMLi,
+SimPEG (with discretize, pymatsolver and geoana) and PyVista/VTK.
 
-The full build collects pyGIMLi, whose 2-D mesh generator wraps Jonathan
-Shewchuk's Triangle. Triangle may be redistributed free of charge with its
-copyright notices kept; distributing it as part of a commercial system needs
-its author's permission.
+The requirements below apply to official desktop releases. They describe the
+release policy, not a completed audit of a particular archive. Before
+publication, each archive must carry these items at its root:
 
-Qt/PySide6 and other bundled libraries also require their applicable license
-texts and distribution obligations to be satisfied. Before releasing an archive,
-inspect the actual bundled modules, versions and library licenses, retain the
-required notices, and document the applicable source/library replacement route.
-PyInstaller hooks may collect some notices; their presence must be verified in
-the final archive. Shipping this document alone is not sufficient.
+* `LICENSE` and this document;
+* `LICENSES/`, containing the applicable third-party licence texts, copyright
+  notices and required attributions;
+* `BUILD_INFO.txt`, identifying the platform, architecture, application version,
+  actual source commit and build tools, and listing the bundled components,
+  their versions or build identifiers, licences and notice-file locations;
+* `SOURCE_CODE.md`, giving release-specific source downloads and instructions
+  for rebuilding and replacing the LGPL-covered libraries.
 
-References: [GNU GPL FAQ](https://www.gnu.org/licenses/gpl-faq.html.en),
-[Qt LGPL obligations](https://www.qt.io/development/open-source-lgpl-obligations).
+The component inventory must describe the files actually distributed, including
+native libraries, plugins, QML files and bundled assets. Components that are
+only installed in the build environment must not be presented as bundled.
+
+### Optional and excluded components
+
+The standard release configuration excludes ResIPy and the optional `tetgen`
+Python package, including its compiled-in TetGen library. The standalone E4D,
+R2, R3t and TetGen programs described above remain user-supplied tools.
+
+`PHGX_BUNDLE_RESIPY=1` and `PHGX_BUNDLE_TETGEN=1` are custom-build options, not
+approved official-release configurations. Enabling either option does not
+change the licences of the components or, by itself, satisfy their distribution
+requirements. Any such build requires a separate review of the applicable
+licences, source-code obligations and licence compatibility before redistribution.
+
+Gmsh requires a separate review as well. Its Python API, native libraries and
+executable must not be included in an official archive until that review is
+complete. The Gmsh fallback described above does not establish whether Gmsh is
+present in any particular desktop archive.
+
+### Qt, PySide6 and Shiboken6
+
+The official desktop interface uses LGPLv3-licensed Qt and PySide6 components,
+including the Shiboken6 runtime. Their copyright notices must be retained.
+`LICENSES/` must include the unmodified GNU LGPL v3 and GNU GPL v3 texts as
+`LGPL-3.0-only.txt` and `GPL-3.0-only.txt`. LGPLv3 incorporates GPLv3 with
+additional permissions; including both texts does not, by itself, change the
+licence of PyHydroGeophysX's own code.
+
+Release builds must exclude Qt components whose available open-source licence
+is GPL-only. This includes Qt Charts, Qt Data Visualization, Qt Graphs, Qt Quick
+3D and Qt Virtual Keyboard; this list is not exhaustive. The review must use
+the licensing information for the actual Qt version in each archive and cover
+bindings, native libraries, plugins, QML files and auxiliary tools. Qt's
+[licensing overview](https://doc.qt.io/qt-6/licensing.html) provides the starting
+point; the version-specific component notices govern the distributed files.
+
+The studio uses a directory-based build intended to keep the Qt, PySide6 and
+Shiboken6 shared libraries replaceable. This layout alone does not establish
+compliance. The released application must support replacement with
+interface-compatible modified libraries. Users may modify the LGPL-covered
+libraries and reverse engineer the combined work for debugging those
+modifications, as permitted by LGPLv3. PyHydroGeophysX imposes no additional
+restriction on those rights.
+
+`SOURCE_CODE.md` must identify the corresponding source for the actual LGPL
+binaries, including applicable downstream patches and the build information
+needed for those libraries. It must also give platform-specific replacement
+instructions and identify the application source commit used for the archive.
+For downloadable releases, complete corresponding library source must be
+available at no additional charge through clearly identified release-specific
+downloads alongside, or clearly linked from, the binary downloads. The
+redistributor remains responsible for the required source availability.
+Generic upstream download or repository homepages are not a substitute for
+identifying and providing the corresponding source.
+
+The governing texts are the
+[GNU LGPL v3](https://www.gnu.org/licenses/lgpl-3.0.html) and the incorporated
+[GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.html). The Qt project also
+publishes [LGPL guidance](https://www.qt.io/development/open-source-lgpl-obligations).
+
+### Code and assets included by dependencies
+
+Qt, PySide6 and the scientific Python packages can include separately licensed
+code and assets. Required notices must be collected for the actual bundled
+versions, including embedded or statically linked dependencies and any fonts
+or icons. A package's top-level licence does not replace its dependencies'
+licences. The component inventory must map these notices to their locations in
+`LICENSES/`.
+
+Qt documents these components in
+[Third-Party Code Used in Qt](https://doc.qt.io/qt-6/licenses-used-in-qt.html)
+and [Licenses Used in Qt for Python](https://doc.qt.io/qtforpython-6/licenses.html).
+Use the versions corresponding to the distributed binaries. Links to these
+pages supplement, and do not replace, licence texts and notices that must
+accompany the distribution.
+
+### Windows runtime and software rendering
+
+Windows archives may include Microsoft Visual C++ runtime DLLs, such as
+`MSVCP140*.dll` and `VCRUNTIME140*.dll`. These remain subject to the applicable
+Microsoft terms, not PyHydroGeophysX's Apache-2.0 licence. Their exact versions,
+origins and applicable redistribution terms must be recorded before release;
+their presence in an upstream package is not, by itself, a redistribution
+assessment. Microsoft's
+[redistribution documentation](https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files)
+is a starting point for that review.
+
+When the archive includes Qt's `opengl32sw.dll` software renderer, the notices
+for that particular Mesa llvmpipe build and its dependencies must be retained
+in `LICENSES/`. Qt identifies its distributed renderer under the MIT License
+and Boost Software License 1.0 in its
+[Mesa llvmpipe attribution](https://doc.qt.io/qt-6/qt-attribution-llvmpipe.html).
+
+### Full builds: pyGIMLi, Triangle and visualization libraries
+
+pyGIMLi's 2-D mesh generator wraps Jonathan Shewchuk's Triangle. Triangle has
+its own redistribution conditions, independent of pyGIMLi's top-level licence.
+Its copyright notices must be retained, and sale or inclusion in commercial
+products requires the author's permission. Modified copies must also satisfy
+the conditions in the original notice for modifications and source/object-code
+distribution. The exact Triangle notice accompanying the bundled version must
+be included in `LICENSES/`; this summary does not replace it. See the
+[author's Triangle page](https://www.cs.cmu.edu/~quake/triangle.html).
+
+PyVista and VTK also retain their own licences. The published projects use MIT
+and BSD-3-Clause, respectively; the notices for the actual distributed versions
+and their bundled dependencies must be preserved. See
+[PyVista's licence](https://github.com/pyvista/pyvista/blob/main/LICENSE)
+and [VTK's licensing information](https://docs.vtk.org/en/latest/about.html).
+
+Full builds require an inventory of their additional native dependencies as
+well as their Python packages. They must not be published until the applicable
+notices, source obligations and redistribution conditions have been checked.
 
 ## Example data
 
 `examples/data/README.md` lists every example dataset with its source and
-licence. Data taken from public releases keep their attribution beside the
-files, among them:
+licence, and each dataset keeps its attribution beside the files. Data taken
+from public releases include:
 
 * `examples/data/EM/skytem_bhmar_*.csv`: five soundings of Brodie, R.C. (2019),
   *Broken Hill Managed Aquifer Recharge (BHMAR) SkyTEM Airborne Electromagnetic
   Survey, NSW, 2009*, Geoscience Australia,
   https://doi.org/10.26186/5d314c5de8040, under CC BY 4.0; the subset was taken
   from the example in Geoscience Australia's ga-aem repository.
+* `examples/data/EM/EastRiver_VTEM/`: a subset of Zamudio, K.D., Minsley, B.J.
+  and Ball, L.B. (2021), *Airborne electromagnetic, magnetic, and radiometric
+  survey, upper East River and surrounding watersheds near Crested Butte,
+  Colorado, 2017*, U.S. Geological Survey data release,
+  https://doi.org/10.5066/P949ZCZ8, a U.S. Government work in the public domain.
+* `examples/data/ERT/E4D/`: ten ERT acquisitions (October 2021 to June 2022)
+  from Uhlemann, S., Dafflon, B., Chou, C., Wielandt, S., Wu, Y. and
+  Williams, K. (2024), *Geophysical and Environmental Monitoring Data, and
+  Subsurface Flow Modelling Results for Chicken Bone Meadow, Mt. Snodgrass,
+  Crested Butte, CO*, ESS-DIVE, https://doi.org/10.15485/2283406, under
+  CC BY 4.0.
+* `examples/data/ERT/DAS/`: five DAS-1 acquisitions (5 to 9 November 2017) from
+  the time-lapse ERT monitoring of the No-Name hillslope, Snowy Range,
+  Wyoming, by Andrew Parsekian's group at the University of Wyoming. The group
+  publishes this monitoring series as Parsekian, A. (2020),
+  *NoName_Snowy_Range_MBNF_Hydrogeophysics*, HydroShare,
+  http://www.hydroshare.org/resource/3357f6ea99ca48a4b418a0be14fb653b, under
+  CC BY 4.0.
 * `examples/data/climate/`: Daymet Version 4 R1 daily weather at one point,
   https://doi.org/10.3334/ORNLDAAC/2129, which the ORNL DAAC asks users to cite.
-
-## Sources requiring provenance verification
-
-| Material | Existing evidence | Verification still needed |
-| --- | --- | --- |
-| Log-time Hermite interpolation in `forward/tdem_forward.py`, the same rule as [TEM1D](https://github.com/hydrogeophysicsgroup/TEM1D) | Upstream URL and MIT identification | Whether implementation was independently written or adapted; retain upstream copyright/license if applicable |
-| ERT DAS and E4D examples | Paper citations in dataset acknowledgements | Data release URL/version and redistribution license |
-| East River VTEM subset | USGS data DOI and processing description | Rights statement of the specific release and any third-party exceptions |
-| Repository images | Local images and generated example figures | Author/source/license or generating script for each distributed asset |
-
-Gravity/Magnetics acknowledgements already record data sources, licenses and
-transformations; retain these alongside redistributed data. Preserve all dataset
-acknowledgements when packaging subsets. Unverified provenance is a tracking
-item, not an allegation of infringement.

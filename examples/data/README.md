@@ -23,5 +23,5 @@ under the repository licence (`LICENSE`, Apache-2.0).
 | `Gravity_Magnetics/` | Bushveld gravity and a Britain aeromagnetic subset | NOAA NCEI and British Geological Survey, curated by Fatiando a Terra | CC BY 4.0; `acknowledgement.txt` |
 | `MT/NMX20.xml` | USMTArray magnetotelluric transfer functions | IRIS/SAGE EMTF, https://doi.org/10.17611/DP/EMTF/USMTARRAY/SOUTH | CC BY 4.0; `acknowledgement.txt` |
 | `climate/` | Daily weather at the Mt. Snodgrass monitoring site | Daymet Version 4 R1, ORNL DAAC, https://doi.org/10.3334/ORNLDAAC/2129 | Cite the dataset; `acknowledgement.txt` |
-| `ERT/DAS/` | Time-lapse DAS-1 ERT acquisitions | See `acknowledgement.txt` | See `acknowledgement.txt` |
-| `ERT/E4D/` | Time-lapse ERT acquisitions in E4D format | See `acknowledgement.txt` | See `acknowledgement.txt` |
+| `ERT/DAS/` | Five time-lapse DAS-1 ERT acquisitions, No-Name hillslope, Wyoming, November 2017 | Andrew Parsekian's group, University of Wyoming; series on HydroShare, http://www.hydroshare.org/resource/3357f6ea99ca48a4b418a0be14fb653b | CC BY 4.0; `acknowledgement.txt` |
+| `ERT/E4D/` | Ten time-lapse ERT acquisitions in E4D format, Chicken Bone Meadow, Colorado, 2021-2022 | Uhlemann et al. (2024), ESS-DIVE, https://doi.org/10.15485/2283406 | CC BY 4.0; `acknowledgement.txt` |

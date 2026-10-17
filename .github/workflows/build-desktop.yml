@@ -1,13 +1,22 @@
-# Build the Qt desktop studio bundles (Windows + macOS, light + full) and,
-# on version tags, attach them to the GitHub Release.
+# Build the Qt desktop studio archives (Windows + macOS, light + full), check
+# each one, and attach all four to a DRAFT GitHub Release for the owner to
+# review and publish by hand (see "Desktop builds" in THIRD_PARTY_NOTICES.md).
 #
-# - light: pip-only PySide6 stack; small, reliable; forward modeling / inversion /
-#   3D viewer show an install message (the app degrades gracefully).
-# - full: gimli/conda-forge engines (pygimli, pyvista/vtk) + SimPEG; best-effort
-#   (continue-on-error) because freezing the compiled engine stack is fragile.
+# - light: pip-only PySide6 stack; forward modeling / inversion / 3D viewer show
+#   an install message (the app degrades gracefully).
+# - full: gimli/conda-forge engines (pyGIMLi, PyVista/VTK) + SimPEG.
 #
-# The Streamlit app and docs link to .../releases/latest. This workflow attaches
-# assets to the triggering version tag; the link's target is selected by GitHub.
+# A draft is made on a version-tag push, or from a manual run with release_tag
+# set. A tag push runs the workflow file as it was at the tagged commit, so a
+# release whose tag already exists is rebuilt with a manual run from main. The
+# draft is made only when all four archives build and pass their checks.
+#
+# packaging/release_audit.py writes, at each archive's root, BUILD_INFO.txt (the
+# component inventory), SOURCE_CODE.md and LICENSES/, then checks the final
+# .zip and runs a library-replacement test on it. Its reports are uploaded as
+# the audit-* artifacts; they are not attached to the release.
+#
+# The Streamlit app and docs link to .../releases/latest, which skips drafts.
 
 name: Build desktop apps
 
@@ -15,6 +24,11 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing tag to attach the archives to, as a draft release (e.g. v0.5.0). Empty: build and check only."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -23,7 +37,6 @@ jobs:
   build:
     name: ${{ matrix.os-name }} ${{ matrix.variant }}
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.variant == 'full' }}
     strategy:
       fail-fast: false
       matrix:
@@ -32,11 +45,16 @@ jobs:
           - { os: windows-latest, os-name: windows, variant: full }
           - { os: macos-latest, os-name: macos, variant: light }
           - { os: macos-latest, os-name: macos, variant: full }
+    env:
+      ARCHIVE: PyHydroGeophysX-Studio-${{ matrix.os-name }}-${{ matrix.variant }}.zip
+      RELEASE_TAG: ${{ inputs.release_tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name || '') }}
     defaults:
       run:
         shell: bash -el {0}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # tags, for the note on which commit the release tag names
 
       # ---- light: plain pip Python ----
       - uses: actions/setup-python@v6
@@ -48,7 +66,7 @@ jobs:
         if: matrix.variant == 'light'
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements-desktop.txt scipy matplotlib pyinstaller pillow
+          python -m pip install --report pip-report.json -r requirements-desktop.txt scipy matplotlib pyinstaller pillow
 
       # ---- full: conda channels for the compiled engines ----
       - uses: conda-incubator/setup-miniconda@v3
@@ -60,19 +78,19 @@ jobs:
 
       - name: Install dependencies (full)
         if: matrix.variant == 'full'
-        # Use the gimli and conda-forge channels for compiled engines. On macOS,
-        # install Qt from conda as well to avoid mixing Qt distributions during
-        # freezing. The Windows branch installs the desktop dependencies via pip.
+        # The compiled engines come from the gimli and conda-forge channels.
+        # conda-forge's VTK is built against conda-forge's Qt, so PySide6 and the
+        # other Qt packages come from there too: one Qt build in the archive.
+        # vtk-base, not the vtk metapackage, which adds vtk-io-ffmpeg and with it
+        # FFmpeg linked to x264 and x265 (GPL). OpenBLAS for BLAS/LAPACK, not
+        # Intel MKL, whose libraries come under Intel's own licence.
         run: |
-          if [ "${{ runner.os }}" = "macOS" ]; then
-            conda install -y -c gimli -c conda-forge pygimli pyvista vtk pyside6 pyqtgraph qtawesome numpy pandas scipy matplotlib pyproj
-            python -m pip install simpeg pymatsolver pyinstaller pillow
-          else
-            conda install -y -c gimli -c conda-forge pygimli pyvista vtk
-            python -m pip install -r requirements-desktop.txt scipy matplotlib simpeg pymatsolver pyinstaller pillow
-          fi
+          conda install -y -c gimli -c conda-forge pygimli pyvista vtk-base pyside6 pyqtgraph qtawesome \
+            numpy pandas scipy matplotlib pyproj pypdf pillow "libblas=*=*openblas"
+          python -m pip install --report pip-report.json simpeg pymatsolver pyinstaller
+          conda list --explicit --md5 > conda-explicit.txt
 
-      # ---- build, smoke-test, package ----
+      # ---- build, smoke-test ----
       - name: Build bundle
         env:
           PHGX_BUILD_VARIANT: ${{ matrix.variant }}
@@ -93,28 +111,81 @@ jobs:
             ./dist/PyHydroGeophysX-Studio/PyHydroGeophysX-Studio --self-test
           fi
 
+      # ---- stage, inventory, package ----
+      # Everything the archive holds goes into stage/, whose contents become the
+      # archive root: the licence files sit beside the studio, not inside it.
+      - name: Stage, inventory and licences
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          mkdir -p stage audit
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            mv dist/PyHydroGeophysX-Studio stage/
+            bundle=stage/PyHydroGeophysX-Studio
+          else
+            ditto dist/PyHydroGeophysX-Studio.app stage/PyHydroGeophysX-Studio.app
+            bundle=stage/PyHydroGeophysX-Studio.app
+          fi
+          cp LICENSE THIRD_PARTY_NOTICES.md stage/
+          tag_note=""
+          if [ -n "$RELEASE_TAG" ]; then
+            tag_sha="$(git rev-list -n 1 "$RELEASE_TAG")"
+            if [ "$tag_sha" != "$GITHUB_SHA" ]; then
+              tag_note="The release tag $RELEASE_TAG points to an earlier commit, $tag_sha. The source archives GitHub generates for that tag do not contain the changes made after it; the links above are the source of this archive."
+            fi
+          fi
+          conda_args=()
+          if [ "${{ matrix.variant }}" = "full" ]; then conda_args=(--conda-prefix "$CONDA_PREFIX"); fi
+          # For a release, a failed check stops the job, so no draft is made.
+          strict=()
+          if [ -n "$RELEASE_TAG" ]; then strict=(--strict); fi
+          python packaging/release_audit.py stage --os "${{ matrix.os-name }}" --variant "${{ matrix.variant }}" \
+            --bundle "$bundle" --stage stage --workpath build/pyinstaller_studio \
+            --pip-report pip-report.json "${conda_args[@]}" "${strict[@]}" \
+            --commit "$GITHUB_SHA" --tag-note "$tag_note" \
+            --report "audit/audit-${{ matrix.os-name }}-${{ matrix.variant }}.md"
+          cp pip-report.json audit/ 2>/dev/null || true
+          cp conda-explicit.txt audit/ 2>/dev/null || true
+          cp stage/BUILD_INFO.txt stage/SOURCE_CODE.md audit/
+
       - name: Package bundle (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: >
-          Compress-Archive -Path dist/PyHydroGeophysX-Studio
-          -DestinationPath "PyHydroGeophysX-Studio-${{ matrix.os-name }}-${{ matrix.variant }}.zip" -Force
+        run: Compress-Archive -Path stage/* -DestinationPath "$env:ARCHIVE" -Force
 
       - name: Package bundle (macOS)
         if: runner.os == 'macOS'
-        run: >
-          ditto -c -k --keepParent dist/PyHydroGeophysX-Studio.app
-          "PyHydroGeophysX-Studio-${{ matrix.os-name }}-${{ matrix.variant }}.zip"
+        run: ditto -c -k stage "$ARCHIVE"
+
+      # ---- checks on the final archive ----
+      - name: Verify the archive
+        run: python packaging/release_audit.py verify --archive "$ARCHIVE" --report "audit/verify-${{ matrix.os-name }}-${{ matrix.variant }}.md"
+
+      - name: Library-replacement test
+        run: |
+          conda_args=()
+          if [ "${{ matrix.variant }}" = "full" ]; then conda_args=(--conda-prefix "$CONDA_PREFIX"); fi
+          python packaging/release_audit.py replace --archive "$ARCHIVE" "${conda_args[@]}" \
+            --report "audit/replace-${{ matrix.os-name }}-${{ matrix.variant }}.md"
 
       - uses: actions/upload-artifact@v6
         with:
           name: PyHydroGeophysX-Studio-${{ matrix.os-name }}-${{ matrix.variant }}
-          path: PyHydroGeophysX-Studio-${{ matrix.os-name }}-${{ matrix.variant }}.zip
+          path: |
+            ${{ env.ARCHIVE }}
+            ${{ env.ARCHIVE }}.sha256
           if-no-files-found: error
 
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: audit-${{ matrix.os-name }}-${{ matrix.variant }}
+          path: audit/
+          if-no-files-found: warn
+
   release:
-    name: Attach bundles to the release
-    if: startsWith(github.ref, 'refs/tags/v')
+    name: Attach the archives to a draft release
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -123,10 +194,36 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           path: assets
+          pattern: PyHydroGeophysX-Studio-*
           merge-multiple: true
+
+      # Versions from each archive's BUILD_INFO.txt, and the archives' SHA-256.
+      - name: Write the release notes
+        run: |
+          cat assets/*.zip.sha256 > assets/SHA256SUMS.txt
+          {
+            echo "## Desktop archives"
+            echo
+            echo "Each archive holds LICENSE, THIRD_PARTY_NOTICES.md, BUILD_INFO.txt (the components it bundles), SOURCE_CODE.md (where to get their source and how to replace the Qt libraries) and LICENSES/ at its root."
+            echo
+            echo "| Archive | SHA-256 | Qt | PySide6 | Python |"
+            echo "|---|---|---|---|---|"
+            for zip in assets/*.zip; do
+              info="$(unzip -p "$zip" BUILD_INFO.txt | tr -d '\r')"
+              field() { printf '%s\n' "$info" | sed -n "s/^$1: //p" | head -1; }
+              sum="$(cut -d' ' -f1 "$zip.sha256")"
+              echo "| $(basename "$zip") | \`$sum\` | $(field Qt) | $(field PySide6) | $(field Python | cut -d' ' -f1) |"
+            done
+          } > release_notes.md
+          cat release_notes.md
 
       - uses: softprops/action-gh-release@v2
         with:
-          files: assets/*.zip
-          fail_on_unmatched_files: false
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
+          draft: true
+          files: |
+            assets/*.zip
+            assets/SHA256SUMS.txt
+          fail_on_unmatched_files: true
+          body_path: release_notes.md
           generate_release_notes: true

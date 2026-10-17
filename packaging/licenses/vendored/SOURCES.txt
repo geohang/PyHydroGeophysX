@@ -1,0 +1,115 @@
+Licence texts of code that packages bundle without including the text
+themselves: native libraries in a wheel's .libs or .dylibs folder (pyproj,
+for one) or in a conda package's Python folder (pgcore), header-only libraries
+a conda recipe compiles in (pybind11, Eigen), and conda packages that ship no
+licence file (libsqlite). packaging/release_audit.py copies the matching texts
+into an archive's LICENSES/<component>/vendored/ folder.
+
+Each file is the upstream text, unchanged, taken from the release named below;
+SHA-256 of the file as stored here.
+
+boost-LICENSE_1_0.txt
+    https://raw.githubusercontent.com/boostorg/boost/boost-1.88.0/LICENSE_1_0.txt
+    SHA-256 c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566
+cli11-LICENSE
+    https://raw.githubusercontent.com/CLIUtils/CLI11/v2.7.2/LICENSE
+    SHA-256 cfc76368aef8f51868fa1cda6bcfa26e583406a4cf8e48e725e7624df24d8855
+cppy-LICENSE
+    https://raw.githubusercontent.com/nucleic/cppy/1.3.1/LICENSE
+    SHA-256 db7a008bff1e63ccec397cfa033109740c4dc6cb12070a70d0cfe69aba27c4df
+curl-COPYING
+    https://raw.githubusercontent.com/curl/curl/curl-8_12_1/COPYING
+    SHA-256 e18f1989333b70044b2adfb7dc2f905d0119dbdcac3bc9f4bc9d540e3a29de5b
+eigen-COPYING.APACHE
+    https://gitlab.com/libeigen/eigen/-/raw/5.0.1/COPYING.APACHE
+    SHA-256 03379001a7b12a2ec997a25554247d985270b353c10d5bafee9ac8d6519820b7
+eigen-COPYING.BSD
+    https://gitlab.com/libeigen/eigen/-/raw/5.0.1/COPYING.BSD
+    SHA-256 51928dce36213c5333ba3172e847d735d4c6e9b7ff2722a326c49067155b82eb
+eigen-COPYING.MINPACK
+    https://gitlab.com/libeigen/eigen/-/raw/5.0.1/COPYING.MINPACK
+    SHA-256 c87b7f8ee88f6195e91743820c00354833583aef091b72e2d4a49c8e28e798a0
+eigen-COPYING.MPL2
+    https://gitlab.com/libeigen/eigen/-/raw/5.0.1/COPYING.MPL2
+    SHA-256 66a3107d5ad6a058aab753eaac2047ccb2ed0e39465dd0fe5844da3e300d5172
+eigen-COPYING.README
+    https://gitlab.com/libeigen/eigen/-/raw/5.0.1/COPYING.README
+    SHA-256 db640ff2bd90c6abd6a4d3fbb351e0ee4d555417cf840492054d1cbb2ea85644
+gcc-COPYING.RUNTIME
+    https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-12.2.0/COPYING.RUNTIME
+    SHA-256 9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74
+gcc-COPYING3
+    https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-12.2.0/COPYING3
+    SHA-256 8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903
+gcc-libquadmath-COPYING.LIB
+    https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-12.2.0/libquadmath/COPYING.LIB
+    SHA-256 32434afcc8666ba060e111d715bfdb6c2d5dd8a35fa4d3ab8ad67d8f850d2f2b
+glad-LICENSE
+    https://raw.githubusercontent.com/Dav1dde/glad/v2.0.8/LICENSE
+    SHA-256 cbb325cd4ac5bd06717ffa34a322b984f9d285e4c67c8ca1b7380d6ef08c2a77
+libjpeg-turbo-LICENSE.md
+    https://raw.githubusercontent.com/libjpeg-turbo/libjpeg-turbo/3.1.0/LICENSE.md
+    SHA-256 96f5b328adbb78eeaaec6980d73fd558cb1e4d62560ed615646bc3cf5e532430
+libjpeg-turbo-README.ijg
+    https://raw.githubusercontent.com/libjpeg-turbo/libjpeg-turbo/3.1.0/README.ijg
+    SHA-256 75815e3bf6484201a3c3d17a1bbf10f2e8e3237f84df10a2357ea896db2a81d6
+libtiff-LICENSE.md
+    https://gitlab.com/libtiff/libtiff/-/raw/v4.7.0/LICENSE.md
+    SHA-256 0780558a8bfba0af1160ec1ff11ade4f41c0d7deafd6ecfc796b492a788e380d
+nlohmann_json-LICENSE.MIT
+    https://raw.githubusercontent.com/nlohmann/json/v3.12.0/LICENSE.MIT
+    SHA-256 46a65cffd1ea955132d95a8dd921640714a8d6b537d2e4e482d31145ae95b603
+openblas-LICENSE
+    https://raw.githubusercontent.com/OpenMathLib/OpenBLAS/v0.3.21/LICENSE
+    SHA-256 190b5a9c8d9723fe958ad33916bd7346d96fab3c5ea90832bb02d854f620fcff
+pybind11-LICENSE
+    https://raw.githubusercontent.com/pybind/pybind11/v2.13.6/LICENSE
+    SHA-256 83965b843b98f670d3a85bd041ed4b372c8ec50d7b4a5995a83ac697ba675dcb
+pythran-LICENSE
+    https://raw.githubusercontent.com/serge-sans-paille/pythran/0.17.0/LICENSE
+    SHA-256 0be9f14c66a9a3cb66d5263a6495437862ce0c9cdf60d4a6c36d1e51b1244c6e
+sqlite-LICENSE.md
+    https://raw.githubusercontent.com/sqlite/sqlite/version-3.49.0/LICENSE.md
+    SHA-256 a7a58d6022c090c528e3167026167b3141d682efc6a3c188b473ba59f1788fc7
+suitesparse-AMD-License.txt
+    https://raw.githubusercontent.com/DrTimothyAldenDavis/SuiteSparse/v6.0.2/AMD/Doc/License.txt
+    SHA-256 e50fdd9a587f4860ce1d503b94576bfff47bccc421f758d1bdc8706c8cd36108
+suitesparse-CAMD-License.txt
+    https://raw.githubusercontent.com/DrTimothyAldenDavis/SuiteSparse/v6.0.2/CAMD/Doc/License.txt
+    SHA-256 2d1e5ff021e18fa4fb40ea78dc760ff2138860534ef537c4d6148573f89fe1f3
+suitesparse-CCOLAMD-License.txt
+    https://raw.githubusercontent.com/DrTimothyAldenDavis/SuiteSparse/v6.0.2/CCOLAMD/Doc/License.txt
+    SHA-256 27e1fb1934109aec52982bea8cda801e3791c683690c2eb0c089c496ba394ac6
+suitesparse-CHOLMOD-License.txt
+    https://raw.githubusercontent.com/DrTimothyAldenDavis/SuiteSparse/v6.0.2/CHOLMOD/Doc/License.txt
+    SHA-256 2b38ac4dbe9192920d54765ff25c14758611accfbdde5e03427a3f3b517a9ca9
+suitesparse-COLAMD-License.txt
+    https://raw.githubusercontent.com/DrTimothyAldenDavis/SuiteSparse/v6.0.2/COLAMD/Doc/License.txt
+    SHA-256 0e92b7bb3e216b8a4d1357b3d828043a4f758f762b2abc30b3440cf78063f80f
+suitesparse-LICENSE.txt
+    https://raw.githubusercontent.com/DrTimothyAldenDavis/SuiteSparse/v6.0.2/LICENSE.txt
+    SHA-256 51eedb9b84fe40269da5d0d38dc9d6a4605f9f7bc882fef81002ed265631aa9b
+suitesparse-SuiteSparse_config-README.txt
+    https://raw.githubusercontent.com/DrTimothyAldenDavis/SuiteSparse/v6.0.2/SuiteSparse_config/README.txt
+    SHA-256 37e1d0ec61807c90e4f9ebb566e3c117ef4aa7ac7332b28ef4b0a5b6cfa15898
+suitesparse-UMFPACK-License.txt
+    https://raw.githubusercontent.com/DrTimothyAldenDavis/SuiteSparse/v6.0.2/UMFPACK/Doc/License.txt
+    SHA-256 08780bde5994ab801068b5ead932cd2ff89715028c47de0030fe154e7b49519b
+vulkan-headers-LICENSE.md
+    https://raw.githubusercontent.com/KhronosGroup/Vulkan-Headers/v1.4.357/LICENSE.md
+    SHA-256 95ad366d23fadf701d355bc45fb8b82ae2d700239471d35d41286ac3b08ff903
+winpthreads-COPYING
+    https://raw.githubusercontent.com/mingw-w64/mingw-w64/v10.0.0/mingw-w64-libraries/winpthreads/COPYING
+    SHA-256 63263614cdd29f2f93cba85e992f041b31f9fc7b4033692f31269489a8a1b177
+xz-COPYING
+    https://raw.githubusercontent.com/tukaani-project/xz/v5.6.3/COPYING
+    SHA-256 ee3b35b82f7bb0ba5fd9f13ca34ebbe757a59c05bfde5ab9d50ff4188ed33396
+xz-COPYING.0BSD
+    https://raw.githubusercontent.com/tukaani-project/xz/v5.6.3/COPYING.0BSD
+    SHA-256 0b01625d853911cd0e2e088dcfb743261034a091bb379246cb25a14cc4c74bf1
+zlib-LICENSE
+    https://raw.githubusercontent.com/madler/zlib/v1.3.1/LICENSE
+    SHA-256 845efc77857d485d91fb3e0b884aaa929368c717ae8186b66fe1ed2495753243
+zstd-LICENSE
+    https://raw.githubusercontent.com/facebook/zstd/v1.5.7/LICENSE
+    SHA-256 7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8

@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Licence texts ship byte for byte (desktop archives check their SHA-256).
+packaging/licenses/** -text

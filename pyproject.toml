@@ -69,7 +69,7 @@ geophysics = [
 # its own, so it is preferred whenever it imports. It is GPL-3.0 and is kept as
 # a separate optional install rather than a hard dependency: installing it is
 # the user's choice. Desktop bundling requires a separate explicit opt-in;
-# see THIRD_PARTY_NOTICES.md for distribution and provenance tracking.
+# see THIRD_PARTY_NOTICES.md for what the desktop archives bundle.
 ert = [
     "resipy>=3.4",
 ]

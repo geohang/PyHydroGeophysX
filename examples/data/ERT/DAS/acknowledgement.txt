@@ -1,4 +1,26 @@
-The data is from 
-Thayer, D., Parsekian, A. D., Hyde, K., Speckman, H., Beverly, D., Ewers, B., ... & Holbrook, W. S. (2018). Geophysical measurements to determine the hydrologic partitioning of snowmelt on a snow‐dominated subalpine hillslope. Water Resources Research, 54(6), 3788-3808.
+No-Name hillslope (Snowy Range, Wyoming) time-lapse ERT
+=======================================================
 
-We thank the authors open source their datasets!
+Source
+------
+Five DAS-1 acquisitions, 5 to 9 November 2017, from the time-lapse ERT
+monitoring of the No-Name hillslope, Snowy Range, Medicine Bow National Forest,
+Wyoming, by Andrew Parsekian's group at the University of Wyoming.
+
+The group publishes this monitoring series as:
+Parsekian, A. (2020). NoName_Snowy_Range_MBNF_Hydrogeophysics. HydroShare.
+http://www.hydroshare.org/resource/3357f6ea99ca48a4b418a0be14fb653b
+
+License
+-------
+Creative Commons Attribution 4.0 International (CC BY 4.0),
+https://creativecommons.org/licenses/by/4.0/. Cite the dataset above.
+
+Site
+----
+Thayer, D., Parsekian, A. D., Hyde, K., Speckman, H., Beverly, D., Ewers, B.,
+... & Holbrook, W. S. (2018). Geophysical measurements to determine the
+hydrologic partitioning of snowmelt on a snow-dominated subalpine hillslope.
+Water Resources Research, 54(6), 3788-3808. https://doi.org/10.1029/2017WR021324
+
+We thank the authors for openly sharing their data.

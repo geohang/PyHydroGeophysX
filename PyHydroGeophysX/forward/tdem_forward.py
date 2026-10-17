@@ -374,7 +374,8 @@ def _local_log_hermite_matrix_cached(source: tuple, target: tuple) -> np.ndarray
     Deliberately not SciPy's global cubic spline. A response tabulated at ten
     points per decade is conventionally interpolated with a local cubic Hermite
     polynomial whose nodal slopes are centred secants and whose endpoint slopes
-    come from the quadratic through the first three points.
+    come from the quadratic through the first three points; TEM1D
+    (https://github.com/hydrogeophysicsgroup/TEM1D) uses the same rule.
 
     Keeping it as a matrix applies the identical interpolation to the response
     and to the Jacobian. Values outside the source interval are zero.
