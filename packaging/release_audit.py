@@ -1490,6 +1490,13 @@ class Audit:
         natives = [p for p in iter_files(self.bundle) if is_native(p)]
         system32 = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32"
         missing = defaultdict(set)
+        alias = {}          # libz.1.dylib -> libz.1.3.1.dylib
+        for folder, _dirs, files in os.walk(self.bundle, followlinks=False):
+            for n in files:
+                p = Path(folder) / n
+                if p.is_symlink():
+                    alias[n.lower()] = p.resolve().name.lower()
+        loaded_by = defaultdict(set)
         for path in natives:
             try:
                 imports = bindepend.get_imports(str(path))
@@ -1498,6 +1505,7 @@ class Audit:
                 continue
             for name, _resolved in imports:
                 base = Path(name).name.lower()
+                loaded_by[alias.get(base, base)].add(path.relative_to(self.stage).as_posix())
                 if base in present or base.startswith(("api-ms-win-", "ext-ms-")):
                     continue
                 if name.startswith(("/usr/lib/", "/System/", "/lib/", "/lib64/")):
@@ -1509,6 +1517,14 @@ class Audit:
                 missing[name].add(path.relative_to(self.stage).as_posix())
         for name, users in sorted(missing.items()):
             self.add("FAIL", "dependencies", f"{name} is needed by {', '.join(sorted(users)[:3])} but not bundled")
+        # What brings each GPL component in: the decision about it starts here.
+        for comp in self.components.values():
+            if comp.source.get("class") != "strong":
+                continue
+            own = {a.rsplit("/", 1)[-1].lower() for a in comp.files}
+            users = sorted({u for n in own for u in loaded_by.get(n, ())} - set(comp.files))
+            self.add("INFO", "dependencies", f"{comp.name} {comp.version} ({comp.licence}) is loaded by: "
+                                             f"{', '.join(users[:8]) or 'no bundled binary'}")
         if not missing:
             self.add("INFO", "dependencies", f"every import of the {len(natives)} native files resolves inside the "
                                              f"archive or to the operating system")
@@ -1912,7 +1928,7 @@ def cmd_replace(args):
             before = sha256_of(target)
             rpaths = macho_rpaths(target) if sys.platform == "darwin" else []
             shutil.copyfile(src, target)
-            if sys.platform == "darwin":
+            if sys.platform == "darwin" and macho_rpaths(target) != rpaths:
                 # As a user would: the replacement looks for its libraries
                 # where the file it replaces did.
                 for r in macho_rpaths(target):
@@ -1950,9 +1966,11 @@ def cmd_replace(args):
 
 
 def macho_rpaths(path):
-    """A Mach-O file's LC_RPATH entries, in order."""
+    """A Mach-O file's LC_RPATH entries, in order, each once (otool lists a
+    universal binary's for every architecture; install_name_tool changes
+    them in all at once)."""
     out = subprocess.run(["otool", "-l", str(path)], capture_output=True, text=True).stdout
-    return re.findall(r"cmd LC_RPATH\s+cmdsize \d+\s+path (.+?) \(offset \d+\)", out)
+    return list(dict.fromkeys(re.findall(r"cmd LC_RPATH\s+cmdsize \d+\s+path (.+?) \(offset \d+\)", out)))
 
 
 def obtain_fresh_qt(args, dest):
