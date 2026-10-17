@@ -1,0 +1,29 @@
+PyHydroGeophysX.agents.assistants.geosage package
+=================================================
+
+Submodules
+----------
+
+PyHydroGeophysX.agents.assistants.geosage.tools module
+------------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.agents.assistants.geosage.tools
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.agents.assistants.geosage.workflow module
+---------------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.agents.assistants.geosage.workflow
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: PyHydroGeophysX.agents.assistants.geosage
+   :members:
+   :show-inheritance:
+   :undoc-members:
