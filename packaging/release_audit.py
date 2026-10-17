@@ -91,7 +91,7 @@ QT_SRC_DIR = {"Core": "corelib", "Gui": "gui", "Widgets": "widgets", "Network": 
               "QmlModels": "qmlmodels", "QmlWorkerScript": "qmlworkerscript", "Quick": "quick",
               "QuickWidgets": "quickwidgets", "Svg": "svg", "SvgWidgets": "svgwidgets"}
 QT_REPOS = ("qtbase", "qtdeclarative", "qtsvg", "qtimageformats")
-PERMISSIVE_SPDX = re.compile(r"^(BSD|MIT|Apache|Zlib|BSL|Unicode|ISC|CC0|Unlicense|Libpng|IJG|FTL|"
+PERMISSIVE_SPDX = re.compile(r"^(BSD|MIT|Apache|Zlib|BSL|Unicode|ISC|CC0|Unlicense|Libpng|IJG|FTL|AFL|"
                              r"curl|X11|Bitstream|OFL|Public|PSF|HPND|blessing)", re.I)
 
 # ------------------------------------------------- excluded and flagged code
@@ -191,7 +191,8 @@ VENDORED_LIBS = [
      "https://github.com/DrTimothyAldenDavis/SuiteSparse/releases"),
 ]
 #: Libraries a package builds as its own besides those named like it.
-OWN_LIBS = {"pgcore": ("gimli",), "pyside6": ("shiboken", "pyside"), "scipy": ("sf_error_state",)}
+OWN_LIBS = {"pgcore": ("gimli",), "pyside6": ("shiboken", "pyside"), "scipy": ("sf_error_state",),
+            "vtk-base": ("vtk",)}
 
 #: Header-only libraries a conda recipe compiles into its package (read from
 #: the recipe's host requirements): name -> (project, texts, licence class,
@@ -212,7 +213,11 @@ HEADER_ONLY = {
 VENDORED_DIR = REPO / "packaging" / "licenses" / "vendored"
 #: conda packages that ship no licence file, nor does any package from their
 #: feedstock: the upstream texts in packaging/licenses/vendored/ to use.
-CONDA_LICENCE_TEXTS = {"libsqlite": ("sqlite-LICENSE.md",), "sqlite": ("sqlite-LICENSE.md",)}
+_GCC_TEXTS = ("gcc-COPYING3", "gcc-COPYING.RUNTIME")
+CONDA_LICENCE_TEXTS = {"libsqlite": ("sqlite-LICENSE.md",), "sqlite": ("sqlite-LICENSE.md",),
+                       "libgcc": _GCC_TEXTS, "libgcc-ng": _GCC_TEXTS, "libgomp": _GCC_TEXTS,
+                       "libgfortran": _GCC_TEXTS, "libgfortran5": _GCC_TEXTS + ("gcc-libquadmath-COPYING.LIB",),
+                       "libstdcxx": _GCC_TEXTS, "libstdcxx-ng": _GCC_TEXTS}
 
 #: Custom licences read and found permissive, and what each asks of a
 #: redistributor beyond carrying its text in LICENSES/ (written to
@@ -516,7 +521,9 @@ def collected(workpath, bundle, stage):
     work, stage = Path(workpath), Path(stage).resolve()
     roots = bundle_roots(Path(bundle).resolve())
     entries, missing, seen = [], [], set()
-    for dest, src, _typecode in load_toc(work / "COLLECT-00.toc")[0]:
+    for dest, src, typecode in load_toc(work / "COLLECT-00.toc")[0]:
+        if typecode == "SYMLINK":       # src is the link's target, not a file
+            continue
         dest = dest.replace("\\", "/")
         found = next((root / dest for root in roots
                       if (root / dest).is_file() and not (root / dest).is_symlink()), None)
@@ -843,14 +850,27 @@ class Audit:
                 unattributed.append(f"{apath}  <- {src}")
             else:
                 self.attach(kind, key, apath, src)
+        # A framework's own Info.plist and code signature belong to the
+        # package whose framework it is.
+        frameworks = {}
+        for comp in self.components.values():
+            for apath in comp.files:
+                m = re.match(r"(.*?\.framework)/", apath)
+                if m:
+                    frameworks.setdefault(m.group(1), comp)
+        app_meta = re.compile(rf"^{re.escape(self.bundle.name)}/Contents/(Info\.plist|PkgInfo|_CodeSignature/.*)$")
         for path in sorted(iter_files(self.bundle)):
             apath = path.relative_to(self.stage).as_posix()
             if apath in listed:
                 continue
+            fw = re.match(r"(.*?\.framework)/", apath)
             if path.name == "base_library.zip":
                 self.attach("python", "", apath, apath)      # the standard library, compiled
-            elif path.name.startswith(APP) or path.name in ("Info.plist", "PkgInfo", "CodeResources") \
-                    or "/_CodeSignature/" in apath:
+            elif fw and fw.group(1) in frameworks:
+                owner = frameworks[fw.group(1)]
+                owner.files.append(apath)
+                owner.sources.append(apath)
+            elif path.name.startswith(APP) or app_meta.match(apath):
                 self.attach("pyinstaller", "", apath, apath)
             elif path.suffix in (".icns", ".ico"):
                 self.attach("project", "packaging/app icon (made from logo.png)", apath, apath)
@@ -872,6 +892,11 @@ class Audit:
                 comp.kind = "pip"
                 comp.licence = dist_licence(dist)
                 comp.licence_files = dist_licence_files(dist)
+                if not comp.licence_files and comp.canon in QT_PACKAGES:
+                    # The macOS PySide6 wheels carry no licence file; their
+                    # metadata names the LGPL-3.0 option this archive uses.
+                    comp.licence_files = [(REPO / "packaging" / "licenses" / n, n) for n in GNU_TEXTS]
+                    comp.notes.append("the wheel ships no licence file; LGPL-3.0 and GPL-3.0 texts from gnu.org")
                 rep = o.pip.get(key)
                 installer = (dist.read_text("INSTALLER") or "").strip() or "an unknown installer"
                 if rep and rep["url"]:
@@ -1065,11 +1090,16 @@ class Audit:
             native_lib = low.endswith((".dll", ".dylib")) or low.endswith(".so") or ".so." in low
             if MS_RUNTIME.match(name) or not native_lib or re.search(r"\.(cp\d+|abi3|cpython)", low):
                 continue
-            if comp.kind == "conda" and "site-packages" not in src.replace("\\", "/"):
-                continue        # a conda package's own libraries (Library/bin, lib)
-            if not (folder.endswith((".libs", ".dylibs")) or not any(w in low for w in own)):
-                continue
             entry = next((e for e in VENDORED_LIBS if re.match(e[0], low)), None)
+            if comp.kind == "conda" and "site-packages" not in src.replace("\\", "/"):
+                # A conda package's own libraries (Library/bin, lib): only
+                # LGPL or GPL code it carries under another project's name
+                # (libquadmath in libgfortran5) is looked at.
+                if entry is None or entry[4] in ("permissive", "exception") or \
+                        any(w in comp.canon for w in entry[2]):
+                    continue
+            elif not (folder.endswith((".libs", ".dylibs")) or not any(w in low for w in own)):
+                continue
             if entry is None:
                 self.add("FAIL", "vendored library", f"{comp.name} {comp.version} carries {name}, a library this "
                                                      f"check does not know; identify it and its licence")
@@ -1078,7 +1108,11 @@ class Audit:
             if terms not in ("permissive", "exception"):     # copyleft: its licence is named
                 version, url = "", ""
                 compiler, builder = gcc_build(self.stage / apath)
-                if "GCC" in project and compiler:
+                upstream = [u for u, _ in comp.source.get("upstream") or []]
+                if comp.kind == "conda" and upstream and "site-packages" not in src.replace("\\", "/"):
+                    # Built by the package's own recipe: its source and patches.
+                    version, url, builder = comp.version.split()[0], upstream[0], ""
+                elif "GCC" in project and compiler:
                     version, url = compiler, f"{source}gcc-{compiler}/gcc-{compiler}.tar.xz"
                 elif project.startswith("SuiteSparse"):
                     version = suitesparse_version(self.stage / apath)
@@ -1193,7 +1227,7 @@ class Audit:
                     if m:
                         fw = "/".join(parts[:i + 1])
                         modules[m.group(1)].add(fw)
-                        if m.group(1) == "Core" and fw not in core_owners[f"{comp.name} {comp.version}"]:
+                        if m.group(1) == "Core" and name == "QtCore":     # the framework's library
                             core_owners[f"{comp.name} {comp.version}"].append(fw)
                 m = bind_re.match(name)
                 if m and "PySide6" in parts:
@@ -1427,8 +1461,9 @@ class Audit:
     # ------------------------------------------------------ dependency check
     def dependency_checks(self):
         from PyInstaller.depend import bindepend
-        present = {p.name.lower() for p in iter_files(self.bundle)}
-        present |= {p.name.lower() for p in self.bundle.rglob("*.framework")}
+        present = set()      # every name in the bundle, symlinks included (libz.1.dylib -> libz.1.3.1.dylib)
+        for _folder, dirs, files in os.walk(self.bundle, followlinks=False):
+            present |= {n.lower() for n in dirs + files}
         natives = [p for p in iter_files(self.bundle) if is_native(p)]
         system32 = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32"
         missing = defaultdict(set)
@@ -1599,9 +1634,10 @@ class Audit:
                     lines.append("  - built and published by The Qt Company from the release sources above")
             lines += ["", f"Qt's own report of its build: `{qt_build_string()}`", ""]
             lines += replacement_instructions(self.args.os, self.qt)
-        weak = [c for c in self.components.values() if c.source.get("class") == "weak" and c not in qt_comps]
+        weak = [c for c in self.components.values()
+                if c.source.get("class") in ("weak", "strong") and c not in qt_comps and c.kind != "project"]
         if weak:
-            lines += ["", "## Other components under the LGPL or MPL", ""]
+            lines += ["", "## Other components under the LGPL, MPL or GPL", ""]
             for comp in sorted(weak, key=lambda c: c.name.lower()):
                 lines.append(f"- {comp.name} {comp.version} ({comp.licence}):")
                 lines += self.conda_source_lines(comp, "  ") if comp.kind == "conda" else \
@@ -1625,13 +1661,27 @@ class Audit:
                   "modifications."]
         (self.stage / "SOURCE_CODE.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    @staticmethod
-    def conda_source_lines(comp, indent):
+    def conda_source_lines(self, comp, indent):
         src, out = comp.source, []
         if src.get("package_url"):
             out.append(f"{indent}- package: {src['package_url']}")
         for u, s in src.get("upstream") or []:
-            out.append(f"{indent}- upstream source: {u}" + (f" (SHA-256 `{s}`)" if s else ""))
+            digest = f" (SHA-256 `{s}`)" if s else ""
+            if url_ok(u):
+                out.append(f"{indent}- upstream source: {u}{digest}")
+                continue
+            # The recipe's download mirror has gone: the same file where its
+            # publisher keeps it, if it is there.
+            alt = next((a for a in mirror_alternatives(u) if url_ok(a)), "")
+            host = u.split("/")[2] if "//" in u else u
+            if alt:
+                out.append(f"{indent}- upstream source: {alt}{digest} (the recipe downloaded the same file name "
+                           f"from {host}, which no longer answers)")
+            else:
+                out.append(f"{indent}- upstream source: the recipe's download from {host} no longer answers; "
+                           f"the recipe below names it")
+                self.add("DECIDE", "source", f"{comp.name} {comp.version}: its recipe's source download ({host}) "
+                                             f"no longer answers and no other copy was found")
         if src.get("feedstock"):
             out.append(f"{indent}- recipe and patches: {src['feedstock'].removesuffix('.git')}"
                        + (f"/tree/{src['feedstock_sha']}" if src.get("feedstock_sha") else ""))
@@ -1683,8 +1733,20 @@ def summarise_paths(paths, limit=12):
 
 
 def qt_everywhere_url(version):
+    """Qt's single source archive: official_releases while current, archive after."""
     mm = ".".join(version.split(".")[:2])
-    return f"https://download.qt.io/official_releases/qt/{mm}/{version}/single/qt-everywhere-src-{version}.tar.xz"
+    urls = [f"https://download.qt.io/{area}/qt/{mm}/{version}/single/qt-everywhere-src-{version}.tar.xz"
+            for area in ("official_releases", "archive")]
+    return next((u for u in urls if url_ok(u)), urls[0])
+
+
+def mirror_alternatives(url):
+    """The publisher's own address for a file a recipe took from a mirror
+    (download.qt.io for Qt mirrors)."""
+    m = re.search(r"/(?:archive|official_releases)/(qt/.+|qt-for-python/.+|QtForPython/.+)$", url)
+    if not m:
+        return []
+    return [f"https://download.qt.io/{area}/{m.group(1)}" for area in ("official_releases", "archive")]
 
 
 def pypi_sdist(name, version):

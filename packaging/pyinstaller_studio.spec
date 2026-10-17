@@ -129,6 +129,9 @@ if not _bundle_tetgen:
 # the user supplies; its Python API must not ride along from the build
 # environment either (THIRD_PARTY_NOTICES.md, "Gmsh").
 excludes += ["gmsh", "pygmsh"]
+# Python's readline module serves the interactive prompt, which the studio does
+# not have; conda's links GNU Readline (GPL-3.0).
+excludes += ["readline"]
 
 # Qt modules the studio does not use, kept out of every archive. Five are
 # available under GPL-3.0 (or a commercial licence) only, with no LGPL option:
@@ -150,7 +153,7 @@ excludes += [f"PySide6.Qt{_name}" for _name in _QT_LEFT_OUT]
 # qtvirtualkeyboardplugin and imageformats/qpdf, and opengl32sw.dll.
 _LEFT_OUT_PATHS = [re.compile(
     r"^(lib)?qt6?(datavisualization|charts|graphs|quick3d|virtualkeyboard|pdf)"
-    r"|^(virtualkeyboard|pdf)$|^qpdf\.|^opengl32sw\.dll$",
+    r"|^(virtualkeyboard|pdf)$|^(lib)?qpdf\.|^opengl32sw\.dll$",
     re.IGNORECASE,
 )]
 # The Universal CRT (ucrtbase.dll and its api-ms-win-*.dll forwarders) is part
