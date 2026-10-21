@@ -203,6 +203,43 @@ Full builds require an inventory of their additional native dependencies as
 well as their Python packages. They must not be published until the applicable
 notices, source obligations and redistribution conditions have been checked.
 
+### Full builds: rustsolve in place of CHOLMOD and UMFPACK
+
+pgcore, pyGIMLi's compiled core, solves sparse systems with SuiteSparse CHOLMOD
+and UMFPACK. UMFPACK, and CHOLMOD's Supernodal, Modify and MatrixOps modules,
+are GPL-2.0-or-later. In Full builds these are replaced by rustsolve, a
+sparse-solver library on faer. The prebuilt files are in `packaging/rustsolve/`;
+its `README.txt` gives their origin and SHA-256. The build installs them with
+`packaging/rustsolve/apply.py`:
+
+* **rustsolve's C interface** (`rustsolve_capi.dll`, `librustsolve_capi.dylib`).
+  rustsolve 0.1.0 is MIT OR Apache-2.0. It is built from
+  https://github.com/geohang/rustsolve, a private repository. The Rust crates
+  compiled with it are listed in `packaging/rustsolve/README.txt`: faer 0.24.4
+  and others under MIT, Apache-2.0, BSD-2-Clause, Zlib or Unlicense terms.
+  faer's licence files also cover code ported into faer from SuiteSparse AMD
+  and COLAMD (BSD-3-Clause), LAPACK (BSD) and Eigen (MPL-2.0). The
+  Eigen-derived code, a divide-and-conquer SVD, is not compiled into these
+  files. The Rust standard library is compiled in. The Windows file also
+  contains MinGW-w64 runtime code and GCC's unwinder (GPL-3.0-or-later with
+  the GCC Runtime Library Exception 3.1).
+* **libgimli, modified** (`libgimli.dll`, `libgimli.dylib`). This is pyGIMLi's
+  core library (Apache-2.0), rebuilt from pyGIMLi's sources with rustsolve's
+  changes:
+  * Windows: commit 5991b6ac, the source of pgcore 1.5.0;
+  * macOS: v1.5.4, the source of pgcore 1.5.4.
+
+  As section 4(b) of the Apache License asks, the archive's
+  `pygimli/MODIFICATIONS.txt` names the changed files. It is in the
+  component's folder in `LICENSES/`. The library's version string ends in
+  `+rustsolve`. It still contains Triangle, as pyGIMLi's own build does.
+* On Windows, the seven SuiteSparse DLLs carried by pgcore 1.5.0 are left
+  out: AMD, CAMD, CCOLAMD, CHOLMOD, COLAMD, SuiteSparse_config and UMFPACK.
+
+`packaging/release_audit.py` identifies these files by their SHA-256. It lists
+them in `BUILD_INFO.txt` as their own components, with their licence texts
+and notices in `LICENSES/`.
+
 ## Example data
 
 `examples/data/README.md` lists every example dataset with its source and

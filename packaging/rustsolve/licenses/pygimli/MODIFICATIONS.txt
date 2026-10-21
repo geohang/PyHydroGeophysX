@@ -1,0 +1,49 @@
+libgimli in this archive: pyGIMLi's core library, modified
+==========================================================
+
+pyGIMLi is Copyright (C) 2005-2024 by the GIMLi development team and is
+licensed under the Apache License, Version 2.0 (COPYING.rst in this folder).
+As section 4(b) of that licence asks, this notice states that the library
+was built from modified files.
+
+The modifications were made in 2026 for PyHydroGeophysX by Hang Chen. They
+are applied by pgcore/apply_rustsolve.py of rustsolve
+(https://github.com/geohang/rustsolve, a private repository), commit fb18324,
+which also supplies the replacement pgcore/src/cholmodWrapper.cpp.
+
+Sources the library was built from
+-----------------------------------
+Windows (libgimli.dll): gimli commit 5991b6ac, the source of pgcore 1.5.0 on
+  the gimli conda channel; version string libgimli-v1.5.0-1-g5991b6ac+rustsolve.
+  Built with MSYS2 MINGW64 GCC 16.2.0 by rustsolve's
+  pgcore/build-libgimli-msys2.sh.
+macOS (libgimli.dylib, arm64): gimli v1.5.4, commit 6241cfab, the source of
+  pgcore 1.5.4 on the gimli conda channel; version string
+  libgimli-v1.5.3-53-g6241cfab+rustsolve. Built with conda-forge clang 21 by
+  rustsolve's pgcore/build-libgimli-macos.sh, in GitHub Actions run
+  39546992242 of geohang/rustsolve.
+
+Files changed
+-------------
+CMakeLists.txt, core/src/CMakeLists.txt
+    The GIMLI_RUSTSOLVE option. With it, the library links rustsolve's C
+    interface (rustsolve_capi) instead of SuiteSparse CHOLMOD and UMFPACK,
+    and its version string ends in "+rustsolve".
+core/src/cholmodWrapper.cpp
+    Replaced. The CHOLMOD and UMFPACK calls are replaced by calls to
+    rustsolve (Cholesky, LDL^T and LU on the faer library).
+core/src/cholmodWrapper.h
+    Overrides of SolverWrapper's two setMatrix(const ...&) overloads. The
+    class layout is unchanged.
+core/src/linSolver.h, core/src/linSolver.cpp
+    A matrix the solver refuses leaves no solver behind, and solve() then
+    raises an error instead of using the previous matrix's solver; the
+    previous solver and the cached matrix are freed; SolverWrapper's
+    one-argument setMatrix overloads are implemented; the LDL solver type
+    raises an error, since this build has no LDL library.
+core/src/bert/dcfemmodelling.cpp
+    The DC forward frees the solver it creates also when a factorization or
+    solve raises an error.
+
+Every other file is pyGIMLi's own and unchanged. The library still contains
+Triangle, as pyGIMLi's own build does (its notice is in LICENSES/Triangle/).

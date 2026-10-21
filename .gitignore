@@ -145,6 +145,7 @@ local_plans/
 !/examples/data/EM/synthetic_tem_lci/README.md
 !/examples/data/README.md
 !/packaging/licenses/**/*.md
+!/packaging/rustsolve/licenses/**/*.md
 
 # Internal review data follows the same local-only policy as its report.
 docs/comment_review_inventory_*.csv

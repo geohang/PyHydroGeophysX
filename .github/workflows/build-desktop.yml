@@ -4,7 +4,9 @@
 #
 # - light: pip-only PySide6 stack; forward modeling / inversion / 3D viewer show
 #   an install message (the app degrades gracefully).
-# - full: gimli/conda-forge engines (pyGIMLi, PyVista/VTK) + SimPEG.
+# - full: gimli/conda-forge engines (pyGIMLi, PyVista/VTK) + SimPEG. pgcore's
+#   SuiteSparse solvers (CHOLMOD, UMFPACK: GPL parts) are replaced by rustsolve,
+#   from the prebuilt files in packaging/rustsolve/ (apply.py there).
 #
 # A draft is made on a version-tag push, or from a manual run with release_tag
 # set. A tag push runs the workflow file as it was at the tagged commit, so a
@@ -87,13 +89,24 @@ jobs:
         # other Qt packages come from there too: one Qt build in the archive.
         # vtk-base, not the vtk metapackage, which adds vtk-io-ffmpeg and with it
         # FFmpeg linked to x264 and x265 (GPL). OpenBLAS for BLAS/LAPACK, not
-        # Intel MKL, whose libraries come under Intel's own licence.
+        # Intel MKL, whose libraries come under Intel's own licence. pgcore and
+        # pyGIMLi are pinned to the builds packaging/rustsolve/ was verified with.
         run: |
-          conda install -y -c gimli -c conda-forge pygimli pyvista vtk-base pyside6 pyqtgraph qtawesome \
+          conda install -y -c gimli -c conda-forge $(python packaging/rustsolve/apply.py spec) \
+            pyvista vtk-base pyside6 pyqtgraph qtawesome \
             numpy pandas scipy matplotlib pyproj pypdf pillow "libblas=*=*openblas"
           python -m pip install --report pip-report.json simpeg pymatsolver pyinstaller
           python -c "import sys; assert sys.version_info[:2] == (3, 11), sys.version"
           conda list --explicit --md5 > conda-explicit.txt
+
+      # libgimli rebuilt with rustsolve in place of pgcore's own, rustsolve's C
+      # interface beside it, and (Windows) the SuiteSparse DLLs pgcore carries
+      # removed; then a solve and an ERT forward in the result.
+      - name: rustsolve in place of SuiteSparse (full)
+        if: matrix.variant == 'full'
+        run: |
+          python packaging/rustsolve/apply.py install --prefix "$CONDA_PREFIX" --record rustsolve-install.txt
+          python packaging/rustsolve/apply.py check --record rustsolve-install.txt
 
       # ---- build, smoke-test ----
       - name: Build bundle
@@ -140,7 +153,7 @@ jobs:
             fi
           fi
           conda_args=()
-          if [ "${{ matrix.variant }}" = "full" ]; then conda_args=(--conda-prefix "$CONDA_PREFIX"); fi
+          if [ "${{ matrix.variant }}" = "full" ]; then conda_args=(--conda-prefix "$CONDA_PREFIX" --rustsolve); fi
           # For a release, a failed check stops the job, so no draft is made.
           strict=()
           if [ -n "$RELEASE_TAG" ]; then strict=(--strict); fi
@@ -151,6 +164,7 @@ jobs:
             --report "audit/audit-${{ matrix.os-name }}-${{ matrix.variant }}.md"
           cp pip-report.json audit/ 2>/dev/null || true
           cp conda-explicit.txt audit/ 2>/dev/null || true
+          cp rustsolve-install.txt audit/ 2>/dev/null || true
           cp stage/BUILD_INFO.txt stage/SOURCE_CODE.md audit/
 
       - name: Package bundle (Windows)

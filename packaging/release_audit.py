@@ -6,8 +6,10 @@ Run from the repository root, in the environment that built the archive:
     After PyInstaller and the smoke test. Traces every file PyInstaller
     collected (its COLLECT, PYZ and PKG tables of contents) to the pip
     distribution, conda package, Python installation or repository file it
-    came from, and writes into the staging folder whose contents become the
-    archive root: ``BUILD_INFO.txt`` (build facts and the component
+    came from (the Full build's rustsolve files by their SHA-256, from
+    ``packaging/rustsolve/manifest.json``), and writes into the staging
+    folder whose contents become the archive root: ``BUILD_INFO.txt``
+    (build facts and the component
     inventory), ``SOURCE_CODE.md`` and ``LICENSES/``. Also writes a review
     report (not shipped) with every check.
 ``verify``
@@ -211,6 +213,10 @@ HEADER_ONLY = {
     "pythran": ("Pythran", ("pythran-LICENSE",), "permissive", ""),
 }
 VENDORED_DIR = REPO / "packaging" / "licenses" / "vendored"
+#: Prebuilt files the Full build puts in place of pgcore's SuiteSparse solvers
+#: (packaging/rustsolve/apply.py): their SHA-256, the pgcore build they belong
+#: to, the files they make redundant and the components they are listed as.
+RUSTSOLVE_MANIFEST = REPO / "packaging" / "rustsolve" / "manifest.json"
 #: conda packages that ship no licence file, nor does any package from their
 #: feedstock: the upstream texts in packaging/licenses/vendored/ to use.
 _GCC_TEXTS = ("gcc-COPYING3", "gcc-COPYING.RUNTIME")
@@ -247,7 +253,7 @@ class Component:
     key: str
     name: str
     version: str = ""
-    kind: str = ""              # pip, conda, python, pyinstaller, project, data
+    kind: str = ""              # pip, conda, python, pyinstaller, project, data, rustsolve
     origin: str = ""
     licence: str = ""
     licence_files: list = field(default_factory=list)   # (source path, name in LICENSES/<key>/)
@@ -592,6 +598,15 @@ class Origins:
                     # Files a conda-installed python package also lists in RECORD
                     # belong to the conda package (its build and channel).
                     self.by_path[norm(prefix / rel)] = ("conda", meta["name"])
+        # The rustsolve files by SHA-256: they sit where pgcore's own files
+        # were (or beside them), so their path names the wrong package.
+        self.rustsolve, self.rustsolve_names = {}, set()
+        if RUSTSOLVE_MANIFEST.is_file():
+            manifest = json.loads(RUSTSOLVE_MANIFEST.read_text(encoding="utf-8"))
+            for plat, spec in manifest["platforms"].items():
+                for entry in spec["files"]:
+                    self.rustsolve[entry["sha256"]] = (plat, entry["component"])
+                    self.rustsolve_names.add(Path(entry["install"]).name.lower())
         self.base = norm(sys.base_prefix)
         self.site = [norm(p) for p in sys.path if p.endswith("site-packages")]
         import PyInstaller
@@ -614,6 +629,10 @@ class Origins:
         if path.startswith(self.repo + os.sep):
             rel = Path(os.path.realpath(str(src))).relative_to(REPO).as_posix()    # keeps the case
             return ("data", rel) if rel.startswith("examples/") else ("project", rel)
+        if Path(path).name.lower() in self.rustsolve_names and os.path.isfile(src):
+            key = self.rustsolve.get(sha256_of(src))
+            if key:
+                return ("rustsolve", key)
         if path in self.by_path:
             return self.by_path[path]
         if path.startswith(self.pyinstaller + os.sep):
@@ -1013,6 +1032,30 @@ class Audit:
                             comp.licence_files.append((path, path.name))
                         else:
                             comp.source.setdefault("missing", []).append(path.relative_to(REPO).as_posix())
+        elif kind == "rustsolve":
+            plat, name = key
+            spec = json.loads(RUSTSOLVE_MANIFEST.read_text(encoding="utf-8"))["platforms"][plat]["components"][name]
+            comp = self.component(spec["key"], spec["name"], spec["version"])
+            if not comp.kind:
+                comp.kind = "rustsolve"
+                comp.licence = spec["licence"]
+                comp.origin = spec["origin"]
+                comp.notes += spec.get("notes", [])
+                # Notices are named relative to packaging/; a folder stands for
+                # every file in it. In LICENSES/<component>/ they keep their
+                # path below packaging/rustsolve/licenses/ or packaging/licenses/.
+                pack = REPO / "packaging"
+                for entry in spec["notices"]:
+                    path = pack / entry
+                    files = sorted(p for p in path.rglob("*") if p.is_file()) if path.is_dir() else [path]
+                    if not files or not all(p.is_file() for p in files):
+                        self.add("FAIL", "licence files", f"{comp.name}: packaging/{entry} is missing")
+                    for p in files:
+                        if not p.is_file():
+                            continue
+                        base = pack / "rustsolve" / "licenses"
+                        label = p.relative_to(base if base in p.parents else pack / "licenses").as_posix()
+                        comp.licence_files.append((p, label))
         else:
             raise ValueError(kind)
         comp.files.append(apath)
@@ -1193,6 +1236,41 @@ class Audit:
         if "SOURCES.txt" not in added:
             comp.licence_files.append((VENDORED_DIR / "SOURCES.txt", "vendored/SOURCES.txt"))
             added.add("SOURCES.txt")
+
+    # -------------------------------------------------------------- rustsolve
+    def rustsolve_checks(self):
+        """The Full build's rustsolve files (packaging/rustsolve/): each one is
+        in the archive as the verified build, beside the pgcore build it was
+        verified with, and none of the libraries it makes redundant is."""
+        spec = json.loads(RUSTSOLVE_MANIFEST.read_text(encoding="utf-8"))["platforms"].get(self.args.os)
+        if spec is None:
+            self.add("FAIL", "rustsolve", f"packaging/rustsolve/manifest.json has no {self.args.os} build")
+            return
+        traced = {a.rsplit("/", 1)[-1].lower(): (c, a) for c in self.components.values() if c.kind == "rustsolve"
+                  for a in c.files}
+        for entry in spec["files"]:
+            name = Path(entry["install"]).name
+            if name.lower() in traced:
+                comp, apath = traced[name.lower()]
+                self.add("INFO", "rustsolve", f"{apath}: packaging/rustsolve/{entry['file']} (SHA-256 "
+                                              f"{entry['sha256']}), listed as {comp.name} {comp.version}")
+            else:
+                self.add("FAIL", "rustsolve", f"{name} with the SHA-256 of packaging/rustsolve/{entry['file']} is "
+                                              f"not in the archive")
+        want = spec["pgcore"]
+        pgcore = [c.version for c in self.components.values() if c.canon == "pgcore"]
+        if f"{want['version']} (build {want['build']})" not in pgcore:
+            self.add("FAIL", "rustsolve", f"the archive's pgcore is {', '.join(pgcore) or 'missing'}; the rustsolve "
+                                          f"files were verified with {want['version']} (build {want['build']})")
+        present = defaultdict(list)
+        for path in iter_files(self.bundle):
+            present[path.name.lower()].append(path.relative_to(self.stage).as_posix())
+        removed = [Path(r).name for r in spec["remove"]]
+        left = [p for n in removed for p in present.get(n.lower(), [])]
+        if left:
+            self.add("FAIL", "rustsolve", f"libraries rustsolve replaces are still in the archive: {', '.join(left)}")
+        elif removed:
+            self.add("INFO", "rustsolve", f"not in the archive, as pgcore's: {', '.join(removed)}")
 
     # ------------------------------------------------------------- exclusions
     def exclusion_checks(self):
@@ -2007,6 +2085,8 @@ def cmd_stage(args):
     audit = Audit(args)
     audit.trace()
     audit.licence_checks()
+    if args.rustsolve:
+        audit.rustsolve_checks()
     audit.exclusion_checks()
     audit.qt_checks()
     audit.runtime_checks()
@@ -2036,6 +2116,8 @@ def main(argv=None):
     st.add_argument("--cache", default="build/audit-cache")
     st.add_argument("--report", required=True)
     st.add_argument("--strict", action="store_true", help="exit 1 when a check fails")
+    st.add_argument("--rustsolve", action="store_true",
+                    help="the build put packaging/rustsolve/ in place of pgcore's SuiteSparse solvers: check it did")
     ve = sub.add_parser("verify")
     ve.add_argument("--archive", required=True)
     ve.add_argument("--report", required=True)

@@ -1,0 +1,236 @@
+{
+  "about": "Prebuilt files the desktop Full build puts in place of pgcore's SuiteSparse solvers (packaging/rustsolve/apply.py); packaging/release_audit.py traces them by SHA-256.",
+  "rustsolve": {
+    "version": "0.1.0",
+    "commit": "fb18324",
+    "repository": "https://github.com/geohang/rustsolve",
+    "licence": "MIT OR Apache-2.0",
+    "cargo": "cargo build --locked --release -p rustsolve-capi --features nd"
+  },
+  "platforms": {
+    "windows": {
+      "pgcore": {
+        "version": "1.5.0",
+        "build": "py311_1",
+        "md5": "b214a8ff4bf800a0409363c0c2db0c62",
+        "channel": "gimli"
+      },
+      "pygimli": "1.5.5",
+      "folder": "Lib/site-packages/pgcore",
+      "files": [
+        {
+          "file": "windows/libgimli.dll",
+          "install": "Lib/site-packages/pgcore/libgimli.dll",
+          "sha256": "5eedb6339e391a337e0fc8f456b8ea4cc543eb6f57d54276eb876c92def4aede",
+          "component": "libgimli"
+        },
+        {
+          "file": "windows/rustsolve_capi.dll",
+          "install": "Lib/site-packages/pgcore/rustsolve_capi.dll",
+          "sha256": "120bbe0ba5400271b15b4e4f2ceba2fe0bb2749543f7df4ad37c510d798e6bd1",
+          "component": "rustsolve"
+        }
+      ],
+      "remove": [
+        "Lib/site-packages/pgcore/libamd.dll",
+        "Lib/site-packages/pgcore/libcamd.dll",
+        "Lib/site-packages/pgcore/libccolamd.dll",
+        "Lib/site-packages/pgcore/libcholmod.dll",
+        "Lib/site-packages/pgcore/libcolamd.dll",
+        "Lib/site-packages/pgcore/libsuitesparseconfig.dll",
+        "Lib/site-packages/pgcore/libumfpack.dll"
+      ],
+      "version_string": "libgimli-v1.5.0-1-g5991b6ac+rustsolve",
+      "components": {
+        "libgimli": {
+          "key": "libgimli-1.5.0-rustsolve",
+          "name": "libgimli (pyGIMLi core library, modified to use rustsolve)",
+          "version": "1.5.0 (libgimli-v1.5.0-1-g5991b6ac+rustsolve)",
+          "licence": "Apache-2.0",
+          "origin": "built from gimli commit 5991b6ac (the source of pgcore 1.5.0) changed by pgcore/apply_rustsolve.py of https://github.com/geohang/rustsolve (private) at commit fb18324, with MSYS2 MINGW64 GCC 16.2.0; packaging/rustsolve/windows/libgimli.dll (SHA-256 5eedb6339e391a337e0fc8f456b8ea4cc543eb6f57d54276eb876c92def4aede)",
+          "notices": [
+            "rustsolve/licenses/pygimli/COPYING.rst",
+            "rustsolve/licenses/pygimli/MODIFICATIONS.txt",
+            "rustsolve/licenses/mingw-w64/COPYING.MinGW-w64-runtime.txt",
+            "licenses/vendored/gcc-COPYING3",
+            "licenses/vendored/gcc-COPYING.RUNTIME"
+          ],
+          "notes": [
+            "replaces pgcore 1.5.0's libgimli.dll; the changed files are listed in pygimli/MODIFICATIONS.txt (Apache-2.0 section 4(b))"
+          ]
+        },
+        "rustsolve": {
+          "key": "rustsolve-0.1.0",
+          "name": "rustsolve (C interface)",
+          "version": "0.1.0 (commit fb18324)",
+          "licence": "MIT OR Apache-2.0",
+          "origin": "built from https://github.com/geohang/rustsolve (private) at commit fb18324 with rustc 1.99.0, target x86_64-pc-windows-gnu, features nd; packaging/rustsolve/windows/rustsolve_capi.dll (SHA-256 120bbe0ba5400271b15b4e4f2ceba2fe0bb2749543f7df4ad37c510d798e6bd1)",
+          "notices": [
+            "rustsolve/licenses/rustsolve",
+            "rustsolve/licenses/rust-standard-library",
+            "rustsolve/licenses/crates/atomic-wait-1.1.0",
+            "rustsolve/licenses/crates/bitflags-2.13.2",
+            "rustsolve/licenses/crates/bytemuck-1.25.2",
+            "rustsolve/licenses/crates/cfg-if-1.0.5",
+            "rustsolve/licenses/crates/crossbeam-0.8.5",
+            "rustsolve/licenses/crates/crossbeam-channel-0.5.17",
+            "rustsolve/licenses/crates/crossbeam-deque-0.8.8",
+            "rustsolve/licenses/crates/crossbeam-epoch-0.9.21",
+            "rustsolve/licenses/crates/crossbeam-queue-0.3.14",
+            "rustsolve/licenses/crates/crossbeam-utils-0.8.23",
+            "rustsolve/licenses/crates/dyn-stack-0.13.2",
+            "rustsolve/licenses/crates/either-1.19.0",
+            "rustsolve/licenses/crates/equator-0.2.2",
+            "rustsolve/licenses/crates/equator-0.4.2",
+            "rustsolve/licenses/crates/equator-0.6.0",
+            "rustsolve/licenses/crates/faer-0.24.4",
+            "rustsolve/licenses/crates/faer-traits-0.24.0",
+            "rustsolve/licenses/crates/feral-amd-0.2.1",
+            "rustsolve/licenses/crates/feral-metis-0.3.0",
+            "rustsolve/licenses/crates/feral-ordering-core-0.2.2",
+            "rustsolve/licenses/crates/gemm-0.19.0",
+            "rustsolve/licenses/crates/gemm-c32-0.19.0",
+            "rustsolve/licenses/crates/gemm-c64-0.19.0",
+            "rustsolve/licenses/crates/gemm-common-0.19.0",
+            "rustsolve/licenses/crates/gemm-f32-0.19.0",
+            "rustsolve/licenses/crates/gemm-f64-0.19.0",
+            "rustsolve/licenses/crates/generativity-1.2.1",
+            "rustsolve/licenses/crates/libm-0.2.16",
+            "rustsolve/licenses/crates/nano-gemm-0.2.2",
+            "rustsolve/licenses/crates/nano-gemm-c32-0.2.1",
+            "rustsolve/licenses/crates/nano-gemm-c64-0.2.1",
+            "rustsolve/licenses/crates/nano-gemm-core-0.2.1",
+            "rustsolve/licenses/crates/nano-gemm-f32-0.2.1",
+            "rustsolve/licenses/crates/nano-gemm-f64-0.2.1",
+            "rustsolve/licenses/crates/num_cpus-1.17.0",
+            "rustsolve/licenses/crates/num-complex-0.4.6",
+            "rustsolve/licenses/crates/num-traits-0.2.19",
+            "rustsolve/licenses/crates/once_cell-1.21.4",
+            "rustsolve/licenses/crates/private-gemm-x86-0.1.22",
+            "rustsolve/licenses/crates/pulp-0.22.3",
+            "rustsolve/licenses/crates/pulp-wasm-simd-flag-0.1.1",
+            "rustsolve/licenses/crates/qd-0.8.0",
+            "rustsolve/licenses/crates/raw-cpuid-11.6.0",
+            "rustsolve/licenses/crates/rayon-1.12.0",
+            "rustsolve/licenses/crates/rayon-core-1.13.0",
+            "rustsolve/licenses/crates/reborrow-0.5.5",
+            "rustsolve/licenses/crates/spindle-0.2.6",
+            "rustsolve/licenses/crates/windows_x86_64_gnu-0.42.2",
+            "rustsolve/licenses/crates/windows-sys-0.42.0",
+            "rustsolve/licenses/mingw-w64/COPYING.MinGW-w64-runtime.txt",
+            "licenses/vendored/gcc-COPYING3",
+            "licenses/vendored/gcc-COPYING.RUNTIME"
+          ],
+          "notes": [
+            "compiled with faer 0.24.4 and the Rust crates in its crates/ folder, and the Rust standard library; rustsolve/CONTENTS.txt lists what is compiled in"
+          ]
+        }
+      }
+    },
+    "macos": {
+      "pgcore": {
+        "version": "1.5.4",
+        "build": "np22py311h3a9382f_0",
+        "md5": "cbabb6af76729001c7c96ff12d7270b0",
+        "channel": "gimli"
+      },
+      "pygimli": "1.5.5",
+      "folder": "lib",
+      "files": [
+        {
+          "file": "macos/libgimli.dylib",
+          "install": "lib/libgimli.dylib",
+          "sha256": "4c743324db353a6dfedd02b6d161ba30dbdaf113820554560962c9c31d944b5c",
+          "component": "libgimli"
+        },
+        {
+          "file": "macos/librustsolve_capi.dylib",
+          "install": "lib/librustsolve_capi.dylib",
+          "sha256": "dfa55eaf20a36385d36339b0bca6d8e984af1d427e45987ff90b4ba90e81fe25",
+          "component": "rustsolve"
+        }
+      ],
+      "remove": [],
+      "version_string": "libgimli-v1.5.3-53-g6241cfab+rustsolve",
+      "components": {
+        "libgimli": {
+          "key": "libgimli-1.5.4-rustsolve",
+          "name": "libgimli (pyGIMLi core library, modified to use rustsolve)",
+          "version": "1.5.4 (libgimli-v1.5.3-53-g6241cfab+rustsolve)",
+          "licence": "Apache-2.0",
+          "origin": "built from gimli v1.5.4, commit 6241cfab (the source of pgcore 1.5.4), changed by pgcore/apply_rustsolve.py of https://github.com/geohang/rustsolve (private) at commit fb18324, with conda-forge clang 21.1.8 in GitHub Actions run 39546992242 of geohang/rustsolve; packaging/rustsolve/macos/libgimli.dylib (SHA-256 4c743324db353a6dfedd02b6d161ba30dbdaf113820554560962c9c31d944b5c)",
+          "notices": [
+            "rustsolve/licenses/pygimli/COPYING.rst",
+            "rustsolve/licenses/pygimli/MODIFICATIONS.txt"
+          ],
+          "notes": [
+            "replaces pgcore 1.5.4's libgimli.dylib; the changed files are listed in pygimli/MODIFICATIONS.txt (Apache-2.0 section 4(b))"
+          ]
+        },
+        "rustsolve": {
+          "key": "rustsolve-0.1.0",
+          "name": "rustsolve (C interface)",
+          "version": "0.1.0 (commit fb18324)",
+          "licence": "MIT OR Apache-2.0",
+          "origin": "built from https://github.com/geohang/rustsolve (private) at commit fb18324 with rustc 1.99.1, target aarch64-apple-darwin, features nd, in GitHub Actions run 39546992242 of geohang/rustsolve; packaging/rustsolve/macos/librustsolve_capi.dylib (SHA-256 dfa55eaf20a36385d36339b0bca6d8e984af1d427e45987ff90b4ba90e81fe25)",
+          "notices": [
+            "rustsolve/licenses/rustsolve",
+            "rustsolve/licenses/rust-standard-library",
+            "rustsolve/licenses/crates/atomic-wait-1.1.0",
+            "rustsolve/licenses/crates/bitflags-2.13.2",
+            "rustsolve/licenses/crates/bytemuck-1.25.2",
+            "rustsolve/licenses/crates/byteorder-1.5.0",
+            "rustsolve/licenses/crates/cfg-if-1.0.5",
+            "rustsolve/licenses/crates/crossbeam-0.8.5",
+            "rustsolve/licenses/crates/crossbeam-channel-0.5.17",
+            "rustsolve/licenses/crates/crossbeam-deque-0.8.8",
+            "rustsolve/licenses/crates/crossbeam-epoch-0.9.21",
+            "rustsolve/licenses/crates/crossbeam-queue-0.3.14",
+            "rustsolve/licenses/crates/crossbeam-utils-0.8.23",
+            "rustsolve/licenses/crates/dyn-stack-0.13.2",
+            "rustsolve/licenses/crates/either-1.19.0",
+            "rustsolve/licenses/crates/equator-0.2.2",
+            "rustsolve/licenses/crates/equator-0.4.2",
+            "rustsolve/licenses/crates/equator-0.6.0",
+            "rustsolve/licenses/crates/faer-0.24.4",
+            "rustsolve/licenses/crates/faer-traits-0.24.0",
+            "rustsolve/licenses/crates/feral-amd-0.2.1",
+            "rustsolve/licenses/crates/feral-metis-0.3.0",
+            "rustsolve/licenses/crates/feral-ordering-core-0.2.2",
+            "rustsolve/licenses/crates/gemm-0.19.0",
+            "rustsolve/licenses/crates/gemm-c32-0.19.0",
+            "rustsolve/licenses/crates/gemm-c64-0.19.0",
+            "rustsolve/licenses/crates/gemm-common-0.19.0",
+            "rustsolve/licenses/crates/gemm-f32-0.19.0",
+            "rustsolve/licenses/crates/gemm-f64-0.19.0",
+            "rustsolve/licenses/crates/generativity-1.2.1",
+            "rustsolve/licenses/crates/libc-0.2.191",
+            "rustsolve/licenses/crates/libm-0.2.16",
+            "rustsolve/licenses/crates/nano-gemm-0.2.2",
+            "rustsolve/licenses/crates/nano-gemm-c32-0.2.1",
+            "rustsolve/licenses/crates/nano-gemm-c64-0.2.1",
+            "rustsolve/licenses/crates/nano-gemm-core-0.2.1",
+            "rustsolve/licenses/crates/nano-gemm-f32-0.2.1",
+            "rustsolve/licenses/crates/nano-gemm-f64-0.2.1",
+            "rustsolve/licenses/crates/num-complex-0.4.6",
+            "rustsolve/licenses/crates/num-traits-0.2.19",
+            "rustsolve/licenses/crates/once_cell-1.21.4",
+            "rustsolve/licenses/crates/pulp-0.22.3",
+            "rustsolve/licenses/crates/pulp-wasm-simd-flag-0.1.1",
+            "rustsolve/licenses/crates/qd-0.8.0",
+            "rustsolve/licenses/crates/raw-cpuid-11.6.0",
+            "rustsolve/licenses/crates/rayon-1.12.0",
+            "rustsolve/licenses/crates/rayon-core-1.13.0",
+            "rustsolve/licenses/crates/reborrow-0.5.5",
+            "rustsolve/licenses/crates/spindle-0.2.6",
+            "rustsolve/licenses/crates/sysctl-0.6.0",
+            "rustsolve/licenses/crates/thiserror-1.0.69"
+          ],
+          "notes": [
+            "compiled with faer 0.24.4 and the Rust crates in its crates/ folder, and the Rust standard library; rustsolve/CONTENTS.txt lists what is compiled in"
+          ]
+        }
+      }
+    }
+  }
+}

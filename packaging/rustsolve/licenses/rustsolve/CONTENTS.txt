@@ -1,0 +1,39 @@
+rustsolve_capi (rustsolve_capi.dll on Windows, librustsolve_capi.dylib on macOS)
+================================================================================
+
+rustsolve 0.1.0, Copyright (c) 2026 Hang Chen, is licensed under the MIT
+licence or the Apache License 2.0, at your option (LICENSE-MIT,
+LICENSE-APACHE). It solves sparse linear systems (Cholesky, LDL^T and LU) on
+the faer library. This file is its C interface, which pyGIMLi's core library
+(libgimli, modified: see the pyGIMLi notice folder) calls in place of
+SuiteSparse CHOLMOD and UMFPACK.
+
+Source: https://github.com/geohang/rustsolve (a private repository), commit
+fb18324, built with
+
+    cargo build --locked --release -p rustsolve-capi --features nd
+
+  Windows: rustc 1.99.0 (b940084d7), target x86_64-pc-windows-gnu.
+  macOS:   rustc 1.99.1 (58cf8f9c3), target aarch64-apple-darwin, in GitHub
+           Actions run 39546992242 of geohang/rustsolve.
+
+Compiled into this file
+-----------------------
+- The Rust crates whose folders are in ../crates/, each under the licence
+  its own files give (MIT, Apache-2.0, BSD-2-Clause, Zlib or Unlicense
+  terms; several crates offer a choice). faer's folder also holds the
+  licences of code ported into faer: SuiteSparse AMD and COLAMD
+  (BSD-3-Clause; used here for fill-reducing orderings), LAPACK (BSD) and
+  Eigen (MPL-2.0, a divide-and-conquer SVD). The Eigen-derived SVD is not
+  compiled into this file.
+- The Rust standard library: ../rust-standard-library/COPYRIGHT-library.html
+  (the same file in Rust 1.99.0 and 1.99.1) and the licence texts it names,
+  in ../rust-standard-library/licenses/.
+- Windows only: MinGW-w64 runtime start-up code
+  (../mingw-w64/COPYING.MinGW-w64-runtime.txt) and GCC's unwinder (libgcc,
+  GPL-3.0-or-later with the GCC Runtime Library Exception 3.1:
+  ../vendored/gcc-COPYING3, ../vendored/gcc-COPYING.RUNTIME), both from
+  Rust's x86_64-pc-windows-gnu toolchain.
+
+No SuiteSparse library (CHOLMOD, UMFPACK or other) and no GPL-licensed code
+other than GCC's unwinder under its runtime exception is compiled in.
