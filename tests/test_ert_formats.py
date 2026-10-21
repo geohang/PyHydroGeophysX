@@ -1205,3 +1205,57 @@ def test_bgs_prime_tab_reads_roles_units_and_channel_numbers(tmp_path) -> None:
                                 instrument="BERT")
     assert std.instrument == "PRIME/RESIMGR" and len(std.electrodes) == 8
     assert std.observations[0].quad == agent.Quadruplet(1, 4, 2, 3)
+
+
+def test_rustmesh_backend_meshes_like_triangle_without_calling_it() -> None:
+    """With PYHYDROGEOPHYSX_MESHER=rustmesh, pyGIMLi's 2D meshes come from
+    rustmesh: the boundary appended around a mesh meets it node for node (a
+    Steiner node on the shared edges would leave the forward mesh open), the
+    markers are Triangle's, and nothing reaches Triangle."""
+    pg = pytest.importorskip("pygimli")
+    rustmesh = pytest.importorskip("rustmesh")
+    import inspect
+
+    import pygimli.meshtools as mt
+
+    from PyHydroGeophysX.core import rustmesh_backend as rb
+
+    if "keep_boundary" not in inspect.signature(rustmesh.triangulate).parameters:
+        pytest.skip("rustmesh without keep_boundary")
+    inner = pg.createGrid(np.arange(0.0, 20.5, 5.0), np.arange(-10.0, 0.5, 5.0), marker=2)
+    world = mt.createWorld(start=[-20, 0], end=[20, -15], layers=[-3], worldMarker=True)
+    plc = world + mt.createCircle(pos=[0, -6], radius=2, marker=3, area=0.2)
+    triangle = mt.createMesh(plc, quality=33, area=2)
+    with rb.rustmesh_meshing():
+        appended = mt.appendTriangleBoundary(inner, marker=1, xbound=20, ybound=20, area=2)
+        # The plan mesh of a 3D extrusion: appended around a mesh rustmesh made.
+        plan = mt.createMesh(mt.createRectangle(start=[0, 0], end=[20, 20], marker=2), quality=34, area=5)
+        ring = mt.appendTriangleBoundary(plan, isSubSurface=False, marker=1)
+        mesh = mt.createMesh(plc, quality=33, area=2)
+        report = rb.last_report()
+        with pytest.raises(RuntimeError, match="Triangle is switched off"):
+            pg.core.TriangleWrapper(plc)
+    assert not rb.is_enabled() and report["call"] >= 2 and report["quality_met"]
+
+    # No node of the appended mesh lies inside an edge of the original grid.
+    xy = np.array(appended.positions())[:, :2]
+    for b in inner.boundaries():
+        if b.outside():
+            a, c = np.array(b.node(0).pos())[:2], np.array(b.node(1).pos())[:2]
+            t = (xy - a) @ (c - a) / ((c - a) @ (c - a))
+            d = np.abs((xy[:, 0] - a[0]) * (c - a)[1] - (xy[:, 1] - a[1]) * (c - a)[0])
+            assert not np.any((t > 1e-9) & (t < 1 - 1e-9) & (d < 1e-9))
+    assert sum(appended.cellSizes()) == pytest.approx((20 + 2 * 20) * (10 + 20), rel=1e-12)
+    assert appended.cellCount() > inner.cellCount() and min(appended.cellSizes()) > 0
+
+    # The whole outline counts as outside, so nothing is meshed twice.
+    assert sum(ring.cellSizes()) == pytest.approx((20 + 2 * 10) ** 2, rel=1e-12)
+
+    # Same area, outline, region markers, boundary and node markers as Triangle's mesh.
+    assert sum(mesh.cellSizes()) == pytest.approx(sum(triangle.cellSizes()), rel=1e-12)
+    outline = [sum(b.size() for b in m.boundaries() if b.outside()) for m in (mesh, triangle)]
+    assert outline[0] == pytest.approx(outline[1], rel=1e-12)
+    for marks in (lambda m: m.cellMarkers(), lambda m: m.boundaryMarkers(),
+                  lambda m: [n.marker() for n in m.nodes()]):
+        assert set(np.unique(marks(mesh))) == set(np.unique(marks(triangle)))
+    assert report["min_angle"] >= 33.0 - 1e-6

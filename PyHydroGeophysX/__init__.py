@@ -17,6 +17,12 @@ __version__ = "0.5.0"
 # ``setdefault`` continues to respect an explicit user override.
 _os.environ.setdefault("QT_API", "pyside6")
 
+# PYHYDROGEOPHYSX_MESHER=rustmesh: pyGIMLi's 2D meshing goes to rustmesh
+# instead of Triangle (core/rustmesh_backend.py). pyGIMLi is patched when it
+# loads, so the import stays light.
+if _os.environ.get("PYHYDROGEOPHYSX_MESHER"):
+    importlib.import_module("PyHydroGeophysX.core.rustmesh_backend").install_from_environment()
+
 _Export = Tuple[str, str]
 
 
