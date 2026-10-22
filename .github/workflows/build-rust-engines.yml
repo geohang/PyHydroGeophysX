@@ -113,8 +113,10 @@ jobs:
           # the script also compiles Triangle into work/tri; the patched CMake never links it
           bash rustsolve/pgcore/build-libgimli-macos.sh gimli rsprefix work "$GIMLI_VERSION" "$PG"
           grep -E "TRIANGLE_FOUND|PACKAGE_VERSION" work/build/config.cmake.h | tee out/config.txt
-          if nm -gU work/rebuilt/libgimli.dylib | grep -i "triangulate\|_triangle"; then
-            echo "libgimli exports Triangle symbols"; exit 1
+          # Triangle's own functions, defined or referenced (pyGIMLi's
+          # TriangleWrapper keeps its methods, which name Triangle's types)
+          if nm work/rebuilt/libgimli.dylib | grep -E " [TtUu] _(triangulate|trifree|exactinit)$"; then
+            echo "libgimli contains or calls Triangle"; exit 1
           fi
           set -o pipefail
           bash rustsolve/pgcore/check/run-check-macos.sh gimli work rsprefix "$PG" | tee out/linsolver-check.txt
