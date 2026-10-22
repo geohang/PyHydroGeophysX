@@ -117,7 +117,7 @@ Desktop guide: https://geohang.github.io/PyHydroGeophysX/agents/desktop_studio.h
    the small example files needed for a check, using a downloader suitable
    for this OS, into a new test directory. Run a short example and report
    finite results, any warnings and the engine that actually executed.
-   If testing ADTLERT, use a compatible dataset without remote electrodes;
+   If testing ADTLERT, use a dataset without remote electrodes on topography;
    report a fallback rather than claiming that GPU execution succeeded.
    For ADTLERT, also run the three isolated checks (runtime, single, time-lapse):
      python -m PyHydroGeophysX.inversion.adtlert_diagnostics --report gpu-check.json
@@ -214,7 +214,7 @@ result = run_ert_manager_inversion("e4d.ohm", "out_gpu", max_iterations=4, engin
 print(result["engine_requested"], "->", result["engine"])   # adtlert -> adtlert
 ```
 
-`adtlert -> pyhydro` means it fell back, normally because Torch is a CPU-only wheel or cuDSS or NVRTC is missing. Use `e4d.ohm` for this check: `line2.dat` has remote electrodes, which ADTLERT cannot represent, so it falls back on that file even when the GPU stack is healthy. A 3D survey runs on ADTLERT's 3D forward when given a tetrahedral mesh (`mesh_file=`).
+`adtlert -> pyhydro` means it fell back, normally because Torch is a CPU-only wheel or cuDSS or NVRTC is missing. Use `e4d.ohm` for this check: `line2.dat` has remote electrodes on a profile with topography, which ADTLERT cannot model in 2.5D, so it falls back on that file even when the GPU stack is healthy (remote electrodes run on flat profiles and 3D meshes). A 3D survey runs on ADTLERT's 3D forward when given a tetrahedral mesh (`mesh_file=`).
 
 ---
 

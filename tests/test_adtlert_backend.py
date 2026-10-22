@@ -112,3 +112,28 @@ def test_adtlert_inverts_a_3d_survey_on_a_tetrahedral_mesh(tmp_path):
     assert result["metrics"]["backend"] == "adtlert"
     chi2 = result["convergence"]
     assert np.all(np.isfinite(chi2)) and chi2[-1] < 0.2 * chi2[0]
+
+
+@pytest.mark.parametrize("relief, engine", [(0.0, "adtlert"), (0.6, "pyhydro")])
+def test_pole_dipole_profiles_run_on_adtlert_unless_on_topography(tmp_path, relief, engine):
+    import pygimli.meshtools as mt
+
+    x = np.linspace(0.0, 23.0, 24)
+    scheme = ert.createData(elecs=np.column_stack([x, relief * np.sin(x / 4.0)]),
+                            schemeName="pd")
+    assert any(np.any(np.asarray(scheme[key]) < 0) for key in "abmn")
+    mesh = mt.createMesh(mt.createParaMeshPLC(scheme.sensorPositions(), paraDepth=10.0,
+                                              boundary=1.0), quality=32)
+    centres = np.asarray([[c.center()[0], c.center()[1]] for c in mesh.cells()])
+    block = (np.abs(centres[:, 0] - 11.5) < 3.0) & (centres[:, 1] < -1.5) & (centres[:, 1] > -5.0)
+    data = ert.simulate(mesh, scheme=scheme, res=np.where(block, 30.0, 100.0),
+                        noiseLevel=0.0, verbose=False)
+    data["err"] = np.full(data.size(), 0.03)
+    data_file = tmp_path / "pole_dipole.dat"
+    data.save(str(data_file), "a b m n rhoa err k")
+
+    result = ert_inversion.run_ert_manager_inversion(
+        data_file, tmp_path / "out", engine="adtlert", max_iterations=3, max_total_iterations=3,
+    )
+    assert result["engine"] == engine
+    assert np.all(np.isfinite(result["convergence"]))

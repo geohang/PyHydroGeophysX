@@ -732,12 +732,19 @@ def _resolve_ert_engine(name: str, *, log=_noop_log) -> str:
     return requested
 
 
-def _adtlert_survey_supported(container) -> bool:
-    """Return whether ADTLERT can represent every ABMN electrode (no remote poles)."""
-    return all(
-        not np.any(np.asarray(container[field], dtype=int) < 0)
-        for field in ("a", "b", "m", "n")
-    )
+def _adtlert_survey_supported(container, mesh) -> bool:
+    """Return whether ADTLERT can model every ABMN electrode on ``mesh``.
+
+    A remote electrode (a negative index) needs absolute potentials, which ADTLERT
+    resolves on 3D meshes and flat 2D profiles but not on a 2D profile with topography.
+    """
+    remote = any(np.any(np.asarray(container[field], dtype=int) < 0)
+                 for field in ("a", "b", "m", "n"))
+    if not remote or int(mesh.dim()) == 3:
+        return True
+    from adtlert.forward import mesh_to_adtlert
+
+    return bool(mesh_to_adtlert(mesh).is_flat_surface)
 
 
 def _build_adtlert_forward(container, mesh, *, log=_noop_log, field_cache_entries=None):
@@ -1395,13 +1402,6 @@ def run_ert_manager_inversion(
         absolute_error=absolute_error, error_source=error_source,
         error_floor=error_floor, error_model=error_model,
     )
-    if engine == "adtlert" and not _adtlert_survey_supported(data):
-        log(
-            "ADTLERT cannot represent remote electrodes encoded with "
-            "negative ABMN indices; falling back to the original PyHydro "
-            "ERT engine."
-        )
-        engine = "pyhydro"
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
@@ -1423,6 +1423,12 @@ def run_ert_manager_inversion(
         log(f"  smoothness dropped across {decoupled_edges} cell edges along the "
             "zone outlines" if decoupled_edges else
             "  (no cell edge lies on a zone outline, so the smoothness is unchanged)")
+    if engine == "adtlert" and not _adtlert_survey_supported(data, inversion_mesh):
+        log(
+            "ADTLERT cannot model remote electrodes on a 2D profile with "
+            "topography; falling back to the original PyHydro ERT engine."
+        )
+        engine = "pyhydro"
 
     # Before anything is fitted, confirm the geometric factors agree with the
     # geometry being modelled, and repair them if they do not. A uniform error
