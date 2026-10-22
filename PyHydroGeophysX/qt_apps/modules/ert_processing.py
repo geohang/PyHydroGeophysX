@@ -859,10 +859,13 @@ class ERTProcessingModule(BaseModule):
             "Solver. The in-house Gauss-Newton inversion exposes its own stopping rule "
             "and line search, so the fit assistance below drives it directly. The "
             "PyGIMLi manager runs its own loop and is available as a cross-check.\n\n"
-            "ADTLERT uses a CUDA-accelerated cuDSS forward solve and GPU CGLS. "
-            "CUDA 12 plus cuDSS are required. Windows is supported; Linux is "
-            "recommended for the best performance. The controls below remain "
-            "available when this engine is selected.\n\n"
+            "ADTLERT uses a CUDA-accelerated cuDSS forward solve and GPU CGLS: 2.5D "
+            "on a profile, 3D on an imported tetrahedral mesh. A CUDA 12 GPU is "
+            "required; cuDSS and NVRTC come with ADTLERT. Windows is supported; Linux "
+            "is recommended for the best performance. Remote electrodes run on flat "
+            "profiles and 3D meshes; on a profile with topography the in-house engine "
+            "is used instead. The controls below remain available when this engine "
+            "is selected.\n\n"
             "E4D is PNNL's parallel 3D code, run as an external program under MPI; "
             "it is not installed with PyHydroGeophysX. It runs on Linux, on Windows "
             "only inside WSL 2, and on macOS when built from source. A profile is "
@@ -1582,7 +1585,7 @@ class ERTProcessingModule(BaseModule):
         self._adtlert_single_ready = None
         self._adtlert_timelapse_ready = None
         self._adtlert_checks = {}
-        self._adtlert_status.setText("Checking CUDA, cuDSS, and GPU CGLS…")
+        self._adtlert_status.setText("Checking CUDA, cuDSS, NVRTC and GPU CGLS…")
         theme.set_tone(self._adtlert_status, "hint")
         self._adtlert_status.setVisible(True)
         worker = ProcessProbeWorker(
@@ -3888,7 +3891,8 @@ class ERTProcessingModule(BaseModule):
         # short entries. Anything omitted here is in the log.
         extra: Dict[str, Any] = dict(metrics.get("extra") or {})
         if engine == "adtlert":
-            extra["compute"] = "cuDSS forward · GPU CGLS"
+            forward = metrics.get("adtlert_forward")
+            extra["compute"] = (f"ADTLERT {forward} · " if forward else "") + "cuDSS forward · GPU CGLS"
         elif engine == "e4d":
             elements = int(dict(result.get("e4d") or {}).get("elements") or 0)
             extra["compute"] = "E4D 3D" + (f" · {elements} elements" if elements else "")
@@ -4049,8 +4053,8 @@ class ERTProcessingModule(BaseModule):
         if requested_engine == "adtlert" and engine != "adtlert":
             self.log(
                 "ADTLERT was requested but the run used the original PyHydro "
-                "ERT engine; CUDA/cuDSS was unavailable or the survey is not "
-                "supported by ADTLERT.",
+                "ERT engine: CUDA, cuDSS or NVRTC was unavailable, or the survey "
+                "has remote electrodes on a profile with topography.",
                 "warn",
             )
         elif engine == "adtlert":

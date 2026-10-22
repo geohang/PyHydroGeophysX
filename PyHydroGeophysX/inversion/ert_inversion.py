@@ -974,6 +974,7 @@ class _ADTLertEngine:
                 "iterations": iterations,
                 "n_data": int(self.container.size()),
                 "sensitivity_profile": "paper",
+                "adtlert_forward": "3D" if self.mesh.dim() == 3 else "2.5D",
                 "normal_sensitivity": True,
                 "include_robin_boundary_derivative": False,
                 "linearized_solver": self._solver,
