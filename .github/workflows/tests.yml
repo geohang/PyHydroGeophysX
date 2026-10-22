@@ -48,7 +48,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
           python -m pip install -e ".[hydrology]" pytest
-          python -m pip install "adtlert>=0.1,<0.2" "pygimli>=1.5.5,<2.0"
+          python -m pip install "adtlert>=0.3,<0.4" "pygimli>=1.5.5,<2.0"
 
       # No ADTLERT test module is left, so the job's contract is checked directly,
       # on a runner without a GPU: the extra imports, and a request for ADTLERT
@@ -89,20 +89,23 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
           python -m pip install -e . pytest
-          python -m pip install "adtlert>=0.1,<0.2" "pygimli>=1.5.5,<2.0"
+          python -m pip install "adtlert>=0.3,<0.4" "pygimli>=1.5.5,<2.0"
 
-      - name: Verify CUDA 12 and Windows cuDSS metadata
+      - name: Verify the ADTLERT extra and its Windows CUDA 12 wheels
         shell: python
         run: |
+          import importlib.metadata
           import pathlib
           import tomllib
 
           project = tomllib.loads(pathlib.Path("pyproject.toml").read_text())
           dependencies = project["project"]["optional-dependencies"]
           assert any("cupy-cuda12x" in item for item in dependencies["gpu"])
-          assert any("cupy-cuda12x" in item for item in dependencies["adtlert"])
-          assert any("nvidia-cudss-cu12" in item for item in dependencies["adtlert"])
-          assert any("nvmath-python" in item for item in dependencies["adtlert"])
+          assert any(item.startswith("adtlert>=0.3") for item in dependencies["adtlert"])
+          assert not any("cupy" in item for item in dependencies["adtlert"])
+          # ADTLERT brings cuDSS, NVRTC and nvmath-python as Windows wheels itself.
+          for wheel in ("nvidia-cudss-cu12", "nvidia-cuda-nvrtc-cu12", "nvmath-python", "cuda-core"):
+              print(wheel, importlib.metadata.version(wheel))
 
       - name: Check that ADTLERT imports and falls back to PyHydro without CUDA
         shell: python

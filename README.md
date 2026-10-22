@@ -24,7 +24,7 @@ A Python package for integrating hydrological model outputs (MODFLOW, ParFlow) w
 - **Hydrological model integration** — load MODFLOW, ParFlow, ATS and PFLOTRAN outputs
 - **Forward modeling** — 2D/3D ERT, SRT, TDEM, FDEM synthetic data, with E4D-style 3D ERT meshes
 - **Inversion** — single-time, time-lapse, windowed, structure-constrained, joint ERT+SRT, TDEM, FDEM
-- **ERT engines** — the built-in engine, the optional GPU engine ADTLERT ([Yang et al. 2026](https://arxiv.org/abs/2608.14661)), and the external E4D, R2 and R3t ([where they run](https://geohang.github.io/PyHydroGeophysX/methods/ert.html#ert-e4d)); a-priori resistivity zones work with every engine
+- **ERT engines** — the built-in engine, the optional GPU engine ADTLERT ([Yang et al. 2026](https://arxiv.org/abs/2608.14661); 2.5D profiles and 3D tetrahedral meshes), and the external E4D, R2 and R3t ([where they run](https://geohang.github.io/PyHydroGeophysX/methods/ert.html#ert-e4d)); a-priori resistivity zones work with every engine
 - **ERT data processing** — field data QC, reciprocal errors, temperature correction, export, and ResIPy integration
 - **Magnetotellurics (MT/AMT)** — time-series processing, Occam 1D with TEM static-shift correction, 2D inversion on SimPEG
 - **Petrophysics and uncertainty** — water content ↔ resistivity (Waxman-Smits/Archie) and seismic velocity (Hertz-Mindlin, DEM); Monte Carlo uncertainty; [pore-fluid properties](https://geohang.github.io/PyHydroGeophysX/methods/petrophysics.html#petrophysics-fluid-properties)
@@ -117,7 +117,8 @@ Desktop guide: https://geohang.github.io/PyHydroGeophysX/agents/desktop_studio.h
    the small example files needed for a check, using a downloader suitable
    for this OS, into a new test directory. Run a short example and report
    finite results, any warnings and the engine that actually executed.
-   If testing ADTLERT, use a compatible dataset without remote electrodes;
+   If testing ADTLERT, use a dataset without remote electrodes (pole arrays
+   need adtlert 0.3 or later);
    report a fallback rather than claiming that GPU execution succeeded.
    For ADTLERT, also run the three isolated checks (runtime, single, time-lapse):
      python -m PyHydroGeophysX.inversion.adtlert_diagnostics --report gpu-check.json
@@ -164,7 +165,7 @@ Do not report success while required verification is failing.
 |---|---|
 | `geophysics` | pygimli, simpeg, pymatsolver, flopy, pftools |
 | `hydrology` | h5py (the ATS and PFLOTRAN output readers) |
-| `adtlert` | adtlert, pygimli, Torch, CuPy CUDA 12 and cuDSS (Python 3.11+; Linux recommended) |
+| `adtlert` | adtlert (Torch, cuDSS, NVRTC) and pygimli (Python 3.11+; Linux recommended) |
 | `desktop` | PySide6, pyqtgraph, qtawesome, numpy, pandas |
 | `desktop-3d` | pyvista, pyvistaqt, vtk (the 3D viewers; without it the studio shows an install message there) |
 | `agents` | openai, google-genai, anthropic |
@@ -214,7 +215,7 @@ result = run_ert_manager_inversion("e4d.ohm", "out_gpu", max_iterations=4, engin
 print(result["engine_requested"], "->", result["engine"])   # adtlert -> adtlert
 ```
 
-`adtlert -> pyhydro` means it fell back, normally because Torch is a CPU-only wheel or CuPy CUDA 12 or cuDSS is missing. Use `e4d.ohm` for this check: `line2.dat` has remote electrodes, which ADTLERT 0.1 cannot represent, so it falls back on that file even when the GPU stack is healthy.
+`adtlert -> pyhydro` means it fell back, normally because Torch is a CPU-only wheel or cuDSS or NVRTC is missing. `line2.dat` works for this check too: its remote (pole) electrodes run on ADTLERT. A 3D survey runs on ADTLERT's 3D forward when given a tetrahedral mesh (`mesh_file=`).
 
 ---
 

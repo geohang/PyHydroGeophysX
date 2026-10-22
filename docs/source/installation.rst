@@ -72,8 +72,9 @@ time-lapse windows.
 Install the optional ADTLERT ERT backend
 ----------------------------------------
 
-ADTLERT provides a differentiable 2.5D ERT engine for the existing
-``run_ert_manager_inversion`` pipeline. It requires Python 3.11 or newer and
+ADTLERT provides a differentiable ERT engine for the existing
+``run_ert_manager_inversion`` pipeline: 2.5D on a profile mesh, 3D on a
+tetrahedral mesh passed as ``mesh_file`` (Gmsh, E4D or pyGIMLi). It requires Python 3.11 or newer and
 is intentionally separate from the general ``geophysics`` extra because it
 also installs PyTorch.
 
@@ -93,16 +94,17 @@ Select it explicitly; the default ERT engine remains unchanged.
        engine="adtlert",
    )
 
-The extra installs CuPy CUDA 12 and cuDSS on both Linux and Windows. Both
-platforms use CUDA-enabled Torch, CuPy GPU CGLS and the cuDSS GPU forward
-solver. The slower SciPy forward solver is intentionally disabled so ADTLERT
-is never reported while running an unaccelerated forward path. Linux remains
-the recommended, most thoroughly tested and generally fastest platform. When
-Torch, CuPy CUDA 12 or cuDSS is unavailable, the Python API can fall back to
-the original PyHydro ERT engine. Studio requires a passing GPU check before
-starting a GPU mode and offers manual selection of PyHydro CPU on failure.
-ADTLERT 0.1 also cannot represent remote electrodes encoded as negative ABMN
-indices; those surveys safely use the original engine without changing data.
+The extra installs ADTLERT with cuDSS and NVRTC (CUDA 12 wheels for Linux
+and Windows); its sensitivity kernel is compiled by NVRTC, so no compiler
+toolchain is needed. Both platforms use CUDA-enabled Torch, Torch GPU CGLS
+and the cuDSS GPU forward solver. Linux remains the recommended, most
+thoroughly tested platform. When Torch, cuDSS or NVRTC is unavailable, the
+Python API can fall back to the original PyHydro ERT engine. Studio requires
+a passing GPU check before starting a GPU mode and offers manual selection of
+PyHydro CPU on failure. Remote electrodes (negative ABMN indices: pole-dipole,
+pole-pole) run on ADTLERT on flat and topographic 2D profiles and 3D meshes.
+Measurements with either receiver polarity (positive or negative geometric
+factor) are used as recorded.
 
 On Windows, install the CUDA-enabled Torch wheel before the extra, for example:
 
@@ -116,7 +118,7 @@ time-lapse inversion. The backend reuses one forward operator and Jacobian
 cache across overlapping windows. Every timestep must have the
 same electrode positions and ABMN ordering; process-level window parallelism
 is disabled for ADTLERT to avoid duplicating GPU memory. The default ``cgls``
-method selects CuPy CGLS on the CUDA-backed ADTLERT path.
+method selects Torch GPU CGLS on the CUDA-backed ADTLERT path.
 
 .. code-block:: python
 
@@ -134,9 +136,6 @@ relative error and an apparent-resistivity placeholder from the available
 timesteps. This reduces their weight; it does not exclude them from fitting.
 Native PyHydro time-lapse keeps each survey's own measurement count and
 ordering.
-
-The ``adtlert`` and ``gpu`` extras share ``cupy-cuda12x``. Do not install a
-second CuPy package such as ``cupy-cuda11x`` in the same environment.
 
 Install from Source
 -------------------
@@ -160,7 +159,7 @@ Optional Dependencies
 ---------------------
 
 - PyGIMLi for ERT/SRT forward and inversion
-- ADTLERT for differentiable 2.5D ERT inversion
+- ADTLERT for differentiable 2.5D and 3D ERT inversion
 - SimPEG for TDEM/FDEM workflows
 - RESIPY for field ERT data processing
 - CuPy for GPU acceleration

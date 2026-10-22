@@ -1,7 +1,7 @@
 """Isolated ADTLERT GPU preflight used by the Qt studio.
 
 This module intentionally imports no Qt package. It is launched with
-``python -m`` so Torch, CuPy, cuDSS, and their native DLLs are loaded in a fresh
+``python -m`` so Torch, cuDSS, NVRTC, and their native DLLs are loaded in a fresh
 process rather than in the long-lived GUI process.
 """
 
@@ -13,7 +13,6 @@ from typing import Any, Dict
 
 def probe_adtlert_runtime() -> Dict[str, Any]:
     """Return the usable ADTLERT CUDA path in this clean interpreter."""
-    import cupy as cp
     import torch
     from nvmath.sparse.advanced import DirectSolver  # noqa: F401
 
@@ -24,15 +23,10 @@ def probe_adtlert_runtime() -> Dict[str, Any]:
 
     if not torch.cuda.is_available():
         raise RuntimeError("Torch cannot see a CUDA-capable GPU")
-    if int(cp.cuda.runtime.getDeviceCount()) < 1:
-        raise RuntimeError("CuPy cannot see a CUDA-capable GPU")
     if not _adtlert_cudss_available():
-        raise RuntimeError("ADTLERT CUDA 12/cuDSS probe failed")
-    device = cp.cuda.runtime.getDeviceProperties(0)["name"]
-    if isinstance(device, bytes):
-        device = device.decode(errors="replace")
+        raise RuntimeError("ADTLERT CUDA/cuDSS/NVRTC probe failed")
     return {
-        "device": str(device),
+        "device": torch.cuda.get_device_name(0),
         "forward_solver": "cudss",
         "linearized_solver": _adtlert_solver_name("cgls", prefer_gpu=True),
     }

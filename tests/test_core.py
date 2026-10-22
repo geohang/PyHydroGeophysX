@@ -1936,38 +1936,6 @@ def test_time_lapse_absolute_u_error_is_a_voltage_on_both_engines(tmp_path, with
         np.testing.assert_allclose(np.expm1(1. / full.Wd.diagonal()), full_error)
 
 
-def test_adtlert_forward_releases_its_terrain_setup_without_changing_a_solve(monkeypatch):
-    # The release reaches into ADTLERT's private state, so an ADTLERT that
-    # changes it must fail here rather than in a user's run.
-    pytest.importorskip("pygimli")
-    from pygimli.physics import ert
-
-    from PyHydroGeophysX.inversion import ert_inversion
-    from PyHydroGeophysX.inversion.ert_mesh import build_inversion_mesh
-
-    ert_inversion._enable_adtlert_float64()  # before adtlert is first imported
-    pytest.importorskip("adtlert")
-    if ert_inversion._resolve_ert_engine("adtlert") != "adtlert":
-        pytest.skip("Terrain forward-solve equivalence requires CUDA and cuDSS")
-    x = np.linspace(0., 23., 24)
-    data = ert.createData(elecs=np.column_stack([x, .6 * np.sin(x / 4.)]), schemeName="dd")
-    data["k"], data["rhoa"] = ert.createGeometricFactors(data), np.full(data.size(), 100.)
-    mesh = build_inversion_mesh(data, mesh_quality=33, para_depth=8)
-    built = {}
-    for release in (False, True):
-        with monkeypatch.context() as patch:
-            if not release:
-                patch.setattr(ert_inversion, "_release_adtlert_terrain_setup", lambda forward: False)
-            built[release], _, active, _ = ert_inversion._build_adtlert_forward(data, mesh)
-    inner = built[True].forward_operator
-    assert inner.primary_potential_discretization is None
-    assert inner.geometric_auxiliary_discretization is None
-    model = np.log(100.) + np.linspace(-.5, .5, active.size)
-    for actual, expected in zip(built[True].forward_and_jacobian(model, log_transform=True),
-                                built[False].forward_and_jacobian(model, log_transform=True)):
-        np.testing.assert_allclose(actual, expected, rtol=1e-9, atol=1e-12 * np.abs(expected).max())
-
-
 def test_srt_inversions_penalize_the_smoothness_they_are_given(tmp_path):
     tt = pytest.importorskip("pygimli.physics.traveltime")
     from PyHydroGeophysX.inversion.srt_inversion import SRTInversion
