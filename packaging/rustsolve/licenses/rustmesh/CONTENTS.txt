@@ -1,0 +1,35 @@
+rustmesh (Python package rustmesh, with _rustmesh.pyd or _rustmesh.abi3.so)
+==========================================================================
+
+rustmesh 0.1.0, Copyright (c) 2026 Hang Chen, is licensed under the MIT
+licence or the Apache License 2.0, at your option (LICENSE-MIT,
+LICENSE-APACHE). It makes the 2-D triangle meshes that pyGIMLi otherwise
+makes with Triangle. In this archive, PyHydroGeophysX's rustmesh backend
+(PyHydroGeophysX/core/rustmesh_backend.py) routes pyGIMLi's 2-D meshing to it,
+and the bundled libgimli is built without Triangle.
+
+Source: https://github.com/geohang/rustmesh, commit e332d94, built with
+
+    maturin build --release --locked
+
+  Windows: rustc 1.99.0 (b940084d7), target x86_64-pc-windows-gnu,
+           maturin 1.15.0 (_rustmesh.pyd).
+  macOS:   rustc 1.99.1, target aarch64-apple-darwin, in GitHub Actions run
+           39815917732 of geohang/PyHydroGeophysX (_rustmesh.abi3.so).
+
+Compiled into the extension module
+----------------------------------
+- spade 2.15.1 (Copyright (c) 2017 The Spade Developers; by Stefan
+  Altmayer; MIT OR Apache-2.0), vendored and modified by rustmesh:
+  spade-LICENSE-MIT, spade-LICENSE-APACHE, and spade-PATCHES.md for the
+  changes.
+- The Rust crates whose folders are in ../crates/ (MIT, Apache-2.0,
+  BSD-2-Clause or Zlib terms; several crates offer a choice).
+- The Rust standard library: ../rust-standard-library/.
+- Windows only: MinGW-w64 runtime start-up code
+  (../mingw-w64/COPYING.MinGW-w64-runtime.txt) and GCC's unwinder (libgcc,
+  GPL-3.0-or-later with the GCC Runtime Library Exception 3.1:
+  ../vendored/gcc-COPYING3, ../vendored/gcc-COPYING.RUNTIME), from Rust's
+  x86_64-pc-windows-gnu toolchain.
+
+Triangle is not compiled in.

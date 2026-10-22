@@ -6,7 +6,8 @@
 #   an install message (the app degrades gracefully).
 # - full: gimli/conda-forge engines (pyGIMLi, PyVista/VTK) + SimPEG. pgcore's
 #   SuiteSparse solvers (CHOLMOD, UMFPACK: GPL parts) are replaced by rustsolve,
-#   from the prebuilt files in packaging/rustsolve/ (apply.py there).
+#   from the prebuilt files in packaging/rustsolve/ (apply.py there). Their
+#   libgimli has no Triangle; pyGIMLi's 2-D meshes come from rustmesh.
 #
 # A draft is made on a version-tag push, or from a manual run with release_tag
 # set. A tag push runs the workflow file as it was at the tagged commit, so a
@@ -102,11 +103,16 @@ jobs:
       # libgimli rebuilt with rustsolve in place of pgcore's own, rustsolve's C
       # interface beside it, and (Windows) the SuiteSparse DLLs pgcore carries
       # removed; then a solve and an ERT forward in the result.
-      - name: rustsolve in place of SuiteSparse (full)
+      - name: rustsolve in place of SuiteSparse, rustmesh in place of Triangle (full)
         if: matrix.variant == 'full'
         run: |
+          # the original core first, then the rebuilt one twice (verify_core.py)
+          python packaging/rustsolve/verify_core.py original verify/orig
           python packaging/rustsolve/apply.py install --prefix "$CONDA_PREFIX" --record rustsolve-install.txt
           python packaging/rustsolve/apply.py check --record rustsolve-install.txt
+          python packaging/rustsolve/verify_core.py rebuilt verify/r1
+          python packaging/rustsolve/verify_core.py rebuilt verify/r2
+          python packaging/rustsolve/verify_core.py compare verify --record rustsolve-install.txt
 
       # ---- build, smoke-test ----
       - name: Build bundle
@@ -128,6 +134,24 @@ jobs:
           else
             ./dist/PyHydroGeophysX-Studio/PyHydroGeophysX-Studio --self-test
           fi
+
+      # Full archives mesh with rustmesh (their libgimli has no Triangle);
+      # packaging/rthook_rustmesh.py runs the check in the built program and
+      # writes rustmesh-selftest.txt.
+      - name: rustmesh meshing in the built program (full)
+        if: matrix.variant == 'full'
+        env:
+          QT_QPA_PLATFORM: offscreen
+          PHGX_RUSTMESH_SELFTEST: ${{ github.workspace }}/rustmesh-selftest.txt
+        run: |
+          rc=0
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            ./dist/PyHydroGeophysX-Studio/PyHydroGeophysX-Studio.exe || rc=$?
+          else
+            ./dist/PyHydroGeophysX-Studio/PyHydroGeophysX-Studio || rc=$?
+          fi
+          cat rustmesh-selftest.txt
+          exit $rc
 
       # ---- stage, inventory, package ----
       # Everything the archive holds goes into stage/, whose contents become the
@@ -165,6 +189,7 @@ jobs:
           cp pip-report.json audit/ 2>/dev/null || true
           cp conda-explicit.txt audit/ 2>/dev/null || true
           cp rustsolve-install.txt audit/ 2>/dev/null || true
+          cp rustmesh-selftest.txt audit/ 2>/dev/null || true
           cp stage/BUILD_INFO.txt stage/SOURCE_CODE.md audit/
 
       - name: Package bundle (Windows)

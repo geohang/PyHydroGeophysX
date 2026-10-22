@@ -1,4 +1,5 @@
-"""Put rustsolve in place of pgcore's SuiteSparse solvers in a conda environment.
+"""Put rustsolve in place of pgcore's SuiteSparse solvers, and rustmesh in place
+of Triangle, in a conda environment.
 
 The desktop Full build (.github/workflows/build-desktop.yml) runs, in order:
 
@@ -6,14 +7,16 @@ The desktop Full build (.github/workflows/build-desktop.yml) runs, in order:
     python packaging/rustsolve/apply.py install --prefix "$CONDA_PREFIX"
     python packaging/rustsolve/apply.py check         # in that environment
 
-``install`` replaces pgcore's libgimli with the one in this folder, adds
-rustsolve's C interface beside it and removes the SuiteSparse libraries pgcore
+``install`` replaces pgcore's libgimli with the one in this folder (built with
+rustsolve and without Triangle), adds rustsolve's C interface beside it,
+installs the rustmesh package, and removes the SuiteSparse libraries pgcore
 carries itself (Windows). It refuses to run unless the environment holds the
 pgcore build these files were verified with, every file it replaces or removes
 is that package's own, and every file it adds has the SHA-256 that
 manifest.json records. ``check`` loads the result: the core reports
-"+rustsolve", a small system solves through rustsolve, a homogeneous ERT forward
-gives the half-space's resistivity, and no SuiteSparse library is loaded.
+"+rustsolve+notriangle", a small system solves through rustsolve, the core
+refuses to mesh with Triangle, rustmesh meshes a half-space whose homogeneous
+ERT forward gives its resistivity, and no SuiteSparse library is loaded.
 
 Needs only the standard library, except ``check`` (numpy, pygimli).
 """
@@ -77,8 +80,9 @@ def cmd_install(args):
         return path
 
     lines = [f"rustsolve {MANIFEST['rustsolve']['version']} (commit {MANIFEST['rustsolve']['commit']}) "
-             f"in place of pgcore's SuiteSparse solvers: {plat}, pgcore {want['version']} build {want['build']} "
-             f"(MD5 {want['md5']}), prefix {prefix}"]
+             f"in place of pgcore's SuiteSparse solvers, rustmesh {MANIFEST['rustmesh']['version']} "
+             f"(commit {MANIFEST['rustmesh']['commit']}) in place of Triangle: {plat}, pgcore {want['version']} "
+             f"build {want['build']} (MD5 {want['md5']}), prefix {prefix}"]
     for entry in spec["files"]:
         src = HERE / entry["file"]
         if sha256_of(src) != entry["sha256"]:
@@ -91,6 +95,7 @@ def cmd_install(args):
             sys.exit(f"{dest} exists but pgcore did not install it")
         else:
             what = "added"
+            dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(src, dest)
         if os.name != "nt":
             os.chmod(dest, 0o755)
@@ -166,7 +171,28 @@ def cmd_check(args):
     for p in scheme.sensors():
         world.createNode(p)
         world.createNode(p - [0.0, 0.1])
+    if spec.get("mesher") == "rustmesh":
+        # A core without Triangle refuses to mesh; PyHydroGeophysX's rustmesh
+        # backend then makes the mesh.
+        try:
+            mt.createMesh(world, quality=34)
+            failures.append("Triangle: the core made a mesh, so it still has Triangle")
+        except RuntimeError as exc:
+            lines.append(f"Triangle: the core refuses ({str(exc).strip()[-70:]})")
+            if "rustmesh" not in str(exc):
+                failures.append(f"Triangle: unexpected error {exc}")
+        sys.path.insert(0, str(HERE.parent.parent))
+        import rustmesh
+        from PyHydroGeophysX.core import rustmesh_backend
+        rustmesh_backend.enable()
+        lines.append(f"rustmesh {rustmesh.__version__} from {Path(rustmesh.__file__).parent}")
     mesh = mt.createMesh(world, quality=34)
+    if spec.get("mesher") == "rustmesh":
+        report = rustmesh_backend.last_report() or {}
+        lines.append(f"mesh by rustmesh: {mesh.cellCount()} cells, angle target "
+                     f"{report.get('min_angle_target')}, cells below it {report.get('requested_angle_violations')}")
+        if not report or report.get("cells") != mesh.cellCount():
+            failures.append("rustmesh: the forward mesh is not the one rustmesh reported")
     data = ert.simulate(mesh, scheme=scheme, res=100.0, noiseLevel=0.0, noiseAbs=0.0, verbose=False)
     rhoa = np.array(data["rhoa"])
     dev = float(np.max(np.abs(rhoa / 100.0 - 1.0)))

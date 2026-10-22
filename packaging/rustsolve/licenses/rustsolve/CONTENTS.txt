@@ -8,14 +8,13 @@ the faer library. This file is its C interface, which pyGIMLi's core library
 (libgimli, modified: see the pyGIMLi notice folder) calls in place of
 SuiteSparse CHOLMOD and UMFPACK.
 
-Source: https://github.com/geohang/rustsolve (a private repository), commit
-fb18324, built with
+Source: https://github.com/geohang/rustsolve, commit c83f4e9, built with
 
     cargo build --locked --release -p rustsolve-capi --features nd
 
   Windows: rustc 1.99.0 (b940084d7), target x86_64-pc-windows-gnu.
-  macOS:   rustc 1.99.1 (58cf8f9c3), target aarch64-apple-darwin, in GitHub
-           Actions run 39546992242 of geohang/rustsolve.
+  macOS:   rustc 1.99.1, target aarch64-apple-darwin, in GitHub Actions run
+           39815917732 of geohang/PyHydroGeophysX.
 
 Compiled into this file
 -----------------------

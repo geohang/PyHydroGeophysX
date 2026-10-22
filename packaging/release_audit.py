@@ -1246,12 +1246,14 @@ class Audit:
         if spec is None:
             self.add("FAIL", "rustsolve", f"packaging/rustsolve/manifest.json has no {self.args.os} build")
             return
-        traced = {a.rsplit("/", 1)[-1].lower(): (c, a) for c in self.components.values() if c.kind == "rustsolve"
-                  for a in c.files}
+        # By the SHA-256 of the file each one was collected from: a module
+        # inside the executable's archive has no file name of its own there.
+        traced = {sha256_of(s): (c, a) for c in self.components.values() if c.kind == "rustsolve"
+                  for a, s in zip(c.files, c.sources)}
         for entry in spec["files"]:
             name = Path(entry["install"]).name
-            if name.lower() in traced:
-                comp, apath = traced[name.lower()]
+            if entry["sha256"] in traced:
+                comp, apath = traced[entry["sha256"]]
                 self.add("INFO", "rustsolve", f"{apath}: packaging/rustsolve/{entry['file']} (SHA-256 "
                                               f"{entry['sha256']}), listed as {comp.name} {comp.version}")
             else:

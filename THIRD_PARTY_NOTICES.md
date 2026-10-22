@@ -184,14 +184,11 @@ and Boost Software License 1.0 in its
 
 ### Full builds: pyGIMLi, Triangle and visualization libraries
 
-pyGIMLi's 2-D mesh generator wraps Jonathan Shewchuk's Triangle. Triangle has
-its own redistribution conditions, independent of pyGIMLi's top-level licence.
-Its copyright notices must be retained, and sale or inclusion in commercial
-products requires the author's permission. Modified copies must also satisfy
-the conditions in the original notice for modifications and source/object-code
-distribution. The exact Triangle notice accompanying the bundled version must
-be included in `LICENSES/`; this summary does not replace it. See the
-[author's Triangle page](https://www.cs.cmu.edu/~quake/triangle.html).
+pyGIMLi's 2-D mesh generator wraps Jonathan Shewchuk's Triangle, which may not
+be sold or included in commercial products without its author's permission
+(see the [author's Triangle page](https://www.cs.cmu.edu/~quake/triangle.html)).
+The libgimli in Full builds is built without Triangle and contains none of its
+code; pyGIMLi's 2-D meshes come from rustmesh instead (next section).
 
 PyVista and VTK also retain their own licences. The published projects use MIT
 and BSD-3-Clause, respectively; the notices for the actual distributed versions
@@ -203,36 +200,46 @@ Full builds require an inventory of their additional native dependencies as
 well as their Python packages. They must not be published until the applicable
 notices, source obligations and redistribution conditions have been checked.
 
-### Full builds: rustsolve in place of CHOLMOD and UMFPACK
+### Full builds: rustsolve and rustmesh in place of SuiteSparse and Triangle
 
 pgcore, pyGIMLi's compiled core, solves sparse systems with SuiteSparse CHOLMOD
-and UMFPACK. UMFPACK, and CHOLMOD's Supernodal, Modify and MatrixOps modules,
-are GPL-2.0-or-later. In Full builds these are replaced by rustsolve, a
-sparse-solver library on faer. The prebuilt files are in `packaging/rustsolve/`;
-its `README.txt` gives their origin and SHA-256. The build installs them with
-`packaging/rustsolve/apply.py`:
+and UMFPACK, and makes 2-D meshes with Triangle. UMFPACK, and CHOLMOD's
+Supernodal, Modify and MatrixOps modules, are GPL-2.0-or-later. In Full builds
+they are replaced by rustsolve, a sparse-solver library on faer, and rustmesh,
+a mesh generator. The prebuilt files are in `packaging/rustsolve/`; its
+`README.txt` gives their origin and `manifest.json` their SHA-256. The build
+installs them with `packaging/rustsolve/apply.py`:
 
 * **rustsolve's C interface** (`rustsolve_capi.dll`, `librustsolve_capi.dylib`).
-  rustsolve 0.1.0 is MIT OR Apache-2.0. It is built from
-  https://github.com/geohang/rustsolve, a private repository. The Rust crates
-  compiled with it are listed in `packaging/rustsolve/README.txt`: faer 0.24.4
-  and others under MIT, Apache-2.0, BSD-2-Clause, Zlib or Unlicense terms.
-  faer's licence files also cover code ported into faer from SuiteSparse AMD
-  and COLAMD (BSD-3-Clause), LAPACK (BSD) and Eigen (MPL-2.0). The
-  Eigen-derived code, a divide-and-conquer SVD, is not compiled into these
-  files. The Rust standard library is compiled in. The Windows file also
-  contains MinGW-w64 runtime code and GCC's unwinder (GPL-3.0-or-later with
-  the GCC Runtime Library Exception 3.1).
+  rustsolve 0.1.0 is MIT OR Apache-2.0, from
+  https://github.com/geohang/rustsolve at commit c83f4e9. The Rust crates
+  compiled with it are faer 0.24.4 and others under MIT, Apache-2.0,
+  BSD-2-Clause, Zlib or Unlicense terms. faer's licence files also cover code
+  ported into faer from SuiteSparse AMD and COLAMD (BSD-3-Clause), LAPACK (BSD)
+  and Eigen (MPL-2.0). The Eigen-derived code, a divide-and-conquer SVD, is not
+  compiled into these files. The Rust standard library is compiled in. The
+  Windows file also contains MinGW-w64 runtime code and GCC's unwinder
+  (GPL-3.0-or-later with the GCC Runtime Library Exception 3.1).
+* **rustmesh** (the `rustmesh` Python package, with `_rustmesh.pyd` or
+  `_rustmesh.abi3.so`). rustmesh 0.1.0 is MIT OR Apache-2.0, from
+  https://github.com/geohang/rustmesh at commit e332d94. It contains a modified
+  copy of spade 2.15.1 (MIT OR Apache-2.0; the changes are listed in its
+  `PATCHES.md`) and Rust crates under MIT, Apache-2.0, BSD-2-Clause or Zlib
+  terms, with the Rust standard library and, on Windows, the same MinGW-w64
+  and GCC runtime code. PyHydroGeophysX's rustmesh backend
+  (`PyHydroGeophysX/core/rustmesh_backend.py`) makes pyGIMLi's 2-D meshes with
+  it.
 * **libgimli, modified** (`libgimli.dll`, `libgimli.dylib`). This is pyGIMLi's
   core library (Apache-2.0), rebuilt from pyGIMLi's sources with rustsolve's
-  changes:
+  changes (`pgcore/apply_rustsolve.py`) and without Triangle
+  (`packaging/rustsolve/apply_notriangle.py`):
   * Windows: commit 5991b6ac, the source of pgcore 1.5.0;
   * macOS: v1.5.4, the source of pgcore 1.5.4.
 
-  As section 4(b) of the Apache License asks, the archive's
-  `pygimli/MODIFICATIONS.txt` names the changed files. It is in the
-  component's folder in `LICENSES/`. The library's version string ends in
-  `+rustsolve`. It still contains Triangle, as pyGIMLi's own build does.
+  As section 4(b) of the Apache License asks, each changed source file
+  carries a modification notice, and the archive's `pygimli/MODIFICATIONS.txt`
+  names the changed files. It is in the component's folder in `LICENSES/`.
+  The library's version string ends in `+rustsolve+notriangle`.
 * On Windows, the seven SuiteSparse DLLs carried by pgcore 1.5.0 are left
   out: AMD, CAMD, CCOLAMD, CHOLMOD, COLAMD, SuiteSparse_config and UMFPACK.
 
