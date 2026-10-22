@@ -134,7 +134,7 @@ def main(argv=None):
         return 0 if payload["ok"] else 1
     import PyHydroGeophysX
     versions = {}
-    for name in ("PyHydroGeophysX", "numpy", "scipy", "pygimli", "torch", "cupy-cuda12x", "nvmath-python", "adtlert"):
+    for name in ("PyHydroGeophysX", "numpy", "scipy", "pygimli", "torch", "cuda-core", "nvmath-python", "adtlert"):
         try:
             versions[name] = importlib.metadata.version(name)
         except importlib.metadata.PackageNotFoundError:

@@ -850,7 +850,7 @@ class ERTProcessingModule(BaseModule):
         self._engine = QComboBox()
         for label, value in (("In-house Gauss-Newton", "pyhydro"),
                              ("PyGIMLi ERTManager", "pygimli"),
-                             ("ADTLERT 2.5D (CUDA)", "adtlert"),
+                             ("ADTLERT 2.5D/3D (CUDA)", "adtlert"),
                              ("E4D 3D (PNNL, external)", "e4d"),
                              ("R2 2D (Binley, external)", "r2"),
                              ("R3t 3D (Binley, external)", "r3t")):

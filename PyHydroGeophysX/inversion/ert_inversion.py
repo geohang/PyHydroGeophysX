@@ -3,7 +3,6 @@ Single-time ERT inversion functionality.
 """
 from dataclasses import dataclass, field, fields
 from functools import lru_cache
-import inspect
 import os
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
@@ -652,9 +651,9 @@ _ADTLERT_STEP_TOLERANCE = 1.0e-4
 def _adtlert_solver_name(method: str, *, prefer_gpu: bool = False) -> str:
     if prefer_gpu and str(method).lower() == "cgls":
         try:
-            import cupy as cp
+            import torch
 
-            if int(cp.cuda.runtime.getDeviceCount()) > 0:
+            if torch.cuda.is_available():
                 return "gpu_cgls"
         except Exception:  # noqa: BLE001 - CPU fallback is intentional
             pass
@@ -682,22 +681,22 @@ def _enable_adtlert_float64() -> None:
 
 
 def _adtlert_cuda_available() -> bool:
-    """Return whether ADTLERT's Torch/CuPy CUDA 12 path is usable."""
+    """Return whether ADTLERT's CUDA path (Torch on an NVIDIA GPU, NVRTC) is usable.
+
+    ADTLERT compiles its sensitivity kernel with NVRTC at first use, so an
+    empty kernel is compiled here: an installation without a usable NVRTC
+    falls back before an inversion starts rather than at its first Jacobian.
+    """
     _enable_adtlert_float64()
     try:
         import adtlert  # noqa: F401
-        import cupy as cp
         import torch
+        from cuda.core import Program
 
         if not torch.cuda.is_available():
             return False
-        if int(cp.cuda.runtime.getDeviceCount()) < 1:
-            return False
-        # Importing CuPy and enumerating devices do not prove that NVRTC and
-        # the CUDA headers are usable. Compile one tiny kernel so incomplete
-        # Windows installations fall back before an inversion starts.
-        probe = cp.arange(1, dtype=cp.float32)
-        return float(cp.sum(probe).get()) == 0.0
+        Program('extern "C" __global__ void probe() {}', "c++").compile("ptx")
+        return True
     except Exception:  # noqa: BLE001 - the original ERT engine is the fallback
         return False
 
@@ -713,14 +712,12 @@ def _adtlert_cudss_available() -> bool:
     return True
 
 
-def _adtlert_forward_solver_backend() -> str:
-    """Require cuDSS so ADTLERT never silently uses its slow SciPy solver."""
+def _require_adtlert_gpu() -> None:
     if not _adtlert_cudss_available():
         raise BackendUnavailable(
-            "ADTLERT requires its cuDSS CUDA 12 forward solver. Install "
+            "ADTLERT requires a CUDA GPU with cuDSS. Install "
             "`pyhydrogeophysx[adtlert]` or use engine='pyhydro'."
         )
-    return "cudss"
 
 
 def _resolve_ert_engine(name: str, *, log=_noop_log) -> str:
@@ -736,74 +733,27 @@ def _resolve_ert_engine(name: str, *, log=_noop_log) -> str:
 
 
 def _adtlert_survey_supported(container) -> bool:
-    """Return whether ADTLERT 0.1 can represent every ABMN electrode."""
+    """Return whether ADTLERT can represent every ABMN electrode (no remote poles)."""
     return all(
         not np.any(np.asarray(container[field], dtype=int) < 0)
         for field in ("a", "b", "m", "n")
     )
 
 
-def _canonicalize_adtlert_polarity(container, *, log=_noop_log):
-    """Return an equivalent positive-geometric-factor survey for ADTLERT.
-
-    ADTLERT's fast normal-sensitivity path expects the receiver polarity that
-    gives a positive geometric factor.  A negative factor is physically valid,
-    so canonicalize only the ADTLERT survey copy by exchanging M and N for the
-    affected rows.  Apparent resistivity and errors keep their original order
-    and values; the caller's container is never modified.
-    """
-    n_data = int(container.size())
-    geometric_factors = np.asarray(container["k"], dtype=float).reshape(-1)
-    if geometric_factors.shape != (n_data,):
-        raise ValueError("ADTLERT requires one geometric factor per datum")
-
-    invalid = ~np.isfinite(geometric_factors) | (geometric_factors == 0.0)
-    if np.any(invalid):
-        count = int(np.count_nonzero(invalid))
-        raise ValueError(
-            "ADTLERT requires finite, non-zero geometric factors; "
-            f"found {count} invalid value(s)"
-        )
-
-    negative = geometric_factors < 0.0
-    if not np.any(negative):
-        return container
-
-    normalized = pg.DataContainerERT(container)
-    receiver_m = np.asarray(container["m"], dtype=np.int64).copy()
-    receiver_n = np.asarray(container["n"], dtype=np.int64).copy()
-    normalized_m = receiver_m.copy()
-    normalized_n = receiver_n.copy()
-    normalized_m[negative] = receiver_n[negative]
-    normalized_n[negative] = receiver_m[negative]
-    normalized["m"] = normalized_m
-    normalized["n"] = normalized_n
-
-    normalized_k = geometric_factors.copy()
-    normalized_k[negative] *= -1.0
-    normalized["k"] = normalized_k
-    normalized["r"] = np.asarray(container["rhoa"], dtype=float) / normalized_k
-
-    count = int(np.count_nonzero(negative))
-    log(
-        "  ADTLERT polarity normalization: swapped M/N for "
-        f"{count}/{n_data} negative-k measurements; rhoa and err unchanged"
-    )
-    return normalized
-
-
 def _build_adtlert_forward(container, mesh, *, log=_noop_log, field_cache_entries=None):
     """Build one shared ADTLERT forward context for single or windowed ERT.
 
-    ``field_cache_entries`` bounds the forward's cache of solved fields, which
-    keeps the total fields of the last 8 models by default - one wavenumber x
-    electrode x node array per model, 130 MB on a 7473-cell mesh with 56
-    electrodes, and a GPU copy of it besides. ``None`` keeps ADTLERT's default.
+    A 2D profile mesh gets ADTLERT's 2.5D forward and a 3D tetrahedral mesh its
+    3D forward; both invert the cells with marker > 1. ``field_cache_entries``
+    bounds the forward's cache of solved fields, which keeps the fields of the
+    last 8 models by default - one wavenumber x electrode x node array per model
+    in 2.5D, 130 MB on a 7473-cell mesh with 56 electrodes. ``None`` keeps
+    ADTLERT's default.
     """
     _enable_adtlert_float64()
     try:
         import adtlert
-        from adtlert.forward import ERTForward2p5D, mesh_to_adtlert, survey_to_adtlert
+        from adtlert.forward import mesh_to_adtlert, survey_to_adtlert
         from adtlert.inversion import ParameterizedERTForward2p5D
     except ImportError as exc:
         raise BackendUnavailable(
@@ -811,11 +761,9 @@ def _build_adtlert_forward(container, mesh, *, log=_noop_log, field_cache_entrie
             "`pip install \"pyhydrogeophysx[adtlert]\"`."
         ) from exc
 
-    if int(mesh.dim()) != 2:
-        raise ValueError(
-            "engine='adtlert' currently supports 2D profile meshes only; "
-            "use engine='pygimli' for this mesh"
-        )
+    dimension = int(mesh.dim())
+    if dimension not in (2, 3):
+        raise ValueError(f"engine='adtlert' needs a 2D or 3D mesh, not {dimension}D")
 
     active_ids = np.asarray(
         [
@@ -835,25 +783,22 @@ def _build_adtlert_forward(container, mesh, *, log=_noop_log, field_cache_entrie
     result_mesh = mesh.createMeshByCellIdx(pg.IVector(active_ids.tolist()))
     forward_mesh = mesh_to_adtlert(mesh)
     parameter_mesh = mesh_to_adtlert(result_mesh)
-    adtlert_container = _canonicalize_adtlert_polarity(container, log=log)
-    survey = survey_to_adtlert(adtlert_container, dimension=2)
-    geometric_mode = (
-        "analytic" if bool(forward_mesh.is_flat_surface) else "numerical"
-    )
-    forward_solver = _adtlert_forward_solver_backend()
-    cache_options = {}
-    if field_cache_entries is not None and "normal_field_cache_max_entries" in (
-            inspect.signature(ERTForward2p5D.from_mesh_survey).parameters):
-        cache_options["normal_field_cache_max_entries"] = int(field_cache_entries)
+    survey = survey_to_adtlert(container, dimension=dimension)
+    _require_adtlert_gpu()
+    options: Dict[str, Any] = {}
+    if dimension == 2:
+        options["topographic_geometric_factor_mode"] = (
+            "analytic" if bool(forward_mesh.is_flat_surface) else "numerical"
+        )
+    if field_cache_entries is not None:
+        options["normal_field_cache_max_entries"] = int(field_cache_entries)
     forward = ParameterizedERTForward2p5D.from_mesh_survey(
         forward_mesh,
         survey,
         active_ids,
         regularization_mesh=parameter_mesh,
         background_mode="pygimli_prolongation",
-        topographic_geometric_factor_mode=geometric_mode,
-        linear_solver_backend=forward_solver,
-        **cache_options,
+        **options,
     )
     # Zone outlines the smoothness must not cross reach ADTLERT the way it
     # takes known structure: one unit label per parameter cell, with no
@@ -862,89 +807,15 @@ def _build_adtlert_forward(container, mesh, *, log=_noop_log, field_cache_entrie
     if units is not None:
         forward.structural_prior_cell_ids = units
         forward.structural_cross_weight = 0.0
-    released = _release_adtlert_terrain_setup(getattr(forward, "forward_operator", forward))
     version = str(getattr(adtlert, "__version__", ""))
     log(
-        f"  ADTLERT {version or '(unknown version)'}: "
+        f"  ADTLERT {version or '(unknown version)'}: {'2.5D' if dimension == 2 else '3D'}, "
         f"{mesh.cellCount()} forward cells, {active_ids.size} parameters, "
-        f"{forward_solver} forward solver"
+        "cuDSS forward solver"
         + ("" if units is None else
            f"; smoothness cut along the zone outlines ({int(units.max()) + 1} parts)")
-        + ("; terrain setup meshes released after use" if released else "")
     )
     return forward, result_mesh, active_ids, version
-
-
-#: What ADTLERT's 2.5D forward builds over a surface with topography to set
-#: itself up, and the results that make each one unnecessary afterwards: the
-#: setup-only discretization, its intermediate potentials in _derived_cache,
-#: the prefix of its solver state in _cudss_state, and the cached result.
-_ADTLERT_TERRAIN_SETUP = (
-    # Unit primary potentials, solved on the P2 mesh and kept on the solve mesh.
-    ("primary_potential_discretization", "primary_potential_sub_potentials",
-     "primary_potential_", "auxiliary_sub_potentials", "_auxiliary_sub_potential_stack"),
-    # Numerical geometric factors.
-    ("geometric_auxiliary_discretization", "auxiliary_geometric_sub_potentials",
-     "auxiliary_geometric_", "geometric_factors", "_geometric_factors"),
-)
-
-
-def _release_adtlert_terrain_setup(forward) -> bool:
-    """Compute what ADTLERT's forward derives from topography, then drop its scaffolding.
-
-    Over a surface with topography the forward solves the unit primary
-    potentials and the numerical geometric factors on a P2 refinement of the
-    mesh, once, and keeps the results; every later solve reads those results.
-    The two P2 discretizations, their potentials and their cuDSS factorizations
-    stayed alive regardless: 1.05 GB of the 3.54 GB the forward held on the
-    DAS-1 example (5994 cells), whose solves and Jacobians are the same to
-    1e-15 without them. The results are computed here - the first solve's work
-    moved, not added: 19 s to build and solve once either way - and each piece
-    is released only once the result that replaces it is cached; anything this
-    ADTLERT does differently is left alone. Returns whether anything was
-    released.
-
-    This reaches into ADTLERT's private state, which offers no public way to
-    let go of it; ``adtlert<0.2`` is the version it was written against.
-    """
-    derived = getattr(forward, "_derived_cache", None)
-    solver_state = getattr(forward, "_cudss_state", None)
-    if not isinstance(derived, dict) or not isinstance(solver_state, dict):
-        return False
-    released = False
-    for field_name, potentials, prefix, result, compute in _ADTLERT_TERRAIN_SETUP:
-        discretization = getattr(forward, field_name, None)
-        if discretization is None or not callable(getattr(forward, compute, None)):
-            continue
-        getattr(forward, compute)()
-        if result not in derived:
-            continue
-        object.__setattr__(forward, field_name, None)  # a frozen dataclass field
-        if getattr(forward, "auxiliary_discretization", None) is discretization:
-            # Its constructor's fallback when there is no geometric discretization.
-            object.__setattr__(forward, "auxiliary_discretization",
-                               getattr(forward, "primary_auxiliary_discretization", None))
-        derived.pop(potentials, None)
-        for key in [key for key in solver_state if key.startswith(prefix)]:
-            entry = solver_state.pop(key)
-            if key.endswith("_solver_batch_gpu") or key.endswith("_solver_gpu"):
-                try:
-                    entry.free()  # as the forward's own close() releases a solver
-                except Exception:  # noqa: BLE001 - freeing is best effort
-                    pass
-        released = True
-    if released:
-        import gc
-
-        gc.collect()
-        try:
-            import torch
-
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-        except Exception:  # noqa: BLE001 - no CUDA cache to empty
-            pass
-    return released
 
 
 def _adtlert_spatial_term(name: str, forward):
@@ -984,7 +855,7 @@ def _cut_robust_term(base):
 
 
 class _ADTLertEngine:
-    """ADTLERT's differentiable 2.5D inversion behind the common ERT contract.
+    """ADTLERT's differentiable 2.5D or 3D inversion behind the common ERT contract.
 
     PyGIMLi remains responsible for file loading, QC and mesh generation.  The
     numerical solve is delegated to ADTLERT, with the parameter-domain cell
@@ -1474,11 +1345,10 @@ def run_ert_manager_inversion(
 
     ``engine`` selects the solver: ``"pyhydro"`` for the in-house Gauss-Newton
     inversion (``ERTInversion``), ``"pygimli"`` for ``ert.ERTManager``, or
-    ``"adtlert"`` for the optional differentiable ADTLERT 2.5D backend when
-    Torch, CuPy CUDA 12 and cuDSS are available. Linux and Windows both use
-    cuDSS; ADTLERT's slower SciPy forward solver is intentionally disabled.
-    Linux remains the recommended platform for the best performance. Without
-    CUDA 12 or cuDSS, ``"adtlert"`` falls back to ``"pyhydro"``.
+    ``"adtlert"`` for the optional differentiable ADTLERT backend when a CUDA
+    GPU, cuDSS and NVRTC are available: 2.5D on a profile mesh, 3D on a
+    tetrahedral mesh (``mesh_file``). Without them, ``"adtlert"`` falls back
+    to ``"pyhydro"``.
 
     ADTLERT matches the published real-data branch: fast normal sensitivity,
     no Robin-boundary derivative, line search, a maximum log step of one, and
@@ -1527,7 +1397,7 @@ def run_ert_manager_inversion(
     )
     if engine == "adtlert" and not _adtlert_survey_supported(data):
         log(
-            "ADTLERT 0.1 cannot represent remote electrodes encoded with "
+            "ADTLERT cannot represent remote electrodes encoded with "
             "negative ABMN indices; falling back to the original PyHydro "
             "ERT engine."
         )

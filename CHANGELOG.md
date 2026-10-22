@@ -5,7 +5,14 @@ Before 1.0, minor releases may change the API.
 
 ## [Unreleased]
 
+### Added
+
+- **ADTLERT 3D:** `engine="adtlert"` inverts 3D surveys on tetrahedral meshes (`mesh_file`), in single and windowed time-lapse runs, with ADTLERT's 3D forward.
+
 ### Changed
+
+- **ADTLERT backend:** requires `adtlert>=0.2.3,<0.3`. The `adtlert` extra no longer installs CuPy, or cuDSS and nvmath-python separately on Windows; ADTLERT brings cuDSS and compiles its kernel with NVRTC. GPU availability is checked with Torch and an NVRTC compile instead of CuPy, and `gpu_cgls` runs on Torch.
+- **ADTLERT backend:** surveys are passed with their recorded receiver polarity; ADTLERT 0.2.3 handles negative geometric factors, so the M/N exchange that canonicalized them is gone, as is the release of 0.1's terrain setup state, which 0.2 no longer has.
 
 - **Third-party notices:** the DAS-1 and E4D example data now name their data releases (HydroShare, ESS-DIVE) and CC BY 4.0 licence, and the desktop-build notes state what each archive bundles.
 - **Desktop archives:** each archive now carries `BUILD_INFO.txt` (the components it bundles, with versions, origins and licences), `SOURCE_CODE.md` (the source of its LGPL libraries and how to replace Qt) and `LICENSES/` at its root. `packaging/release_audit.py` writes them and checks every archive (Qt module and plugin licences, excluded engines such as Gmsh and TetGen, bundled third-party libraries, source links, a Qt library swap) before the workflow attaches it to a draft release. Full builds take Qt, PySide6 and VTK from conda-forge (one Qt build, no FFmpeg) and use OpenBLAS.
