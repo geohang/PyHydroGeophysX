@@ -102,10 +102,9 @@ thoroughly tested platform. When Torch, cuDSS or NVRTC is unavailable, the
 Python API can fall back to the original PyHydro ERT engine. Studio requires
 a passing GPU check before starting a GPU mode and offers manual selection of
 PyHydro CPU on failure. Remote electrodes (negative ABMN indices: pole-dipole,
-pole-pole) run on ADTLERT for flat 2D profiles and 3D meshes; on a 2D profile
-with topography those surveys safely use the original engine without changing
-data. Measurements with either receiver polarity (positive or
-negative geometric factor) are used as recorded.
+pole-pole) run on ADTLERT on flat and topographic 2D profiles and 3D meshes.
+Measurements with either receiver polarity (positive or negative geometric
+factor) are used as recorded.
 
 On Windows, install the CUDA-enabled Torch wheel before the extra, for example:
 

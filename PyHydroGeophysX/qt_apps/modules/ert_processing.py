@@ -862,10 +862,9 @@ class ERTProcessingModule(BaseModule):
             "ADTLERT uses a CUDA-accelerated cuDSS forward solve and GPU CGLS: 2.5D "
             "on a profile, 3D on an imported tetrahedral mesh. A CUDA 12 GPU is "
             "required; cuDSS and NVRTC come with ADTLERT. Windows is supported; Linux "
-            "is recommended for the best performance. Remote electrodes run on flat "
-            "profiles and 3D meshes; on a profile with topography the in-house engine "
-            "is used instead. The controls below remain available when this engine "
-            "is selected.\n\n"
+            "is recommended for the best performance. Pole arrays (remote electrodes) "
+            "run too. The controls below remain available when this engine is "
+            "selected.\n\n"
             "E4D is PNNL's parallel 3D code, run as an external program under MPI; "
             "it is not installed with PyHydroGeophysX. It runs on Linux, on Windows "
             "only inside WSL 2, and on macOS when built from source. A profile is "
@@ -4053,8 +4052,7 @@ class ERTProcessingModule(BaseModule):
         if requested_engine == "adtlert" and engine != "adtlert":
             self.log(
                 "ADTLERT was requested but the run used the original PyHydro "
-                "ERT engine: CUDA, cuDSS or NVRTC was unavailable, or the survey "
-                "has remote electrodes on a profile with topography.",
+                "ERT engine: CUDA, cuDSS or NVRTC was unavailable.",
                 "warn",
             )
         elif engine == "adtlert":

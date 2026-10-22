@@ -8,11 +8,11 @@ Before 1.0, minor releases may change the API.
 ### Added
 
 - **ADTLERT 3D:** `engine="adtlert"` inverts 3D surveys on tetrahedral meshes (`mesh_file`), in single and windowed time-lapse runs, with ADTLERT's 3D forward.
-- **ADTLERT remote electrodes:** pole-dipole and pole-pole surveys run on ADTLERT for flat 2D profiles and 3D meshes; only a 2D profile with topography still falls back to PyHydro.
+- **ADTLERT remote electrodes:** pole-dipole and pole-pole surveys (negative ABMN indices) run on ADTLERT, on flat and topographic 2D profiles and on 3D meshes; they no longer fall back to PyHydro. adtlert 0.3 applies the far-field mixed condition on 2.5D terrain meshes, as pyGIMLi does, which also changes ADTLERT's 2.5D terrain results.
 
 ### Changed
 
-- **ADTLERT backend:** requires `adtlert>=0.2.4,<0.3`. The `adtlert` extra no longer installs CuPy, or cuDSS and nvmath-python separately on Windows; ADTLERT brings cuDSS and compiles its kernel with NVRTC. GPU availability is checked with Torch and an NVRTC compile instead of CuPy, and `gpu_cgls` runs on Torch.
+- **ADTLERT backend:** requires `adtlert>=0.3,<0.4`. The `adtlert` extra no longer installs CuPy, or cuDSS and nvmath-python separately on Windows; ADTLERT brings cuDSS and compiles its kernel with NVRTC. GPU availability is checked with Torch and an NVRTC compile instead of CuPy, and `gpu_cgls` runs on Torch.
 - **ADTLERT backend:** surveys are passed with their recorded receiver polarity; ADTLERT 0.2.3 handles negative geometric factors, so the M/N exchange that canonicalized them is gone, as is the release of 0.1's terrain setup state, which 0.2 no longer has.
 
 - **Third-party notices:** the DAS-1 and E4D example data now name their data releases (HydroShare, ESS-DIVE) and CC BY 4.0 licence, and the desktop-build notes state what each archive bundles.

@@ -114,8 +114,8 @@ def test_adtlert_inverts_a_3d_survey_on_a_tetrahedral_mesh(tmp_path):
     assert np.all(np.isfinite(chi2)) and chi2[-1] < 0.2 * chi2[0]
 
 
-@pytest.mark.parametrize("relief, engine", [(0.0, "adtlert"), (0.6, "pyhydro")])
-def test_pole_dipole_profiles_run_on_adtlert_unless_on_topography(tmp_path, relief, engine):
+@pytest.mark.parametrize("relief", [0.0, 0.6])
+def test_pole_dipole_profiles_run_on_adtlert_with_and_without_topography(tmp_path, relief):
     import pygimli.meshtools as mt
 
     x = np.linspace(0.0, 23.0, 24)
@@ -135,5 +135,5 @@ def test_pole_dipole_profiles_run_on_adtlert_unless_on_topography(tmp_path, reli
     result = ert_inversion.run_ert_manager_inversion(
         data_file, tmp_path / "out", engine="adtlert", max_iterations=3, max_total_iterations=3,
     )
-    assert result["engine"] == engine
+    assert result["engine"] == "adtlert"
     assert np.all(np.isfinite(result["convergence"]))
