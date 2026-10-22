@@ -1,0 +1,158 @@
+name: Rust engines for desktop Full (macOS)
+
+# Builds, from public sources, the macOS files packaging/rustsolve/ holds for the
+# desktop Full build, and checks them in the conda environment that build uses:
+# - librustsolve_capi.dylib: rustsolve's C interface (--features nd);
+# - libgimli.dylib: pgcore 1.5.4's libgimli with rustsolve in place of
+#   CHOLMOD/UMFPACK (rustsolve's pgcore/apply_rustsolve.py, with the P2
+#   primary-potential change) and without Triangle (apply_notriangle.py here);
+# - rustmesh's Python package, whose extension module meshes in Triangle's place.
+# Checks: rustsolve's C++ check of the patched LinSolver, the rebuilt core under
+# the shipped bindings, and verify_core.py (original against rebuilt, P2 node
+# values, two runs bit for bit). The files are then committed to
+# packaging/rustsolve/macos/ with their SHA-256 in manifest.json. Runs by hand,
+# or on a push outside main that changes this file (a workflow that is not yet
+# on main cannot be started by hand).
+
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore: [main, gh-pages]
+    paths:
+      - ".github/workflows/build-rust-engines.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  macos-arm64:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash -el {0}
+    env:
+      RUSTSOLVE_COMMIT: c83f4e95e3ca244198d9f414bc570264d9039349
+      RUSTMESH_COMMIT: e332d94a492373fc19cc2e8c55f078f58a1756d7
+      # pgcore 1.5.4's versionStr() is v1.5.3-53-g6241cfab (built before the tag)
+      GIMLI_COMMIT: 6241cfaba43ed859c03894f8d0c4d5901d20e718
+      GIMLI_VERSION: v1.5.3-53-g6241cfab
+      MACOSX_DEPLOYMENT_TARGET: "13.0"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: geohang/rustsolve
+          ref: ${{ env.RUSTSOLVE_COMMIT }}
+          path: rustsolve
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: geohang/rustmesh
+          ref: ${{ env.RUSTMESH_COMMIT }}
+          path: rustmesh
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: gimli-org/gimli
+          ref: ${{ env.GIMLI_COMMIT }}
+          path: gimli
+          persist-credentials: false
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          python-version: "3.11"
+          activate-environment: build
+
+      - name: Runtime environment (the desktop Full pins)
+        run: |
+          conda install -y -c gimli -c conda-forge $(python packaging/rustsolve/apply.py spec) \
+            numpy pandas scipy matplotlib "libblas=*=*openblas"
+          python -c "import pygimli as pg; print(pg.core.versionStr(), pg.__version__)"
+          echo "PG=$CONDA_PREFIX" >> "$GITHUB_ENV"
+          mkdir -p out
+          conda list --explicit --md5 > out/conda-explicit-runtime.txt
+
+      - name: Compiler environment
+        run: |
+          conda create -y -n tc -c conda-forge cxx-compiler c-compiler cmake make
+          conda list -n tc --explicit --md5 > out/conda-explicit-toolchain.txt
+
+      - name: rustsolve C interface
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          cargo --version | tee out/cargo-version.txt
+          cargo build --locked --release -p rustsolve-capi --features nd --manifest-path rustsolve/Cargo.toml
+          P=$PWD/rsprefix
+          mkdir -p "$P/include" "$P/lib"
+          cp rustsolve/crates/rustsolve-capi/include/rustsolve.h "$P/include/"
+          cp rustsolve/target/release/librustsolve_capi.dylib "$P/lib/"
+          install_name_tool -id @rpath/librustsolve_capi.dylib "$P/lib/librustsolve_capi.dylib"
+          codesign --force -s - "$P/lib/librustsolve_capi.dylib"
+
+      - name: Patch gimli (rustsolve, no Triangle)
+        run: |
+          python rustsolve/pgcore/apply_rustsolve.py gimli
+          python packaging/rustsolve/apply_notriangle.py gimli
+
+      - name: Build libgimli
+        run: |
+          TC=$CONDA/envs/tc
+          export PATH="$TC/bin:$PATH"
+          if [ -x "$TC/bin/arm64-apple-darwin20.0.0-clang++" ]; then
+            export CC=$TC/bin/arm64-apple-darwin20.0.0-clang CXX=$TC/bin/arm64-apple-darwin20.0.0-clang++
+          else
+            export CC=$TC/bin/clang CXX=$TC/bin/clang++
+          fi
+          export LDFLAGS="-L$PG/lib -Wl,-headerpad_max_install_names"
+          export SDKROOT=$(xcrun --show-sdk-path)
+          # the script also compiles Triangle into work/tri; the patched CMake never links it
+          bash rustsolve/pgcore/build-libgimli-macos.sh gimli rsprefix work "$GIMLI_VERSION" "$PG"
+          grep -E "TRIANGLE_FOUND|PACKAGE_VERSION" work/build/config.cmake.h | tee out/config.txt
+          if nm -gU work/rebuilt/libgimli.dylib | grep -i "triangulate\|_triangle"; then
+            echo "libgimli exports Triangle symbols"; exit 1
+          fi
+          set -o pipefail
+          bash rustsolve/pgcore/check/run-check-macos.sh gimli work rsprefix "$PG" | tee out/linsolver-check.txt
+
+      - name: rustmesh Python package
+        run: |
+          python -m pip install "maturin>=1.7,<2"
+          (cd rustmesh && maturin build --release --locked --out ../wheels)
+          ls -l wheels
+          mkdir -p rustmesh-pkg
+          python -m zipfile -e wheels/*.whl rustmesh-pkg
+          ls -l rustmesh-pkg/rustmesh
+
+      - name: Original against rebuilt (verify_core.py)
+        run: |
+          set -o pipefail
+          python packaging/rustsolve/verify_core.py original verify/orig
+          for r in r1 r2; do
+            DYLD_LIBRARY_PATH="$PWD/work/rebuilt" python packaging/rustsolve/verify_core.py rebuilt verify/$r
+          done
+          python packaging/rustsolve/verify_core.py compare verify | tee out/verify-core.txt
+
+      - name: Collect
+        if: always()
+        run: |
+          mkdir -p files
+          cp work/rebuilt/libgimli.dylib work/rebuilt/librustsolve_capi.dylib files/ 2>/dev/null || true
+          cp -R rustmesh-pkg/rustmesh files/ 2>/dev/null || true
+          (cd files && find . -type f | sort | xargs shasum -a 256) | tee out/sha256.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rust-engines-macos
+          path: |
+            files/
+            out/
+            wheels/
+            work/build/configure.log
+            work/build/build.log
+          if-no-files-found: warn
