@@ -39,7 +39,8 @@ Desktop guide: https://geohang.github.io/PyHydroGeophysX/agents/desktop_studio.h
    the small example files needed for a check, using a downloader suitable
    for this OS, into a new test directory. Run a short example and report
    finite results, any warnings and the engine that actually executed.
-   If testing ADTLERT, use a compatible dataset without remote electrodes;
+   If testing ADTLERT, use a dataset without remote electrodes (pole arrays
+   need adtlert 0.3 or later);
    report a fallback rather than claiming that GPU execution succeeded.
    For ADTLERT, also run the three isolated checks (runtime, single, time-lapse):
      python -m PyHydroGeophysX.inversion.adtlert_diagnostics --report gpu-check.json
