@@ -17,6 +17,7 @@ Before 1.0, minor releases may change the API.
 
 - **Third-party notices:** the DAS-1 and E4D example data now name their data releases (HydroShare, ESS-DIVE) and CC BY 4.0 licence, and the desktop-build notes state what each archive bundles.
 - **Desktop archives:** each archive now carries `BUILD_INFO.txt` (the components it bundles, with versions, origins and licences), `SOURCE_CODE.md` (the source of its LGPL libraries and how to replace Qt) and `LICENSES/` at its root. `packaging/release_audit.py` writes them and checks every archive (Qt module and plugin licences, excluded engines such as Gmsh and TetGen, bundled third-party libraries, source links, a Qt library swap) before the workflow attaches it to a draft release. Full builds take Qt, PySide6 and VTK from conda-forge (one Qt build, no FFmpeg) and use OpenBLAS.
+- **Desktop Full builds:** pyGIMLi's core solves its systems with rustsolve instead of SuiteSparse CHOLMOD and UMFPACK, and is built without Triangle; its 2-D meshes come from rustmesh through `PyHydroGeophysX/core/rustmesh_backend.py`. The prebuilt files and their checks are in `packaging/rustsolve/`.
 
 ## [0.5.0] - 2026-10-15
 

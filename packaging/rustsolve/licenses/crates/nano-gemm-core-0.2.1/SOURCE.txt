@@ -1,0 +1,2 @@
+nano-gemm-core 0.2.1 is published on crates.io under the MIT licence, without a licence file of its own. LICENSE here is the text in the project's repository:
+https://raw.githubusercontent.com/sarah-ek/nano-gemm/main/LICENSE

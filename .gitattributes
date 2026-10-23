@@ -3,3 +3,6 @@
 
 # Licence texts ship byte for byte (desktop archives check their SHA-256).
 packaging/licenses/** -text
+
+# Prebuilt binaries and licence texts ship byte for byte (manifest.json has their SHA-256).
+packaging/rustsolve/** -text
