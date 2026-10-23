@@ -2,18 +2,18 @@
 
 A workflow that quietly drops a requested product is worse than one that fails:
 the report still looks complete, so nobody checks. This module is the guard
-against that, and it exists because of a real run. The request
+against that. A request such as
 
     "help me processs ERT data and estimate the water conent"
 
-produced a full time-lapse ERT report with no water content anywhere and no
-statement that it had been skipped. Two things had to go wrong together:
+must produce water content or a statement that it was not delivered. Two
+things have to hold for that:
 
-1. Intent was decided by substring matching against a keyword list, and the
-   typo "conent" matched none of them - not ``water content``, not ``moisture``,
-   nothing. The user asked in plain English and the workflow read "no".
-2. The branch that ran had no petrophysics step at all, while the single-survey
-   branch did, so even correct intent would have produced nothing.
+1. Intent is not decided by substring matching against a keyword list alone:
+   the typo "conent" matches none of the phrases - not ``water content``, not
+   ``moisture``, nothing - and the workflow would read "no".
+2. Every branch of a workflow that can be asked for a product has the step
+   that makes it; intent read correctly is not enough if no step follows.
 
 Reading intent is a job for the model, not for a phrase list: a list only ever
 recognises the wordings someone thought of in advance, and "I want to know how
@@ -510,10 +510,9 @@ def wants_climate(config: Dict[str, Any]) -> bool:
     """
     explicit = config.get("use_climate")
     if explicit is not None:
-        # A decision is not outvoted by a keyword. A False used to fall through
-        # to the matching below, so the step ran - and the report warned that
-        # weather data had been requested - whenever the wording said "weather"
-        # or "temperature" in any sense.
+        # A decision is not outvoted by a keyword: an explicit False must not
+        # fall through to the matching below, or the step would run whenever
+        # the wording said "weather" or "temperature" in any sense.
         return bool(explicit)
     if config.get("climate_config"):
         return True
@@ -707,7 +706,10 @@ Fields:
                   (radar rainfall is climate, not GPR)
   Mark one false only when the request clearly does not involve it. If in doubt,
   mark it true: an extra question costs a moment, a missed one loses settings the
-  user asked for.
+  user asked for. Two cases that are doubt, not clear: rain, snow, drought, a
+  season or the weather named as a cause or a time ("after it rains") involves
+  climate; and a request that does not say what its data are ("process the data
+  in survey/") leaves tdem, seismic and gpr open, so mark them true.
 
 The request may be in any language and may contain misspellings; judge what the
 user means, not how they spelled it.
@@ -765,6 +767,11 @@ def llm_deliverables(user_request, query) -> Dict[str, Any]:
     return _config_from(answer)
 
 
+#: A site "name" that is only numbers, signs, hemisphere letters and degree,
+#: minute and second marks: coordinates, not a name.
+_COORDINATE_TEXT = re.compile(r"^[\s\d.,;:+\-°º'′\"″NSEWnsew]+$")
+
+
 def _config_from(answer: Dict[str, Any]) -> Dict[str, Any]:
     """Workflow-configuration keys implied by the model's answer.
 
@@ -781,6 +788,8 @@ def _config_from(answer: Dict[str, Any]) -> Dict[str, Any]:
     {'length_unit': 'ft'}
     >>> _config_from({})
     {}
+    >>> _config_from({"site_location": "41.37 N, 106.24 W"}), _config_from({"site_location": "Site 12"})
+    ({}, {'site_location': 'Site 12'})
     """
     out: Dict[str, Any] = {}
     if answer.get("resistivity_only") is True:
@@ -795,13 +804,14 @@ def _config_from(answer: Dict[str, Any]) -> Dict[str, Any]:
             "ft", "feet", "foot") else "m"
     place = answer.get("site_location")
     if isinstance(place, str) and place.strip():
-        # A name, to be resolved by a gazetteer. Anything that parses as a pair
-        # of numbers is the model having supplied coordinates after all, which
-        # is exactly what must not be trusted.
+        # A name, to be resolved by a gazetteer. Anything that is only numbers,
+        # hemispheres and degree marks ("41.37 N, 106.24 W") is the model having
+        # supplied coordinates after all, which is exactly what must not be
+        # trusted; this catches degree marks and hemispheres as well as a bare
+        # number pair.
         cleaned = place.strip()
-        parts = cleaned.replace(",", " ").split()
-        looks_numeric = len(parts) == 2 and all(
-            part.replace("-", "").replace(".", "").isdigit() for part in parts)
+        looks_numeric = (bool(_COORDINATE_TEXT.match(cleaned))
+                         and len(re.findall(r"\d+(?:\.\d+)?", cleaned)) >= 2)
         if not looks_numeric:
             out["site_location"] = cleaned
     return out
@@ -809,8 +819,8 @@ def _config_from(answer: Dict[str, Any]) -> Dict[str, Any]:
 
 #: The extraction stages the request parser can run, and what each is for. A
 #: stage costs an LLM call with a prompt of several hundred tokens, so running
-#: all of them on every request spent most of the parsing time answering
-#: questions the request had not raised.
+#: all of them on every request would spend most of the parsing time answering
+#: questions the request has not raised.
 ROUTABLE_ASPECTS = {
     "climate": "meteorological data: precipitation, temperature, PET, snow",
     "fusion": "combining two or more geophysical methods in one interpretation",
@@ -839,12 +849,11 @@ def _aspects_from(answer: Dict[str, Any]) -> Dict[str, bool]:
 def read_request(user_request, query) -> Tuple[Dict[str, Any], Dict[str, bool]]:
     """One model call: what the request asks for, and which stages to run.
 
-    The parser used to make a call per topic whether or not the request
-    mentioned the topic - for a plain ERT request, two of its calls returned
-    only ``fusion_pattern: null``, ``use_climate: false`` and
-    ``use_seismic: false``, at about seven seconds each. Asking once which
-    topics are in play, then extracting only those, is the same decision made
-    for a fraction of the cost, and it does not get slower as stages are added.
+    A call per topic, whether or not the request mentions the topic, would
+    mostly return ``null`` or ``false`` for a plain ERT request. Asking once
+    which topics are in play, then extracting only those, makes the same
+    decision for a fraction of the cost, and it does not get slower as stages
+    are added.
 
     Parameters
     ----------
@@ -858,7 +867,7 @@ def read_request(user_request, query) -> Tuple[Dict[str, Any], Dict[str, bool]]:
     tuple
         ``(config_updates, aspects)`` - keys to merge into the workflow
         configuration, and a stage-name -> bool map. On any failure the config
-        is empty and every stage is enabled, which is the old behaviour.
+        is empty and every stage is enabled.
 
     Raises
     ------

@@ -1,11 +1,10 @@
 """Domain AI assistants: AQUAH for hydrogeophysics, GeoSAGE for geological modelling, and more.
 
 An *assistant* is one complete AI agent for a domain - what the user talks to
-in the studio's chat and what "Auto to report" runs. PyHydroGeophysX used to
-have exactly one, AQUAH, written into the desktop app, the workflow runner and
-the chat's system prompt. This package makes an assistant a plug-in: each is a
-small package that describes itself with an :class:`Assistant`, and the studio
-builds its chat, its Workflow page and its run from that description.
+in the studio's chat and what "Auto to report" runs. An assistant is a plug-in:
+each is a small package that describes itself with an :class:`Assistant`, and
+the studio builds its chat, its Workflow page and its run from that
+description.
 
 What an assistant supplies
 --------------------------
@@ -144,6 +143,11 @@ class Assistant:
     offline_workflow : bool
         Whether the workflow can produce useful results without model access.
         Enables an explicit "Run without AI" action in the Workflow page.
+    skills : tuple of str
+        Folders of the assistant's skills (:mod:`PyHydroGeophysX.agents.skills`),
+        each ``'package:folder'`` - a folder inside an importable package - or a
+        path. The run and the chat see the skills' names and descriptions and
+        read one when it fits; ``PHGX_SKILLS_PATH`` adds the user's own.
     """
 
     key: str
@@ -169,6 +173,7 @@ class Assistant:
     workflow_setup: str = ""
     retrieval: Tuple[str, ...] = ("rag", "mcp")
     focused_workspace: bool = False
+    skills: Tuple[str, ...] = ()
     _cache: Dict[str, Any] = field(default_factory=dict, compare=False, repr=False)
 
     def availability(self) -> Tuple[bool, str]:
@@ -197,6 +202,38 @@ class Assistant:
             value = _load(self.tools)
             self._cache["tools"] = value() if callable(value) else value
         return self._cache["tools"]
+
+    def skill_folders(self) -> List[Any]:
+        """The folders its skills are read from: its own, then ``PHGX_SKILLS_PATH``'s."""
+        from pathlib import Path
+
+        from ..skills import env_folders
+
+        folders = []
+        for ref in self.skills:
+            package, sep, folder = str(ref).partition(":")
+            # 'pkg.sub:skills', not a path; 'C:\\skills' has a one-letter "package".
+            if (sep and len(package) > 1 and package.replace(".", "").replace("_", "").isalnum()
+                    and not folder.startswith(("/", "\\"))):
+                spec = importlib.util.find_spec(package)
+                roots = list(spec.submodule_search_locations or []) if spec else []
+                folders += [Path(root) / folder for root in roots]
+            else:
+                folders.append(Path(ref).expanduser())
+        return folders + env_folders()
+
+    def load_skills(self) -> List[Any]:
+        """Its skills (:class:`~PyHydroGeophysX.agents.skills.Skill`), read from disk.
+
+        Read every time, not cached: a skill being written is seen at once,
+        and the index is a few lines.
+        """
+        from ..skills import discover
+
+        try:
+            return discover(self.skill_folders())
+        except Exception:  # noqa: BLE001 - a missing procedure must not stop a run
+            return []
 
     def tool_for_label(self, label: str) -> str:
         """The name of the tool whose label (or name) is ``label``, or ""."""

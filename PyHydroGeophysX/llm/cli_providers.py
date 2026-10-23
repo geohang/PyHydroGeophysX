@@ -39,8 +39,8 @@ def cli_failure(label, stdout, stderr, login_hint=""):
     """What went wrong in a failed CLI call, in a sentence the user can act on.
 
     The Claude Code CLI answers a failed call with a JSON envelope. A usage limit
-    (HTTP 429) used to come out as the whole envelope followed by "sign in",
-    which sent the user to fix a login that was fine.
+    (HTTP 429) is reported as a usage limit, with the envelope's message, not as
+    a failed login.
 
     >>> envelope = ('{"is_error": true, "api_error_status": 429, "result": '
     ...             '"You have hit your session limit - resets 8:10pm"}')
@@ -126,7 +126,7 @@ class CliProvider(Provider):
         return True, "CLI found; " + self.login_hint
 
     def supports_vision(self):
-        # This first CLI bridge carries text and studio state only.
+        # The CLI bridge carries text and studio state only, no images.
         return False
 
     def _environment(self):

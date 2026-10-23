@@ -156,7 +156,7 @@ def _written_paths(text: str) -> Iterator[str]:
     """Each path a request writes out, read to the longest prefix that exists.
 
     The suffix readers stop at the first space, and field folders have spaces
-    in them ("C:\\...\\APLL data\\TEM\\Sep06"). A path stops at the first
+    in them ("C:\\...\\field data\\TEM\\Sep06"). A path stops at the first
     candidate end, longest first, that names something on disk; only that is
     yielded, never the folders above it.
     """
@@ -471,7 +471,7 @@ class ContextInputAgent(BaseAgent):
     """
 
     #: Extraction questions :meth:`parse_request` keeps in flight at once after
-    #: the router has answered. 1 asks them one after another, as it used to.
+    #: the router has answered. 1 asks them one after another.
     parse_workers = MAX_CONCURRENT_STAGES
 
     def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4",
@@ -757,8 +757,8 @@ class ContextInputAgent(BaseAgent):
 
         Without an API key, or when a model call fails, the request is read by
         the deterministic rules of :meth:`preview_config` instead, with a
-        warning saying so. It used to raise "OPENAI API key not found", so a
-        caller without a key had no configuration at all.
+        warning saying so, so a caller without a key still gets a
+        configuration.
 
         Args:
             user_request: Natural language description of desired workflow
@@ -913,7 +913,7 @@ class ContextInputAgent(BaseAgent):
             name: on for name, on in aspects.items() if isinstance(on, bool)}
         # The router's "no meteorology" is the model's decision and is recorded
         # as one. Nothing else writes use_climate=False: a False nobody decided
-        # would now silence the keyword fallback that runs without a model.
+        # would silence the keyword fallback that runs without a model.
         if aspects.get('climate') is False:
             workflow_config.setdefault('use_climate', False)
 
@@ -1061,11 +1061,10 @@ class ContextInputAgent(BaseAgent):
         is a file the run is to write ("save the model as model.bin") or a
         mesh ("mesh.bin"). Names
         come back in the order the request gives them, which for a time-lapse
-        series puts the baseline it names first; the patterns this replaced
-        listed list items and .ohm files ahead of the rest. In Chinese text the
-        words run onto a name are not part of it: "反演2021-10-08_1400.ohm" was
-        read as two files, that name and itself with "反演" in front, and so as
-        a time-lapse series.
+        series puts the baseline it names first. In Chinese text the words run
+        onto a name are not part of it: "反演2021-10-08_1400.ohm" is one file,
+        not two (that name and itself with "反演" in front, which would read as
+        a time-lapse series).
 
         Examples
         --------
@@ -1981,8 +1980,8 @@ Generate JSON now:"""
             return config
         
         # Set defaults
-        # No 'instrument' default either. A guessed one contradicted the file
-        # header whenever it was wrong, and the loader then refused every file;
+        # No 'instrument' default either. A guessed one contradicts the file
+        # header whenever it is wrong, and the loader then refuses the file;
         # left unset, the run reads the instrument from the header instead.
         defaults = {
             'crs': 'local',
@@ -2020,9 +2019,9 @@ Generate JSON now:"""
             else:
                 # Set defaults for time-lapse
                 if 'time_lapse_method' not in config:
-                    # What the solver actually does. The old default named a
-                    # difference inversion, which this package does not
-                    # implement, and every report then described the run as one.
+                    # What the solver actually does. A difference inversion is
+                    # not implemented here, and naming one would make every
+                    # report describe the run as one.
                     config['time_lapse_method'] = IMPLEMENTED_SCHEME
                 if 'temporal_regularization' not in config:
                     config['temporal_regularization'] = 10.0

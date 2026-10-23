@@ -40,7 +40,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from ..._internal.utils import parse_json_object
+from ..._internal.utils import fence_data, parse_json_object
 from .context import RunContext
 
 #: Configuration keys an adapter may rewrite: plain numeric text tables, where
@@ -289,7 +289,7 @@ def propose(ctx: RunContext, key: str, path: Any, error: str,
     prompt = ADAPTER_PROMPT.format(
         name=Path(str(path)).name, columns=columns,
         meaning=meanings.get(key, "numbers"), error=str(error)[:400],
-        sample=sample,
+        sample=fence_data(sample, f"the first lines of {Path(str(path)).name}"),
         retry=ADAPTER_RETRY.format(failure=str(failure)[:600], previous=previous)
         if previous else "")
     from .recovery import ask_long
@@ -340,7 +340,7 @@ def adapt_file(ctx: RunContext, key: str, error: str,
     Returns
     -------
     str
-        The path of the rewritten file, now a plain numeric table the ordinary
+        The path of the rewritten file, a plain numeric table the ordinary
         readers accept, or "" when nothing was produced. The rewritten file is
         inside the run's output directory; the user's own file is never touched.
     """
@@ -354,7 +354,7 @@ def adapt_file(ctx: RunContext, key: str, error: str,
         return ""
     lead = ""
     # A reader that was approved and failed goes back to the model once with
-    # its error, and the fix is put to the user again. It used to end there.
+    # its error, and the fix is put to the user again.
     for attempt in range(2):
         if not review(ctx, key, path, code, lead + description):
             ctx.note(f"A generated reader for {name} was offered and declined, so that "

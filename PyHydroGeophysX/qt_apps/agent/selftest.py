@@ -271,7 +271,7 @@ def main() -> int:
     min_w = window.minimumSizeHint().width()
     ok &= _check(
         "window minimum fits a 1920 px screen",
-        min_w <= 1860, f"minimum width={min_w} (was 2699 before the relax pass)",
+        min_w <= 1860, f"minimum width={min_w}",
     )
 
     # 9. Vision: capture_view renders a real panel and reaches the model as an image.

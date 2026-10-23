@@ -1,24 +1,19 @@
 """Which figures a report should carry, decided from the request.
 
-The figure set used to be whatever the plotting code happened to reach. That is
-how a run asking for water content produced four resistivity figures and none
-of the product it was asked for: the water-content figure was written inside an
-exception handler and so was drawn only when the others failed. Nothing
-compared the figures produced against the figures the request implied, so
-nothing noticed.
-
-This module is that comparison. The request is read by the model - the same
-model already parsing it - and turned into a set of *topics*. Topics are
-matched against the figures whose data the run actually produced, and the
-result says three things rather than one:
+The figure set is compared against what the request implies, so that a run
+asking for water content does not end with resistivity figures only. The
+request is read by the model - the same model that parses it for the rest of
+the run - and turned into a set of *topics*. Topics are matched against the
+figures whose data the run actually produced, and the result says three things
+rather than one:
 
 - ``draw``: figures to render, ordered so the requested topics come first.
 - ``omitted``: figures deliberately left out, each with the reason, so a
   narrow request ("just the resistivity section") gets a short report instead
   of everything the code can plot.
-- ``missing``: a topic the user asked about for which no data exists. This is
-  the one that matters: it becomes a warning the user sees, rather than a
-  silent absence in the figure list.
+- ``missing``: a topic the user asked about for which no data exists. It
+  becomes a warning the user sees, rather than a silent absence in the figure
+  list.
 
 The asymmetry is deliberate and matches :mod:`PyHydroGeophysX.agents._intent`:
 a topic is included on weak evidence and excluded only on explicit evidence.

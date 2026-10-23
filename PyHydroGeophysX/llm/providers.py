@@ -54,14 +54,14 @@ REQUEST_TIMEOUT_S = float(
 
 #: How long an idle connection to the provider is kept for the next request, in
 #: seconds. The SDKs drop one after 5 s, which is less time than a person takes
-#: to read a proposed step and approve it, so step-by-step chat opened a new TCP
-#: and TLS connection before nearly every request. Override with the
+#: to read a proposed step and approve it, so step-by-step chat would open a new
+#: TCP and TLS connection before nearly every request. Override with the
 #: PHGX_LLM_KEEPALIVE_S environment variable; it never goes below the SDK's own.
 KEEPALIVE_S = float(os.getenv("PHGX_LLM_KEEPALIVE_S", "120"))
 
 
 #: Held while a provider's client is built or discarded. The client is built on
-#: first use, and first use can now come from two threads at once - the warm-up
+#: first use, and first use can come from two threads at once - the warm-up
 #: started when the user begins typing, and the request itself.
 _CLIENT_LOCK = threading.Lock()
 
@@ -82,7 +82,7 @@ def keepalive_http_client(sdk: Any) -> Optional[Any]:
     -------
     httpx.Client or None
         None when the SDK does not expose its default client and limits, which
-        leaves the SDK to build its own exactly as before.
+        leaves the SDK to build its own.
     """
     base = getattr(sdk, "DefaultHttpxClient", None)
     limits = getattr(sdk, "DEFAULT_CONNECTION_LIMITS", None)
@@ -480,11 +480,10 @@ class OpenAIProvider(Provider):
             return self._client
 
     def _warm(self) -> None:
-        # The package and the chat resource: the SDK imports that on first
-        # attribute access, which cost a first request about 0.3 s on its own.
-        # Not openai.resources.responses: building its types holds the GIL for
-        # about 100 ms at a stretch, which froze the window while the user
-        # typed. The first request still imports it, as it always did.
+        # The package and the chat resource, which the SDK otherwise imports on
+        # first attribute access. Not openai.resources.responses: building its
+        # types holds the GIL for long stretches, which would freeze the window
+        # while the user types. The first request imports it.
         importlib.import_module("openai")
         importlib.import_module("openai.resources.chat")
         if self.available()[0]:
@@ -787,9 +786,8 @@ def tier_effort(tier_id: Optional[str]) -> str:
     tier = MODEL_TIERS.get(tier_id or "")
     return str((tier or {}).get("effort") or DEFAULT_EFFORT)
 
-#: Provider names used by callers that predate this module - the Streamlit
-#: sidebar and the agents engine both say "claude" where the adapters say
-#: "anthropic".
+#: Provider names callers use - the Streamlit sidebar and the agents engine
+#: both say "claude" where the adapters say "anthropic".
 PROVIDER_ALIASES = {"claude": "anthropic", "anthropic": "anthropic",
                     "openai": "openai", "gpt": "openai"}
 
@@ -904,7 +902,7 @@ def make_provider(
 def prewarm(provider: Any) -> Optional[threading.Thread]:
     """Start a first request's one-off work on a background thread.
 
-    The first request of a session paid about 1.5 s before anything reached the
+    The first request of a session spends time before anything reaches the
     network: importing the SDK, then the resource module behind the endpoint,
     then building the client. None of that depends on what the user is about to
     ask, so the chat starts it as soon as they begin typing and the request

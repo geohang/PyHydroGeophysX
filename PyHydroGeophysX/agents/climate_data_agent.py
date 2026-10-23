@@ -7,12 +7,10 @@ the ERA5 reanalysis: one HTTPS request, no API key, global coverage, and data to
 within about a week of today. Evapotranspiration is FAO-56 Penman-Monteith
 reference ET0 as Open-Meteo computes it.
 
-This replaced PyDaymet. That package pinned NumPy versions the geophysics stack
-cannot use, so it was reachable only through a second conda environment and a
-subprocess, and it was not installed in the project environment at all - every
-retrieval failed. Daymet is also limited to North America and published about a
-year behind. ERA5 is coarser (0.1-0.25 degrees against Daymet's 1 km), which is
-why the source is carried in the result for the report to name.
+PyDaymet pins NumPy versions the geophysics stack cannot use, and Daymet is
+limited to North America and published about a year behind, so ERA5 is used
+instead. ERA5 is coarser (0.1-0.25 degrees against Daymet's 1 km), which is why
+the source is carried in the result for the report to name.
 
 Open-Meteo data are licensed CC BY 4.0: "Weather data by Open-Meteo.com".
 """

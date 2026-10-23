@@ -1,19 +1,15 @@
-"""The pre-controller agent workflow, kept reachable on purpose.
+"""The fixed-pipeline agent workflow, an alternative to the controller loop.
 
-``BaseAgent.run_unified_agent_workflow`` now builds a run context and lets the
+``BaseAgent.run_unified_agent_workflow`` builds a run context and lets the
 controller in :mod:`PyHydroGeophysX.agents.runtime` choose each step. This
-module holds the implementation it replaced: it classifies the request into a
-workflow type (:func:`_detect_workflow_type`, formerly a method of the removed
-``WorkflowOrchestratorAgent``) and runs that type's fixed sequence. A request
-no type matches is refused; it no longer goes to the removed
-``CodeGenerationAgent``. It covers
-workflow types whose tools cannot be exercised on every machine (ParFlow
-output, SEG-Y files, a GPU), and keeping it callable lets a run that behaves
-differently be compared against the code it replaced.
+module holds the fixed pipeline: it classifies the request into a workflow
+type (:func:`_detect_workflow_type`) and runs that type's fixed sequence. A
+request that no type matches is refused. The pipeline covers workflow types
+whose tools cannot be exercised on every machine (ParFlow output, SEG-Y files,
+a GPU), and it can be run to compare the controller's result with that of the
+fixed sequence.
 
-It lived inside ``base_agent.py``, where every agent module imported it with
-the base class. Reach it as before, through
-``BaseAgent.run_legacy_agent_workflow`` or by setting
+Reach it through ``BaseAgent.run_legacy_agent_workflow`` or by setting
 ``PHGX_LEGACY_WORKFLOW=1``.
 """
 
@@ -29,10 +25,9 @@ from .base_agent import _dates_from_filenames
 
 
 def _detect_workflow_type(config: Dict[str, Any]) -> str:
-    """Classify a configuration into the legacy pipeline's workflow type.
+    """Classify a configuration into the fixed pipeline's workflow type.
 
-    Moved here from ``WorkflowOrchestratorAgent``, which was removed: only this
-    pipeline classifies requests, and the runtime controller does not.
+    Only this pipeline classifies requests; the runtime controller does not.
 
     Args:
         config: Workflow configuration dictionary
@@ -156,9 +151,9 @@ def run_legacy_agent_workflow(workflow_config, api_key, llm_model, llm_provider,
     Parameters
     ----------
     workflow_config : dict
-        Configuration from ``ContextInputAgent``. Normalised in place, as it
-        always was (``data_file`` is copied to ``ert_file``, a raw SEG-Y
-        ``seismic_file`` becomes ``raw_seismic_file``).
+        Configuration from ``ContextInputAgent``. Normalised in place
+        (``data_file`` is copied to ``ert_file``, a raw SEG-Y ``seismic_file``
+        becomes ``raw_seismic_file``).
     api_key, llm_model, llm_provider : str
         Model access for the agents the pipeline creates.
     output_dir : str or Path
@@ -284,13 +279,13 @@ def run_legacy_agent_workflow(workflow_config, api_key, llm_model, llm_provider,
 
 **Water Content Results:**{wc_stats if wc_stats else ' Not computed'}
 
-**Key Benefits:**
-- Seismic-derived structure constrains ERT inversion
-- Layer-specific petrophysics improves accuracy
-- Monte Carlo provides uncertainty quantification
+**Approach:**
+- Seismic-derived structure constrains the ERT inversion
+- Petrophysical parameters are set per layer
+- Monte Carlo sampling gives the water content uncertainty
 """
 
-        # Generate comprehensive report with layer-specific statistics
+        # Generate the report with layer-specific statistics
         if results.get('status') == 'success':
             from .report_agent import ReportAgent
             report_agent = ReportAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
@@ -360,10 +355,7 @@ def run_legacy_agent_workflow(workflow_config, api_key, llm_model, llm_provider,
         # Read the request first, then design the plan from what it asked
         # for, then dispatch exactly the agents the plan names. These two
         # flags gate both the plan below and the execution further down, so
-        # a step is listed if and only if it runs. Hardcoding the plan let
-        # it drift: it advertised a ClimateDataAgent step that configuration
-        # had disabled, and omitted petrophysics for a request that asked
-        # for water content in so many words.
+        # a step is listed if and only if it runs.
         plan_climate = wants_climate(workflow_config)
         if plan_climate and coords_from_config(workflow_config) is None:
             # The reanalysis is sampled at a point, so a position is required. The
@@ -547,7 +539,7 @@ def run_legacy_agent_workflow(workflow_config, api_key, llm_model, llm_provider,
         update_progress("Running time-lapse inversion", 0.45, "This may take several minutes...")
         inversion_input = {
             'time_lapse_data': time_lapse_data,
-            # The loaded containers no longer know where they came from, and
+            # The loaded containers do not record where they came from, and
             # the acquisition time is in the file name: without these the run
             # falls back to a 1..n index and cannot report an interval.
             'source_files': list(time_lapse_files),
@@ -597,26 +589,24 @@ def run_legacy_agent_workflow(workflow_config, api_key, llm_model, llm_provider,
 
             # Update results if optimization improved them
             if evaluation_results.get('status') == 'success' and evaluation_results.get('attempts', 1) > 1:
-                print('✓ Inversion was optimized! Using improved results.')
+                print('Inversion was optimized; using the improved results.')
                 results = evaluation_results['final_results']
             # Carry the evaluation on the results, not only into the report:
             # the audit's quality block and the runner's "needs review"
-            # warning both read it here, so without this a 54.8/100 run was
-            # published as a clean success with no caveat anywhere.
+            # warning both read it here, so without it a low-scoring run
+            # would be published as a clean success with no caveat.
             if isinstance(results, dict):
                 # Without final_results: that key holds this same dict, and
-                # the self-reference makes the results unserialisable - the
-                # audit writer stops with "Circular reference detected" after
-                # the whole workflow has already succeeded. The audit wants
-                # the verdict, not a second copy of the models.
+                # the self-reference would make the results unserialisable
+                # ("Circular reference detected" in the audit writer). The
+                # audit wants the verdict, not a second copy of the models.
                 results['evaluation_results'] = {
                     key: value for key, value in evaluation_results.items()
                     if key != 'final_results'}
 
         # Convert every time step to water content when the request asked
-        # for it. Only the single-survey branch used to do this, so a
-        # time-lapse request for water content returned a resistivity report
-        # with the product silently missing.
+        # for it, so a time-lapse request for water content does not return a
+        # resistivity report with the product silently missing.
         if results.get('status') == 'success' and plan_water_content:
             from .petrophysics_agent import PetrophysicsAgent
             update_progress("Converting to water content", 0.70,
@@ -645,7 +635,7 @@ def run_legacy_agent_workflow(workflow_config, api_key, llm_model, llm_provider,
                 if petro.get('status') != 'success':
                     # One failed step must not discard the ones that worked,
                     # and must not be reported as if nothing was asked for.
-                    print(f"  ⚠ Water content failed at time step {index + 1}: "
+                    print(f"  Warning: water content failed at time step {index + 1}: "
                           f"{petro.get('error')}")
                     break
                 per_step.append(petro)
@@ -688,12 +678,12 @@ Decreasing resistivity indicates increased soil moisture (wetting events).
 Increasing resistivity indicates soil drying (evapotranspiration or drainage).
 """
 
-        # Generate comprehensive report with climate integration if available
+        # Generate the report, with climate integration if available
         if results.get('status') == 'success':
             from .report_agent import ReportAgent
             report_agent = ReportAgent(api_key=api_key, model=llm_model, llm_provider=llm_provider)
 
-            # Prepare comprehensive report input
+            # Prepare the report input
             climate_config = workflow_config.get('climate_config', {})
             dates = climate_config.get('dates', ['N/A', 'N/A']) if climate_config else ['N/A', 'N/A']
 
@@ -750,9 +740,9 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
                             'PET_mm': pet_vals
                         })
 
-            # The survey dates are in the file names the run was given, so
-            # reporting "N/A to N/A" for the study period threw away
-            # something already in hand. Any date the caller supplied wins.
+            # The survey dates are in the file names the run was given, so the
+            # study period is taken from them rather than reported as "N/A to
+            # N/A". Any date the caller supplied wins.
             stamps = _dates_from_filenames(time_lapse_files)
             if start_date == 'N/A' or end_date == 'N/A':
                 if stamps:
@@ -770,8 +760,8 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
                 'coordinates': str(coordinates_str),
                 'elevation': str(site_info_config.get('elevation', 'N/A')),
                 'study_period': f"{start_date} to {end_date}",
-                # Says what this run did. The fixed wording advertised
-                # climate integration on runs that had no climate data.
+                # Says what this run did: climate integration is named only
+                # when the run has climate data.
                 'description': str(
                     'Time-lapse ERT monitoring with climate integration for '
                     'subsurface moisture dynamics.' if plan_climate else
@@ -884,8 +874,7 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
 
         export_requested = workflow_config.get('export_for_inversion')
         if export_requested is None:
-            # Never defined in this function before: every legacy ERT
-            # processing run without export_for_inversion hit a NameError.
+            # No explicit flag: export when the request asks for it.
             user_request_lower = str(workflow_config.get('user_request', '')).lower()
             export_requested = 'export' in user_request_lower or 'bert' in user_request_lower or 'pgimli' in user_request_lower
 
@@ -1020,9 +1009,8 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
         # Detect if user wants water content conversion
         # Check explicit flag or presence of petrophysical parameters
         # One intent decision, shared with the time-lapse branch, so the two
-        # cannot disagree about what the same sentence meant. The keyword
-        # lists this replaces were exact substring matches, and the typo in
-        # "estimate the water conent" matched none of them.
+        # cannot disagree about what the same sentence meant. It does not
+        # depend on exact keyword matches, so a misspelling still counts.
         skip_petrophysics = not wants_water_content(workflow_config)
 
         if skip_petrophysics:
@@ -1229,7 +1217,7 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
                 {'step': 'Convert to Water Content', 'agent': 'PetrophysicsAgent', 
                  'description': 'Apply petrophysics with Monte Carlo', 'outputs': ['water_content', 'uncertainty']},
                 {'step': 'Generate Report', 'agent': 'ReportAgent', 
-                 'description': 'Create comprehensive report', 'outputs': ['report']}
+                 'description': 'Create the report', 'outputs': ['report']}
             ]
 
             # Build detailed interpretation including petrophysical parameters used
@@ -1277,7 +1265,7 @@ Increasing resistivity indicates soil drying (evapotranspiration or drainage).
 - Uncertainty (std): {np.nanmean(petro_results.get('water_content_std', [0])):.3f}
 """
 
-        # Generate comprehensive report
+        # Generate the report
         if results.get('status') == 'success':
             update_progress("Generating report", 0.85, "Creating visualizations and summary")
             from .report_agent import ReportAgent
@@ -1735,10 +1723,9 @@ Based on typical velocity-depth relationships:
             raise ValueError(f"Seismic processing failed: {results.get('error')}")
 
     elif workflow_type == 'custom':
-        # A request no workflow type matches. Out-of-scope requests used to go
-        # to CodeGenerationAgent, which wrote and ran model-generated code; that
-        # agent was removed, so every such request gets the error an in-scope
-        # request without data files always got.
+        # A request no workflow type matches is refused with the same error as
+        # an in-scope request without data files. The pipeline never writes or
+        # runs model-generated code.
         raise ValueError(
             'Could not infer workflow type from config! '
             'Please provide at least ert_file or data_file.'

@@ -1,7 +1,6 @@
 """The run transcript: what was asked, what was done, and what was found.
 
-One object, passed to every tool, holding two separate things that used to be
-conflated in a results dictionary:
+One object, passed to every tool, holding two separate things:
 
 - **Artifacts** - the data itself: loaded surveys, recovered models, meshes,
   arrays. Large, and of interest only to the tool that consumes them.
@@ -10,15 +9,13 @@ conflated in a results dictionary:
   including the model choosing the next action and the report describing the
   run afterwards.
 
-Keeping them apart is what makes a controller loop affordable. The model reads
+Keeping them apart keeps the controller loop cheap. The model reads
 :meth:`RunContext.transcript`, which is a few hundred words whatever the run
-did; it never sees a mesh. This is the same discipline a tool-using assistant
-applies when it summarises a tool result instead of pasting it.
+did; it never sees a mesh.
 
-It also removes a whole class of reporting bug. The execution plan is derived
-from the steps that ran (:meth:`RunContext.plan`) rather than written by hand
-beside them, so a plan cannot describe a step that did not happen - which is
-exactly what it used to do.
+The execution plan is derived from the steps that ran
+(:meth:`RunContext.plan`) rather than written by hand beside them, so a plan
+cannot describe a step that did not happen.
 """
 
 import time
@@ -52,6 +49,10 @@ class Step:
     #: is why this run chose it; without a model to ask there is no reason, and
     #: the plan then read "next available step" for every row.
     purpose: str = ""
+    #: The model's stated confidence, 0 to 1, in the decision that led to this
+    #: step; None when no model decided it. A rough signal, recorded so runs
+    #: can show whether it separates good decisions from bad ones.
+    confidence: Optional[float] = None
 
     def line(self) -> str:
         """The step as one line of transcript."""
@@ -270,9 +271,9 @@ class RunContext:
         """How many times ``tool`` has been tried, successfully or not.
 
         A ``blocked`` step is not an attempt: the tool never ran, because
-        something it needed was missing or it was not on offer. Counting it made
-        a premature choice permanent - a conversion named before the evaluation
-        existed was never offered again once the evaluation did exist.
+        something it needed was missing or it was not on offer. Counting it
+        would make a premature choice permanent: a conversion named before the
+        evaluation existed would never be offered again once it did.
         """
         since = self.reopened.get(tool, 0)
         return sum(1 for index, s in enumerate(self.steps)
@@ -344,8 +345,8 @@ class RunContext:
     def plan(self) -> List[Dict[str, Any]]:
         """The execution plan, derived from what actually ran.
 
-        Returns the shape the report and the audit already consume, so a plan
-        can no longer disagree with the run it describes.
+        Returns the shape the report and the audit consume, so a plan cannot
+        disagree with the run it describes.
         """
         return [{"step": step.description or step.tool,
                  "agent": step.agent or step.tool,
@@ -353,7 +354,8 @@ class RunContext:
                  "reason": step.reason,
                  "status": step.status,
                  "seconds": round(step.seconds, 1),
-                 "outputs": list(step.produced)}
+                 "outputs": list(step.produced),
+                 "confidence": step.confidence}
                 for step in self.steps]
 
     def unfinished(self) -> List[str]:

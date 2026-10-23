@@ -41,10 +41,10 @@ Rules:
 def configure(payload: Dict[str, Any]) -> Dict[str, Any]:
     """The run's configuration from the request: GeoSAGE's ContextAgent.
 
-    Placeholder for the port: today it only carries the request and the input
-    files through. The ContextAgent turns the request into a complete
-    executable configuration - data fields, inversion settings, grouping
-    settings - on top of the defaults.
+    A placeholder: it only carries the request and the input files through.
+    The ContextAgent is to turn the request into a complete executable
+    configuration - data fields, inversion settings, grouping settings - on top
+    of the defaults.
     """
     config = {"user_request": str(payload.get("request") or "").strip()}
     config.update(payload.get("inputs") or {})

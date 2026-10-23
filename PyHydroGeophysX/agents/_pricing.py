@@ -28,7 +28,7 @@ DEFAULT_PROVIDER_RATES_USD_PER_MTOK: Dict[Tuple[str, str], Tuple[float, float]] 
     ("claude", "claude-3-haiku-20240307"): (0.25, 1.25),
     ("claude", "claude-3-5-sonnet-20241022"): (3.00, 15.00),
     ("claude", "claude-3-opus-20240229"): (15.00, 75.00),
-    # Current Anthropic generation (July 2026). "claude" and "anthropic" keys both
+    # Current Anthropic generation. "claude" and "anthropic" keys both
     # work because different entry points pass different provider labels.
     ("claude", "claude-sonnet-5"): (3.00, 15.00),
     ("claude", "claude-sonnet-4-6"): (3.00, 15.00),

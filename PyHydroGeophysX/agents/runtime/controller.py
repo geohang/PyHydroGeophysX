@@ -1,8 +1,8 @@
 """The loop: read the transcript, choose one action, observe, choose again.
 
-This is the whole difference from the pipeline it replaces. A pipeline decides
-everything before it starts; a loop decides one step at a time, with the
-results of the previous steps in front of it. That is what lets a run react -
+A fixed pipeline decides everything before it starts; this loop decides one
+step at a time, with the results of the previous steps in front of it. That is
+what lets a run react -
 to an inversion that did not converge, to a mesh with no layering, to a file
 that turned out to hold something other than what its name suggested.
 
@@ -11,9 +11,9 @@ Two properties matter more than the loop itself:
 **It always terminates, and always produces something.** A model that keeps
 choosing badly is bounded by ``max_steps``; a model that cannot be reached at
 all falls through to :func:`next_by_policy`, which walks the tools in
-dependency order. A run without an API key therefore behaves exactly like the
-old pipeline - it simply stops adapting. This matters because the previous
-design's failure mode was an exception mid-sequence that lost the whole run.
+dependency order. A run without an API key therefore behaves like the fixed
+pipeline - it simply stops adapting. An exception mid-sequence does not lose
+the whole run.
 
 **A refusal is data.** When the controller names a tool that cannot run, or one
 that does not exist, that becomes a recorded step with the reason, and the loop
@@ -88,6 +88,7 @@ Settings that may be changed, with their current values:
 
 Reply with JSON only - no prose, no code fence. Your reasoning comes first:
 {{"why": "<what the evidence so far shows, and why this is the best next action>",
+  "confidence": <0 to 1: how likely this is the action an expert would take here>,
   "plan": ["<the step names you intend to run after this one, in order>"],
   "check_after": ["<steps in your plan whose results you want to see before going on>"],
   "tool": "<a step name from either list>"}}
@@ -104,6 +105,8 @@ Variants of the same reply:
   add "settings": {{"<key>": <new value>}}
 - to look at a product's numbers before deciding: "inspect": "<a name under Available now>"
   in place of "tool"
+- to read a written procedure (when the list above has them): "read_skill": "<its name>"
+  in place of "tool"
 - to use a studio page (listed above when the studio is open): "studio": {{"module":
   "<page key>", "action": "describe" or an action name, "args": {{...}}}} in place of "tool"
 - to leave out route steps that do not serve the goal (data the request never named,
@@ -111,6 +114,7 @@ Variants of the same reply:
   is your call, not put to the user; the steps are recorded as left out with your
   reason, and the steps after them that need their products drop off the route too.
   A step the report or a product the goal asks for still needs is not left out.
+  With a confidence below {low_confidence} it is put to the user instead.
 - for something no step does: "script": "<what a short Python script should do>" in
   place of "tool"
 - when a choice is the user's to make: "ask": "<question>", "options": ["..", ".."],
@@ -123,7 +127,9 @@ Rules:
   implausible model, a product the goal implies that the route leaves out, a check
   that would confirm or overturn a conclusion. Put that reason in "why"; it is what
   the user reads when asked.
-- Look before you change: inspect a product when its numbers decide what to do.
+- Look before you change: inspect a product when its numbers decide what to do, and
+  read a written procedure (listed above, when there are any) before a step it covers.
+- Give "confidence" honestly: low when the evidence is thin or two actions are close.
 - A step run again changes what the steps after it read; they run again after it.
   If the report was already written, write it again so it describes the final results.
 - If the user declined a proposal, accept it and carry on; never propose it again.
@@ -136,13 +142,38 @@ Rules:
 """
 
 
+#: Below this confidence, a decision the model may otherwise take alone -
+#: leaving route steps out - is put to the user instead. A model's stated
+#: confidence is a rough signal, so it only ever adds a question; it never
+#: lets a decision skip one.
+LOW_CONFIDENCE = 0.5
+
+
+def _confidence(value: Any) -> Optional[float]:
+    """A stated confidence as a number in [0, 1], or None.
+
+    Examples
+    --------
+    >>> _confidence(0.83), _confidence("70%"), _confidence("high"), _confidence(3)
+    (0.83, 0.7, None, None)
+    """
+    text = str(value).strip() if value is not None and not isinstance(value, bool) else ""
+    scale = 100.0 if text.endswith("%") else 1.0
+    try:
+        number = float(text.rstrip("%")) / scale
+    except ValueError:
+        return None
+    return round(number, 3) if 0.0 <= number <= 1.0 else None
+
+
 def _parse_choice(reply: Any) -> Optional[Dict[str, Any]]:
     """The controller's decision, or None when the reply is unusable.
 
     ``settings`` is kept when the reply carries a dict of them: it is how a
     decision follows a note from the user (:data:`STEERING_PROMPT`), and in a
-    flexible run how it proposes a change. ``plan``, ``inspect``, ``script`` and
-    ``ask`` are the flexible run's (:data:`FLEXIBLE_PROMPT`).
+    flexible run how it proposes a change. ``plan``, ``confidence``, ``inspect``,
+    ``read_skill``, ``script`` and ``ask`` are the flexible run's
+    (:data:`FLEXIBLE_PROMPT`); a confidence is kept only as a number in [0, 1].
 
     Examples
     --------
@@ -151,6 +182,8 @@ def _parse_choice(reply: Any) -> Optional[Dict[str, Any]]:
     {'inversion_params': {'lambda': 20}}
     >>> _parse_choice('{"why": "check", "inspect": "inversion_results"}')['inspect']
     'inversion_results'
+    >>> _parse_choice('{"why": "qc first", "confidence": 0.4, "read_skill": "ert-data-quality"}')
+    {'read_skill': 'ert-data-quality', 'why': 'qc first', 'confidence': 0.4}
     >>> _parse_choice('{"why": "no TDEM data", "skip": "load_tdem_data"}')['skip']
     ['load_tdem_data']
     >>> _parse_choice('not json') is None
@@ -166,6 +199,9 @@ def _parse_choice(reply: Any) -> Optional[Dict[str, Any]]:
         extra["plan"] = [str(p)[:160] for p in answer["plan"][:12]]
     if isinstance(answer.get("check_after"), list):
         extra["check_after"] = [str(p)[:160] for p in answer["check_after"][:12]]
+    confidence = _confidence(answer.get("confidence"))
+    if confidence is not None:
+        extra["confidence"] = confidence
     why = str(answer.get("why", ""))
     if answer.get("done"):
         return {"done": True, "why": why, **extra}
@@ -180,7 +216,7 @@ def _parse_choice(reply: Any) -> Optional[Dict[str, Any]]:
     if isinstance(skip, list) and any(str(s).strip() for s in skip):
         return {"skip": [str(s).strip() for s in skip if str(s).strip()][:12],
                 "why": why, **extra}
-    for kind in ("inspect", "script", "ask"):
+    for kind in ("inspect", "read_skill", "script", "ask"):
         value = answer.get(kind)
         if isinstance(value, str) and value.strip():
             choice = {kind: value.strip(), "why": why, **extra}
@@ -216,7 +252,7 @@ def next_by_policy(ctx: RunContext,
 
     Takes the first tool whose requirements are met and which has not already
     run. Registration order is dependency order, so this reproduces the fixed
-    pipeline - which is the right fallback: without a model the run should
+    pipeline - the right fallback: without a model the run should
     still do the obvious thing, it just cannot reconsider.
 
     Parameters
@@ -375,8 +411,7 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
         notes the tool's module and returns immediately, while "step by step"
         supplies one that shows the user what is about to happen and waits.
         Both drive the same loop over the same tools, so a step behaves
-        identically whichever way it was reached - the previous design had two
-        separate code paths that could and did drift.
+        identically whichever way it was reached.
     recovery : bool
         Whether a failed step may be diagnosed and retried once with different
         settings. On by default, because the alternative - recording the failure
@@ -451,12 +486,17 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
     flexible = bool(flexible and ask is not None and prompt is None)
     # The model's own plan, followed without asking it again until it wants to
     # be asked (FLEXIBLE_PROMPT): the steps it means to run next, and the ones
-    # whose results it wants to see first. Asking before every step made a
-    # flexible run three times as slow as the fixed one for the same steps.
+    # whose results it wants to see first. Asking before every step would make
+    # a flexible run much slower than the fixed route for the same steps.
     planned: List[str] = []
     checks: List[str] = []
     warned = len(ctx.warnings)
+    # The model's stated confidence in its last decision, and the step it went
+    # to: kept on that step, so runs can be checked for whether it means anything.
+    stamp: Optional[tuple] = None
     for index in range(max_steps):
+        _stamp_confidence(ctx, stamp)
+        stamp = None
         # Between steps is where the user's pause and notes take effect: the
         # step that was running has finished, and nothing new has started.
         if steer is not None and not steer.checkpoint(
@@ -477,6 +517,8 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
             choice = follow
         else:
             choice = _decide(ctx, ask, tools, prompt, finish, notes, flexible=flexible)
+            if choice is not None and choice.get("confidence") is not None:
+                stamp = (len(ctx.steps), choice["confidence"])
             if flexible and choice is not None:
                 # A look, a script or a question is read before going on.
                 planned = ([p for p in choice.get("plan") or [] if p in registry]
@@ -487,12 +529,13 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
             _answer_notes(ctx, steer, notes, choice, heard=ask is not None)
         if choice is not None and choice.get("done") and not _may_finish(ctx, finish):
             # "done" is a valid answer only once a report exists: the prompt
-            # says so and forced_choice counts on it. Taken at its word here, a
-            # model answering "done" with steps on offer ended the run on the
-            # spot - nothing run, no report, reported as a success. The step
-            # taken instead records why, which is how the model reads the
+            # says so and forced_choice counts on it. Taken at its word, a
+            # model answering "done" with steps on offer would end the run on
+            # the spot - nothing run, no report, reported as a success. The
+            # step taken instead records why, which is how the model reads the
             # refusal on its next turn.
             name = next_by_policy(ctx, tools)
+            stamp = None
             choice = None if name is None else {
                 "tool": name,
                 "why": "the model answered 'done' before a report was written, "
@@ -523,11 +566,11 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
             continue
         if deviation is None and tool is not None and name not in {t.name for t in options}:
             # Only what the menu offered may run. `invoke` checks requirements
-            # and nothing else, so a reply naming an unlisted tool ran it: a
-            # single-survey inversion replaced a time-lapse result, a climate
-            # retrieval ran with climate switched off. Recorded as blocked - it
-            # never ran - so the model reads why on its next turn, and the tool
-            # stays on offer for when it does apply.
+            # and nothing else, so a reply naming an unlisted tool would run
+            # it: a single-survey inversion could replace a time-lapse result,
+            # a climate retrieval could run with climate switched off. Recorded
+            # as blocked - it never ran - so the model reads why on its next
+            # turn, and the tool stays on offer for when it does apply.
             why = tool.unavailable_because(ctx)
             ctx.begin(name, reason, agent=tool.agent,
                       description=tool.label or name, purpose=tool.description)
@@ -618,6 +661,7 @@ def run_controller(ctx: RunContext, ask: Optional[Callable[[str], str]] = None,
                 pass
     else:
         ctx.ended = STEP_LIMIT
+    _stamp_confidence(ctx, stamp)
     return ctx
 
 
@@ -822,6 +866,22 @@ def _act_off_route(ctx: RunContext, choice: Dict[str, Any], ask: Any,
 
     Returns the step hook's verdict when a studio action was put to it -
     :data:`STOP` ends the run - and :data:`PROCEED` otherwise.
+
+    Examples
+    --------
+    >>> from .tools import Tool
+    >>> reg = {name: Tool(name, '', lambda c: ('', {}), produces=(name,))
+    ...        for name in ('a', 'b', 'c', 'report_files')}
+    >>> ctx = RunContext('x')
+    >>> _skip_agreed(ctx, ['a', 'b'], 'maybe not needed', 'Load data')
+    False
+    >>> for choice in ({'skip': ['a'], 'confidence': 0.9}, {'skip': ['b']},
+    ...                {'skip': ['a', 'b', 'c'], 'confidence': 0.9}):
+    ...     verdict = _act_off_route(ctx, choice, None, None, tools=reg)
+    >>> [(s.tool, s.status) for s in ctx.steps]
+    [('skip_steps', 'blocked'), ('skip_steps', 'blocked'), ('c', 'skipped')]
+    >>> print(ctx.steps[0].error)
+    The user kept these steps on the route: a.
     """
     why = str(choice.get("why", ""))
     before = len(ctx.steps)
@@ -833,12 +893,29 @@ def _act_off_route(ctx: RunContext, choice: Dict[str, Any], ask: Any,
                                                "the run has shown.")
         else:
             toolbox.inspect_artifact(ctx, str(choice["inspect"]))
+    elif choice.get("read_skill"):
+        if not toolbox.skill_reads_left(ctx):
+            ctx.begin("skill:", why, description="Read a procedure")
+            ctx.finish(status="blocked", error="No more procedure reads in this run; act "
+                                               "on what you have read.")
+        else:
+            toolbox.read_skill(ctx, str(choice["read_skill"]), why)
     elif choice.get("studio"):
         verdict = _use_studio(ctx, choice["studio"], why, on_step, approves_steps,
                               route_next)
     elif choice.get("skip"):
-        # The model's own call; it asks nobody and spends no proposal.
-        _skip_steps(ctx, list(choice["skip"]), why, tools, finish)
+        kept = {name for key in toolbox.declined(ctx) if key.startswith("skip:")
+                for name in key[len("skip:"):].split(",")}
+        names = [name for name in choice["skip"] if name not in kept]
+        if not names:
+            ctx.begin("skip_steps", why, agent=_assistant(ctx), description="Leave steps out")
+            ctx.finish(status="blocked", error="The user kept these steps on the route: "
+                       + ", ".join(choice["skip"]) + ".")
+        else:
+            # The model's own call unless it is unsure; steps the user kept stay.
+            unsure = choice.get("confidence") is not None and choice["confidence"] < LOW_CONFIDENCE
+            if not unsure or _skip_agreed(ctx, names, why, route_next):
+                _skip_steps(ctx, names, why, tools, finish)
     elif not toolbox.proposals_left(ctx):
         ctx.begin("ask_user" if choice.get("ask") else "temporary_script", why,
                   description="Off-route proposal")
@@ -864,6 +941,40 @@ def _act_off_route(ctx: RunContext, choice: Dict[str, Any], ask: Any,
         except Exception:  # noqa: BLE001 - a UI hook must not stop a run
             pass
     return verdict
+
+
+def _skip_agreed(ctx: RunContext, names: List[str], why: str, route_next: str) -> bool:
+    """Put route steps the model is unsure of leaving out to the user; True if agreed.
+
+    Staying on the route is the default, so with nobody to answer, or no
+    questions left, the steps stay.
+
+    Examples
+    --------
+    >>> ctx = RunContext('x')
+    >>> _skip_agreed(ctx, ['load_tdem_data'], 'maybe no TEM', 'Load TEM')
+    False
+    >>> ctx.proposals[0]['title'], ctx.proposals[0]['accepted']
+    ('leave out load_tdem_data', False)
+    """
+    key = "skip:" + ",".join(sorted(names))
+    if key in toolbox.declined(ctx) or not toolbox.proposals_left(ctx):
+        ctx.begin("skip_steps", why, agent=_assistant(ctx), description="Leave steps out")
+        ctx.finish(status="blocked", error=(
+            "The user kept these steps on the route." if key in toolbox.declined(ctx) else
+            "Not sure enough to leave these steps out alone, and no questions are left: "
+            "they stay on the route."))
+        return False
+    return toolbox.propose(ctx, key, f"leave out {', '.join(names)}", why, route_next,
+                           name=_assistant(ctx))
+
+
+def _stamp_confidence(ctx: RunContext, stamp: Optional[tuple]) -> None:
+    """Record a decision's stated confidence on the step it led to."""
+    if stamp is not None and stamp[0] < len(ctx.steps):
+        step = ctx.steps[stamp[0]]
+        if step.confidence is None:
+            step.confidence = stamp[1]
 
 
 def _use_studio(ctx: RunContext, request: Dict[str, Any], why: str,
@@ -1064,7 +1175,8 @@ def _decide(ctx: RunContext, ask: Optional[Callable[[str], str]],
                 toolbox=toolbox.toolbox_text(ctx, TOOLS if tools is None else tools,
                                              route=[step["tool"] for step in ahead],
                                              finish=finish),
-                settings=json.dumps(settings_for(ctx), default=str)[:2500] or "{}")
+                settings=json.dumps(settings_for(ctx), default=str)[:2500] or "{}",
+                low_confidence=LOW_CONFIDENCE)
         else:
             prompt = (template or CONTROLLER_PROMPT).format(transcript=ctx.transcript(),
                                                             menu=menu(ctx, tools))
@@ -1085,7 +1197,7 @@ def _decide(ctx: RunContext, ask: Optional[Callable[[str], str]],
         if choice is not None:
             return choice
         # The model could not be reached or did not answer usably. Recording it
-        # matters: a run that silently fell back to the fixed order looks
+        # matters: a run that silently falls back to the fixed order looks
         # identical to one the model drove, and the two are not the same run.
         # The reason goes with it - a usage limit is not a bad reply.
         ctx.note(f"The controller could not get a usable decision from the model "

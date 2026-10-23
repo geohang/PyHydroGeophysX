@@ -2,8 +2,9 @@
 
 Each tool is offered to the controller only once what it ``requires`` exists,
 so the order below is a consequence of the data, not a script. The handlers
-are placeholders for the port from https://github.com/ZhengyangFang/GeoSAGE;
-each says what it has to do and what it must return. A handler takes the
+are placeholders until the stages are implemented (the method is that of
+https://github.com/ZhengyangFang/GeoSAGE); each says what it has to do and
+what it must return. A handler takes the
 :class:`~PyHydroGeophysX.agents.runtime.context.RunContext` and returns
 ``(summary, outputs)``: one sentence a user can read, and a dict of the
 artifacts named in ``produces``. ``ctx.config`` holds the configuration from

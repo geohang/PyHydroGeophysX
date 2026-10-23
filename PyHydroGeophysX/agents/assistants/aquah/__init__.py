@@ -62,4 +62,5 @@ ASSISTANT = Assistant(
     ordered_roles=("time_lapse_files", "mt_files"),
     folder_classifier=True,
     providers=("openai", "anthropic", "openai_compatible", "codex_cli", "claude_code"),
+    skills=("PyHydroGeophysX.agents.assistants.aquah:skills",),
 )

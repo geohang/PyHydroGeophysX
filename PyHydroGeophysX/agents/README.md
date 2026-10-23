@@ -1,10 +1,10 @@
 # Multi-Agent System for Automated Geophysical Workflows
 
-This module provides a GPT API-based multi-agent system for automating geophysical data processing workflows in PyHydroGeophysX.
+This module is a multi-agent system that automates geophysical data processing workflows in PyHydroGeophysX. Its agents call a large language model (OpenAI, Gemini or Claude) where a decision or an interpretation is needed.
 
 ## Overview
 
-The multi-agent system coordinates specialized AI agents to execute the complete workflow:
+The agents are coordinated to run the workflow:
 
 **"load ERT → invert → convert to water content → report"**
 
@@ -19,7 +19,7 @@ With optional seismic data integration for structure-constrained inversion and c
 1. **ERTLoaderAgent**: Loads and quality-checks ERT field data from various instruments
 2. **ERTInversionAgent**: Performs ERT inversion with optional structural constraints
 3. **WaterContentAgent**: Converts resistivity to water content using petrophysical models
-4. **ReportAgent**: Generates comprehensive reports with visualizations - for an ERT run, with a section for each other method beside it, and for a run without ERT (TDEM, seismic, MT, gravity/magnetics) a report of its own
+4. **ReportAgent**: Writes reports with figures - for an ERT run, with a section for each other method beside it, and for a run without ERT (TDEM, seismic, MT, gravity/magnetics) a report of its own
 5. **SeismicAgent** (optional): Processes seismic refraction data for structural constraints
 6. **ClimateDataAgent** (optional): Fetches meteorological data and computes PET for hydrologic analysis
 7. **TDEMAgent** (optional): Inverts TDEM soundings, and TEM2Go/TEMcompany or tTEM surveys as laterally constrained 1D sections
@@ -27,13 +27,13 @@ With optional seismic data integration for structure-constrained inversion and c
 
 ## Key Features
 
-- 🤖 **AI-Enhanced**: Each agent uses LLM API (GPT/Gemini/Claude) for intelligent parameter selection and interpretation
-- 🔄 **Automated Workflow**: Complete end-to-end processing with minimal user input
-- 📊 **Quality Control**: Automatic data validation and quality metrics
-- 🧪 **Uncertainty Quantification**: Monte Carlo analysis for water content estimates
-- 📈 **Comprehensive Reports**: Automatic generation of reports with visualizations
-- 🌊 **Seismic Integration**: Optional structure-constrained inversion using seismic data
-- ☁️ **Climate Integration**: Optional meteorological data and PET for hydrologic context
+- **LLM support**: each agent can use an LLM API (OpenAI, Gemini or Claude) to choose parameters and to interpret results
+- **Automated workflow**: end-to-end processing with minimal user input
+- **Quality control**: automatic data validation and quality metrics
+- **Uncertainty quantification**: Monte Carlo analysis for water content estimates
+- **Reports**: automatic reports with figures
+- **Seismic integration**: optional structure-constrained inversion using seismic data
+- **Climate integration**: optional meteorological data and PET for hydrologic context
 
 ## Installation
 
@@ -211,7 +211,7 @@ if results['status'] == 'success':
    - LLM suggests parameter distributions
 
 5. **Generate Report**
-   - Creates comprehensive markdown/HTML report
+   - Creates a markdown/HTML report
    - Generates visualization plots
    - Includes climate context if available
    - LLM provides narrative summary
@@ -353,11 +353,11 @@ jupyter lab examples/Ex_multi_agent_workflow.ipynb
 
 When an LLM API key is provided (OpenAI/Gemini/Claude), agents can:
 
-1. **Recommend Parameters**: Suggest optimal inversion and petrophysical parameters
-2. **Interpret Results**: Provide expert interpretation of results
-3. **Quality Assessment**: Assess data quality and identify issues
-4. **Generate Reports**: Create narrative summaries and recommendations
-5. **Climate Context**: Explain resistivity changes in context of climate events
+1. **Recommend parameters**: suggest inversion and petrophysical parameters
+2. **Interpret results**: describe and interpret the results
+3. **Assess quality**: assess data quality and point out issues
+4. **Write reports**: write narrative summaries and recommendations
+5. **Give climate context**: relate resistivity changes to climate events
 
 ## Dependencies
 
@@ -418,13 +418,16 @@ pip install "cupy-cuda12x[ctk]"
 If you use the multi-agent system in your research, please cite PyHydroGeophysX:
 
 ```bibtex
-@software{chen2025pyhydrogeophysx,
-  author = {Chen, Hang and Niu, Qifei and Wu, Yuxin},
-  title = {PyHydroGeophysX: An Extensible Open-Source Platform for 
-           Bridging Hydrological Models and Geophysical Measurements},
-  year = {2025},
-  publisher = {Water Resources Research (under review)},
-  url = {https://github.com/geohang/PyHydroGeophysX}
+@article{chen2026pyhydrogeophysx,
+  author  = {Chen, Hang and Niu, Qifei and Wu, Yuxin},
+  title   = {PyHydroGeophysX: An Extensible Open-Source Platform for Integrating
+             Hydrological Models with Geophysical Measurements},
+  journal = {SoftwareX},
+  volume  = {34},
+  pages   = {102710},
+  year    = {2026},
+  doi     = {10.1016/j.softx.2026.102710},
+  url     = {https://github.com/geohang/PyHydroGeophysX}
 }
 ```
 

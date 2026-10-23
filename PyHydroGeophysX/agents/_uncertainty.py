@@ -5,18 +5,17 @@ absence of one — but printed as "water content 0.028 to 0.162" it reads like a
 finding. This module turns the uncertainty the Monte Carlo already computed into
 a statement about what the numbers can and cannot support.
 
-The run that prompted it converted resistivity to water content across five
-surveys and reported values spanning 0.028-0.162 with a mean standard deviation
-of 0.081. That error bar covers 60% of the whole range: the driest and wettest
-cells are not distinguishable, so no wetting or drying pattern in that image is
-established. Two causes compound, and both are worth naming separately because
-the user can act on the second:
+When the mean standard deviation of a water-content image covers a large part
+of the range of its values, the driest and wettest cells are not
+distinguishable, so no wetting or drying pattern in that image is established.
+Two causes compound, and both are named separately because the user can act on
+the second:
 
 - The petrophysical parameters were not supplied, so Archie exponents and
-  saturated resistivity were generated at a "low information" level with 100%
+  saturated resistivity are generated at a "low information" level with 100%
   standard-deviation scaling. That spread propagates straight into the answer.
-- Every mesh cell carried a distinct marker, so the layered model collapsed to
-  one layer and a single parameter set was applied to soil, weathered rock and
+- Every mesh cell carries a distinct marker, so the layered model collapses to
+  one layer and a single parameter set is applied to soil, weathered rock and
   bedrock alike.
 """
 
@@ -106,6 +105,21 @@ def water_content_reliability(results: Dict[str, Any],
             f"The mean uncertainty (+/-{typical:.3f}) is {ratio:.0%} of the range of "
             f"the estimate, so contrasts across the section are resolved well enough "
             f"to compare.")
+    # What the Monte Carlo varied. A synthetic check with the truth known
+    # (TL_measurements, day 330) found the parameters-only band too narrow
+    # below a few metres and where coverage was low; drawing the inversion's
+    # linearised posterior as well narrowed the gap but did not close it, since
+    # a smoothness prior cannot describe a sharp boundary.
+    if _inversion_drawn(results):
+        verdict += (" This +/- combines the petrophysical parameters with the inversion's "
+                    "linearised uncertainty; that part leaves out the smoothing of sharp "
+                    "boundaries, so the error is still larger than stated at depth and "
+                    "where coverage is low.")
+    else:
+        verdict += (" This +/- is the spread from the petrophysical parameters alone; the "
+                    "inversion's smoothing and the data noise are not in it, so the error "
+                    "is larger than stated where the model is poorly resolved, at depth "
+                    "and where coverage is low.")
 
     if not calibrated:
         verdict += (" It rests on petrophysical parameters that were not calibrated for "
@@ -113,6 +127,20 @@ def water_content_reliability(results: Dict[str, Any],
                     "them against samples or logs is what would narrow this.")
     return {"ratio": ratio, "usable": ratio < _UNUSABLE,
             "calibrated": calibrated, "sentence": verdict}
+
+
+def _inversion_drawn(results: Dict[str, Any]) -> bool:
+    """Whether the conversion drew the inversion's own uncertainty as well.
+
+    >>> _inversion_drawn({"inversion_uncertainty": True}), _inversion_drawn({})
+    (True, False)
+    """
+    if not isinstance(results, dict):
+        return False
+    if results.get("inversion_uncertainty"):
+        return True
+    steps = results.get("time_lapse_water_content") or []
+    return bool(steps) and isinstance(steps[0], dict) and bool(steps[0].get("inversion_uncertainty"))
 
 
 def _relationship(results: Dict[str, Any]) -> str:

@@ -1,19 +1,16 @@
 """The workflow entry point, as a controller run.
 
-``BaseAgent.run_unified_agent_workflow`` keeps its signature and its four-value
-return, because the desktop app, the Streamlit app and the one-click runner all
-call it. What changed is everything behind that signature: instead of
-classifying the request into one of eight workflow types and running that
-type's fixed sequence, it builds a run context and lets the controller choose
-each step from the tools whose inputs exist.
+``BaseAgent.run_unified_agent_workflow`` returns four values and is called by
+the desktop app, the Streamlit app and the one-click runner. Behind that
+signature it builds a run context and lets the controller choose each step from
+the tools whose inputs exist, rather than classifying the request into one of
+eight workflow types and running that type's fixed sequence.
 
-The old implementation is still present as
-``BaseAgent.run_legacy_agent_workflow``. It is not dead weight and not
-indecision: it covers workflow types whose tools cannot be exercised on this
-machine - there is no ParFlow output, no SEG-Y file and no GPU here - and
-keeping it reachable means a run that behaves differently can be compared
-against the code it replaced instead of argued about. Set
-``PHGX_LEGACY_WORKFLOW=1`` to use it.
+The fixed-sequence implementation is available as
+``BaseAgent.run_legacy_agent_workflow``. It covers workflow types whose tools
+cannot be exercised on every machine (ParFlow output, SEG-Y files, a GPU), and
+a controller run can be compared against it. Set ``PHGX_LEGACY_WORKFLOW=1`` to
+use it.
 """
 
 import os
@@ -28,7 +25,7 @@ from .controller import (BROKE, DEFAULT_FINISH, DEFAULT_MAX_STEPS, FLEXIBLE_MAX_
                          STEP_LIMIT, STOP, STOPPED, route_ahead, run_controller)
 from .modes import announcement, auto, completion
 
-#: Set to 1 to run the pre-controller implementation instead.
+#: Set to 1 to run the fixed-sequence implementation instead.
 LEGACY_ENV = "PHGX_LEGACY_WORKFLOW"
 
 #: The keys that name a run's ERT data.
@@ -58,9 +55,8 @@ def adopt_request_inputs(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[s
     """The configuration with what its request states and it leaves out, and a note on each.
 
     A configuration of a request alone - ``{"user_request": "invert a.ohm and
-    estimate water content"}`` - used to end with "No step could run with the
-    inputs given": nothing read the files the request names unless the model
-    parser had run first. The rules are those of
+    estimate water content"}`` - still gets its files read, although the model
+    parser has not run. The rules are those of
     ``AgentCoordinator._resolve_config``: only what the request itself states
     is taken (:meth:`ContextInputAgent.request_inputs`, never the parser's
     defaults), the ERT files only when the configuration names no ERT data,
@@ -119,7 +115,7 @@ def adopt_request_inputs(config: Dict[str, Any]) -> Tuple[Dict[str, Any], List[s
     model_read = config.get("request_read_by") == "model"
     # The model's reading of the methods decides what an ambiguous file is (a
     # SEG-Y line: GPR or seismic); the words decide only without one.
-    stated = ContextInputAgent(api_key=None).request_inputs(
+    stated = ContextInputAgent(api_key="").request_inputs(
         request, known_files=given,
         methods=config.get("request_methods") if model_read else None)
     notes: List[str] = []
@@ -515,8 +511,8 @@ def drive(ctx: RunContext, *, tools: Optional[Dict[str, Any]] = None,
     hook = announced(on_step, announce) if on_step else auto(announce)
     # A tool that raises is a failed step (``invoke``), which the model
     # diagnoses. An error in the loop's own code - a proposal, a look, a
-    # recovery, a studio page - used to end the whole run with a traceback.
-    # Now the step it interrupted is recorded as failed, the error becomes a
+    # recovery, a studio page - does not end the whole run with a traceback:
+    # the step it interrupted is recorded as failed, the error becomes a
     # note the model reads at its next decision, and the loop picks the run up
     # where it stood: the run's state is all in ``ctx``. The second time it
     # resumes on the standard route, where less of that code runs; a third
@@ -584,6 +580,16 @@ def _where(exc: BaseException) -> str:
     return f"{Path(frames[-1].filename).stem}.{frames[-1].name}"
 
 
+def _assistant_skills(key: str) -> List[Any]:
+    """The written procedures of assistant ``key`` (:mod:`..skills`); [] if none load."""
+    try:
+        from ..assistants import get_assistant
+
+        return get_assistant(key).load_skills()
+    except Exception:  # noqa: BLE001 - procedures help a run; they never stop one
+        return []
+
+
 def run_workflow(workflow_config: Dict[str, Any], api_key: Optional[str],
                  llm_model: Optional[str], llm_provider: str, output_dir: Any,
                  progress_callback: Optional[Callable[[str, float, str], None]] = None,
@@ -626,9 +632,9 @@ def run_workflow(workflow_config: Dict[str, Any], api_key: Optional[str],
     -------
     tuple
         ``(results, execution_plan, interpretation, report_files)`` - the same
-        four values the pipeline returned. ``execution_plan`` is now derived
-        from the steps that ran, so it can no longer describe a step that did
-        not happen. ``results["status"]`` is ``"incomplete"`` when the run
+        four values the fixed pipeline returns. ``execution_plan`` is derived
+        from the steps that ran, so it cannot describe a step that did not
+        happen. ``results["status"]`` is ``"incomplete"`` when the run
         cannot be called complete (:func:`_incomplete_because`), with the
         reasons among ``results["warnings"]`` and heading the interpretation.
 
@@ -667,7 +673,9 @@ def run_workflow(workflow_config: Dict[str, Any], api_key: Optional[str],
         settings={"api_key": api_key, "model": llm_model,
                   "llm_provider": llm_provider,
                   "progress_callback": progress_callback,
-                  "ask_user": ask_user, "assistant_name": "AQUAH"},
+                  "ask_user": ask_user, "assistant_name": "AQUAH",
+                  # Written procedures the controller may read (agents.skills).
+                  "skills": _assistant_skills("aquah")},
     )
     # What the caller settled about the inputs before the run (a file used in
     # another role, one set aside) is in the record the controller reads, so it
@@ -737,8 +745,8 @@ def _incomplete_because(ctx: RunContext, results: Dict[str, Any]) -> List[str]:
     was written after it (the report lists it under "Not delivered"); or when
     the request named a product the results do not hold, which is said with
     the reason it is missing. A run with a broken TDEM file beside good ERT
-    data used to come back a success, the failure only among its warnings. A
-    run that ends without a report because none of its tools writes one - a
+    data is therefore incomplete, not a success with the failure only among
+    its warnings. A run that ends without a report because none of its tools writes one - a
     seismic line on its own - is complete: it ran out of work, not of steps.
 
     Parameters
@@ -806,5 +814,5 @@ def _incomplete_because(ctx: RunContext, results: Dict[str, Any]) -> List[str]:
 
 
 def use_legacy() -> bool:
-    """Whether this process should run the pre-controller implementation."""
+    """Whether this process should run the fixed-sequence implementation."""
     return str(os.environ.get(LEGACY_ENV, "")).strip().lower() in {"1", "true", "yes"}

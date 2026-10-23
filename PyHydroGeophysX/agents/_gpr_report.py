@@ -156,8 +156,8 @@ def method_section(results: Mapping[str, Any], unit: str = "m", level: str = "##
          if results.get("max_depth_m") else "not given: no velocity"),
     ])
     return (f"{level} Data and Method\n\n{sub} Data\n\n" + facts(data, "Item", "Value")
-            + f"\n{sub} Processing\n\nThe steps follow the order of the open-source GPR codes "
-              "(GPRPy, readgssi, ImpDAR, RGPR), as written in "
+            + f"\n{sub} Processing\n\nThe steps use the standard processing sequence also used "
+              "by GPRPy, readgssi, ImpDAR and RGPR, as written in "
               "`PyHydroGeophysX.data_processing.gpr`:\n\n"
             + facts(steps, "Step", "What was done")
             + f"\n{sub} Velocity and Depth\n\n" + facts(depth, "Item", "Value")

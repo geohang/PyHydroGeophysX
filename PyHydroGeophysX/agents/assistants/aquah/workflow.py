@@ -1,7 +1,7 @@
 """AQUAH's run: what "Auto to report" does when AQUAH is the assistant.
 
-Moved here from the desktop's workflow runner, which now only starts the chosen
-assistant's workflow in its own process (``qt_apps.agent.one_click_runner``).
+The desktop's workflow runner only starts the chosen assistant's workflow in
+its own process (``qt_apps.agent.one_click_runner``); the run itself is here.
 """
 from __future__ import annotations
 
@@ -150,10 +150,10 @@ def run(payload, progress, *, context_factory=None, run_fn=None, events=None,
     if payload.get('step_mode') and approve is not None:
         from PyHydroGeophysX.agents.runtime import step_by_step
         on_step = step_by_step(approve)
-    # Which hooks the run takes is read off its signature before it starts. It
-    # used to be tried and caught: any TypeError raised inside the workflow
-    # then restarted it from scratch, without the hooks, so a step-by-step run
-    # went on without asking and its calls were recorded twice.
+    # Which hooks the run takes is read off its signature before it starts, not
+    # found by trying and catching TypeError: a TypeError raised inside the
+    # workflow would restart it without the hooks, so a step-by-step run would
+    # go on without asking and record its calls twice.
     hooks = accepted_hooks(run_fn, on_step=on_step, ask_user=approve, on_event=on_event)
     with record_calls() as calls:
         results, plan, interpretation, files = run_fn(
@@ -164,12 +164,10 @@ def run(payload, progress, *, context_factory=None, run_fn=None, events=None,
     evaluation = results.get('evaluation_results') or {} if isinstance(results, dict) else {}
     warnings = list(results.get('warnings') or []) if isinstance(results, dict) else []
     if evaluation.get('status') == 'failed':
-        # A failed quality check is a warning, not the end of the run. Raising
-        # here threw away a complete result: a real run inverted two surveys,
-        # estimated water content from them and wrote the report, and the
-        # desktop was handed an exception instead of any of it, because the
-        # optional QC step hit a bad number. The check describes the inversion;
-        # it does not produce it, and what it could not judge still exists.
+        # A failed quality check is a warning, not the end of the run: raising
+        # here would discard a complete result because the optional QC step hit
+        # a bad number. The check describes the inversion; it does not produce
+        # it, and what it could not judge still exists.
         warnings.append(
             'The automatic quality check could not be completed'
             + (f" ({evaluation.get('error')})" if evaluation.get('error') else '')
@@ -184,8 +182,8 @@ def run(payload, progress, *, context_factory=None, run_fn=None, events=None,
     from PyHydroGeophysX.agents._uncertainty import result_caveats
     finished = results if isinstance(results, dict) else {}
     # What follows checks and records a run that has already done its work. A
-    # check or a record that fails is a warning; it used to throw the finished
-    # results away with it.
+    # check or a record that fails is a warning; it does not discard the
+    # finished results.
     try:
         # The run states a missing product with its reason; the same sentence
         # without one would only repeat it.
@@ -199,10 +197,10 @@ def run(payload, progress, *, context_factory=None, run_fn=None, events=None,
     except Exception as exc:  # noqa: BLE001 - see above
         warnings.append(f'The final check of the requested products failed ({type(exc).__name__}: '
                         f'{exc}); compare the results with the request yourself.')
-    # Several sources now raise the same warning - the controller records what
-    # a step found, and this function re-derives the same checks as a last line
-    # of defence - so the quality summary arrived twice. dict.fromkeys keeps
-    # the first occurrence of each and its order.
+    # Several sources raise the same warning - the controller records what a
+    # step found, and this function re-derives the same checks as a last line of
+    # defence - so duplicates are dropped. dict.fromkeys keeps the first
+    # occurrence of each and its order.
     warnings = list(dict.fromkeys(w for w in warnings if str(w).strip()))
     if isinstance(results, dict):
         results['warnings'] = warnings
@@ -254,8 +252,8 @@ def _read_request(context_factory, request, inputs, key, model, provider, setbac
 
     The parser falls back to its rules when the model call fails. When the
     parser itself fails, or answers with an error or no configuration at all,
-    the rules read the request here instead, with a note; "Could not interpret
-    request" used to end the run before its first step.
+    the rules read the request here instead, with a note, so that the run
+    always has a configuration to start from.
 
     >>> class Broken:
     ...     def __init__(self, **kw): pass
@@ -280,7 +278,7 @@ def _read_request(context_factory, request, inputs, key, model, provider, setbac
         problem = exc
     setback('Reading the request', problem, fallback)
     try:
-        preview = ContextInputAgent(api_key=None).preview_config(request, inputs)
+        preview = ContextInputAgent(api_key='').preview_config(request, inputs)
         return dict(preview.get('workflow_config') or {})
     except Exception as exc:  # noqa: BLE001 - the run's files and words still say a lot
         setback('Reading the request by rules', exc, 'with only the files it was given')
@@ -290,13 +288,11 @@ def _read_request(context_factory, request, inputs, key, model, provider, setbac
 def _settle_inputs(inputs):
     """Settle the inputs this workflow cannot take as labelled; return a note on each.
 
-    A terrain table beside ERT data used to stop the run before its first step
-    ("Independent terrain grids are not yet consumed"), and a classifier calls
-    an electrode file terrain often enough - ``electrodes.dat``, 56 rows for 56
-    electrodes, was one. Now a terrain table with one evenly spaced row per
-    electrode of the ERT surveys is used as their electrode file; any other is
-    left out with a note, as are geophone coordinates without raw seismic.
-    ``inputs`` is changed in place.
+    A classifier often labels an electrode file as terrain. A terrain table
+    with one evenly spaced row per electrode of the ERT surveys is therefore
+    used as their electrode file; any other terrain table is left out with a
+    note, as are geophone coordinates without raw seismic. ``inputs`` is
+    changed in place.
 
     >>> notes = _settle_inputs({'data_file': 'a.ohm', 'topography_file': 'dem.xyz'})
     >>> print(notes[0])  # doctest: +ELLIPSIS
@@ -364,9 +360,9 @@ def _classifier_provider(name):
     """The chat adapter that classifies files, for a desktop provider id.
 
     Classification runs on :func:`PyHydroGeophysX.llm.providers.make_provider`,
-    which covers OpenAI, Claude and OpenAI-compatible endpoints. Every id but
-    'claude' used to be sent to OpenAI, so a Gemini or OpenAI-compatible key
-    was presented to OpenAI and refused there with an authentication error.
+    which covers OpenAI, Claude and OpenAI-compatible endpoints. A desktop id is
+    mapped to its adapter name ('claude' becomes 'anthropic'); a provider the
+    classifier cannot use is refused rather than sent to OpenAI.
 
     >>> _classifier_provider('claude'), _classifier_provider('openai_compatible')
     ('anthropic', 'openai_compatible')

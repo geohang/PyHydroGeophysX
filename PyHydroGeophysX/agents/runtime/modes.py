@@ -1,13 +1,11 @@
 """Auto and step-by-step, as two hooks on one loop.
 
 The studio offers the same work two ways: "Auto to report" runs to the end, and
-the chat walks through it a step at a time. Those were separate code paths -
-different dispatch, different ordering, different error handling - so a step
-could behave one way when a user approved it and another when the workflow ran
-it unattended, and a fix to one did not reach the other.
-
-They are now the same :func:`~PyHydroGeophysX.agents.runtime.controller.run_controller`
-over the same registry, differing only in the ``on_step`` hook they supply:
+the chat walks through it a step at a time. Both are the same
+:func:`~PyHydroGeophysX.agents.runtime.controller.run_controller` over the same
+registry, so a step behaves the same way whether a user approved it or the
+workflow ran it unattended. They differ only in the ``on_step`` hook they
+supply:
 
 - :func:`auto` never pauses. It announces the step and where in the studio it is
   happening, so the app can bring that module to the front while the work runs.

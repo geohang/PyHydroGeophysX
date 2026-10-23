@@ -31,8 +31,8 @@ def table_facts(path, limit_bytes=200_000):
     What a 1200-character preview does not show a classifier: how many rows
     there are and whether the first column steps evenly. An electrode file is
     one row per electrode along an evenly spaced line; a terrain profile is
-    denser or irregular. Without this, ``electrodes.dat`` - 56 rows 1.5 m apart
-    beside surveys of 56 electrodes - was called "maybe topography".
+    denser or irregular. Without this, an electrode table with 56 rows 1.5 m
+    apart beside surveys of 56 electrodes could be taken for topography.
 
     >>> import tempfile
     >>> folder = Path(tempfile.mkdtemp())
@@ -151,8 +151,8 @@ def nearby_files(paths, limit=30):
     """The other data files in the folders of ``paths``: context for classifying them.
 
     A file is easier to read beside its neighbours - a coordinate table next to
-    three ERT surveys is their electrode file - and the chat used to show the
-    model each pasted file alone.
+    three ERT surveys is their electrode file - so the model is shown them
+    together rather than each pasted file alone.
     """
     chosen = {str(Path(p).resolve()) for p in paths}
     out = []
@@ -248,8 +248,8 @@ def _row(path, root, preview):
 def _survey_companions(folder, root, project_listed):
     """The rest of a TEM2Go survey folder, each with what it is and whether it is used.
 
-    A survey folder used to be listed as its project file alone, which read as
-    if nothing else in it mattered and as if the run could not do without
+    A survey folder is not listed as its project file alone, which would read
+    as if nothing else in it mattered and as if the run could not do without
     TEMImage. The raw stream is a complete second source - the same survey as
     the instrument recorded it, which this package stacks itself - and is
     offered as one when a project is the default; the protocol and line file
@@ -452,9 +452,8 @@ def classify_catalog(catalog, request, provider, progress=None, roles=None, near
     A coordinate table with exactly as many evenly spaced rows as a survey
     beside it has electrodes is that survey's electrode file, settled from the
     files themselves before the model is asked (:func:`electrode_table_match`).
-    Left to the model, ``electrodes.dat`` - 56 rows for 56 electrodes - came
-    back as terrain "denser and longer than the electrode line", which it is
-    not, and the run then refused it as a terrain grid.
+    Left to the model, such a table could come back as terrain, and the run
+    would then refuse it as a terrain grid.
     """
     allowed = tuple(roles) if roles is not None else ROLES
     rows = [dict(row) for row in catalog['files']]
@@ -520,8 +519,7 @@ def classify_catalog(catalog, request, provider, progress=None, roles=None, near
         if problem:
             # An answer that cannot be read is asked for once more, then left
             # as unknown with the reason: the table, and the chat, then ask
-            # for those roles. It used to end the classification with
-            # "retry classification", the detected roles included.
+            # for those roles, and the roles already detected are kept.
             warnings.append(f'The AI could not classify files {start+1}–{start+len(chunk)} '
                             f'({problem}); give them a role, or retry.')
         for i in chunk:

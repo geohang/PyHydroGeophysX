@@ -25,7 +25,8 @@ from PyHydroGeophysX.agents.context_input_agent import ContextInputAgent
 
 @pytest.fixture(autouse=True)
 def _no_model(monkeypatch):
-    # The agents read an API key from the environment; these tests never ask a model.
+    # These tests never ask a model; agents take a key only when given one, and
+    # an empty environment keeps the once-a-process key warning out of the way.
     for key in ("OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY"):
         monkeypatch.delenv(key, raising=False)
 
@@ -423,6 +424,69 @@ _LAYERED = {"status": "success", "recovered_resistivity": np.array([40.0, 80, 15
             "thicknesses": np.array([1.0, 2.0, 3.0, 5.0])}
 
 
+class _CellNumbered:
+    """An inversion mesh as the conversion sees it: one marker per cell."""
+
+    def __init__(self, cells):
+        self.cells = cells
+
+    def cellMarkers(self):
+        return list(range(self.cells))
+
+
+@pytest.mark.parametrize("run_uncertainty", [True, False])
+@pytest.mark.parametrize("params, relationship, region", [
+    ({}, "default", False),
+    ({"rho_sat": [200.0, 300.0], "n": 2.0, "porosity": [0.2, 0.3]}, "user", False),
+    ({2: {}}, "default", False),
+    ({2: {"rhos": {"mean": 50.0, "std": 0.0}, "n": {"mean": 2.0, "std": 0.0},
+          "porosity": {"mean": 0.3, "std": 0.0}, "sigma_sur": {"mean": 0.0, "std": 0.0}}},
+     "user", True),
+])
+def test_the_coordinators_water_content_takes_cell_numbers_as_one_unit(tmp_path, params,
+                                                                        relationship, region,
+                                                                        run_uncertainty):
+    # WaterContentAgent read an inversion mesh's cell numbers as layers in index
+    # order - regolith for the first cell, bedrock for the last, fractured
+    # bedrock for the rest - and dropped parameters given by name: on a
+    # synthetic with the truth known, 27 % of cells within one sigma. One
+    # genuine region with its own distributions still converts with them, and
+    # the result keeps its saturation_all.
+    from types import SimpleNamespace
+
+    from PyHydroGeophysX.agents.water_content_agent import WaterContentAgent
+
+    mesh = SimpleNamespace(cellMarkers=lambda: [2] * 40) if region else _CellNumbered(40)
+    inputs = {
+        "inversion_results": {"mesh": mesh,
+                              "resistivity_model": np.linspace(100.0, 900.0, 40)},
+        "petrophysical_params": params, "uncertainty_analysis": run_uncertainty,
+        "n_realizations": 50, "output_dir": str(tmp_path)}
+    out = WaterContentAgent(api_key="").execute(inputs)
+    assert out["saturation_all"].shape == ((50, 40, 1) if run_uncertainty else (40, 1))
+    assert out["inversion_uncertainty"] is False
+    if region:
+        expected = 0.3 * (50.0 / inputs["inversion_results"]["resistivity_model"]) ** 0.5
+        np.testing.assert_allclose(out["water_content_mean"][:, 0], expected)
+        np.testing.assert_allclose(out["water_content_std"], 0.0, atol=1e-15)
+        if run_uncertainty:
+            for name, distribution in params[2].items():
+                np.testing.assert_allclose(out["params_used"][2][name], distribution["mean"])
+    else:
+        assert out["n_layers"] == 1 and out["petrophysical_relationship"] == relationship
+        assert np.all(np.asarray(out["water_content_std"]) > 0)
+        if relationship == "user":
+            assert 200.0 <= np.median(out["params_used"][0]["rho_sat"]) <= 300.0
+
+    # The inversion's own uncertainty, when it came with the model, is drawn too.
+    inputs["inversion_results"]["log_resistivity_std"] = np.full(40, 0.5)
+    uncertain = WaterContentAgent(api_key="").execute(inputs)
+    assert uncertain["inversion_uncertainty"] is True
+    assert uncertain["saturation_all"].shape == out["saturation_all"].shape
+    if run_uncertainty:
+        assert np.mean(uncertain["water_content_std"]) > np.mean(out["water_content_std"])
+
+
 def _tdem_stubs(name):
     """TDEM steps that fail to read ``broken``, find no model in ``empty``, or invert."""
     def load(ctx):
@@ -622,23 +686,20 @@ _REMOVED = [("WorkflowOrchestratorAgent", "workflow_orchestrator_agent"),
 
 
 @pytest.mark.parametrize("name, module", _REMOVED)
-def test_a_removed_agent_names_what_replaced_it(name, module):
+@pytest.mark.parametrize("through", ["package", "module"])
+def test_a_removed_agent_names_what_replaced_it(name, module, through, monkeypatch):
+    if through == "package":
+        source = "PyHydroGeophysX.agents"
+        said = f"{name} was removed in PyHydroGeophysX 0.5.0: "
+    else:
+        # 0.3.0 code imported the module, not the package attribute.
+        monkeypatch.delitem(sys.modules, f"PyHydroGeophysX.agents.{module}", raising=False)
+        source = f"PyHydroGeophysX.agents.{module}"
+        said = f"agents.{module} was removed in PyHydroGeophysX 0.5.0: "
     namespace = {}
-    with pytest.warns(DeprecationWarning, match=f"{name} was removed in PyHydroGeophysX 0.5.0: "):
-        exec(f"from PyHydroGeophysX.agents import {name}", namespace)
+    with pytest.warns(DeprecationWarning, match=said):
+        exec(f"from {source} import {name}", namespace)
     # Importing the name is harmless; using it says the same thing, loudly.
-    with pytest.raises(RuntimeError, match=f"{name} was removed"):
-        namespace[name]()
-
-
-@pytest.mark.parametrize("name, module", _REMOVED)
-def test_a_removed_module_path_warns_instead_of_failing(name, module, monkeypatch):
-    # 0.3.0 code imported the module, not the package attribute; the deleted
-    # file used to make that a bare ModuleNotFoundError.
-    monkeypatch.delitem(sys.modules, f"PyHydroGeophysX.agents.{module}", raising=False)
-    namespace = {}
-    with pytest.warns(DeprecationWarning, match=f"agents.{module} was removed in PyHydroGeophysX 0.5.0: "):
-        exec(f"from PyHydroGeophysX.agents.{module} import {name}", namespace)
     with pytest.raises(RuntimeError, match=f"{name} was removed"):
         namespace[name]()
 
@@ -654,6 +715,25 @@ def test_a_moved_helper_still_imports_from_base_agent(name, home):
     with pytest.warns(DeprecationWarning, match=f"PyHydroGeophysX.agents.{home}.{name}"):
         value = getattr(base_agent, name)
     assert value is getattr(importlib.import_module(f"PyHydroGeophysX.agents.{home}"), name)
+
+
+def test_an_agent_takes_the_environments_key_only_when_asked(monkeypatch):
+    # An agent used to read OPENAI_API_KEY whenever it was given no key, so a
+    # library call - a conversion, a header check, the documentation's no-model
+    # examples - sent requests and spent credit nobody asked for.
+    import warnings
+
+    from PyHydroGeophysX.agents import base_agent
+    from PyHydroGeophysX.agents.context_input_agent import ContextInputAgent
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-environment")
+    monkeypatch.setattr(base_agent, "_KEYS_REPORTED", set())
+    with pytest.warns(UserWarning, match="OPENAI_API_KEY"):
+        assert not ContextInputAgent(api_key=None).llm_enabled
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert not ContextInputAgent(api_key="").llm_enabled
+        assert ContextInputAgent(api_key="env").api_key == "sk-test-environment"
 
 
 # --------------------------------------------------------------------------
@@ -673,11 +753,36 @@ def test_each_assistant_registers_with_its_own_tools_and_workflow():
     # never mix with AQUAH's, even where a name is the same.
     from PyHydroGeophysX.agents.assistants.geosage import ASSISTANT as geosage
     ready, why = geosage.availability()
-    assert not ready and "ported" in why
+    assert not ready and why
     own = geosage.load_tools()
     assert own is not TOOLS and own["write_report"] is not TOOLS["write_report"]
     assert "run_joint_inversion" not in TOOLS
     assert geosage.tool_for_label("Run joint gravity-magnetic inversion") == "run_joint_inversion"
+
+
+def test_an_assistants_skills_ship_with_it_and_a_group_can_replace_one(tmp_path, monkeypatch):
+    # Skills (agents.skills) are the plug-in's own folder, found inside its
+    # package, then PHGX_SKILLS_PATH, whose skill of the same name wins. A read
+    # never leaves the skill's folder.
+    from PyHydroGeophysX.agents.assistants import get_assistant
+    from PyHydroGeophysX.agents.skills import ENV_VAR, find, run_tool
+
+    aquah = get_assistant("aquah")
+    monkeypatch.delenv(ENV_VAR, raising=False)
+    shipped = aquah.load_skills()
+    assert find(shipped, "ert-data-quality") is not None
+    assert all(skill.description and skill.body() for skill in shipped)
+    ours = tmp_path / "lab" / "ert-data-quality"
+    ours.mkdir(parents=True)
+    (ours / "SKILL.md").write_text("---\nname: ert-data-quality\ndescription: Our lab's QC."
+                                   "\n---\nDrop readings above 3 % reciprocal error.\n",
+                                   encoding="utf-8")
+    monkeypatch.setenv(ENV_VAR, str(tmp_path / "lab"))
+    skills = aquah.load_skills()
+    assert len(skills) == len(shipped)
+    assert find(skills, "ert-data-quality").body() == "Drop readings above 3 % reciprocal error."
+    (tmp_path / "lab" / "secret.txt").write_text("not a skill's", encoding="utf-8")
+    assert run_tool(skills, {"name": "ert-data-quality", "file": "../secret.txt"})["status"] == "failed"
 
 
 def test_an_assistant_runs_its_own_tools_to_its_own_final_product(tmp_path, monkeypatch):
@@ -705,45 +810,3 @@ def test_an_assistant_runs_its_own_tools_to_its_own_final_product(tmp_path, monk
     assert result["status"] == "success"
     assert result["report_files"] == {"report_markdown": "report.md"}
     assert result["interpretation"] == "Group 5 is the primary target."
-
-
-def test_installed_geosage_runs_on_the_studio_contract(tmp_path):
-    # A plug-in's "needs review" stays that, never saved as a success.
-    from PyHydroGeophysX.qt_apps.results_store import normalize_status
-    assert normalize_status("needs_review") == "needs_review"
-    pytest.importorskip("geosage.pyhydrogeophysx")
-    import json
-    import numpy as np
-    from discretize import TensorMesh
-    from PyHydroGeophysX.agents.assistants import get_assistant
-    from PyHydroGeophysX.qt_apps.agent.one_click_runner import execute
-
-    source = tmp_path / "source"
-    (source / "mesh").mkdir(parents=True)
-    (source / "inversion_result").mkdir()
-    (source / "geology_models").mkdir()
-    mesh = TensorMesh([[10] * 3, [10] * 3, [10] * 3], x0=[100, 200, -30])
-    mesh.write_UBC(source / "mesh/mesh_core.msh")
-    shape = (3, 3, 3)
-    np.save(source / "inversion_result/joint_density_core.npy", np.arange(27).reshape(shape) / 100)
-    np.save(source / "inversion_result/joint_susceptibility_core.npy", np.ones(shape) / 1000)
-    for name in ("unit_id_3d", "geo_id_3d"):
-        np.save(source / f"geology_models/{name}.npy", np.ones(shape, dtype=int))
-    (source / "geology_models/geo_defs.json").write_text(json.dumps({"1": "Synthetic unit"}))
-    assistant = get_assistant("geosage")
-    assert assistant.availability()[0]
-    events, approved = [], []
-
-    def approve(event):
-        approved.append(event["tool"])
-        return "proceed"
-
-    result = execute({"assistant": "geosage", "request": "Inspect the synthetic archive",
-                      "inputs": {"source_inversion_dir": str(source)},
-                      "output_dir": str(tmp_path / "output"), "step_mode": True},
-                     lambda *args: None, approve=approve, on_event=events.append)
-    assert result["status"] == "needs_review"
-    assert result["source_files_unchanged"]
-    assert approved == list(assistant.load_tools())
-    assert [e["tool"] for e in events if e["phase"] == "done"] == approved
-    assert result["report_files"]["report_markdown"].endswith("evidence_summary.md")

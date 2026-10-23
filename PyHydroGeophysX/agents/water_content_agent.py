@@ -12,6 +12,27 @@ import numpy as np
 from .base_agent import BaseAgent
 
 
+def _by_marker(params: Any) -> bool:
+    """Whether ``params`` gives distributions per layer marker (``{1: {...}, 2: {...}}``).
+
+    The other form, parameters by name (``{"rho_sat": [50, 250], "n": 2}``),
+    applies to the whole model.
+
+    >>> _by_marker({1: {"rhos": {"mean": 100, "std": 20}}}), _by_marker({"n": 2.0}), _by_marker({})
+    (True, False, False)
+    """
+    if not isinstance(params, dict) or not params:
+        return False
+    for key, value in params.items():
+        try:
+            int(key)
+        except (TypeError, ValueError):
+            return False
+        if not isinstance(value, dict):
+            return False
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Water Content Agent
 # ---------------------------------------------------------------------------
@@ -77,13 +98,45 @@ different geological layers, and quantify uncertainties."""
             
             # Get cell markers
             cell_markers = np.array(mesh.cellMarkers())
-            
-            # Get LLM recommendations for petrophysical parameters if needed
-            if self.llm_enabled and not petro_params:
-                self._log_execution("Requesting LLM recommendations for petrophysical parameters")
-                petro_params = self._get_recommended_petro_params(resistivity, cell_markers)
-            
-            # Set up default layer distributions (even if petro_params has some values)
+
+            log_std = inversion_results.get('log_resistivity_std')
+            if log_std is not None:
+                try:
+                    log_std = np.asarray(log_std, dtype=float)
+                except (TypeError, ValueError):
+                    log_std = np.array(np.nan)
+                if (log_std.shape not in ((len(cell_markers),), (len(cell_markers), 1))
+                        or not np.all(np.isfinite(log_std) & (log_std >= 0))):
+                    self._log_execution("The inversion's uncertainty does not match the model "
+                                        "cell for cell; it is left out.", level='WARNING')
+                    log_std = None
+
+            # Distributions given by marker, for real layers or every distinct
+            # mesh marker, are converted as given. Everything else - parameters
+            # by name, or none - goes through PetrophysicsAgent, the conversion
+            # the AQUAH runtime uses. An inversion mesh's one-marker-per-cell
+            # is not read as layers in index order, and parameters given by
+            # name are not dropped.
+            from PyHydroGeophysX.petrophysics.monte_carlo import resolve_layers
+
+            _, unique_layers, layering_note = resolve_layers(cell_markers, len(cell_markers))
+            self._log_execution(layering_note)
+            by_marker = _by_marker(petro_params)
+            if by_marker:
+                petro_params = {int(marker): params for marker, params in petro_params.items()}
+            if not by_marker or (len(unique_layers) < 2
+                                 and not all(marker in petro_params for marker in np.unique(cell_markers))):
+                if by_marker:
+                    self._log_execution(
+                        "Distributions were given per layer marker, but the mesh's markers "
+                        "do not divide it into layers; it is converted as one unit, on the "
+                        "default parameters, and the result says so.", level='WARNING')
+                    petro_params = {}
+                return self._convert_with_petrophysics(
+                    resistivity_values, cell_markers, mesh, coverage, petro_params,
+                    n_realizations, output_dir, run_uncertainty, log_std)
+
+            # Set up layer distributions: the ones given, defaults for any layer left out
             layer_distributions = self._setup_layer_distributions(petro_params, cell_markers)
             
             self._log_execution(f"Converting resistivity to water content for "
@@ -105,7 +158,8 @@ different geological layers, and quantify uncertainties."""
                 self._log_execution(f"Running Monte Carlo analysis with {n_realizations} realizations")
                 wc_all, sat_all, params_used = converter.run_monte_carlo(
                     n_realizations=n_realizations,
-                    progress_bar=True
+                    progress_bar=True,
+                    log_resistivity_std=log_std
                 )
                 
                 # Get statistics
@@ -120,7 +174,8 @@ different geological layers, and quantify uncertainties."""
                 # Single realization
                 wc_all, sat_all, params_used = converter.run_monte_carlo(
                     n_realizations=1,
-                    progress_bar=False
+                    progress_bar=False,
+                    log_resistivity_std=log_std
                 )
                 stats = {
                     'mean': wc_all[0],
@@ -140,6 +195,7 @@ different geological layers, and quantify uncertainties."""
                 'saturation_all': sat_all if run_uncertainty else sat_all[0],
                 'layer_distributions': layer_distributions,
                 'params_used': params_used if run_uncertainty else None,
+                'inversion_uncertainty': log_std is not None,
                 'interpretation': interpretation,
                 'output_dir': output_dir,
                 'mesh': mesh,
@@ -167,6 +223,54 @@ different geological layers, and quantify uncertainties."""
             }
             raise
     
+    def _convert_with_petrophysics(self, resistivity_values: np.ndarray, cell_markers: np.ndarray,
+                                   mesh: Any, coverage: Any, petro_params: Dict,
+                                   n_realizations: int, output_dir: str,
+                                   run_uncertainty: bool, log_resistivity_std: Any) -> Dict[str, Any]:
+        """Convert with :class:`PetrophysicsAgent`, in this agent's result shape.
+
+        PetrophysicsAgent decides whether the markers are layers at all
+        (``resolve_layers``), applies parameters given by name to every layer,
+        always draws a Monte Carlo, and states whose relationship the result
+        rests on (``prior_statement``) - none of which this agent did.
+        """
+        from .petrophysics_agent import PetrophysicsAgent
+
+        petro = PetrophysicsAgent(api_key=self.api_key or "", model=self.model,
+                                  llm_provider=self.llm_provider)
+        result = petro.execute({
+            'resistivity_model': resistivity_values,
+            'mesh': mesh,
+            'cell_markers': cell_markers,
+            'petrophysical_params': petro_params or None,
+            'n_realizations': n_realizations,
+            'log_resistivity_std': log_resistivity_std,
+            'return_realizations': True,
+            'output_dir': output_dir,
+        })
+        keep = ('water_content_p10', 'water_content_p50', 'water_content_p90',
+                'saturation_mean', 'saturation_std', 'layering', 'n_layers',
+                'params_used', 'param_given', 'petrophysical_relationship',
+                'prior_ranges', 'prior_ranges_text', 'prior_statement',
+                'realization_notes', 'n_realizations', 'statistics', 'interpretation',
+                'inversion_uncertainty')
+        self.results = {
+            'status': result.get('status', 'success'),
+            'water_content_mean': result['water_content_mean'],
+            'water_content_std': result['water_content_std'],
+            'saturation_all': (result['saturation_all'] if run_uncertainty
+                               else result['saturation_all'][0]),
+            'layer_distributions': result.get('layer_params'),
+            **{key: result[key] for key in keep if key in result},
+            'output_dir': output_dir,
+            'mesh': mesh,
+            'coverage': coverage,
+        }
+        statement = result.get('prior_statement')
+        if statement and result.get('petrophysical_relationship') != 'user':
+            self._log_execution(statement, level='WARNING')
+        return self.results
+
     def _setup_layer_distributions(self, petro_params: Dict, cell_markers: np.ndarray) -> Dict:
         """
         Setup layer parameter distributions for Monte Carlo.

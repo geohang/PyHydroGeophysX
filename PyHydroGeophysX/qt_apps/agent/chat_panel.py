@@ -80,6 +80,9 @@ from PyHydroGeophysX.qt_apps.agent.runtime import LlmCallWorker, CliSetupWorker,
 from PyHydroGeophysX.qt_apps.widgets import ai_presence as presence
 from PyHydroGeophysX.agents import assistants as assistant_registry
 from PyHydroGeophysX.qt_apps.widgets.ai_presence import AiOrb
+from PyHydroGeophysX.agents.skills import (TOOL_NAME as SKILL_TOOL, index_text as skill_index,
+                                           run_tool as run_skill_tool,
+                                           tool_spec as skill_tool_spec)
 from PyHydroGeophysX.agents.studio_tools import tool_specs
 
 _P = theme.PALETTE
@@ -95,7 +98,7 @@ Rules:
 - When something fails or the studio has no action for what is needed, think about the cause before giving up or handing the problem back. First look for a way with the studio's own actions (another action, other parameters, another module). If there is none, and a few lines of Python would get past it - a file in a layout a module cannot read, one module's result in a format another module has no action to take, a number no module computes - call propose_script. Check the module's actions first: the water-content module, for example, takes the ERT page's model with use_ert_model and opens an inversion's output folder with set_data_dir, so it needs no script for that. A script must never invent layer markers: an inversion mesh's cell markers number cells, they are not layers. In its purpose, say plainly what went wrong, what the script will do and what you will do with its output. The user sees the code and decides; if they reject it, accept that and offer the other options. After it runs, use what it wrote through the studio's actions (for example set_data_dir on the folder it wrote). If it fails, read its error and what it printed, fix the cause (not with a bare except or a made-up value) and call propose_script again with the corrected script and a purpose that says what was wrong; the user approves it again. If a fix does not help either, say so and offer another way rather than a third version. Never propose the same script unchanged. Never present a script's guess as a measured result.
 - The user chose to work step by step, and can change their mind at any point. When they ask for the end result rather than the next step - in any words or language, e.g. "give me the final result directly", "just finish it", "use auto report", "直接给我结果" - call run_to_report in that same turn, with ask_user false since they asked for it. It hands the rest of the task to Auto to report, which carries on from where you are now, reuses what is already done, and writes the report. Never tell the user to switch modes themselves; switching is what run_to_report does. In its goal, restate the whole task as the run should read it: what the user asked for, the data and every choice made so far (instrument, geometry, single or time-lapse, inversion settings and the fit obtained), and what is left to do.
 - Pick the module by matching the task to the module purposes listed under "Studio modules" below — read them before choosing.
-- You decide which calls the user approves, with each call's ask_user argument. Calls with ask_user false run at once and the user sees them in the chat; calls with ask_user true wait for Approve / Reject. Ask where the user's judgement matters: before a long computation (an inversion, a forward run, picking every shot) whose settings they have not confirmed, when you choose a value, data source or method they did not give, and before a change of plan. Do not ask for routine work: looking, opening a module, loading the data they named, applying values they gave, the next step of a plan they already agreed to. A task of ten steps should ask once or twice, at its decisions. Clearing picks, electrodes or inputs, and running a script, always wait for the user whatever you set.
+- You decide which calls the user approves, with each call's ask_user argument. Calls with ask_user false run at once and the user sees them in the chat; calls with ask_user true wait for Approve / Reject. Ask where the user's judgement matters: before a long computation (an inversion, a forward run, picking every shot) whose settings they have not confirmed, when you choose a value, data source or method they did not give, and before a change of plan. Do not ask for routine work: looking, opening a module, loading the data they named, applying values they gave, the next step of a plan they already agreed to. A task of ten steps should ask once or twice, at its decisions. Clearing or removing picks, electrodes or inputs, exporting or saving to a path you name, and running a script, always wait for the user whatever you set.
 - Never ask for permission in words ("Shall I proceed?"): briefly say what you are about to do and make the tool call in the same turn, with ask_user true if it needs their say.
 - Think the whole task through before the first action: what the goal needs, which modules and actions get there, what could go wrong. Say the plan in a sentence or two, then revise it as results come in.
 - Take one action at a time: call a single tool, wait for its result, then decide the next step.
@@ -108,9 +111,16 @@ Rules:
 - Always finish your turn by telling the user the next step: what you will do next, or what they can ask for. When you START a long job (a tool result with status "started"), say it is running in the background and that the user can ask for its status (for example "is it done?") or say "continue" to proceed once it finishes — then end your turn rather than guessing the job is complete.
 - After a background job, refresh the module's status before reporting progress. Read inversion_status, inversion_running, has_model and result_summary when provided. A completed model is available for review in the processing module even before saving it or adding it to Map. Report the returned fit metrics; if a metric is missing, say it is unavailable rather than claiming no model exists. If a new run is running or failed while an earlier model remains, distinguish the latest run from that earlier result.
 - When a tool returns status "awaiting_user", the workflow is paused for the user to act in the GUI (for example correcting picks). Relay the message, end your turn, and resume only when the user says to continue.
-{persona}{vision_rules}
+{persona}{vision_rules}{skill_rules}
 Studio modules (key: purpose):
 {modules}
+"""
+
+#: Appended to the rules when the assistant has written procedures (skills,
+#: :mod:`PyHydroGeophysX.agents.skills`): the index only; read_skill reads one.
+SKILL_RULES = """- Written procedures (skills) are listed below by name and when they apply. Before a task one of them covers, read it with read_skill (it runs at once and changes nothing), then follow it where it fits the data and the request. A procedure is its author's advice: it never overrides the user, the checkpoints above or what the data show, and it is not a reason to skip asking. Say which procedure you followed.
+Written procedures:
+{index}
 """
 
 #: Appended to the rules only when the selected model reads images, so a
@@ -134,18 +144,35 @@ SCRIPT_TOOL = "propose_script"
 # -- which calls wait for the user ---------------------------------------------
 # The model decides, call by call ("ask_user"): routine actions run at once and
 # are shown in the chat, decisions wait for the user. Asking before every call
-# made a ten-step task ten clicks, most of them on actions nobody would refuse.
+# would make a ten-step task ten clicks, most of them on actions nobody refuses.
 # The rules below only guard that judgement and stand in when the model gives
 # none.
 
 #: Tools that only look. They run at once, whatever the model says.
 READ_ONLY_TOOLS = frozenset({"list_modules", "describe_current_module",
-                             "get_studio_state", "capture_view"})
+                             "get_studio_state", "capture_view", SKILL_TOOL})
 #: Page actions that only look or show, by name.
 _LOOK_ACTION = re.compile(r"^(get_|list_|describe|show_|preview_)")
 #: Page actions that throw away a set of the user's work (picks corrected by
-#: hand, electrodes, inputs): always the user's call.
-_DISCARD_ACTION = re.compile(r"^(clear|discard|reset)")
+#: hand, electrodes, inputs): always the user's call. remove_air_wave and the
+#: like are filters, not removals, and stay with the model.
+_DISCARD_ACTION = re.compile(r"^(clear|discard|reset)|^(remove_input|remove_timelapse_files|"
+                             r"delete_electrode)$")
+#: Page actions that write files. Where the model names the destination, the
+#: user sees it before anything is written there.
+_WRITE_ACTION = re.compile(r"^(export|save)")
+_DESTINATION_KEY = re.compile(r"path|file|folder|dir|destination|output", re.IGNORECASE)
+
+
+def _names_destination(args: Any) -> bool:
+    """Whether a page action's arguments name where to write.
+
+    >>> _names_destination({"path": "C:/elsewhere/grid.tif"}), _names_destination({"dpi": 200})
+    (True, False)
+    """
+    return isinstance(args, dict) and any(
+        _DESTINATION_KEY.search(str(key)) and str(value or "").strip()
+        for key, value in args.items())
 #: With no "ask_user" from the model: actions that start a long computation ask.
 _LONG_ACTION = re.compile(r"^(run|generate|interpolate|process)|invert|forward|auto_pick_all")
 #: Calls in a row the assistant may run without the user; the next one asks.
@@ -223,6 +250,20 @@ def needs_approval(name: str, args: Dict[str, Any]) -> bool:
     False
     >>> needs_approval('apply_action', {'action': 'clear_picks', 'ask_user': False})
     True
+    >>> needs_approval('apply_action', {'action': 'remove_input', 'ask_user': False})
+    True
+    >>> needs_approval('apply_action', {'action': ' delete_electrode', 'ask_user': False})
+    True
+    >>> needs_approval('apply_action', {'action': 'remove_air_wave', 'ask_user': False})
+    False
+    >>> needs_approval('apply_action', {'action': 'export_grid', 'ask_user': False,
+    ...                                 'args': {'path': 'D:/out/grid.tif'}})
+    True
+    >>> needs_approval('apply_action', {'action': ' export_grid', 'ask_user': False,
+    ...                                 'args': {'path': 'D:/out/grid.tif'}})
+    True
+    >>> needs_approval('apply_action', {'action': 'export_grid', 'ask_user': False, 'args': {}})
+    False
     >>> needs_approval('get_studio_state', {'ask_user': True})
     False
     >>> needs_approval('navigate', {'module': 'ert', 'ask_user': 'true'})
@@ -232,8 +273,10 @@ def needs_approval(name: str, args: Dict[str, Any]) -> bool:
         return True
     if name in READ_ONLY_TOOLS:
         return False
-    action = str(args.get("action") or "") if name == "apply_action" else ""
+    action = str(args.get("action", "")).strip() if name == "apply_action" else ""
     if action and _DISCARD_ACTION.search(action):
+        return True
+    if action and _WRITE_ACTION.match(action) and _names_destination(args.get("args")):
         return True
     if action and _LOOK_ACTION.match(action):
         return False
@@ -487,14 +530,20 @@ class AssistantChatPanel(QWidget):
         except Exception:  # noqa: BLE001 - an odd provider simply gets no vision
             self._vision = False
         agent = assistant_registry.active()
+        # Read once per assistant and model; a skill added on disk is seen on
+        # the next change of either, or the next start.
+        self._skills = agent.load_skills()
         self._tool_specs = [_with_ask_user(spec) for spec in
                             tool_specs(vision=self._vision)
+                            + ([skill_tool_spec()] if self._skills else [])
                             + [_handover_spec(agent), _script_spec()]]
         self._system = SYSTEM_PROMPT.format(
             name=agent.name, title=agent.title, summary=agent.summary,
             persona=agent.persona,
             modules=self._controller.capabilities_summary(agent.studio_modules),
             vision_rules=VISION_RULES if self._vision else "",
+            skill_rules=(SKILL_RULES.format(index=skill_index(self._skills, width=240))
+                         if self._skills else ""),
         )
 
     @staticmethod
@@ -510,7 +559,7 @@ class AssistantChatPanel(QWidget):
 
         header = QHBoxLayout()
         # Which assistant this is. One that cannot run here - not installed, or
-        # still being ported - is listed but greyed out, with the reason.
+        # still in development - is listed but greyed out, with the reason.
         self._assistant_combo = QComboBox()
         self._assistant_combo.setToolTip("The AI assistant you are talking to")
         # A styled delegate, so a greyed-out entry is drawn grey: the combo's
@@ -568,8 +617,8 @@ class AssistantChatPanel(QWidget):
         root.addWidget(self._transcript, stretch=1)
 
         # Shown while a model request is in flight, with how long it has been.
-        # The Send button's "…" was the only sign of the wait step-by-step
-        # spends most of its time in. The orb is the agent's presence in the
+        # The Send button's "…" alone is too little sign of the wait that
+        # step-by-step spends most of its time in. The orb is the agent's presence in the
         # studio's one visual language: the same one is on the Workflow page
         # and on every panel an automatic run is working in.
         self._thinking_row = QWidget()
@@ -626,7 +675,7 @@ class AssistantChatPanel(QWidget):
 
         # How to carry out a request, asked once it has been sent rather than
         # picked beforehand: the choice is about this task, and a picker set
-        # ahead of it was easy to leave on the wrong mode.
+        # ahead of it is easy to leave on the wrong mode.
         self._choice = QFrame()
         self._choice.setObjectName("ConfirmCard")
         choice_layout = QVBoxLayout(self._choice)
@@ -744,9 +793,9 @@ class AssistantChatPanel(QWidget):
         """Build the collapsible configuration block.
 
         Laid out on a grid rather than a row per control: each of these is a
-        short word or a model name, so one per full-width row spent most of the
-        panel's height on empty combo boxes. Pairing them across four columns
-        keeps the labels aligned and roughly halves the block.
+        short word or a model name, so one per full-width row would spend most
+        of the panel's height on empty combo boxes. Pairing them across four
+        columns keeps the labels aligned and about halves the block.
         """
         box = QFrame()
         lay = QGridLayout(box)
@@ -770,9 +819,9 @@ class AssistantChatPanel(QWidget):
             self._level_combo.addItem(tier_id, tier_id)  # text filled in by _sync
         self._level_combo.addItem("Custom model", TIER_CUSTOM)
         self._level_combo.currentIndexChanged.connect(self._on_level_changed)
-        # What the level is for is a tooltip, not a label. Visible, it wrapped to
-        # three lines - more height than every other control here put together -
-        # to say something that is read once and then never again.
+        # What the level is for is a tooltip, not a label. Visible, it would wrap
+        # to three lines - more height than every other control here put
+        # together - to say something that is read once.
         lrow.addWidget(self._level_combo, stretch=1)
         lay.addWidget(self._level_row, 0, 0, 1, 4)
 
@@ -809,8 +858,8 @@ class AssistantChatPanel(QWidget):
 
         # One line: where sign-in stands, and the one action that fits it -
         # Log in, Log out, Cancel or Retry - as a small button at its end. A
-        # full-width "Log In" under "Signed in. Ready to chat." was easy to
-        # click by mistake and said the opposite of the state.
+        # full-width "Log In" under "Signed in. Ready to chat." would be easy to
+        # click by mistake and say the opposite of the state.
         self._cli_login_row = QWidget()
         login_row = QHBoxLayout(self._cli_login_row)
         login_row.setContentsMargins(0, 0, 0, 0)
@@ -1220,9 +1269,9 @@ class AssistantChatPanel(QWidget):
         """Move reasoning effort with the level, unless the user set it.
 
         Chat drives the studio one tool call at a time and each call is its own
-        request, so effort is paid per step rather than once per question. Level
-        1 at medium effort made the cheapest level the slowest thing in the app;
-        the levels now carry the effort they are for. A value the user chose is
+        request, so effort is paid per step rather than once per question. The
+        cheapest level at medium effort would be the slowest thing in the app, so
+        each level carries the effort it is for. A value the user chose is
         left alone - the combo stays the override.
         """
         if self._effort_is_user_set:
@@ -1347,7 +1396,7 @@ class AssistantChatPanel(QWidget):
         self._send_btn.setEnabled(typing)
         label = PROVIDER_META.get(self._provider_id, {}).get("label", self._provider_id)
         if ok:
-            eye = " · 👁" if self._vision else ""
+            eye = " · vision" if self._vision else ""
             price = ("" if self._provider_id in CLI_PROVIDER_IDS
                      else price_label(self._provider.model, compact=True))
             cost = f" · {html.escape(price)}" if price else ""
@@ -1395,7 +1444,7 @@ class AssistantChatPanel(QWidget):
         if pending:
             # "continue" when asked about a file is not information about it:
             # it hands the decision back. Appended as the word itself, the
-            # classifier read the same evidence and asked the same question.
+            # classifier would read the same evidence and ask the same question.
             clarification = (
                 'the user asked you to decide: give every file its most likely role from '
                 'the evidence, and use unknown only if no role is plausible at all'
@@ -1696,10 +1745,11 @@ class AssistantChatPanel(QWidget):
     def _on_workflow_step(self, event: Dict[str, Any]) -> None:
         """Narrate an automatic run here, a line per step as each one ends.
 
-        The run used to say "Workflow started." in the chat and then nothing
-        until the report, so the conversation that started it went quiet for
-        the whole run. Each finished step now reports back with what it found,
-        and the line under the transcript says what the assistant is doing meanwhile.
+        Without this the chat would say "Workflow started." and then nothing
+        until the report, so the conversation that started the run would go
+        quiet for the whole run. Each finished step reports back with what it
+        found, and the line under the transcript says what the assistant is
+        doing meanwhile.
         """
         label = str(event.get("label") or event.get("tool") or "Step")
         if event.get("phase") == "start":
@@ -1812,10 +1862,10 @@ class AssistantChatPanel(QWidget):
     def _prewarm_provider(self) -> None:
         """Do the provider's first-request setup while the user is still typing.
 
-        Importing the SDK and building its client cost the first request of a
-        session about 1.5 s, and none of it depends on the message. It runs on
-        a background thread from the first keystroke - once per provider, and
-        once more when a key makes a provider that could not send able to.
+        Importing the SDK and building its client add to the first request of a
+        session, and none of it depends on the message. It runs on a background
+        thread from the first keystroke - once per provider, and once more when
+        a key makes a provider that could not send able to.
         """
         provider = self._provider
         last = self._prewarmed
@@ -1926,7 +1976,7 @@ class AssistantChatPanel(QWidget):
         name = call.get("name", "?")
         if not isinstance(args, dict):
             # Arguments the provider could not read as JSON. Run with none, the
-            # call did something other than what was meant; back to the model.
+            # call would do something other than what was meant; back to the model.
             unread = {"status": "failed", "error": (
                 f"The arguments of this {name} call could not be read "
                 f"({str(args)[:200]!r}). Call it again with a JSON object of its parameters.")}
@@ -1983,9 +2033,11 @@ class AssistantChatPanel(QWidget):
                 self._start_script(call, args)  # answers the call when it has run
                 return
             result = (self._accept_handover(args) if name == HANDOVER_TOOL
+                      else run_skill_tool(getattr(self, "_skills", []), args)
+                      if name == SKILL_TOOL
                       else self._controller.dispatch(name, args))
         except Exception as exc:  # noqa: BLE001 - the model reads it and adjusts
-            # The panel's own part of a call failing used to leave the chat
+            # A failure in the panel's own part of a call would leave the chat
             # busy with nothing answered; the model gets the error instead.
             result = {"status": "failed",
                       "error": f"The studio could not carry out this call ({type(exc).__name__}: {exc})."}
@@ -2083,8 +2135,8 @@ class AssistantChatPanel(QWidget):
         used = str(Path(ert["electrode_file"]).resolve()) if ert.get("electrode_file") else ""
         if used:
             # The ERT page read this file as electrode positions, and that use
-            # outranks a classifier's label: a run handed electrodes.dat as
-            # "terrain" refused it at once, after the page had used it.
+            # outranks a classifier's label: a run handed an electrode file
+            # labelled "terrain" would refuse it, after the page had used it.
             for row in self._controller.chat_attachments():
                 if (row["role"] not in ("electrode_file", "pending", "chat_reference")
                         and str(Path(row["path"]).resolve()) == used):
@@ -2291,7 +2343,7 @@ class AssistantChatPanel(QWidget):
         # Next-step guidance so the user is never left wondering what to do.
         if status == "started":
             self._render_note(
-                "&#9203; This is running in the background. Ask <i>“is it done?”</i> for the "
+                "This is running in the background. Ask <i>“is it done?”</i> for the "
                 "status, or say <i>“continue”</i> / tell the assistant the next step.")
         elif status == "awaiting_user":
             note = html.escape(str(result.get("message")
@@ -2299,11 +2351,11 @@ class AssistantChatPanel(QWidget):
             suspect = result.get("suspect_traces")
             if isinstance(suspect, list) and suspect:
                 note += f"<br>Suspect traces to check: <code>{html.escape(str(suspect))}</code>"
-            self._render_note(f"&#9208; <b>Paused for you.</b> {note}")
+            self._render_note(f"<b>Paused for you.</b> {note}")
         else:
             hint = result.get("hint") or (result.get("error") if status == "failed" else None)
             if hint:
-                self._render_note(f"&#128161; {html.escape(str(hint))}")
+                self._render_note(f"Hint: {html.escape(str(hint))}")
         self._scroll_to_end()
 
     def _render_image(self, data_b64: str) -> None:
@@ -2329,5 +2381,5 @@ class AssistantChatPanel(QWidget):
         sb.setValue(sb.maximum())
 
 
-#: The panel's name before assistants became pluggable; kept for callers.
+#: Alias for callers that still use the AQUAH-specific name.
 AquahChatPanel = AssistantChatPanel

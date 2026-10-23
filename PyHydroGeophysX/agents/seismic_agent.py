@@ -541,9 +541,8 @@ and fresh bedrock (>3000 m/s)."""
 
         The fixed defaults (a 30 m deep mesh of 2 m cells, velocities from
         500 m/s at the surface to 5000 m/s, bounded below at 300 m/s) describe a
-        line hundreds of metres long over regolith. On an 11.5 m spread of
-        0.5 m geophones over soil with a 120 m/s surface layer they left the
-        picks a median 4.9 ms from the model; scaled, 1.4 ms. Each setting is
+        line hundreds of metres long over regolith, and fit a short spread of
+        closely spaced geophones over slow soil poorly. Each setting is
         scaled only where the survey calls for it, so a long line keeps the
         fixed values:
 
@@ -914,8 +913,8 @@ Return as: lam=XX, zWeight=XX, vTop=XX, vBottom=XX"""
         try:
             positions = (seismic_data.sensors() if hasattr(seismic_data, 'sensors')
                          else [pg.Pos(*row) for row in np.asarray(seismic_data, dtype=float)])
-            # A third of the sensor spacing, at most 0.8 m: a fixed 0.8 m covered
-            # a 0.5 m spread with overlapping discs.
+            # A third of the sensor spacing, at most 0.8 m, so that the discs
+            # of closely spaced sensors do not overlap.
             xs = np.unique(np.round([float(p[0]) for p in positions], 6))
             diam = min(0.8, 0.3 * float(np.median(np.diff(xs)))) if xs.size > 1 else 0.8
             pg.viewer.mpl.drawSensors(ax, positions, diam=diam,

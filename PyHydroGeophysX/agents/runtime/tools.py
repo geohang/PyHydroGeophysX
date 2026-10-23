@@ -11,8 +11,8 @@ Three fields carry the weight:
 ``requires``
     Artifacts that must exist. A tool whose requirements are unmet is never
     offered, which is what makes an impossible sequence unrepresentable rather
-    than merely discouraged. The old pipeline enforced ordering by writing the
-    calls in order; here the data dependencies say it.
+    than merely discouraged. The ordering comes from the data dependencies, not
+    from the order of calls.
 
 ``produces``
     What will exist afterwards, so the controller can reason about reaching a

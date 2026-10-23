@@ -1,20 +1,20 @@
 """The workflow's capabilities, registered as tools.
 
-Each entry wraps an existing agent rather than reimplementing it: the agents
-are the tested part of this codebase and their behaviour must not change here.
-What changes is who decides to call them, and in what order.
+Each entry wraps an existing agent rather than reimplementing it, so the
+agents' behaviour is the same whichever way they are called. The controller
+decides which to call, and in what order.
 
-Registration order is dependency order. That is not decoration - it is the
-fallback policy: without a model to ask, the controller takes the first tool
-whose requirements are met, which reproduces the pipeline these tools replaced.
-A run with no API key therefore behaves as it always did.
+Registration order is dependency order. It is also the fallback policy:
+without a model to ask, the controller takes the first tool whose requirements
+are met, which reproduces the fixed pipeline. A run with no API key therefore
+runs the usual sequence.
 
 Each handler returns ``(summary, outputs)``. The summary is the sentence the
 next step and the final report will read, so it states what was *found*, not
 that the step finished - "5 surveys, 812 measurements each, 2017-11-05 to
-2017-11-09" rather than "loading complete". This is the shared memory the
-agents did not previously have: ``BaseAgent.context`` is per-agent, so nothing
-an agent concluded ever reached another one.
+2017-11-09" rather than "loading complete". This is the run's shared memory:
+``BaseAgent.context`` is per-agent, so nothing an agent concluded would reach
+another one otherwise.
 """
 
 import re
@@ -47,8 +47,7 @@ def resolve_path(path: Any, project_dir: Any = ".") -> str:
 
     Requests name files as the user sees them, which is often a bare file name,
     a path relative to the project directory, or one carrying a duplicated
-    ``examples/`` prefix. This was written out three times in the branch this
-    package replaces, once per file role, with the copies already drifting.
+    ``examples/`` prefix. Every file role goes through this one function.
 
     Parameters
     ----------
@@ -145,11 +144,9 @@ def export_model_bundle(ctx: RunContext, results: Dict[str, Any]) -> str:
     exactly these names, and the studio's ERT-to-water-content page asks for a
     folder containing them.
 
-    An automatic run used to leave nothing in that format: it held the mesh and
-    the models in memory, converted them in the same process, and wrote only
-    figures. So a run that had just inverted five surveys still left every other
-    part of the studio with nothing to open, and the water-content page asking
-    the user to go and find a model folder that did not exist.
+    An automatic run writes this bundle, so that every other part of the
+    studio has a model folder to open after the run, the water-content page
+    included.
 
     Parameters
     ----------
@@ -385,9 +382,9 @@ def _loader_failure(result: Mapping[str, Any]) -> str:
     """Why a survey was not loaded, in the loader's own words.
 
     A refusal - the declared instrument contradicting the file header - comes
-    back as ``needs_review`` with a summary and a fix hint but no ``error``, and
-    reporting only the error printed "None", which neither the user nor a
-    recovery could act on.
+    back as ``needs_review`` with a summary and a fix hint but no ``error``, so
+    the summary and the hint are reported, not an error of "None" that neither
+    the user nor a recovery could act on.
     """
     reason = (result.get("error") or result.get("summary")
               or f"the loader returned status {result.get('status')!r}")
@@ -662,8 +659,8 @@ def _invert_time_lapse(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         "baseline_index": 0,
         # No linear solver: the library's own default (spd_cholesky for the
         # time-lapse normal equations) applies unless the caller chose one.
-        # 'cgls' here overrode it, and the solver then warned that a
-        # least-squares method had been handed a normal matrix.
+        # Passing 'cgls' here would override it, and the solver would warn
+        # that a least-squares method had been handed a normal matrix.
         "inversion_params": config.get("inversion_params",
                                        {"lambda": 15.0, "max_iterations": 10}),
         "output_dir": str(Path(ctx.output_dir) / "inversion"),
@@ -882,8 +879,8 @@ def _last_failure(ctx: RunContext, tools: Sequence[str]) -> Any:
 def _water_content_failure(ctx: RunContext, results: Mapping[str, Any]) -> Optional[str]:
     """Why water content the request asked for is missing, or None.
 
-    The report states a failed conversion as a failure, with its reason; it
-    used to read as "not requested", or leave the section out. With no
+    The report states a failed conversion as a failure, with its reason, not
+    as "not requested" and not by leaving the section out. With no
     resistivity model to convert, the reason is the step that failed to make
     one - a TDEM file that could not be read, say - rather than a bare "this
     run produced none".
@@ -940,8 +937,8 @@ def not_delivered_items(ctx: RunContext, delivered: Mapping[str, Any]) -> List[T
 
     The products the request named and the run did not make, then each step
     that failed and was not recovered, once and with its reason. A run with a
-    broken TDEM file beside good ERT data used to write a complete-looking
-    report that never mentioned TDEM, and to call itself a success.
+    broken TDEM file beside good ERT data must not write a complete-looking
+    report that never mentions TDEM.
 
     Examples
     --------
@@ -983,10 +980,10 @@ def _structure_pending(ctx: RunContext) -> bool:
 
     With a seismic line beside one ERT survey, ``derive_structure`` re-inverts
     the survey with the velocity interface built into the mesh, and that model
-    replaces the unconstrained one. Registration order put the conversion
-    first, so water content was computed from the model about to be replaced
-    and the constrained one was never used. A conversion or a fusion therefore
-    waits until the constraint has been tried, or can no longer be.
+    replaces the unconstrained one. A conversion run first would compute water
+    content from the model about to be replaced, and the constrained one would
+    never be used. A conversion or a fusion therefore waits until the
+    constraint has been tried, or can no longer be.
     """
     if _survey_count(ctx) != 1:
         return False
@@ -1048,8 +1045,8 @@ def _convert_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
         # number its cells, and would make the conversion a single unit.
         markers = np.asarray(layers)
         # Parameters the request gave per named layer (regolith, fractured
-        # bedrock) apply to these layers in order, as the fusion pipeline this
-        # replaced applied them; without it they were dropped for defaults.
+        # bedrock) apply to these layers in order, as the fixed fusion pipeline
+        # applies them; otherwise they would be dropped for defaults.
         layer_params = requested
     else:
         markers = (np.array(mesh.cellMarkers()) if mesh is not None
@@ -1065,11 +1062,17 @@ def _convert_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     # What the report states about the parameters, from what was applied.
     results["layer_params_applied"] = layer_params or {}
     results["layer_params_not_applied"] = {} if layer_params else (requested or {})
+    # The single-survey inversion's own uncertainty (its linearised posterior),
+    # drawn with the parameters so the water content's error carries both.
+    log_std = results.get("log_resistivity_std") if len(models) == 1 else None
+    if log_std is not None and np.asarray(log_std).size != np.asarray(models[0]).size:
+        log_std = None
     agent = PetrophysicsAgent(**agent_kwargs(ctx))
     per_step: List[Dict[str, Any]] = []
     for index, model in enumerate(models):
         step = agent.execute({
             "resistivity_model": model,
+            "log_resistivity_std": log_std,
             "mesh": mesh,
             "cell_markers": markers,
             "petrophysical_params": config.get("petrophysical_params", {}),
@@ -1098,7 +1101,7 @@ def _convert_water_content(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     results["petrophysical_params"] = config.get("petrophysical_params", {})
     first = per_step[0]
     for key in ("petrophysical_relationship", "prior_statement", "prior_ranges_text",
-                "n_realizations"):
+                "n_realizations", "inversion_uncertainty"):
         results[key] = first.get(key)
     flag = _state_prior(ctx, first)
 
@@ -1152,9 +1155,9 @@ register(Tool(
     # Evaluation, not just the inversion. `evaluate_inversion` may retry with
     # adjusted regularization and *replace* the model; a conversion that ran
     # first would report water content derived from a model the run then threw
-    # away. The controller does re-order these - on one run it chose to convert
-    # before evaluating - so the constraint has to live in the dependency, not
-    # in the order the tools happen to be registered.
+    # away. The controller can re-order tools - it may choose to convert before
+    # evaluating - so the constraint has to live in the dependency, not in the
+    # order the tools happen to be registered.
     requires=("inversion_results", "evaluation_results"),
     produces=("water_content",),
     agent="PetrophysicsAgent",
@@ -1180,8 +1183,9 @@ def seismic_inversion_params(config: Mapping[str, Any]) -> Dict[str, Any]:
     ``seismic_inversion_params`` is this runtime's own key and wins, setting by
     setting. The request parser writes ``seismic_params`` (its fusion stage)
     and, for a seismic-only request, top-level ``lam``, ``z_weight`` and the
-    like; reading the first key alone sent SeismicAgent an empty dictionary, so
-    every value the request stated was replaced by the agent's defaults.
+    like; reading the first key alone would send SeismicAgent an empty
+    dictionary, and every value the request stated would be replaced by the
+    agent's defaults.
 
     Examples
     --------
@@ -1591,8 +1595,8 @@ def _seismic_structure_pending(ctx: RunContext) -> bool:
 def _figure_style(ctx: RunContext) -> Optional[Dict[str, Any]]:
     """The figure style for a step that draws before any report is written.
 
-    "In feet" in the request has to reach the figures now, and is recorded in
-    the configuration so the report's tables agree with them.
+    "In feet" in the request has to reach the figures, and is recorded in the
+    configuration so the report's tables agree with them.
     """
     from .._figures import length_unit_from_text
 
@@ -1686,7 +1690,7 @@ def _invert_tdem(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     style = _figure_style(ctx)
     # TDEMAgent takes its settings flat, under 'data_file' - not an
     # 'inversion_params' dict and not 'tdem_file'. Passing the names this
-    # workflow uses elsewhere silently gave it no data file at all.
+    # workflow uses elsewhere would silently give it no data file at all.
     payload = {
         "mode": "inversion",
         "data_file": resolve_path(config.get("tdem_file") or config.get("em_file"),
@@ -1839,8 +1843,8 @@ def _tdem_water_content_wanted(ctx: RunContext) -> bool:
     """Water content is asked for, and the TDEM sounding is the run's resistivity model.
 
     With ERT data in the run the ERT model carries the conversion. A sounding
-    on its own used to end the run "incomplete" with no reason given, although
-    its layered model converts exactly as an ERT section does.
+    on its own is converted too, because its layered model converts exactly as
+    an ERT section does.
     """
     return _water_content_wanted(ctx) and not survey_files(ctx.config)
 
@@ -3066,9 +3070,9 @@ def _fuse(ctx: RunContext) -> Tuple[str, Dict[str, Any]]:
     })
     if results.get("status") != "success":
         raise ValueError(str(results.get("error") or "Data fusion failed."))
-    # DataFusionAgent.execute only drafts an execution plan. The summary used to
-    # announce "Combined seismic, ert, petrophysics" on the strength of that
-    # plan, so it now reports what the other steps of this run combined.
+    # DataFusionAgent.execute only drafts an execution plan, so the summary
+    # does not announce "Combined seismic, ert, petrophysics" on the strength of
+    # that plan; it reports what the other steps of this run combined.
     combined, apart = fusion_account(ctx)
     results = {**results, "combined": combined, "not_combined": apart,
                "planned_only": not combined}
@@ -3174,10 +3178,10 @@ def _survey_report_input(ctx: RunContext, results: Dict[str, Any]) -> Dict[str, 
 
     It takes the configuration under ``config`` and the step outputs nested by
     step - ``inversion_results``, ``water_content``, ``ert_data`` - the shape the
-    pre-controller pipeline assembled. Handing it the flat inversion dict and
-    ``workflow_config`` instead gave a report with no request, no inversion
-    statistics, no water content and no figures, while the step still said it
-    had written them.
+    fixed pipeline assembles. Handing it the flat inversion dict and
+    ``workflow_config`` instead gives a report with no request, no inversion
+    statistics, no water content and no figures, while the step still says it
+    has written them.
     """
     config = ctx.config
     failure = _water_content_failure(ctx, results)
@@ -3186,7 +3190,7 @@ def _survey_report_input(ctx: RunContext, results: Dict[str, Any]) -> Dict[str, 
         "evaluation_results": ctx.get("evaluation_results") or {},
         "raw_figures": ctx.get("ert_raw_figures") or [],
         # "Not requested" only when it was not: a conversion that was asked for
-        # and failed used to be reported as never requested.
+        # and failed is not reported as never requested.
         "skip_petrophysics": (results.get("water_content_mean") is None
                               and not _water_content_wanted(ctx)),
     }
@@ -3225,7 +3229,7 @@ def _survey_report_input(ctx: RunContext, results: Dict[str, Any]) -> Dict[str, 
         workflow_data["climate_data"] = climate
     if results.get("structure_constrained"):
         # The report's seismic section and its "Seismic Integration" line read
-        # this; without it a constrained run was reported as ERT alone.
+        # this; without it a constrained run would be reported as ERT alone.
         structure = ctx.get("structure_results") or {}
         # An interpretation nobody wrote is left out, not printed as "N/A".
         workflow_data["seismic_structure"] = {
@@ -3329,8 +3333,8 @@ def _survey_report_due(ctx: RunContext) -> bool:
     """The survey report is this run's report, and what it describes exists.
 
     A run whose models came only from TDEM, seismic refraction, MT, gravity
-    and magnetics or GPR used to end without a report, "success" and all, because
-    ``write_report`` needs an ERT inversion. This report takes its place when
+    and magnetics or GPR has no ERT inversion, which ``write_report`` needs.
+    This report takes its place when
     no ERT model exists or is still coming - an ERT step that failed leaves the
     other surveys to be reported - once every method step and water-content
     conversion the run can still take has been tried.

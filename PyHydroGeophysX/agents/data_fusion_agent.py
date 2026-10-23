@@ -1,11 +1,10 @@
 """
 Data Fusion Agent
 
-Intelligent coordinator for multi-method geophysical workflows. This agent understands
-which geophysical methods should work together and orchestrates complex data fusion
-workflows like seismic-constrained ERT inversion.
-
-The DataFusionAgent is designed to be extensible for future multi-method combinations.
+Coordinator for multi-method geophysical workflows. The agent holds a table of
+which geophysical methods work together (``FUSION_PATTERNS``) and plans data
+fusion workflows such as seismic-constrained ERT inversion. New method
+combinations are added to that table.
 """
 
 from typing import Any, Dict, List, Optional
@@ -20,17 +19,16 @@ from .base_agent import BaseAgent
 # ---------------------------------------------------------------------------
 class DataFusionAgent(BaseAgent):
     """
-    Agent for intelligent coordination of multi-method geophysical workflows.
-    
-    This agent understands common geophysical data fusion patterns and can
-    recommend and execute appropriate multi-method workflows based on user
-    requirements.
-    
+    Agent for coordinating multi-method geophysical workflows.
+
+    The agent knows common geophysical data fusion patterns and can recommend
+    and plan the matching multi-method workflow for a user's requirements.
+
     Supported Fusion Patterns:
         - ERT + Seismic: Structure-constrained resistivity inversion
         - ERT + Gravity: Density-constrained models
         - Multiple Time-Lapse: Joint temporal inversion
-        - (Extensible for future methods)
+        - Further combinations can be added to ``FUSION_PATTERNS``
     """
     
     # Define known fusion patterns

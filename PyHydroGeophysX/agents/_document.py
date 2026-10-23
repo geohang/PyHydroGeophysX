@@ -1,15 +1,15 @@
 """Markdown building blocks for a report that reads like a deliverable.
 
-The reports were assembled as runs of bullet points and raw ``json.dumps``
-blocks. That is legible to whoever wrote the workflow and to nobody else: a
-reader looking for the final chi-squared had to find it inside a fenced block
-of three hundred lines, and a five-survey inventory arrived as a JSON array
-carrying absolute paths and full SHA-256 digests.
+A report built from runs of bullet points and raw ``json.dumps`` blocks is
+legible to whoever wrote the workflow and to nobody else: a reader looking for
+the final chi-squared would have to find it inside a fenced block of hundreds
+of lines, and a survey inventory would arrive as a JSON array of absolute paths
+and full SHA-256 digests.
 
 Nothing here changes what a report says. It changes where a reader has to look
 for it: a document-control block at the top, numbered sections, tabulated
-numbers, and the machine-readable record moved to appendices with the complete
-version left in ``processing_audit.json``.
+numbers, and the machine-readable record in appendices, with the complete
+version in ``processing_audit.json``.
 
 The one formatting rule worth stating: every value that reaches a table passes
 through :func:`cell`, because an unescaped pipe or a newline inside a value

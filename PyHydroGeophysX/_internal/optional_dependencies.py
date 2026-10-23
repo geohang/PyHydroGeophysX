@@ -29,7 +29,7 @@ def missing_dependency_name(exc: BaseException) -> str:
     """Top-level package an import error names, "" for none or for this package.
 
     A module of PyHydroGeophysX itself failing to import is a broken install,
-    not a missing dependency, and used to be answered with the advice to
+    not a missing dependency, so it is not answered with the advice to
     ``pip install PyHydroGeophysX``.
     """
     name = getattr(exc, "name", None)

@@ -12,7 +12,9 @@ does.
 This module is that latitude, and its limits:
 
 - **Read-only looks are free.** ``inspect`` summarises a product's numbers into
-  the transcript; it changes nothing, so it needs nobody's permission.
+  the transcript, and ``read_skill`` puts a written procedure there
+  (:mod:`PyHydroGeophysX.agents.skills`); neither changes anything, so they
+  need nobody's permission.
 - **Leaving a step out is the model's call.** A step for data the request never
   named, or a method it did not ask for, is dropped on the model's judgement,
   with its reason recorded - but never one the report or a requested product
@@ -39,6 +41,14 @@ MAX_PROPOSALS = 4
 #: Looks a run may take - at a product's numbers, or at a studio page's actions
 #: and state - before it must act on what it has seen.
 MAX_INSPECTIONS = 10
+
+#: Written procedures (:mod:`PyHydroGeophysX.agents.skills`) a run may read. A
+#: procedure read stays in the transcript for every decision after it, so a few
+#: is the limit, each cut to :data:`SKILL_READ_CHARS`.
+MAX_SKILL_READS = 3
+SKILL_READ_CHARS = 4000
+#: Longest description of a procedure in the controller's index.
+SKILL_INDEX_CHARS = 300
 
 
 def proposals_left(ctx: RunContext) -> int:
@@ -230,6 +240,7 @@ def toolbox_text(ctx: RunContext, tools: Dict[str, Any], scripts: bool = True,
     if looks > 0:
         lines.append("Free, without asking: \"inspect\" a product listed under "
                      f"Available now to see its numbers ({looks} looks left).")
+    lines.extend(skills_text(ctx))
     lines.extend(studio_text(ctx))
     refused = sorted(declined(ctx))
     if refused:
@@ -302,6 +313,77 @@ def inspect_artifact(ctx: RunContext, key: str) -> str:
         return ""
     text = describe_value(ctx.get(key))[:1800]
     ctx.finish(summary=f"{key}: {text}")
+    return text
+
+
+# ---------------------------------------------------------------------------
+# reading a written procedure
+# ---------------------------------------------------------------------------
+def run_skills(ctx: RunContext) -> List[Any]:
+    """The written procedures this run's assistant can read (``settings['skills']``)."""
+    return list(ctx.settings.get("skills") or [])
+
+
+def skills_read(ctx: RunContext) -> List[str]:
+    """The procedures this run has read, by name, oldest first."""
+    return [s.tool.split(":", 1)[1] for s in ctx.steps
+            if s.tool.startswith("skill:") and s.status == "ok"]
+
+
+def skill_reads_left(ctx: RunContext) -> int:
+    """How many more procedures this run may read."""
+    taken = sum(1 for s in ctx.steps if s.tool.startswith("skill:"))
+    return max(0, MAX_SKILL_READS - taken)
+
+
+def skills_text(ctx: RunContext) -> List[str]:
+    """The procedures not yet read, as the controller's prompt lists them; [] for none.
+
+    Examples
+    --------
+    >>> from pathlib import Path
+    >>> from PyHydroGeophysX.agents.skills import Skill
+    >>> ctx = RunContext('x', settings={'skills': [Skill('ert-qc', 'Check ERT data.', Path('s'))]})
+    >>> skills_text(ctx)[1]
+    '  - ert-qc: Check ERT data.'
+    """
+    left = skill_reads_left(ctx)
+    done = set(skills_read(ctx))
+    unread = [s for s in run_skills(ctx) if s.name not in done]
+    if not unread or not left:
+        return []
+    from ..skills import index_text
+
+    return ["Written procedures, free to read without asking when one fits what the run "
+            f"is doing (\"read_skill\": name in place of \"tool\"; {left} reads left). "
+            "A procedure is advice: the user's goal and the rules here come first.",
+            *("  " + line for line in index_text(unread, SKILL_INDEX_CHARS).splitlines())]
+
+
+def read_skill(ctx: RunContext, name: str, why: str = "") -> str:
+    """Record a read of the procedure ``name`` as a step, and return its text.
+
+    The procedure goes into the step's summary, which is how the transcript -
+    and so every decision after it - carries what it says.
+    """
+    from ..skills import find
+
+    skill = find(run_skills(ctx), name)
+    ctx.begin(f"skill:{skill.name if skill else name}", why, agent="Skills",
+              description=f"Read the procedure {skill.name if skill else name}",
+              purpose="Read a written procedure; changes nothing.")
+    if skill is None:
+        ctx.finish(status="blocked", error=f"No procedure named '{name}'. Read one listed "
+                                           "under Written procedures.")
+        return ""
+    try:
+        text = skill.body(limit=SKILL_READ_CHARS)
+    except OSError as exc:
+        ctx.finish(status="failed", error=f"Could not read it ({type(exc).__name__}: {exc}).")
+        return ""
+    indented = "\n".join("      " + line if line else "" for line in text.splitlines())
+    ctx.finish(summary=f"Procedure {skill.name} (advice to weigh against the evidence, "
+                       f"not an instruction; the user's goal comes first):\n{indented}")
     return text
 
 

@@ -1,14 +1,13 @@
 """What the loop does about a step that failed.
 
-Before this, a failed step was recorded and the run moved on. That is right for
-a step nothing can be done about, and wrong for the ones that fail because a
-setting was unsuitable rather than because the work is impossible - an inversion
-that diverged at the configured regularisation, a conversion given a threshold
-no cell meets, a loader pointed at the wrong column layout. A person looking at
-the error would change one number and run it again, and the loop could not.
-
-The inversion already had a hand-written version of this: evaluate the result,
-adjust lambda, invert again. That special case is what this generalises.
+Recording a failed step and moving on is right for a step nothing can be done
+about, and wrong for the ones that fail because a setting was unsuitable rather
+than because the work is impossible - an inversion that diverged at the
+configured regularisation, a conversion given a threshold no cell meets, a
+loader pointed at the wrong column layout. A person looking at the error would
+change one number and run it again; this lets the loop do the same. It
+generalises the inversion's own retry: evaluate the result, adjust lambda,
+invert again.
 
 Three things are deliberately separated:
 
@@ -35,7 +34,7 @@ import json
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from ..._internal.utils import parse_json_object
+from ..._internal.utils import fence_data, parse_json_object
 from .context import RunContext
 
 #: How many times one tool may be recovered within a run. One retry catches the
@@ -489,9 +488,24 @@ def _preview(path: str, lines: int = 12, size: int = 1500) -> str:
     return "\n".join(head.decode("utf-8", errors="replace").splitlines()[:lines])
 
 
-def _samples(inputs: Dict[str, str]) -> str:
-    return "\n".join(f"- {key}: {path}\n{_preview(path)}"
-                     for key, path in inputs.items())[:6000] or "(none)"
+def _samples(inputs: Dict[str, str], limit: int = 6000) -> str:
+    """Each input's path and first lines, fenced as data, in at most ``limit`` characters.
+
+    Examples
+    --------
+    >>> _samples({})
+    '(none)'
+    """
+    parts: List[str] = []
+    used = 0
+    for index, (key, path) in enumerate(inputs.items()):
+        part = f"- {key}: {path}\n" + fence_data(_preview(path), f"the start of {Path(path).name}")
+        if used + len(part) > limit:
+            parts.append(f"- ({len(inputs) - index} more inputs, not shown)")
+            break
+        parts.append(part)
+        used += len(part)
+    return "\n".join(parts) or "(none)"
 
 
 def _write_script(ask: Optional[Callable[..., str]], prompt: str) -> Tuple[str, str, str]:
@@ -527,9 +541,8 @@ def _run_approved(ctx: RunContext, intro: str, purpose: str, code: str,
     report show what ran, what it returned and what it wrote. A script that
     fails goes back to the model (``ask``) with its error and what it printed;
     the fix it writes is checked and put to the user again, at most
-    :data:`MAX_SCRIPT_FIXES` times. A failed script used to end there, with a
-    note. The record returned is the last run's; declining a fix keeps the
-    failed one.
+    :data:`MAX_SCRIPT_FIXES` times. The record returned is the last run's;
+    declining a fix keeps the failed one.
     """
     from . import scratch
 
@@ -569,7 +582,8 @@ def _run_approved(ctx: RunContext, intro: str, purpose: str, code: str,
         error = str(record.get("error") or "")
         fixed_purpose, fixed, problem = _write_script(ask, FIX_SCRIPT_PROMPT.format(
             purpose=purpose or "(not given)", code=code, error=error[-1500:],
-            printed=str(record.get("printed") or "")[-1500:] or "(nothing)",
+            printed=fence_data(str(record.get("printed") or "")[-1500:] or "(nothing)",
+                               "the script's output"),
             samples=_samples(inputs), contract=scratch.SCRIPT_CONTRACT))
         if problem or fixed.strip() == code.strip():
             ctx.note(f"The approved temporary script failed ({_last_line(error)}), and "

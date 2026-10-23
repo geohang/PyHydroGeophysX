@@ -21,9 +21,9 @@ from PyHydroGeophysX._internal.utils import json_safe
 
 from ._intent import unmet_requests
 
-#: Names this module imported for the legacy workflow, which now lives in
-#: ``_legacy_workflow``. They still resolve here, with a warning naming their
-#: home, through the 0.5 series; 0.6.0 removes them.
+#: Names that were importable from this module because the fixed workflow in
+#: ``_legacy_workflow`` used them. They still resolve here, with a warning
+#: naming their home, through the 0.5 series; 0.6.0 removes them.
 _MOVED = {
     "IMPLEMENTED_SCHEME": "PyHydroGeophysX.agents._method",
     "climate_blocker": "PyHydroGeophysX.agents._intent",
@@ -46,8 +46,8 @@ def __getattr__(name: str) -> Any:
 
 #: Held for the two once-per-agent steps of a model call: folding the agent's
 #: .agent.md instructions into its system message, and building its SDK client.
-#: Both can now be reached from several threads at once - the request parser
-#: asks its independent questions concurrently - and neither may run twice.
+#: Both can be reached from several threads at once - the request parser asks
+#: its independent questions concurrently - and neither may run twice.
 #: Module-level rather than one per agent, so agents stay picklable; each step
 #: runs once per agent, so nothing waits on it in practice.
 _LLM_INIT_LOCK = threading.Lock()
@@ -353,6 +353,51 @@ def _dates_from_filenames(paths):
     timing = survey_timing([str(p) for p in (paths or [])], allow_header=False)
     return list(timing.labels) if timing.dated else []
 
+
+#: ``api_key`` value that takes the key from the provider's environment
+#: variable. Without it an agent has no key, whatever the environment holds.
+KEY_FROM_ENVIRONMENT = "env"
+
+#: Environment variables already reported by :func:`_api_key`, once a process.
+_KEYS_REPORTED: set = set()
+
+
+def _api_key(given: Optional[str], variable: str) -> Optional[str]:
+    """The key an agent uses: the one it was given, or none.
+
+    An agent reads ``variable`` only when asked to, so a library call - a
+    conversion, a header check, a request preview meant to run on rules - does
+    not send requests or spend credit nobody asked for, and ``api_key=None``,
+    which the documentation's no-model examples pass, means no key. ``"env"``
+    asks for the variable. ``None`` with the variable set warns once, saying
+    how to use it; ``""`` is no key, quietly.
+
+    Examples
+    --------
+    >>> import os
+    >>> os.environ['PHGX_DOCTEST_KEY'] = 'sk-x'
+    >>> _api_key('sk-given', 'PHGX_DOCTEST_KEY'), _api_key('env', 'PHGX_DOCTEST_KEY')
+    ('sk-given', 'sk-x')
+    >>> _api_key('', 'PHGX_DOCTEST_KEY') is None
+    True
+    >>> del os.environ['PHGX_DOCTEST_KEY']
+    """
+    if given == KEY_FROM_ENVIRONMENT:
+        return os.getenv(variable) or None
+    if given:
+        return given
+    if given is None and os.getenv(variable) and variable not in _KEYS_REPORTED:
+        import warnings
+
+        _KEYS_REPORTED.add(variable)
+        warnings.warn(
+            f"{variable} is set, but this agent was given no api_key, so it runs "
+            f"without a model. Pass api_key=os.environ['{variable}'] (or "
+            f"api_key='{KEY_FROM_ENVIRONMENT}') to use it; agents no longer read it "
+            f"by themselves.", UserWarning, stacklevel=4)
+    return None
+
+
 class BaseAgent(ABC):
     """
     Abstract base class for all agents in the multi-agent system.
@@ -368,7 +413,12 @@ class BaseAgent(ABC):
         
         Args:
             name: Name identifier for this agent
-            api_key: LLM API key (uses provider-specific env var if not provided)
+            api_key: LLM API key. None or "" means no key: the agent runs
+                without a model. ``"env"`` (:data:`KEY_FROM_ENVIRONMENT`) reads
+                the provider's variable (OPENAI_API_KEY, GEMINI_API_KEY,
+                ANTHROPIC_API_KEY, OPENAI_COMPAT_API_KEY). An agent does not
+                pick that variable up by itself, so a library call cannot
+                spend credit unasked.
             model: Model identifier. If omitted, use OPENAI_MODEL, GEMINI_MODEL
                 or CLAUDE_MODEL, then the provider fallback in this constructor.
             llm_provider: API provider ('openai', 'gemini', 'claude',
@@ -381,18 +431,18 @@ class BaseAgent(ABC):
         
         # Set API key and default model based on provider
         if self.llm_provider == "openai":
-            self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+            self.api_key = _api_key(api_key, 'OPENAI_API_KEY')
             self.model = model or os.getenv('OPENAI_MODEL', 'gpt-4')
         elif self.llm_provider == "gemini":
-            self.api_key = api_key or os.getenv('GEMINI_API_KEY')
+            self.api_key = _api_key(api_key, 'GEMINI_API_KEY')
             self.model = model or os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
         elif self.llm_provider == "claude":
-            self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
+            self.api_key = _api_key(api_key, 'ANTHROPIC_API_KEY')
             self.model = model or os.getenv('CLAUDE_MODEL', 'claude-sonnet-5')
         elif self.llm_provider == "openai_compatible":
             # A vLLM server, Jetstream2's inference service, DeepSeek and the
             # like; the endpoint is read when the client is built.
-            self.api_key = api_key or os.getenv('OPENAI_COMPAT_API_KEY')
+            self.api_key = _api_key(api_key, 'OPENAI_COMPAT_API_KEY')
             self.model = model or os.getenv('OPENAI_COMPAT_MODEL', 'deepseek-chat')
         elif self.llm_provider in ("codex_cli", "claude_code"):
             from PyHydroGeophysX.llm.providers import make_provider
@@ -415,10 +465,10 @@ class BaseAgent(ABC):
         return bool(self.api_key) or getattr(self, "llm_provider", "") in ("codex_cli", "claude_code")
 
     def __getstate__(self) -> Dict[str, Any]:
-        """Pickle and copy as before the agent held a client: without it.
+        """Pickle and copy the agent without its cached SDK client.
 
-        The cached SDK client owns sockets and locks, which neither pickle nor
-        deep-copy; the copy builds its own on its first call.
+        The client owns sockets and locks, which neither pickle nor deep-copy;
+        the copy builds its own on its first call.
         """
         state = self.__dict__.copy()
         state.pop("_llm_clients", None)
@@ -427,12 +477,12 @@ class BaseAgent(ABC):
     def _llm_client(self, sdk_name: str) -> Any:
         """This agent's SDK client, built on its first call and kept after it.
 
-        Each call used to build a new client, and so open a new connection: a
-        TCP and TLS handshake before every question, 17 of them in one ERT
-        workflow, and the SDK's ten-minute request timeout. The client kept
-        here reuses its connection between calls - the chat providers' idle
-        allowance, not the SDK's five seconds - and times a request out after
-        ``PHGX_LLM_TIMEOUT_S`` (``REQUEST_TIMEOUT_S``), as the chat does.
+        Building a client per call would open a new connection - a TCP and TLS
+        handshake before every question - and leave the SDK's ten-minute
+        request timeout in force. The client kept here reuses its connection
+        between calls - the chat providers' idle allowance, not the SDK's five
+        seconds - and times a request out after ``PHGX_LLM_TIMEOUT_S``
+        (``REQUEST_TIMEOUT_S``), as the chat does.
 
         Parameters
         ----------
@@ -486,9 +536,9 @@ class BaseAgent(ABC):
         ``KEEPALIVE_S`` and times a request out after ``REQUEST_TIMEOUT_S``. The
         older ``google-generativeai`` has no client an agent can own -
         ``genai.configure`` sets one key for the whole process and discards every
-        client built before it - and each call configured and built afresh. With
-        that SDK the agent keeps one ``GenerativeModel``, configured once when it
-        is built, and the model keeps the connection it opens on its first call.
+        client built before it. With that SDK the agent keeps one
+        ``GenerativeModel``, configured once when it is built, and the model
+        keeps the connection it opens on its first call.
 
         Returns
         -------
@@ -1056,11 +1106,11 @@ class BaseAgent(ABC):
     def _log_execution(self, message: str, level: str = 'INFO') -> None:
         """Print one progress line, ``[agent] [LEVEL] message``.
 
-        Every agent used to carry its own copy of this method. The desktop
-        worker reads these lines from the run's standard output, which is why
-        this prints rather than logs. A console that cannot encode a character
-        (a Windows code page meeting a chi-squared sign) gets a replacement
-        character instead of an exception that ends the run.
+        The desktop worker reads these lines from the run's standard output,
+        which is why this prints rather than logs. A console that cannot
+        encode a character (a Windows code page meeting a chi-squared sign)
+        gets a replacement character instead of an exception that ends the
+        run.
         """
         prefix = f"[{self.name}] [{level}] "
         try:
@@ -1126,8 +1176,9 @@ class BaseAgent(ABC):
             except ImportError:
                 pass
 
-            # Plain JSON-serialisable types. Containers are converted through:
-            # a numpy value inside a dict or list used to stop json.dump.
+            # Plain JSON-serialisable types. Containers are converted through
+            # json_safe, because json.dump cannot write a numpy value inside a
+            # dict or list.
             if isinstance(value, (str, int, float, bool, list, dict)):
                 return json_safe(value)
 
@@ -1152,21 +1203,18 @@ class BaseAgent(ABC):
                                    output_dir, progress_callback=None, **kwargs):
         """Run one workflow, choosing each step from what the run has produced.
 
-        Kept as the entry point every caller already uses - the desktop studio,
-        the Streamlit app and the one-click runner - while what happens behind
-        it changed. It used to classify the request into one of eight workflow
-        types and run that type's fixed sequence; it now builds a run context
-        and hands it to the controller in
-        :mod:`PyHydroGeophysX.agents.runtime`, which picks each step from the
-        tools whose inputs exist and observes the result before picking the
-        next.
+        This is the entry point the desktop studio, the Streamlit app and the
+        one-click runner use. It builds a run context and hands it to the
+        controller in :mod:`PyHydroGeophysX.agents.runtime`, which picks each
+        step from the tools whose inputs exist and observes the result before
+        picking the next.
 
         The returned execution plan is derived from the steps that ran, so it
-        can no longer advertise a step the run skipped.
+        cannot advertise a step the run skipped.
 
         Set ``PHGX_LEGACY_WORKFLOW=1`` to run
-        :meth:`run_legacy_agent_workflow` instead, which is the implementation
-        this replaced.
+        :meth:`run_legacy_agent_workflow` instead, which classifies the request
+        into one of eight workflow types and runs that type's fixed sequence.
         """
         from .runtime.entry import run_workflow, use_legacy
         if use_legacy():
@@ -1181,12 +1229,11 @@ class BaseAgent(ABC):
         """
         Unified agent workflow: infers task type from config and runs the appropriate pipeline.
 
-        The pre-controller implementation, kept reachable because it covers
-        workflow types whose tools cannot be exercised here - there is no
-        ParFlow output, no SEG-Y file and no GPU on this machine - and because
-        a run that behaves differently can then be compared against the code it
-        replaced. Reached by setting ``PHGX_LEGACY_WORKFLOW=1``. The code lives
-        in :mod:`PyHydroGeophysX.agents._legacy_workflow`.
+        The fixed-pipeline implementation. It covers workflow types whose tools
+        cannot be exercised on every machine (ParFlow output, SEG-Y files, a
+        GPU), and a controller run can be compared against it. Reached by
+        setting ``PHGX_LEGACY_WORKFLOW=1``. The code lives in
+        :mod:`PyHydroGeophysX.agents._legacy_workflow`.
         Supported: data fusion, time-lapse, direct ERT conversion.
         Returns: results dict, execution plan, interpretation, report files
         

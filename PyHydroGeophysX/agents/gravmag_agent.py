@@ -1,7 +1,6 @@
 """Gravity / magnetics agent: station data to QC maps and a 3D model.
 
-The agents had no step for potential-field data, so a gravity or magnetic
-survey given to a run was not processed at all. This agent does what the
+This agent is the run's step for potential-field data. It does what the
 Gravity / Magnetics page does with its default settings, without Qt: it reads
 the station table, separates a polynomial regional trend from the residual
 anomaly (:func:`~PyHydroGeophysX.data_processing.gravmag.qc_products`), maps

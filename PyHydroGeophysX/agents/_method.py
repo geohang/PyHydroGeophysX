@@ -1,6 +1,7 @@
 """What the time-lapse inversion actually does, in one place.
 
-The reports described the run as a *difference inversion*, and it is not one.
+The time-lapse inversion the agents run is not a *difference inversion*, and
+reports must not describe it as one.
 ``time_lapse_method`` is read in
 :meth:`PyHydroGeophysX.agents.ert_inversion_agent.ERTInversionAgent.run_time_lapse_inversion`
 only to be written to the log; it never reaches
@@ -26,6 +27,12 @@ changes are as smooth in time as they are.
 So the label is taken from here rather than from the configuration, and a
 configuration that asks for a scheme this package does not implement is
 reported as an unhonoured request rather than quietly relabelled.
+
+This concerns the in-house inversion the automatic run uses. The external
+engines the ERT page can run are another matter: R2 and R3t invert a
+time-lapse series as a difference inversion against the first survey
+(LaBrecque and Yang, 2001), and E4D runs its own time-lapse mode; see the ERT
+methods page.
 """
 
 from typing import Any, Dict, Optional, Tuple

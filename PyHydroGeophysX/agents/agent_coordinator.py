@@ -50,10 +50,9 @@ def _unsupported_by_coordinator(config: Dict[str, Any]) -> Optional[str]:
 
     Its pipeline is ERT (one survey or a time-lapse series) with optional
     climate data, a seismic structure constraint read from ``seismic_data``,
-    and water content. The preview used to plan TDEM, SEG-Y and seismic-fusion
-    workflows as well, which the run then skipped: it ran the ERT steps alone,
-    or failed for want of an ERT file. The preview and the run now both refuse
-    such a configuration. A request that rules TDEM out ("not TDEM", "不需要
+    and water content. The preview and the run both refuse a configuration
+    that asks for anything else (TDEM, SEG-Y, seismic fusion), rather than
+    plan it and then skip it. A request that rules TDEM out ("not TDEM", "不需要
     TDEM") does not count as asking for it; one that asks for a TEM sounding
     does.
 
@@ -86,9 +85,8 @@ def _unsupported_by_coordinator(config: Dict[str, Any]) -> Optional[str]:
 def _input_problem(config: Dict[str, Any]) -> Optional[str]:
     """Why the ERT data *config* names cannot be run, or None.
 
-    A request that says "time-lapse" of one file becomes a series of one,
-    which the run refused only after loading it, while the preview planned the
-    whole pipeline. Both now refuse it before any step.
+    A request that says "time-lapse" of one file becomes a series of one.
+    The preview and the run both refuse it before any step.
 
     Examples
     --------
@@ -115,9 +113,9 @@ def _time_lapse_files(config: Dict[str, Any]) -> List[str]:
     """The time-lapse survey files a configuration names, in acquisition order.
 
     ``ContextInputAgent`` writes them to ``time_lapse_files`` and also sets
-    ``data_file`` to the first one as the baseline, which is why a pipeline
-    that read only ``data_file`` inverted the baseline alone.
-    ``timelapse_files`` is the older spelling.
+    ``data_file`` to the first one as the baseline, so a pipeline that read
+    only ``data_file`` would invert the baseline alone.
+    ``timelapse_files`` is the alternative spelling.
 
     Examples
     --------
@@ -132,8 +130,7 @@ def _time_lapse_files(config: Dict[str, Any]) -> List[str]:
 def _single_survey_file(config: Dict[str, Any]) -> Optional[str]:
     """The ERT file a single-survey run loads: ``data_file``, else ``ert_file``.
 
-    The preview planned a run for either name, while the run read
-    ``data_file`` alone and failed to load anything for an ``ert_file``.
+    The preview and the run both accept either name.
 
     Examples
     --------
@@ -152,10 +149,9 @@ def _converts_water_content(config: Dict[str, Any]) -> bool:
     run skips, or the reverse. A configuration that states an intent (the
     ``convert_to_water_content`` flag, petrophysical parameters, or the
     request's own words) is read by :func:`._intent.wants_water_content`, as
-    the runtime reads it. The ``"water content" in request`` test this
-    replaced missed a typo, a synonym and a request written in Chinese. A
-    configuration that states nothing keeps the pipeline this coordinator has
-    always run and documents, which converts.
+    the runtime reads it, which accepts a typo, a synonym and a request
+    written in Chinese. A configuration that states nothing gets the
+    coordinator's documented pipeline, which converts.
 
     Examples
     --------
@@ -180,8 +176,8 @@ def _converts_water_content(config: Dict[str, Any]) -> bool:
 def _climate_gap(config: Dict[str, Any]) -> Optional[str]:
     """Why climate data *config* asks for will not be fetched, or None.
 
-    The report says it with this reason: "No climate data was integrated"
-    read as if none had been asked for.
+    The report says it with this reason: a bare "No climate data was
+    integrated" would read as if none had been asked for.
 
     Examples
     --------
@@ -524,7 +520,7 @@ class AgentCoordinator:
         * its ERT files, when the configuration names no ERT data at all, or
           the time-lapse series it asks for when the configuration's one
           survey is part of it. A file mentioned beside the caller's
-          ``data_file`` (an output name, say) no longer turns the run into a
+          ``data_file`` (an output name, say) does not turn the run into a
           time-lapse series;
         * the instrument and the petrophysical parameters it names;
         * a seismic travel-time file, as the ``seismic_data`` of the seismic
@@ -534,17 +530,15 @@ class AgentCoordinator:
           TDEM and SEG-Y files a request names.
 
         The parser's defaults - a regularisation, an iteration count, an
-        uncertainty run - are not taken: they replaced the defaults this run
-        has always used, the time-lapse ones among them, and a guess such as
-        a seismic file refused the seismic constraint the caller had
+        uncertainty run - are not taken: they would replace the run's own
+        defaults, the time-lapse ones among them, and a guess such as a
+        seismic file would displace a seismic constraint the caller had
         configured. A key the caller set keeps the caller's value. Wherever
         the request states something this run will not use, a sentence saying
-        so is appended to ``notes``. The preview used to let the parsed values
-        overwrite the caller's, and the run ignored the request, so a
-        time-lapse series named only in the request was planned and never
-        inverted; both now read this result. A configuration without a request
-        is returned as given, apart from moving a SEG-Y ``seismic_file`` to
-        ``raw_seismic_file``.
+        so is appended to ``notes``. The preview and the run both read this
+        result, so a time-lapse series named only in the request is planned
+        and inverted. A configuration without a request is returned as given,
+        apart from moving a SEG-Y ``seismic_file`` to ``raw_seismic_file``.
         """
         request = config.get("user_request") or config.get("request") or ""
         resolved = dict(config)
@@ -554,7 +548,7 @@ class AgentCoordinator:
 
             caller_files = [str(f) for f in (config.get("data_file"), config.get("ert_file"),
                                              *_time_lapse_files(config)) if f]
-            stated = ContextInputAgent(api_key=None, llm_provider=self.llm_provider) \
+            stated = ContextInputAgent(api_key="", llm_provider=self.llm_provider) \
                 .request_inputs(str(request), known_files=caller_files)
 
             named_files = stated.get("time_lapse_files") or (
@@ -664,8 +658,7 @@ class AgentCoordinator:
 
         Only a configuration :func:`_unsupported_by_coordinator` accepts gets
         here, so the plan is the ERT pipeline, or empty when no ERT data is
-        named. The TDEM, SEG-Y and seismic-fusion plans this used to return
-        described steps :meth:`execute_workflow` never ran.
+        named. It lists only steps :meth:`execute_workflow` runs.
         """
         if _time_lapse_files(config) or _single_survey_file(config):
             return self._ert_pipeline_plan(config)
@@ -675,9 +668,7 @@ class AgentCoordinator:
         """The steps :meth:`execute_workflow` runs for an ERT configuration.
 
         Built from the same tests the run makes, step for step, so the preview
-        can no longer list a step the run skips (it listed an evaluation step
-        the run never made) or omit one it runs (the water-content step, read
-        from a substring, and every time step after the baseline).
+        cannot list a step the run skips or omit one it runs.
         """
         time_lapse = bool(_time_lapse_files(config))
         seismic = (not time_lapse and bool(config.get("use_seismic", False))
@@ -772,13 +763,11 @@ class AgentCoordinator:
         result, so writing one is best-effort. A result that cannot be pickled
         - an inversion result holds a pyGIMLi mesh, which cannot - or a disk
         that refuses the file leaves a warning in the log and no checkpoint,
-        and the run goes on; a resumed run then repeats that step. It used to
-        end the run: the example notebook's inversion finished and the workflow
-        failed on pickling the mesh it had just computed, with no water content
-        and no report. The pickle is written beside its final name and moved
-        into place only when complete, so a failure leaves no partial file,
-        and an older checkpoint of the same step is removed rather than left
-        for a resumed run to mistake for this run's result.
+        and the run goes on; a resumed run then repeats that step. The pickle
+        is written beside its final name and moved into place only when
+        complete, so a failure leaves no partial file, and an older checkpoint
+        of the same step is removed rather than left for a resumed run to
+        mistake for this run's result.
 
         Parameters
         ----------
@@ -990,8 +979,8 @@ class AgentCoordinator:
                 })
                 # As for each survey of a series: a survey the loader did not
                 # load (an instrument that contradicts the file header, say)
-                # stops the run with the loader's reason, where it used to
-                # fail further on with a bare KeyError 'ert_data'.
+                # stops the run with the loader's reason, not with a bare
+                # KeyError 'ert_data' further on.
                 if ert_data.get('status') != 'success':
                     raise ValueError(f"ERT survey {_single_survey_file(config)} could not be "
                                      f"loaded: {_load_failure(ert_data)}")
@@ -1028,8 +1017,8 @@ class AgentCoordinator:
                     self.workflow_state['completed_steps'].append('process_seismic')
                 else:
                     # A failed seismic step is not a structure. Stored as one,
-                    # it made the inversion "structure-constrained" by a result
-                    # that held no interface, and the step was listed as done.
+                    # it would make the inversion "structure-constrained" by a
+                    # result that holds no interface, and list the step as done.
                     reason = (seismic_results.get('error') or seismic_results.get('summary')
                               or f"status {seismic_results.get('status')!r}")
                     note = (f"The seismic step failed ({reason}), so no seismic structure "
@@ -1047,10 +1036,10 @@ class AgentCoordinator:
                 inversion_results = ckpt
                 self._log("  → Loaded from checkpoint")
             elif time_lapse_files:
-                # The keys the legacy time-lapse pipeline hands the same agent.
+                # The keys the fixed time-lapse pipeline hands the same agent.
                 inversion_results = self._execute_agent('ert_inversion', {
                     'time_lapse_data': [loaded['ert_data'] for loaded in ert_data],
-                    # The loaded surveys no longer carry their file names, and
+                    # The loaded surveys do not carry their file names, and
                     # the acquisition times are read from them.
                     'source_files': list(time_lapse_files),
                     'inversion_mode': 'time-lapse',

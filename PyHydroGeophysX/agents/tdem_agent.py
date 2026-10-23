@@ -813,19 +813,16 @@ and where the model is reliable given the depth of investigation."""
                         ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Times, observations and uncertainties from a TDEM data file.
 
-        Handles the two shapes these files come in, which the previous version
-        handled neither of for the data shipped with this package:
+        Handles the two shapes these files come in:
 
-        - **Delimiter.** It read with ``np.loadtxt``'s whitespace default, so a
-          comma-separated file failed on its first row. The delimiter is now
-          taken from the header line.
-        - **What the third column is.** It assumed column 2 was an uncertainty.
-          In a multi-sounding file - ``time_s, dBdt_E603036_N6413476,
-          dBdt_E611529_N6405000, ...``, which is what
+        - **Delimiter.** The delimiter is taken from the header line, so
+          comma-separated files read as well as whitespace-separated ones.
+        - **What the third column is.** In a multi-sounding file - ``time_s,
+          dBdt_E603036_N6413476, dBdt_E611529_N6405000, ...``, which is what
           ``examples/data/EM/skytem_bhmar_tdem.csv`` is - every column after the
           time is a separate sounding, and using the second one as the error on
-          the first weights the inversion by another site's data. A column is
-          treated as an uncertainty only when its name says so.
+          the first would weight the inversion by another site's data. A column
+          is treated as an uncertainty only when its name says so.
 
         Parameters
         ----------

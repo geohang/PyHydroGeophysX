@@ -1,23 +1,15 @@
-"""A controller loop for the geophysics agents, in place of a fixed pipeline.
+"""A controller loop for the geophysics agents.
 
-The workflow used to be a classifier followed by one of eight hard-coded
-sequences: ``_detect_workflow_type`` picked a branch of a 1770-line ``if/elif``
-and that branch called its agents in a fixed order. Three things followed from
-that shape, and all three were reported as bugs rather than recognised as one
-design:
+Rather than a fixed pipeline, a run is a loop with one shared transcript and
+one tool per capability. The controller reads the transcript, chooses the next
+action, observes its result, and chooses again. This has three consequences:
 
-- The execution plan was written by hand in nine separate places, so it
-  described the run someone expected rather than the run that happened. A plan
-  listed ``ClimateDataAgent`` on a run whose configuration had climate disabled.
-- ``BaseAgent.context`` is per-agent and never shared, so no agent could see
-  what another had concluded. The report agent received the evaluation's
-  numbers but not its judgement, and could not say why a result needed review.
-- Nothing could react. A stage that found a problem had no way to change what
-  happened next, beyond one special case for re-running an inversion.
-
-This package replaces the dispatcher with a controller loop: one transcript,
-one tool per capability, and a controller that reads the transcript, chooses
-the next action, observes its result, and chooses again.
+- The execution plan is derived from the steps that ran, so it describes the
+  run that happened rather than the run someone expected.
+- Every tool sees what the earlier steps concluded, not only their numbers: the
+  report can say why a result needs review.
+- A stage that finds a problem can change what happens next, for example by
+  re-running an inversion with different settings.
 
 - :mod:`~PyHydroGeophysX.agents.runtime.context` is the transcript: the goal,
   every step taken, what each step found, and the artifacts they produced.

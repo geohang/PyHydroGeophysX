@@ -9,15 +9,15 @@ density and susceptibility volumes into a quasi-geological model (prior-guided
 units and Geo groups, or GMM/BIC when priors are thin), ranks targets, writes
 the interpretation and has it reviewed before it is final.
 
-**Status: being ported.** This package is the scaffold the port fills in. The
-pipeline is laid out as tools in :mod:`.tools` - one per stage of the paper's
-Figure 1, with what each requires and produces - and :mod:`.workflow` runs
-them on the same controller as AQUAH, so the studio's chat, live timeline,
-step approval and report view work for GeoSAGE as soon as the tools do. Until
-then it is listed in the studio's assistant menu but cannot be selected; set
-``status="ready"`` below once the tools run.
+**Status: in development.** The pipeline is laid out as tools in
+:mod:`.tools` - one per stage of the paper's Figure 1, with what each requires
+and produces - and :mod:`.workflow` runs them on the same controller as AQUAH,
+so the studio's chat, live timeline, step approval and report view work for
+GeoSAGE as soon as the tools do. Until the tools are implemented the assistant
+is listed in the studio's assistant menu but cannot be selected; set
+``status="ready"`` below once they run.
 
-The paper's seven agents map onto this package as follows:
+The paper's seven agents correspond to this package as follows:
 
 =================  ====================================================
 ContextAgent       :func:`.workflow.configure` (request -> configuration)

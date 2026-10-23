@@ -12,6 +12,23 @@ import numpy as np
 from ._method import IMPLEMENTED_SCHEME, SCHEME_LABEL
 from .base_agent import BaseAgent
 
+#: The mesh settings a request may give, as pyGIMLi's createMesh names them.
+MESH_SETTINGS = ('quality', 'paraDX', 'paraMaxCellSize', 'paraDepth')
+
+
+def _mesh_settings(inversion_params: Dict[str, Any]) -> Dict[str, float]:
+    """The mesh settings ``inversion_params`` gives, as numbers; none it leaves out.
+
+    >>> _mesh_settings({'lambda': 20, 'paraDepth': 40, 'quality': None})
+    {'paraDepth': 40.0}
+    """
+    out: Dict[str, float] = {}
+    for key in MESH_SETTINGS:
+        value = (inversion_params or {}).get(key)
+        if value is not None:
+            out[key] = float(value)
+    return out
+
 
 # ---------------------------------------------------------------------------
 # ERTInversion Agent
@@ -149,9 +166,8 @@ constraints, structural constraints, and convergence criteria."""
                     # around pyGIMLi sensor positions.
                     mesh = self._create_structured_mesh(data_file, seismic_structure)
                 except Exception as exc:  # noqa: BLE001 - reported on the result
-                    # Said on the result, not only in the log: a constrained
-                    # inversion that quietly ran unconstrained is what this
-                    # used to do, because the mesh builder it imported was gone.
+                    # Said on the result, not only in the log, so that a
+                    # constrained inversion cannot quietly run unconstrained.
                     constraint_warning = (
                         f"A structure-constrained inversion was requested but the "
                         f"constraint could not be built ({exc}); this model is an "
@@ -170,10 +186,10 @@ constraints, structural constraints, and convergence criteria."""
                 lambda_rate=inversion_params.get('lambda_rate', 1.0),
                 lambda_min=inversion_params.get('lambda_min', 1.0),
                 model_constraints=tuple(inversion_params.get('model_constraints', (1e-6, 1e7))),
-                quality=inversion_params.get('quality', 34.0),
-                paraDX=inversion_params.get('paraDX', 0.3),
-                paraMaxCellSize=inversion_params.get('paraMaxCellSize', 0.0),
-                paraDepth=inversion_params.get('paraDepth', 0.0),
+                # Only the mesh settings the caller gave: ERTInversion builds its
+                # own mesh otherwise (pyGIMLi's, quality 34). The defaults passed
+                # here before (paraDX 0.3 and the rest) never reached the mesh.
+                **_mesh_settings(inversion_params),
                 absoluteUError=inversion_params.get('absoluteUError', 0.0),
                 relativeError=inversion_params.get('relativeError', 0.05),
                 maxLineSearch=inversion_params.get('maxLineSearch'),
@@ -181,10 +197,13 @@ constraints, structural constraints, and convergence criteria."""
                 robustData=inversion_params.get('robustData'),
                 blockyModel=inversion_params.get('blockyModel'),
                 verbose=inversion_params.get('verbose', False),
+                # The model's own uncertainty, which the water-content
+                # conversion draws resistivity with.
+                posterior_std=inversion_params.get('posterior_std', True),
             )
-            
+
             inversion_result = inversion.run()
-            
+
             self._log_execution("Inversion completed successfully")
             
             # Store results
@@ -203,6 +222,7 @@ constraints, structural constraints, and convergence criteria."""
                 'mesh': inversion_result.mesh,
                 'resistivity_model': inversion_result.final_model,
                 'coverage': inversion_result.coverage,
+                'log_resistivity_std': getattr(inversion_result, 'model_log_std', None),
                 'chi2': float(inversion_result.meta.get('final_chi2')) if inversion_result.meta.get('final_chi2') is not None else (float(np.asarray(inversion_result.iteration_chi2[-1]).item()) if inversion_result.iteration_chi2 else None),
                 'iterations': int(inversion_result.meta.get('native_iterations')) if inversion_result.meta.get('native_iterations') is not None else len(inversion_result.iteration_chi2),
                 'interpretation': interpretation,
@@ -319,14 +339,12 @@ Return as: lambda=XX, max_iterations=YY"""
 
         Raises:
             ValueError: If there is no interface to build in. The caller says
-                so on its result; returning None used to leave the inversion
+                so on its result; returning None would leave the inversion
                 running unconstrained with nothing but a log line to show it.
         """
         from pygimli.physics import ert
 
-        # create_ert_mesh_with_structure, which this imported, was removed from
-        # Geophy_modular.structure_integration; this is the builder the
-        # structure-constraint agent uses.
+        # The builder the structure-constraint agent uses.
         from PyHydroGeophysX.core.mesh_utils import add_velocity_interface
 
         structure = seismic_structure or {}
@@ -497,7 +515,13 @@ Provide a brief interpretation (2-3 sentences) about:
             from pygimli.physics import ert
             data = ert.load(data_files[0])
             ert_manager = ert.ERTManager(data)
-            mesh = ert_manager.createMesh(data=data, quality=31, paraMaxCellSize=25,paraDepth=28)
+            # These defaults are fixed whatever the line length (paraDepth 28 m
+            # cuts a long line's depth of investigation short); mesh settings
+            # the caller gave replace them.
+            mesh_settings = {'quality': 31, 'paraMaxCellSize': 25, 'paraDepth': 28,
+                             **_mesh_settings(inversion_params)}
+            self._log_execution(f"Time-lapse mesh: {mesh_settings}")
+            mesh = ert_manager.createMesh(data=data, **mesh_settings)
             
             # Perform time-lapse inversion
             self._log_execution("Running time-lapse inversion...")

@@ -16,7 +16,7 @@ three terms of the objective function (see ``TimeLapseERTInversion`` in
 
 Column 0 is the data misfit; columns 1 and 2 are the model- and
 temporal-regularization terms, which are not chi-squared and are not on its
-scale. Callers that read a row as if it were one dataset's history took the
+scale. A caller that reads a row as if it were one dataset's history takes the
 wrong column - ``row[-1]`` scores the temporal regularization term as the data
 fit, and ``rows[0]`` treats the first iteration's three terms as a convergence
 history. Neither raises: both produce a plausible-looking number, so the error

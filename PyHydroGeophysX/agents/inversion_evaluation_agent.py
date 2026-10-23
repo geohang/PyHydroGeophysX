@@ -369,8 +369,9 @@ optimal regularization parameter selection."""
                          params: Dict[str, Any],
                          quality_threshold: float = 70) -> Dict[str, Any]:
         """
-        Comprehensive quality evaluation of inversion results.
-        
+        Quality evaluation of inversion results: data fit, smoothness,
+        physical plausibility and the other metrics scored below.
+
         Returns:
             Dictionary containing quality metrics and overall assessment
         """
@@ -523,9 +524,9 @@ optimal regularization parameter selection."""
         else:
             score = max(0, 100 - violation_ratio * 200)
         
-        # Additional check for extreme contrasts. This is max/min, a ratio - it
-        # was reported under the key 'resistivity_range', where 94.5 read as a
-        # span of 94.5 ohm-m for a model spanning 105.8 to 10000.
+        # Additional check for extreme contrasts. This is max/min, a ratio, and
+        # is reported as 'resistivity_ratio'; the span in ohm-m is
+        # 'resistivity_span'.
         resistivity_ratio = max_res / min_res if min_res > 0 else float('inf')
         if resistivity_ratio > 1000:  # More than 3 orders of magnitude
             score *= 0.8  # Penalize extreme contrasts
@@ -613,11 +614,8 @@ optimal regularization parameter selection."""
         
         return float(score), metrics
     
-    # Coverage evaluation removed - not needed for quality assessment
-    # def _evaluate_coverage(self, results: Dict[str, Any]) -> Tuple[float, Dict[str, Any]]:
-    #     """Evaluate model coverage (sensitivity)."""
-    #     # Method commented out - coverage not included in quality metrics
-    
+    # Model coverage (sensitivity) is not part of the quality metrics.
+
     def _generate_recommendations(self, metrics: Dict[str, Any], 
                                  scores: Dict[str, Any]) -> List[str]:
         """Generate actionable recommendations based on evaluation."""
@@ -777,7 +775,7 @@ optimal regularization parameter selection."""
             reinversion_input['output_dir'] = str(Path(original_input['output_dir']) / f'attempt_{len(self.history) + 1}')
         reinversion_input['inversion_params'] = adjusted_params
         # An attempt is not interpreted: only the model the loop keeps is, once
-        # (_interpret_retained). Every attempt used to ask the model for one.
+        # (_interpret_retained), so a retry loop does not ask for one per attempt.
         reinversion_input['interpret'] = False
         
         # Remove evaluation-specific keys
@@ -785,9 +783,10 @@ optimal regularization parameter selection."""
             reinversion_input.pop(key, None)
 
         # Run inversion. ERTInversionAgent raises on failure rather than
-        # returning a failed status, and the exception left the retry loop
-        # through the outer handler - replacing a finished first evaluation
-        # with quality 0. A retry that fails is an outcome of the loop.
+        # returning a failed status; an exception here would leave the retry
+        # loop through the outer handler and replace a finished first
+        # evaluation with quality 0. A retry that fails is an outcome of the
+        # loop.
         try:
             return inversion_agent.execute(reinversion_input)
         except Exception as exc:  # noqa: BLE001 - reported by the loop
@@ -796,12 +795,11 @@ optimal regularization parameter selection."""
     def _interpret_retained(self, results: Dict[str, Any]) -> None:
         """Ask for the model interpretation once, for the model the run keeps.
 
-        ERTInversionAgent asked for one on every attempt of this loop, so a
-        simple request spent most of its model calls interpreting models the
-        loop then discarded. Attempts now run without one; the retained model -
-        the first or a retry - is interpreted here when it carries none, which
-        is the interpretation the report prints. A result without the solver's
-        own record (a structure-constrained model, say) is left as it is.
+        Attempts run without an interpretation, so that model calls are not
+        spent on models the loop then discards. The retained model - the first
+        or a retry - is interpreted here when it carries none, which is the
+        interpretation the report prints. A result without the solver's own
+        record (a structure-constrained model, say) is left as it is.
         """
         if not self.llm_enabled or not isinstance(results, dict) or results.get('interpretation'):
             return

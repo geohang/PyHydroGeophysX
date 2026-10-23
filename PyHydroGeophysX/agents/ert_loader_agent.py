@@ -155,7 +155,7 @@ different data formats, coordinate systems, and common data quality issues."""
                 self.update_context('qc_artifacts', qc_artifacts)
                 self.update_context('qc_results', qc_results)
             
-            # Use LLM to provide intelligent insights about the data
+            # Ask the LLM for brief insights about the data
             if self.llm_enabled:
                 data_summary = f"""
                 Data Summary:
@@ -253,11 +253,25 @@ different data formats, coordinate systems, and common data quality issues."""
             Dictionary of quality metrics
         """
         try:
-            # Extract apparent resistivity values
-            rhoa_values = np.array([obs.resistance for obs in ert_data.observations])
-            
+            # Apparent resistivity per reading: the file's own, or dV / I * K.
+            # Read as obs.resistance, which an Observation does not have, so
+            # every call fell through to the error below.
+            rhoa_values = []
+            for obs in ert_data.observations:
+                value = getattr(obs, 'app_res', None)
+                if value is None and None not in (getattr(obs, 'dV', None),
+                                                   getattr(obs, 'I', None),
+                                                   getattr(obs, 'K', None)) and obs.I:
+                    value = obs.dV / obs.I * obs.K
+                if value is not None and np.isfinite(value):
+                    rhoa_values.append(float(value))
+            rhoa_values = np.asarray(rhoa_values, dtype=float)
+            if not rhoa_values.size:
+                return {'error': 'No reading carries an apparent resistivity'}
+
             # Calculate basic statistics
             metrics = {
+                'num_readings': int(rhoa_values.size),
                 'mean_rhoa': float(np.mean(rhoa_values)),
                 'std_rhoa': float(np.std(rhoa_values)),
                 'min_rhoa': float(np.min(rhoa_values)),
@@ -272,7 +286,7 @@ different data formats, coordinate systems, and common data quality issues."""
     
     def _get_llm_insights(self, data_summary: str) -> str:
         """
-        Get intelligent insights from LLM about the data.
+        Get brief insights about the data from the LLM.
         
         Args:
             data_summary: Summary of loaded data

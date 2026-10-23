@@ -299,7 +299,7 @@ def pg_show(*args, **kwargs):
     pyGIMLi draws its colorbar through ``plt.colorbar``, which calls
     ``plt.gcf()`` and so opens an empty pyplot figure beside a detached one.
     Left open, that is the figure pyGIMLi's exit handler waits on under an
-    interactive backend: the same hang, moved to the end of the process.
+    interactive backend, so the process would hang at exit.
     """
     import warnings
 

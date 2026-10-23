@@ -1,9 +1,9 @@
 """
 Structure Constraint Agent
 
-Applies seismic velocity interfaces as structural constraints to ERT inversion.
-Implements the workflow from Ex_Structure_resinv.py for creating structure-constrained
-resistivity models.
+Applies seismic velocity interfaces as structural constraints to ERT inversion,
+to create structure-constrained resistivity models. The workflow is the one
+shown in ``examples/Ex_Structure_resinv.py``.
 """
 
 import os
@@ -22,8 +22,8 @@ class StructureConstraintAgent(BaseAgent):
     Agent for applying structural constraints from seismic data to ERT inversion.
     
     This agent creates ERT meshes that honor geological boundaries derived from
-    seismic velocity interfaces, leading to more accurate resistivity models
-    that preserve sharp layer contrasts.
+    seismic velocity interfaces, so that the resistivity model can keep sharp
+    layer contrasts.
     """
     
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None,

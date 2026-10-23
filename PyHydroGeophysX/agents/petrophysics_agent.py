@@ -64,7 +64,7 @@ def _as_range(value: Any) -> Optional[Tuple[float, float]]:
     """``(low, high)`` of a two-number range, or None when ``value`` is not one.
 
     A parsed request can carry ``None``, ``[None, None]`` or a string where a
-    range belongs; unpacking those used to stop the whole conversion.
+    range belongs; those must not stop the whole conversion.
 
     >>> _as_range([250, 50]), _as_range([None, None]), _as_range("50-250")
     ((50.0, 250.0), None, None)
@@ -131,6 +131,7 @@ different geological materials and quantify uncertainties."""
                 - cell_markers: Array identifying geological layers
                 - layer_params: Dictionary of parameters for each layer (optional)
                 - n_realizations: Number of Monte Carlo samples (default: 100)
+                - return_realizations: Include saturation and water content samples (default: False)
                 - output_dir: Directory for saving results
                 
         Returns:
@@ -174,8 +175,8 @@ different geological materials and quantify uncertainties."""
             self._log_execution(f"Monte Carlo realizations: {n_realizations}")
             
             # Decide whether the markers describe geology or merely number the
-            # cells. A fixed "more than 100 is too many" threshold called the
-            # latter a failure; the honest reading is that a model with no
+            # cells. A fixed "more than 100 is too many" threshold would call
+            # the latter a failure; the honest reading is that a model with no
             # structural information is one unit.
             cell_markers, unique_layers, layering_note = resolve_layers(cell_markers, n_cells)
             self._log_execution(layering_note)
@@ -210,7 +211,7 @@ different geological materials and quantify uncertainties."""
                 # Convert named layer parameters to numeric IDs if needed. A
                 # layer the request did not describe, or a parameter it left
                 # out, takes what the conversion would have used without them;
-                # a partial set used to stop the conversion outright.
+                # a partial set does not stop the conversion.
                 layer_params, layer_param_notes = self._convert_named_to_numeric_params(
                     layer_params,
                     unique_layers,
@@ -224,6 +225,17 @@ different geological materials and quantify uncertainties."""
                 for note in layer_param_notes:
                     self._log_execution(note, level='WARNING')
             
+            # The inversion's own uncertainty, when it came with the model: each
+            # draw perturbs ln(resistivity) by it, so the result's spread
+            # carries the inversion's error as well as the parameters'.
+            log_std = input_data.get('log_resistivity_std')
+            if log_std is not None:
+                log_std = np.asarray(log_std, dtype=float)
+                if log_std.shape[0] != n_cells or not np.all(np.isfinite(log_std) & (log_std >= 0)):
+                    self._log_execution("The inversion's uncertainty does not match the model "
+                                        "cell for cell; it is left out.", level='WARNING')
+                    log_std = None
+
             # Monte Carlo simulation
             self._log_execution("Starting Monte Carlo simulation...")
             mc_results = self._run_monte_carlo(
@@ -232,6 +244,7 @@ different geological materials and quantify uncertainties."""
                 layer_params,
                 n_realizations,
                 seed=seed,
+                log_resistivity_std=log_std,
             )
             
             # Calculate statistics
@@ -313,6 +326,8 @@ different geological materials and quantify uncertainties."""
                 'prior_statement': prior['statement'],
                 'realization_notes': realization_notes,
                 'n_realizations': n_realizations,
+                # Whether the spread includes the inversion's own uncertainty.
+                'inversion_uncertainty': log_std is not None,
                 'statistics': {
                     'mean_water_content': wc_mean_overall,
                     'mean_uncertainty': wc_std_overall,
@@ -324,6 +339,10 @@ different geological materials and quantify uncertainties."""
                 'output_dir': output_dir
             }
             
+            if input_data.get('return_realizations', False):
+                self.results['saturation_all'] = saturation_all
+                self.results['water_content_all'] = water_content_all
+
             self._log_execution(f"Water content range: {self.results['statistics']['wc_range'][0]:.4f} - "
                               f"{self.results['statistics']['wc_range'][1]:.4f}")
             self._log_execution(f"Mean uncertainty: {wc_std_overall:.4f}")
@@ -591,9 +610,8 @@ different geological materials and quantify uncertainties."""
                 base = self.DEFAULT_LAYER_PARAMS[template].copy()
                 
                 # A value given is used with a tight spread (or the range given);
-                # one not given keeps the default with a generous spread. It
-                # used to take the default at the given values' 5%, which
-                # made a guess look like a measurement.
+                # one not given keeps the default with a generous spread, so
+                # that a guess does not look like a measurement.
                 def value(key, default_mean, floor, relative=scale):
                     return _distribution_of(petrophysical_params.get(key), default_mean,
                                             relative, floor)
@@ -666,16 +684,19 @@ different geological materials and quantify uncertainties."""
         n_realizations: int,
         *,
         seed: int = 7,
+        log_resistivity_std: Optional[np.ndarray] = None,
     ) -> Dict:
         """
         Run Monte Carlo uncertainty quantification.
-        
+
         Args:
             resistivity_array: Resistivity values (cells × timesteps)
             cell_markers: Layer markers
             layer_params: Parameters for each layer
             n_realizations: Number of MC samples
-            
+            log_resistivity_std: Per-cell standard deviation of ln(resistivity)
+                from the inversion, drawn with the parameters (optional)
+
         Returns:
             Dictionary with MC results
         """
@@ -697,6 +718,7 @@ different geological materials and quantify uncertainties."""
             seed=seed,
             progress=self._log_execution,
             return_realizations=True,
+            log_resistivity_std=log_resistivity_std,
         )
     
     def _get_recommended_params(self, resistivity_array: np.ndarray,

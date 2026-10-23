@@ -1,9 +1,8 @@
 """One report for the methods a run inverted, and their sections in an ERT report.
 
-A run whose models came from TDEM, seismic refraction, MT or gravity and
-magnetics, without ERT, ended "success" with no report, because the report step
-needed an ERT inversion; and an ERT report described the ERT survey alone. Each
-method now writes its own sections from its step's results, in a module with
+A run whose models come from TDEM, seismic refraction, MT or gravity and
+magnetics, without ERT, has no ERT inversion for the ERT report to describe.
+Each method writes its own sections from its step's results, in a module with
 one interface - :mod:`._tdem_report`, :mod:`._seismic_report`,
 :mod:`._mt_report`, :mod:`._gravmag_report`, :mod:`._gpr_report`::
 

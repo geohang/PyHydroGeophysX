@@ -10,11 +10,9 @@ pasted into the document as JSON.
 
 So the markdown carries tabulated summaries and the appendices they belong in,
 and points at the JSON for the rest. The retrieval excerpts in particular are
-now filtered to the sources the interpretation actually cites: a semantic search
-returns its best matches whether or not they are relevant, and a report on a
-time-lapse ERT survey was ending with several hundred words about the desktop
-studio's gravity module and its seismic agent, under a heading that implied the
-run had used them.
+filtered to the sources the interpretation actually cites: a semantic search
+returns its best matches whether or not they are relevant, and unfiltered
+excerpts would sit under a heading that implies the run used them.
 
 In the studio, the report also cites the run records the studio keeps as text
 in each run folder - settings, data QC report, logs (``qt_apps/run_records.py``)
@@ -61,8 +59,8 @@ def record_calls():
 def _fallback_body(config, interpretation):
     """A document head for a run whose engine produced no report of its own.
 
-    Without this the file opened straight into interpretive prose with no
-    title, no date and no statement of what it describes - which is exactly the
+    Without this the file would open straight into interpretive prose with no
+    title, no date and no statement of what it describes - exactly the
     document most likely to be forwarded to someone who was not there.
     """
     request = str((config or {}).get('user_request') or '').strip()
@@ -82,11 +80,11 @@ def _fallback_body(config, interpretation):
 def _inventory_rows(inputs):
     """One row per file, listing every role it was used in.
 
-    The configuration names the same file under several keys - a five-survey
-    run had each survey under ``time_lapse_files`` and again under
-    ``timelapse_files``, plus the first one under ``data_file``,
-    ``baseline_file`` and ``ert_file``. Listed once per key, seven files filled
-    seventeen rows and the repetition read as seventeen inputs.
+    The configuration names the same file under several keys - each survey of
+    a time-lapse series under ``time_lapse_files`` and again under
+    ``timelapse_files``, and the first one also under ``data_file``,
+    ``baseline_file`` and ``ert_file``. Listed once per key, the repetition
+    would read as many more inputs than there are files.
     """
     merged = {}
     for record in inputs:

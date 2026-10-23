@@ -1,8 +1,8 @@
 """The TDEM part of a workflow report: what was measured, how, and what it shows.
 
-A run whose only data were TEM soundings ended without a report, because the
-report step needed an ERT inversion, and a run with both described the ERT
-survey alone. These functions write the TDEM sections from what
+These functions write the TDEM sections of a run's report, so that a run whose
+only data are TEM soundings has a report and a run with ERT as well reports
+both. They work from what
 :class:`~PyHydroGeophysX.agents.tdem_agent.TDEMAgent` returns - an instrument
 survey (TEM2Go, tTEM) inverted as laterally constrained 1D models, or one
 sounding read from a table. :mod:`PyHydroGeophysX.agents._survey_report` lays

@@ -35,8 +35,8 @@ class OneClickWorker(ProcessProbeWorker):
                          timeout_ms=2147483647, parent=parent)
         # One line, and the write channel stays open: the child reads this
         # line to start, then blocks on the same stream whenever it needs an
-        # answer. Closing it after the payload - which is what this did - makes
-        # every later question read end-of-input and give up.
+        # answer. Closing it after the payload would make every later question
+        # read end-of-input and give up.
         # Notes, pause and resume reach the run through this file, which it
         # reads between steps; it also records what the user told the run.
         self._control_path = Path(payload['output_dir']) / 'steering.jsonl'

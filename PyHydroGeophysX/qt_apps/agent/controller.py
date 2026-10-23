@@ -407,12 +407,12 @@ class StudioController(QObject):
         """Reply once ``page`` has finished what the action started.
 
         A job the action started in the background (``"started"``) is answered
-        with how it ended. It used to be answered "started" whatever happened,
-        so an inversion that failed on the page was recorded by the run as a
-        step that had worked, and the model went on as if it had. Now a job
-        that logged errors, or whose page reports it failed, is answered
-        "failed" with the reason, which the model reads at its next decision;
-        one that ended cleanly is answered "ok".
+        with how it ended. Answering "started" whatever happened would record
+        an inversion that failed on the page as a step that worked, and the
+        model would go on as if it had. A job that logged errors, or whose page
+        reports it failed, is answered "failed" with the reason, which the
+        model reads at its next decision; one that ended cleanly is answered
+        "ok".
         """
         from PySide6.QtCore import QTimer
 

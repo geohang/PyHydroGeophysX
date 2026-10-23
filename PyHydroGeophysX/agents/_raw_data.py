@@ -1,14 +1,13 @@
 """Pictures of the data a workflow run reads, drawn while the run reads them.
 
-A load step used to read for forty seconds and then say "Loaded 1 ERT survey",
-which left the user nothing to look at and nothing to check. The studio's Live
-tab shows every image a run writes the moment it appears, so each step that
-reads a method's data now draws what it read, under ``raw_data/`` in the run
-folder: an apparent-resistivity pseudosection per ERT survey, the travel-time
-curves of a seismic line, the decay curves of TEM soundings, the apparent
-resistivity and phase of MT sites, and the radargram of a GPR line as
-recorded. The same figures open the method's section
-of the report, as the data the models were fitted to.
+A load step that only reports "Loaded 1 ERT survey" gives the user nothing to
+look at and nothing to check. The studio's Live tab shows every image a run
+writes the moment it appears, so each step that reads a method's data draws
+what it read, under ``raw_data/`` in the run folder: an apparent-resistivity
+pseudosection per ERT survey, the travel-time curves of a seismic line, the
+decay curves of TEM soundings, the apparent resistivity and phase of MT sites,
+and the radargram of a GPR line as recorded. The same figures open the
+method's section of the report, as the data the models were fitted to.
 
 Every function here draws on a detached figure (see
 :func:`._figstyle.detached_figure`), so nothing here can block a headless run.
