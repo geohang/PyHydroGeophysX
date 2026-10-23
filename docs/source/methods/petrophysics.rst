@@ -95,27 +95,25 @@ companion routines
 at ``f=1``. rockphypy expects pressure in MPa, so 6.5502 MPa is supplied
 there as 6.5502 and to this API as 6.5502e6.
 
-Affected revisions before ``962a9ced`` used ``10 - 2*nu`` in the denominator
-and put the class method's prefactor inside the cube root. The older
-standalone ``vel_porous`` had the denominator error only. Those are bugs,
-not alternative modeling defaults. The equations were corrected in that
-commit; ``vel_porous`` now delegates to ``HertzMindlinModel.calculate_velocity``
-so it cannot drift from the two-value and ``return_moduli=True`` paths.
-No option restores the incorrect formula.
+Releases before 0.5.0 used ``10 - 2*nu`` in the denominator and put the class
+method's prefactor inside the cube root; the standalone ``vel_porous`` had the
+denominator error only. Results computed with those releases change. No option
+restores the earlier formula. ``vel_porous`` delegates to
+``HertzMindlinModel.calculate_velocity``, so it stays consistent with the
+two-value and ``return_moduli=True`` paths.
 
-For the dt_framework notebook 01 section 7.2 baseline at x=2.51 m,
-use phi=0.2, S=1, Km=40.39369 GPa, Gm=43.10014 GPa,
+A check case: phi=0.2, S=1, Km=40.39369 GPa, Gm=43.10014 GPa,
 mineral density=2657.5 kg/m3, C=9, phi_c=0.4,
 effective pressure=6.5502 MPa, fluid modulus=2.260256 GPa and
 fluid density=998.4548 kg/m3. These are explicit supplied fluid properties,
 not values recomputed by a separate water-property model.
 
-.. list-table:: Lower-bound baseline at identical fluid properties
+.. list-table:: Lower-bound result for this case, before and after 0.5.0
    :header-rows: 1
 
    * - Quantity
-     - Historical class equation
-     - Standard equation
+     - Releases before 0.5.0
+     - Current
    * - Dry bulk modulus (GPa)
      - 5.691664
      - 4.663967
@@ -132,20 +130,18 @@ not values recomputed by a separate water-property model.
      - 1809.457
      - 1481.309
 
-Both columns use bulk density 2325.69096 kg/m3. The historical function
-did not accept fluid overrides: its dry moduli were evaluated from the
-original source and substituted with the supplied fluids for this comparison.
-Running the actual old API with its fixed water properties gives lower Vp
-3088.660 m/s versus 2794.058 m/s from the corrected legacy API, at the same
-equivalent depth of 403.250531 m.
+Both columns use bulk density 2325.69096 kg/m3. The earlier releases did not
+accept fluid overrides, so their column evaluates the earlier equations for the
+dry moduli and substitutes the supplied fluids.
 
 Results change even when the default coordination number remains 4.
 For quartz (Km=36.6 GPa, Gm=45 GPa, mineral density=2650 kg/m3) with
 phi=0.2, S=1 and depth=5 m, the class's lower Vp decreases from
 2109.732 to 2039.173 m/s (3.344%). At phi=0.3, S=0.5 and depth=5 m,
-it decreases from 1038.908 to 939.168 m/s (9.600%). Historical vel_porous
-instead increases slightly for the first case, from 2036.809 to 2039.173 m/s.
-Recompute outputs and review calibrations made with the affected equations.
+it decreases from 1038.908 to 939.168 m/s (9.600%). The earlier
+``vel_porous`` instead increases slightly for the first case, from 2036.809 to
+2039.173 m/s. Recompute outputs and review calibrations made with the earlier
+equations.
 
 Ionic conductivity and charge
 -----------------------------
@@ -266,10 +262,54 @@ including the conductivity floor. Normal inputs emit no clipping warning.
 NaN values propagate. These limits are numerical safeguards, not inferred
 physical bounds on your sample.
 
+.. _water-content-uncertainty:
+
+Water-content uncertainty
+-------------------------
+
+A water content from resistivity is reported as a mean and a standard
+deviation from a Monte Carlo (``petrophysics.monte_carlo.run_petrophysics_monte_carlo``).
+Each realisation draws the petrophysical parameters of every layer. Given
+``log_resistivity_std``, it also draws the resistivity as
+:math:`\rho \exp(\sigma \varepsilon)`, with :math:`\varepsilon` standard
+normal, one stream per cell.
+
+A single-survey ERT run by AQUAH supplies that :math:`\sigma`: the
+inversion's linearised posterior standard deviation of
+:math:`\ln \rho` at the final model,
+
+.. math::
+
+   C = \left(J^T W_d^2 J + \lambda (W_m^T W_m + \alpha I)\right)^{-1},
+
+from the Jacobian and the inversion's own data and model weights
+(``ERTInversion(posterior_std=True)``, ``result.model_log_std``;
+:func:`PyHydroGeophysX.uncertainty.regularized_posterior_std`; Tarantola,
+2005; Aster et al., 2018). The water content's standard deviation then carries
+both parts. Time-lapse runs, and meshes above 6000 cells, draw the parameters
+only.
+
+The linearised part leaves out the smoothing of sharp boundaries, which a
+smoothness prior cannot describe. A layered synthetic with the truth known
+(``examples/data/TL_measurements``, day 330, priors that contain the true
+parameters) gave these shares of cells holding the truth:
+
+- parameters alone: 65 % within one standard deviation, 94 % within two;
+- with the inversion's part drawn as well: 72 % and 97 %;
+- below 3 m, still under 70 % within one.
+
+With generic default parameters, the parameter spread is wide enough to hide
+both effects, and the mean was biased low by about 0.07. The reports say which
+case a run is. :func:`PyHydroGeophysX.uncertainty.interval_coverage` repeats
+this check wherever the truth is known: synthetics, cores, logs.
+
 References
 ----------
 
 Full BibTeX records are in :doc:`/citation`. Relevant sources are Batzle
 and Wang (1992), Waxman and Thomas (1974), Kanciruk et al. (1986),
 Metrohm's *Conductometry - Conductivity Measurement*, Girault (2004),
-and Mavko, Mukerji and Dvorkin (2009).
+and Mavko, Mukerji and Dvorkin (2009). The linearised posterior follows
+Tarantola, A. (2005), *Inverse Problem Theory and Methods for Model Parameter
+Estimation*, SIAM, and Aster, R. C., Borchers, B. and Thurber, C. H. (2018),
+*Parameter Estimation and Inverse Problems*, 3rd ed., Elsevier.

@@ -1,9 +1,8 @@
 System Architecture
 ===================
 
-This document provides a comprehensive overview of the PyHydroGeophysX multi-agent
-system architecture, including agent relationships, data flow, and communication
-protocols.
+This document describes the architecture of the PyHydroGeophysX multi-agent
+system: agent relationships, data flow, and communication protocols.
 
 This page is for contributors. If you just want to use the system, start with
 :doc:`quick_start` or the :doc:`webapp`.
@@ -162,13 +161,18 @@ Monte Carlo Uncertainty Propagation
         For each cell:
           For i = 1 to N_realizations:
             Sample parameters from distributions
-            Calculate WC(i) = f(resistivity, params_i)
+            Sample ln(resistivity) ~ N(ln rho, sigma_inv)   (when the inversion gave sigma_inv)
+            Calculate WC(i) = f(resistivity_i, params_i)
         │
         ▼
     Output:
         - water_content_mean
         - water_content_std
         - 95% confidence intervals
+
+What the standard deviation contains, and how well it covers the truth, is on
+the petrophysics methods page (``methods/petrophysics.rst``, "Water-content
+uncertainty").
 
 Workflow State Management
 -------------------------
@@ -293,7 +297,7 @@ Pattern 3: full_integration
 * **Methods**: Seismic → ERT → Petrophysics
 * **Description**: Complete geological-to-hydrological workflow
 * **Workflow**: ``seismic_inversion`` → ``interface_extraction`` → ``constrained_ert`` → ``petrophysics_conversion``
-* **Benefits**: Comprehensive subsurface characterization with constraints
+* **Benefits**: Subsurface characterization with structural constraints
 
 Extension Points
 ----------------
@@ -347,12 +351,12 @@ To add a new agent to the system:
 Error Handling
 --------------
 
-The agent system implements robust error handling:
+The agent system handles errors as follows:
 
 * **Input Validation**: All agents validate inputs before processing
-* **Graceful Degradation**: LLM features are optional; system works without them
+* **Optional LLM**: LLM features are optional; the system works without them
 * **Retry Logic**: Failed operations can be retried with adjusted parameters
-* **Comprehensive Logging**: All agent actions are logged for debugging
+* **Logging**: All agent actions are logged for debugging
 
 Performance Considerations
 --------------------------

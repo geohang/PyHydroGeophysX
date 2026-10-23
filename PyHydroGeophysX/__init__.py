@@ -306,8 +306,8 @@ _EXPORTS["BackendUnavailable"] = (
     "BackendUnavailable",
 )
 
-# These names historically degraded to ``None`` when their optional backend
-# could not be imported.  Keep that 0.4 behavior while making access lazy.
+# These names degrade to ``None`` when their optional backend cannot be
+# imported, as they did in 0.4; access to them is lazy.
 _OPTIONAL_EXPORTS = {
     "MeshCreator",
     "create_mesh_from_layers",

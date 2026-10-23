@@ -22,6 +22,12 @@ The agent system requires an API key from your preferred LLM provider:
     # or
     export ANTHROPIC_API_KEY="your-api-key-here"
 
+Pass the key to the agents you create, as the examples below do
+(``api_key=os.environ.get('OPENAI_API_KEY')``), or pass ``api_key="env"`` to
+have an agent read its provider's variable. An agent given no key runs without
+a model whatever the environment holds, so a library call never spends credit
+you did not ask it to; when a key is set but not passed, it warns once.
+
 Try Without an API Key
 ----------------------
 

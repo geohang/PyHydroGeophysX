@@ -120,6 +120,10 @@ model calls. The reasoning and the plan appear in the Live tab. If the evidence
 gives it a concrete reason, it can leave the route. It may:
 
 - look at a product's numbers before deciding (without asking);
+- read one of the assistant's written procedures, such as its data-quality
+  checklist for ERT, before a step the procedure covers (without asking; at most
+  three in a run). The Live tab shows which one it read. See
+  :ref:`assistant-skills` to add your own;
 - use a studio page, through the same actions you click and the chat drives.
   For example, it can filter the ERT data, set zones, choose another engine or
   run the page's own inversion, then bring the page's model into the run with
@@ -141,7 +145,9 @@ gives it a concrete reason, it can leave the route. It may:
   call and is not put to you. The steps that need their results drop out too,
   and the Live tab and the report say what was left out and why. A step is
   never left out when the report or a product you asked for, such as water
-  content, still needs it;
+  content, still needs it. When the assistant says it is not sure (it states a
+  confidence with every decision, kept in the run's plan), leaving steps out is
+  put to you instead;
 - write a temporary script (see :ref:`assistant-temporary-scripts`);
 - ask you a question whose answer is yours to give.
 
@@ -600,7 +606,7 @@ Two options below the table decide what the zones do beyond their values; both
 are off by default.
 
 - **Mesh follows the zones** rebuilds the mesh so that the zone outlines become
-  cell edges, the way E4D meshes its internal boundaries: no cell straddles an
+  cell edges: no cell straddles an
   outline, so a zone's value, and a fixed zone, covers exactly the area drawn
   rather than a staircase of the cells nearest to it. The mesh is rebuilt after
   every zone that is drawn, moved or removed; changing a zone's value does not
@@ -737,7 +743,7 @@ The ERT loader also manages an ordered time series:
 
 .. _e4d-meshes:
 
-E4D-Style 3-D Meshes
+3-D Meshes from E4D Configurations
 --------------------------------------------------------------------------------
 
 `E4D <https://e4d-userguide.pnnl.gov>`_, PNNL's parallel ERT/IP code, does not
@@ -958,18 +964,31 @@ own process instead.
        and inversion-quality plots.
    * - **3D Mesh Builder**
      - Work down the numbered steps in the column on the right, as on the ERT
-       page: **1. Sensor array** (surface grid, borehole, crosshole, or
-       surface-to-borehole); **2. Mesh engine**, whose note says what will
+       page: **1. Sensor array** (surface grid, borehole, crosshole,
+       surface-to-borehole, or **From file (x, y, z)**, which reads sensor
+       positions from a table such as ``Cable,Elec,X,Y,Z``: surface sensors
+       are meshed under the ground through their own elevations, sensors
+       stacked below others around their boreholes; **Build mesh from sensor
+       file...**, at the top of the step, reads such a table and generates the
+       mesh at once with the settings of the steps below); **2. Mesh engine**, whose note says what will
        actually build the mesh; **3. Domain and topography**; **4. Mesh
        refinement**; **5. Zones**; **6. Build and save** - the files to save,
        **Preview sensors**, then **Generate mesh**; inspect the 3D viewer. Each
        step shows only the settings the mesher that will run reads. With the
-       **E4D (Triangle + TetGen)** engine the mesh is laid out the way E4D lays
-       one out (see :ref:`e4d-meshes` below); **Load E4D .cfg...** builds from
+       **E4D (Triangle + TetGen)** engine the mesh is laid out from an E4D
+       configuration (see :ref:`e4d-meshes` below); **Load E4D .cfg...** builds from
        an existing E4D configuration, and **Open E4D mesh...**, above the view,
        views one E4D built. **Zones** add boxes of known resistivity that the
        mesh can follow and make regions of their own (see :ref:`mesh3d-zones`
-       below).
+       below). **Use for ERT inversion** hands the mesh to the ERT page, which
+       checks it against the loaded survey and shows it in 3D on its Mesh tab.
+       Every mesh's outer faces are marked for an ERT forward model: no flow
+       on the ground, far-field on the rest. A field mesh (prism, Gmsh,
+       structured grid) is wrapped in a coarse **Outer region**, never
+       inverted, reaching 4 spreads beyond its domain sideways and down, as the
+       ERT page's own mesh is; set 0 to leave it out (a Box mesh, a tank, has
+       none). The view hides it unless **Outer region** above the view is
+       ticked.
      - BMS, VTK, sensor CSV, and a reusable survey/mesh configuration; with the
        E4D engine also the E4D ``.cfg``, TetGen ``.poly`` and ``.trn``.
    * - **EM Processing**
@@ -1347,12 +1366,23 @@ Modules
        pseudosection, filter data, and run single or time-lapse inversion with
        per-step results. The Mesh tab previews the inversion mesh, outer region
        included on request, and holds the a-priori resistivity zones drawn on
-       it. The Resistivity model tab corrects the model on screen to a reference
-       temperature, for one survey or a whole series.
+       it; a 3D mesh is shown in an interactive 3D view, and **Build a 3D
+       mesh...** opens the 3D Mesh Builder with the page's electrodes. On an
+       imported 3D mesh the in-house, PyGIMLi and ADTLERT engines invert the profile laid
+       along x at y = 0: the section along the line is shown, and **Open 3D
+       model** opens the whole model (``resistivity_3d.vtk``), for one survey
+       or each step of a time-lapse series. Electrodes that cover an area (a
+       grid from an ``X,Y,Z`` electrode file) make a 3D survey: the Data tab
+       shows the readings in plan, the Mesh tab a prism mesh built under the
+       array, and the in-house, PyGIMLi and ADTLERT engines invert it in 3D, the
+       model shown in 3D on the Resistivity model tab and in Saved Results. The
+       Resistivity model tab corrects the model on screen, a section or a 3D
+       model, to a reference temperature, for one survey or a whole series.
    * - 3D Mesh Builder
-     - Build ERT meshes (surface grid, borehole, crosshole arrays; flat, tilted,
-       Gaussian-hill, file-based, or custom topography), including E4D-style
-       meshes and E4D configurations, view meshes in 3D with a clipping plane,
+     - Build ERT meshes (surface grid, borehole, crosshole arrays, or sensor
+       positions read from a file; flat, tilted, Gaussian-hill, file-based,
+       sensor-elevation or custom topography), including meshes from
+       E4D configurations, view meshes in 3D with a clipping plane,
        and run 3D ERT forward modeling on the generated mesh.
    * - EM Processing
      - Load TDEM / FDEM soundings (single or multi-sounding line files), invert one
@@ -1396,7 +1426,8 @@ After a successful ERT, EM, seismic, gravity/magnetic, or joint inversion,
 choose **Add to Map…** or **Not now**. The latter keeps the result on its
 processing page, where **Add to Map…** remains available. For time-lapse ERT,
 the map receives the currently displayed step; joint inversion lets you choose
-the recovered model to add.
+the recovered model to add. A 3D ERT model goes to the map as a grid of depth
+slices below the ground, placed by the electrodes' own x and y.
 
 Confirm the survey name, coordinates and coordinate reference system (CRS).
 Existing survey coordinates can be used directly. Profiles without coordinates
@@ -1535,15 +1566,17 @@ Building the Bundles Yourself
 
 The PyInstaller configuration lives at ``packaging/pyinstaller_studio.spec``. The
 ``PHGX_BUILD_VARIANT`` environment variable selects ``light`` (default) or ``full``.
-Helper scripts build and zip a bundle in one step:
+From the repository root, in an environment with the desktop dependencies:
 
 .. code-block:: bash
 
-   # Windows (PowerShell)
-   scripts/build_studio_exe.ps1 light
+   pip install pyinstaller pillow
+   python packaging/make_icons.py
+   pyinstaller --noconfirm packaging/pyinstaller_studio.spec
 
-   # macOS / Linux
-   bash scripts/build_studio_exe.sh light
+   # the full variant (macOS / Linux; in PowerShell set $env:PHGX_BUILD_VARIANT first)
+   PHGX_BUILD_VARIANT=full pyinstaller --noconfirm packaging/pyinstaller_studio.spec
 
-The GitHub Actions workflow ``.github/workflows/build-desktop.yml`` builds all four
-bundles and attaches them to the Release for every version tag.
+The bundle is written to ``dist/PyHydroGeophysX-Studio/``. The GitHub Actions
+workflow ``.github/workflows/build-desktop.yml`` builds all four bundles and
+attaches them to a draft release for every version tag.

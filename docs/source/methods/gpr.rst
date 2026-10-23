@@ -12,8 +12,8 @@ metres deep at 100-500 MHz.
 The GPR tools are a first, simple framework: one line at a time, a single
 velocity for the whole line, no picking yet. They are written in the package
 (``PyHydroGeophysX.data_processing.gpr``) and need only NumPy and SciPy. The
-processing steps and their usual order follow the open-source GPR codes GPRPy,
-readgssi, ImpDAR and RGPR; see :doc:`/citation`.
+processing steps use the standard sequence also used by the open-source GPR
+codes GPRPy, readgssi, ImpDAR and RGPR; see :doc:`/citation`.
 
 What you can do
 ---------------
@@ -103,8 +103,18 @@ left out, and the report says that no depth is given and how to measure the
 velocity. A velocity or permittivity the request does not contain is never
 taken from the language model's reading of it.
 
+.. _gpr-python-examples:
+
 Python examples
 ---------------
+
+:doc:`/auto_examples/Ex_GPR_workflow` runs the whole chain on the line
+simulated over the MODFLOW model. It processes the line, then checks time zero
+and the velocity against the CRIM permittivity that made it, so that a wrong
+choice shows as nanoseconds and metres rather than as a plausible picture. It
+ends with depth and elevation sections and the saved line.
+
+On a line of your own:
 
 .. code-block:: python
 

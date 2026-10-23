@@ -146,6 +146,7 @@ local_plans/
 !/examples/data/README.md
 !/packaging/licenses/**/*.md
 !/packaging/rustsolve/licenses/**/*.md
+!/PyHydroGeophysX/agents/assistants/*/skills/**/*.md
 
 # Internal review data follows the same local-only policy as its report.
 docs/comment_review_inventory_*.csv

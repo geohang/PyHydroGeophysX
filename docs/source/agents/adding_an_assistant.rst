@@ -146,6 +146,66 @@ over your tools and produces the step events the studio needs:
 has to exist before the run may end. GeoSAGE's is the reviewed report, so it
 cannot stop at the draft.
 
+.. _assistant-skills:
+
+Written procedures (skills)
+---------------------------
+
+Procedures an expert would follow - what to check in ERT data before
+inverting, how to choose a petrophysical relationship - can be written down
+once as *skills* rather than added to every prompt. A skill is a folder
+holding ``SKILL.md``: front matter with a ``name`` and a ``description`` of what
+it covers and when to use it, then the procedure in Markdown, and optionally a
+``references/`` folder the procedure points to. This is the open Agent Skills
+format that Claude Code, Codex and DOE's Genesis Agent Skills catalogue use, so
+skills move between them and PyHydroGeophysX unchanged.
+
+.. code-block:: markdown
+
+   ---
+   name: ert-data-quality
+   description: >
+     Check an ERT survey before inverting it: reciprocal errors, contact
+     resistance, negative apparent resistivities. Use after loading ERT data.
+   methods: [ert]
+   ---
+
+   # ERT data quality
+   1. ...
+
+Name the folders in ``skills``. ``"package:folder"`` is a folder inside an
+importable package, so it ships with the plug-in; a plain path is a folder on
+disk:
+
+.. code-block:: python
+
+   ASSISTANT = Assistant(..., skills=("PyHydroGeophysX.agents.assistants.aquah:skills",))
+
+A group adds its own with the ``PHGX_SKILLS_PATH`` environment variable
+(folders separated as in ``PATH``). A skill found there replaces a shipped one
+with the same name, so a lab can keep its own QC thresholds without editing the
+package. :meth:`~PyHydroGeophysX.agents.assistants.Assistant.load_skills` reads
+them all; a malformed ``SKILL.md`` is left out rather than failing the others.
+
+The model sees only the index - each skill's name and description - and reads
+a procedure when it fits what it is doing:
+
+- In a flexible run the index is listed with the controller's off-route
+  actions, and ``{"read_skill": "<name>"}`` reads one. Like a look at a
+  product, it is free and changes nothing; a run reads at most three, each cut
+  to 4000 characters, and the text stays in the transcript for every decision
+  after it.
+- In the chat the assistant has a ``read_skill`` tool that runs without
+  approval and can also read a file the procedure points to, never one outside
+  the skill's folder.
+
+A procedure is advice to the model, not a change to what it may do: approvals,
+the requested products and the uncertainty that every water-content estimate
+carries apply as before, and the text comes back labelled as the author's
+advice. Search ranks skills by the words they share with a query, a word in the
+name counting twice (:func:`PyHydroGeophysX.agents.skills.search`), as the
+Genesis catalogue's ``skill-search`` does.
+
 Registering it
 --------------
 
@@ -185,11 +245,17 @@ What the studio does with it
   settings in :data:`~PyHydroGeophysX.agents.runtime.recovery.ADJUSTABLE`.
 - ``drive(..., flexible=True)`` lets the controller leave the standard route
   when the evidence calls for it (:mod:`PyHydroGeophysX.agents.runtime.toolbox`).
-  It can look at a product, add a step whose ``when`` gate is closed, run a
-  finished step again with changed settings, leave route steps out, write a
-  temporary script, or ask the user. Leaving a step out is the model's call,
-  refused only when ``finish`` or a requested product would then not be made;
-  every other change of course is put to the user with the model's reason.
+  It can look at a product, read a skill (see :ref:`assistant-skills`), add a
+  step whose ``when`` gate is closed, run a finished step again with changed
+  settings, leave route steps out, write a temporary script, or ask the user.
+  Leaving a step out is the model's call, refused only when ``finish`` or a
+  requested product would then not be made; every other change of course is
+  put to the user with the model's reason. Each decision also states a
+  ``confidence`` from 0 to 1, kept on the step it led to (``ctx.plan()``), and
+  leaving steps out with a confidence below
+  :data:`~PyHydroGeophysX.agents.runtime.controller.LOW_CONFIDENCE` is put to
+  the user too. A stated confidence only ever adds a question; it never lets a
+  decision skip one.
   Mark a tool ``proposable=False`` when it must never be proposed (a loader
   that reads a configured file), and give it ``applies`` when it fits only some
   runs. AQUAH runs flexibly; flexibility needs the default decision prompt, so

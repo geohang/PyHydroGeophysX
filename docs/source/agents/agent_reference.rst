@@ -247,7 +247,7 @@ InversionEvaluationAgent
 DataFusionAgent
 ---------------
 
-**Purpose**: Intelligent coordinator for multi-method geophysical workflows.
+**Purpose**: Coordinates multi-method geophysical workflows.
 
 **System Prompt**:
     You are an expert in multi-method geophysical data fusion. You understand how
@@ -343,11 +343,16 @@ models with Monte Carlo uncertainty quantification.
 * ``cell_markers`` (array): Layer identifications
 * ``layer_params`` (dict): Parameters for each layer
 * ``n_realizations`` (int): Monte Carlo samples (default: 100)
+* ``log_resistivity_std`` (array, optional): the inversion's standard deviation
+  of ln(resistivity) per cell, drawn with the parameters (see
+  :ref:`water-content-uncertainty`)
 
 **Outputs**:
 
 * ``water_content_mean`` (array): Mean water content per cell
 * ``water_content_std`` (array): Standard deviation (uncertainty)
+* ``inversion_uncertainty`` (bool): whether that standard deviation includes
+  the inversion's own
 * ``saturation_mean`` (array): Mean saturation
 * ``saturation_std`` (array): Saturation uncertainty
 * ``statistics`` (dict): WC range, mean WC, mean uncertainty
@@ -458,7 +463,7 @@ key, global coverage), with the antecedent-moisture features ERT is read against
 ReportAgent
 -----------
 
-**Purpose**: Generates comprehensive reports from workflow results.
+**Purpose**: Generates reports from workflow results.
 
 **System Prompt**:
     You are an expert in technical report writing for geophysical and hydrological

@@ -5,9 +5,7 @@
 #     python packaging/make_icons.py     # generates app_icon.ico / app_icon.icns
 #     pyinstaller --noconfirm packaging/pyinstaller_studio.spec
 #
-# Or use the helper scripts, which do all three steps and zip the result:
-#     scripts/build_studio_exe.ps1 [light|full]     (Windows)
-#     bash scripts/build_studio_exe.sh [light|full] (macOS / Linux)
+# .github/workflows/build-desktop.yml runs the same steps for each archive.
 #
 # Variants -- selected with the PHGX_BUILD_VARIANT environment variable:
 #
@@ -103,6 +101,13 @@ _modules_dir = os.path.join(repo_root, "PyHydroGeophysX", "qt_apps", "modules")
 for _name in sorted(os.listdir(_modules_dir)):
     if _name.endswith("_input_format.md"):
         datas.append((os.path.join(_modules_dir, _name), "PyHydroGeophysX/qt_apps/modules"))
+# The assistants' written procedures, read from beside their packages
+# (agents/skills.py, Assistant.skill_folders).
+_assistants_dir = os.path.join(repo_root, "PyHydroGeophysX", "agents", "assistants")
+for _name in sorted(os.listdir(_assistants_dir)):
+    if os.path.isdir(os.path.join(_assistants_dir, _name, "skills")):
+        datas.append((os.path.join(_assistants_dir, _name, "skills"),
+                      f"PyHydroGeophysX/agents/assistants/{_name}/skills"))
 
 binaries = []
 

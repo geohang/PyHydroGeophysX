@@ -170,7 +170,7 @@ Optional Dependencies
    pip install pygimli simpeg resipy joblib
    pip install "cupy-cuda12x[ctk]"
 
-TetGen builds the E4D-style 3-D meshes. It is AGPL-licensed, so it is not
+TetGen builds the 3-D meshes from E4D mesh configurations. It is AGPL-licensed, so it is not
 installed with the package; without it, Gmsh stands in:
 
 .. code-block:: bash

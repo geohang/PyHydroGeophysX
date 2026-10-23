@@ -9,7 +9,7 @@
 
 # PyHydroGeophysX
 
-A Python package for integrating hydrological model outputs (MODFLOW, ParFlow) with geophysical forward modeling and inversion — ERT, SRT, TDEM, FDEM, MT — for watershed monitoring and critical zone science. Includes a multi-agent AI system for automated geophysical workflows.
+A Python package for integrating hydrological model outputs (MODFLOW, ParFlow) with geophysical forward modeling and inversion — ERT, SRT, TDEM, FDEM, MT, GPR, gravity and magnetics — for watershed monitoring and critical zone science. Includes a multi-agent AI system for automated geophysical workflows.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/geohang/PyHydroGeophysX/main/frame.png" alt="HydroGeophysX Framework" width="600">
@@ -21,12 +21,13 @@ A Python package for integrating hydrological model outputs (MODFLOW, ParFlow) w
 
 ## Features
 
-- **Hydrological model integration** — load MODFLOW, ParFlow, ATS and PFLOTRAN outputs
-- **Forward modeling** — 2D/3D ERT, SRT, TDEM, FDEM synthetic data, with E4D-style 3D ERT meshes
-- **Inversion** — single-time, time-lapse, windowed, structure-constrained, joint ERT+SRT, TDEM, FDEM
+- **Hydrological model integration** — load MODFLOW, ParFlow, ATS and PFLOTRAN outputs, and write interpreted results back as MODFLOW 6 or ParFlow input
+- **Forward modeling** — 2D/3D ERT, SRT, TDEM, FDEM, gravity and magnetics synthetic data, with 3D ERT meshes from E4D mesh configurations
+- **Inversion** — single-time, time-lapse, windowed and structure-constrained ERT and SRT; TDEM/FDEM soundings and laterally constrained lines; 3D gravity and magnetics; joint ERT+SRT, FDEM+TDEM and gravity+magnetics
 - **ERT engines** — the built-in engine, the optional GPU engine ADTLERT ([Yang et al. 2026](https://arxiv.org/abs/2608.14661); 2.5D profiles and 3D tetrahedral meshes), and the external E4D, R2 and R3t ([where they run](https://geohang.github.io/PyHydroGeophysX/methods/ert.html#ert-e4d)); a-priori resistivity zones work with every engine
 - **ERT data processing** — field data QC, reciprocal errors, temperature correction, export, and ResIPy integration
 - **Magnetotellurics (MT/AMT)** — time-series processing, Occam 1D with TEM static-shift correction, 2D inversion on SimPEG
+- **Ground-penetrating radar (GPR)** — read the common GPR file formats, clean up and migrate a line, fit the radar velocity and show the line in depth ([GPR guide](https://geohang.github.io/PyHydroGeophysX/methods/gpr.html))
 - **Petrophysics and uncertainty** — water content ↔ resistivity (Waxman-Smits/Archie) and seismic velocity (Hertz-Mindlin, DEM); Monte Carlo uncertainty; [pore-fluid properties](https://geohang.github.io/PyHydroGeophysX/methods/petrophysics.html#petrophysics-fluid-properties)
 - **Multi-agent AI system** — automated workflows via GPT, Gemini, or Claude APIs
 - **GPU acceleration** — optional CuPy/CUDA support for large-scale inversions
@@ -47,9 +48,9 @@ conda activate pyhydrogeophysx
 ### From PyPI
 
 ```bash
-pip install pyhydrogeophysx                  # core: petrophysics, model I/O, solvers
-pip install "pyhydrogeophysx[geophysics]"    # + ERT/SRT/TDEM/FDEM forward modeling and inversion
-pip install "pyhydrogeophysx[all]"           # every general-purpose extra (ADTLERT stays opt-in)
+pip install pyhydrogeophysx                  # core: petrophysics, model I/O, solvers, GPR
+pip install "pyhydrogeophysx[geophysics]"    # + ERT, SRT, EM, MT and gravity/magnetics modeling and inversion
+pip install "pyhydrogeophysx[all]"           # every extra except adtlert, ert and mcp
 ```
 
 If `pip` fails on PyGIMLi, install it first with `conda install -c gimli pygimli`, then add the extras.
@@ -163,19 +164,21 @@ Do not report success while required verification is failing.
 
 | Extra | Packages installed |
 |---|---|
-| `geophysics` | pygimli, simpeg, pymatsolver, flopy, pftools |
+| `geophysics` | pygimli, simpeg, pymatsolver, flopy, pftools, threadpoolctl, numba |
+| `ert` | resipy (reads more ERT instrument formats; GPL-3.0, so it is a separate choice) |
 | `hydrology` | h5py (the ATS and PFLOTRAN output readers) |
 | `adtlert` | adtlert (Torch, cuDSS, NVRTC) and pygimli (Python 3.11+; Linux recommended) |
-| `desktop` | PySide6, pyqtgraph, qtawesome, numpy, pandas |
+| `desktop` | PySide6, pyqtgraph, qtawesome, pyproj, psutil, pypdf, numpy, pandas |
 | `desktop-3d` | pyvista, pyvistaqt, vtk (the 3D viewers; without it the studio shows an install message there) |
 | `agents` | openai, google-genai, anthropic |
+| `mcp` | mcp (the `pyhydrogeophysx-mcp` server for other MCP clients) |
 | `climate` | pandas, requests |
 | `webapp` | streamlit, plotly, streamlit-plotly-events, pyarrow |
 | `seismic-raw` | obspy |
 | `gpu` | cupy-cuda12x with CUDA Toolkit components |
 | `docs` | sphinx, sphinx-gallery, sphinx_rtd_theme |
 | `dev` | pytest, pytest-cov, black, flake8 |
-| `all` | all general-purpose groups above; ADTLERT remains opt-in |
+| `all` | every group above except `adtlert`, `ert` and `mcp`, which stay opt-in |
 
 ### Optional engines
 
@@ -183,7 +186,7 @@ These are set up separately:
 
 - **ADTLERT (GPU)** — `pip install "pyhydrogeophysx[adtlert]"` (on Windows, install a CUDA-enabled Torch wheel first). Before using field data, run `python -m PyHydroGeophysX.inversion.adtlert_diagnostics --report gpu-check.json`; see the [GPU setup and checks](https://geohang.github.io/PyHydroGeophysX/installation.html#install-the-optional-adtlert-ert-backend).
 - **E4D, R2 and R3t** — external programs, not installed with the package: E4D runs on Linux (on Windows inside WSL 2), R2/R3t natively on Windows and through Wine elsewhere. See [where they run and how to call them](https://geohang.github.io/PyHydroGeophysX/methods/ert.html#ert-e4d).
-- **TetGen** — `pip install tetgen` for E4D-style 3D meshes. It is AGPL-licensed, so it is not installed with the package; without it, Gmsh stands in.
+- **TetGen** — `pip install tetgen` for 3D meshes from E4D mesh configurations. It is AGPL-licensed, so it is not installed with the package; without it, Gmsh stands in.
 
 ---
 
@@ -247,27 +250,40 @@ On Windows, `PyHydroGeophysX\start_webapp.bat` does the same from a double-click
 ```
 PyHydroGeophysX/
 ├── core/               # Interpolation, 2D/3D mesh utilities
-├── agents/             # Multi-agent AI orchestration
-├── data_processing/    # ERT field data loading, QC, export; mt/ for magnetotellurics; gpr.py for GPR
 ├── model_output/       # MODFLOW, ParFlow, ATS and PFLOTRAN output interfaces
-├── petrophysics/       # Resistivity and velocity rock-physics models
-├── forward/            # ERT, SRT, TDEM, FDEM forward modeling
-├── inversion/          # ERT, SRT, TDEM, FDEM, joint, time-lapse inversion
+├── model_input/        # Interpreted results written back as MODFLOW 6 / ParFlow input
+├── data_processing/    # Field data readers and QC: ERT, seismic, TEM, gravity/magnetics, boreholes
+│   ├── mt/             #   magnetotellurics: time series, impedances, 1D and 2D inversion
+│   └── gpr.py          #   GPR: readers, processing, migration, synthetic lines
+├── petrophysics/       # Resistivity, velocity and pore-fluid models
+├── forward/            # ERT (2D/3D), SRT, TDEM, FDEM, gravity and magnetics forward modeling
+├── inversion/          # ERT (with E4D, R2/R3t, ADTLERT), SRT, TDEM/FDEM, gravity/magnetics; joint, time-lapse
+├── analysis/           # Sensitivity, resolution, depth of investigation
+├── uncertainty/        # Posterior uncertainty, propagated to water content
+├── assimilation/       # EnKF and ES-MDA updates of model states
 ├── solvers/            # CGLS, LSQR, RRLS linear solvers (optional GPU)
 ├── Hydro_modular/      # Hydro-to-geophysics conversion utilities
-└── Geophy_modular/     # Geophysical data processing tools
+├── Geophy_modular/     # Geophysics-to-hydrology and structure integration
+├── visualization/      # Sections, maps, animations, VTK export
+├── workflows/          # Workflow recipes, CLI and Python code generation
+├── agents/             # Multi-agent AI orchestration (AQUAH)
+└── qt_apps/            # Desktop studio
 ```
+
+MT and GPR each sit in one place under `data_processing/`, from reading the files to the final section; the other methods keep forward modeling in `forward/` and inversion in `inversion/`.
 
 ---
 
 ## Examples
 
-All examples have paired `.ipynb` notebooks and `.py` scripts under `examples/`. Data is in `examples/data/`, outputs go to `examples/results/`.
+The examples sit under `examples/`, each scientific one as a paired `.ipynb` notebook and `.py` script; the agent examples are notebooks only. Data is in `examples/data/`, outputs go to `examples/results/`.
 
 | Example | Description |
 |---|---|
 | `Ex_model_output` | MODFLOW/ParFlow output loading |
+| `Ex_MODFLOW_geophysics_feedback` | Interpreted regolith and bedrock depths fed into a MODFLOW 6 model, compared with uniform layers |
 | `Ex_ERT_workflow` | End-to-end ERT forward + inversion |
+| `Ex_ERT_single_inversion` | One ERT survey, no time-lapse: load, QC and invert |
 | `Ex_Time_lapse_measurement` | Synthetic time-lapse ERT schedules |
 | `Ex_TL_inversion` | Time-lapse ERT inversion |
 | `Ex_TL_inversion_memory` | Memory-optimized versus standard time-lapse ERT inversion |
@@ -279,13 +295,18 @@ All examples have paired `.ipynb` notebooks and `.py` scripts under `examples/`.
 | `Ex_3D_ERT_forward` | 3D ERT forward with MODFLOW integration |
 | `Ex_TDEM_workflow` | TDEM forward + inversion (SimPEG) |
 | `Ex_FDEM_workflow` | FDEM forward + inversion (SimPEG) |
+| `Ex_TEM_LMHM_LCI` | Low- and high-moment TEM fitted together along a line with lateral constraints, checked against the true model |
+| `Ex_EM_line_section` | Airborne TEM line: response calibrated to a reference resistivity, then a section stitched from 1D inversions |
+| `Ex_gravity_magnetics_inversion` | Gravity and magnetic field data: regional-residual separation, body responses, 3D inversion |
 | `Ex_MT_workflow` | Magnetotellurics over the MODFLOW model: time-series processing, static shift fixed by TEM, water content, a 2D profile, and a USMTArray site |
+| `Ex_GPR_workflow` | GPR line simulated over the MODFLOW model: processing, time zero and velocity checked against the CRIM permittivity, depth and elevation sections |
 | `Ex_hydro_to_multigeophys` | Hydro → petrophysics → multi-method forward |
 | `Ex_MC_Hydro` | Monte Carlo uncertainty quantification |
 | `Ex_sensitivity_analysis` | Sensitivity, resolution and depth of investigation of an ERT survey over the MODFLOW model |
 | `Ex_ensemble_assimilation` | EnKF and ES-MDA updates of MODFLOW water content with an ERT survey |
 | `Ex_posterior_uncertainty` | Posterior ERT uncertainty propagated to water content, checked against MODFLOW |
 | `Ex_multi_agent_workflow` | Automated multi-agent ERT+seismic workflow |
+| `Ex_Unified_Workflow_ex1`–`ex3` | Agent workflows from a plain-language request: one ERT survey, time-lapse ERT with climate data, seismic-constrained ERT |
 
 Three examples read another example's output: run `EX_SRT_forward` before
 `Ex_SRT_inv`, `Ex_Structure_resinv` before `Ex_structure_TLresinv`, and both of
@@ -318,8 +339,10 @@ If you use PyHydroGeophysX, please cite:
   title   = {PyHydroGeophysX: An Extensible Open-Source Platform for Integrating
              Hydrological Models with Geophysical Measurements},
   journal = {SoftwareX},
+  volume  = {34},
+  pages   = {102710},
   year    = {2026},
-  note    = {In press},
+  doi     = {10.1016/j.softx.2026.102710},
   url     = {https://github.com/geohang/PyHydroGeophysX}
 }
 ```
@@ -372,36 +395,6 @@ Please also cite the underlying libraries you use (click to expand):
 </details>
 
 <details>
-<summary><b>ERT reciprocal errors and the reciprocal error model (the ERT page's Reciprocal errors tab, data errors from the reciprocal error model)</b></summary>
-
-```bibtex
-@article{slater2000crosshole,
-  author  = {Slater, L. and Binley, A. M. and Daily, W. and Johnson, R.},
-  title   = {Cross-hole electrical imaging of a controlled saline tracer injection},
-  journal = {Journal of Applied Geophysics},
-  volume  = {44},
-  number  = {2-3},
-  pages   = {85--102},
-  year    = {2000},
-  doi     = {10.1016/S0926-9851(00)00002-1}
-}
-
-@article{koestel2008quantitative,
-  author  = {Koestel, Johannes and Kemna, Andreas and Javaux, Mathieu and
-             Binley, Andrew and Vereecken, Harry},
-  title   = {Quantitative imaging of solute transport in an unsaturated and
-             undisturbed soil monolith with {3-D} {ERT} and {TDR}},
-  journal = {Water Resources Research},
-  volume  = {44},
-  number  = {12},
-  year    = {2008},
-  doi     = {10.1029/2007WR006755}
-}
-```
-
-</details>
-
-<details>
 <summary><b>R2 and R3t inversions (the <code>r2</code> and <code>r3t</code> engines) and their difference inversion for time-lapse series</b></summary>
 
 ```bibtex
@@ -442,7 +435,7 @@ Please also cite the underlying libraries you use (click to expand):
 </details>
 
 <details>
-<summary><b>E4D inversions (the <code>e4d</code> engine) and E4D-style 3D meshes (E4D, TetGen)</b></summary>
+<summary><b>E4D inversions (the <code>e4d</code> engine) and 3D meshes from E4D configurations (E4D, TetGen)</b></summary>
 
 ```bibtex
 @article{johnson2010e4d,
@@ -474,25 +467,6 @@ Please also cite the underlying libraries you use (click to expand):
 </details>
 
 <details>
-<summary><b>3D meshes built with Gmsh (the Gmsh engine and its zones, or Gmsh standing in for TetGen)</b></summary>
-
-```bibtex
-@article{geuzaine2009gmsh,
-  author  = {Geuzaine, Christophe and Remacle, Jean-Fran{\c{c}}ois},
-  title   = {{Gmsh}: A 3-{D} finite element mesh generator with built-in
-             pre- and post-processing facilities},
-  journal = {International Journal for Numerical Methods in Engineering},
-  volume  = {79},
-  number  = {11},
-  pages   = {1309--1331},
-  year    = {2009},
-  doi     = {10.1002/nme.2579}
-}
-```
-
-</details>
-
-<details>
 <summary><b>Geophysical modeling (PyGIMLi)</b></summary>
 
 ```bibtex
@@ -510,7 +484,7 @@ Please also cite the underlying libraries you use (click to expand):
 </details>
 
 <details>
-<summary><b>EM modeling (SimPEG)</b></summary>
+<summary><b>EM, MT 2D and gravity/magnetics modeling (SimPEG)</b></summary>
 
 ```bibtex
 @article{cockett2015simpeg,
@@ -521,172 +495,6 @@ Please also cite the underlying libraries you use (click to expand):
   pages   = {142--154},
   year    = {2015},
   doi     = {10.1016/j.cageo.2015.09.015}
-}
-```
-
-</details>
-
-<details>
-<summary><b>Magnetotellurics (<code>data_processing.mt</code>)</b></summary>
-
-For MT/AMT methods and complete BibTeX entries, see the
-[MT references](https://geohang.github.io/PyHydroGeophysX/citation.html#mt-references).
-
-</details>
-
-<details>
-<summary><b>Shallow seismic processing (<code>data_processing.seismic_shallow</code>)</b></summary>
-
-air-wave
-onsets are picked with Maeda's (1985) AIC; traces are stacked by common midpoint (Mayne
-1962) after NMO with Dix (1955) interval velocities; velocity analysis uses
-semblance (Neidell & Taner 1971); the trace QC, mutes and the
-flat-event test follow the pitfalls listed by Steeples & Miller (1998).
-
-```bibtex
-@article{maeda1985method,
-  author  = {Maeda, Naoki},
-  title   = {A method for reading and checking phase time in auto-processing
-             system of seismic wave data},
-  journal = {Zisin (Journal of the Seismological Society of Japan. 2nd ser.)},
-  volume  = {38},
-  number  = {3},
-  pages   = {365--379},
-  year    = {1985},
-  doi     = {10.4294/zisin1948.38.3_365}
-}
-
-@article{dix1955seismic,
-  author  = {Dix, C. Hewitt},
-  title   = {Seismic velocities from surface measurements},
-  journal = {Geophysics},
-  volume  = {20},
-  number  = {1},
-  pages   = {68--86},
-  year    = {1955},
-  doi     = {10.1190/1.1438126}
-}
-
-@article{mayne1962common,
-  author  = {Mayne, W. Harry},
-  title   = {Common reflection point horizontal data stacking techniques},
-  journal = {Geophysics},
-  volume  = {27},
-  number  = {6},
-  pages   = {927--938},
-  year    = {1962},
-  doi     = {10.1190/1.1439118}
-}
-
-@article{neidell1971semblance,
-  author  = {Neidell, N. S. and Taner, M. Turhan},
-  title   = {Semblance and other coherency measures for multichannel data},
-  journal = {Geophysics},
-  volume  = {36},
-  number  = {3},
-  pages   = {482--497},
-  year    = {1971},
-  doi     = {10.1190/1.1440186}
-}
-
-@article{steeples1998avoiding,
-  author  = {Steeples, Don W. and Miller, Richard D.},
-  title   = {Avoiding pitfalls in shallow seismic reflection surveys},
-  journal = {Geophysics},
-  volume  = {63},
-  number  = {4},
-  pages   = {1213--1224},
-  year    = {1998},
-  doi     = {10.1190/1.1444422}
-}
-```
-
-</details>
-
-<details>
-<summary><b>Ground-penetrating radar (<code>data_processing.gpr</code>, the studio's GPR page)</b></summary>
-
-The file readers and the processing steps follow GPRPy, readgssi, ImpDAR and
-RGPR; F-K migration follows Stolt (1978); the example line turns water content
-into permittivity with CRIM (Birchak et al. 1974; Roth et al. 1990).
-
-```bibtex
-@article{plattner2020gprpy,
-  author  = {Plattner, Alain M.},
-  title   = {{GPRPy}: Open-source ground-penetrating radar processing and
-             visualization software},
-  journal = {The Leading Edge},
-  volume  = {39},
-  number  = {5},
-  pages   = {332--337},
-  year    = {2020},
-  doi     = {10.1190/tle39050332.1}
-}
-
-@misc{nesbitt2018readgssi,
-  author       = {Nesbitt, Ian and Simon, Fran{\c{c}}ois-Xavier and Paulin, Thomas
-                  and Hoffmann, Felippe and teshaw},
-  title        = {readgssi: an open-source tool to read and plot {GSSI}
-                  ground-penetrating radar data},
-  howpublished = {Zenodo},
-  year         = {2018},
-  doi          = {10.5281/zenodo.1439119}
-}
-
-@article{lilien2020impdar,
-  author  = {Lilien, David A. and Hills, Benjamin H. and Driscol, Joshua and
-             Jacobel, Robert and Christianson, Knut},
-  title   = {{ImpDAR}: an open-source impulse radar processor},
-  journal = {Annals of Glaciology},
-  volume  = {61},
-  number  = {81},
-  pages   = {114--123},
-  year    = {2020},
-  doi     = {10.1017/aog.2020.44}
-}
-
-@inproceedings{huber2018rgpr,
-  author    = {Huber, Emanuel and Hans, Guillaume},
-  title     = {{RGPR} -- An open-source package to process and visualize {GPR} data},
-  booktitle = {2018 17th International Conference on Ground Penetrating Radar (GPR)},
-  pages     = {1--4},
-  year      = {2018},
-  doi       = {10.1109/ICGPR.2018.8441658}
-}
-
-@article{stolt1978migration,
-  author  = {Stolt, R. H.},
-  title   = {Migration by {Fourier} transform},
-  journal = {Geophysics},
-  volume  = {43},
-  number  = {1},
-  pages   = {23--48},
-  year    = {1978},
-  doi     = {10.1190/1.1440826}
-}
-
-@article{birchak1974high,
-  author  = {Birchak, J. R. and Gardner, C. G. and Hipp, J. E. and Victor, J. M.},
-  title   = {High dielectric constant microwave probes for sensing soil moisture},
-  journal = {Proceedings of the IEEE},
-  volume  = {62},
-  number  = {1},
-  pages   = {93--98},
-  year    = {1974},
-  doi     = {10.1109/PROC.1974.9388}
-}
-
-@article{roth1990calibration,
-  author  = {Roth, Kurt and Schulin, Rainer and Fl{\"u}hler, Hannes and
-             Attinger, Werner},
-  title   = {Calibration of time domain reflectometry for water content
-             measurement using a composite dielectric approach},
-  journal = {Water Resources Research},
-  volume  = {26},
-  number  = {10},
-  pages   = {2267--2273},
-  year    = {1990},
-  doi     = {10.1029/WR026i010p02267}
 }
 ```
 
@@ -863,105 +671,7 @@ the three references PFLOTRAN asks users to cite.
 
 </details>
 
-<details>
-<summary><b>Batzle-Wang (brine density and elastic modulus)</b></summary>
-
-```bibtex
-@article{batzle1992fluids,
-  author = {Batzle, Michael and Wang, Zhijing},
-  title = {Seismic properties of pore fluids},
-  journal = {Geophysics},
-  volume = {57},
-  number = {11},
-  pages = {1396--1408},
-  year = {1992},
-  doi = {10.1190/1.1443207}
-}
-```
-
-</details>
-
-<details>
-<summary><b>Waxman-Thomas (surface conductivity)</b></summary>
-
-```bibtex
-@article{waxman1974conductivities,
-  author = {Waxman, Monroe H. and Thomas, E. C.},
-  title = {Electrical Conductivities in Shaly Sands: I. The Relation Between Hydrocarbon Saturation and Resistivity Index; II. The Temperature Coefficient of Electrical Conductivity},
-  journal = {Journal of Petroleum Technology},
-  volume = {26},
-  number = {2},
-  pages = {213--225},
-  year = {1974},
-  doi = {10.2118/4094-PA}
-}
-```
-
-</details>
-
-<details>
-<summary><b>ORNL surface-water survey (limiting equivalent ionic conductivities)</b></summary>
-
-```bibtex
-@techreport{kanciruk1986conductance,
-  author = {Kanciruk, Paul and Gentry, Merilyn and McCord, Raymond and Hook, Les and Eilers, Joseph and Best, Mary D.},
-  title = {National Surface Water Survey: Eastern Lake Survey---Phase I, Data Base Dictionary},
-  institution = {Oak Ridge National Laboratory},
-  number = {ORNL/TM-10153},
-  year = {1986},
-  note = {Table 8, CONCAL, page 30},
-  url = {https://archive.epa.gov/emap/archive-emap/web/pdf/elsi_dd-2.pdf}
-}
-```
-
-</details>
-
-<details>
-<summary><b>Metrohm conductometry (Kohlrausch square-root correction)</b></summary>
-
-```bibtex
-@manual{metrohmconductometry,
-  author = {Bruttel, Peter},
-  title = {Conductometry---Conductivity Measurement},
-  organization = {Metrohm},
-  number = {8.109.5021},
-  note = {Revised by Lucia Meier, Sabrina Gschwind and Iris Kalkman; square-root law, page 14},
-  url = {https://www.metrohm.com/content/dam/metrohm/shared/documents/monographs/81095021EN.pdf}
-}
-```
-
-</details>
-
-<details>
-<summary><b>Girault electrochemistry (calcium chloride conductivity benchmark)</b></summary>
-
-```bibtex
-@book{girault2004electrochemistry,
-  author = {Girault, Hubert H.},
-  title = {Analytical and Physical Electrochemistry},
-  publisher = {EPFL Press},
-  year = {2004},
-  doi = {10.55430/6101APEHG}
-}
-```
-
-</details>
-
-<details>
-<summary><b>Rock Physics Handbook (grain contacts and fluid substitution)</b></summary>
-
-```bibtex
-@book{mavko2009handbook,
-  author = {Mavko, Gary and Mukerji, Tapan and Dvorkin, Jack},
-  title = {The Rock Physics Handbook: Tools for Seismic Analysis of Porous Media},
-  publisher = {Cambridge University Press},
-  edition = {2},
-  year = {2009},
-  doi = {10.1017/CBO9780511626753}
-}
-```
-
-</details>
+Papers behind individual methods (ERT reciprocal errors, laterally constrained EM inversion, MT processing and inversion, shallow seismic and GPR processing, petrophysics and pore fluids), and the Gmsh mesher, are listed with their BibTeX on the website's [citation page](https://geohang.github.io/PyHydroGeophysX/citation.html#method-references).
 
 **Related geophysics-hydrology study:**
 

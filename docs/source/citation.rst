@@ -10,8 +10,8 @@ Cite the software
 
 - Chen, H., Niu, Q., and Wu, Y. (2026). *PyHydroGeophysX: An Extensible
   Open-Source Platform for Integrating Hydrological Models with Geophysical
-  Measurements*. SoftwareX, in press.
-  https://doi.org/10.2139/ssrn.6238293
+  Measurements*. SoftwareX, 34, 102710.
+  https://doi.org/10.1016/j.softx.2026.102710
 
 Cite this one for any use of the package.
 
@@ -30,7 +30,7 @@ Cite this one for work that uses geophysical observations to inform a
 hydrological model, which is the last step of the
 :doc:`model-data loop <tutorials/hydro_geophysical_interaction>`.
 
-BibTeX entries for the three references above are in the
+BibTeX entries for the first two references above are in the
 `project README <https://github.com/geohang/PyHydroGeophysX#citation>`_.
 
 Cite GeoSAGE
@@ -93,7 +93,7 @@ Cite the engines you used
        Environmental and Engineering Geophysics*, 6(2), 83-89.
        https://doi.org/10.4133/JEEG6.2.83
    * - E4D inversions (``engine="e4d"``, single surveys or time-lapse),
-       E4D-style 3-D meshes (the 3D Mesh Builder's E4D engine), E4D mesh
+       3-D meshes built by the 3D Mesh Builder's E4D engine, E4D mesh
        configurations, or E4D meshes imported for inversion
      - Johnson, T. C., Versteeg, R. J., Ward, A., Day-Lewis, F. D., and Revil,
        A. (2010). Improved hydrogeophysical characterization and monitoring
@@ -116,6 +116,15 @@ Cite the engines you used
    * - TDEM or FDEM forward modelling and inversion
      - Cockett, R., Kang, S., Heagy, L. J., Pidlisecky, A., and Oldenburg,
        D. W. (2015). SimPEG. *Computers and Geosciences*, 85, 142-154.
+   * - Laterally constrained inversion of a TDEM or FDEM line
+       (``inversion.em1d_lci``) and its depth of investigation
+     - Auken, E. and Christiansen, A. V. (2004). Layered and laterally
+       constrained 2D inversion of resistivity data. *Geophysics*, 69(3),
+       752-761. https://doi.org/10.1190/1.1759461; for the depth of
+       investigation, Christiansen, A. V. and Auken, E. (2012). A global
+       measure for depth of investigation. *Geophysics*, 77(4), WB171-WB177.
+       https://doi.org/10.1190/geo2011-0393.1 (BibTeX in
+       :ref:`em-lci-references`)
    * - MT time-series processing (``mt.process_mt``)
      - Egbert, G. D. and Booker, J. R. (1986). Robust estimation of
        geomagnetic transfer functions. *Geophysical Journal International*,
@@ -202,8 +211,8 @@ Cite the engines you used
        https://doi.org/10.1190/1.1440186; Steeples, D. W. and Miller, R. D.
        (1998). Avoiding pitfalls in shallow seismic reflection surveys.
        *Geophysics*, 63(4), 1213-1224. https://doi.org/10.1190/1.1444422
-   * - GPR reading and processing (``data_processing.gpr``, the GPR page): file
-       layouts and processing steps after GPRPy, readgssi, ImpDAR and RGPR
+   * - GPR reading and processing (``data_processing.gpr``, the GPR page): GPR
+       processing steps (the standard sequence described by GPRPy, readgssi, ImpDAR and RGPR)
      - Plattner, A. M. (2020). GPRPy: Open-source ground-penetrating radar
        processing and visualization software. *The Leading Edge*, 39(5),
        332-337. https://doi.org/10.1190/tle39050332.1; Nesbitt, I., Simon,
@@ -287,10 +296,227 @@ Cite the engines you used
        assimilation. *Computers and Geosciences*, 55, 3-15.
        https://doi.org/10.1016/j.cageo.2012.03.011
 
+.. _method-references:
+
+Method references
+-----------------
+
+The README carries the references for the core packages and engines an analysis
+runs on. The papers behind individual methods, and supporting tools such as the
+Gmsh mesher, are kept here with their BibTeX; the table above says which of
+them to cite for which part of an analysis.
+
+ERT reciprocal errors
+~~~~~~~~~~~~~~~~~~~~~
+
+The ERT page's Reciprocal errors tab, and data errors taken from the reciprocal
+error model.
+
+.. code-block:: bibtex
+
+   @article{slater2000crosshole,
+     author  = {Slater, L. and Binley, A. M. and Daily, W. and Johnson, R.},
+     title   = {Cross-hole electrical imaging of a controlled saline tracer injection},
+     journal = {Journal of Applied Geophysics},
+     volume  = {44},
+     number  = {2-3},
+     pages   = {85--102},
+     year    = {2000},
+     doi     = {10.1016/S0926-9851(00)00002-1}
+   }
+
+   @article{koestel2008quantitative,
+     author  = {Koestel, Johannes and Kemna, Andreas and Javaux, Mathieu and
+                Binley, Andrew and Vereecken, Harry},
+     title   = {Quantitative imaging of solute transport in an unsaturated and
+                undisturbed soil monolith with {3-D} {ERT} and {TDR}},
+     journal = {Water Resources Research},
+     volume  = {44},
+     number  = {12},
+     year    = {2008},
+     doi     = {10.1029/2007WR006755}
+   }
+
+3D meshes built with Gmsh
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The 3D Mesh Builder's Gmsh engine and its zones, or Gmsh standing in for
+TetGen.
+
+.. code-block:: bibtex
+
+   @article{geuzaine2009gmsh,
+     author  = {Geuzaine, Christophe and Remacle, Jean-Fran{\c{c}}ois},
+     title   = {{Gmsh}: A 3-{D} finite element mesh generator with built-in
+                pre- and post-processing facilities},
+     journal = {International Journal for Numerical Methods in Engineering},
+     volume  = {79},
+     number  = {11},
+     pages   = {1309--1331},
+     year    = {2009},
+     doi     = {10.1002/nme.2579}
+   }
+
+Shallow seismic processing
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In ``data_processing.seismic_shallow``, air-wave onsets are picked with Maeda's
+(1985) AIC; traces are stacked by common midpoint (Mayne 1962) after NMO with
+Dix (1955) interval velocities; velocity analysis uses semblance (Neidell &
+Taner 1971); the trace QC, mutes and the flat-event test follow the pitfalls
+listed by Steeples & Miller (1998).
+
+.. code-block:: bibtex
+
+   @article{maeda1985method,
+     author  = {Maeda, Naoki},
+     title   = {A method for reading and checking phase time in auto-processing
+                system of seismic wave data},
+     journal = {Zisin (Journal of the Seismological Society of Japan. 2nd ser.)},
+     volume  = {38},
+     number  = {3},
+     pages   = {365--379},
+     year    = {1985},
+     doi     = {10.4294/zisin1948.38.3_365}
+   }
+
+   @article{dix1955seismic,
+     author  = {Dix, C. Hewitt},
+     title   = {Seismic velocities from surface measurements},
+     journal = {Geophysics},
+     volume  = {20},
+     number  = {1},
+     pages   = {68--86},
+     year    = {1955},
+     doi     = {10.1190/1.1438126}
+   }
+
+   @article{mayne1962common,
+     author  = {Mayne, W. Harry},
+     title   = {Common reflection point horizontal data stacking techniques},
+     journal = {Geophysics},
+     volume  = {27},
+     number  = {6},
+     pages   = {927--938},
+     year    = {1962},
+     doi     = {10.1190/1.1439118}
+   }
+
+   @article{neidell1971semblance,
+     author  = {Neidell, N. S. and Taner, M. Turhan},
+     title   = {Semblance and other coherency measures for multichannel data},
+     journal = {Geophysics},
+     volume  = {36},
+     number  = {3},
+     pages   = {482--497},
+     year    = {1971},
+     doi     = {10.1190/1.1440186}
+   }
+
+   @article{steeples1998avoiding,
+     author  = {Steeples, Don W. and Miller, Richard D.},
+     title   = {Avoiding pitfalls in shallow seismic reflection surveys},
+     journal = {Geophysics},
+     volume  = {63},
+     number  = {4},
+     pages   = {1213--1224},
+     year    = {1998},
+     doi     = {10.1190/1.1444422}
+   }
+
+Ground-penetrating radar
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+In ``data_processing.gpr`` and the studio's GPR page, the processing steps are
+the standard ones also used by GPRPy, readgssi, ImpDAR and RGPR; the readers and
+steps are written independently from the file-format descriptions and these
+papers. F-K migration follows Stolt (1978); the example line turns water content
+into permittivity with CRIM (Birchak et al. 1974; Roth et al. 1990).
+
+.. code-block:: bibtex
+
+   @article{plattner2020gprpy,
+     author  = {Plattner, Alain M.},
+     title   = {{GPRPy}: Open-source ground-penetrating radar processing and
+                visualization software},
+     journal = {The Leading Edge},
+     volume  = {39},
+     number  = {5},
+     pages   = {332--337},
+     year    = {2020},
+     doi     = {10.1190/tle39050332.1}
+   }
+
+   @misc{nesbitt2018readgssi,
+     author       = {Nesbitt, Ian and Simon, Fran{\c{c}}ois-Xavier and Paulin, Thomas
+                     and Hoffmann, Felippe and teshaw},
+     title        = {readgssi: an open-source tool to read and plot {GSSI}
+                     ground-penetrating radar data},
+     howpublished = {Zenodo},
+     year         = {2018},
+     doi          = {10.5281/zenodo.1439119}
+   }
+
+   @article{lilien2020impdar,
+     author  = {Lilien, David A. and Hills, Benjamin H. and Driscol, Joshua and
+                Jacobel, Robert and Christianson, Knut},
+     title   = {{ImpDAR}: an open-source impulse radar processor},
+     journal = {Annals of Glaciology},
+     volume  = {61},
+     number  = {81},
+     pages   = {114--123},
+     year    = {2020},
+     doi     = {10.1017/aog.2020.44}
+   }
+
+   @inproceedings{huber2018rgpr,
+     author    = {Huber, Emanuel and Hans, Guillaume},
+     title     = {{RGPR} -- An open-source package to process and visualize {GPR} data},
+     booktitle = {2018 17th International Conference on Ground Penetrating Radar (GPR)},
+     pages     = {1--4},
+     year      = {2018},
+     doi       = {10.1109/ICGPR.2018.8441658}
+   }
+
+   @article{stolt1978migration,
+     author  = {Stolt, R. H.},
+     title   = {Migration by {Fourier} transform},
+     journal = {Geophysics},
+     volume  = {43},
+     number  = {1},
+     pages   = {23--48},
+     year    = {1978},
+     doi     = {10.1190/1.1440826}
+   }
+
+   @article{birchak1974high,
+     author  = {Birchak, J. R. and Gardner, C. G. and Hipp, J. E. and Victor, J. M.},
+     title   = {High dielectric constant microwave probes for sensing soil moisture},
+     journal = {Proceedings of the IEEE},
+     volume  = {62},
+     number  = {1},
+     pages   = {93--98},
+     year    = {1974},
+     doi     = {10.1109/PROC.1974.9388}
+   }
+
+   @article{roth1990calibration,
+     author  = {Roth, Kurt and Schulin, Rainer and Fl{\"u}hler, Hannes and
+                Attinger, Werner},
+     title   = {Calibration of time domain reflectometry for water content
+                measurement using a composite dielectric approach},
+     journal = {Water Resources Research},
+     volume  = {26},
+     number  = {10},
+     pages   = {2267--2273},
+     year    = {1990},
+     doi     = {10.1029/WR026i010p02267}
+   }
+
 .. _mt-references:
 
 Magnetotellurics references
----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Use the references below for the processing and inversion methods used in
 :doc:`the MT/AMT workflows <methods/mt>`. The table above maps each method to
@@ -521,8 +747,43 @@ SimPEG (above). The example site NMX20 is from the USMTArray (IRIS SPUD, CC BY 4
    }
 
 
+.. _em-lci-references:
+
+Laterally constrained EM inversion references
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``inversion.em1d_lci`` inverts the soundings of a TDEM or FDEM line as one
+system, with lateral constraints between neighbouring soundings, after the
+laterally constrained inversion of Auken & Christiansen (2004). Its depth of
+investigation is the cumulated sensitivity of Christiansen & Auken (2012).
+
+.. code-block:: bibtex
+
+   @article{auken2004layered,
+     author  = {Auken, Esben and Christiansen, Anders Vest},
+     title   = {Layered and laterally constrained 2D inversion of resistivity data},
+     journal = {Geophysics},
+     volume  = {69},
+     number  = {3},
+     pages   = {752--761},
+     year    = {2004},
+     doi     = {10.1190/1.1759461}
+   }
+
+   @article{christiansen2012global,
+     author  = {Christiansen, Anders Vest and Auken, Esben},
+     title   = {A global measure for depth of investigation},
+     journal = {Geophysics},
+     volume  = {77},
+     number  = {4},
+     pages   = {WB171--WB177},
+     year    = {2012},
+     doi     = {10.1190/geo2011-0393.1}
+   }
+
+
 Pore-fluid properties and grain contacts
-----------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For the equations, units and calibration limits, see :doc:`methods/petrophysics`.
 

@@ -268,8 +268,8 @@ Pattern D: Full Field-Scale Analysis
 
 * Multi-method integration
 * Quality optimization loop
-* Comprehensive uncertainty quantification
-* Publication-ready reports
+* Uncertainty quantification
+* Reports with figures
 
 **Workflow Diagram**:
 

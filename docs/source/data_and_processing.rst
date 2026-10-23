@@ -143,8 +143,8 @@ and the solvers treat it as one: ``spd_cholesky`` and ``spd_cg`` are available
 alongside the least-squares methods, and ``generalized_solver`` reports a
 mismatch between the method and the system it was handed.
 
-An optional differentiable 2.5D ERT backend runs on the GPU through CuPy and
-cuDSS. It falls back to the built-in engine when CUDA is unavailable, and the
+An optional differentiable ERT backend, ADTLERT, runs 2.5D profiles and 3D
+tetrahedral meshes on the GPU through PyTorch and cuDSS. It falls back to the built-in engine when CUDA is unavailable, and the
 engine that actually ran is reported, so a fallback is visible rather than
 silent.
 

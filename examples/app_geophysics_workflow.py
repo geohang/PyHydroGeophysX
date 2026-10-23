@@ -1521,15 +1521,17 @@ HYDRO_NOTEBOOK_DEFAULTS: Dict[str, Any] = {
 
 README_REFERENCE_ENTRIES: List[Dict[str, str]] = [
     {
-        "label": "PyHydroGeophysX platform paper (SSRN, 2026)",
-        "url": "https://ssrn.com/abstract=6238293",
-        "bibtex": """@misc{chen2026pyhydrogeophysx,
+        "label": "PyHydroGeophysX platform paper (SoftwareX, 2026)",
+        "url": "https://doi.org/10.1016/j.softx.2026.102710",
+        "bibtex": """@article{chen2026pyhydrogeophysx,
   author = {Chen, Hang and Niu, Qifei and Wu, Yuxin},
   title = {PyHydroGeophysX: An Extensible Open-Source Platform for Integrating Hydrological Models with Geophysical Measurements},
+  journal = {SoftwareX},
+  volume = {34},
+  pages = {102710},
   year = {2026},
-  howpublished = {SSRN},
-  doi = {10.2139/ssrn.6238293},
-  url = {https://ssrn.com/abstract=6238293}
+  doi = {10.1016/j.softx.2026.102710},
+  url = {https://github.com/geohang/PyHydroGeophysX}
 }""",
     },
     {
@@ -1541,82 +1543,6 @@ README_REFERENCE_ENTRIES: List[Dict[str, str]] = [
   journal = {Big Data and Earth System},
   pages = {100042},
   year = {2026}
-}""",
-    },
-    {
-        "label": 'Batzle-Wang (brine density and elastic modulus)',
-        "url": 'https://doi.org/10.1190/1.1443207',
-        "bibtex": """@article{batzle1992fluids,
-  author = {Batzle, Michael and Wang, Zhijing},
-  title = {Seismic properties of pore fluids},
-  journal = {Geophysics},
-  volume = {57},
-  number = {11},
-  pages = {1396--1408},
-  year = {1992},
-  doi = {10.1190/1.1443207}
-}""",
-    },
-    {
-        "label": 'Waxman-Thomas (surface conductivity)',
-        "url": 'https://doi.org/10.2118/4094-PA',
-        "bibtex": """@article{waxman1974conductivities,
-  author = {Waxman, Monroe H. and Thomas, E. C.},
-  title = {Electrical Conductivities in Shaly Sands: I. The Relation Between Hydrocarbon Saturation and Resistivity Index; II. The Temperature Coefficient of Electrical Conductivity},
-  journal = {Journal of Petroleum Technology},
-  volume = {26},
-  number = {2},
-  pages = {213--225},
-  year = {1974},
-  doi = {10.2118/4094-PA}
-}""",
-    },
-    {
-        "label": 'ORNL surface-water survey (limiting equivalent ionic conductivities)',
-        "url": 'https://archive.epa.gov/emap/archive-emap/web/pdf/elsi_dd-2.pdf',
-        "bibtex": """@techreport{kanciruk1986conductance,
-  author = {Kanciruk, Paul and Gentry, Merilyn and McCord, Raymond and Hook, Les and Eilers, Joseph and Best, Mary D.},
-  title = {National Surface Water Survey: Eastern Lake Survey---Phase I, Data Base Dictionary},
-  institution = {Oak Ridge National Laboratory},
-  number = {ORNL/TM-10153},
-  year = {1986},
-  note = {Table 8, CONCAL, page 30},
-  url = {https://archive.epa.gov/emap/archive-emap/web/pdf/elsi_dd-2.pdf}
-}""",
-    },
-    {
-        "label": 'Metrohm conductometry (Kohlrausch square-root correction)',
-        "url": 'https://www.metrohm.com/content/dam/metrohm/shared/documents/monographs/81095021EN.pdf',
-        "bibtex": """@manual{metrohmconductometry,
-  author = {Bruttel, Peter},
-  title = {Conductometry---Conductivity Measurement},
-  organization = {Metrohm},
-  number = {8.109.5021},
-  note = {Revised by Lucia Meier, Sabrina Gschwind and Iris Kalkman; square-root law, page 14},
-  url = {https://www.metrohm.com/content/dam/metrohm/shared/documents/monographs/81095021EN.pdf}
-}""",
-    },
-    {
-        "label": 'Girault electrochemistry (calcium chloride conductivity benchmark)',
-        "url": 'https://doi.org/10.55430/6101APEHG',
-        "bibtex": """@book{girault2004electrochemistry,
-  author = {Girault, Hubert H.},
-  title = {Analytical and Physical Electrochemistry},
-  publisher = {EPFL Press},
-  year = {2004},
-  doi = {10.55430/6101APEHG}
-}""",
-    },
-    {
-        "label": 'Rock Physics Handbook (grain contacts and fluid substitution)',
-        "url": 'https://doi.org/10.1017/CBO9780511626753',
-        "bibtex": """@book{mavko2009handbook,
-  author = {Mavko, Gary and Mukerji, Tapan and Dvorkin, Jack},
-  title = {The Rock Physics Handbook: Tools for Seismic Analysis of Porous Media},
-  publisher = {Cambridge University Press},
-  edition = {2},
-  year = {2009},
-  doi = {10.1017/CBO9780511626753}
 }""",
     },
     {
@@ -1692,6 +1618,8 @@ README_REFERENCE_ENTRIES: List[Dict[str, str]] = [
 }""",
     },
 ]
+
+METHOD_REFERENCES_URL = "https://geohang.github.io/PyHydroGeophysX/citation.html#method-references"
 
 
 def _clone_default_value(value: Any) -> Any:
@@ -2306,7 +2234,10 @@ You can use any of the following providers:
     st.markdown("---")
 
     st.markdown("### References (from README.md)")
-    st.markdown("The references below mirror the `README.md` citation section.")
+    st.markdown(
+        "The references below mirror the `README.md` citation section. Papers behind "
+        f"individual methods are on the website's [citation page]({METHOD_REFERENCES_URL})."
+    )
     for ref in README_REFERENCE_ENTRIES:
         if ref.get("url"):
             st.markdown(f"- [{ref['label']}]({ref['url']})")
@@ -10138,7 +10069,7 @@ def render_ert_processing_tab(sidebar_state: Dict[str, Any]) -> None:
 
     st.subheader("ERT field data QC and export")
     st.caption(
-        "Load DAS-1/Syscal/ABEM/ResIPy-style field files, inspect electrode geometry and apparent values, "
+        "Load DAS-1, Syscal, ABEM and other field files ResIPy reads, inspect electrode geometry and apparent values, "
         "apply light QC, then export inversion-ready PyGIMLi/BERT data."
     )
 

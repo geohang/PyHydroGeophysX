@@ -35,27 +35,34 @@ should contact the author (Andrew Binley, Lancaster University); those terms
 apply to every run, whichever program launched it. Locating ResIPy's copy does
 not import ResIPy.
 
+## ResIPy
+
+[ResIPy](https://gitlab.com/hkex/resipy) is licensed under GPL-3.0. It is an
+optional dependency (`pip install "PyHydroGeophysX[ert]"`): the wheel and the
+desktop archives do not contain it, and PyHydroGeophysX imports it only when
+the user has installed it. When it imports, `data_processing/ert_data_agent.py`
+defines `_FastSurvey`, a subclass of ResIPy's `Survey`, and reads ERT files
+through ResIPy. Three layout details of the BGS PRIME reader in
+`data_processing/ert_formats.py` are handled as ResIPy's `primeParserTab`
+expects them (Blanchy et al., 2020); `parse_bgs_prime` names them.
+
 ## TetGen
 
-PyHydroGeophysX does not include or redistribute TetGen. E4D-style meshes
-(`core.e4d_mesh`) run a `tetgen` program found on the machine, or the optional
+PyHydroGeophysX does not include or redistribute TetGen. Meshes from E4D
+configurations (`core.e4d_mesh`) run a `tetgen` program found on the machine, or the optional
 `tetgen` Python package (`pip install tetgen`), whose wrapper is MIT-licensed
 but whose compiled-in TetGen 1.6 library is AGPL-3.0. Without either, the same
 geometry is meshed with Gmsh.
 
 ## Gmsh
 
-The meshing fallback mentioned above uses Gmsh, which is licensed under
-GPL-2.0-or-later with an upstream exception for specified third-party projects.
-That exception is not a general permission to combine Gmsh with arbitrary
-software under any licence. See the
-[Gmsh licence](https://gmsh.info/LICENSE.txt).
-
-Gmsh's terms apply independently of the Apache-2.0 licence on PyHydroGeophysX's
-own code. Any distribution of its executable, Python API or native libraries
-requires a review of the actual integration and applicable source-code and
-redistribution obligations. This notice does not establish that Gmsh is bundled;
-that must be determined from the individual archive and its build records.
+The meshing fallback mentioned above runs a `gmsh` program found on the
+machine. PyHydroGeophysX does not include or redistribute Gmsh and does not
+import its Python API. Gmsh is licensed under GPL-2.0-or-later with an upstream
+exception for specified third-party projects; the exception is not a general
+permission to combine Gmsh with software under any licence. See the
+[Gmsh licence](https://gmsh.info/LICENSE.txt). Gmsh's terms apply independently
+of the Apache-2.0 licence on PyHydroGeophysX's own code.
 
 ## geoana
 
@@ -64,141 +71,145 @@ coefficient of a layered earth and its conductivity gradient, `_rTE_forward`
 and `_rTE_gradient` in [geoana](https://github.com/simpeg/geoana)
 (`geoana/kernels/tranverse_electric_reflections.py`), Copyright (c) 2017 SimPEG
 Team, MIT License. The licence text is kept at the top of that file, so it
-travels with the code in every distribution, including the wheel, which does
-not carry this document.
+travels with the code in every distribution.
+
+## Phoenix receiver hardware rules
+
+`data_processing/mt/phoenix.py` (`_board_gain`, `_low_pass`) turns the
+hardware-configuration bytes of a Phoenix time-series header into a board's
+gain, attenuator and low-pass corner. The bit assignments and gain values are
+those of two MIT-licensed readers, which implement the same rules:
+
+* [PhoenixGeoPy](https://github.com/torresolmx/PhoenixGeoPy), Copyright (c)
+  2021 Phoenix Geophysics Ltd.;
+* [mth5](https://github.com/kujaku11/mth5) (`mth5/io/phoenix/readers`),
+  Copyright (c) 2020 JP.
+
+The licence text is kept at the top of that file, so it travels with the code
+in every distribution.
 
 ## Desktop builds
 
-The desktop studio is built with `packaging/pyinstaller_studio.spec` in two
-variants. **Light** contains the package, its Qt interface (PySide6, pyqtgraph,
-qtawesome) and its scientific Python dependencies. **Full** adds pyGIMLi,
-SimPEG (with discretize, pymatsolver and geoana) and PyVista/VTK.
+The desktop studio is built with `packaging/pyinstaller_studio.spec` for
+Windows and macOS, in two variants. **Light** contains the package, its Qt
+interface (PySide6, pyqtgraph, qtawesome) and its scientific Python
+dependencies. **Full** adds pyGIMLi (with pgcore), SimPEG (with discretize,
+pymatsolver and geoana) and PyVista/VTK. Full builds take their compiled
+engines from the gimli and conda-forge channels, use OpenBLAS in place of
+Intel MKL, and use conda-forge's `vtk-base`, which leaves out VTK's FFmpeg
+module (FFmpeg links x264 and x265, GPL-2.0-or-later).
 
-The requirements below apply to official desktop releases. They describe the
-release policy, not a completed audit of a particular archive. Before
-publication, each archive must carry these items at its root:
+### What an archive contains
+
+Each archive holds these at its root, beside the `PyHydroGeophysX-Studio`
+folder (Windows) or `PyHydroGeophysX-Studio.app` (macOS):
 
 * `LICENSE` and this document;
-* `LICENSES/`, containing the applicable third-party licence texts, copyright
-  notices and required attributions;
-* `BUILD_INFO.txt`, identifying the platform, architecture, application version,
-  actual source commit and build tools, and listing the bundled components,
-  their versions or build identifiers, licences and notice-file locations;
-* `SOURCE_CODE.md`, giving release-specific source downloads and instructions
-  for rebuilding and replacing the LGPL-covered libraries.
+* `LICENSES/`: the GNU LGPL v3 and GPL v3 texts (`LGPL-3.0-only.txt`,
+  `GPL-3.0-only.txt`) and the licence texts, copyright notices and
+  attributions of the bundled components;
+* `BUILD_INFO.txt`: the platform, architecture, application version, source
+  commit and build tools, and the bundled components with their versions or
+  build identifiers, licences and notice-file locations;
+* `SOURCE_CODE.md`: the source of the LGPL-covered libraries, the application
+  commit the archive was built from, and instructions for replacing those
+  libraries.
 
-The component inventory must describe the files actually distributed, including
-native libraries, plugins, QML files and bundled assets. Components that are
-only installed in the build environment must not be presented as bundled.
+`BUILD_INFO.txt` lists the files in the archive (native libraries, plugins, QML
+files and assets as well as Python packages), each traced to the package that
+supplied it; components that exist only in the build environment are not
+listed.
 
-### Optional and excluded components
+### Excluded and optional components
 
-The standard release configuration excludes ResIPy and the optional `tetgen`
-Python package, including its compiled-in TetGen library. The standalone E4D,
-R2, R3t and TetGen programs described above remain user-supplied tools.
+The standard build leaves out:
 
-`PHGX_BUNDLE_RESIPY=1` and `PHGX_BUNDLE_TETGEN=1` are custom-build options, not
-approved official-release configurations. Enabling either option does not
-change the licences of the components or, by itself, satisfy their distribution
-requirements. Any such build requires a separate review of the applicable
-licences, source-code obligations and licence compatibility before redistribution.
+* ResIPy and the `tetgen` Python package, including its compiled-in TetGen
+  library;
+* Gmsh's Python API, native libraries and executable (`gmsh`, `pygmsh`);
+* Python's `readline` module and conda's GNU Readline libraries (GPL-3.0);
+* Qt modules available under the GPL only, among them Qt Data Visualization,
+  Qt Charts, Qt Graphs, Qt Quick 3D and Qt Virtual Keyboard;
+* Qt PDF, which is LGPL-3.0 but brings PDFium;
+* Qt's `opengl32sw.dll` software renderer (Windows);
+* Full builds also leave out VTK's FFmpeg module and FFmpeg's libraries.
 
-Gmsh requires a separate review as well. Its Python API, native libraries and
-executable must not be included in an official archive until that review is
-complete. The Gmsh fallback described above does not establish whether Gmsh is
-present in any particular desktop archive.
+The standalone E4D, R2, R3t, TetGen and Gmsh programs described above are tools
+the user supplies.
+
+`PHGX_BUNDLE_RESIPY=1` and `PHGX_BUNDLE_TETGEN=1` are custom-build switches that
+add ResIPy (GPL-3.0) or the `tetgen` package (AGPL-3.0) to the archive. They are
+not part of the standard build. Neither switch changes the licence of the
+component it adds.
 
 ### Qt, PySide6 and Shiboken6
 
-The official desktop interface uses LGPLv3-licensed Qt and PySide6 components,
-including the Shiboken6 runtime. Their copyright notices must be retained.
-`LICENSES/` must include the unmodified GNU LGPL v3 and GNU GPL v3 texts as
-`LGPL-3.0-only.txt` and `GPL-3.0-only.txt`. LGPLv3 incorporates GPLv3 with
-additional permissions; including both texts does not, by itself, change the
-licence of PyHydroGeophysX's own code.
+The desktop interface uses Qt and PySide6, including the Shiboken6 runtime,
+under the GNU LGPL v3. `LICENSES/` holds the unmodified LGPL v3 and the GPL v3
+text it incorporates, `LGPL-3.0-only.txt` and `GPL-3.0-only.txt`, with the
+copyright notices of these components. Including both texts does not change the
+licence of PyHydroGeophysX's own code. When an archive is built, the licence of
+each bundled Qt module is read from the sources of that Qt version.
 
-Release builds must exclude Qt components whose available open-source licence
-is GPL-only. This includes Qt Charts, Qt Data Visualization, Qt Graphs, Qt Quick
-3D and Qt Virtual Keyboard; this list is not exhaustive. The review must use
-the licensing information for the actual Qt version in each archive and cover
-bindings, native libraries, plugins, QML files and auxiliary tools. Qt's
-[licensing overview](https://doc.qt.io/qt-6/licensing.html) provides the starting
-point; the version-specific component notices govern the distributed files.
-
-The studio uses a directory-based build intended to keep the Qt, PySide6 and
-Shiboken6 shared libraries replaceable. This layout alone does not establish
-compliance. The released application must support replacement with
-interface-compatible modified libraries. Users may modify the LGPL-covered
-libraries and reverse engineer the combined work for debugging those
-modifications, as permitted by LGPLv3. PyHydroGeophysX imposes no additional
-restriction on those rights.
-
-`SOURCE_CODE.md` must identify the corresponding source for the actual LGPL
-binaries, including applicable downstream patches and the build information
-needed for those libraries. It must also give platform-specific replacement
-instructions and identify the application source commit used for the archive.
-For downloadable releases, complete corresponding library source must be
-available at no additional charge through clearly identified release-specific
-downloads alongside, or clearly linked from, the binary downloads. The
-redistributor remains responsible for the required source availability.
-Generic upstream download or repository homepages are not a substitute for
-identifying and providing the corresponding source.
+The studio is a one-folder build, so the Qt, PySide6 and Shiboken6 shared
+libraries are separate files. The build checks that they can be replaced: it
+swaps in separately obtained copies of the same release, alters one of them and
+runs the studio's self-test. Users may modify the LGPL-covered libraries and
+reverse engineer the combined work for debugging those modifications, as LGPLv3
+permits. PyHydroGeophysX imposes no additional restriction on those rights.
 
 The governing texts are the
 [GNU LGPL v3](https://www.gnu.org/licenses/lgpl-3.0.html) and the incorporated
 [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.html). The Qt project also
-publishes [LGPL guidance](https://www.qt.io/development/open-source-lgpl-obligations).
+publishes [LGPL guidance](https://www.qt.io/development/open-source-lgpl-obligations)
+and its [licensing overview](https://doc.qt.io/qt-6/licensing.html).
 
 ### Code and assets included by dependencies
 
-Qt, PySide6 and the scientific Python packages can include separately licensed
-code and assets. Required notices must be collected for the actual bundled
-versions, including embedded or statically linked dependencies and any fonts
-or icons. A package's top-level licence does not replace its dependencies'
-licences. The component inventory must map these notices to their locations in
-`LICENSES/`.
+Qt, PySide6 and the scientific Python packages include separately licensed
+code and assets, among them embedded or statically linked dependencies, fonts
+and icons. Their notices are collected for the bundled versions into
+`LICENSES/`, and `BUILD_INFO.txt` gives their locations.
 
 Qt documents these components in
 [Third-Party Code Used in Qt](https://doc.qt.io/qt-6/licenses-used-in-qt.html)
 and [Licenses Used in Qt for Python](https://doc.qt.io/qtforpython-6/licenses.html).
-Use the versions corresponding to the distributed binaries. Links to these
-pages supplement, and do not replace, licence texts and notices that must
-accompany the distribution.
+Those pages describe each Qt version; the notices in `LICENSES/` are those of
+the distributed binaries.
 
-### Windows runtime and software rendering
+### Windows runtime
 
 Windows archives may include Microsoft Visual C++ runtime DLLs, such as
-`MSVCP140*.dll` and `VCRUNTIME140*.dll`. These remain subject to the applicable
-Microsoft terms, not PyHydroGeophysX's Apache-2.0 licence. Their exact versions,
-origins and applicable redistribution terms must be recorded before release;
-their presence in an upstream package is not, by itself, a redistribution
-assessment. Microsoft's
+`MSVCP140*.dll` and `VCRUNTIME140*.dll`. They are subject to Microsoft's terms,
+not to PyHydroGeophysX's Apache-2.0 licence; `BUILD_INFO.txt` lists each file
+with its version and the package that carried it. Microsoft's
 [redistribution documentation](https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files)
-is a starting point for that review.
+describes those terms. The Universal CRT files (`ucrtbase.dll` and the
+`api-ms-win-*.dll` forwarders) are part of Windows 10 and later and are not
+included.
 
-When the archive includes Qt's `opengl32sw.dll` software renderer, the notices
-for that particular Mesa llvmpipe build and its dependencies must be retained
-in `LICENSES/`. Qt identifies its distributed renderer under the MIT License
-and Boost Software License 1.0 in its
+Qt's `opengl32sw.dll` is Mesa llvmpipe; Qt identifies its distributed renderer
+under the MIT License and Boost Software License 1.0 in its
 [Mesa llvmpipe attribution](https://doc.qt.io/qt-6/qt-attribution-llvmpipe.html).
+The archives do not include it.
 
 ### Full builds: pyGIMLi, Triangle and visualization libraries
 
-pyGIMLi's 2-D mesh generator wraps Jonathan Shewchuk's Triangle, which may not
-be sold or included in commercial products without its author's permission
-(see the [author's Triangle page](https://www.cs.cmu.edu/~quake/triangle.html)).
+pyGIMLi's 2-D mesh generator wraps Jonathan Shewchuk's Triangle, which has its
+own redistribution conditions, independent of pyGIMLi's top-level licence. They
+require its copyright notices to be kept, require the author's permission for
+sale or inclusion in commercial products, and set conditions for modified
+copies and for source and object-code distribution. See the
+[author's Triangle page](https://www.cs.cmu.edu/~quake/triangle.html).
 The libgimli in Full builds is built without Triangle and contains none of its
 code; pyGIMLi's 2-D meshes come from rustmesh instead (next section).
 
-PyVista and VTK also retain their own licences. The published projects use MIT
-and BSD-3-Clause, respectively; the notices for the actual distributed versions
-and their bundled dependencies must be preserved. See
+PyVista and VTK retain their own licences, MIT and BSD-3-Clause for the
+published projects. See
 [PyVista's licence](https://github.com/pyvista/pyvista/blob/main/LICENSE)
 and [VTK's licensing information](https://docs.vtk.org/en/latest/about.html).
-
-Full builds require an inventory of their additional native dependencies as
-well as their Python packages. They must not be published until the applicable
-notices, source obligations and redistribution conditions have been checked.
+The native libraries of the Full archives are listed in their `BUILD_INFO.txt`
+with the Python packages.
 
 ### Full builds: rustsolve and rustmesh in place of SuiteSparse and Triangle
 

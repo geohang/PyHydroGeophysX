@@ -342,6 +342,23 @@ From the repository root, for example::
 
 .. raw:: html
 
+    <div class="sphx-glr-thumbcontainer" tooltip="This example runs the package&#x27;s ground-penetrating radar (GPR) tools, PyHydroGeophysX.data_processing.gpr, on a line simulated over the MODFLOW model shipped in examples/data.">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_Ex_GPR_workflow_thumb.png
+    :alt:
+
+  :doc:`/auto_examples/Ex_GPR_workflow`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Ex. GPR Workflow: A Radar Line over the Hydrological Model, from Radargram to Depth</div>
+    </div>
+
+
+.. raw:: html
+
     <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to perform a 2D seismic refraction tomography (SRT) inversion and interpret the results to define subsurface structures.">
 
 .. only:: html
@@ -534,6 +551,7 @@ From the repository root, for example::
    /auto_examples/Ex_ERT_single_inversion
    /auto_examples/Ex_structure_TLresinv
    /auto_examples/Ex_TL_inversion
+   /auto_examples/Ex_GPR_workflow
    /auto_examples/Ex_SRT_inv
    /auto_examples/Ex_MT_workflow
    /auto_examples/Ex_joint_inversion

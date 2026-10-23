@@ -12,6 +12,20 @@ What you can do
 - Single-survey inversion.
 - Time-lapse inversion of a monitoring series, including a windowed variant for
   series too long to invert at once.
+- 3D surveys: electrodes that cover an area, read with their x, y and z from
+  an electrode file, are inverted in 3D on a prism mesh built under the array
+  (``survey_3d=True``, or detected from the electrodes), as single surveys or
+  time-lapse series, by the in-house, PyGIMLi and ADTLERT engines (ADTLERT on
+  the prisms split into tetrahedra, with quadratic elements). The mesh reaches
+  four spreads beyond the array, sideways and down, with a mixed (far-field)
+  condition on its sides and bottom. An imported 3D mesh gets the same
+  conditions whatever its mesher marked: no flow on the ground, far-field on
+  every other outer face; its extent is its own, so build it well beyond the
+  array (meshes that end close to it moved a two-layer ground's data by
+  1-5 %). The 3D Mesh Builder's field meshes reach 4 spreads beyond their
+  domain through a coarse outer region, as the generated mesh does. A profile
+  can be inverted on an imported 3D mesh as well,
+  laid along x at y = 0 and read back as the section along the line.
 - Structure-constrained inversion, where seismic structure guides the result.
 - Joint ERT and seismic inversion against a shared structure.
 - Field-data quality control with reciprocal error estimates.

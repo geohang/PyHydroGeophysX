@@ -1,11 +1,10 @@
 System Overview
 ===============
 
-The PyHydroGeophysX multi-agent system provides an intelligent framework for
-automating complex geophysical workflows in subsurface hydrology. By leveraging
-Large Language Models (LLMs), the system enables users to describe their
-analysis goals in natural language and have the system automatically orchestrate
-the necessary processing steps.
+The PyHydroGeophysX multi-agent system runs geophysical workflows in subsurface
+hydrology from a request written in natural language: a Large Language Model
+(LLM) reads the request, and the system carries out the processing steps it
+calls for.
 
 Who This Is For
 ---------------
@@ -30,8 +29,8 @@ Design Principles
     data flow between agents.
 
 **Extensibility**
-    New agents can be easily added by inheriting from BaseAgent and implementing
-    the execute() method.
+    New agents are added by inheriting from BaseAgent and implementing the
+    execute() method.
 
 **LLM Integration**
     Natural language interfaces allow non-expert users to describe complex
@@ -51,8 +50,8 @@ The system supports multiple LLM providers:
 * **Anthropic Claude** (Claude Haiku 4.5, Sonnet 5, Opus 5)
 * Any **OpenAI-compatible** endpoint (DeepSeek, OpenRouter, a local server)
 
-Each provider can be configured via API keys, and the system gracefully handles
-cases where LLM features are not available.
+Each provider is configured with an API key; without one, the LLM features are
+unavailable and the rest of the system keeps working.
 
 For OpenAI and Anthropic the chat surfaces do not ask you to name a model. They
 offer a three-step **request level** instead — level 1 for the simple majority of
@@ -108,7 +107,7 @@ Conversion/Analysis Agents
 Output/Reporting Agents
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-* ``ReportAgent`` - Generates comprehensive reports with visualizations
+* ``ReportAgent`` - Generates reports with figures
 
 Benefits
 --------
@@ -122,5 +121,5 @@ Benefits
     natural language interfaces.
 
 **For Educators**
-    Demonstrate complete geophysical workflows with clear, reproducible steps
-    and comprehensive documentation.
+    Demonstrate complete geophysical workflows with reproducible steps and
+    a report of each run.

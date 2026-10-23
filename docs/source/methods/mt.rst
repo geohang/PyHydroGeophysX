@@ -87,6 +87,14 @@ came out of its quadrant. On the Desktop Studio page the same setting is
 **Directions**, under Recording, and the run records it with the other reader
 options.
 
+A dipole that changed during a recording is split there:
+``run.window(None, at)`` and ``run.window(at, None).with_dipole_length("ey", 50)``
+give the part after the change its own length, and the pieces are processed
+together. When one electrode of a line laid out about a ground electrode breaks
+off, the receiver goes on measuring the other arm against the ground
+electrode, half the line. At Osborne, Iowa (October 2026) the Ey line's
+response then fell to half, in phase, until its noise grew.
+
 Typical outputs
 ---------------
 

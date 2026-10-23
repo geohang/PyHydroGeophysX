@@ -1,0 +1,344 @@
+{
+ "Path": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pathlib",
+   "module_short": "pathlib",
+   "name": "Path"
+  }
+ ],
+ "Path.cwd": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pathlib.Path",
+   "module_short": "pathlib.Path",
+   "name": "cwd"
+  }
+ ],
+ "gpr.elevation_section": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.data_processing.gpr",
+   "module_short": "PyHydroGeophysX.data_processing.gpr",
+   "name": "elevation_section"
+  }
+ ],
+ "gpr.example_profile": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.data_processing.gpr",
+   "module_short": "PyHydroGeophysX.data_processing.gpr",
+   "name": "example_profile"
+  }
+ ],
+ "gpr.permittivity_from_velocity": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.data_processing.gpr",
+   "module_short": "PyHydroGeophysX.data_processing.gpr",
+   "name": "permittivity_from_velocity"
+  }
+ ],
+ "gpr.process": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.data_processing.gpr",
+   "module_short": "PyHydroGeophysX.data_processing.gpr",
+   "name": "process"
+  }
+ ],
+ "gpr.read_gpr": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.data_processing.gpr",
+   "module_short": "PyHydroGeophysX.data_processing.gpr",
+   "name": "read_gpr"
+  }
+ ],
+ "gpr.save_profile": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.data_processing.gpr",
+   "module_short": "PyHydroGeophysX.data_processing.gpr",
+   "name": "save_profile"
+  }
+ ],
+ "gpr.time_to_depth": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.data_processing.gpr",
+   "module_short": "PyHydroGeophysX.data_processing.gpr",
+   "name": "time_to_depth"
+  }
+ ],
+ "gpr.velocity_from_permittivity": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.data_processing.gpr",
+   "module_short": "PyHydroGeophysX.data_processing.gpr",
+   "name": "velocity_from_permittivity"
+  }
+ ],
+ "json.dump": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "json",
+   "module_short": "json",
+   "name": "dump"
+  }
+ ],
+ "np.abs": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "abs"
+  }
+ ],
+ "np.arange": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "arange"
+  }
+ ],
+ "np.argmax": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "argmax"
+  }
+ ],
+ "np.array_equal": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "array_equal"
+  }
+ ],
+ "np.clip": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "clip"
+  }
+ ],
+ "np.cumsum": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "cumsum"
+  }
+ ],
+ "np.diff": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "diff"
+  }
+ ],
+ "np.empty": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "empty"
+  }
+ ],
+ "np.flatnonzero": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "flatnonzero"
+  }
+ ],
+ "np.isfinite": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "isfinite"
+  }
+ ],
+ "np.mean": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "mean"
+  }
+ ],
+ "np.median": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "median"
+  }
+ ],
+ "np.nan": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "nan"
+  }
+ ],
+ "np.nanmax": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "nanmax"
+  }
+ ],
+ "np.nanmean": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "nanmean"
+  }
+ ],
+ "np.percentile": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "percentile"
+  }
+ ],
+ "np.std": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "std"
+  }
+ ],
+ "np.sum": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "sum"
+  }
+ ],
+ "np.take_along_axis": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "take_along_axis"
+  }
+ ],
+ "np.where": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "where"
+  }
+ ],
+ "plt.rcParams.update": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot.rcParams",
+   "module_short": "matplotlib.pyplot.rcParams",
+   "name": "update"
+  }
+ ],
+ "plt.show": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "show"
+  }
+ ],
+ "plt.subplots": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "subplots"
+  }
+ ],
+ "set_length_axis": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.visualization.axis_units",
+   "module_short": "PyHydroGeophysX.visualization.axis_units",
+   "name": "set_length_axis"
+  }
+ ],
+ "set_length_unit": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "PyHydroGeophysX.visualization.axis_units",
+   "module_short": "PyHydroGeophysX.visualization.axis_units",
+   "name": "set_length_unit"
+  }
+ ],
+ "sys.path": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "sys",
+   "module_short": "sys",
+   "name": "path"
+  }
+ ],
+ "sys.path.insert": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "sys.path",
+   "module_short": "sys.path",
+   "name": "insert"
+  }
+ ]
+}

@@ -48,6 +48,8 @@ Connect model states to measurements through petrophysics. Start here to underst
      - Layered time-domain EM modeling and inversion
    * - :doc:`Hydrology → FDEM </auto_examples/Ex_FDEM_workflow>`
      - Frequency-domain EM responses and recovered models
+   * - :doc:`Hydrology → GPR </auto_examples/Ex_GPR_workflow>`
+     - A radar line processed into depth and elevation sections, its time zero and velocity checked against the CRIM permittivity
    * - :doc:`One profile → multiple methods </auto_examples/Ex_hydro_to_multigeophys>`
      - Compare ERT, seismic, EM and gravity responses from a shared hydrological profile
    * - :doc:`3D ERT with topography </auto_examples/Ex_3D_ERT_forward>`

@@ -121,5 +121,8 @@ extra:
 
    pip install "pyhydrogeophysx[geophysics]"
 
-Reading SEG-2 field records needs ObsPy. Travel times are first arrivals: the
-package inverts picks, it does not pick them for you.
+Reading SEG-2 field records needs ObsPy. Travel times are first arrivals. The
+package can pick them automatically (``data_processing.seismic.pick_and_correct``,
+the studio's Auto-pick and AQUAH's first-break step), but an automatic pick is a
+starting point: review every shot before inverting, as the studio's per-shot
+review does.
