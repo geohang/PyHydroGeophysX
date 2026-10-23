@@ -209,7 +209,7 @@ def _run_ert_srt(request: JointInversionRequest) -> JointInversionResult:
                 [float(position.x()) for position in ert_positions],
                 [float(position.y()) for position in ert_positions],
             )
-        sequential = StructureConstraintAgent().execute({
+        sequential = StructureConstraintAgent(api_key="").execute({
             "ert_data": inv.ert_data,
             "seismic_data": inv.srt_data,
             "interface_coords": interface_coords,

@@ -39,9 +39,9 @@ def backend_status() -> Dict[str, Any]:
 def station_footprint(x, y) -> Tuple[float, float, float, float]:
     """The horizontal extent ``(x0, x1, y0, y1)`` a 3-D model is built over.
 
-    Stations on one line have no extent across it: a zero cell size there made
-    zero-width cells and NaN predictions, and the joint inversion's 1 m floor a
-    model about 1.7 m wide. The collapsed axis takes the other one's extent,
+    Stations on one line have no extent across it: a zero cell size there gives
+    zero-width cells and NaN predictions, and a 1 m floor a model only about
+    1.7 m wide. The collapsed axis takes the other one's extent,
     centred on the line, so the model reaches across the profile.
 
     >>> station_footprint([0.0, 50.0, 100.0], [5.0, 5.0, 5.0])
@@ -170,8 +170,8 @@ def invert_gravmag(x, y, value, kind: str, *, z: Optional[np.ndarray] = None,
     nx, ny, nz = int(n_xy) + 4, int(n_xy) + 4, int(n_z)
     # Top of the mesh just below the lowest station, the rule
     # JointGravityMagneticsInversion uses (its baseline calls this with the same
-    # z). It used to be fixed at z = 0, so stations given at 300 m elevation
-    # floated 300 m above the model.
+    # z). It is not fixed at z = 0: stations given at 300 m elevation would
+    # float 300 m above the model.
     surface_z = float(np.min(z)) - 0.05 * csz
     ox, oy, oz = x0 - padx - 2 * csx, y0 - pady - 2 * csy, surface_z - csz * nz
     mesh = TensorMesh([[(csx, nx)], [(csy, ny)], [(csz, nz)]], origin=[ox, oy, oz])
@@ -384,8 +384,8 @@ def apply_sensitivity_weights(sim, dmis, reg, m: np.ndarray, *,
     standard correction (Li and Oldenburg, 1996) and is what SimPEG's
     ``UpdateSensitivityWeights`` directive applies on the iterative path.
 
-    Measured on a 0.7 g/cc block buried 60-160 m: unweighted the peak sits at
-    12 m, weighted it sits at 88 m.
+    Without the weights the recovered peak sits near the surface; with them it
+    moves to the depth of the body.
     """
     diagonal = None
     try:  # SimPEG can give the diagonal without forming the full Jacobian

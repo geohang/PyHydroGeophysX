@@ -1,18 +1,16 @@
 """
-Module for converting Electrical Resistivity Tomography (ERT) resistivity models to
-volumetric water content, incorporating structural information (geological layers)
-and quantifying uncertainty using Monte Carlo simulations.
+Conversion of Electrical Resistivity Tomography (ERT) resistivity models to
+volumetric water content, with geological layers from structural information and
+Monte Carlo uncertainty.
 
-This module provides the `ERTtoWC` class, which takes ERT resistivity data,
-a corresponding mesh, cell markers identifying different layers, and optional
-coverage information. It allows users to define petrophysical parameter
-distributions (saturated resistivity `rhos`, saturation exponent `n`,
-surface conductivity `sigma_sur`, and porosity `φ`) for each layer.
-The core functionality involves running Monte Carlo simulations to sample these
-parameters and convert resistivity to water content for each realization,
-thereby providing a distribution of possible water content values.
-Statistics (mean, std, percentiles) can then be calculated from these distributions.
-The module also includes utilities for plotting results and extracting time series.
+The `ERTtoWC` class takes ERT resistivity data, a corresponding mesh, cell
+markers identifying the layers, and optional coverage information. Petrophysical
+parameter distributions (saturated resistivity `rhos`, saturation exponent `n`,
+surface conductivity `sigma_sur`, and porosity `φ`) are defined for each layer.
+Each Monte Carlo realization samples these parameters and converts resistivity
+to water content, giving a distribution of water content values from which the
+mean, standard deviation and percentiles are calculated. Utilities for plotting
+results and extracting time series are included.
 """
 
 from __future__ import annotations
@@ -68,6 +66,7 @@ class ERTtoWC:
         n_realizations: int = 100,
         progress_bar: bool = True,
         seed: int = 7,
+        log_resistivity_std: Optional[np.ndarray] = None,
     ) -> Tuple:
         """
         Run Monte Carlo simulation for uncertainty quantification.
@@ -75,6 +74,7 @@ class ERTtoWC:
         Args:
             n_realizations: Number of Monte Carlo realizations
             progress_bar: Whether to show progress bar
+            log_resistivity_std: Per-cell standard deviation of ln(resistivity), if available
         
         Returns:
             Tuple of (water_content_all, saturation_all, params_used)
@@ -110,6 +110,7 @@ class ERTtoWC:
                 else (lambda _message: None)
             ),
             return_realizations=True,
+            log_resistivity_std=log_resistivity_std,
         )
         water_content_all = result["water_content_all"]
         saturation_all = result["saturation_all"]

@@ -125,7 +125,7 @@ class ESMDA:
         # ES-MDA assimilates the same data once per step, each time with its
         # error covariance inflated by alpha. The steps add up to one use of
         # the data only when sum(1/alpha) = 1 (Emerick and Reynolds, 2013);
-        # [1, 1, 1, 1] used it four times and shrank the ensemble accordingly.
+        # [1, 1, 1, 1] would use it four times and shrink the ensemble accordingly.
         # A schedule that does not qualify is refused, not normalised, since
         # which alpha the caller meant cannot be known. Schedules are usually
         # quoted to a few figures - [9.333, 7, 4, 2] sums to 1 + 4e-6 - so a

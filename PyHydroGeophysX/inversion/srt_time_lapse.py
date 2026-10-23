@@ -26,7 +26,7 @@ class TimeLapseSRTInversion(InversionBase):
     """
     Time-lapse Seismic Refraction Tomography inversion.
 
-    Architecture mirrors TimeLapseERTInversion while using
+    Follows the structure of TimeLapseERTInversion, using
     TravelTimeManager and log-slowness model parameters.
     """
 
@@ -54,15 +54,12 @@ class TimeLapseSRTInversion(InversionBase):
             # Weight each adjacent pair by the interval between the two surveys,
             # so the temporal constraint penalizes the rate of change rather than
             # the raw difference. Normalized by the median interval, so an evenly
-            # sampled series is unaffected; 'uniform' reproduces a run from before
-            # this existed.
+            # sampled series is unaffected; 'uniform' weights every pair alike.
             "temporal_weighting": "interval",
             "temporal_weight_limit": DEFAULT_TEMPORAL_LIMIT,
             # 'H' below is the Gauss-Newton normal matrix, which needs a
-            # symmetric solver; the old 'cgls' default is a least-squares method
-            # and works with the square of its condition number. Pass
-            # method='cgls' to reproduce a run from before this became the
-            # default.
+            # symmetric solver; a least-squares method such as 'cgls' works
+            # with the square of its condition number.
             "method": "spd_cholesky",
             "zWeight": 0.2,
             "vTop": 500.0,
@@ -80,12 +77,10 @@ class TimeLapseSRTInversion(InversionBase):
             "solver_tol": 1e-8,
             "lambda_rate": 1.0,
             "lambda_min": 1.0,
-            # The convergence test used to hard-code these two numbers and had
-            # no minimum-iteration guard, so a flat second iteration ended the
-            # inversion at iteration three. The values below reproduce the old
-            # thresholds; 'min_iterations' is the new part, and matches the
-            # guard TimeLapseERTInversion already uses. The names are the ones
-            # time_lapse.py and srt_inversion.py use.
+            # The convergence test has a minimum-iteration guard, so a flat
+            # second iteration does not end the inversion early;
+            # 'min_iterations' matches the guard TimeLapseERTInversion uses.
+            # The names are the ones time_lapse.py and srt_inversion.py use.
             "target_chi_squared": 1.5,
             "convergence_tolerance": 0.01,
             "min_iterations": 5,
@@ -448,8 +443,8 @@ class TimeLapseSRTInversion(InversionBase):
             step = 1.0
             accepted = False
             # Armijo: f(m + s dm) <= f(m) + c s (dm . g), with dm . g < 0 for a
-            # descent step. The sign was reversed, which passed steps that did
-            # not lower the objective; see SRTInversion.run.
+            # descent step. With the sign reversed, steps that do not lower the
+            # objective would pass; see SRTInversion.run.
             best_m, best_obj = None, current_obj
 
             for _ in range(int(self.parameters.get("line_search_maxiter", 12))):
@@ -467,8 +462,8 @@ class TimeLapseSRTInversion(InversionBase):
                 step *= 0.5
 
             if not accepted and best_m is not None:
-                # Never step uphill: this used to take 0.1 * dm whatever it did
-                # to the objective. Keep the best trial that lowered it, or stay.
+                # Never step uphill: keep the best trial that lowered the
+                # objective, or stay.
                 m = best_m
             model_moved = True
 

@@ -8,9 +8,7 @@ parameters cannot really be edited.
 This module emits the other half: the same run written the way a person would
 write it, with named parameters, the actual domain calls, printed intermediates
 and a figure. Both files come from one recipe, so a walkthrough always describes
-the run it was generated from, and
-``tests/test_walkthroughs.py::test_gravmag_walkthrough_matches_the_engine``
-pins the two to identical artifacts.
+the run it was generated from and produces the same artifacts.
 
 Each :class:`Walkthrough` is the single prose description of what a workflow
 does. Parameters are rendered into named module-level constants, so step code is
@@ -145,9 +143,9 @@ def _bundle_directory(
 def _timelapse_inputs(spec: WorkflowSpec) -> List[str]:
     """The series as the run read it: surveys in order, their times, the electrodes.
 
-    A studio run stores the surveys as one bundle named in sequence order; the
-    step below took ``data_files`` and ``measurement_times``, which nothing
-    defined for such a run, so the script stopped at a NameError.
+    A studio run stores the surveys as one bundle named in sequence order, so
+    the script defines the ``data_files`` and ``measurement_times`` that the
+    step below takes from that bundle.
     """
     lines: List[str] = []
     bundle = next(iter(iter_artifact_refs(spec.inputs.get("data_bundle") or {})), None)
@@ -184,7 +182,7 @@ def default_inputs(spec: WorkflowSpec) -> List[str]:
 
     A path is the artifact's own, relative to the run directory the script is
     written into - ``inputs/...`` for what a studio run stored - not just its
-    name, which pointed beside the script where nothing is.
+    name, which would point beside the script.
     """
     lines: List[str] = []
     groups = _npz_groups(spec)
@@ -1362,8 +1360,8 @@ WALKTHROUGHS["mesh3d.build"] = Walkthrough(
                 "response is wrong near electrodes, too fine and the inversion becomes "
                 "impractical. A common compromise is cells smaller than half the minimum "
                 "electrode spacing near the surface, growing with depth. The E4D engine "
-                "lays the mesh out as E4D does - a fine zone around the electrodes inside "
-                "a far-reaching outer zone - and writes the E4D .cfg and .poly beside it. "
+                "lays the mesh out as a fine zone around the electrodes inside "
+                "a far-reaching outer zone and writes the E4D .cfg and .poly beside it. "
                 "Zones in the config, boxes of known resistivity, take the inverted cells "
                 "inside them; with conform_to_zones the mesh is built along their faces, "
                 "and with decouple_zones each is a region of its own, which an inversion "
@@ -1376,6 +1374,8 @@ WALKTHROUGHS["mesh3d.build"] = Walkthrough(
                 "# Inputs the run had, when it had them.\n"
                 'if "topography_points" in globals():   # surface points loaded from a file\n'
                 '    config["topography_points"] = np.load(topography_points)\n'
+                'if "electrode_positions" in globals():  # electrodes read from a file\n'
+                '    config["electrode_positions"] = np.load(electrode_positions)\n'
                 'if "e4d_config" in globals():          # an E4D mesh configuration\n'
                 '    config["e4d_config_path"] = str(e4d_config)\n'
                 "result = generate_mesh(config)\n"

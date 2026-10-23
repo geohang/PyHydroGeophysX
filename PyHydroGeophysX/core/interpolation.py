@@ -75,8 +75,8 @@ def _sample_grid_along_profile(data: np.ndarray,
     data_arr = np.asarray(data, dtype=float)
     if method == 'nearest':
         return map_coordinates(data_arr, [rows, cols], order=0, mode='nearest')
-    # 'linear' (and anything else): bilinear, NaN outside the grid to mirror the
-    # convex-hull behavior of griddata on a regular grid.
+    # 'linear' (and anything else): bilinear, NaN outside the grid, which is the
+    # convex hull of a regular grid's points.
     return map_coordinates(data_arr, [rows, cols], order=1, mode='constant', cval=np.nan)
 
 
@@ -281,8 +281,7 @@ def interpolate_to_mesh(
 
     L_profile_new = np.repeat(profile_distance.reshape(1,-1),property_values.shape[0],axis=0)
 
-    # One depth row per property row. This took the first 14 rows whatever
-    # the layer count, so only a 14-layer model could be interpolated.
+    # One depth row per property row, so a model of any layer count works.
     Depth = np.asarray(depth_values)[:property_values.shape[0]]
     if Depth.shape != np.shape(property_values):
         raise ValueError(

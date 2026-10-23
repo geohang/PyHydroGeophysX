@@ -125,10 +125,10 @@ def interpolate_layer_samples(points: Any, values: Any, query: Any) -> np.ndarra
 
     Linear interpolation needs a triangulation of the samples, and there is none
     when they lie on one line: a single layer between flat or evenly sloping
-    boundaries, or a single station. SciPy then raised ``QhullError`` ("initial
-    simplex is flat") before the nearest-neighbour fallback could run, so such
-    a model could not be forward modelled at all. Collinear samples are
-    interpolated along their line instead, holding the end values beyond it.
+    boundaries, or a single station. SciPy raises ``QhullError`` ("initial
+    simplex is flat") for such samples before a nearest-neighbour fallback could
+    run. Collinear samples are therefore interpolated along their line,
+    holding the end values beyond it.
 
     Parameters
     ----------

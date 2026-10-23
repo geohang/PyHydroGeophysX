@@ -38,9 +38,9 @@ def _tdem_geometry(
 
     Instrument readers keep station geometry under ``data["system"]`` and the
     moment-specific waveform, filters and gate windows under ``transmitter``.
-    Public forward/inversion entry points historically accepted only ``geom``;
-    merging here prevents a caller that passes a loaded sounding plus its system
-    dictionary from silently falling back to the bare SimPEG receiver path.
+    Public forward/inversion entry points accept ``geom`` alone; merging here
+    keeps a caller that passes a loaded sounding plus its system dictionary
+    from silently falling back to the bare SimPEG receiver path.
 
     ``geom`` is applied last so notebook/GUI overrides remain effective.
     """
@@ -120,9 +120,9 @@ def fdem_forward(model: Dict[str, Any], geom: Dict[str, Any], log: LogFn = _noop
         resp = resp[0::2] + 1j * resp[1::2]
     resp = np.asarray(resp, dtype=complex).ravel()
     # One complex value per frequency and field, frequency-major: for "both"
-    # that is [secondary(f1), total(f1), secondary(f2), ...]. This used to be
-    # cut to freqs.size, which labelled sec(f1), tot(f1), sec(f2), tot(f2) as
-    # f1..f4 and dropped the upper half of the band.
+    # that is [secondary(f1), total(f1), secondary(f2), ...]. The array must not
+    # be cut to freqs.size: that would label sec(f1), tot(f1), sec(f2), tot(f2)
+    # as f1..f4 and drop the upper half of the band.
     n_fields = resp.size // max(freqs.size, 1)
     if n_fields < 1 or n_fields * freqs.size != resp.size:
         raise ValueError(
@@ -196,9 +196,9 @@ def _tdem_config(geom: Dict[str, Any], times: np.ndarray):
         times = times + shift
         if opens.size:
             opens, closes = opens + shift, closes + shift
-    # The loop and the coil can sit at different heights. They are equal on
-    # every TEMcompany project seen so far, so ``height`` remains the single
-    # number a caller that does not care has to supply. A reader that has the
+    # The loop and the coil can sit at different heights. They are normally
+    # equal, so ``height`` remains the single number a caller that does not
+    # care has to supply. A reader that has the
     # key but no value writes NaN rather than omitting it, which ``.get`` cannot
     # catch, and a NaN source location fails much later and less legibly.
     def _height(key: str) -> float:

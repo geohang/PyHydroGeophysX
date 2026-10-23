@@ -216,8 +216,9 @@ class JointERTSRTInversion(InversionBase):
     def _jacobian_keep_sparse(jac: Any) -> Any:
         """A pyGIMLi sparse Jacobian as CSR, any other as a dense ndarray.
 
-        The SRT ray Jacobian holds about 2% nonzeros; it used to be expanded to
-        a dense array here and copied back into CSR for the stacked system.
+        The SRT ray Jacobian holds about 2% nonzeros, so it is kept sparse
+        rather than expanded to a dense array and copied back into CSR for the
+        stacked system.
         """
         if isinstance(jac, (pg.matrix.SparseMapMatrix, pg.matrix.SparseMatrix)):
             return pg.utils.sparseMatrix2coo(jac).tocsr()
@@ -518,7 +519,7 @@ class JointERTSRTInversion(InversionBase):
         LcB = np.sqrt(float(lambda_cg)) * (B if issparse(B) else csr_matrix(B))
 
         # Each block is kept in the form it was built in: stacking them into
-        # one CSR matrix copied the dense ERT Jacobian twice, 1.5x its size
+        # one CSR matrix would copy the dense ERT Jacobian twice, 1.5x its size
         # each time.
         A = StackedSystem([WdJ, LmWm, LcB])
         rhs = -np.vstack(
@@ -604,11 +605,10 @@ class JointERTSRTInversion(InversionBase):
         directional = float(np.vdot(np.asarray(dm).ravel(), np.asarray(grad).ravel()))
 
         # Armijo: f(m + s dm) <= f(m) + c s (dm . g), with dm . g < 0 for a
-        # descent step, so the goal lies below f(m). The sign was reversed,
-        # which put the goal above f(m) and returned steps that left the
-        # objective unchanged; and when every trial failed, 0.1 * dm was taken
-        # anyway, uphill or not. Now the best trial that lowered the objective
-        # is kept, or else the current model.
+        # descent step, so the goal lies below f(m). With the sign reversed the
+        # goal would lie above f(m) and return steps that leave the objective
+        # unchanged. When every trial fails, the best trial that lowered the
+        # objective is kept, or else the current model, never an uphill step.
         best, best_obj = None, current_obj
         maxiter = int(self.parameters.get("line_search_maxiter", 20))
         for _ in range(maxiter):
@@ -764,8 +764,8 @@ class JointERTSRTInversion(InversionBase):
             mr = self._line_search(mr, d_mr, g_r, ert_obj, clip_r)
             mr = clip_r(mr)
 
-            # chi2 needs only the responses; the Jacobians built here were
-            # discarded, and the next iteration builds its own.
+            # chi2 needs only the responses; Jacobians built here would be
+            # discarded, since the next iteration builds its own.
             dt_eval = self._srt_forward(mv)
             dr_eval = self._ert_forward(mr)
             chi2_srt = self._compute_chi2(self.Wd_srt, self.dobs_srt, dt_eval)

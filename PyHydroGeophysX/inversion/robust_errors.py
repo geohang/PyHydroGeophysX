@@ -27,7 +27,7 @@ def huber_error_factor(residual, threshold: float, max_error_factor: float):
     """sigma_eff/sigma_base, with inverse-variance weight min(1, k/|r|).
 
     The maximum error factor bounds the loss of influence. Beyond that cap this
-    is a bounded Huber-style reweighting, not an exact unbounded Huber loss.
+    is a bounded Huber reweighting, not an exact unbounded Huber loss.
     """
     threshold, maximum = float(threshold), float(max_error_factor)
     if not np.isfinite(threshold) or threshold <= 0:

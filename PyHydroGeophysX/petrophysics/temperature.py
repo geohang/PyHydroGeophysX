@@ -982,7 +982,7 @@ def temperature_field(spec: Dict[str, Any], depths: Any, n_times: int,
         # change at depth that was never there. That same record belongs in
         # 'surface', where the conduction damps it with depth.
         raise ValueError(
-            "temperature mode 'series' has been removed: one temperature per "
+            "temperature mode 'series' is not supported: one temperature per "
             "survey applied uniformly over depth over-corrects the deep part of "
             "the section. Pass the same values as a surface record with "
             "mode='surface' and let the 1-D conduction supply the depth structure")

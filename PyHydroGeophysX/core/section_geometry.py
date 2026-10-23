@@ -17,7 +17,8 @@ stays importable without a geophysics backend.
 
 In a 2-D pyGIMLi mesh the profile coordinate is x and the elevation is y, so every
 array below is ``(x, elevation)`` and depth is measured downward from the
-interpolated ground surface.
+interpolated ground surface. :func:`cell_depths` takes a 3-D mesh too, its ground
+a surface over (x, y).
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ __all__ = [
     "surface_line",
     "surface_elevation_at",
     "cell_depths",
+    "ground_elevation_at",
     "coverage_mask",
     "coverage_envelope",
     "coverage_envelope_mask",
@@ -153,9 +155,54 @@ def surface_elevation_at(x: Any, surface: Tuple[np.ndarray, np.ndarray]) -> np.n
                      np.asarray(sz, dtype=float))
 
 
+def _ground_points(mesh: Any, sensors: Any = None) -> np.ndarray:
+    """``(n, 3)`` points on the ground over a 3-D mesh.
+
+    The electrodes when they cover an area (x, y, z); otherwise the mesh's top:
+    the highest node above each plan position, which is a ground node on a
+    mesh of columns (prisms, and the tetrahedra split from them).
+    """
+    if sensors is not None:
+        points = np.asarray(sensors, dtype=float)
+        if (points.ndim == 2 and points.shape[1] >= 3 and len(points) >= 3
+                and np.linalg.matrix_rank(points[:, :2] - points[:, :2].mean(axis=0),
+                                          tol=1e-6) == 2):
+            return points[:, :3]
+    nodes = np.asarray(mesh.positions(), dtype=float)
+    plan, column = np.unique(np.round(nodes[:, :2], 6), axis=0, return_inverse=True)
+    top = np.full(len(plan), -np.inf)
+    np.maximum.at(top, np.asarray(column).reshape(-1), nodes[:, 2])
+    return np.column_stack([plan, top])
+
+
+def ground_elevation_at(xy: Any, mesh: Any = None, sensors: Any = None) -> np.ndarray:
+    """The ground's elevation above each plan point ``xy`` of a 3-D mesh:
+    linear between the ground points (:func:`_ground_points`), the nearest
+    one's beyond them."""
+    from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
+
+    points = _ground_points(mesh, sensors)
+    xy = np.asarray(xy, dtype=float)[:, :2]
+    try:
+        height = LinearNDInterpolator(points[:, :2], points[:, 2])(xy)
+    except Exception:  # noqa: BLE001 - points on one line span no triangle
+        height = np.full(len(xy), np.nan)
+    missing = ~np.isfinite(height)
+    if missing.any():
+        height[missing] = NearestNDInterpolator(points[:, :2], points[:, 2])(xy[missing])
+    return height
+
+
 def cell_depths(mesh: Any, sensors: Any = None,
                 surface: Optional[Tuple[np.ndarray, np.ndarray]] = None) -> np.ndarray:
-    """Depth of every cell centre below the ground surface (positive downward)."""
+    """Depth of every cell centre below the ground surface (positive downward).
+
+    A 3-D mesh's depths are below the ground over each centre's (x, y)
+    (:func:`ground_elevation_at`); ``sensors`` are then (x, y, z).
+    """
+    if int(mesh.dim()) == 3:
+        centres = np.asarray(mesh.cellCenters(), dtype=float)
+        return ground_elevation_at(centres, mesh, sensors) - centres[:, 2]
     centers = cell_centers(mesh)
     line = surface if surface is not None else surface_line(mesh, sensors)
     return surface_elevation_at(centers[:, 0], line) - centers[:, 1]

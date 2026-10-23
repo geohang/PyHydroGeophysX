@@ -284,7 +284,8 @@ def create_difference_gif(
         vmax = np.nanmax(np.abs(all_vals))
         if mode == "ratio":
             # Symmetric in log space and drawn on a log scale, as in
-            # plotting.plot_difference_map: max|r| alone ignored ratios below 1.
+            # plotting.plot_difference_map: max|r| alone would ignore ratios
+            # below 1.
             from .plotting import _log_symmetric_ratio_limit
             vmax = _log_symmetric_ratio_limit(all_vals)
             cmin_val = 1.0 / vmax

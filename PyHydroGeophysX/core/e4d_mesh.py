@@ -1,4 +1,4 @@
-"""E4D-style tetrahedral meshes: the configuration file, the PLC, and the mesh.
+"""Tetrahedral meshes from E4D mesh configurations: the file, the PLC, the mesh.
 
 E4D, PNNL's parallel ERT/IP code, does not take a mesh; it takes a *mesh
 configuration file* (``.cfg``) describing the geometry, and builds the mesh
@@ -28,7 +28,7 @@ E4D then builds the mesh in two steps, and this module does the same:
 2. That surface, the vertical outer walls, the bottom, the internal boundaries
    (carrying every surface node Triangle put on their top edges) and the
    internal points form a piecewise linear complex (PLC), written as a TetGen
-   ``.poly`` and tetrahedralized as E4D does it,
+   ``.poly`` and tetrahedralized with
    ``tetgen -pnq<quality>a<max volume>aAA``: region attributes become the zone
    numbers of the elements, and each zone's volume constraint applies.
 
@@ -344,7 +344,7 @@ def write_e4d_config(config: E4DMeshConfig, path: Union[str, Path]) -> Path:
 
 
 # ---------------------------------------------------------------------------
-# A configuration built the way E4D users build one
+# A configuration built from an electrode layout
 # ---------------------------------------------------------------------------
 def _surface_function(surface: Union[float, Callable[[float, float], float], None]):
     if callable(surface):
@@ -492,7 +492,7 @@ def _lay_out_zones(zones: List[Dict[str, Any]], points: List[Tuple[float, float,
                    bottom_corner: List[int]) -> Dict[str, Any]:
     """The fine zone's internal boundaries, with box ``zones`` inside it.
 
-    Two kinds of zone are laid out, the way E4D models known structure:
+    Two kinds of zone are laid out for known structure:
 
     * a **layer** - a zone whose plan reaches the fine zone's walls on every
       side - spans the fine zone: its top and bottom are horizontal faces
@@ -1177,7 +1177,7 @@ def read_e4d_mesh(base: Union[str, Path], *, translation: Optional[Sequence[floa
     translation is read from the ``.trn`` beside it unless given. Cell markers
     are the zone numbers; the outer faces' markers come from the ``.face``
     file, and the faces between cells are left unmarked, so a PyGIMLi
-    inversion smooths within a zone as E4D does. With
+    inversion smooths within each zone. With
     ``conductivity``, the ``.sig`` beside it - or the file named - is attached
     as cell data ``conductivity`` (S/m) and ``resistivity`` (ohm-m).
 
@@ -1302,7 +1302,7 @@ def write_e4d_mesh(mesh, folder: Union[str, Path], name: str = "e4d", *,
     neighbours, outer, up = _outer_faces(cells, nodes)
     flags = np.zeros(len(nodes), dtype=int)
     flags[np.unique(outer[up])] = SURFACE
-    flags[np.unique(outer[~up])] = OUTER          # a rim node is held, as E4D does
+    flags[np.unique(outer[~up])] = OUTER          # a rim node is held
 
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
@@ -1378,7 +1378,7 @@ def _write_geo(plc: E4DPLC, path: Path, fine_scale: float = 0.9) -> None:
             size[i] = min(spacing, 0.9 * nearest[i]) if nearest[i] < spacing else spacing
         else:
             size[i] = min(fine, 0.9 * nearest[i])
-    out = ["// E4D-style PLC; coordinates translated as in the .trn file",
+    out = ["// PLC from the E4D mesh configuration; coordinates translated as in the .trn file",
            "Mesh.CharacteristicLengthFromPoints = 1;",
            "Mesh.CharacteristicLengthExtendFromBoundary = 1;",
            "Mesh.CharacteristicLengthFromCurvature = 0;",
@@ -1504,7 +1504,7 @@ def zone_report(mesh, config: E4DMeshConfig) -> List[Dict[str, Any]]:
 def build_e4d_mesh(config: E4DMeshConfig, workdir: Union[str, Path], *, name: str = "e4d_mesh",
                    mesher: str = "auto", tetgen: str = "", gmsh: str = "",
                    log: LogFn = _noop) -> Dict[str, Any]:
-    """Build the mesh ``config`` describes, the way E4D does.
+    """Build the mesh ``config`` describes.
 
     Writes ``<name>.cfg``, ``<name>.poly`` and ``<name>.trn`` into ``workdir``
     first - what E4D itself would be run on - then tetrahedralizes with TetGen

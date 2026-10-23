@@ -5,8 +5,9 @@ and the time-lapse inversions, and the ERT page's mesh preview - so what the
 page shows before a run is the mesh the run then inverts on, cell for cell:
 
 * :func:`build_inversion_mesh` builds PyGIMLi's parameter mesh of a survey,
-  along the outlines of a-priori zones (``ert_zones``) when asked, or imports
-  one built elsewhere;
+  along the outlines of a-priori zones (``ert_zones``) when asked, a prism
+  volume under a 3-D survey's electrodes (:func:`survey_volume_mesh`), or
+  imports one built elsewhere;
 * :func:`load_inversion_mesh` reads such a mesh - PyGIMLi, Gmsh, VTK, E4D -
   and checks that it can hold the survey;
 * :func:`mark_zone_interfaces` stops the smoothness at the zone outlines;
@@ -28,12 +29,40 @@ from PyHydroGeophysX._internal.utils import noop as _noop_log
 #: Mesh formats a user can hand the inversion. ``.bms`` is PyGIMLi's own,
 #: ``.msh`` is Gmsh (the usual route for a complex 3D domain), ``.node`` and
 #: ``.ele`` an E4D (TetGen) mesh, ``.cfg`` an E4D mesh configuration, which is
-#: built the way E4D builds it; the rest are what PyGIMLi's loader recognises.
+#: meshed on import; the rest are what PyGIMLi's loader recognises.
 MESH_SUFFIXES = (".bms", ".msh", ".vtk", ".vtu", ".poly", ".node", ".ele", ".cfg")
 
 
+def _volume_positions(sensors: np.ndarray) -> Optional[np.ndarray]:
+    """A profile's electrodes in a volume's coordinates, or None when there is
+    nothing to move.
+
+    PyGIMLi writes a 2-D profile as (x, elevation, 0); in a volume the
+    elevation is z, so the line runs along x at y = 0: (x, 0, elevation), as
+    E4D, R3t and the 3D Mesh Builder lay a profile out. Electrodes with a z,
+    or all at y = 0 already, are left as they are.
+    """
+    sensors = np.atleast_2d(np.asarray(sensors, dtype=float))
+    if sensors.shape[1] < 2 or not len(sensors):
+        return None
+    z = sensors[:, 2] if sensors.shape[1] > 2 else np.zeros(len(sensors))
+    if np.any(z) or not np.any(sensors[:, 1]):
+        return None
+    return np.column_stack([sensors[:, 0], np.zeros(len(sensors)), sensors[:, 1]])
+
+
+def profile_in_volume(data, mesh) -> bool:
+    """Whether ``data`` is a line of electrodes along x at y = 0 in a 3-D
+    ``mesh``: a profile inverted in 3-D, read back as the section along it."""
+    if data is None or int(mesh.dim()) != 3 or not int(data.sensorCount()):
+        return False
+    sensors = np.array(data.sensorPositions(), dtype=float)
+    return bool(np.allclose(sensors[:, 1], 0.0))
+
+
 def load_inversion_mesh(mesh_path: str | Path, data=None,
-                        log: Callable[[str], None] = _noop_log):
+                        log: Callable[[str], None] = _noop_log, *,
+                        place_profile: bool = False, survey_3d: bool = False):
     """Load a user-supplied inversion mesh and check it can hold this survey.
 
     Building a mesh from the electrode line is fine for a 2D profile and
@@ -47,6 +76,12 @@ def load_inversion_mesh(mesh_path: str | Path, data=None,
     the domain, or every cell marked background so nothing is inverted. Both
     surface deep inside the forward solver as errors that name nothing useful,
     so they are checked here where the message can say what is wrong.
+
+    A 2-D profile fits a 3-D mesh when its electrodes, laid along x at y = 0
+    (:func:`_volume_positions`), lie inside it. ``place_profile`` then moves
+    the electrodes of ``data`` there, for the run that inverts on the mesh;
+    otherwise ``data`` is left as it is. A 3-D survey (``survey_3d``) needs a
+    3-D mesh, and its electrodes are where they are.
     """
     path = Path(mesh_path)
     if not path.is_file():
@@ -81,19 +116,45 @@ def load_inversion_mesh(mesh_path: str | Path, data=None,
             "and above and treats 0 and 1 as background, so nothing here would "
             "be inverted. Re-tag the region to invert with marker 2.")
 
+    if survey_3d and int(mesh.dim()) != 3:
+        raise ValueError(
+            f"{path.name} is a {mesh.dim()}-D mesh, and the survey's electrodes cover an "
+            "area: a 3-D survey is inverted on a 3-D mesh.")
     if data is not None:
-        sensors = np.atleast_2d(np.asarray(data.sensorPositions(), dtype=float))
+        sensors = np.atleast_2d(np.array(data.sensorPositions(), dtype=float))
         if sensors.size:
             outside = _sensors_outside(mesh, sensors)
+            placed = (_volume_positions(sensors)
+                      if outside and int(mesh.dim()) == 3 and not survey_3d else None)
+            if placed is not None and not _sensors_outside(mesh, placed):
+                outside = []
+                if place_profile:
+                    for index, (x, y, z) in enumerate(placed):
+                        data.setSensorPosition(index, pg.Pos(float(x), float(y), float(z)))
+                    log("  the profile is laid along x at y = 0 in the 3-D mesh, its "
+                        "elevations as z")
             if outside:
+                hint = (" The survey is a 2-D profile, and it does not fit the mesh "
+                        "laid along x at y = 0 with its elevations as z either: build "
+                        "the mesh around the line that way."
+                        if placed is not None
+                        else " Check the coordinate origin and units.")
                 raise ValueError(
                     f"{path.name} does not contain {len(outside)} of "
                     f"{len(sensors)} electrodes (first at "
                     f"{np.round(sensors[outside[0]], 2).tolist()}). A mesh that "
-                    "does not cover the array cannot be used for this survey; "
-                    "check the coordinate origin and units.")
+                    "does not cover the array cannot be used for this survey."
+                    + hint)
     log(f"  mesh: {path.name}, {mesh.cellCount()} cells "
         f"({invertible} inverted), {mesh.nodeCount()} nodes, {mesh.dim()}D")
+    if int(mesh.dim()) == 3:
+        # Whatever the mesher marked them: the ground no flow, the rest the
+        # far-field condition (see core.mesh_3d.mark_far_field).
+        from PyHydroGeophysX.core.mesh_3d import mark_far_field
+
+        faces = mark_far_field(mesh)
+        log(f"  outer faces: {faces['ground']} on the ground (no flow), {faces['far']} "
+            "far-field (mixed)")
     return mesh
 
 
@@ -119,7 +180,8 @@ def build_inversion_mesh(data, *, mesh_quality: float = 34.0, para_depth: float 
                          outer_max_cell_size: float = 0.0,
                          conform_zones: Optional[Sequence[Dict[str, Any]]] = None,
                          mesh_file: str = "", log: Callable[[str], None] = _noop_log,
-                         report: Optional[Dict[str, Any]] = None):
+                         report: Optional[Dict[str, Any]] = None,
+                         survey_3d: bool = False):
     """The mesh an ERT inversion of ``data`` runs on: imported, or built.
 
     One function for every place that needs it - the single-survey and the
@@ -164,10 +226,16 @@ def build_inversion_mesh(data, *, mesh_quality: float = 34.0, para_depth: float 
     mesh_file : str
         A mesh built elsewhere (.bms, .msh, .vtk, .vtu, .poly, E4D). Its own
         domain applies, and the options above are ignored.
+    survey_3d : bool
+        The electrodes cover an area (``ert_io.survey_is_3d``) and sit at
+        (x, y, z): the generated mesh is :func:`survey_volume_mesh`, and an
+        imported one must be 3-D.
     report : dict, optional
-        Filled with what was built: ``source`` ("generated" or "imported") and
+        Filled with what was built: ``source`` ("generated" or "imported"),
         ``zone_outline_edges``, the edges the zone outlines added (0 when the
-        mesh does not follow them).
+        mesh does not follow them), and for an imported mesh
+        ``profile_in_volume``: a profile laid into a 3-D mesh, whose
+        electrodes in ``data`` now carry the volume's coordinates.
 
     Returns
     -------
@@ -184,7 +252,10 @@ def build_inversion_mesh(data, *, mesh_quality: float = 34.0, para_depth: float 
     if str(mesh_file or ""):
         # A mesh built elsewhere describes its own domain, so the sizing knobs
         # below have nothing to act on. Saying so beats silently ignoring them.
-        mesh = load_inversion_mesh(mesh_file, data=data, log=log)
+        # A profile on a 3-D mesh has its electrodes laid into the volume here.
+        mesh = load_inversion_mesh(mesh_file, data=data, log=log,
+                                   place_profile=not survey_3d, survey_3d=survey_3d)
+        report["profile_in_volume"] = not survey_3d and profile_in_volume(data, mesh)
         ignored = [name for name, changed in (
             ("depth", float(para_depth) > 0),
             ("cell size", float(para_max_cell_size) > 0),
@@ -204,6 +275,13 @@ def build_inversion_mesh(data, *, mesh_quality: float = 34.0, para_depth: float 
     if float(para_boundary) <= 0:
         raise ValueError("The side margin (para_boundary) must be positive: the "
                          "inverted region has to reach past the outer electrodes.")
+    if survey_3d:
+        if zones:
+            log("  (zone outlines are drawn on 2-D sections; the 3-D mesh is built "
+                "without them)")
+        return survey_volume_mesh(
+            data, para_depth=para_depth, para_max_cell_size=para_max_cell_size,
+            para_boundary=para_boundary, outer_width=outer_width, quality=quality, log=log)
     # PyGIMLi sizes the parameter domain from the array length when paraDepth is
     # left at 0, which for a long line reaches far below anything the data can
     # resolve. Capping it removes unknowns the inversion cannot constrain anyway.
@@ -242,6 +320,134 @@ def build_inversion_mesh(data, *, mesh_quality: float = 34.0, para_depth: float 
     log(f"  mesh: {mesh.cellCount()} cells, {para_cells} of them inverted"
         + (f" ({'; '.join(details)})" if details else ""))
     return mesh
+
+
+def survey_volume_mesh(data, *, para_depth: float = 0.0, para_max_cell_size: float = 0.0,
+                       para_boundary: float = 2.0, outer_width: float = 0.0,
+                       quality: float = 34.0, log: Callable[[str], None] = _noop_log):
+    """A prism mesh under a 3-D survey's electrodes (x, y, z).
+
+    The settings mean what they mean for a profile's mesh. The inverted
+    region (marker 2) reaches ``para_boundary`` electrode spacings past the
+    outermost electrodes and ``para_depth`` below the ground (0: 0.4 of the
+    array's larger extent, as PyGIMLi sizes a profile's); its plan triangles
+    are at most ``para_max_cell_size`` m² (0: a spacing squared) and every
+    electrode is one of their corners. Its layers start a third of a spacing
+    thick and grow by 20 % each. The defaults keep a 50-electrode grid near
+    5000 inverted cells: a 3-D forward model refines the mesh eightfold. The outer region (marker 1) reaches
+    ``outer_width`` spreads further sideways and down (0: four, as on a
+    profile's mesh), in coarse cells. The ground passes through the electrodes, flat beyond them.
+    """
+    import pygimli.meshtools as mt
+    from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
+    from scipy.spatial import cKDTree
+
+    sensors = np.atleast_2d(np.asarray(data.sensorPositions(), dtype=float))
+    # Each electrode's own position, once: PyGIMLi looks for an electrode at a
+    # node, and one rounded a hair off it on a ridge of the ground is outside.
+    first = np.unique(np.round(sensors[:, :2], 6), axis=0, return_index=True)[1]
+    plan = sensors[np.sort(first), :2]
+    nearest = cKDTree(plan).query(plan, k=2)[0][:, 1]
+    spacing = float(np.median(nearest)) if len(plan) > 1 else 1.0
+    lower = plan.min(axis=0) - float(para_boundary) * spacing
+    upper = plan.max(axis=0) + float(para_boundary) * spacing
+    spread = float(np.max(upper - lower))
+    depth = float(para_depth) if float(para_depth) > 0 else 0.4 * float(np.ptp(plan, axis=0).max())
+    area = float(para_max_cell_size) if float(para_max_cell_size) > 0 else spacing ** 2
+    outer = (float(outer_width) if float(outer_width) > 0 else 4.0) * spread
+
+    rectangle = mt.createRectangle(start=lower.tolist(), end=upper.tolist(), marker=2)
+    for x, y in plan:
+        rectangle.createNode(float(x), float(y), 0.0)
+    surface = mt.createMesh(rectangle, quality=float(quality), area=area)
+    # The outer region only carries the boundary far away, so its triangles
+    # may be less regular, which roughly halves their number.
+    surface = mt.appendTriangleBoundary(surface, xbound=outer, ybound=outer, marker=1,
+                                        isSubSurface=False, quality=20.0)
+    layers, step = [0.0], spacing / 3.0
+    while layers[-1] < depth - 1e-9:
+        layers.append(min(layers[-1] + step, depth))
+        step *= 1.2
+    while layers[-1] < depth + outer - 1e-9:
+        step *= 1.5
+        layers.append(min(layers[-1] + step, depth + outer))
+    mesh = mt.createMesh3D(surface, -np.asarray(layers),
+                           pg.core.MARKER_BOUND_HOMOGEN_NEUMANN, pg.core.MARKER_BOUND_MIXED)
+    # Below the inverted depth every cell is the outer region's; the depth is a
+    # layer face, so no cell straddles it.
+    for cell, centre in zip(mesh.cells(), np.asarray(mesh.cellCenters(), dtype=float)):
+        if centre[2] < -depth:
+            cell.setMarker(1)
+
+    ground = sensors[:, 2]
+    nodes = np.asarray(mesh.positions(), dtype=float)
+    if np.ptp(ground) > 1e-9:
+        try:
+            height = LinearNDInterpolator(sensors[:, :2], ground)(nodes[:, :2])
+        except Exception:  # noqa: BLE001 - electrodes on one line span no triangle
+            height = np.full(len(nodes), np.nan)
+        missing = ~np.isfinite(height)
+        height[missing] = NearestNDInterpolator(sensors[:, :2], ground)(nodes[missing, :2])
+    else:
+        height = np.full(len(nodes), float(ground[0]))
+    for node, value in zip(mesh.nodes(), nodes[:, 2] + height):
+        node.setPos(pg.Pos(node.x(), node.y(), float(value)))
+    inverted = int(np.count_nonzero(np.asarray(mesh.cellMarkers(), dtype=int) > 1))
+    log(f"  mesh: {mesh.cellCount()} cells, {inverted} of them inverted (3-D: "
+        f"{len(layers) - 1} layers, inverted {depth:.3g} m deep and "
+        f"{float(para_boundary):g} spacings past the electrodes)")
+    return mesh
+
+
+#: The six orders of a prism's corners (0-2 one triangle, 3-5 the other, i
+#: facing i + 3) that bring each corner to the front, keeping the prism a prism.
+_PRISM_TURNS = np.array([[0, 1, 2, 3, 4, 5], [1, 2, 0, 4, 5, 3], [2, 0, 1, 5, 3, 4],
+                         [3, 5, 4, 0, 2, 1], [4, 3, 5, 1, 0, 2], [5, 4, 3, 2, 1, 0]])
+
+
+def tetrahedral_mesh(mesh):
+    """``mesh`` with every prism split into three tetrahedra, markers kept.
+
+    Each quadrilateral face is cut along the diagonal from its lowest-numbered
+    node, so two prisms sharing a face cut it alike and the tetrahedra fit
+    together (Dompierre et al., 1999, Int. J. Numer. Meth. Eng.). A mesh of
+    tetrahedra comes back as it is; ADTLERT's 3-D forward takes nothing else.
+    """
+    cells = [[node.id() for node in cell.nodes()] for cell in mesh.cells()]
+    sizes = {len(ids) for ids in cells}
+    if sizes == {4}:
+        return mesh
+    if not sizes <= {4, 6}:
+        raise ValueError("Only prisms and tetrahedra can be split into tetrahedra; "
+                         f"this mesh has cells of {sorted(sizes)} nodes.")
+    positions = np.asarray(mesh.positions(), dtype=float)
+    markers = np.asarray(mesh.cellMarkers(), dtype=int)
+    tets, owner = [], []
+    for index, ids in enumerate(cells):
+        if len(ids) == 4:
+            pieces = [ids]
+        else:
+            v = np.asarray(ids)[_PRISM_TURNS[int(np.argmin(ids))]]
+            if min(v[1], v[5]) < min(v[2], v[4]):
+                pieces = [v[[0, 1, 2, 5]], v[[0, 1, 5, 4]], v[[0, 4, 5, 3]]]
+            else:
+                pieces = [v[[0, 1, 2, 4]], v[[0, 4, 2, 5]], v[[0, 4, 5, 3]]]
+        tets.extend(pieces)
+        owner.extend([index] * len(pieces))
+    tets = np.asarray(tets, dtype=int)
+    corners = positions[tets]
+    volume = np.einsum("ij,ij->i", np.cross(corners[:, 1] - corners[:, 0],
+                                            corners[:, 2] - corners[:, 0]),
+                       corners[:, 3] - corners[:, 0])
+    flip = volume < 0
+    tets[flip, 1], tets[flip, 2] = tets[flip, 2].copy(), tets[flip, 1].copy()
+    out = pg.Mesh(3)
+    for x, y, z in positions:
+        out.createNode(pg.Pos(float(x), float(y), float(z)))
+    for ids, index in zip(tets, owner):
+        out.createCell(pg.core.IndexArray([int(i) for i in ids]), int(markers[index]))
+    out.createNeighbourInfos()
+    return out
 
 
 def _electrode_spacing(data) -> float:
@@ -500,7 +706,7 @@ def _interface_regions(mesh, cell_ids, *, marker: int = ZONE_INTERFACE_MARKER):
     ``cell_ids`` are the parameter cells of ``mesh`` in model order. Cells that
     connect without crossing a marked edge share a label, which is what ADTLERT's
     structure-guided smoothness takes: it drops the constraint between cells of
-    different labels, as pyGIMLi does across the marked edge. None when no edge
+    different labels, so no smoothness acts across a marked edge. None when no edge
     is marked.
     """
     position = {int(cell_id): index for index, cell_id in enumerate(cell_ids)}
@@ -550,17 +756,19 @@ def mesh_preview(mesh, data=None) -> Dict[str, Any]:
     Returns
     -------
     dict
-        ``dim`` and the cell counts always. For a 2-D mesh also the cell
-        polygons of both parts as ``(cells, corners, 2)`` arrays,
-        ``para_centers`` (what :func:`~.ert_zones.zone_prior` takes), both
-        extents as ``(xmin, xmax, zmin, zmax)``, and the electrode positions.
+        ``dim``, the cell counts and the electrode positions always (x and
+        the elevation on a 2-D mesh, x, y, z in a volume). For a 2-D mesh also
+        the cell polygons of both parts as ``(cells, corners, 2)`` arrays,
+        ``para_centers`` (what :func:`~.ert_zones.zone_prior` takes) and both
+        extents as ``(xmin, xmax, zmin, zmax)``.
     """
     from .ert_zones import cell_centers_2d
 
     dim = int(mesh.dim())
-    sensors = np.zeros((0, 2))
+    sensors = np.zeros((0, 2 if dim == 2 else 3))
     if data is not None and int(data.sensorCount()):
-        sensors = np.asarray(data.sensorPositions(), dtype=float)[:, :2]
+        # In a volume the electrodes sit where the forward model puts them.
+        sensors = np.asarray(data.sensorPositions(), dtype=float)[:, :2 if dim == 2 else 3]
     preview: Dict[str, Any] = {
         "dim": dim, "cells": int(mesh.cellCount()), "nodes": int(mesh.nodeCount()),
         "sensors": sensors,
@@ -606,12 +814,20 @@ def mesh_preview(mesh, data=None) -> Dict[str, Any]:
 
 
 def _sensors_outside(mesh, sensors: np.ndarray) -> List[int]:
-    """Indices of electrodes no cell of ``mesh`` contains."""
+    """Indices of electrodes no cell of ``mesh`` contains.
+
+    An electrode on the ground may sit a hair above it - its position written
+    to six digits, on a ridge between surface nodes - so one a millimetre
+    lower counts as inside.
+    """
     missing: List[int] = []
+    up = int(mesh.dim()) - 1           # the vertical axis: y in 2-D, z in 3-D
     for index, position in enumerate(sensors):
         coords = list(position[:3]) + [0.0] * (3 - len(position[:3]))
+        lower = list(coords[:3])
+        lower[up] -= 1e-3
         try:
-            cell = mesh.findCell(pg.Pos(*coords[:3]))
+            cell = mesh.findCell(pg.Pos(*coords[:3])) or mesh.findCell(pg.Pos(*lower))
         except Exception:  # noqa: BLE001 - fall back to the bounding box
             cell = None
             lower, upper = mesh.boundingBox().min(), mesh.boundingBox().max()

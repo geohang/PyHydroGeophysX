@@ -58,11 +58,11 @@ def _try_pg_show(ax, mesh, values, **kwargs):
 def _coverage_mask(coverage) -> np.ndarray:
     """Boolean show-mask for a coverage array, whatever convention it uses.
 
-    ERT coverage here is log10 sensitivity, masked below -1 as before. SRT
-    coverage is pyGIMLi's standardized 0/1 ray coverage (or a non-negative ray
-    count), for which the old fixed '> -1' kept every cell, so nothing was ever
-    masked; a coverage with no negative values masks its zero cells instead. A
-    boolean array is taken as the mask itself.
+    ERT coverage here is log10 sensitivity, masked below -1. SRT coverage is
+    pyGIMLi's standardized 0/1 ray coverage (or a non-negative ray count), for
+    which a fixed '> -1' would keep every cell and mask nothing; a coverage
+    with no negative values masks its zero cells instead. A boolean array is
+    taken as the mask itself.
     """
     cov = np.asarray(coverage).ravel()
     if cov.dtype == bool:
@@ -362,9 +362,9 @@ def plot_difference_map(
         vmax = np.nanmax(np.abs(vals))
         if mode == "ratio":
             # Symmetric in log space, where a ratio of 0.2 is as big a change
-            # as 5, and on a log scale so the diverging map centres on 1. Only
-            # max|r| was used, so ratios below 1 never widened the range
-            # (0.2 to 0.9 were drawn between 0.99 and 1.01).
+            # as 5, and on a log scale so the diverging map centres on 1. Using
+            # max|r| alone, ratios below 1 would never widen the range (0.2 to
+            # 0.9 would be drawn between 0.99 and 1.01).
             vmax = _log_symmetric_ratio_limit(vals)
             kw["cMin"] = 1.0 / vmax
             kw["cMax"] = vmax
@@ -646,7 +646,7 @@ def _convert_pygimli_to_simpeg(data_obj):
     from pygimli.physics import ert as pgert
     # 'simpeg', not the deprecated 'SimPEG' shim: with simpeg >= 0.25 the shim
     # loads a second copy of the package, whose Survey is not the BaseSurvey
-    # that simpeg.data.Data checks for, so every conversion raised TypeError.
+    # that simpeg.data.Data checks for, so every conversion would raise TypeError.
     from simpeg import data as simpeg_data
     from simpeg.electromagnetics.static import resistivity as dc
 
@@ -666,9 +666,9 @@ def _convert_pygimli_to_simpeg(data_obj):
     rhoa = np.asarray(data_obj["rhoa"])
 
     # pyGIMLi marks a remote (infinite) electrode with index -1. Indexing the
-    # sensor arrays with it put every remote electrode at the last electrode
-    # (x = 70.19 m on fielddataline2), so pole-dipole readings were drawn at
-    # the wrong pseudo-positions. Remote electrodes become SimPEG poles.
+    # sensor arrays with it would put every remote electrode at the last
+    # electrode, so pole-dipole readings would be drawn at the wrong
+    # pseudo-positions. Remote electrodes become SimPEG poles.
     def _loc(idx):
         return None if idx < 0 else np.array([xx[idx], yy[idx]])
 

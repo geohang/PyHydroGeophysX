@@ -39,7 +39,7 @@ How a run maps onto E4D
 -----------------------
 E4D models in 3-D. A 3-D survey on an imported tetrahedral mesh is handed to
 E4D on that mesh. A 2-D profile is inverted in 3-D on a mesh built around the
-line the way E4D users build one (a fine zone under the electrodes inside a
+line (a fine zone under the electrodes inside a
 far-reaching outer zone, the topography carried across the line; see
 ``core.e4d_mesh``), and the section along the line is read back onto the
 profile's own parameter mesh, so the result looks and exports like any other.

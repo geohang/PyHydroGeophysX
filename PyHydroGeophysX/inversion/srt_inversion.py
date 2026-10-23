@@ -107,7 +107,7 @@ def _make_srt_result(mesh, velocity, response, coverage, ray_paths):
 def build_srt_mesh(data, *, mesh_quality: float = 32.0, para_depth: float = 0.0,
                    para_max_cell_size: float = 0.0,
                    log: Callable[[str], None] = _noop_log):
-    """Build the travel-time inversion mesh, mirroring the ERT pipeline.
+    """Build the travel-time inversion mesh the way the ERT pipeline does.
 
     PyGIMLi sizes the parameter domain from the array length when ``paraDepth``
     is left at 0. For refraction that reaches well past where any ray turns, so
@@ -357,7 +357,7 @@ class SRTInversion(InversionBase):
                 - lambda_min: Minimum lambda value.
                 - relativeError: Relative data error.
                 - absoluteUError: Absolute data error (ERT-style name).
-                - zWeight: Vertical smoothness weighting, as in pyGIMLi
+                - zWeight: Vertical smoothness weighting (pyGIMLi's zWeight)
                   (default 1.0, which weights both directions alike; pyGIMLi's
                   own examples often use 0.2 for flatter layering).
                 - vTop: Starting-model velocity near surface.
@@ -400,14 +400,11 @@ class SRTInversion(InversionBase):
         defaults = {
             "lambda_val": 50.0,
             # 'H' below is the Gauss-Newton normal matrix, which needs a
-            # symmetric solver; the old 'cgls' default is a least-squares method
-            # and works with the square of its condition number. Pass
-            # method='cgls' to reproduce a run from before this became the
-            # default.
+            # symmetric solver; a least-squares method such as 'cgls' works
+            # with the square of its condition number.
             "method": "spd_cholesky",
-            # Until 0.5.0 zWeight never reached the constraint matrix, so every
-            # run smoothed isotropically whatever the value; 1.0 keeps a default
-            # run's result as it was. Pass zWeight for anisotropic smoothing.
+            # Vertical weight of the smoothness constraint; 1.0 smooths
+            # isotropically. Pass zWeight for anisotropic smoothing.
             "zWeight": 1.0,
             "vTop": 500.0,
             "vBottom": 5000.0,
@@ -428,9 +425,9 @@ class SRTInversion(InversionBase):
             "solver_tol": 1e-8,
             "lambda_rate": 1.0,
             "lambda_min": 1.0,
-            # Stopping. The plateau cut was hard-coded at 0.01; a lambda search
-            # needs it configurable so a flattened misfit is attributable to
-            # lambda rather than to where the iterations happened to stop.
+            # Stopping. The plateau cut is configurable so that a flattened
+            # misfit is attributable to lambda rather than to where the
+            # iterations happened to stop.
             "target_chi_squared": 1.0,
             "convergence_tolerance": 0.005,
             "min_iterations": 5,
@@ -599,9 +596,9 @@ class SRTInversion(InversionBase):
             int(self.parameters.get("min_iterations", 5)),
             max(int(self.parameters["max_iterations"]) - 2, 0),
         )
-        # Was hard-coded at 0.01. A lambda search needs it configurable: a run
-        # that stops on a 1 % plateau may still be descending, and its chi2 then
-        # says more about the iteration budget than about lambda.
+        # A lambda search needs the plateau cut configurable: a run that stops
+        # on a 1 % plateau may still be descending, and its chi2 then says more
+        # about the iteration budget than about lambda.
         dphi_tol = float(self.parameters.get("convergence_tolerance", 0.005))
         verbose = bool(self.parameters.get("verbose", True))
         stop_reason = "iteration_cap"
@@ -693,8 +690,8 @@ class SRTInversion(InversionBase):
             accepted = False
             accepted_step = step
             # Armijo: f(m + s dm) <= f(m) + c s (dm . g), where dm . g < 0 for a
-            # descent step, so the goal lies below f(m). The sign was reversed,
-            # which put the goal above f(m) and passed steps that did not lower
+            # descent step, so the goal lies below f(m). With the sign reversed
+            # the goal would lie above f(m) and pass steps that do not lower
             # the objective. The best trial that did lower it is kept for the
             # case where none meets the test.
             best_m, best_obj, best_step = None, current_obj, 0.0
@@ -727,8 +724,8 @@ class SRTInversion(InversionBase):
                 line_search_failures += 1
                 if verbose:
                     print("Line search FAIL EXIT")
-                # Never step uphill. This used to take 0.1 * dm whatever it did
-                # to the objective; keep the best trial that lowered it, or stay.
+                # Never step uphill: keep the best trial that lowered the
+                # objective, or stay.
                 if best_m is not None:
                     m = best_m
                 accepted_step = best_step

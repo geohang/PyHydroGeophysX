@@ -352,9 +352,9 @@ def add_velocity_interface(
             interface_y = np.interp(cell_x, input_points[:, 0], input_points[:, 1])
             
             # Set marker based on position relative to interface. Compare
-            # elevations, not their magnitudes: abs() matched this only while
-            # both were negative, and swapped the layers for a survey at a real
-            # (positive) elevation, handing bedrock parameters to the regolith.
+            # elevations, not their magnitudes: magnitudes agree with the
+            # elevation order only while both are negative, and would swap the
+            # layers for a survey at a real (positive) elevation.
             if cell_y > interface_y:
                 markers[i] = 2  # Above interface
             else:

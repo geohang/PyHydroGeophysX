@@ -12,7 +12,7 @@ def metrics_from_manager(
     lam: Optional[float] = None,
     method: Optional[str] = None,
 ) -> Tuple[Dict[str, Any], List[float]]:
-    """Extract common metrics from a PyGIMLi-style manager."""
+    """Extract common metrics from a pyGIMLi inversion manager."""
     metrics: Dict[str, Any] = {}
     if n_data is not None:
         metrics["n_data"] = int(n_data)

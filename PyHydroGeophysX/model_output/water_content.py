@@ -222,8 +222,8 @@ class MODFLOWWaterContent(HydroModelOutput):
 
                 # Skip data for this timestep. The header states how many
                 # values follow (ncol * nrow = UZF cells x layers, 1866 = 622 x 3
-                # in examples/data/modflow). This used to assume
-                # nuzfcells * 3, which lands mid-record, and then reads data as
+                # in examples/data/modflow), so the count is read from it. A
+                # fixed nuzfcells * 3 would land mid-record, and read data as
                 # headers, for a model with any other layer count.
                 n_values = int(header["maxbound"]) * int(header["1"])
                 if n_values <= 0:
@@ -285,8 +285,8 @@ class MODFLOWPorosity(HydroModelOutput):
         """
         Estimate porosity using the legacy specific-yield proxy, with a warning.
 
-        Supports MODFLOW 6 and earlier versions. A missing storage package keeps
-        the historical uniform 0.3 fallback, also with a RuntimeWarning.
+        Supports MODFLOW 6 and earlier versions. A missing storage package
+        falls back to a uniform 0.3, also with a RuntimeWarning.
         Specific storage is not a porosity and is never returned here.
 
         Returns:

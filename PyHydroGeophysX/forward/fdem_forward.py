@@ -42,7 +42,7 @@ class FDEMSurveyConfig:
     as (3,). ``receiver_location`` is one point, (3,), or several, (n, 3); it
     keeps the shape it was given. Several receivers share every frequency.
 
-    An omitted receiver sits at the origin, as in earlier releases, except
+    An omitted receiver sits at the origin, except
     where the origin cannot be modelled: below or above a dipole source (zero
     horizontal offset, a non-finite response) it goes 10 m along x from the
     source, and for a loop away from the origin it goes to the loop centre on

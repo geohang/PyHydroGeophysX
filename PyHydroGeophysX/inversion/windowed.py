@@ -107,10 +107,8 @@ def _adtlert_windows(forward, observed, initial, *, window_size: int,
     ``invert_timelapse_log_resistivity`` as there. That function also keeps a
     forward-and-Jacobian cache across windows, up to window x (iterations + 2)
     x 4 dense Jacobians (84 by default, 128 at most), until the run ends. It
-    reuses the few a window shares with the one before: on the DAS-1 example,
-    942 readings and 6024 cells over five surveys, 4 of 54, while the cache
-    grew to 2 GB and the run's peak to 9.2 GB. At a reported run's 63 MB per
-    survey it fills with 5.3 GB, and that run ran out of memory.
+    reuses only the few a window shares with the one before, so the cache holds
+    gigabytes of Jacobians on a large survey for almost no hits.
     """
     from adtlert.inversion import (
         TimeLapseERTInversionResult,
@@ -469,8 +467,7 @@ class WindowedTimeLapseERTInversion:
             self.inversion_params.get("relativeError", 0.05)
         )
         # absoluteError is an ohm floor and absoluteUError a voltage error in
-        # volts, the same two meanings TimeLapseERTInversion gives them; the
-        # voltage used to be read as ohms here.
+        # volts, the same two meanings TimeLapseERTInversion gives them.
         absolute_error = float(self.inversion_params.get("absoluteError", 0.0))
         absolute_u_error = self.inversion_params.get("absoluteUError", 0.0)
         absolute_current = float(self.inversion_params.get("absoluteCurrent", 0.1))
@@ -551,9 +548,9 @@ class WindowedTimeLapseERTInversion:
             mesh = self.mesh
 
         # No time-lapse step solves a model twice: the candidate's Jacobian is
-        # computed with its fields, and an accepted candidate's is reused. Kept,
-        # the forward's field cache only held 1 GB on the DAS-1 example (eight
-        # 130 MB entries, and their GPU copies) for no hit in 59 lookups.
+        # computed with its fields, and an accepted candidate's is reused. The
+        # forward's field cache would only hold memory (large entries, and their
+        # GPU copies) without a hit.
         forward, result_mesh, active_ids, version = _build_adtlert_forward(
             datasets[0], mesh, field_cache_entries=0
         )

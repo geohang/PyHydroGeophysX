@@ -7,24 +7,41 @@ soundings together. That is the same structure as the time-lapse inversion in
 :mod:`PyHydroGeophysX.inversion.time_lapse`, with along-line distance in place
 of time.
 
-This replaces block-coordinate LCI, where each sounding is re-inverted on its
-own against a reference built from its neighbours' models from the *previous*
-pass. Under block coordinates the lateral constraint is never enforced while a
-sounding is being solved, so the passes chase each other; here it is part of the
-system being solved.
+Block-coordinate LCI instead re-inverts each sounding on its own against a
+reference built from its neighbours' models from the *previous* pass. Under
+block coordinates the lateral constraint is never enforced while a sounding is
+being solved, so the passes chase each other; here it is part of the system
+being solved.
 
 Two properties make the simultaneous form affordable:
 
-* SimPEG's ``Simulation1DLayered.getJ`` returns the analytic sensitivity, and
-  measures faster than a single forward call. Finite differencing the same
-  Jacobian costs one forward per layer, so the analytic route is roughly an
-  order of magnitude cheaper per Gauss-Newton iteration.
+* SimPEG's ``Simulation1DLayered.getJ`` returns the analytic sensitivity at
+  about the cost of one forward call. Finite differencing the same Jacobian
+  costs one forward per layer, so the analytic route is roughly an order of
+  magnitude cheaper per Gauss-Newton iteration.
 * The normal matrix is block tridiagonal, so a sparse factorization scales with
   the number of soundings rather than its cube.
 
 Models are parameterized as ``x = log10(resistivity)``, matching the Occam
 routine in :mod:`PyHydroGeophysX.inversion.em1d` so that ``smoothness`` and
 ``lateral_smoothness`` keep the meaning they have there.
+
+The scheme is the laterally constrained inversion of Auken and Christiansen
+(2004): all soundings and models inverted as one system, with constraints tying
+each layer to the same layer of the neighbouring sounding. Their models are
+layered, with interface depths inverted alongside the resistivities; here the
+layer grid is fixed and the model smooth, so the constraints tie resistivities
+only. The depth of investigation (:func:`cumulated_sensitivity`,
+:func:`sensitivity_doi`) is the cumulated sensitivity of Christiansen and Auken
+(2012).
+
+Auken, E. & Christiansen, A. V. (2004). Layered and laterally constrained 2D
+inversion of resistivity data. Geophysics, 69(3), 752-761.
+https://doi.org/10.1190/1.1759461
+
+Christiansen, A. V. & Auken, E. (2012). A global measure for depth of
+investigation. Geophysics, 77(4), WB171-WB177.
+https://doi.org/10.1190/geo2011-0393.1
 """
 
 from __future__ import annotations
@@ -324,14 +341,12 @@ def _map_soundings(executor: Optional[ThreadPoolExecutor], fn, count: int) -> li
     than handed out a station at a time, and each lane builds its forward
     operators into a cache of its own, kept by the pool. A station's operator
     depends on its own transmitter-receiver distance, so a line presents many
-    distinct operators: 134 on a 140-station survey. The cache used to belong to
-    the thread, on the assumption that a chunk returns to the same thread from
-    one pass to the next; a ``ThreadPoolExecutor`` gives no such guarantee, so
-    every thread came to build the operator of nearly every station. On that
-    survey a 20-thread pool built 1,946 operators for 280 blocks, each warm-up
-    holding the GIL, and a forward pass ran only 2.2 times faster than one
-    thread. With the cache on the lane, which runs on one thread at a time, it
-    builds 280 and the pass runs 12.8 times faster.
+    distinct operators, nearly one per station. The cache belongs to the lane,
+    not to the thread: a ``ThreadPoolExecutor`` does not return a chunk to the
+    same thread from one pass to the next, so a cache held by the thread would
+    make every thread build the operator of nearly every station, each warm-up
+    holding the GIL. A lane runs on one thread at a time, so each operator is
+    built once.
 
     Equal chunks assume the stations cost about the same, which holds when they
     share a layer grid and differ only in how many gates survived. A survey
@@ -421,7 +436,7 @@ def _misfit(blocks: Sequence[SoundingBlock],
 def _solve_normal_equations(gram, rhs: np.ndarray) -> np.ndarray:
     """Solve ``gram x = rhs`` for the block-tridiagonal LCI normal matrix.
 
-    Two details the obvious version gets wrong. ``spsolve`` does not raise on a
+    Two details need care. ``spsolve`` does not raise on a
     singular matrix: it warns "Matrix is exactly singular" and returns an array
     of NaN, so a bare ``try/except`` never fires for the case it exists for and
     the NaN travels on into the model update. The finiteness of the result is
@@ -455,8 +470,7 @@ def _solve_normal_equations(gram, rhs: np.ndarray) -> np.ndarray:
     minres_out = np.asarray(minres_out, dtype=float)
     # info == 0 is not enough. On a system that is singular AND inconsistent,
     # MINRES reports success while the component along the null direction runs
-    # away; a 3x3 probe returned 1.4e15 there. The residual is the honest test
-    # of whether the system was actually solved.
+    # away. The residual is the test of whether the system was actually solved.
     rhs_flat = np.asarray(rhs, dtype=float).ravel()
     rhs_norm = float(np.linalg.norm(rhs_flat))
     residual = float(np.linalg.norm(gram @ minres_out - rhs_flat))
@@ -660,36 +674,30 @@ def solve_lci(
     toward ``reference_model`` (the background half-space at
     ``starting_resistivity`` when none is given). It is expressed as a fraction
     of ``smoothness``, so ``1.0`` weights the smallness term equally with the
-    vertical roughness term, which is SimPEG's ``alpha_s == alpha_x`` default. It answers a failure the two
-    roughness operators cannot: they constrain the shape of the model and say
-    nothing about its level, so below the depth of investigation, where the data
-    no longer pins the level, the model is free to drift, and it drifts wherever
-    the residual gradient leads. On a 1323-station ground TDEM survey that showed
-    up as the deep model becoming 2.7 times more variable than the shallow model,
-    where the reference inversion's became 0.8 times as variable. Losing
-    resolution should make a model less variable, not more, and the deep values
-    correlated with misfit at r = -0.37: unresolved layers were absorbing noise.
+    vertical roughness term, which is SimPEG's ``alpha_s == alpha_x`` default.
+    It supplies what the two roughness operators cannot: they constrain the
+    shape of the model and say nothing about its level, so below the depth of
+    investigation, where the data no longer pins the level, the model is free
+    to drift, and it drifts wherever the residual gradient leads. Losing
+    resolution should make a model less variable, not more; without the term,
+    unresolved layers absorb noise.
 
     It is scaled by ``smoothness_scale`` alongside the other two, so the
     chi-squared search moves all three together and their balance is a property
     of the setup rather than of where the search happened to stop. ``0.0``
-    leaves the regularisation as it was.
+    leaves the regularisation without a smallness term.
 
-    Equal weighting is more than this data wants. Measured on that 1323-station
-    survey, a ratio of 0.4 brought the deep spread from 0.291 to 0.121 dex
-    against the reference inversion's 0.117, and cost 1.9% in chi-squared under
-    the original errors. It also tightened the resolved shallow part by 7%,
-    which is the first sign of the term reaching past its job: the purpose is to
-    give unresolved layers somewhere to rest, not to hold resolved ones in
-    place, and a weight large enough to bend the resolved part is reporting the
-    reference model back rather than the ground. Ratios above roughly 0.5 on
-    sparse ground TDEM start doing that.
+    Equal weighting is more than ground TDEM data usually wants. The purpose of
+    the term is to give unresolved layers somewhere to rest, not to hold
+    resolved ones in place, and a weight large enough to bend the resolved part
+    is reporting the reference model back rather than the ground. Ratios above
+    roughly 0.5 on sparse ground TDEM start doing that.
 
     ``parallel_workers`` runs the per-sounding forward and Jacobian on a thread
     pool, ``0`` choosing a count from the machine. Every sounding owns its
     forward operator, and the workers only read the shared model vector, so the
-    arithmetic is the same either way; measured against the serial path, the
-    models come back bit for bit identical.
+    arithmetic is the same either way and the models are identical to the
+    serial path's.
     """
     if convergence_metric not in {"data", "objective"}:
         raise ValueError("convergence_metric must be data or objective.")
@@ -1081,8 +1089,7 @@ def cumulated_sensitivity(block: SoundingBlock, model: np.ndarray) -> np.ndarray
     only for plotting, and the cumulated quantity here is built from equation 3,
     which is also what keeps it independent of the layer grid: split a layer in
     two and its sensitivity splits with it, so the value at a given depth does
-    not move (measured at 0.2 to 2.5 % across a 2x refinement on real ground
-    TDEM).
+    not move.
 
     Only the data part of the Jacobian takes part, so a depth that clears the
     threshold is one the measurements reach, not one the lateral or vertical

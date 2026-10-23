@@ -27,9 +27,8 @@ INVERSION_TYPES = ("L2", "L1", "L1L2")
 
 #: The overview figure draws at most this many time steps. pyGIMLi lays the
 #: whole figure out again after every section it draws, so the figure's cost
-#: grows with the square of its panel count: a 420-step series spent most of an
-#: hour, after the inversion had finished, on one image 315 inches tall that
-#: nobody could read. A longer series shows this many steps, evenly spaced from
+#: grows with the square of its panel count, and a long series would give one
+#: image too tall to read. A longer series shows this many steps, evenly spaced from
 #: the first to the last; every step is still saved in ``final_models.npy`` and
 #: the per-step VTK files, and the studio's step viewer shows any of them.
 OVERVIEW_MAX_PANELS = 12
@@ -75,7 +74,7 @@ DEFAULT_TL = {
     # Distribute the temporal constraint by the interval between surveys, so it
     # penalizes the rate of change rather than the raw difference. Normalized by
     # the median interval: an evenly sampled series is unaffected and alpha keeps
-    # its meaning. "uniform" reproduces a run from before this existed.
+    # its meaning. "uniform" weights every pair alike.
     "temporal_weighting": "interval",
     "temporal_weight_limit": 10.0,
     # Correct every step to one reference temperature before the sections are
@@ -247,9 +246,9 @@ def _resolve_timing(source_files: Sequence[str],
     if not has_times:
         return named
     # Numeric times place each survey for the temporal regularization; they say
-    # nothing about when it was measured, and the file names often do. Numeric
-    # times used to skip the names, so the same two dated files had a seasonal
-    # temperature correction without times and none with them.
+    # nothing about when it was measured, and the file names often do. The
+    # names are read in either case, so the same dated files get the same
+    # seasonal temperature correction with or without times.
     supplied = [float(t) for t in measurement_times]
     if time_labels is not None and len(time_labels) == n:
         labels = [str(lbl) for lbl in time_labels]
@@ -290,7 +289,9 @@ def _apply_temperature_correction(spec: Any, models: np.ndarray, mesh: Any, data
         from PyHydroGeophysX.core import section_geometry
         from PyHydroGeophysX.petrophysics import temperature as temperature_model
 
-        depths = section_geometry.cell_depths(mesh, sensors=_sensor_positions(data))
+        sensors = (np.asarray(data.sensorPositions(), dtype=float) if int(mesh.dim()) == 3
+                   else _sensor_positions(data))
+        depths = section_geometry.cell_depths(mesh, sensors=sensors)
         dates = [t for t in timestamps] if timestamps and all(
             t is not None for t in timestamps) else None
         corrected, report = temperature_model.correct_time_lapse_models(
@@ -398,9 +399,9 @@ class _JointIterationProgress:
     """Report each iteration of the full (all steps at once) inversion.
 
     The windowed inversion reports every window it finishes; the full one
-    solves every step together and said nothing a progress bar could read, so
-    the studio showed a bar that only knew the run was busy. This turns the
-    inversion's own iteration events into ``[progress i/n]`` lines, ``n`` being
+    solves every step together and reports nothing a progress bar could read
+    on its own. This turns the inversion's own iteration events into
+    ``[progress i/n]`` lines, ``n`` being
     the most iterations the run can take; one that converges early stops short.
     """
 
@@ -512,15 +513,78 @@ def _draw_overview(path: Path, mesh: Any, models: np.ndarray,
         plt.close(fig)
 
 
+def _draw_overview_3d(path: Path, mesh: Any, models: np.ndarray, data, *,
+                      steps: Sequence[int], titles: Sequence[str],
+                      rho_range: Sequence[float], title: str, log: LogFn) -> None:
+    """A 3-D survey's series in plan: each step's resistivity one electrode
+    spacing below the ground, over the electrodes, in rows of four.
+
+    The value at a point is that of the nearest cell centre; the ground is
+    the surface through the electrodes.
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib import colors, ticker
+    from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
+    from scipy.spatial import cKDTree
+
+    from PyHydroGeophysX.visualization.axis_units import set_length_axis
+
+    sensors = np.asarray(data.sensorPositions(), dtype=float)
+    plan = np.unique(np.round(sensors[:, :2], 6), axis=0)
+    spacing = float(np.median(cKDTree(plan).query(plan, k=2)[0][:, 1]))
+    lower, upper = plan.min(axis=0), plan.max(axis=0)
+    gx, gy = np.meshgrid(np.linspace(lower[0], upper[0], 80),
+                         np.linspace(lower[1], upper[1], 80))
+    ground = LinearNDInterpolator(sensors[:, :2], sensors[:, 2])(gx, gy)
+    missing = ~np.isfinite(ground)
+    ground[missing] = NearestNDInterpolator(sensors[:, :2], sensors[:, 2])(gx[missing],
+                                                                          gy[missing])
+    points = np.column_stack([gx.ravel(), gy.ravel(), (ground - spacing).ravel()])
+    nearest = cKDTree(np.asarray(mesh.cellCenters(), dtype=float)).query(points)[1]
+
+    n_panels = len(steps)
+    ncol = min(4, n_panels)
+    nrow = int(np.ceil(n_panels / ncol))
+    height = 3.2 * nrow + 0.85
+    fig = plt.figure(figsize=(3.6 * ncol, height))
+    norm = colors.LogNorm(vmin=float(rho_range[0]), vmax=float(rho_range[1]))
+    cmap = ert_plot_style.ert_model_plot_kwargs()["cMap"]
+    mappable = None
+    try:
+        for slot, i in enumerate(steps):
+            ax = fig.add_subplot(nrow, ncol, slot + 1)
+            mappable = ax.pcolormesh(gx, gy, models[nearest, i].reshape(gx.shape),
+                                     norm=norm, cmap=cmap, shading="auto")
+            ax.plot(sensors[:, 0], sensors[:, 1], "^", color="#1d1d1f", ms=3)
+            ax.set_aspect("equal")
+            set_length_axis(ax, "x", "x")
+            set_length_axis(ax, "y", "y")
+            ax.set_title(titles[i])
+            _progress(log, slot + 1, n_panels,
+                      f"Saving results: overview figure, panel {slot + 1}/{n_panels}")
+        fig.suptitle(f"{title}, {spacing:.3g} m below the ground", y=1.0)
+        fig.tight_layout(rect=(0.0, 0.85 / height, 1.0, 0.97))
+        if mappable is not None:
+            cax = fig.add_axes((0.3, 0.32 / height, 0.4, 0.13 / height))
+            bar = fig.colorbar(mappable, cax=cax, orientation="horizontal")
+            bar.set_label(ert_plot_style.ERT_RESISTIVITY_LABEL)
+            bar.set_ticks(_log_ticks(float(rho_range[0]), float(rho_range[1])))
+            bar.ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda v, _: f"{v:g}"))
+            bar.ax.xaxis.set_minor_formatter(ticker.NullFormatter())
+        fig.savefig(path, dpi=160, bbox_inches="tight")
+    finally:
+        plt.close(fig)
+
+
 class _VTKTemplate:
     """pyGIMLi's VTK file of one time step, with its field values left open.
 
     Every per-step file holds the same mesh - points, cells, markers - and only
     its resistivity and coverage differ, yet ``exportVTK`` formats the whole
-    geometry again for each one: on a 60 000-cell mesh three quarters of a
-    file's 0.3 s, repeated for every step. The template is cut from the first
-    file pyGIMLi writes and fills in later steps' values the way pyGIMLi
-    formats them. It is used only after it reproduced that first file byte for
+    geometry again for each one, which on a large mesh is most of a file's
+    write time, repeated for every step. The template is cut from the first
+    file pyGIMLi writes and fills in later steps' values in that file's number
+    format. It is used only after it has reproduced that first file byte for
     byte, and a step it cannot render the same way (a NaN, say, whose spelling
     is the C++ library's own) is left to pyGIMLi.
     """
@@ -838,7 +902,7 @@ def run_timelapse_ert(
             "time (e.g. site_2024-06-12_1430.dat) or enter the times in the "
             "interface to get real dates and intervals.")
 
-    # Load every file through the robust device-aware loader and re-write it as a
+    # Load every file through the device-aware loader and re-write it as a
     # clean pygimli file. Raw ``ert.load`` cannot parse index-prefixed / header-less
     # formats (E4D etc.) and would drop all data + topography; normalizing first is
     # what makes the time-lapse inversion actually work on those files.
@@ -847,22 +911,26 @@ def run_timelapse_ert(
         + (f" (instrument: {instrument})" if instrument else " (auto-detect)")
         + (f", electrode positions from {Path(electrode_file).name}" if electrode_file else "")
         + " …")
+    survey_3d = bool(p.get("survey_3d", False))
     clean_dir, basenames, containers = ert_load.normalize_for_timelapse(
         source_files, instrument, out_dir, log=log,
         max_error=p.get("max_error"), engine=engine,
         electrode_file=str(electrode_file) if electrode_file else None,
-        error_model=p.get("error_model") or None)
+        error_model=p.get("error_model") or None,
+        survey_3d=True if survey_3d else None)
     files = [os.path.join(clean_dir, b) for b in basenames]
     data_error = _data_error_report(engine, containers, p.get("error_model") or None,
                                     log=log)
 
     # The same mesh builder as the single-survey run and the ERT page's mesh
     # preview, so the preview of the first survey is the mesh inverted here.
-    from .ert_inversion import _zone_notes
-    from .ert_mesh import build_inversion_mesh, mark_zone_interfaces
+    from .ert_inversion import _PROGRAM_NAMES, _zone_notes
+    from .ert_mesh import _volume_positions, build_inversion_mesh, mark_zone_interfaces
     from .ert_zones import normalize_zones, zone_prior
 
     data0 = containers[0]
+    survey_3d = survey_3d or ert_load.survey_is_3d(
+        np.asarray(data0.sensorPositions(), dtype=float))
     p["mesh_file"] = str(p.get("mesh_file") or "")
     zones = normalize_zones(p.get("zones"))
     p["zones"] = zones or None
@@ -880,7 +948,34 @@ def run_timelapse_ert(
         outer_width=float(p.get("outer_width", 0.0) or 0.0),
         outer_max_cell_size=float(p.get("outer_max_cell_size", 0.0) or 0.0),
         conform_zones=zones if p.get("conform_to_zones") else None,
-        mesh_file=p["mesh_file"], log=log, report=mesh_report)
+        mesh_file=p["mesh_file"], log=log, report=mesh_report, survey_3d=survey_3d)
+    # A profile on an imported 3-D mesh is inverted in 3-D and read back as the
+    # section along the line, step by step, as a single survey is; a 3-D
+    # survey's series is inverted on its volume.
+    in_volume = bool(mesh_report.get("profile_in_volume"))
+    if in_volume and engine in ("e4d", "r2", "r3t"):
+        raise ValueError(
+            f"{_PROGRAM_NAMES[engine]} cannot invert this series on the imported 3-D "
+            f"mesh {Path(p['mesh_file']).name}: E4D and R3t build their own 3-D mesh "
+            "around a profile, so go back to a generated mesh for them. The in-house "
+            "and ADTLERT engines invert it on this mesh.")
+    if survey_3d and not p["mesh_file"] and engine not in ("pyhydro", "adtlert"):
+        raise ValueError(
+            f"{_PROGRAM_NAMES.get(engine, engine.upper())} needs an imported 3-D mesh for "
+            "a survey whose electrodes cover an area; the in-house and ADTLERT engines "
+            "invert it on the mesh generated here.")
+    if (in_volume or survey_3d) and zones:
+        log("Note: a-priori zones are drawn on 2-D sections and are not applied in 3-D.")
+        zones, p["zones"] = [], None
+    if in_volume:
+        # The first survey was laid into the volume with the mesh; the others go
+        # the same way, and every clean file the engine reads is written again.
+        for data in containers[1:]:
+            placed = _volume_positions(np.asarray(data.sensorPositions(), dtype=float))
+            for index, position in enumerate(placed if placed is not None else ()):
+                data.setSensorPosition(index, pygimli.Pos(*(float(v) for v in position)))
+        for name, data in zip(basenames, containers):
+            data.save(os.path.join(clean_dir, name))
     # The smoothness stops at the zone outlines for every engine: the in-house
     # one and PyGIMLi read the marked edges, ADTLERT turns them into units.
     decoupled_edges = 0
@@ -1041,6 +1136,22 @@ def run_timelapse_ert(
     except Exception:  # noqa: BLE001 - coverage is optional
         coverage = None
     res_mesh = getattr(result, "mesh", mesh)
+    # A profile inverted in 3-D: every step is read back along the line, and the
+    # volumes are kept to be written beside the sections.
+    volume = None
+    if in_volume:
+        from .ert_inversion import _line_of, profile_section
+
+        section, on_line = profile_section(data0, mesh, res_mesh)
+        volume = (res_mesh, final_models, coverage)
+        final_models = final_models[on_line]
+        if coverage is not None and coverage.ndim == 2 and coverage.shape[1] == res_mesh.cellCount():
+            coverage = coverage[:, on_line]
+        else:
+            coverage = None
+        log(f"Inverted in 3-D on {res_mesh.cellCount()} cells; each step is read back "
+            f"as the section along the line ({section.cellCount()} cells).")
+        res_mesh, data0 = section, _line_of(data0)
 
     # ADTLERT windowed results expose the actual iteration trace separately from
     # ``all_chi2`` (which contains one final value per window). Prefer that trace
@@ -1111,7 +1222,7 @@ def run_timelapse_ert(
     # panels are not on the same axes cannot be compared by eye - which is the
     # only reason to draw them side by side.
     clip_polygon = None
-    if coverage is not None and clip_mode == "envelope":
+    if coverage is not None and clip_mode == "envelope" and not survey_3d:
         clip_polygon = _envelope_polygon(
             res_mesh, np.nanmean(coverage, axis=0), clip_cut, sensors, log)
     # A long series is drawn as a sample of its steps (OVERVIEW_MAX_PANELS),
@@ -1125,11 +1236,17 @@ def run_timelapse_ert(
     counted = (f"{n_time} time steps" if len(shown_steps) == n_time
                else f"{len(shown_steps)} of {n_time} time steps, evenly spaced")
     panel = out / "timelapse_resistivity.png"
-    _draw_overview(panel, res_mesh, final_models, coverage, steps=shown_steps,
-                   titles=panel_titles, rho_range=(rho_min, rho_max),
-                   clip_mode=clip_mode, clip_polygon=clip_polygon,
-                   title=f"Time-lapse resistivity ({mode}, {counted}){corrected}{span}",
-                   log=log)
+    if survey_3d:
+        _draw_overview_3d(panel, res_mesh, final_models, data0, steps=shown_steps,
+                          titles=panel_titles, rho_range=(rho_min, rho_max),
+                          title=f"Time-lapse resistivity ({mode}, {counted}){span}",
+                          log=log)
+    else:
+        _draw_overview(panel, res_mesh, final_models, coverage, steps=shown_steps,
+                       titles=panel_titles, rho_range=(rho_min, rho_max),
+                       clip_mode=clip_mode, clip_polygon=clip_polygon,
+                       title=f"Time-lapse resistivity ({mode}, {counted}){corrected}{span}",
+                       log=log)
     figure_paths.append(str(panel))
     if len(shown_steps) < n_time:
         log(f"The overview figure shows {len(shown_steps)} of the {n_time} time steps, "
@@ -1174,6 +1291,15 @@ def run_timelapse_ert(
     data_paths.extend(vtk_step_paths)
     if vtk_combined:
         data_paths.append(vtk_combined)
+    vtk_3d_step_paths: List[str] = []
+    if volume is not None:
+        # The whole volume of every step, as the sections are written.
+        vtk_3d_step_paths, vtk_3d_combined = _export_vtks(
+            io_utils.ensure_dir(out / "volume"), volume[0], volume[1], volume[2],
+            labels, log)
+        data_paths.extend(vtk_3d_step_paths)
+        if vtk_3d_combined:
+            data_paths.append(vtk_3d_combined)
 
     config = build_timelapse_config(source_files, times, p)
     config["electrode_file"] = str(electrode_file) if electrode_file else None
@@ -1208,6 +1334,14 @@ def run_timelapse_ert(
         ),
         "n_times": int(n_time),
         "mesh_cells": int(res_mesh.cellCount()),
+        # Inverted in 3-D: a 3-D survey's models are the volume; a profile's are
+        # the sections along the line, its volumes in vtk_3d_step_paths.
+        "survey_3d": survey_3d,
+        "volume": ({"cells": int(volume[0].cellCount()),
+                    "section_cells": int(res_mesh.cellCount())} if volume is not None
+                   else {"cells": int(res_mesh.cellCount()), "survey_3d": True}
+                   if survey_3d else {}),
+        "vtk_3d_step_paths": vtk_3d_step_paths,
         "mesh_file": p["mesh_file"],
         # The a-priori zones as applied (cells covered, values after clipping);
         # empty when none were defined or the engine could not take them.

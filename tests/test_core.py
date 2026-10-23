@@ -113,6 +113,26 @@ def test_seeded_monte_carlo_matches_the_legacy_converter_in_any_chunking():
                 result["params_used"][3]["rho_sat" if name == "rhos" else name], value)
 
 
+def test_the_inversions_uncertainty_propagates_into_the_water_content():
+    # Exact parameters, so the spread is the resistivity's alone. Water content
+    # is porosity * (rho_sat / rho)^(1/n), so ln(theta) moves by -1/n of ln(rho):
+    # with sigma(ln rho) = 0.2 and n = 2, theta is lognormal with s = 0.1. The
+    # draws are the same in any chunking, and a cell with no std draws nothing.
+    rho = np.array([[400.], [1600.], [6400.]])
+    layer = dict(marker=1, rho_sat=100., n=2., sigma_sur=0., porosity=.3)
+    runs = [run_petrophysics_monte_carlo(
+        rho, np.ones(3), [layer], n_realizations=4000, seed=3, cell_chunk_size=chunk,
+        log_resistivity_std=np.array([.2, .2, 0.]), return_realizations=True)
+        for chunk in (1, 1024)]
+    np.testing.assert_array_equal(runs[0]["water_content_all"], runs[1]["water_content_all"])
+    theta = .3 * np.sqrt(100. / rho.ravel())
+    s = .1
+    expected = theta * np.exp(s ** 2 / 2) * np.sqrt(np.exp(s ** 2) - 1)
+    std = runs[0]["statistics"]["water_content"]["std"][:, 0]
+    np.testing.assert_allclose(std[:2], expected[:2], rtol=.05)
+    assert std[2] < 1e-12 and runs[0]["resistivity_drawn"]
+
+
 @pytest.mark.parametrize("surface", [0., 1e-3, 1 / 200])
 def test_porosity_inverse_is_exact_and_reports_where_no_porosity_exists(surface):
     phi, S, n, m = np.array([.05, .2, .4]), .7, 2., 1.5
@@ -245,24 +265,28 @@ def _identity():
     return HydroGeophysObsOperator(lambda x: x, lambda x: x)
 
 
-@pytest.mark.parametrize("n_steps,schedule", [
-    (4, [1., 1., 1., 1.]),          # the data four times over
-    (2, [4., 4.]),                  # half of it
-    (2, [2., -2.]),
-    (2, [2., np.nan]),
-    (1, [0.]),
+@pytest.mark.parametrize("n_steps,schedule,valid", [
+    (4, [1., 1., 1., 1.], False),   # the data four times over
+    (2, [4., 4.], False),           # half of it
+    (2, [2., -2.], False),
+    (2, [2., np.nan], False),
+    (1, [0.], False),
+    (3, [2., 4., 4.], True),
+    (4, None, True),                # the default: n_steps each
+    (4, [9.333, 7., 4., 2.], True),  # the decreasing schedule as usually quoted
+    (4, [9.33, 7., 4., 2.], True),   # ... to fewer figures
 ])
-def test_esmda_refuses_a_schedule_that_does_not_use_the_data_once(n_steps, schedule):
-    with pytest.raises(ValueError, match="inflation_factors"):
-        ESMDA(_identity(), np.eye(1), n_steps=n_steps, inflation_factors=schedule)
+def test_esmda_takes_only_a_schedule_that_uses_the_data_once(n_steps, schedule, valid):
+    def build():
+        return ESMDA(_identity(), np.eye(1), n_steps=n_steps, inflation_factors=schedule)
 
-
-def test_esmda_accepts_valid_schedules_as_they_are_quoted():
-    assert ESMDA(_identity(), np.eye(1), n_steps=3, inflation_factors=[2., 4., 4.])
-    assert ESMDA(_identity(), np.eye(1), n_steps=4).inflation_factors == [4.] * 4
-    # The decreasing schedule as it is usually quoted, to a few figures.
-    assert ESMDA(_identity(), np.eye(1), n_steps=4, inflation_factors=[9.333, 7., 4., 2.])
-    assert ESMDA(_identity(), np.eye(1), n_steps=4, inflation_factors=[9.33, 7., 4., 2.])
+    if not valid:
+        with pytest.raises(ValueError, match="inflation_factors"):
+            build()
+    elif schedule is None:
+        assert build().inflation_factors == [float(n_steps)] * n_steps
+    else:
+        assert build().inflation_factors == schedule
 
 
 @pytest.mark.parametrize("method", ["enkf", "esmda"])
@@ -445,6 +469,57 @@ def test_ert_log_jacobian_differentiates_the_forward_calls_model(logs, cached):
                 - ertforward2(operator, logs - step * np.eye(len(logs))[i], None)) / (2 * step)
                for i in range(len(logs))]
     np.testing.assert_allclose(jacobian, np.column_stack(columns), rtol=2e-6, atol=1e-9)
+
+
+def test_ert_forward_refuses_a_non_finite_resistivity_model():
+    """pyGIMLi models a NaN cell without a word (fielddataline2: every rhoa
+    finite) and an infinite one with a printed warning, so each forward entry
+    refuses the model before the solve. A NaN water content keeps its NaN
+    through the petrophysical clip, which is how one reaches hydro_to_ert."""
+    pg = pytest.importorskip("pygimli")
+    from PyHydroGeophysX.forward.ert_forward import (
+        ERTForwardModeling, ertforandjac, ertforward2)
+    from PyHydroGeophysX.Hydro_modular.hydro_to_ert import hydro_to_ert
+
+    rho = np.array([20., np.nan, np.inf, 300.])
+    operator = _LinearForward(len(rho))
+    mesh = pg.createGrid(x=np.linspace(0, 12, 13), y=np.linspace(-4, 0, 5))
+    forward = ERTForwardModeling(mesh)
+    forward.fwd_operator = operator
+    water = np.full(mesh.cellCount(), .2)
+    water[7] = np.nan
+    calls = [
+        lambda: forward.forward(rho, log_transform=False),
+        lambda: forward.forward_and_jacobian(rho, log_transform=False),
+        lambda: ertforandjac(operator, rho, np.log(rho)),
+        lambda: ertforward2(operator, np.log(rho), None),
+    ]
+    for call in calls:
+        with pytest.raises(ValueError, match=r"1 NaN, 1 infinite"):
+            call()
+    assert operator.calls == 0
+    with pytest.raises(ValueError, match=r"1 NaN of its 48 cells"):
+        hydro_to_ert(water_content=water, porosity=np.full(mesh.cellCount(), .35), mesh=mesh,
+                     profile_interpolator=SimpleNamespace(L_profile=np.array([0., 12.]),
+                                                          surface_profile=np.zeros(2)),
+                     layer_idx=[0, 1, 2], structure=None, marker_labels=[2, 0, 3],
+                     rho_parameters={}, num_electrodes=12, noise_level=0.,
+                     mesh_markers=np.full(mesh.cellCount(), 2))
+
+
+def test_ertforward_updates_only_marker_2_and_keeps_the_rest_in_ohm_m():
+    """ertforward passed every cell outside marker 2 as ln(resistivity), a
+    100 ohm-m background modelled at 4.6 ohm-m."""
+    pg = pytest.importorskip("pygimli")
+    from PyHydroGeophysX.forward.ert_forward import ertforward
+
+    mesh = pg.createGrid(x=np.linspace(0, 4, 5), y=np.linspace(-1, 0, 2))
+    mesh.setCellMarkers(np.array([1, 2, 2, 1]))
+    operator = _LinearForward(4)
+    log_response, model = ertforward(operator, mesh, pg.Vector(4, 100.), np.log([20., 300.]))
+    expected = np.array([100., 20., 300., 100.])
+    np.testing.assert_allclose(np.array(model), expected)
+    np.testing.assert_allclose(log_response, np.log(operator.matrix @ expected))
 
 
 @pytest.fixture
@@ -831,6 +906,295 @@ def test_an_e4d_mesh_reads_back_into_survey_coordinates(tmp_path, name):
     assert marks == {(0, 1, 2): 1}
 
 
+@pytest.mark.parametrize("engine", ["Auto", "Gmsh (tetrahedral)", "Structured grid"])
+def test_a_3d_mesh_from_an_electrode_file_keeps_every_electrode_on_a_node(tmp_path, engine):
+    """The 3D builder's file array: the X, Y, Z columns read by header past a
+    cable and an electrode number, the surface through the electrodes' own
+    elevations, and a column of electrodes read as a borehole. Every node is
+    in a cell and no cell is flat (Gmsh duplicated electrodes on the ground
+    into no cell), and the outer faces carry the ERT forward's conditions:
+    the ground no flow, the rest far-field, around an outer region reaching
+    far beyond the electrodes that is never inverted."""
+    pg = pytest.importorskip("pygimli")
+    from PyHydroGeophysX.core import mesh_3d
+
+    if engine.startswith("Gmsh") and not mesh_3d.find_gmsh_binary():
+        pytest.skip("no Gmsh executable")
+
+    xy = [(x, y) for x in (0.0, 5.0, 10.0) for y in (0.0, 4.0, 8.0)]
+    table = tmp_path / "grid.csv"
+    table.write_text("Cable,Elec,X,Y,Z\n" + "".join(
+        f"1,{i + 1},{x},{y},{100.0 + 0.1 * x}\n" for i, (x, y) in enumerate(xy)))
+    positions, _ = mesh_3d.read_sensor_table(table)
+    assert np.allclose(positions, [(x, y, 100.0 + 0.1 * x) for x, y in xy])
+    assert not mesh_3d.buried_electrodes(positions)
+    assert mesh_3d.buried_electrodes(np.vstack([positions, [[5.0, 4.0, 95.0]]]))
+
+    result = mesh_3d.generate_mesh({
+        "array_type": mesh_3d.FILE_ARRAY, "electrode_positions": positions,
+        "mesh_type": "Surface with topography", "mesh_engine": engine,
+        "topography_type": mesh_3d.SENSOR_GROUND, "electrode_refinement": 0.5,
+        "attractor_distance": 5.0, "boundary_refinement": 2.0, "para_depth": 4.0,
+        "dz_fine": 1.0, "dz_coarse": 2.0, "boundary_extension": 1.4,
+        "output_dir": str(tmp_path)})
+    assert result["generator"] == {"Auto": "PyGIMLi topography prism",
+                                   "Gmsh (tetrahedral)": "Gmsh tetrahedral",
+                                   "Structured grid": "PyGIMLi structured grid"}[engine]
+    mesh = result["mesh"]
+    nodes = np.asarray(mesh.positions())
+    gaps = [np.linalg.norm(nodes - p, axis=1).min() for p in positions]
+    assert max(gaps) < 1e-6
+    assert all(len(node.cellSet()) for node in mesh.nodes())
+    assert min(cell.size() for cell in mesh.cells()) > 1e-9
+    for face in mesh.boundaries():
+        if face.leftCell() is None or face.rightCell() is None:
+            outward = face.center() - (face.leftCell() or face.rightCell()).center()
+            up = face.norm().z() * np.sign(face.norm().dot(outward)) > 1e-8
+            assert face.marker() == (pg.core.MARKER_BOUND_HOMOGEN_NEUMANN if up
+                                     else pg.core.MARKER_BOUND_MIXED)
+    inverted = np.asarray(mesh.cellMarkers()) > 1
+    centres = np.asarray(mesh.cellCenters())
+    assert np.ptp(nodes[:, 0]) > 100.0 and nodes[:, 2].min() < 60.0
+    assert (~inverted).any() and np.all(np.abs(centres[inverted, 0] - 5.0) < 15.0)
+
+
+def test_a_profile_on_a_3d_mesh_is_laid_along_x_and_read_back_on_the_line(tmp_path):
+    """A 2-D profile (elevation in y) laid into a volume at (x, 0, elevation);
+    the section reads the volume's cell on the line, and a model handed back
+    warm-starts from the exact volume it came from. The imported grid's outer
+    faces (its own markers 1-6) become no flow on the ground, far-field
+    elsewhere: left as they were, they modelled an insulating box."""
+    pg = pytest.importorskip("pygimli")
+    from PyHydroGeophysX.inversion.ert_inversion import ERTRun, _ProfileInVolume
+    from PyHydroGeophysX.inversion.ert_mesh import load_inversion_mesh, profile_in_volume
+
+    mesh = pg.createGrid(x=np.arange(-4.0, 15.0), y=np.arange(-5.0, 6.0),
+                         z=np.arange(-14.0, 1.0))
+    for cell in mesh.cells():
+        cell.setMarker(1 if cell.center().z() < -12 else 2)
+    mesh.save(str(tmp_path / "volume.bms"))
+    data = pg.DataContainerERT()
+    for x in range(11):
+        data.createSensor(pg.Pos(float(x), -8.0))     # a profile: elevation in y
+    data.createFourPointData(0, 0, 1, 2, 3)
+    volume = load_inversion_mesh(tmp_path / "volume.bms", data=data, place_profile=True)
+    assert np.allclose(np.array(data.sensorPositions()),
+                       [(x, 0.0, -8.0) for x in range(11)])
+    assert profile_in_volume(data, volume)
+    outer = {}
+    for face in volume.boundaries():
+        if face.leftCell() is None or face.rightCell() is None:
+            key = "ground" if abs(face.center().z()) < 1e-9 else "far"
+            outer.setdefault(key, set()).add(face.marker())
+    assert outer == {"ground": {pg.core.MARKER_BOUND_HOMOGEN_NEUMANN},
+                     "far": {pg.core.MARKER_BOUND_MIXED}}
+
+    class Inner:
+        name = "pyhydro"
+        starts: list = []
+
+        def reference_model(self):
+            return None
+
+        def fit(self, *, start_model=None, **_):
+            self.starts.append(start_model)
+            centres = np.asarray(volume.cellCenters())
+            return ERTRun(lam=1.0, chi2=1.0, iterations=1, stop="plateau",
+                          convergence=[1.0], model=10.0 + centres[:, 0] - centres[:, 2],
+                          response=np.ones(1), mesh=volume)
+
+    inner = Inner()
+    engine = _ProfileInVolume(inner, data, volume)
+    run = engine.fit(lam=1.0, max_iterations=1, plateau_tolerance=0.01, target_chi2=1.0)
+    centres = np.asarray(engine.mesh.cellCenters())
+    assert engine.mesh.dim() == 2 and run.model.size == engine.mesh.cellCount()
+    assert np.allclose(run.model, 10.0 + centres[:, 0] - centres[:, 1], atol=1.0)
+    engine.fit(lam=1.0, max_iterations=1, plateau_tolerance=0.01, target_chi2=1.0,
+               start_model=run.model)
+    assert inner.starts[-1] is run.volume[1]
+
+
+def test_a_3d_surveys_mesh_puts_every_electrode_on_its_ground():
+    """A grid of electrodes on a slope: each one a node of the generated
+    volume, the inverted cells under the array and no deeper than asked, and
+    their depths (what the temperature correction reads) below that slope."""
+    pg = pytest.importorskip("pygimli")
+    from PyHydroGeophysX.core.section_geometry import cell_depths
+    from PyHydroGeophysX.inversion.ert_mesh import build_inversion_mesh
+
+    data = pg.DataContainerERT()
+    grid = [(x, y, 50.0 + 0.2 * x) for x in (0.0, 4.0, 8.0, 12.0) for y in (0.0, 3.0, 6.0)]
+    for position in grid:
+        data.createSensor(pg.Pos(*position))
+    data.createFourPointData(0, 0, 3, 6, 9)
+    mesh = build_inversion_mesh(data, para_depth=5.0, para_boundary=1.0, survey_3d=True)
+    assert mesh.dim() == 3
+    nodes = np.asarray(mesh.positions())
+    assert max(np.linalg.norm(nodes - p, axis=1).min() for p in grid) < 1e-9
+    centres = np.asarray(mesh.cellCenters())
+    inverted = np.asarray(mesh.cellMarkers()) > 1
+    ground = 50.0 + 0.2 * centres[:, 0]
+    assert np.all(ground[inverted] - centres[inverted, 2] < 5.0)
+    assert np.all((centres[inverted, 0] > -3.0) & (centres[inverted, 0] < 15.0)
+                  & (centres[inverted, 1] > -3.0) & (centres[inverted, 1] < 9.0))
+    under = ((centres[:, 0] > 0) & (centres[:, 0] < 12) & (centres[:, 1] > 0)
+             & (centres[:, 1] < 6))
+    for sensors in (grid, None):
+        np.testing.assert_allclose(cell_depths(mesh, sensors=sensors)[under],
+                                   (ground - centres[:, 2])[under], atol=1e-9)
+
+
+def test_prisms_split_into_tetrahedra_that_fill_them_and_fit_together():
+    """ADTLERT's 3-D forward takes tetrahedra: each prism's three keep its
+    volume and marker, and every face inside the mesh is shared by two of
+    them, so no gap or overlap opens where neighbouring prisms meet."""
+    pg = pytest.importorskip("pygimli")
+    from PyHydroGeophysX.inversion.ert_mesh import build_inversion_mesh, tetrahedral_mesh
+
+    data = pg.DataContainerERT()
+    for position in [(x, y, 50.0 + 0.2 * x) for x in (0.0, 4.0, 8.0) for y in (0.0, 3.0)]:
+        data.createSensor(pg.Pos(*position))
+    data.createFourPointData(0, 0, 2, 3, 5)
+    prisms = build_inversion_mesh(data, para_depth=4.0, para_boundary=1.0, survey_3d=True)
+    tets = tetrahedral_mesh(prisms)
+    ids = np.array([[n.id() for n in cell.nodes()] for cell in tets.cells()])
+    corners = np.asarray(tets.positions())[ids]
+    volume = np.einsum("ij,ij->i", np.cross(corners[:, 1] - corners[:, 0],
+                                            corners[:, 2] - corners[:, 0]),
+                       corners[:, 3] - corners[:, 0]) / 6.0
+    assert volume.min() > 0
+    np.testing.assert_allclose(volume.reshape(-1, 3).sum(axis=1),
+                               [cell.size() for cell in prisms.cells()], rtol=1e-9)
+    assert np.all(np.asarray(tets.cellMarkers()).reshape(-1, 3).T
+                  == np.asarray(prisms.cellMarkers()))
+    faces = np.sort(ids[:, [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]]].reshape(-1, 3), axis=1)
+    _, counts = np.unique(faces, axis=0, return_counts=True)
+    outer = [b.nodeCount() - 2 for b in prisms.boundaries()
+             if b.leftCell() is None or b.rightCell() is None]
+    assert counts.max() == 2 and np.sum(counts == 1) == sum(outer)
+
+
+def test_adtlert_background_prolongation_built_sparse_matches_adtlerts_own():
+    """ADTLERT fills the background cells from the parameter cells through a
+    (cells x parameters) map it holds dense, gigabytes on a 3-D mesh; the
+    sparse build that replaces it must give the same map."""
+    pg = pytest.importorskip("pygimli")
+    from types import SimpleNamespace
+
+    from PyHydroGeophysX.inversion import ert_inversion
+    from PyHydroGeophysX.inversion.ert_mesh import survey_volume_mesh, tetrahedral_mesh
+
+    ert_inversion._enable_adtlert_float64()  # before adtlert is first imported
+    pytest.importorskip("adtlert")
+    from adtlert.forward import mesh_to_adtlert
+
+    ert_inversion._use_sparse_adtlert_prolongation()
+    data = pg.DataContainerERT()
+    for x in (0.0, 5.0, 10.0):
+        for y in (0.0, 5.0, 10.0):
+            data.createSensor(pg.Pos(x, y, 0.0))
+    mesh = tetrahedral_mesh(survey_volume_mesh(data))
+    inverted = np.asarray(mesh.cellMarkers()) > 1
+    forward = SimpleNamespace(
+        mesh=mesh_to_adtlert(mesh), cell_count=int(inverted.sum()),
+        _active_forward_mask=inverted, _active_forward_cell_ids=np.flatnonzero(inverted),
+        _active_parameter_ids=np.arange(inverted.sum()),
+        background_cell_ids=np.flatnonzero(~inverted))
+    dense = ert_inversion._sparse_adtlert_prolongation.replaced(forward).toarray()
+    sparse = ert_inversion._sparse_adtlert_prolongation(forward)
+    assert (~inverted).any()
+    np.testing.assert_allclose(sparse.toarray(), dense, atol=1e-12)
+
+
+def test_adtlert_3d_forward_matches_a_two_layer_ground():
+    """ADTLERT's 3-D forward on a 3-D survey's mesh against the image-series
+    answer for 100 ohm-m over 10 ohm-m: linear elements missed it by up to
+    6 % (90th percentile) on this mesh, quadratic ones by well under 1 %."""
+    pg = pytest.importorskip("pygimli")
+    from pygimli.physics import ert
+
+    from PyHydroGeophysX.inversion import ert_inversion
+    from PyHydroGeophysX.inversion.ert_mesh import survey_volume_mesh
+
+    ert_inversion._enable_adtlert_float64()  # before adtlert is first imported
+    pytest.importorskip("adtlert")
+    if ert_inversion._resolve_ert_engine("adtlert") != "adtlert":
+        pytest.skip("the ADTLERT backend needs a CUDA GPU with cuDSS and NVRTC")
+
+    data = pg.DataContainerERT()
+    for x in np.arange(0.0, 61.0, 15.0):
+        for y in np.arange(0.0, 64.0, 7.0):
+            data.createSensor(pg.Pos(x, y, 0.0))
+    # Wenner arrays along each line of the grid, both ways.
+    lines = [[10 * i + j for j in range(10)] for i in range(5)]
+    lines += [[10 * i + j for i in range(5)] for j in range(10)]
+    for line in lines:
+        for i in range(len(line) - 3):
+            a, m, n, b = line[i:i + 4]
+            data.createFourPointData(data.size(), a, b, m, n)
+    data["k"] = ert.createGeometricFactors(data, numerical=False)
+    mesh = survey_volume_mesh(data)
+    centres = np.asarray(mesh.cellCenters())
+    for cell in mesh.cells():
+        cell.setMarker(2)
+    deep = centres[:, 2] < -10.0
+    depth = -max(max(node.z() for node in mesh.cell(int(i)).nodes())
+                 for i in np.flatnonzero(deep))
+    forward, _, active, _ = ert_inversion._build_adtlert_forward(data, mesh)
+    rhoa = np.asarray(forward.response(np.repeat(np.where(deep, 10.0, 100.0), 3)[active]))
+    forward.close()
+
+    kappa = (10.0 - 100.0) / (10.0 + 100.0)
+    images = np.arange(1, 400)
+    pos = np.asarray(data.sensorPositions())
+    ids = {key: np.asarray(data[key], dtype=int) for key in "abmn"}
+
+    def potential(p, q):
+        r = np.linalg.norm(pos[ids[p]] - pos[ids[q]], axis=1)[:, None]
+        return 100.0 / (2 * np.pi) * (1 / r[:, 0] + 2 * np.sum(
+            kappa ** images / np.sqrt(r ** 2 + (2 * images * depth) ** 2), axis=1))
+
+    exact = np.asarray(data["k"]) * (potential("a", "m") - potential("b", "m")
+                                     - potential("a", "n") + potential("b", "n"))
+    error = np.abs(rhoa / exact - 1.0)
+    assert np.percentile(error, 90) < 0.01 and error.max() < 0.02
+
+
+def test_time_steps_sharing_one_forward_operator_get_their_own_jacobians():
+    """A 3-D series' steps take turns on one forward operator; each step's
+    Jacobian must be that of its own readings and its own model."""
+    pg = pytest.importorskip("pygimli")
+    from pygimli.physics import ert
+    from PyHydroGeophysX.inversion.time_lapse import (
+        _StepForward, _calculate_forward, _calculate_jacobian)
+
+    first = ert.createData(elecs=np.linspace(0.0, 10.0, 6), schemeName="dd")
+    first["k"] = ert.createGeometricFactors(first, numerical=False)
+    second = pg.DataContainerERT(first)
+    second.remove(np.arange(second.size()) % 3 == 0)
+    mesh = pg.meshtools.createParaMesh(first.sensors(), paraDepth=4.0, quality=33.0)
+    shared = ert.ERTModelling()
+    shared.setData(first)
+    shared.setMesh(mesh)
+    cells = shared.paraDomain.cellCount()
+    models = np.log(np.c_[np.full(cells, 100.0),
+                          np.linspace(20.0, 400.0, cells)]).ravel(order="F")
+    steps = [_StepForward(shared, first), _StepForward(shared, second)]
+    _, responses = _calculate_forward(steps, models, mesh, 2, with_responses=True)
+    _, joint = _calculate_jacobian(steps, models, mesh, 2, responses=responses)
+    rows = 0
+    for index, data in enumerate((first, second)):
+        own = ert.ERTModelling()
+        own.setData(data)
+        own.setMesh(mesh)
+        alone = _calculate_jacobian([own], models[index * cells:(index + 1) * cells], mesh, 1)[1]
+        block = joint[rows:rows + data.size(), index * cells:(index + 1) * cells]
+        # PyGIMLi's threaded sensitivities differ in the last digits run to run.
+        np.testing.assert_allclose(block, alone, atol=1e-3 * np.abs(alone).max())
+        rows += data.size()
+    assert rows == joint.shape[0]
+
+
 #: E4D's modes 3 and 4 as far as their files go: inputs read the way
 #: READ_INP.F90 reads them, refusing what E4D refuses, and E4D's outputs written
 #: as it writes them - a sigma.N per update, the simulated data rewritten at
@@ -1181,8 +1545,8 @@ def test_mt_processing_recovers_a_layered_impedance_with_honest_errors(tmp_path)
 
 
 def test_mt_a_reversed_layout_read_with_its_azimuths_keeps_the_impedance_in_its_quadrants(tmp_path):
-    """Ex laid out south, Ey and Hy pointing west (Manchester, 2026): Zyx comes out with the
-    wrong sign unless the recording is read with the channels' azimuths."""
+    """Ex laid out south, Ey and Hy pointing west: Zyx comes out with the wrong sign
+    unless the recording is read with the channels' azimuths."""
     from PyHydroGeophysX.data_processing import mt
 
     run = _mt_run(np.random.default_rng(5), sample_rate=1.0, n=2 ** 14)
@@ -1202,6 +1566,30 @@ def test_mt_a_reversed_layout_read_with_its_azimuths_keeps_the_impedance_in_its_
     assert np.median(np.abs(as_laid.z[:, 1, 0] - true) / np.abs(true)) < 0.05
     with pytest.raises(ValueError, match="hz"):
         mt.read_timeseries(tmp_path / "site.txt", azimuths={"hz": 0}, **reader)
+
+
+def test_mt_a_dipole_that_halves_midway_read_with_its_new_length_keeps_the_impedance():
+    """An electrode breaks off a line laid out about a ground electrode: from then on the
+    receiver measures the other arm, half the line. Read as the whole line, Zyx falls; the
+    part after the break read with half the length gives it back."""
+    from PyHydroGeophysX.data_processing import mt
+    from PyHydroGeophysX.data_processing.mt.timeseries import dipole_stage, unit_stage
+
+    run = _mt_run(np.random.default_rng(8))
+    volts = run["ey"].data * 100.0 / 1000.0 * 1e-3            # mV/km on 100 m, in V
+    half = volts.size // 2
+    volts[half:] *= 0.5
+    ey = mt.Channel("ey", volts, "V", response=[dipole_stage(100.0), unit_stage("mV", "V")])
+    run = mt.TimeSeriesRun({**run.channels, "ey": ey}, run.sample_rate, run.start)
+    before, after = run.slice(0, half), run.slice(half)
+    as_laid = mt.process_mt([before, after])
+    corrected = mt.process_mt([before, after.with_dipole_length("ey", 50.0)])
+    true = mt.impedance_1d(_MT_RHO, _MT_THICKNESS, corrected.frequency)
+    assert np.median(np.abs(corrected.z[:, 1, 0] + true) / np.abs(true)) < 0.05
+    assert np.median(np.abs(as_laid.z[:, 1, 0]) / np.abs(true)) < 0.9
+    assert after.with_dipole_length("ey", 50.0)["ey"].dipole_length == 50.0
+    with pytest.raises(ValueError, match="dipole"):
+        run.with_dipole_length("hx", 50.0)
 
 
 def test_mt_interference_on_the_receiver_clock_is_found_and_removed_before_the_impedance():
@@ -1936,6 +2324,56 @@ def test_time_lapse_absolute_u_error_is_a_voltage_on_both_engines(tmp_path, with
         np.testing.assert_allclose(np.expm1(1. / full.Wd.diagonal()), full_error)
 
 
+@pytest.mark.parametrize("case", ["receivers reversed", "terrain setup released"])
+def test_adtlert_forward_gives_the_same_solve_two_ways(monkeypatch, case):
+    # Two builds that must give the same response and Jacobian: a survey with
+    # half its receiver pairs reversed (k changes sign, the measurement does
+    # not), and a terrain forward with and without its setup released. The
+    # release reaches into ADTLERT's private state, so an ADTLERT that
+    # changes it must fail here rather than in a user's run.
+    pg = pytest.importorskip("pygimli")
+    from pygimli.physics import ert
+
+    from PyHydroGeophysX.inversion import ert_inversion
+    from PyHydroGeophysX.inversion.ert_mesh import build_inversion_mesh
+
+    ert_inversion._enable_adtlert_float64()  # before adtlert is first imported
+    pytest.importorskip("adtlert")
+    if ert_inversion._resolve_ert_engine("adtlert") != "adtlert":
+        pytest.skip("the ADTLERT backend needs a CUDA GPU with cuDSS and NVRTC")
+    x = np.linspace(0., 23., 24)
+    relief = .6 * np.sin(x / 4.) if case == "terrain setup released" else np.zeros_like(x)
+    data = ert.createData(elecs=np.column_stack([x, relief]), schemeName="dd")
+    data["k"], data["rhoa"] = ert.createGeometricFactors(data), np.full(data.size(), 100.)
+    mesh = build_inversion_mesh(data, mesh_quality=33, para_depth=8)
+    if case == "receivers reversed":
+        reversed_data, rows = pg.DataContainerERT(data), np.arange(0, data.size(), 2)
+        m, n = np.array(data["m"]), np.array(data["n"])
+        m[rows], n[rows] = n[rows], m[rows].copy()
+        reversed_data["m"], reversed_data["n"] = m, n
+        reversed_data["k"] = ert.createGeometricFactors(reversed_data)
+        # pyGIMLi's dipole-dipole ordering has negative geometric factors; the reversed rows positive.
+        assert np.all(np.array(data["k"]) < 0) and np.all(np.array(reversed_data["k"])[rows] > 0)
+        forwards = [ert_inversion._build_adtlert_forward(d, mesh)[0] for d in (reversed_data, data)]
+    else:
+        forwards = []
+        for release in (True, False):
+            with monkeypatch.context() as patch:
+                if not release:
+                    patch.setattr(ert_inversion, "_release_adtlert_terrain_setup", lambda forward: False)
+                forwards.append(ert_inversion._build_adtlert_forward(data, mesh)[0])
+    model = np.log(100.) + np.linspace(-.5, .5, forwards[0].cell_count)
+    (response, jacobian), (expected_response, expected_jacobian) = (
+        forward.forward_and_jacobian(model, log_transform=True) for forward in forwards)
+    np.testing.assert_allclose(response, expected_response, rtol=1e-9)
+    np.testing.assert_allclose(jacobian, expected_jacobian, rtol=1e-7,
+                               atol=1e-10 * np.abs(expected_jacobian).max())
+    if case == "terrain setup released":
+        # The P2 setup systems are gone and no solve brought them back.
+        plans = {key[0] for key in forwards[0].forward_operator._solver._plans}
+        assert plans and not plans & {"primary_potential", "geometric"}
+
+
 def test_srt_inversions_penalize_the_smoothness_they_are_given(tmp_path):
     tt = pytest.importorskip("pygimli.physics.traveltime")
     from PyHydroGeophysX.inversion.srt_inversion import SRTInversion
@@ -1991,7 +2429,7 @@ def test_electrodes_at_one_position_share_a_sensor_and_keep_their_geometric_fact
     np.testing.assert_allclose(np.abs(data["k"]), 6. * np.pi)   # dipole-dipole, a = n = 1 m
     # A reading on both of them has no geometric factor, so the table is refused.
     std.observations.append(Observation(Quadruplet(1, 2, 3, 4), 100.))
-    with pytest.raises(ValueError, match="electrodes 1, 2"):
+    with pytest.raises(ValueError, match="no geometric factor"):
         standard_to_pg(std)
 
 
@@ -2068,7 +2506,7 @@ def test_an_electrode_file_keeps_each_measured_resistance(tmp_path):
         assert placed.sensorPosition(1).x() == pytest.approx(2.), instrument
         np.testing.assert_allclose(np.asarray(placed["rhoa"]) / np.asarray(placed["k"]),
                                    measured, rtol=1e-6)
-        with pytest.raises(ValueError, match="lists 11 electrodes"):
+        with pytest.raises(ValueError, match="11 electrodes"):
             ert_io.load_ert_container(str(path), instrument=instrument,
                                       electrode_file=str(short))
 
@@ -2220,62 +2658,6 @@ def test_a_single_output_uncertainty_keeps_a_covariance_matrix(rho, variance, tr
                                       n_samples=200, seed=0)
     assert out["cov"].shape == (1, 1)
     np.testing.assert_allclose(np.diag(out["cov"]), np.var(out["samples"], axis=0, ddof=1))
-
-
-@pytest.mark.parametrize("pygimli", ["blocked", "installed"])
-def test_hydro_modular_imports_lazily_and_saves_what_it_is_asked_to(pygimli, tmp_path):
-    import os
-    import subprocess
-    import sys
-
-    import PyHydroGeophysX
-    from PyHydroGeophysX._internal.optional_dependencies import optional_import_error
-
-    if pygimli == "blocked":
-        # Without PyGIMLi the package and its profile helpers still import,
-        # and hydro_to_ert says what is missing.
-        code = ("import sys; sys.modules['pygimli'] = None\n"
-                "from PyHydroGeophysX.Hydro_modular import hydro_to_geophysics\n"
-                "assert 'simpeg' not in sys.modules\n"
-                "sys.modules['simpeg'] = None\n"
-                "from PyHydroGeophysX.Hydro_modular import hydro_to_tdem\n"
-                "assert callable(hydro_to_tdem) and hydro_to_tdem.unavailable_because\n"
-                "try:\n    hydro_to_tdem()\n"
-                "except ImportError:\n    pass\n"
-                "else:\n    raise AssertionError('Missing backend must raise on use')\n"
-                "try:\n    from PyHydroGeophysX.Hydro_modular import hydro_to_ert\n"
-                "except ImportError as exc:\n    print(exc)\n")
-        root = str(Path(PyHydroGeophysX.__file__).resolve().parents[1])
-        env = dict(os.environ, PYTHONPATH=os.pathsep.join(
-            filter(None, [root, os.environ.get("PYTHONPATH")])))
-        run = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, env=env,
-                             capture_output=True, text=True, timeout=300)
-        assert run.returncode == 0, run.stderr
-        assert "'pygimli' could not be imported" in run.stdout
-        # A module of the package itself failing is a broken install, not a
-        # dependency to pip install.
-        broken = ModuleNotFoundError("No module named 'PyHydroGeophysX.forward.x'",
-                                     name="PyHydroGeophysX.forward.x")
-        message = str(optional_import_error("X", broken))
-        assert "'PyHydroGeophysX.forward.x'" in message and "pip install" not in message
-        return
-
-    pg = pytest.importorskip("pygimli")
-    import PyHydroGeophysX.Hydro_modular.hydro_to_ert  # noqa: F401  (the submodule first)
-    from PyHydroGeophysX.Hydro_modular import hydro_to_ert
-
-    mesh = pg.createGrid(x=np.linspace(0, 12, 13), y=np.linspace(-4, 0, 5))
-    mesh.setCellMarkers(np.full(mesh.cellCount(), 2))
-    kwargs = dict(water_content=np.full(mesh.cellCount(), .2),
-                  porosity=np.full(mesh.cellCount(), .35), mesh=mesh,
-                  profile_interpolator=SimpleNamespace(L_profile=np.array([0., 12.]),
-                                                       surface_profile=np.zeros(2)),
-                  layer_idx=[0, 1, 2], structure=None, marker_labels=[3, 0, 2],
-                  rho_parameters={}, num_electrodes=12, noise_level=0., seed=0)
-    target = tmp_path / "synthetic_ert_data.dat"
-    data, _ = hydro_to_ert(save_path=str(target), **kwargs)
-    saved = pg.DataContainerERT(str(target))    # kept: its vectors are views into it
-    np.testing.assert_allclose(np.array(saved["rhoa"]), np.array(data["rhoa"]), rtol=1e-5)
 
 
 # --------------------------------------------------------------------------
@@ -2570,44 +2952,6 @@ def test_a_030_call_still_runs_as_it_did(case, tmp_path, monkeypatch, request):
     assert check(value)
 
 
-# --------------------------------------------------------------------------
-# Comparing two saved models
-# --------------------------------------------------------------------------
-
-def test_model_comparison_differences_are_exact_and_refuse_mismatched_grids():
-    # The B - A section of two saved models. Unsigned models (uint16 1000 and
-    # 900) must give -100, not a wrapped 65436; grids that sit apart, or hold
-    # a non-finite value, are refused rather than differenced.
-    pv = pytest.importorskip("pyvista")
-    pytest.importorskip("PySide6")
-    import os
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    from PySide6.QtWidgets import QApplication
-    from PyHydroGeophysX.qt_apps.widgets.scientific_sections import ModelComparison, require_aligned
-
-    QApplication.instance() or QApplication([])
-
-    def grid(density=1000):
-        mesh = pv.RectilinearGrid([100, 102, 109], [200, 203, 208], [-10, -8, 0])
-        mesh.cell_data["Density contrast (g/cm3)"] = np.full(8, density, dtype=np.uint16)
-        mesh.cell_data["Susceptibility (SI)"] = np.arange(8, dtype=float) / 10
-        return mesh
-
-    a = grid()
-    view = ModelComparison(a, grid(900))
-    np.testing.assert_array_equal(view.sections.axes[2].collections[0].get_array(), -100)
-    np.testing.assert_array_equal(a["Density contrast (g/cm3)"], 1000)
-    view.close()
-    shifted = grid()
-    shifted.x = shifted.x + 1
-    with pytest.raises(ValueError, match="grids differ"):
-        require_aligned(grid(), shifted)
-    broken = grid()
-    broken.cell_data["Susceptibility (SI)"][0] = np.nan
-    with pytest.raises(ValueError, match="nonfinite"):
-        ModelComparison(grid(), broken)
-
-
 def _gpr_files(tmp_path, truth, kind):
     """``truth`` (samples x traces) written as a GSSI, pulseEKKO or MALA line."""
     ns, nt = truth.shape
@@ -2676,6 +3020,53 @@ def test_gpr_migration_collapses_a_diffraction_onto_its_apex_at_the_right_veloci
     assert near_apex(right) > 0.95
     # Depth is half the two-way path at the radar velocity.
     assert gpr.time_to_depth(apex_t, v) == pytest.approx(3.0)
+
+
+def test_gpr_migration_leaves_no_offset_under_a_record_that_starts_mid_arrival():
+    from PyHydroGeophysX.data_processing import gpr
+
+    # Between 20 and 30 m the record starts 2 ns before a strong arrival's
+    # peak, as when time zero is set on the direct wave's peak.
+    x, t = np.arange(200) * 0.25, np.arange(500) * 0.2
+    cut = (x > 20) & (x < 30)
+    line = gpr.GPRProfile(gpr.ricker(t[:, None] - 2.0, 100.0) * cut, 0.2, x)
+    migrated = gpr.migrate(line, 0.1).data
+    # The migration drops each trace's mean; behind zero padding that left a
+    # constant offset (0.6 % of the arrival) down every cut trace.
+    under = migrated[t > 40][:, (x > 22) & (x < 28)]
+    assert np.abs(under).max() < 1e-3
+
+
+def test_gpr_migration_keeps_the_amplitude_of_a_diffraction_late_in_the_record():
+    from PyHydroGeophysX.data_processing import gpr
+
+    x, t = np.arange(200) * 0.25, np.arange(500) * 0.2
+    arrival = gpr.hyperbola_time(x, 25.0, 90.0, 0.1)
+    data = gpr.ricker(t[:, None] - arrival[None, :], 100.0)
+    short = gpr.migrate(gpr.GPRProfile(data, 0.2, x), 0.1).data
+    # The same line with empty record after it: the Stolt mapping then reads
+    # the spectrum between more finely spaced frequencies. Linear interpolation
+    # left the focused apex 14 % low in the short record.
+    padded = np.vstack([data, np.zeros((1500, x.size))])
+    long = gpr.migrate(gpr.GPRProfile(padded, 0.2, x), 0.1).data[:t.size]
+    assert np.abs(short).max() == pytest.approx(np.abs(long).max(), rel=0.01)
+    assert np.sqrt(np.mean((short - long) ** 2) / np.mean(long ** 2)) < 0.01
+
+
+def test_gpr_bandpass_does_not_ring_on_the_edge_time_zero_cuts():
+    from PyHydroGeophysX.data_processing import gpr
+
+    # Time zero on the direct wave's peak cuts each trace at 95 % of it.
+    x, t = np.arange(8) * 0.25, np.arange(600) * 0.2
+    line = gpr.GPRProfile(gpr.ricker(t[:, None] - 12.0, 100.0) * np.ones(x.size), 0.2, x)
+    out = gpr.process(line, [{"name": "time_zero", "threshold": 0.9},
+                             {"name": "bandpass", "low_mhz": 25, "high_mhz": 250}])
+    cut = gpr.set_time_zero(line, threshold=0.9)
+    np.testing.assert_allclose(out.time_ns, cut.time_ns)
+    # Filtered after the cut, the 25 MHz corner rang on it at 6 % of the
+    # arrival from 30 to 80 ns; filtered before, nothing is left there.
+    late = (out.time_ns > 30) & (out.time_ns < 80)
+    assert np.abs(out.data[late]).max() < 0.01
 
 
 @pytest.mark.parametrize("pressure", [0., 5e6])

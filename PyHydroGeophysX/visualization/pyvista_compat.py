@@ -1,7 +1,7 @@
 """Shared PyVista / PyVistaQt setup used by the 3D viewers.
 
-Factored out of the Mesh 3D module so the inversion model viewer can reuse the
-same VTK shim and the same offscreen guard.
+Used by both the Mesh 3D module and the inversion model viewer, so they share
+one VTK shim and one offscreen guard.
 """
 
 from __future__ import annotations
@@ -25,6 +25,32 @@ def ensure_vtk_matplotlib_shim() -> None:
     except Exception:  # noqa: BLE001 - missing optional submodule; provide a stub
         sys.modules["vtkmodules.vtkRenderingMatplotlib"] = types.ModuleType(
             "vtkmodules.vtkRenderingMatplotlib")
+
+
+def pygimli_to_pyvista(mesh: Any) -> Any:
+    """A PyGIMLi mesh as a PyVista grid, its cell markers as ``Marker``.
+
+    Through PyGIMLi's own VTK writer, which is much faster on a large volume
+    than building the grid cell by cell in Python. Holds no Qt object, so it
+    can run off the UI thread.
+    """
+    import shutil
+    import tempfile
+
+    import numpy as np
+
+    ensure_vtk_matplotlib_shim()
+    import pyvista as pv
+
+    folder = tempfile.mkdtemp(prefix="phgx_mesh_")
+    try:
+        path = os.path.join(folder, "mesh.vtk")
+        mesh.exportVTK(path)
+        grid = pv.read(path)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+    grid.cell_data["Marker"] = np.asarray(mesh.cellMarkers(), dtype=int)
+    return grid
 
 
 def try_import_pyvista() -> Tuple[bool, Optional[Any], Optional[Any], str]:

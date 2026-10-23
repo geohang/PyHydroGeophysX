@@ -1,7 +1,7 @@
 """Line inversion of 1D EM soundings, and the amplitude calibration it can start from.
 
 :func:`invert_line` inverts a line of FDEM or TDEM soundings on one shared layer
-grid: each sounding on its own, in the older block-coordinate passes, or as one
+grid: each sounding on its own, in block-coordinate passes, or as one
 laterally constrained system (:mod:`~PyHydroGeophysX.inversion.em1d_lci`). The
 single-sounding solvers it calls are in :mod:`~PyHydroGeophysX.inversion.em1d`,
 the readers in :mod:`~PyHydroGeophysX.data_processing.em1d`.
@@ -240,10 +240,10 @@ def _fdem_halfspace_amplitude(geom: Dict[str, Any], frequencies: np.ndarray,
     """``|H|`` of a half-space at ``resistivity``, one value per frequency.
 
     The solver returns one complex value per frequency and field, frequency
-    first. Cutting that to ``frequencies.size``, as this used to, read a "both"
-    response - [secondary(f1), total(f1), secondary(f2), ...] - as the band
-    itself, mixing the two fields and dropping its upper half. It is reshaped
-    as :func:`PyHydroGeophysX.forward.em1d.fdem_forward` does instead.
+    first. Cutting that to ``frequencies.size`` would read a "both" response -
+    [secondary(f1), total(f1), secondary(f2), ...] - as the band itself, mixing
+    the two fields and dropping its upper half, so the size is checked instead
+    (see :func:`PyHydroGeophysX.forward.em1d.fdem_forward`).
     """
     _one_fdem_field(geom)
     from PyHydroGeophysX.forward.fdem_forward import FDEMForwardModeling
@@ -415,76 +415,36 @@ def calibrate_to_reference(path: str, method: str, geom: Dict[str, Any], inv: Di
 #: Geometry a station measures for itself rather than inheriting from the survey.
 #:
 #: A TEMcompany project records the transmitter-receiver distance and the two
-#: heights per station. Only the distance actually varies on a walking ground
-#: system, and it varies by more than the nominal layout suggests: one survey
-#: spans 11.58 to 17.63 m against a spec that states 15.0 m for every station.
-#: It is a per-station quantity.
+#: heights per station. Only the distance varies on a walking ground system,
+#: and it can differ noticeably from the nominal layout distance the system
+#: spec states for every station.
 _STATION_GEOMETRY_KEYS = ("tx_rx_sep", "height", "rx_height", "tx_height")
 
-#: Distance bin the per-station transmitter-receiver separation is rounded to.
-#:
-#: Only used when ``per_station_geometry`` is switched on; see
-#: :func:`_station_geometry` for why that is off by default. A quarter of a
-#: metre is 1.7 percent of a typical 15 m offset, which is well inside what the
-#: response can tell apart, and it takes one survey's 794 distinct distances
-#: down to 25.
 #: Metres to round a station's measured transmitter-receiver distance to, or
 #: zero to model the distance the file records.
 #:
-#: Zero is the default. Rounding existed to keep the forward-operator cache
-#: small, and it is no longer needed for that: a warmed operator is about 50 kB,
-#: so even a survey presenting 1,600 distinct ones costs under 80 MB, and the
-#: chunked scheduling in
+#: Zero (no rounding) is the default. A positive value reduces the number of
+#: distinct forward operators a line needs, at the cost of modelling an offset
+#: the instrument did not report. Each distinct distance costs one forward
+#: operator of about 50 kB, and the chunked scheduling in
 #: :func:`~PyHydroGeophysX.inversion.em1d_lci._map_soundings` keeps each worker
-#: to its own share in any case.
-#:
-#: The rounding was not free. Half a bin at 16.6 m moved the modelled response
-#: by 0.4 percent at the median and 1.8 percent at its worst gate, and at 30.5 m
-#: by 2.8 percent at its worst. Those are small next to the gate errors, and
-#: they are also an offset the instrument did not report.
+#: to its own share.
 STATION_DISTANCE_BIN_M = 0.0
 
 
 def _station_geometry(geom: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
     """Overlay one station's measured geometry on the survey-wide dictionary.
 
-    On by default. The project records the distance per station, and a walking
-    ground survey genuinely records a different one at nearly every station: 794
-    distinct values over 929 stations on one line, spanning 11.58 to 17.63 m
-    against a nominal 15.0.
+    On by default (``per_station_geometry``). The project records the distance
+    per station, and a walking ground survey records a different one at nearly
+    every station, so the survey-wide nominal distance would misstate the
+    modelled response wherever a station departs from it. Set
+    ``per_station_geometry`` to false to model the nominal geometry of the
+    system spec for every station, as some TEM processing programs do.
 
-    It was briefly off, because with the earlier forward path an operator took
-    about fourteen seconds to build and a distinct distance per station turned a
-    line inversion from minutes into hours. The native-order instrument chain
-    removed that: SimPEG now models a compact step response, a build costs about
-    twenty milliseconds, and the reason to switch it off went with it.
-
-    It is also worth more than an earlier measurement suggested, because that
-    measurement predated the instrument model above. Replacing the measured
-    column with the nominal 15 m moves one survey's low-moment response by 1.4
-    percent at the median and 18 percent at its worst gate.
-
-    It is also where this package and TEMimage part ways. TEMimage 3 (Lupus
-    3.0.2) hands its solver the spec's nominal ``RxCoilXYZPos`` for every
-    station, as the run's stored ``InversionInput`` shows. Given that same 15 m,
-    this forward reproduces TEMimage's stored ``ForwardData`` for TEMimage's own
-    models to a median 0.09 (LM) and 0.15 (HM) data errors over 627 stations and
-    12,763 gates, the largest systematic gap 2 percent; given each station's own
-    distance it differs by a median 2.0 data errors at the low moment, almost
-    all of it at the early gates. The measured distance is the right one. On
-    that survey an inversion with it fits equally well at every station
-    (median chi-squared 0.65 to 0.93 whatever the station's distance), while
-    with the nominal 15 m the fit falls apart as the distance departs from it:
-    chi-squared 0.77 within half a metre, 5.7 at 2 to 4 m and 16 beyond 4 m,
-    and TEMimage's own data fit worsens the same way, 1.3 to 3.9 (correlation
-    0.61 with the departure). The distance also accounts for most of the
-    difference between the two programs' models: 0.20 decades at the median
-    where the station is 2 m or more off nominal, 0.10 where it is within 1 m,
-    and 0.10 in both groups once this package is given the nominal distance too.
-
-    ``tx_rx_sep`` is passed through as the file records it. It used to be
-    rounded to :data:`STATION_DISTANCE_BIN_M`, which now defaults to zero; set
-    ``tx_rx_sep_bin`` to a positive number of metres to round again.
+    ``tx_rx_sep`` is passed through as the file records it unless
+    ``tx_rx_sep_bin`` (default :data:`STATION_DISTANCE_BIN_M`, zero) is a
+    positive number of metres, in which case it is rounded to that bin.
 
     A value the station did not record, or recorded as non-positive, leaves the
     survey-wide entry alone. That matters for ``tx_rx_sep``, where zero is how a
@@ -526,9 +486,9 @@ def _with_sensor_height(geom: Dict[str, Any], height: Any) -> Dict[str, Any]:
     heights silently ignored while looking as though they were applied.
 
     The loop and the coil end up at the same height, which is what a single
-    number can say. Every TEMcompany project seen so far records them equal
-    anyway; a survey that does not should pass its own geometry rather than one
-    height per station.
+    number can say. TEMcompany projects normally record them equal; a survey
+    that does not should pass its own geometry rather than one height per
+    station.
     """
     try:
         value = float(height)
@@ -589,9 +549,7 @@ def _best_starting_resistivity(blocks, n_layers: int, workers: int, *,
     Gauss-Newton step is built from a linearization about the current model, and
     from a decade and a half away that linearization describes a different
     problem; the line search then shortens the step, the run spends its budget
-    crossing the gap, and where it stops depends on where it started. On one
-    ground survey the project's own 40 ohm-m default begins at a chi-squared of
-    3.1e6 while the best half-space begins at 164.
+    crossing the gap, and where it stops depends on where it started.
 
     Cheap because it runs after the blocks are built: the first candidate warms
     the forward operators the inversion is about to use anyway, and every
@@ -599,34 +557,20 @@ def _best_starting_resistivity(blocks, n_layers: int, workers: int, *,
     if nothing can be evaluated, so a forward that will not run here fails in
     the inversion rather than in the search.
 
-    A half-space is a poor start for a layered conductive site, and two richer
-    searches were built, measured and removed. Both are recorded here because
-    neither failure is visible from the idea.
+    A half-space is a poor start for a layered conductive site, but two richer
+    searches are not used here:
 
-    **Layered candidates, ranked the same way, changed nothing.** On one
-    conductive site running about 126, 27, 300 and 21 ohm-m with depth, a
-    22.7 ohm-m half-space still scored best on initial misfit, 117 against 145
-    for the two- and three-layer shapes, and the run ended identically. Initial
-    misfit says how close a model already is, which on a multi-minimum problem
-    is not where the solver goes from it: after four iterations those same
-    layered candidates reached 37.6 while the half-space reached 46.2.
+    - Ranking layered candidates by initial misfit. Initial misfit says how
+      close a model already is, which on a multi-minimum problem is not where
+      the solver goes from it, so the ranking does not predict which start
+      ends in the better minimum.
+    - Giving the best few candidates a short trial inversion. Trials on the
+      full line cost more than the inversion they prepare, and trials on a
+      sampled subset rank the candidates differently from the full line, so
+      the choice can be worse than the half-space.
 
-    **Deciding by trial worked where it was aimed and broke everything else.**
-    Ranking cheaply and giving the best four a short run found the better
-    minimum: that survey went from DataFit 3.39 to 2.83, and its median deep
-    resistivity from a tenth of the reference model's to a half. But full-line
-    trials cost more than the inversion they prepare, running past ten minutes
-    on a 518-station line against a forty-second run. Sampling them to thirty
-    soundings restored the cost and destroyed the answer, because a sampled
-    ranking is not the full-line ranking: the same survey then chose the
-    half-space again and lost the gain, while another regressed from
-    chi-squared 1.6 to 9.5. A search that helps one survey and ruins another is
-    worse than no search.
-
-    What does work, on the same survey, is starting from an existing model:
-    DataFit 1.79, better than the reference's own 1.98. Until a search can be
-    made both cheap and representative of the whole line, pass
-    ``initial_models`` rather than extending the scan here.
+    To start from a better model, pass ``initial_models`` rather than
+    extending the scan here.
     """
     from PyHydroGeophysX.inversion.em1d_lci import (
         _forward_line, _map_soundings, _misfit, _worker_pool, resolve_worker_count,
@@ -767,7 +711,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
         what is being minimized. See
         :mod:`PyHydroGeophysX.inversion.em1d_lci`.
     ``sequential``
-        The older block-coordinate passes: each station is re-inverted on its
+        Block-coordinate passes: each station is re-inverted on its
         own against the distance-weighted model its neighbours had at the end of
         the previous pass. Kept because it needs no analytic Jacobian, so it
         still runs against a forward operator that cannot supply one.
@@ -805,8 +749,8 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
 
     ``lines`` restricts the run to the named survey lines, so a line whose data
     is thinner than the rest can be given its own settings instead of one set
-    having to suit every line. Passing ``None`` runs from the first station, as
-    before. The lateral constraint already groups by line, so a line inverted on
+    having to suit every line. Passing ``None`` runs from the first station.
+    The lateral constraint already groups by line, so a line inverted on
     its own is tied exactly as it would be inside a whole-survey run; what
     changes is which settings reach it, and that the other lines are not
     re-solved. ``max_soundings`` then counts within the selection.
@@ -1186,8 +1130,8 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
                     position=float(pos_lci[s]), line=int(line_numbers[s]),
                     label=f"sounding {s + 1}")
                 # Checked here because the coupled solve cannot: one station
-                # with a NaN gate made every residual non-finite and the whole
-                # line failed, where it is that one station that cannot be fitted.
+                # with a NaN gate would make every residual non-finite and fail
+                # the whole line, where only that station cannot be fitted.
                 values = np.concatenate([np.ravel(block.dobs), np.ravel(block.uncertainty)])
                 bad = int(np.count_nonzero(~np.isfinite(values)))
                 if bad or not np.size(block.dobs):
@@ -1615,9 +1559,7 @@ def invert_line(path: str, method: str, geom: Dict[str, Any], inv: Dict[str, Any
     def reach(s: int):
         """One station's cumulated sensitivity and depth of investigation, or None.
 
-        On the worker pool, and the Jacobian once: this loop ran on one
-        thread and computed each station's Jacobian twice, which on a
-        627-station TEM2Go survey was about two minutes after the inversion.
+        Runs on the worker pool and computes each station's Jacobian once.
         """
         row, block = surface_models[s], doi_blocks.get(s)
         if block is None or not np.all(np.isfinite(row)):

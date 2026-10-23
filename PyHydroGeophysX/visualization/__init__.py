@@ -7,7 +7,7 @@ from .axis_units import (
     set_length_unit,
 )
 
-# --- Multi-method panels (existing) ---
+# --- Multi-method panels ---
 from .multi_method import (
     plot_cross_section_with_wells,
     plot_hydro_vs_geophys,
@@ -70,7 +70,7 @@ __all__ = [
     "get_length_unit",
     "set_length_unit",
     "length_unit",
-    # Multi-method (existing)
+    # Multi-method
     "plot_multi_method_panel",
     "plot_hydro_vs_geophys",
     "plot_cross_section_with_wells",

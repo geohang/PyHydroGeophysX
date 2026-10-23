@@ -12,7 +12,7 @@ from scipy.sparse import block_diag as sparse_block_diag
 from scipy.sparse import csr_matrix, diags
 from scipy.sparse.linalg import lsqr
 
-from ..forward.ert_forward import ertforandjac2, ertforward2
+from ..forward.ert_forward import check_resistivity_model, ertforandjac2, ertforward2
 from ..solvers.linear_solvers import (
     block_tridiagonal_cholesky_solve,
     generalized_solver,
@@ -117,6 +117,32 @@ class _BlockDiagonal:
 # ---------------------------------------------------------------------------
 # calculate jacobian
 # ---------------------------------------------------------------------------
+class _StepForward:
+    """One time step's turn on a forward operator every step shares.
+
+    A 3-D forward operator holds a gigabyte or more of refined mesh and
+    potentials, so a 3-D series keeps one and each step sets its own data on
+    it before it solves. The operator's potentials are then those of the last
+    step solved, so a Jacobian is never built on a response solved earlier
+    (``_calculate_jacobian`` solves again).
+    """
+
+    def __init__(self, shared, data):
+        self._shared = shared
+        self._data = data
+
+    def _turn(self):
+        if getattr(self._shared, "_phgx_turn", None) is not self:
+            self._shared.setData(self._data)
+            self._shared._phgx_turn = self
+        return self._shared
+
+    def __getattr__(self, name):
+        if name.startswith("__"):
+            raise AttributeError(name)
+        return getattr(self._turn(), name)
+
+
 def _calculate_jacobian(fwd_operators, model, mesh, size, as_sparse: bool = False,
                         dtype=np.float64, responses=None, with_responses: bool = False,
                         as_blocks: bool = False):
@@ -147,6 +173,8 @@ def _calculate_jacobian(fwd_operators, model, mesh, size, as_sparse: bool = Fals
     model_reshaped = np.reshape(model, (-1, size), order='F')
     obs = []
     linear = []
+    if responses is not None and isinstance(fwd_operators[0], _StepForward):
+        responses = None   # the shared operator holds the last step's potentials
 
     jac_blocks = []
 
@@ -316,31 +344,29 @@ class TimeLapseERTInversion(InversionBase):
             # so the temporal constraint penalizes the rate of change rather than
             # the raw difference. Normalized by the median interval, so an evenly
             # sampled series is unaffected and 'alpha' keeps its meaning; pass
-            # 'uniform' to reproduce a run from before this existed.
+            # 'uniform' to weight every pair alike.
             'temporal_weighting': 'interval',
             'temporal_weight_limit': DEFAULT_TEMPORAL_LIMIT,
             # 'H' below is the Gauss-Newton normal matrix, which is square and
-            # symmetric positive definite, so it wants a symmetric solver. The
-            # old 'cgls' default is a least-squares method: on this matrix it
-            # solves 'H^T H d = H^T (-g)' and so works with the square of the
-            # condition number, which at a realistic 4D size leaves the update
-            # far short of the Newton step and makes the result look insensitive
-            # to lambda. Pass method='cgls' to reproduce a run from before this
-            # became the default.
+            # symmetric positive definite, so it wants a symmetric solver. A
+            # least-squares method such as 'cgls' would solve
+            # 'H^T H d = H^T (-g)' on this matrix and so work with the square
+            # of the condition number, which at a realistic 4D size leaves the
+            # update far short of the Newton step and makes the result look
+            # insensitive to lambda.
             'method': 'spd_cholesky',
             'absoluteError': 0.0001,
             'relativeError': 0.05,
-            # Cooling is off by default. It used to be 0.8, which moved lambda on
-            # every iteration and left the final chi2 attributable to no single
+            # Cooling is off by default: a rate below 1 moves lambda on every
+            # iteration and leaves the final chi2 attributable to no single
             # value; the caller relaxes lambda between converged runs instead.
             'lambda_rate': 1.0,
             'lambda_min': 1.0,
             'inversion_type': 'L2',  # 'L1', 'L2', or 'L1L2'
             'model_constraints':(0.0001,10000.0),  # min and max resistivity
             'save_memory': False,  # float32 Jacobian; see the docstring
-            # Stopping. Both were hard-coded (chi2 < 1.5, dPhi < 0.01 after 5
-            # iterations); a lambda sweep needs them configurable so a flattened
-            # misfit means the lambda is spent, not that the budget ran out.
+            # Stopping. Both are configurable: a lambda sweep needs a flattened
+            # misfit to mean the lambda is spent, not that the budget ran out.
             'target_chi_squared': 1.0,
             'convergence_tolerance': 0.01,
             'min_iterations': 5,
@@ -439,18 +465,22 @@ class TimeLapseERTInversion(InversionBase):
                     raise RuntimeError(
                         f"Dataset {fname}: cannot estimate error without 'r' or 'k'.")
                 err_i = rel_e + abs_e / np.maximum(r_abs, 1e-10)
-                # absoluteUError is volts, not ohms, and used to be ignored here
-                # while the ADTLERT windowed path read it as an ohm floor.
+                # absoluteUError is volts, not ohms, so it enters through
+                # _voltage_error rather than as an ohm floor.
                 err_i = err_i + _voltage_error(
                     dataert, self.parameters.get('absoluteUError', 0.0),
                     float(self.parameters.get('absoluteCurrent', 0.1)))
                 dataerr.append(np.clip(err_i, 0.01, 0.50))
             
-            # Create forward operator
-            fwd_operator = ert.ERTModelling()
-            fwd_operator.setData(dataert)
-            fwd_operator.setMesh(self.mesh)
-            self.fwd_operators.append(fwd_operator)
+            # Create forward operator; a 3-D series' steps share one.
+            if int(self.mesh.dim()) == 3 and self.fwd_operators:
+                self.fwd_operators.append(_StepForward(self.fwd_operators[0]._shared, dataert))
+            else:
+                fwd_operator = ert.ERTModelling()
+                fwd_operator.setData(dataert)
+                fwd_operator.setMesh(self.mesh)
+                self.fwd_operators.append(_StepForward(fwd_operator, dataert)
+                                          if int(self.mesh.dim()) == 3 else fwd_operator)
         
         # Stack all data
         rhos_temp = np.concatenate(rhos)
@@ -464,15 +494,12 @@ class TimeLapseERTInversion(InversionBase):
         # Data error and weighting matrix
         err_temp = np.concatenate(dataerr)
         data_weights = (1.0 / np.log(err_temp + 1)).astype(self.dtype, copy=False)
-        # Wd is diagonal by construction, so keep it diagonal on both paths.
-        # The dense branch used to build a D-by-D array to hold D numbers and
-        # then square it with a full matmul. At D = 6000 that is 0.27 GB and
-        # 1.7 s, and it leaves 'Jr.T @ Wd_sq @ Jr' costing O(D^2 P) every
-        # Gauss-Newton iteration rather than O(D P): measured 0.512 s against
-        # 0.115 s at D = 6000, P = 1200, for an identical result. At a realistic
-        # 4D size, D = 20000, the array alone would be 3.0 GB. Every use of Wd
-        # below is .dot, .T or @, all of which a scipy diagonal supports, so no
-        # call site changes. Rd, Rs and Rt were already built with diags().
+        # Wd is diagonal by construction, so keep it diagonal on both paths. A
+        # dense D-by-D array would hold only D numbers, cost D^2 memory (3.0 GB
+        # at a realistic 4D size, D = 20000) and make 'Jr.T @ Wd_sq @ Jr' cost
+        # O(D^2 P) every Gauss-Newton iteration rather than O(D P). Every use
+        # of Wd below is .dot, .T or @, all of which a scipy diagonal supports.
+        # Rd, Rs and Rt are built with diags() as well.
         self.Wd = diags(data_weights, dtype=self.dtype)
         self.Wd_sq = self.Wd.multiply(self.Wd).astype(self.dtype, copy=False)
         
@@ -490,10 +517,10 @@ class TimeLapseERTInversion(InversionBase):
         self._WmTWm_block = None
 
         # Sparse in either memory mode. Wm and Wt only ever multiply vectors -
-        # the normal matrix is built from the blocks above - and the dense mode
-        # used to store them dense: (N C) x (N n) and (N - 1) n x N n, almost
-        # all zeros. At the 15000 unknowns below which the studio keeps the
-        # dense mode that was 5.6 GB, and every product with them paid for it.
+        # the normal matrix is built from the blocks above - and stored dense
+        # they would be (N C) x (N n) and (N - 1) n x N n, almost all zeros:
+        # 5.6 GB at the 15000 unknowns below which the studio keeps the dense
+        # mode, with every product paying for it.
         self.Wm = sparse_block_diag([self._Wm_block] * self.size, format="csr", dtype=self.dtype)
 
         # Create temporal regularization matrix. One weight per adjacent pair,
@@ -652,10 +679,10 @@ class TimeLapseERTInversion(InversionBase):
         # The median resistivity of each time step, taken from the apparent
         # resistivities the inversion fits (self.rhos1, stacked survey by
         # survey, rebuilt from r * k where needed): the homogeneous start model,
-        # and the background of the a-priori model when there are zones. This
-        # used to test hasattr(dataset, 'rhoa'), which is always False for a
-        # DataContainerERT (its tokens are not attributes), so every survey
-        # started from 100 ohm-m.
+        # and the background of the a-priori model when there are zones. The
+        # data are read from the stacked vector rather than with
+        # hasattr(dataset, 'rhoa'), which is always False for a DataContainerERT
+        # (its tokens are not attributes).
         sizes = [int(d.size()) for d in self.datasets]
         per_survey = np.split(np.asarray(self.rhos1, dtype=float).ravel(),
                               np.cumsum(sizes)[:-1])
@@ -755,8 +782,8 @@ class TimeLapseERTInversion(InversionBase):
         model_moved = False
         # What the forward operators last solved: (log model, linear responses,
         # whether the Jacobians followed). The line search solves every survey
-        # for the model it accepts, and each iteration used to solve them all
-        # again before building the Jacobians. pyGIMLi's createJacobian reads
+        # for the model it accepts, and the next iteration reuses those solves
+        # when it builds the Jacobians. pyGIMLi's createJacobian reads
         # the potentials of an operator's last response() without checking the
         # model, so the solves are reused only while this record holds.
         solved = None
@@ -1025,10 +1052,10 @@ class TimeLapseERTInversion(InversionBase):
                 best_mr = mr.copy()
                 best_f = ftot
                 
-                # One line search for every norm. L1L2 used to take the full step
-                # unchecked; it still does whenever that step lowers the objective,
-                # which is the first trial. Its IRLS weights are those of this
-                # iteration, so the L1 form of the objective below is its own.
+                # One line search for every norm. L1L2 takes the full step
+                # whenever that step lowers the objective, which is the first
+                # trial. Its IRLS weights are those of this iteration, so the L1
+                # form of the objective below is its own.
                 for iarm in range(20):
                     mr1 = mr + mu_LS * d_mr
                     mr1 = np.clip(mr1, min_mr, max_mr)
@@ -1080,10 +1107,10 @@ class TimeLapseERTInversion(InversionBase):
                         Lambda *= self.parameters['lambda_rate']
                 model_moved = success
                 if not success:
-                    # No trial lowered the objective. This used to take a fixed
-                    # 0.01 step down the gradient regardless, which could raise
-                    # it; the model stays instead. With the model and weights
-                    # unchanged, the next L2 or L1 iteration would repeat this one
+                    # No trial lowered the objective. A fixed step down the
+                    # gradient could raise it, so the model stays. With the
+                    # model and weights unchanged, the next L2 or L1 iteration
+                    # would repeat this one
                     # exactly - Jacobians and all - so the misfit has stopped
                     # changing and the loop ends. L1L2 re-weights each iteration,
                     # so it tries again.
@@ -1108,8 +1135,8 @@ class TimeLapseERTInversion(InversionBase):
         
         # Every row of Err_tot is scored before that iteration's update, so when
         # the loop ends on its iteration cap the last row, meta['chi2'] and
-        # chi2_history described the model from before the final step, not the
-        # one returned. Score the returned model the same way the loop does.
+        # chi2_history would describe the model from before the final step, not
+        # the one returned. Score the returned model the same way the loop does.
         iterations_run = len(Err_tot)
         if model_moved:
             if solved is not None and np.array_equal(solved[0], mr):
@@ -1133,7 +1160,8 @@ class TimeLapseERTInversion(InversionBase):
         # Reshape to (cells, timesteps)
         final_model = np.reshape(mr, (-1, self.size), order='F').astype(self.dtype, copy=False)
         final_model = np.exp(final_model).astype(self.dtype if self.use_sparse else np.float64, copy=False)
-        
+        check_resistivity_model(final_model, name="final resistivity model")
+
         # Compute coverage for middle time step. Its operator usually holds this
         # model's solve already, and its Jacobian when the loop stopped at the
         # start of an iteration; they are the same only if the model handed to

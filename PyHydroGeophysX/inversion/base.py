@@ -75,6 +75,9 @@ class InversionResult:
         self.final_model: Optional[np.ndarray] = None
         self.predicted_data: Optional[np.ndarray] = None
         self.coverage: Optional[np.ndarray] = None
+        # Per-cell standard deviation of the log model, when the inversion
+        # computed it (ERTInversion with posterior_std=True).
+        self.model_log_std: Optional[np.ndarray] = None
         self.mesh: Optional[pg.Mesh] = None
         self.iteration_models: List[np.ndarray] = []
         self.iteration_data_errors: List[np.ndarray] = []
@@ -111,6 +114,7 @@ class InversionResult:
             'final_model': self.final_model,
             'predicted_data': self.predicted_data,
             'coverage': self.coverage,
+            'model_log_std': getattr(self, 'model_log_std', None),
             'iteration_models': self.iteration_models,
             'iteration_data_errors': self.iteration_data_errors,
             'iteration_chi2': self.iteration_chi2,
@@ -125,9 +129,9 @@ class InversionResult:
             try:
                 _save_mesh(self.mesh, mesh_specific_filename)
                 # Record the name relative to the pickle, which sits in the same
-                # folder. The path as given (e.g. results/run.bms) was joined
+                # folder. A path as given (e.g. results/run.bms) would be joined
                 # onto the pickle's folder again on load, giving
-                # results/results/run.bms, so the mesh never came back.
+                # results/results/run.bms, so the mesh would not be found.
                 data_to_save['mesh_file'] = os.path.basename(mesh_specific_filename)
                 print(f"Mesh saved to: {mesh_specific_filename}")
             except Exception as e:
@@ -190,6 +194,7 @@ class InversionResult:
         result_instance.final_model = loaded_data.get('final_model')
         result_instance.predicted_data = loaded_data.get('predicted_data')
         result_instance.coverage = loaded_data.get('coverage')
+        result_instance.model_log_std = loaded_data.get('model_log_std')
         result_instance.iteration_models = loaded_data.get('iteration_models', [])
         result_instance.iteration_data_errors = loaded_data.get('iteration_data_errors', [])
         result_instance.iteration_chi2 = loaded_data.get('iteration_chi2', [])
@@ -331,7 +336,6 @@ class TimeLapseInversionResult(InversionResult):
                                          for the corresponding timestep's model.
         all_chi2 (List[Any]): A list where each element is a list of chi-squared values
                                       per iteration for the inversion of that specific timestep or window.
-                                      (Note: Original was List[float], if chi2 is per window, might need adjustment)
     """
     
     def __init__(self):
@@ -410,6 +414,7 @@ class TimeLapseInversionResult(InversionResult):
         result_instance.final_model = loaded_data.get('final_model')
         result_instance.predicted_data = loaded_data.get('predicted_data')
         result_instance.coverage = loaded_data.get('coverage')
+        result_instance.model_log_std = loaded_data.get('model_log_std')
         result_instance.iteration_models = loaded_data.get('iteration_models', [])
         result_instance.iteration_data_errors = loaded_data.get('iteration_data_errors', [])
         result_instance.iteration_chi2 = loaded_data.get('iteration_chi2', []) # Base chi2 list

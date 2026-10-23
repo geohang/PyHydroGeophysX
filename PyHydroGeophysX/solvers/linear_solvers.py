@@ -160,11 +160,10 @@ class StackedSystem(splinalg.LinearOperator):
 def _info(*args: Any) -> None:
     """Emit solver progress on stderr.
 
-    The verbose branches below used to call ``pg.info`` even though pygimli is
-    never imported here, so every one of them raised ``NameError`` the moment a
-    caller passed ``verbose=True``. This module is numpy/scipy only, so it must
-    not pull in a heavy optional backend just to log. stderr keeps stdout free
-    for the machine-readable output of generated workflow scripts.
+    The verbose branches below log through this function rather than
+    ``pg.info``. This module is numpy/scipy only, so it must not pull in a
+    heavy optional backend just to log. stderr keeps stdout free for the
+    machine-readable output of generated workflow scripts.
     """
     print(*args, file=sys.stderr)
 
@@ -187,7 +186,7 @@ def _scipy_lsmr_solve(A, b, maxiter=400, tol=1e-8, damp=0.0, **kwargs):
     LSMR is mathematically equivalent to applying MINRES to the normal
     equations and converges faster than LSQR for ill-conditioned systems.
     LSMR takes a dense array, a sparse matrix or a ``LinearOperator`` as it
-    is; a dense system used to be copied into CSR first, 1.5 times its size.
+    is, so a dense system is not copied into CSR first (1.5 times its size).
     """
     b_flat = np.asarray(b, dtype=float).ravel()
     result = splinalg.lsmr(A, b_flat, atol=tol, btol=tol, maxiter=maxiter, damp=damp)
@@ -212,9 +211,9 @@ def _precond_lsmr_solve(A, b, maxiter=400, tol=1e-8, damp=0.0, **kwargs):
     b_flat = np.asarray(b, dtype=float).ravel()
 
     # LSMR's own damp would act on the scaled unknowns y = D x, i.e. penalise
-    # damp^2 ||D x||^2, so the preconditioner changed the answer (0.21 away
-    # from the Tikhonov solution on a 20 x 5 test). Stack the damping rows
-    # [A; damp I] x = [b; 0] instead: the same problem as 'scipy_lsmr'.
+    # damp^2 ||D x||^2, so the preconditioner would change the answer. Stack
+    # the damping rows [A; damp I] x = [b; 0] instead: the same problem as
+    # 'scipy_lsmr'.
     if damp:
         n_col = A.shape[1]
         identity = float(damp) * scipy.sparse.identity(n_col, format="csr")
@@ -362,10 +361,9 @@ def _spd_ridge(A_dense: Any) -> float:
     fixed 1e-12 sits three orders below eps (1.19e-7) and would do nothing.
 
     This is applied only after an unridged factorization has failed. Applying it
-    unconditionally is tempting and measurably wrong: on synthetic SPD systems
-    the ridge is a few percent of the smallest eigenvalue once ``cond(A)``
-    reaches 1e12, and it costs three to four orders of magnitude of accuracy
-    (6.4e-3 relative error against 1.1e-5 without it) on exactly the
+    unconditionally is tempting and costs accuracy: once ``cond(A)`` reaches
+    1e12 the ridge is a few percent of the smallest eigenvalue, and it costs
+    three to four orders of magnitude of accuracy on exactly the
     ill-conditioned problems this module exists to solve.
     """
     diag = np.abs(np.diagonal(A_dense))
@@ -422,8 +420,7 @@ def _spd_cholesky_solve(A, b, damp=0.0, overwrite_a=False, verbose=False, **kwar
 
     if scipy.sparse.issparse(A):
         # SciPy has no sparse Cholesky; ``scipy.sparse.linalg.cholesky`` simply
-        # does not exist, which is the bug repaired in ``direct_solver`` below.
-        # CHOLMOD lives in scikit-sparse, which is not a dependency. SuperLU
+        # does not exist. CHOLMOD lives in scikit-sparse, which is not a dependency. SuperLU
         # ignores symmetry and so does roughly twice the work of a Cholesky, but
         # it is exact and it keeps the matrix sparse, which is the entire point
         # of the ``save_memory=True`` path that produces a sparse H.
@@ -858,7 +855,7 @@ def generalized_solver(
         return _precond_lsmr_solve(A, b, maxiter=maxiter, tol=tol, damp=damp)
     if m == "scipy_lsqr":
         # LSQR takes a dense array, a sparse matrix or a LinearOperator as it
-        # is; a dense system used to be copied into CSR first.
+        # is, so a dense system is not copied into CSR first.
         b_flat = np.asarray(b, dtype=float).ravel()
         result = splinalg.lsqr(A, b_flat, atol=tol, btol=tol, iter_lim=maxiter, damp=damp)
         return np.asarray(result[0], dtype=float).reshape(-1, 1)
@@ -1015,12 +1012,12 @@ def _cgls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
     if s.ndim == 1:
         s = s.reshape(-1, 1)
     
-    # The damping enters the normal equations as damp^2 I. It used to be added
-    # as ``q += damp * p`` and ``s += damp * r``: for a rectangular A those
-    # shapes do not broadcast, and for a square A the iteration solved
-    # (A + damp I) x = b, which is not a least-squares problem at all. The
-    # data residual r = b - A x stays undamped; the damping only reaches the
-    # gradient s and the step length.
+    # The damping enters the normal equations as damp^2 I. Adding it as
+    # ``q += damp * p`` and ``s += damp * r`` would not broadcast for a
+    # rectangular A, and for a square A would solve (A + damp I) x = b, which
+    # is not a least-squares problem at all. The data residual r = b - A x
+    # stays undamped; the damping only reaches the gradient s and the step
+    # length.
     shift = float(damp) ** 2 if damp > 0 else 0.0
     if shift:
         # s is the damped gradient at the initial guess, which need not be 0.
@@ -1030,11 +1027,10 @@ def _cgls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
     # CGLS minimises ||A x - b||^2 + damp^2 ||x||^2 over a growing Krylov space,
     # so in exact arithmetic that objective never rises. Past convergence on an
     # inconsistent system - where ||r|| stays finite and the test on it cannot
-    # fire - rounding noise does make it rise, without bound (a 20 x 5 system:
-    # 2.9e152 error after 2000 iterations). The best iterate is kept and a
-    # tenfold rise ends the loop; neither can cut short a solve still making
-    # progress. x is rebound each step, never updated in place, so holding the
-    # best one costs no copy.
+    # fire - rounding noise does make it rise, without bound. The best iterate
+    # is kept and a tenfold rise ends the loop; neither can cut short a solve
+    # still making progress. x is rebound each step, never updated in place, so
+    # holding the best one costs no copy.
     best_x = x
     best_f = float(rr) + (shift * _scalar_dot(xp, x, x) if shift else 0.0)
 
@@ -1144,8 +1140,8 @@ def _lsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
     # holding the lower block of each left Lanczos vector. Solving for the
     # correction from an initial guess x0 puts -damp x0 in that lower block,
     # which Paige and Saunders' cheaper damping rotation assumes is zero, so
-    # the stacked form is what keeps a warm start exact. It used to ignore
-    # damp altogether. With damp == 0, u2 stays None: the classic iteration.
+    # the stacked form is what keeps a warm start exact. With damp == 0, u2
+    # stays None: the classic iteration.
     d = float(damp) if damp > 0 else 0.0
     u2 = -d * x if d else None
 
@@ -1157,8 +1153,7 @@ def _lsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
 
     # Initialize u and beta. The norms go through _scalar_dot: u and v are
     # (n, 1) columns, so ``xp.dot(u.T, u)`` is a (1, 1) array, and NumPy >= 2.4
-    # refuses ``float()`` on anything that is not 0-d. Every 'lsqr' call raised
-    # TypeError before reaching its first iteration.
+    # refuses ``float()`` on anything that is not 0-d.
     u = r.copy()
     beta = _norm(u, u2)
     if beta > 0:
@@ -1252,13 +1247,12 @@ def _rrlsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
     Returns:
         Solution vector
     """
-    # This used to be a copy of the LSQR loop that added ``damp * x`` to each
-    # right Lanczos vector and damp**2 under the rotation's square root. That
-    # destroys the orthogonality the recurrences rely on, so it converged to no
-    # defined problem: on a 20 x 5 system with damp=0.5 it returned a model
-    # 3.4e4 away from the Tikhonov solution. RRLSQRSolver (damping=0.1 by
-    # default) is also the rectangular fallback of get_optimal_solver. _lsqr
-    # solves exactly the damped problem this was meant to, so defer to it.
+    # A separate loop that added ``damp * x`` to each right Lanczos vector and
+    # damp**2 under the rotation's square root would destroy the orthogonality
+    # the recurrences rely on and converge to no defined problem. _lsqr solves
+    # exactly the damped problem this solver is meant to, so defer to it.
+    # RRLSQRSolver (damping=0.1 by default) is also the rectangular fallback of
+    # get_optimal_solver.
     return _lsqr(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
                  use_gpu, parallel, n_jobs, xp)
 
@@ -1292,8 +1286,8 @@ def _rrls(A, b, x, r, s, gamma, rr, rr0, maxiter, tol, verbose, damp,
         s = s.reshape(-1, 1)
         
     # Damped, this is steepest descent on min ||Ax - b||^2 + damp^2 ||x||^2,
-    # whose descent direction is A^T r - damp^2 x. It used to add ``damp * x``,
-    # the wrong sign and power: the fixed point then solved
+    # whose descent direction is A^T r - damp^2 x. Adding ``damp * x`` would be
+    # the wrong sign and power: the fixed point would then solve
     # (A^T A - damp I) x = A^T b, which removes regularization instead.
     shift = float(damp) ** 2 if damp > 0 else 0.0
     if shift:
@@ -1546,11 +1540,9 @@ def direct_solver(
             # Sparse LU decomposition
             return splinalg.spsolve(A, b)
         elif method == "cholesky":
-            # SciPy has no sparse Cholesky. This branch used to call
-            # ``splinalg.cholesky``, which does not exist, so it raised
-            # AttributeError on every call, the bare except swallowed it, and it
-            # printed "Matrix not SPD" whether or not the matrix was SPD. SuperLU
-            # ignores symmetry but is exact and keeps the matrix sparse.
+            # SciPy has no sparse Cholesky (``splinalg.cholesky`` does not
+            # exist), so use SuperLU: it ignores symmetry but is exact and keeps
+            # the matrix sparse.
             return splinalg.splu(A.tocsc()).solve(b)
         else:
             # Fall back to sparse solve for other methods
@@ -1585,8 +1577,8 @@ def direct_solver(
                     lower=False
                 )
             except np.linalg.LinAlgError:
-                # Narrowed from a bare except, which reported a NaN or a shape
-                # error as "not SPD" too.
+                # Only a LinAlgError means "not SPD"; a NaN or a shape error
+                # must propagate.
                 print("Warning: Matrix not SPD, falling back to LU")
                 return scipy.linalg.solve(A, b)
         else:

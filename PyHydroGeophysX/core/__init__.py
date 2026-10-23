@@ -3,10 +3,10 @@ Core utilities for geophysical modeling and inversion.
 
 Names are loaded from their submodules on first use, as the package root does:
 importing one core module - the 3-D mesh builder a workflow process runs, say -
-no longer loads SciPy's signal and image tools, pandas and the kriging stack
-for the others, which took a second before any work began. The availability
-flags and the ``None`` stand-ins for an optional module that is not installed
-are as they were.
+does not load SciPy's signal and image tools, pandas and the kriging stack
+for the others. The availability flags and the ``None`` stand-ins for an
+optional module that is not installed behave as they would after an eager
+import.
 """
 
 from __future__ import annotations

@@ -127,8 +127,8 @@ class TDEMSurveyConfig:
 #: between the samples of its own grid is interpolated with the local cubic
 #: Hermite rule described in :func:`_local_log_hermite_matrix`. Reading
 #: ``GateShapePar1`` as the tapered fraction rather than as the flat top changes
-#: the result by 1.5 to 4 percent; responses stored in two surveys pick the
-#: reading used here.
+#: the result by 1.5 to 4 percent; the tapered-fraction reading is the one that
+#: reproduces responses stored in survey files.
 #:
 #: Two things separate it from a flat average of the window, and they pull the
 #: same way. The taper draws weight in from the edges, and the window is
@@ -263,21 +263,16 @@ def _analog_sampling(config: "TDEMSurveyConfig"):
     """Return SimPEG times and the combined analog-filter/repetition/gate operator.
 
     The internal grid is uniform in log time across the whole modelled range.
-    That is a change from an earlier two-region grid which was dense only until
-    the filter had settled and then fell back to the receiver times themselves,
-    roughly 0.05 decade apart. The first-order-hold reconstruction was then
-    integrating across steps twenty times longer than the filter's own time
-    constant, and the per-step lag that leaves does not die away with time the
-    way the continuous operator does: on one station it added 2.2 percent at
-    95 us, where a 0.55 us group delay can account for at most 1.4 percent.
+    A grid that is dense only until the filter has settled and then falls back
+    to the receiver times would let the first-order-hold reconstruction
+    integrate across steps much longer than the filter's own time constant, and
+    the per-step lag that leaves does not die away with time the way the
+    continuous operator does.
 
     The error is set by how well a piecewise-linear reconstruction represents
     the decay, not by the filter, so the density belongs in log time and the
-    same density serves every decade. Measured against a 600-points-per-decade
-    reference on one station, the largest gate moves by 0.79 percent going from
-    20 to 40 points per decade, 0.31 percent from 40 to 80, 0.08 percent from
-    80 to 150 and 0.04 percent from 150 to 300. The default of 150 sits at the
-    0.1 percent level this was asked to reach.
+    same density serves every decade. The default of 150 points per decade
+    targets an error of about 0.1 percent of a gate value.
     """
     targets, weights = _gate_sampling(config)
     damping, receiver_cutoff, tib_order, tib_cutoff, first_order = _analog_parameters(
@@ -313,8 +308,8 @@ def _analog_sampling(config: "TDEMSurveyConfig"):
     # coarse one, and its setup cost grows with how many times it is asked for;
     # the filter is integrated on the dense one, and its accuracy is set by how
     # well a piecewise-linear reconstruction follows the decay. Tying the two
-    # together made the filter converge only by making every forward operator
-    # four times more expensive to build. A cubic spline in log time carries the
+    # together would make every forward operator about four times more
+    # expensive to build. A cubic spline in log time carries the
     # coarse response onto the dense grid, which costs a matrix of a few hundred
     # by a few hundred and is exact to far better than either grid's own error:
     # the response is smooth in log-log and changes by about 15 percent per step

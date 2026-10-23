@@ -48,7 +48,7 @@ def rte_dsigma_hankel(frequencies, lamb, sigma, mu, thicknesses,
     wavenumbers with ``weights`` (n_lambda, n_receiver) as it is computed, so
     the (n_layer, n_frequency, n_lambda) gradient is never stored: allocating
     and reading back several megabytes per sounding is what kept a parallel
-    line pass from using its cores. Arguments as in geoana: ``sigma`` and ``mu``
+    line pass from using its cores. Arguments: ``sigma`` and ``mu``
     complex, shaped (n_layer, n_frequency), the first layer the top one and the
     last a half-space. Returns (n_layer, n_frequency, n_receiver).
     """

@@ -157,14 +157,13 @@ def resistivity_to_water_content(
         array: Volumetric water content values
     """
     # The saturated resistivity is given, so solve Waxman-Smits with it directly.
-    # This used to go through resistivity_to_saturation with m=0 and
-    # rho_fluid=rhos, relying on porosity**-0 == 1; once that function clamped m
-    # to at least 1 the saturated resistivity became rhos / porosity and every
-    # water content came back too high (0.10 returned as 0.18).
+    # Going through resistivity_to_saturation with m=0 and rho_fluid=rhos would
+    # rely on porosity**-0 == 1, which fails because that function clamps m to
+    # at least 1: the saturated resistivity would become rhos / porosity.
     saturation = _waxman_smits_saturation(resistivity, rhos, n, sigma_sur)
     if saturation.size == 1:
-        # The solver keeps the input's shape now, so a single value may sit in
-        # a (1, 1) array; it still comes back as a float, as it always did.
+        # The solver keeps the input's shape, so a single value may sit in a
+        # (1, 1) array; it still comes back as a float.
         saturation = float(saturation.reshape(-1)[0])
 
     # Convert saturation to water content
@@ -239,8 +238,7 @@ def _waxman_smits_saturation(resistivity: Any, rhos: Any, n: Any,
 
     ``resistivity_to_saturation`` derives ``rhos`` from Archie's law first;
     ``resistivity_to_water_content`` is given it. Always returns an array.
-    A negative ``sigma_sur`` raises ValueError; it used to be answered with
-    the Archie saturation as if it were zero.
+    A negative ``sigma_sur`` raises ValueError.
     """
     resistivity, rhos, sigma_sur, n_arr = np.broadcast_arrays(*[
         np.atleast_1d(value).astype(float)
@@ -291,8 +289,8 @@ def _surface_conduction_roots(A, B, n, C, fallback):
              & (A > 0) & (B > 0) & (C > 0) & (n > 0))
     with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
         # C = B S**(n-1) gives S = (C/B)**(1/(n-1)), and S = 1 once C reaches
-        # A + B = B, the conductivity at full saturation. These cells used to
-        # keep the Archie guess, which is S = 1 whatever the resistivity.
+        # A + B = B, the conductivity at full saturation. The Archie guess for
+        # these cells is S = 1 whatever the resistivity, so it is not kept.
         surface_only = (np.isfinite(B) & np.isfinite(n) & np.isfinite(C)
                         & (A == 0) & (B > 0) & (C > 0) & (n > 1))
         ratio = C[surface_only] / B[surface_only]
@@ -390,8 +388,7 @@ def resistivity_to_porosity(
     the surface term alone conducts at least as well as the rock is measured
     to and no porosity satisfies the equation. Those values are NaN, with a
     RuntimeWarning naming the parameters and the resistivity range a porosity
-    can explain. They used to be whatever ``fsolve`` stopped at near its
-    starting guess, about 0.05.
+    can explain.
 
     Args:
         resistivity (array): Resistivity values (ohm-m)

@@ -230,6 +230,7 @@ def run_petrophysics_monte_carlo(
     progress: ProgressFn = _noop,
     return_realizations: bool = False,
     cell_chunk_size: int = 1024,
+    log_resistivity_std: Optional[np.ndarray] = None,
 ) -> Dict[str, Any]:
     """Run reproducible layer-wise petrophysical uncertainty propagation.
 
@@ -268,6 +269,14 @@ def run_petrophysics_monte_carlo(
         Maximum cells processed at once. Exact percentiles and the random
         draws are independent of this setting. Full sample storage is only
         allocated when return_realizations is True.
+    log_resistivity_std : array_like, optional
+        The resistivity's own uncertainty: a standard deviation of
+        ln(resistivity) per cell, shaped (cells,) or (cells, times), such as an
+        inversion's linearised posterior. Each realization then multiplies the
+        resistivity by exp(std * e), e standard normal, drawn independently per
+        cell and time from a stream of its own (so the draws do not depend on
+        ``cell_chunk_size``), and the statistics carry both sources. Without it
+        the resistivity is taken as exact.
 
     Returns
     -------
@@ -330,6 +339,19 @@ def run_petrophysics_monte_carlo(
         raise ValueError("timestep_indices must contain integers.")
     if min(time_indices) < 0 or max(time_indices) >= resistivity_array.shape[1]:
         raise IndexError("timestep_indices contains an out-of-range index.")
+    log_std = None
+    if log_resistivity_std is not None:
+        log_std = np.asarray(log_resistivity_std, dtype=float)
+        log_std = log_std.reshape(-1, 1) if log_std.ndim == 1 else log_std
+        if (log_std.ndim != 2 or log_std.shape[0] != marker_array.size
+                or log_std.shape[1] not in (1, resistivity_array.shape[1])
+                or not np.all(np.isfinite(log_std)) or np.any(log_std < 0)):
+            raise ValueError("log_resistivity_std needs one finite, non-negative value per "
+                             "cell (and per time, or one for all times).")
+        if log_std.shape[1] == 1:
+            log_std = np.repeat(log_std, resistivity_array.shape[1], axis=1)
+        if not np.any(log_std > 0):
+            log_std = None
 
     normalized_layers = [dict(layer) for layer in layers]
     layer_ids = []
@@ -389,7 +411,8 @@ def run_petrophysics_monte_carlo(
     # Per layer: values evaluated, values with no porosity root, the draws
     # they came from and their resistivity range, for one warning per layer.
     no_root: Dict[int, Dict[str, Any]] = {}
-    # Draw parameters before chunking, preserving the historical RNG sequence.
+    # Draw parameters before chunking, so the RNG sequence does not depend on
+    # the chunk size.
     # Only exact per-cell statistics are reduced; no approximate quantiles.
     for start in range(0, marker_array.size, chunk_size):
         stop = min(start + chunk_size, marker_array.size)
@@ -400,10 +423,22 @@ def run_petrophysics_monte_carlo(
         block_markers = marker_array[start:stop]
         layer_indices = {int(m): np.flatnonzero(block_markers == m) for m in np.unique(block_markers)}
         observations = resistivity_array[start:stop, :][:, time_indices]
+        # Multiplicative resistivity draws, one stream per cell.
+        factors = None
+        if log_std is not None:
+            block_std = log_std[start:stop, :][:, time_indices]
+            factors = np.zeros(block_shape)
+            for offset in np.flatnonzero(np.any(block_std > 0, axis=1)):
+                stream = np.random.default_rng([int(seed) & 0xFFFFFFFF, 1, start + int(offset)])
+                factors[:, offset, :] = (stream.standard_normal((count, len(time_indices)))
+                                         * block_std[offset])
+            np.exp(factors, out=factors)
         for marker, indices in layer_indices.items():
-            rho = observations[indices].ravel()
+            exact = observations[indices].ravel()
             local_shape = (indices.size, len(time_indices))
             for realization, sampled in enumerate(samples):
+                rho = (exact if factors is None
+                       else (observations[indices] * factors[realization, indices, :]).ravel())
                 parameters = sampled[marker]
                 if want_water or return_realizations:
                     if bool(parameters["use_rho_sat"]):
@@ -470,6 +505,8 @@ def run_petrophysics_monte_carlo(
         "seed": int(seed),
         "timestep_indices": time_indices,
         "warnings": messages,
+        # Whether the draws varied the resistivity as well as the parameters.
+        "resistivity_drawn": log_std is not None,
     }
     if return_realizations:
         result.update({

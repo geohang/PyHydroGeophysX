@@ -95,7 +95,7 @@ def hydro_to_srt(
         ID_layers[:layer_idx[1]] = marker_labels[0]  # Top layer
         ID_layers[layer_idx[1]:layer_idx[2]] = marker_labels[1]  # Middle layer
         ID_layers[layer_idx[2]:] = marker_labels[2]  # Bottom layer
-        # The whole array used to be printed on every call.
+        # The markers are printed only on request.
         if verbose:
             print(f"Layer markers along the profile: {np.unique(ID_layers).tolist()}")
 

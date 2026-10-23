@@ -3,7 +3,8 @@
 Turns a plain ``config`` dict (the same keys the Streamlit 3D mesh builder uses)
 into electrode positions and a PyGIMLi 3D mesh:
 
-* surface grids with topography -> a PyGIMLi prism mesh (``Mesh3DCreator``);
+* surface arrays with topography - a grid, or electrodes read from a file
+  (:data:`FILE_ARRAY`) - -> a PyGIMLi prism mesh (``Mesh3DCreator``);
 * box and borehole layouts -> a Gmsh-free PyGIMLi structured grid.
 
 Zones - boxes of known or assumed resistivity, a clay layer, a tank, a plume -
@@ -51,6 +52,9 @@ def topography_function(config: Dict[str, Any]) -> Callable[[float, float], floa
 
     if topo_type.startswith("From file"):
         return _topography_from_points(config.get("topography_points"))
+
+    if topo_type == SENSOR_GROUND:
+        return _topography_from_points(config.get("electrode_positions"))
 
     expr = str(config.get("topography_expr", "0.0"))
     allowed = {
@@ -103,12 +107,104 @@ def _topography_from_points(points: Any) -> Callable[[float, float], float]:
 # ---------------------------------------------------------------------------
 # Electrodes
 # ---------------------------------------------------------------------------
+#: The array read from a table of sensor positions (``electrode_positions``).
+FILE_ARRAY = "From file (x, y, z)"
+
+#: The ground of a surface array read from a file: the surface through its
+#: sensors' own elevations.
+SENSOR_GROUND = "Sensor elevations"
+
+
+def read_sensor_table(path: Any):
+    """Sensor positions from a table, as ``(positions, how)``.
+
+    ``positions`` is ``(n, 3)``: x, y and the elevation. The columns are chosen
+    the way the ERT page chooses them (``table_io.read_electrode_table``): by
+    the header when there is one - ``Cable,Elec,X,Y,Z`` reads X, Y and Z - and
+    otherwise with a sensor-number column set aside. A table of x and the
+    elevation alone is a line along x, at y = 0.
+    """
+    from PyHydroGeophysX.data_processing.table_io import read_electrode_table
+
+    coords, elevation, how = read_electrode_table(path)
+    if coords.shape[1] == 2:
+        positions = np.column_stack([coords[:, 0], np.zeros(len(coords)), elevation])
+    else:
+        positions = np.asarray(coords[:, :3], dtype=float)
+    positions = np.asarray(positions, dtype=float)
+    if len(positions) < 2 or not np.isfinite(positions).all():
+        raise ValueError("a sensor table needs at least two rows of finite x, y, z.")
+    return positions, how
+
+
+def _file_positions(config: Dict[str, Any]) -> np.ndarray:
+    positions = config.get("electrode_positions")
+    positions = np.atleast_2d(np.asarray(positions if positions is not None else [],
+                                         dtype=float))
+    if positions.ndim != 2 or positions.shape[1] < 3 or len(positions) < 2:
+        raise ValueError("Load a sensor file (x, y, z) for this array first.")
+    return positions[:, :3]
+
+
+def buried_electrodes(positions: Any) -> bool:
+    """Whether some electrodes sit below others: two at one place in plan, to
+    the millimetre, at different depths - a borehole. On a surface array no
+    electrode is stacked over another."""
+    positions = np.atleast_2d(np.asarray(positions, dtype=float))
+    if len(positions) < 2:
+        return False
+    _, column = np.unique(np.round(positions[:, :2], 3), axis=0, return_inverse=True)
+    column = np.asarray(column).reshape(-1)
+    for index in np.unique(column):
+        depths = np.round(positions[column == index, 2], 3)
+        if np.unique(depths).size > 1:
+            return True
+    return False
+
+
+def surface_array(config: Dict[str, Any]) -> bool:
+    """Whether the sensors all lie on the ground: a surface grid, or a file
+    with no sensor below another. A surface array is meshed under the
+    ground the topography gives; any other around its boreholes."""
+    array_type = config.get("array_type", "Surface grid")
+    if array_type == "Surface grid":
+        return True
+    if array_type == FILE_ARRAY:
+        try:
+            return not buried_electrodes(_file_positions(config))
+        except ValueError:
+            return True
+    return False
+
+
+def sensor_spacing(electrodes: Any, config: Optional[Dict[str, Any]] = None) -> float:
+    """The spacing of a surface array: the grid's larger step, or for any other
+    layout the median distance from a sensor to its nearest neighbour."""
+    config = config or {}
+    if config.get("array_type") == "Surface grid":
+        return max(float(config.get("dx", 5.0)), float(config.get("dy", 5.0)), 1.0)
+    from scipy.spatial import cKDTree
+
+    xyz = np.unique(np.column_stack([np.asarray(electrodes[axis], dtype=float)
+                                     for axis in "xyz"]), axis=0)
+    if len(xyz) < 2:
+        return 1.0
+    nearest = cKDTree(xyz).query(xyz, k=2)[0][:, 1]
+    nearest = nearest[np.isfinite(nearest) & (nearest > 1e-9)]
+    return max(float(np.median(nearest)), 1.0e-3) if nearest.size else 1.0
+
+
 def build_electrodes(config: Dict[str, Any], *, create_directory: bool = True):
     """Create a ``Mesh3DCreator`` and an electrode DataFrame from the config.
 
     Returns ``(creator, electrodes_df)`` where the DataFrame has columns
     ``x, y, z, n`` (electrode number). ``create_directory`` False leaves the
     output directory alone, for a caller that only wants the electrodes.
+
+    A file array (:data:`FILE_ARRAY`) keeps the positions the file gives. On
+    a surface array under topography, though, the electrodes are placed on
+    the ground the topography sets, as a surface grid's are, unless that
+    ground is their own elevations (:data:`SENSOR_GROUND`).
     """
     import pandas as pd
 
@@ -144,6 +240,17 @@ def build_electrodes(config: Dict[str, Any], *, create_directory: bool = True):
     elif array_type == "Crosshole":
         z_values = np.linspace(float(config["z_start"]), float(config["z_end"]), int(config["n_bh_elec"]))
         electrodes = creator.create_crosshole_electrode_array(list(config["boreholes"]), z_values)
+    elif array_type == FILE_ARRAY:
+        positions = _file_positions(config)
+        electrodes = pd.DataFrame({"x": positions[:, 0], "y": positions[:, 1],
+                                   "z": positions[:, 2],
+                                   "n": np.arange(1, len(positions) + 1, dtype=int)})
+        if (mesh_type == "Surface with topography" and surface_array(config)
+                and config.get("topography_type", "Flat") != SENSOR_GROUND):
+            topo_func = topography_function(config)
+            electrodes["z"] = [
+                topo_func(x_val, y_val) for x_val, y_val in zip(electrodes["x"], electrodes["y"])
+            ]
     else:  # Surface-to-borehole
         surface = creator.create_surface_electrode_array(
             nx=int(config["n_surface_elec"]), ny=1,
@@ -167,7 +274,7 @@ def build_electrodes(config: Dict[str, Any], *, create_directory: bool = True):
 # ---------------------------------------------------------------------------
 #: Zone ``k`` (0-based) is region ``ZONE_MARKER_START + k`` when zones are
 #: regions of their own: marker 1 is the background and 2 the inverted region,
-#: as in PyGIMLi, and E4D numbers the zones it adds to a fine zone the same way.
+#: and the zones added to an E4D fine zone are numbered on from there.
 ZONE_MARKER_START = 3
 
 
@@ -293,9 +400,74 @@ def clear_inner_face_markers(mesh: Any) -> int:
     return cleared
 
 
+def mark_far_field(mesh: Any) -> Dict[str, int]:
+    """Mark a 3-D mesh's outer faces for an ERT forward model: the ground (an
+    outer face whose outward normal points up) no flow, every other one the
+    mixed condition that stands in for the ground going on beyond the mesh.
+
+    PyGIMLi reads these conditions from the face markers (-1 no flow, -2
+    mixed); a face left 0 or carrying a mesher's own number (Gmsh's surface
+    group, E4D's 1 and 2) is no flow, so the mesh would be modelled as an
+    insulating box. ADTLERT decides from the faces' normals the same way. A
+    face marked for a fixed potential (-3, -4) keeps it. Returns how many
+    faces are ``ground`` and ``far``.
+    """
+    import pygimli as pg
+
+    counts = {"ground": 0, "far": 0}
+    if int(mesh.dim()) != 3:
+        return counts
+    mesh.createNeighbourInfos()
+    fixed = (pg.core.MARKER_BOUND_HOMOGEN_DIRICHLET, pg.core.MARKER_BOUND_DIRICHLET)
+    for boundary in mesh.boundaries():
+        left, right = boundary.leftCell(), boundary.rightCell()
+        if (left is None) == (right is None) or int(boundary.marker()) in fixed:
+            continue
+        inside = (left if left is not None else right).center()
+        normal, centre = boundary.norm(), boundary.center()
+        outward = (normal.x() * (centre.x() - inside.x()) + normal.y() * (centre.y() - inside.y())
+                   + normal.z() * (centre.z() - inside.z()))
+        up = normal.z() if outward > 0 else -normal.z()
+        ground = up > 1.0e-8
+        boundary.setMarker(pg.core.MARKER_BOUND_HOMOGEN_NEUMANN if ground
+                           else pg.core.MARKER_BOUND_MIXED)
+        counts["ground" if ground else "far"] += 1
+    return counts
+
+
 # ---------------------------------------------------------------------------
 # Structured (Gmsh-free) mesh for box / borehole layouts
 # ---------------------------------------------------------------------------
+#: How far a field mesh's outer region reaches beyond its domain, sideways and
+#: down, in spreads (the domain's larger horizontal side), as on the ERT page's
+#: own mesh: it carries the far boundary away from the array.
+OUTER_SPREADS = 4.0
+
+
+def outer_spreads(config: Dict[str, Any]) -> float:
+    """How many spreads (the domain's larger horizontal side) the outer region
+    reaches beyond the domain: ``config['outer_spreads']``, by default
+    :data:`OUTER_SPREADS`. A Box mesh has none: a tank's walls are where its
+    ground ends."""
+    if config.get("mesh_type") == "Box mesh":
+        return 0.0
+    return max(float(config.get("outer_spreads", OUTER_SPREADS)), 0.0)
+
+
+def graded_offsets(step: float, reach: float, growth: float = 1.5) -> np.ndarray:
+    """Offsets from 0 out to ``reach``, the first ``growth`` times ``step`` and
+    each next one ``growth`` times the last, all stretched a little so the last
+    lands on ``reach``: the outer region's cells, fine beside the domain and
+    coarse far from it. An empty reach gives ``[0]``."""
+    if reach <= 0:
+        return np.zeros(1)
+    steps, size = [], float(step)
+    while sum(steps) < reach - 1e-9:
+        size *= growth
+        steps.append(size)
+    return np.r_[0.0, np.cumsum(steps) * (reach / sum(steps))]
+
+
 def _axis_with_points(lower: float, upper: float, spacing: float, required_points: Any,
                       faces: Any = ()) -> np.ndarray:
     """Float axis spanning ``[lower, upper]`` that also includes electrode coords.
@@ -336,7 +508,6 @@ def _structured_bounds(electrodes_df: Any, config: Dict[str, Any]) -> Dict[str, 
     xs = np.asarray(electrodes_df["x"], dtype=float)
     ys = np.asarray(electrodes_df["y"], dtype=float)
     zs = np.asarray(electrodes_df["z"], dtype=float)
-    array_type = config.get("array_type", "Surface grid")
     mesh_type = config.get("mesh_type", "Surface with topography")
 
     if mesh_type == "Box mesh":
@@ -346,7 +517,7 @@ def _structured_bounds(electrodes_df: Any, config: Dict[str, Any]) -> Dict[str, 
         y_max = max(float(config.get("box_width", 30.0)), float(np.nanmax(ys)))
         z_top = max(0.0, float(np.nanmax(zs)))
         z_bottom = min(-float(config.get("box_height", 25.0)), float(np.nanmin(zs)))
-    elif array_type != "Surface grid":
+    elif not surface_array(config):
         lateral_padding = float(config.get("borehole_lateral_padding", 10.0))
         top_padding = float(config.get("borehole_top_padding", 2.0))
         bottom_padding = float(config.get("borehole_bottom_padding", 5.0))
@@ -357,7 +528,7 @@ def _structured_bounds(electrodes_df: Any, config: Dict[str, Any]) -> Dict[str, 
         z_top = max(0.0, float(np.nanmax(zs)) + top_padding)
         z_bottom = float(np.nanmin(zs)) - bottom_padding
     else:
-        spacing = max(float(config.get("dx", 5.0)), float(config.get("dy", 5.0)), 1.0)
+        spacing = sensor_spacing(electrodes_df, config)
         extension = max(float(config.get("boundary_extension", 1.4)) - 1.0, 0.1)
         x_pad = max(spacing, (float(np.nanmax(xs)) - float(np.nanmin(xs))) * extension * 0.5)
         y_pad = max(spacing, (float(np.nanmax(ys)) - float(np.nanmin(ys))) * extension * 0.5)
@@ -390,12 +561,14 @@ def create_structured_mesh(electrodes_df: Any, config: Dict[str, Any],
     """Create a Gmsh-free PyGIMLi structured 3D mesh for box/borehole layouts.
 
     With ``zones`` the grid lines include every zone face, so the zones'
-    faces are cell faces.
+    faces are cell faces. A field mesh gets an outer region (marker 1) of
+    cells doubling outward, reaching beyond the domain sideways and down
+    (:func:`outer_spreads`).
     """
     import pygimli as pg
 
     bounds = _structured_bounds(electrodes_df, config)
-    if config.get("array_type") == "Surface grid":
+    if surface_array(config):
         xy_spacing = float(config.get("boundary_refinement", 2.0))
         z_spacing = float(config.get("dz_fine", 0.5))
     else:
@@ -411,11 +584,26 @@ def create_structured_mesh(electrodes_df: Any, config: Dict[str, Any],
     z_axis = _axis_with_points(bounds["z_bottom"], bounds["z_top"], z_spacing, electrodes_df["z"],
                                faces["z"])
 
+    reach = outer_spreads(config) * max(bounds["x_max"] - bounds["x_min"],
+                                        bounds["y_max"] - bounds["y_min"])
+    if reach > 0:
+        # Doubling, not growing by half: a grid's padding planes cross the
+        # whole grid, so every extra one costs a full slab of cells.
+        pad = graded_offsets(xy_spacing, reach, growth=2.0)[1:]
+        x_axis = np.r_[bounds["x_min"] - pad[::-1], x_axis, bounds["x_max"] + pad]
+        y_axis = np.r_[bounds["y_min"] - pad[::-1], y_axis, bounds["y_max"] + pad]
+        z_axis = np.r_[bounds["z_bottom"]
+                       - graded_offsets(z_spacing, reach, growth=2.0)[1:][::-1], z_axis]
+
     mesh = pg.createGrid(x=x_axis.astype(float), y=y_axis.astype(float), z=z_axis.astype(float), marker=2)
     para_depth = float(config.get("para_depth", abs(bounds["z_top"] - bounds["z_bottom"])))
     for cell in mesh.cells():
-        depth = bounds["z_top"] - float(cell.center().z())
-        cell.setMarker(1 if depth > para_depth else 2)
+        centre = cell.center()
+        depth = bounds["z_top"] - float(centre.z())
+        inside = (bounds["x_min"] < centre.x() < bounds["x_max"]
+                  and bounds["y_min"] < centre.y() < bounds["y_max"]
+                  and centre.z() > bounds["z_bottom"])
+        cell.setMarker(2 if inside and depth <= para_depth else 1)
     return mesh
 
 
@@ -514,7 +702,7 @@ def _gmsh_box_mesh(creator: Any, electrodes: Any, config: Dict[str, Any],
         height = float(config.get("box_height", 25.0))
         origin = (min(0.0, float(xs.min())), min(0.0, float(ys.min())), float(zs.max()) - height)
     else:
-        if config.get("array_type") == "Surface grid":
+        if surface_array(config):
             ext = max(float(config.get("boundary_extension", 1.4)) - 1.0, 0.1)
             lateral = max(float(config.get("boundary_refinement", 2.0)),
                           (float(xs.max()) - float(xs.min())) * ext * 0.5,
@@ -527,11 +715,21 @@ def _gmsh_box_mesh(creator: Any, electrodes: Any, config: Dict[str, Any],
         width = (float(ys.max()) - float(ys.min())) + 2.0 * lateral
         height = float(zs.max()) - origin[2]
 
-    return creator.create_box_mesh(length, width, height, electrodes, output_name="gmsh_mesh",
-                                   origin=origin, zones=zones)
+    reach = outer_spreads(config) * max(length, width)
+    mesh = creator.create_box_mesh(length, width, height, electrodes, output_name="gmsh_mesh",
+                                   origin=origin, zones=zones, outer=reach)
+    if reach > 0:
+        # The outer region is background: only the box is inverted.
+        upper = (origin[0] + length, origin[1] + width)
+        for cell in mesh.cells():
+            centre = cell.center()
+            if not (origin[0] < centre.x() < upper[0] and origin[1] < centre.y() < upper[1]
+                    and centre.z() > origin[2]):
+                cell.setMarker(1)
+    return mesh
 
 
-#: The engine that builds meshes the way E4D does (see ``core.e4d_mesh``).
+#: The engine that builds meshes from an E4D mesh configuration (see ``core.e4d_mesh``).
 E4D_ENGINE = "E4D (Triangle + TetGen)"
 
 #: What the E4D engine reads from the config, and its defaults: those of the
@@ -680,13 +878,13 @@ def generate_mesh(config: Dict[str, Any], log: Optional[Callable[[str], None]] =
         cfg, electrodes = e4d_configuration(config, zones=zones if conform else None)
         for note in getattr(cfg, "notes", []):
             say("  " + note)
-        say("Building the mesh the way E4D does: surface triangulation, then TetGen…")
+        say("Building the mesh from the E4D configuration: surface triangulation, then TetGen…")
         built = e4d.build_e4d_mesh(
             cfg, Path(config.get("output_dir") or "."),
             name=str(config.get("e4d_basename") or "e4d_mesh"),
             mesher=str(config.get("e4d_mesher", "auto")),
             tetgen=str(config.get("e4d_tetgen", "") or ""), log=say)
-        mesh, label = built["mesh"], f"E4D-style · {built['mesher']}"
+        mesh, label = built["mesh"], f"E4D configuration · {built['mesher']}"
         if config.get("single_region"):
             for cell in mesh.cells():
                 cell.setMarker(2)
@@ -704,6 +902,7 @@ def generate_mesh(config: Dict[str, Any], log: Optional[Callable[[str], None]] =
                 entry["follows"] = conform
             _zone_log(say, report, conform=conform, separate=separate)
         clear_inner_face_markers(mesh)
+        mark_far_field(mesh)
         say(f"Mesh ready ({label}).")
         return {"mesh": mesh, "electrodes": electrodes, "generator": label,
                 "e4d_files": dict(built["files"]), "e4d_zones": list(built["zones"]),
@@ -712,8 +911,7 @@ def generate_mesh(config: Dict[str, Any], log: Optional[Callable[[str], None]] =
     say("Building sensor array…")
     creator, electrodes = build_electrodes(config)
     mesh_type = config.get("mesh_type")
-    array_type = config.get("array_type")
-    surface_topo = mesh_type == "Surface with topography" and array_type == "Surface grid"
+    surface_topo = mesh_type == "Surface with topography" and surface_array(config)
     shaping = zones if conform else None
 
     def _prism():
@@ -724,7 +922,7 @@ def generate_mesh(config: Dict[str, Any], log: Optional[Callable[[str], None]] =
             dz_fine=float(config["dz_fine"]),
             dz_coarse=float(config["dz_coarse"]),
             boundary_extension=float(config["boundary_extension"]),
-            use_prism_mesh=True, zones=shaping,
+            use_prism_mesh=True, zones=shaping, outer_spreads=outer_spreads(config),
         ), "PyGIMLi topography prism"
 
     followed = conform
@@ -763,6 +961,7 @@ def generate_mesh(config: Dict[str, Any], log: Optional[Callable[[str], None]] =
         entry["follows"] = followed and index not in missed
     _zone_log(say, report, conform=followed, separate=separate)
     clear_inner_face_markers(mesh)
+    mark_far_field(mesh)
     say(f"Mesh ready ({label}).")
     return {"mesh": mesh, "electrodes": electrodes, "generator": label, "zones": report,
             "zones_conform": followed}

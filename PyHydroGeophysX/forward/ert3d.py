@@ -2,7 +2,7 @@
 
 Given a 3D mesh + electrode layout (as produced by
 :func:`mesh3d_builder.generate_mesh`) and a resistivity model, this generates
-synthetic 3D ERT apparent-resistivity data. It mirrors
+synthetic 3D ERT apparent-resistivity data. It follows the steps of
 ``examples/Ex_3D_ERT_forward.py``: build an ERT data container with 3D geometric
 factors (:func:`core.mesh_3d.create_3d_ert_data_container`), run pygimli's
 ``ERTModelling`` response via :class:`forward.ert_forward.ERTForwardModeling`, add

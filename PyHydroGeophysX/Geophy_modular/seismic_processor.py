@@ -58,8 +58,7 @@ def process_seismic_tomography(
     if mesh is not None:
         TT.setMesh(mesh)
     else:
-        # Create mesh from data if not provided
-        # For a more sophisticated mesh creation, we could use createParaMesh
+        # No mesh given: the travel-time manager builds one from the data.
         pass
     
     # Run inversion

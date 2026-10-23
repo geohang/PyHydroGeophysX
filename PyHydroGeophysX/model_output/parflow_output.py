@@ -1,10 +1,9 @@
 """
-Module for processing ParFlow model outputs.
+Readers for ParFlow model outputs.
 
-This module provides classes to handle specific types of ParFlow outputs,
-such as saturation and porosity, by reading ParFlow Binary Files (PFB).
-It includes a standalone PFB reader that works without the `parflow` package,
-falling back to the `parflow` package if available for maximum compatibility.
+The classes here read ParFlow outputs such as saturation and porosity from
+ParFlow Binary Files (PFB). A standalone PFB reader works without the `parflow`
+package, and :func:`read_pfb` uses the `parflow` package when it is installed.
 """
 import os
 import struct
@@ -124,9 +123,8 @@ class ParflowOutput(HydroModelOutput):
     """
     Base class for processing ParFlow model outputs.
 
-    This class handles common ParFlow output functionalities, such as
-    identifying available timesteps and reading PFB files. It uses the
-    standalone PFB reader that works without the parflow package installed.
+    It identifies the available timesteps and reads PFB files, with the
+    standalone PFB reader where the parflow package is not installed.
     """
     
     def __init__(self, model_directory: str, run_name: str):

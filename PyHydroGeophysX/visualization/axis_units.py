@@ -5,7 +5,7 @@ meshes, the contour grids, the clip polygons and every exported file. What this
 module changes is only what an axis *shows*. A figure drawn "in feet" keeps its
 data in metres and gets a tick locator and formatter that place round numbers
 of feet along the axis, so a pyGIMLi mesh drawing, a filled contour and a clip
-path all line up exactly as before - nothing is re-projected.
+path all line up exactly - nothing is re-projected.
 
 The same mechanism turns the vertical axis of a section into depth. A survey
 read without elevations puts every electrode at z = 0 and the model below it at
@@ -180,8 +180,8 @@ def section_has_elevation(mesh: Any = None, *, surface: Any = None, z: Any = Non
     when it was read without elevations. Give the ``mesh``, the ``surface``
     (``(x, z)`` tuple, ``(n, 2)`` array or the surface z values) or just the
     section's ``z`` coordinates, whose top is then taken as the surface. When
-    none of them can be read the answer is True, which keeps the label a
-    section has always had.
+    none of them can be read the answer is True, which keeps the elevation
+    label.
 
     Examples
     --------

@@ -1,4 +1,4 @@
-"""Occam-style 1D FDEM/TDEM inversion helpers."""
+"""Smoothest-model (Occam) 1D FDEM/TDEM inversion helpers."""
 
 from __future__ import annotations
 
@@ -29,14 +29,14 @@ DEFAULT_INVERSION = {
     "lateral_smoothness": 0.0, "lci_passes": 1,
     # Line inversion. ``lci_mode`` picks how neighbouring soundings are tied
     # together: "simultaneous" solves the line as one system, "sequential" runs
-    # the older block-coordinate passes, "off" inverts each sounding alone. The
+    # block-coordinate passes, "off" inverts each sounding alone. The
     # mode only takes effect when ``lateral_smoothness`` is positive.
     "lci_mode": "simultaneous", "reference_distance": 10.0,
-    # The formal coupled-line solver is bound-aware sparse TRF.  The tolerances
-    # below are the balanced full-survey settings validated on trailcreek: the
-    # stricter ftol=1e-6 spent all 90 evaluations in the weakly constrained
-    # convergence tail without completing robust reweighting.  Gauss-Newton is
-    # still available explicitly for fast previews and historical reproduction.
+    # The coupled-line solver is bound-aware sparse TRF.  The tolerances below
+    # balance accuracy against cost on a full survey: a stricter ftol=1e-6
+    # spends all 90 evaluations in the weakly constrained convergence tail
+    # without completing robust reweighting.  Gauss-Newton is available
+    # explicitly for fast previews.
     "lci_solver": "trf", "lci_max_nfev": 90,
     "lci_ftol": 1e-4, "lci_xtol": 1e-6, "lci_gtol": 1e-5,
     # A multiplier on ``lateral_smoothness``, not a second knob. The two meet as
@@ -56,20 +56,14 @@ DEFAULT_INVERSION = {
     # half-space, as a fraction of ``smoothness``. The two roughness terms
     # constrain the shape of the model and not its level, so a layer below the
     # depth of investigation has nothing holding its level and drifts to
-    # wherever the residual gradient leads; on one ground survey the deep model
-    # came back 2.4 times more conductive than a reference inversion of the same
-    # data, and more variable than the resolved part above it.
+    # wherever the residual gradient leads, so the deep model can turn
+    # conductive and more variable than the resolved part above it.
     #
-    # On by default. Measured at a ratio of 0.4 across four ground TDEM surveys,
-    # judged on whether the model turns conductive below the depth of
-    # investigation, where nothing constrains it. The column below is the
-    # below-DOI median relative to the resolved part above it, in decades, and
-    # the share of stations dropping more than threefold across that boundary:
-    #
-    # 1.0 would weight smallness equally with roughness, SimPEG's
-    # alpha_s == alpha_x. A weight that varies with depth or sensitivity would
-    # buy the deep fix without moving the resolved part; until that exists this
-    # is a uniform term and 0.4 is where it was measured.
+    # On by default, at a ratio of 0.4. 1.0 would weight smallness equally with
+    # roughness, SimPEG's alpha_s == alpha_x. A weight that varies with depth or
+    # sensitivity would stabilise the deep part without moving the resolved
+    # part; this is a uniform term, so the ratio stays below the point where it
+    # bends the resolved part.
     # See :func:`PyHydroGeophysX.inversion.em1d_lci.solve_lci`.
     "model_damping": 0.4,
     # Where that damping pulls to, which is a separate question from where the
@@ -92,9 +86,9 @@ DEFAULT_INVERSION = {
     "robust_target_tolerance": 0.25,
     # Optional empirical resistive-background tendency. Weak absolute LM signal
     # can support a resistive half-space/background interpretation, but it does
-    # not locate that resistivity in the shallow layers. The historical
-    # ``shallow_prior_*`` key prefix remains for saved-config compatibility;
-    # the penalty now spans the whole layer vector. A zero explicit resistivity
+    # not locate that resistivity in the shallow layers. The ``shallow_prior_*``
+    # key prefix is kept for saved-config compatibility; the penalty spans the
+    # whole layer vector. A zero explicit resistivity
     # chooses ``effective starting half-space * factor`` instead.
     "shallow_prior_enabled": False, "shallow_prior_depth_m": 0.0,
     "shallow_prior_min_resistivity": 0.0,
@@ -136,10 +130,8 @@ DEFAULT_INVERSION = {
 #:
 #: :data:`DEFAULT_INVERSION` has to serve everything from a 30 m ground sounding
 #: to an airborne line that sees several hundred metres, so it is deliberately
-#: unopinionated. A survey type that has been worked through can do better than
-#: unopinionated, and that is what a preset carries: the settings a particular
-#: kind of data was found to want, in one place, with the reason recorded beside
-#: each one.
+#: unopinionated. A preset carries the settings a particular kind of data
+#: needs, in one place, with the reason recorded beside each one.
 #:
 #: A preset holds only what it changes. :func:`preset_inversion` merges it over
 #: the defaults, so a key nobody has an opinion about stays wherever the
@@ -155,8 +147,7 @@ INVERSION_PRESETS: Dict[str, Dict[str, Any]] = {
         # A ground sounding keeps a median of four or five gates against twenty
         # layers. Chasing chi-square to 1 on that is fitting noise: the model
         # oscillates to pass through a handful of points. Fixing the
-        # regularisation and accepting a higher misfit is the honest trade, and
-        # it halves the upper tail of the recovered resistivity.
+        # regularisation and accepting a higher misfit is the honest trade.
         "smoothness": 1.5, "lateral_smoothness": 1.3,
         "auto_lambda": False, "scale_bounds": (0.5, 2.0),
         # Preserve sparse LM/HM observations. Large residuals get a bounded
@@ -186,20 +177,16 @@ INVERSION_PRESETS: Dict[str, Dict[str, Any]] = {
         # were a measurement.
         "rho_max": 1.0e4,
         # Cumulative sensitivity is summed from the bottom up and the deepest
-        # layer is thick, so a low threshold saturates: on one survey more than
-        # half the stations reported a depth of investigation at the very base
-        # of the model, which is the metric running out rather than the data.
+        # layer is thick, so a low threshold saturates: stations then report a
+        # depth of investigation at the very base of the model, which is the
+        # metric running out rather than the data.
         "doi_threshold": 6.0,
         "auto_starting_model": True,
         # The coupled solve stops once an accepted step lowers the objective by
         # less than this fraction. At the general 1e-4 the last half of the
-        # iterations moved the global chi-squared from 1.045 to 1.013 on a
-        # 627-station TEM2Go survey. Measured on four TEM2Go surveys (140 to
-        # 1,013 stations), 1e-3 took 22 to 40 % less time, raised chi-squared
-        # by 0.1 to 1.8 %, left every depth of investigation where it was, and
-        # moved 0.5 to 1.4 % of cells by more than 25 %; its median difference
-        # from TEMcompany's own inversion of the same surveys stayed within
-        # 0.003 decades of what 1e-4 gives (0.13 to 0.26 decades).
+        # iterations changes the misfit very little, so 1e-3 shortens the run
+        # substantially at a negligible cost in chi-squared and no change in
+        # the depth of investigation.
         "lci_ftol": 1e-3,
     },
 }
@@ -270,8 +257,8 @@ def _tdem_uncertainty(observed: np.ndarray, item: Dict[str, Any],
     it; that is what ``rel`` carries.
 
     Adding them in quadrature is how independent errors combine. It also
-    behaves better than taking the larger of the two, which was the previous
-    rule: quadrature leaves a gate that is already noisy essentially untouched,
+    behaves better than taking the larger of the two: quadrature leaves a gate
+    that is already noisy essentially untouched,
     so the instrument's relative weighting between clean and noisy gates
     survives, where a floor flattens every gate below it to the same weight.
 
@@ -651,18 +638,18 @@ def _occam_with_optional_rejection(
 #: One warmed-up forward operator per worker thread, per distinct survey.
 #:
 #: ``Simulation1DLayered`` does a substantial one-time setup on its first call
-#: and caches it on the instance: measured on a ground TDEM station it is around
-#: 8 s the first time and 18 ms afterwards, and the setup grows with the number
-#: of receiver times, so modelling the receiver's analog filter makes it an order
-#: of magnitude more expensive than it is without.
+#: and caches it on the instance: the first call takes seconds and later calls
+#: milliseconds, and the setup grows with the number of receiver times, so
+#: modelling the receiver's analog filter makes it an order of magnitude more
+#: expensive than it is without.
 #:
 #: A line inversion re-uses one layer grid and one system geometry for every
 #: station, so a fresh instance per station pays that setup hundreds of times
 #: over for nothing. It cannot simply be shared, because two threads calling
 #: ``getJ`` on one instance corrupt the state it caches. Keeping the instances in
 #: thread-local storage gives one per worker rather than one per station, which
-#: is the saving without the race: on a 600-station line that is around ten
-#: warm-ups instead of twelve hundred. Inside a worker pool the cache is the
+#: is the saving without the race: a line pays a handful of warm-ups instead of
+#: one or two per station. Inside a worker pool the cache is the
 #: lane's instead (:data:`~PyHydroGeophysX.inversion.em1d_lci._LANE`), which
 #: also runs on one thread at a time and, unlike the thread, keeps the same
 #: stations from one pass to the next.
@@ -672,20 +659,18 @@ _MODELER_CACHE = threading.local()
 #: per distinct geometry, and a bounded number keeps a long survey from holding
 #: every simulation it ever built.
 #:
-#: Eight was enough while a line shared one geometry. It is not enough now that
-#: the transmitter-receiver distance is read per station, and modelled as
-#: recorded: a walking ground survey records a different distance at nearly
-#: every station, 794 distinct values over 929 stations on one line, so a line
-#: presents two operators per station and a small cache evicts each one before
-#: it is reused. That is the difference between fourteen seconds and twenty
-#: milliseconds per station.
+#: The transmitter-receiver distance is read per station and modelled as
+#: recorded, and a walking ground survey records a different distance at nearly
+#: every station, so a line presents up to two operators per station. A small
+#: cache would evict each one before it is reused, and rebuilding an operator
+#: costs orders of magnitude more than a cache hit.
 #:
 #: The bound is per thread and the dict grows only as far as a thread actually
 #: reaches, which under the chunked scheduling in
 #: :func:`~PyHydroGeophysX.inversion.em1d_lci._map_soundings` is one worker's
 #: share of the line. It is sized instead for a serial run, which sees the whole
 #: survey: 2,048 entries covers a 1,000-station line at both moments. A warmed
-#: operator measures about 50 kB, so a full cache is under 100 MB.
+#: operator takes about 50 kB, so a full cache is under 100 MB.
 _MODELER_CACHE_SIZE = 2048
 
 
@@ -736,7 +721,7 @@ def _moment_gate_times(geometry: Dict[str, Any], times: np.ndarray) -> np.ndarra
     times then depend on the moment, not on which gates that station happened to
     keep. It also gives the analog-filter reconstruction more nodes to work with
     than a three-gate station would, so the shared operator is at least as
-    accurate as the per-station one it replaces.
+    accurate as a per-station one.
     """
     windows = geometry.get("gate_windows") or {}
     centres = np.asarray(windows.get("centre", []), dtype=float).ravel()
@@ -759,7 +744,7 @@ def _thread_local_modeler(thick: np.ndarray, geometry: Dict[str, Any],
     The cache is keyed on the whole survey configuration, so a line re-uses one
     warmed-up simulation per moment per thread rather than building one per
     station. A pool of N workers pays the setup N times instead of once, which
-    on a 540-station line is still two orders of magnitude fewer builds.
+    on a long line is still far fewer builds than one per station.
     """
     try:
         from PyHydroGeophysX.forward.tdem_forward import TDEMForwardModeling
@@ -815,11 +800,11 @@ def tdem_moment_blocks(data: Dict[str, Any], geom: Dict[str, Any],
         # The turn-off ramp and the gate windows belong to the moment, not to
         # the station, so the geometry a block needs is the moment's.
         geometry = _tdem_geometry(data, geom, item.get("transmitter"))
-        # The sign is the instrument's, like the rest of the geometry. It was
-        # read from ``geom`` alone, so a caller passing only the moment - which
-        # the forward completes from ``data["system"]`` - had every TEM2Go gate
-        # (``response_sign`` -1) fitted with the wrong sign: chi-squared in the
-        # hundreds, no depth of investigation, a blank section, no error.
+        # The sign is the instrument's, like the rest of the geometry. It is
+        # read from the merged geometry, not from ``geom`` alone: a caller
+        # passing only the moment has the rest completed from ``data["system"]``,
+        # and an instrument with ``response_sign`` -1 would otherwise be fitted
+        # with the wrong sign, without any error.
         sign = float(geometry.get("response_sign", 1.0))
         # Model every gate the instrument records, not just the ones this station
         # kept, and select afterwards. The forward operator then depends on the
@@ -888,8 +873,7 @@ def _moment_halfspace(blocks: List[Dict[str, Any]]) -> Callable[[float], np.ndar
     A uniform model on the inversion's layer grid is a half-space, and the
     starting-model scan evaluates twelve of them per station through the full
     twenty-layer recursion. One layer gives the same response, to rounding, for
-    a twentieth of the reflection-coefficient work; on a 627-station TEM2Go
-    survey the scan took 22 s that way.
+    a twentieth of the reflection-coefficient work.
     """
     def forward_halfspace(sigma: float) -> np.ndarray:
         return np.concatenate([

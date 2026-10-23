@@ -5,7 +5,7 @@ from dataclasses import dataclass, field, fields
 from functools import lru_cache
 import os
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import pygimli as pg
@@ -15,7 +15,7 @@ from scipy.sparse import diags
 
 from PyHydroGeophysX._internal.utils import noop as _noop_log
 from PyHydroGeophysX._internal.optional_dependencies import BackendUnavailable
-from ..forward.ert_forward import ertforandjac2, ertforward2
+from ..forward.ert_forward import check_resistivity_model, ertforandjac2, ertforward2
 from ..solvers.linear_solvers import _SPD_METHODS, StackedSystem, generalized_solver
 from .base import InversionBase, InversionResult
 from .lambda_search import LAMBDA_BOUNDS, search_lambda_for_chi2
@@ -34,13 +34,12 @@ from .ert_mesh import (  # noqa: F401 - re-exported, see below
     mesh_preview,
 )
 
-# ``LAMBDA_BOUNDS`` and ``search_lambda_for_chi2`` were defined here first and
-# are re-exported so existing imports keep working. They moved to
+# ``LAMBDA_BOUNDS`` and ``search_lambda_for_chi2`` live in
 # :mod:`PyHydroGeophysX.inversion.lambda_search` because the potential-field and
-# EM1D paths need them and must not import pygimli to get them.
-# The inversion mesh - built, imported, cut at zone outlines, previewed - is
-# in :mod:`PyHydroGeophysX.inversion.ert_mesh`; its names are re-exported
-# here, where they were defined first.
+# EM1D paths need them and must not import pygimli to get them; they are
+# re-exported here. The inversion mesh - built, imported, cut at zone outlines,
+# previewed - is in :mod:`PyHydroGeophysX.inversion.ert_mesh`; its names are
+# re-exported here too.
 
 
 #: How ``err`` is chosen. ``file`` trusts the ``err`` column the instrument wrote
@@ -501,6 +500,9 @@ class ERTRun:
     coverage: Optional[np.ndarray] = None
     manager: Any = None
     metrics: Dict[str, Any] = field(default_factory=dict)
+    #: ``(mesh, model)`` of the whole volume, when a profile was inverted in
+    #: 3-D and ``mesh``/``model`` are the section along the line.
+    volume: Any = None
 
     @property
     def result(self):
@@ -633,6 +635,148 @@ class _PygimliEngine:
         )
 
 
+class _ProfileInVolume:
+    """A profile inverted on a 3-D mesh, seen as the section along the line.
+
+    The engine it wraps inverts every cell of the volume. The pipeline, the
+    viewer and the exports see the profile's own parameter mesh, as PyGIMLi
+    builds it for the line and as deep as the volume's inverted cells reach,
+    each cell holding the value of the volume's cell on the line at its centre;
+    each run's whole volume travels with it (``ERTRun.volume``). A model handed
+    back - a warm start, a continuation - is the exact volume it came from; any
+    other section model is spread across the line by each cell's (x, z), as
+    E4D does.
+    """
+
+    def __init__(self, inner, container, mesh):
+        self._inner = inner
+        self.name = inner.name
+        self.container = container
+        self.zone_prior = None
+        self.mesh = _section_mesh(container, mesh)
+        self._map: Optional[Tuple[Any, np.ndarray, np.ndarray]] = None
+        self._volumes: Dict[int, Tuple[np.ndarray, Any, np.ndarray]] = {}
+        para = getattr(getattr(inner, "_inv", None), "fwd_operator", None)
+        if para is not None:
+            self._map_onto(para.paraDomain)
+
+    def _map_onto(self, volume) -> None:
+        """Which volume cell each section cell reads, and which section cell
+        each volume cell takes a section model from."""
+        from scipy.spatial import cKDTree
+
+        from .e4d import _inside_2d
+
+        if self._map is not None and self._map[0] is volume:
+            return
+        centres = np.asarray(self.mesh.cellCenters(), dtype=float)
+        cell_of_section = _cells_on_line(self.mesh, volume)
+        cells = np.asarray(volume.cellCenters(), dtype=float)[:, [0, 2]]
+        section_of_cell = _inside_2d(self.mesh, cells)
+        outside = section_of_cell < 0
+        if outside.any():
+            section_of_cell[outside] = cKDTree(centres[:, :2]).query(cells[outside])[1]
+        self._map = (volume, cell_of_section, section_of_cell)
+
+    def _to_volume(self, model):
+        if model is None:
+            return None
+        held = self._volumes.get(id(model))
+        if held is not None and held[0] is model:
+            return held[2]
+        if self._map is None:
+            return None
+        return np.asarray(model, dtype=float)[self._map[2]]
+
+    def reference_model(self):
+        reference = self._inner.reference_model()
+        if reference is None or self._map is None:
+            return None
+        return np.asarray(reference, dtype=float)[self._map[1]]
+
+    def fit(self, *, lam, max_iterations, plateau_tolerance, target_chi2,
+            start_model=None, reference_model=None) -> ERTRun:
+        run = self._inner.fit(
+            lam=lam, max_iterations=max_iterations, plateau_tolerance=plateau_tolerance,
+            target_chi2=target_chi2, start_model=self._to_volume(start_model),
+            reference_model=self._to_volume(reference_model))
+        self._map_onto(run.mesh)
+        on_line = self._map[1]
+        model = np.asarray(run.model, dtype=float)
+        section = model[on_line].copy()
+        coverage = None
+        if run.coverage is not None and np.asarray(run.coverage).size == model.size:
+            coverage = np.asarray(run.coverage, dtype=float)[on_line]
+        self._volumes[id(section)] = (section, run.mesh, model)
+        metrics = dict(run.metrics)
+        metrics["volume_cells"] = int(model.size)
+        return ERTRun(lam=run.lam, chi2=run.chi2, iterations=run.iterations, stop=run.stop,
+                      convergence=list(run.convergence), model=section,
+                      response=run.response, mesh=self.mesh, coverage=coverage,
+                      metrics=metrics, volume=(run.mesh, model))
+
+
+def _line_of(container):
+    """A copy of a profile laid into a volume, (x, 0, elevation), back on its
+    line: PyGIMLi's (x, elevation)."""
+    line = pg.DataContainerERT(container)
+    for index, (x, _, z) in enumerate(np.array(container.sensorPositions(), dtype=float)):
+        line.setSensorPosition(index, pg.Pos(float(x), float(z)))
+    return line
+
+
+def _cells_on_line(section, volume) -> np.ndarray:
+    """For each cell of ``section``, the cell of ``volume`` at its centre on
+    the line (x, 0, elevation)."""
+    from .e4d import _find_cells
+
+    centres = np.asarray(section.cellCenters(), dtype=float)
+    return _find_cells(volume, np.column_stack(
+        [centres[:, 0], np.zeros(len(centres)), centres[:, 1]]), 3)
+
+
+def profile_section(container, volume, para) -> Tuple[Any, np.ndarray]:
+    """``(section, cells)``: the section along a profile laid into ``volume``
+    (:func:`_section_mesh`) and, for each of its cells, the cell of ``para``
+    (the volume's parameter mesh) whose model it shows."""
+    section = _section_mesh(container, volume)
+    return section, _cells_on_line(section, para)
+
+
+def _section_mesh(container, volume):
+    """The profile's own parameter mesh, as PyGIMLi builds it for the line,
+    reaching as deep below the lowest electrode as the volume's inverted cells.
+
+    ``container`` holds the line laid into the volume, (x, 0, elevation);
+    ``volume`` is the 3-D mesh, its inverted cells marked 2 and above.
+    """
+    sensors = np.array(container.sensorPositions(), dtype=float)
+    line = _line_of(container)
+    inverted = np.flatnonzero(np.asarray(volume.cellMarkers(), dtype=int) > 1)
+    bottom = volume.createMeshByCellIdx(pg.IVector(inverted.tolist())).boundingBox().min().z()
+    spread = max(float(np.ptp(sensors[:, 0])), 1.0)
+    depth = max(float(sensors[:, 2].min()) - float(bottom), 0.05 * spread)
+    mesh = ert.ERTManager(line).createMesh(data=line, quality=34.0, paraDepth=depth)
+    fop = ert.ERTModelling()
+    fop.setData(line)
+    fop.setMesh(mesh)
+    return pg.Mesh(fop.paraDomain)
+
+
+def _export_volume_vtk(volume, output_dir: str | Path, filename: str) -> str:
+    """Write a run's whole volume (``ERTRun.volume``) to VTK; "" when it cannot."""
+    from PyHydroGeophysX.core.mesh_serialization import via_ascii_path
+
+    try:
+        mesh = pg.Mesh(volume[0])
+        mesh["resistivity"] = np.asarray(volume[1], dtype=float)
+        path = Path(output_dir) / filename
+        via_ascii_path(mesh.exportVTK, path, mode="write")
+        return str(path)
+    except Exception:  # noqa: BLE001 - the section is still exported
+        return ""
+
+
 _ADTLERT_SOLVERS: Dict[str, str] = {
     "cgls": "pyhydro_cgls",
     "pyhydro_cgls": "pyhydro_cgls",
@@ -735,8 +879,9 @@ def _resolve_ert_engine(name: str, *, log=_noop_log) -> str:
 def _build_adtlert_forward(container, mesh, *, log=_noop_log, field_cache_entries=None):
     """Build one shared ADTLERT forward context for single or windowed ERT.
 
-    A 2D profile mesh gets ADTLERT's 2.5D forward and a 3D tetrahedral mesh its
-    3D forward; both invert the cells with marker > 1. ``field_cache_entries``
+    A 2D profile mesh gets ADTLERT's 2.5D forward and a 3D mesh its 3D
+    forward, on tetrahedra (a prism mesh is split, ``ert_mesh.tetrahedral_mesh``);
+    both invert the cells with marker > 1. ``field_cache_entries``
     bounds the forward's cache of solved fields, which keeps the fields of the
     last 8 models by default - one wavenumber x electrode x node array per model
     in 2.5D, 130 MB on a 7473-cell mesh with 56 electrodes. ``None`` keeps
@@ -756,6 +901,14 @@ def _build_adtlert_forward(container, mesh, *, log=_noop_log, field_cache_entrie
     dimension = int(mesh.dim())
     if dimension not in (2, 3):
         raise ValueError(f"engine='adtlert' needs a 2D or 3D mesh, not {dimension}D")
+    split = ""
+    if dimension == 3:
+        from .ert_mesh import tetrahedral_mesh
+
+        cells = int(mesh.cellCount())
+        mesh = tetrahedral_mesh(mesh)
+        if int(mesh.cellCount()) != cells:
+            split = f" (its {cells} prisms split into tetrahedra)"
 
     active_ids = np.asarray(
         [
@@ -777,11 +930,18 @@ def _build_adtlert_forward(container, mesh, *, log=_noop_log, field_cache_entrie
     parameter_mesh = mesh_to_adtlert(result_mesh)
     survey = survey_to_adtlert(container, dimension=dimension)
     _require_adtlert_gpu()
+    _use_sparse_adtlert_prolongation()
+    _narrow_adtlert_assembly()
     options: Dict[str, Any] = {}
     if dimension == 2:
         options["topographic_geometric_factor_mode"] = (
             "analytic" if bool(forward_mesh.is_flat_surface) else "numerical"
         )
+    else:
+        # Quadratic elements: on the ERT page's survey mesh linear ones miss a
+        # two-layer ground's exact answer by 6.4 % (90th percentile), these by
+        # 0.4 %, for a second more per forward. PyGIMLi refines the mesh instead.
+        options["element_order"] = 2
     if field_cache_entries is not None:
         options["normal_field_cache_max_entries"] = int(field_cache_entries)
     forward = ParameterizedERTForward2p5D.from_mesh_survey(
@@ -799,15 +959,169 @@ def _build_adtlert_forward(container, mesh, *, log=_noop_log, field_cache_entrie
     if units is not None:
         forward.structural_prior_cell_ids = units
         forward.structural_cross_weight = 0.0
+    released = _release_adtlert_terrain_setup(getattr(forward, "forward_operator", forward))
     version = str(getattr(adtlert, "__version__", ""))
     log(
         f"  ADTLERT {version or '(unknown version)'}: {'2.5D' if dimension == 2 else '3D'}, "
-        f"{mesh.cellCount()} forward cells, {active_ids.size} parameters, "
-        "cuDSS forward solver"
+        f"{mesh.cellCount()} forward cells{split}"
+        + (", quadratic elements" if dimension == 3 else "")
+        + f", {active_ids.size} parameters, cuDSS forward solver"
         + ("" if units is None else
            f"; smoothness cut along the zone outlines ({int(units.max()) + 1} parts)")
+        + ("; terrain setup meshes released after use" if released else "")
     )
     return forward, result_mesh, active_ids, version
+
+
+#: What ADTLERT's 2.5D forward builds over a surface with topography to set
+#: itself up, and the cached result that makes each one unnecessary afterwards:
+#: the setup-only discretization field, the method that computes the result,
+#: and the result's key in the forward's _cache.
+_ADTLERT_TERRAIN_SETUP = (
+    # Unit primary potentials, solved on the P2 mesh and kept on the solve mesh.
+    ("primary_potential_discretization", "_unit_primary", "auxiliary_sub_potentials"),
+    # Numerical geometric factors.
+    ("geometric_discretization", "_geometric_factors", "geometric_factors"),
+)
+
+
+def _sparse_adtlert_prolongation(self):
+    """ADTLERT's pyGIMLi-style background prolongation, built sparse.
+
+    The map from parameters to every forward cell's resistivity: a parameter
+    cell is its parameter, and each background cell the mean of its known
+    neighbours weighted by the shared face's horizontal extent (+1e-6), taken
+    sweep by sweep outward from the parameter cells, as ADTLERT 0.3 takes it.
+    ADTLERT holds the map as a dense (cells x parameters) array filled row by
+    row, 3.4 GB on an E4D mesh of 35 644 cells with 12 942 inverted; here
+    each sweep is one sparse product.
+    """
+    import scipy.sparse as sp
+    from adtlert.inversion import parameterized
+
+    cells, parameters = int(self.mesh.cell_count), int(self.cell_count)
+    known = np.asarray(self._active_forward_mask, dtype=bool).copy()
+    full = sp.csr_matrix((np.ones(self._active_forward_cell_ids.size),
+                          (self._active_forward_cell_ids, self._active_parameter_ids)),
+                         shape=(cells, parameters))
+    if known.all():
+        return full
+    pairs, normal_z = parameterized._neighbor_pairs(self.mesh)
+    pairs = np.asarray(pairs, dtype=np.int64).reshape(-1, 2)
+    weight = np.sqrt(np.clip(1.0 - np.asarray(normal_z) ** 2, 0.0, None)) + 1.0e-6
+    neighbours = sp.csr_matrix(
+        (np.r_[weight, weight], (np.r_[pairs[:, 0], pairs[:, 1]], np.r_[pairs[:, 1], pairs[:, 0]])),
+        shape=(cells, cells))
+    while not known.all():
+        unknown, sources = np.flatnonzero(~known), np.flatnonzero(known)
+        links = neighbours[unknown][:, sources]
+        total = np.asarray(links.sum(axis=1)).ravel()
+        front = total > 1.0e-8
+        if not front.any():
+            raise ValueError(
+                "could not prolongate background forward cells from active parameter cells")
+        rows = (sp.diags(1.0 / total[front]) @ links[front] @ full[sources]).tocoo()
+        full = full + sp.csr_matrix((rows.data, (unknown[front][rows.row], rows.col)),
+                                    shape=(cells, parameters))
+        known[unknown[front]] = True
+    full.eliminate_zeros()
+    return full
+
+
+def _use_sparse_adtlert_prolongation() -> None:
+    """Have ADTLERT build its background prolongation sparse
+    (:func:`_sparse_adtlert_prolongation`); an ADTLERT without the method it
+    replaces is left alone."""
+    from adtlert.inversion import parameterized
+
+    forward = getattr(parameterized, "ParameterizedERTForward2p5D", None)
+    if (forward is not None and hasattr(forward, "_prolongation")
+            and hasattr(parameterized, "_neighbor_pairs")
+            and forward._prolongation is not _sparse_adtlert_prolongation):
+        _sparse_adtlert_prolongation.replaced = forward._prolongation   # ADTLERT's own
+        forward._prolongation = _sparse_adtlert_prolongation
+
+
+def _narrow_adtlert_assembly(block: int = 16) -> None:
+    """Have ADTLERT sum its assembly in blocks of ``block`` entries, not 64.
+
+    ADTLERT adds each matrix entry's cell contributions in blocks as wide as
+    the most crowded entry (up to 64) and pads every entry to that width, so
+    one node shared by 40 cells makes them all 64 wide: with quadratic
+    elements an E4D mesh of 35 644 tetrahedra took more than 7.5 GB, with
+    blocks of 16 it takes 2.0 GB. A wider entry takes another level of the
+    same sum, which stays deterministic.
+    """
+    import inspect
+
+    from adtlert.forward import kernels
+
+    group_sum = getattr(kernels, "GroupSum", None)
+    init = getattr(group_sum, "__init__", None)
+    if (init is None or getattr(init, "narrowed", False)
+            or "block" not in inspect.signature(init).parameters):
+        return
+
+    def narrowed(self, groups, count, device, block=block):
+        init(self, groups, count, device, block=block)
+
+    narrowed.narrowed = True
+    group_sum.__init__ = narrowed
+
+
+def _release_adtlert_terrain_setup(forward) -> bool:
+    """Compute what ADTLERT's forward derives from topography, then drop its scaffolding.
+
+    Over a surface with topography the 2.5D forward solves the unit primary
+    potentials and the numerical geometric factors on a P2 refinement of the
+    mesh, once, and keeps the results; every later solve reads those results.
+    The P2 systems' potentials, assembly templates and cuDSS factorizations are
+    only needed to produce those results, yet ADTLERT keeps them alive, and
+    they hold a large share of the forward's GPU memory; solves and Jacobians
+    are the same without them. The results are computed here - the first
+    solve's work moves, it is not added - and each piece is released only once
+    the result that replaces it is cached; anything this ADTLERT does
+    differently is left alone. The discretization fields stay: the forward
+    reads them to choose its precision. Returns whether anything was released.
+
+    This reaches into ADTLERT's private state, which offers no public way to
+    let go of it; ``adtlert>=0.3,<0.4`` is the version it was written against.
+    """
+    cache = getattr(forward, "_cache", None)
+    plans = getattr(getattr(forward, "_solver", None), "_plans", None)
+    if not isinstance(cache, dict) or not isinstance(plans, dict):
+        return False
+    released = False
+    for field_name, compute, result in _ADTLERT_TERRAIN_SETUP:
+        name = getattr(getattr(forward, field_name, None), "name", None)
+        if not name or not callable(getattr(forward, compute, None)):
+            continue
+        getattr(forward, compute)()
+        if result not in cache:
+            continue
+        for key in list(cache):
+            label = key[0] if isinstance(key, tuple) else key
+            if (label == f"{name}_sub_potentials" or key == (name, "assembly")
+                    or (isinstance(label, str) and label.startswith(f"{name}."))):
+                del cache[key]
+        for key in [key for key in plans if isinstance(key, tuple) and key[0] == name]:
+            try:
+                plans.pop(key)["solver"].free()  # its cuDSS factorization
+            except Exception:  # noqa: BLE001 - freeing is best effort
+                pass
+        released = True
+    if released:
+        import gc
+
+        gc.collect()
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:  # noqa: BLE001 - no CUDA cache to empty
+            pass
+    return released
 
 
 def _adtlert_spatial_term(name: str, forward):
@@ -1304,6 +1618,7 @@ def run_ert_manager_inversion(
     lambda_cold_retry_chi2: float = 15.0,
     e4d: Optional[Dict[str, Any]] = None,
     r2: Optional[Dict[str, Any]] = None,
+    survey_3d: bool = False,
     log: Callable[[str], None] = _noop_log,
 ) -> Dict[str, Any]:
     """Invert one ERT dataset, in the order that actually lowers chi2.
@@ -1380,6 +1695,11 @@ def run_ert_manager_inversion(
 
     The mesh options (``mesh_quality`` to ``outer_max_cell_size``) are those of
     :func:`build_inversion_mesh`.
+
+    ``survey_3d``: the electrodes cover an area and sit at (x, y, z), so the
+    survey is inverted in 3-D - by the in-house and PyGIMLi engines on a
+    generated prism mesh, by any engine on an imported 3-D mesh - and the
+    model is the volume, exported as ``resistivity_3d.vtk`` too.
     """
     requested_engine = str(engine).lower()
     engine = _resolve_ert_engine(requested_engine, log=log)
@@ -1390,6 +1710,11 @@ def run_ert_manager_inversion(
     )
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
+    # Electrodes whose y and z both vary, or a full grid, are a 3-D survey's
+    # even when the caller did not say so (ert_io.survey_is_3d).
+    from PyHydroGeophysX.data_processing.ert_io import survey_is_3d
+
+    survey_3d = bool(survey_3d) or survey_is_3d(np.asarray(data.sensorPositions(), dtype=float))
 
     log("Inverting ERT data…")
     from .ert_zones import normalize_zones
@@ -1402,7 +1727,32 @@ def run_ert_manager_inversion(
         surface_nodes=surface_nodes, outer_width=outer_width,
         outer_max_cell_size=outer_max_cell_size,
         conform_zones=zones if conform_to_zones else None,
-        mesh_file=mesh_file, log=log, report=mesh_report)
+        mesh_file=mesh_file, log=log, report=mesh_report, survey_3d=survey_3d)
+    if survey_3d and not str(mesh_file or "") and engine not in ("pyhydro", "pygimli",
+                                                                 "adtlert"):
+        raise ValueError(
+            f"{_PROGRAM_NAMES.get(engine, engine.upper())} needs an imported 3-D mesh for a survey "
+            "whose electrodes cover an area. The in-house and PyGIMLi engines invert it on "
+            "the mesh generated here, and ADTLERT on its tetrahedra.")
+    if survey_3d and zones:
+        log("  Note: a-priori zones are drawn on 2-D sections and are not applied to "
+            "a 3-D survey; the inversion starts from a uniform model.")
+        zones, decouple_zones = [], False
+    # A profile on a 3-D mesh: inverted in 3-D, read back as the section along
+    # the line. E4D and R3t build their own volume around a profile.
+    in_volume = bool(mesh_report.get("profile_in_volume"))
+    if in_volume and engine not in ("pyhydro", "pygimli", "adtlert"):
+        raise ValueError(
+            f"{_PROGRAM_NAMES.get(engine, engine)} cannot invert this profile on the "
+            f"imported 3-D mesh {Path(mesh_file).name}: "
+            + ("E4D and R3t build their own 3-D mesh around a profile, so go back to "
+               "a generated mesh for them" if engine in _EXTERNAL_ENGINES else
+               "it inverts profiles on 2-D meshes")
+            + ". The in-house, PyGIMLi and ADTLERT engines invert it on this mesh.")
+    if in_volume and zones:
+        log("  Note: a-priori zones are drawn on 2-D sections and are not applied to "
+            "the 3-D mesh; the inversion starts from a uniform model.")
+        zones, decouple_zones = [], False
     decoupled_edges = 0
     if decouple_zones and zones:
         inversion_mesh, decoupled_edges = mark_zone_interfaces(inversion_mesh, zones)
@@ -1439,6 +1789,8 @@ def run_ert_manager_inversion(
                              zones=zones, log=log, **engine_options)
         if engine in _EXTERNAL_ENGINES:
             external_engine = built
+        if in_volume:
+            built = _ProfileInVolume(built, container, inversion_mesh)
         return built
 
     active_engine = build_engine(data)
@@ -1487,7 +1839,7 @@ def run_ert_manager_inversion(
         "zones_fixed_held": bool(zone_prior_used is not None
                                  and zone_prior_used.any_fixed and holds_fixed),
         # The outline edges the mesh gained, and the cell edges the smoothness
-        # no longer crosses: 0 when the option was off or found nothing to do.
+        # does not cross: 0 when the option was off or found nothing to do.
         "mesh_zone_outline_edges": int(mesh_report.get("zone_outline_edges", 0)),
         "zone_edges_decoupled": int(decoupled_edges),
     }
@@ -1556,7 +1908,7 @@ def run_ert_manager_inversion(
         # A trial is kept for its chi2 and convergence; only the best one, the
         # cleaned and the fixed-lambda runs are ever exported. On the pyGIMLi
         # engine each run also holds its ERTManager - Jacobian, meshes and
-        # forward operator - and every trial of a sweep used to stay alive,
+        # forward operator - and every trial of a sweep would stay alive,
         # thirteen with a cold retry. A run nothing can still select drops it;
         # its result is then the model, mesh and response it already carries.
         exported = {id(cleaned_run), id(fixed_run)}
@@ -1702,6 +2054,20 @@ def run_ert_manager_inversion(
         result["export_error"] = str(exc)
         log(f"  the inversion finished, but writing its results to {out} failed: {exc}")
 
+    if survey_3d and vtk_path:
+        # The model is the volume itself.
+        result["vtk_3d_path"] = vtk_path
+        result["volume"] = {"cells": int(np.asarray(run.model).size), "survey_3d": True}
+    elif run.volume is not None:
+        # The section is what the page shows; the whole volume goes beside it.
+        result["vtk_3d_path"] = _export_volume_vtk(run.volume, out, "resistivity_3d.vtk")
+        result["volume"] = {"cells": int(np.asarray(run.volume[1]).size),
+                            "section_cells": int(np.asarray(run.model).size)}
+        log(f"  inverted in 3-D on {result['volume']['cells']} cells; the section along "
+            f"the line has {result['volume']['section_cells']}"
+            + (", and the whole model is in resistivity_3d.vtk"
+               if result["vtk_3d_path"] else ""))
+
     if result["auto_lambda_note"]:
         log(result["auto_lambda_note"])
 
@@ -1825,7 +2191,12 @@ class ERTInversion(InversionBase):
                 - lambda_rate: Lambda reduction rate
                 - lambda_min: Minimum lambda value
                 - min_relative_error: Minimum error floor (default 0.01)
-                - max_relative_error: Maximum error cap (default 0.50)
+                - max_relative_error: Maximum error cap (default 2.00)
+                - posterior_std: also compute each cell's linearised posterior
+                  standard deviation of ln(resistivity) at the final model
+                  (``result.model_log_std``; default False). Costs one dense
+                  n x n factorisation; skipped, with a note in ``result.meta``,
+                  above ``posterior_max_cells`` (default 6000).
                 - use_gpu: Whether to use GPU acceleration (requires CuPy)
                 - parallel: Whether to use parallel CPU computation
                 - n_jobs: Number of parallel jobs (-1 for all cores)
@@ -1852,8 +2223,8 @@ class ERTInversion(InversionBase):
             data['k'] = ert.createGeometricFactors(data, numerical=True)
             # Rebuild rhoa only from resistances the file actually carries.
             # pyGIMLi fills an absent 'r' with zeros, so an unconditional r * k
-            # wiped out every apparent resistivity of a file that stores rhoa
-            # (fielddataline2.dat does) and the run returned 1e-6 Ohm m.
+            # would wipe out every apparent resistivity of a file that stores
+            # rhoa.
             if data.haveData('r'):
                 data['rhoa'] = data['r'] * data['k']
             elif not data.haveData('rhoa') and data.haveData('u') and data.haveData('i'):
@@ -1872,10 +2243,10 @@ class ERTInversion(InversionBase):
             'lambda_min': 1.0,
             'min_relative_error': 0.01,
             'max_relative_error': 2.00,
-            # Stopping. Both were hard-coded (chi2 < 1.5, dPhi < 0.01) before; the
-            # lambda search needs them configurable, because a run that stops at
-            # 1.5 cannot tell you whether this lambda could have reached 1.0, and
-            # a run that stops at dPhi = 1 % may still be descending.
+            # Stopping. Both are parameters, because the lambda search needs
+            # them: a run that stops at chi2 1.5 cannot tell whether this lambda
+            # could have reached 1.0, and a run that stops at dPhi = 1 % may
+            # still be descending.
             'target_chi_squared': 1.0,
             'convergence_tolerance': 0.005,
             'min_iterations': 5,
@@ -1919,19 +2290,17 @@ class ERTInversion(InversionBase):
 
     def setup(self):
         """Set up ERT inversion (create operators, matrices, etc.)"""
-        # DEBUG: Print electrode positions from data before mesh creation
-        sensors = self.data.sensorPositions()
-       
-        if len(sensors) > 0:
-            y_vals = [s.y() for s in sensors]
-            
-
-        # Create mesh if not provided
+        # Create mesh if not provided: pyGIMLi's, with the mesh settings the
+        # caller gave (quality, paraDX, paraMaxCellSize, paraDepth). Quality
+        # defaults to 34; a setting of 0 leaves pyGIMLi's own choice.
         if self.mesh is None:
             ert_manager = ert.ERTManager(self.data)
-            self.mesh = ert_manager.createMesh(data=self.data, quality=34)
-            
-            y_coords = [n.y() for n in self.mesh.nodes()]
+            settings = {'quality': 34.0}
+            for key in ('quality', 'paraDX', 'paraMaxCellSize', 'paraDepth'):
+                value = self.parameters.get(key)
+                if value is not None and float(value) > 0:
+                    settings[key] = float(value)
+            self.mesh = ert_manager.createMesh(data=self.data, **settings)
 
         # Initialize forward operator
         self.fwd_operator = ert.ERTModelling()
@@ -1993,9 +2362,9 @@ class ERTInversion(InversionBase):
         Delta_rhoa_rhoa = np.clip(np.asarray(Delta_rhoa_rhoa, dtype=float), min_err, max_err)
 
         # Data weighting is diagonal, so hold it as a vector and apply it by
-        # broadcasting. Materializing it as a D-by-D array cost 0.27 GB at
-        # D = 6000 and turned 'Wdert.dot(Jr)' into an O(D^2 P) matmul where
-        # O(D P) does the same job. Wdert is kept as a scipy diagonal for any
+        # broadcasting. A D-by-D array would cost D^2 memory and turn
+        # 'Wdert.dot(Jr)' into an O(D^2 P) matmul where O(D P) does the same
+        # job. Wdert is kept as a scipy diagonal for any
         # caller that reads the attribute; the hot paths below use the vector.
         self.Wdert_diag = 1.0 / np.log(Delta_rhoa_rhoa + 1)
         self.Wdert = diags(self.Wdert_diag)
@@ -2008,11 +2377,39 @@ class ERTInversion(InversionBase):
         rm.fillConstraints(Ctmp)
         self.Wm_r = pg.utils.sparseMatrix2coo(Ctmp)
         cw = rm.constraintWeights().array()
-        # Left sparse. It holds about two nonzeros per row, so densifying it
-        # was roughly 300 MB of mostly zeros for a 5000-cell mesh, kept for the
-        # whole run. The one place that needs a dense copy makes it on the spot.
+        # Left sparse. It holds about two nonzeros per row, so a dense copy
+        # would be mostly zeros (roughly 300 MB for a 5000-cell mesh) kept for
+        # the whole run. The one place that needs a dense copy makes it on the
+        # spot.
         self.Wm_r = diags(cw).dot(self.Wm_r).tocsr()
-    
+
+    def _log_model_std(self, final_model: np.ndarray, response: Any, lam: float,
+                       alpha: float, fixed: Optional[np.ndarray]) -> np.ndarray:
+        """Each cell's linearised posterior standard deviation of ln(resistivity).
+
+        The forward operator holds the final model's Jacobian (run() builds it
+        for the coverage just before this). It is taken to the log-log form the
+        iterations solve in, and the objective's own weights give the covariance
+        (:func:`PyHydroGeophysX.uncertainty.posterior.regularized_posterior_std`).
+        Held cells, of a fixed a-priori zone, get 0.
+        """
+        from PyHydroGeophysX.forward.ert_forward import _bounded_ert_resistivity
+        from PyHydroGeophysX.uncertainty.posterior import (
+            POSTERIOR_MAX_CELLS,
+            regularized_posterior_std,
+        )
+
+        model = np.asarray(final_model, dtype=float).ravel()
+        limit = int(self.parameters.get('posterior_max_cells', POSTERIOR_MAX_CELLS))
+        if model.size > limit:
+            raise ValueError(f"{model.size} cells is more than posterior_max_cells ({limit})")
+        _, derivative = _bounded_ert_resistivity(np.log(model).reshape(-1, 1))
+        J = pg.utils.gmat2numpy(self.fwd_operator.jacobian())
+        J *= np.asarray(derivative, dtype=float).reshape(1, -1)
+        J /= np.asarray(response, dtype=float).reshape(-1, 1)
+        free = None if fixed is None else ~np.asarray(fixed, dtype=bool).ravel()
+        return regularized_posterior_std(J, self.Wdert_diag, self.Wm_r, lam, alpha, free=free)
+
     def run(self, initial_model: Optional[np.ndarray] = None,
             reference_model: Optional[np.ndarray] = None) -> InversionResult:
         """
@@ -2026,9 +2423,7 @@ class ERTInversion(InversionBase):
                 default makes the restart point the new reference, so the penalty
                 becomes roughness of the *change* since the restart rather than
                 roughness of the model; accumulated structure then goes unpenalized
-                and the run drifts steadily under-regularized. Measured on the
-                Ashton line over a 20 to 0.3 lambda ladder, that reached chi2 5.72
-                where the same ladder with the reference pinned reached 6.38.
+                and the run drifts steadily under-regularized.
 
         Returns:
             InversionResult with inversion results
@@ -2086,9 +2481,8 @@ class ERTInversion(InversionBase):
         # cancel any constant, so without it a homogeneous reference drops out
         # of the objective and two runs from different homogeneous references
         # converge to the same model. The depth-of-investigation index compares
-        # exactly such runs; without this term it measured only how far each
-        # had got when it stopped, and on the Ex_sensitivity_analysis survey it
-        # was near zero in every cell. Oldenburg and Li (1999) keep the weight
+        # exactly such runs; without this term it would measure only how far
+        # each had got when it stopped. Oldenburg and Li (1999) keep the weight
         # small.
         alpha_s = float(self.parameters.get('reference_weight', 0.0))
         if not np.isfinite(alpha_s) or alpha_s < 0:
@@ -2126,8 +2520,8 @@ class ERTInversion(InversionBase):
         line_search_failures = 0
         # What the forward operator last solved: (log model, linear response,
         # whether its Jacobian followed). The line search solves the model it
-        # accepts, and each iteration used to solve that same model again before
-        # building its Jacobian - a third of the run. pyGIMLi's createJacobian
+        # accepts, and the next iteration reuses that solve when it builds its
+        # Jacobian. pyGIMLi's createJacobian
         # reads the potentials of the operator's last response() and does not
         # check the model, so a solve is reused only while this record still
         # describes the operator.
@@ -2210,10 +2604,9 @@ class ERTInversion(InversionBase):
             ).reshape(-1, 1)
             gc_r = np.vstack((wd * data_residual, L_mr * reg_residual))
             # The stacked system [W_d J; L W_m; L sqrt(alpha_s) I] is held as
-            # its blocks, the Jacobian dense and the rest sparse. It used to be
-            # one dense array, built by densifying W_m (about 1.5 n^2 doubles)
-            # and np.eye(n), copied again by each vstack: 4.4 GB on top of the
-            # run for a 10779-cell mesh. The GPU solvers take it assembled.
+            # its blocks, the Jacobian dense and the rest sparse. One dense array
+            # would need W_m densified (about 1.5 n^2 doubles) and np.eye(n),
+            # copied again by each vstack. The GPU solvers take it assembled.
             blocks = [wd * Jr, L_mr * self.Wm_r]
             if alpha_s > 0:
                 gc_r = np.vstack((gc_r, L_mr * np.sqrt(alpha_s) * delta_mr))
@@ -2226,9 +2619,9 @@ class ERTInversion(InversionBase):
             gc_r = gc_r.reshape(-1, 1)
             
             # Alternative gradient formulation
-            # L_mr stays at the first power here, as it was. This expression
-            # feeds only the Armijo test below, and rescaling it would change
-            # which step lengths are accepted.
+            # L_mr stays at the first power here. This expression feeds only
+            # the Armijo test below, and rescaling it would change which step
+            # lengths are accepted.
             reg_gradient = np.asarray(
                 self.Wm_r.T.dot(self.Wm_r.dot(delta_mr)), dtype=float
             ).reshape(-1, 1) + alpha_s * delta_mr
@@ -2256,10 +2649,10 @@ class ERTInversion(InversionBase):
             
             # Line search. Armijo sufficient decrease is
             # f(m + mu d) <= f(m) + c mu (d . g), with d . g < 0 for a descent
-            # direction, so the goal lies below f(m). It was written with the
-            # sign reversed, which put the goal above f(m) and let a step that
-            # did not lower the objective, or raised it, pass. The best trial
-            # that did lower it is kept in case none meets the test.
+            # direction, so the goal lies below f(m). With the sign reversed the
+            # goal would lie above f(m) and admit a step that did not lower the
+            # objective, or raised it. The best trial that did lower it is kept
+            # in case none meets the test.
             mu_LS = 1
             iarm = 1
             f_current = float(np.asarray(fc_r).item())
@@ -2269,14 +2662,15 @@ class ERTInversion(InversionBase):
             while True:
                 mr1 = mr + mu_LS * d_mr
 
-                # Enforce constraints BEFORE forward modeling (critical fix)
+                # Enforce constraints BEFORE forward modeling
                 mr1 = np.clip(mr1, min_mr, max_mr)
 
-                # Validate that model is finite before forward modeling
-                if not np.all(np.isfinite(mr1)):
-                    if verbose:
-                        print(f'WARNING: Non-finite values detected in model at iteration {nn}')
-                    mr1 = np.nan_to_num(mr1, nan=min_mr, posinf=max_mr, neginf=min_mr)
+                # The clip leaves only a NaN, from a failed linear solve;
+                # setting it to the lower bound would let the line search
+                # accept it as a model.
+                check_resistivity_model(
+                    mr1, log=True, name=f"log-resistivity model of iteration {nn}",
+                    hint="The linear solve for the update step returned NaN.")
 
                 dr, linear = ertforward2(self.fwd_operator, mr1, self.mesh, with_response=True)
                 solved = (mr1, linear, False)
@@ -2312,8 +2706,7 @@ class ERTInversion(InversionBase):
                     if verbose:
                         print('Line search FAIL EXIT')
                     # Never step uphill: take the best trial that lowered the
-                    # objective, or stay put. Before, the last (tiniest) trial
-                    # was taken whatever its objective.
+                    # objective, or stay put.
                     mr1 = best_mr if best_mr is not None else mr
                     break
 
@@ -2333,6 +2726,7 @@ class ERTInversion(InversionBase):
 
         # Process final model
         final_model = np.exp(mr)
+        check_resistivity_model(final_model, name="final resistivity model")
 
         # Compute final forward response. The loop has usually just solved this
         # model - it ends right after its forward solve, or after the line search
@@ -2347,9 +2741,8 @@ class ERTInversion(InversionBase):
             jacobian_held = False
 
         # Every chi2 recorded in the loop is pre-update, so when the loop ends
-        # on the iteration cap the history, and meta['chi2'] with it, described
-        # the model from before the final step, not the one returned
-        # (fielddataline2 with max_iterations=1: 3.49 reported, 0.25 actual).
+        # on the iteration cap the history, and meta['chi2'] with it, would
+        # describe the model from before the final step, not the one returned.
         # Score the returned model the same way the loop does.
         iterations_run = len(result.iteration_chi2)
         if stop_reason == 'iteration_cap':
@@ -2377,7 +2770,18 @@ class ERTInversion(InversionBase):
             paramSizes[c.marker()] += c.size()
             
         FinalJ = np.log10(covTrans / paramSizes)
-        
+
+        # The model's own uncertainty, for whoever converts it to a property:
+        # the water-content Monte Carlo draws resistivity with it, so the error
+        # it reports carries the inversion's share, not the parameters' alone.
+        if self.parameters.get('posterior_std', False):
+            result.model_log_std = None
+            try:
+                result.model_log_std = self._log_model_std(
+                    final_model, dr, lam_val, alpha_s, fixed)
+            except Exception as exc:  # noqa: BLE001 - the model stands without it
+                result.meta['posterior_std_note'] = f"not computed: {exc}"
+
         # Store results
         result.final_model = final_model.ravel()
         result.coverage = FinalJ

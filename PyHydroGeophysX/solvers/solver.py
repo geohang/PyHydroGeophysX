@@ -30,8 +30,8 @@ def __getattr__(name: str) -> Any:
         f"{__name__}.gpu_available",
         "solvers.linear_solvers.generalized_solver(..., use_gpu=True), which runs on "
         "the CPU when CuPy is missing")
-    # 0.3.0 set this by importing CuPy as this module loaded. CuPy is now loaded
-    # only on request, and asking for this name is one.
+    # Version 0.3.0 set this by importing CuPy as this module loaded. CuPy is
+    # loaded only on request, and asking for this name is one.
     return _linear_solvers._load_gpu_backend()
 
 

@@ -461,7 +461,7 @@ class HertzMindlinModel(BaseVelocityModel):
         depth : array-like
             Depth in metres, default 1. Ignored when effective_pressure is set.
         effective_pressure : array-like, optional
-            Nonnegative grain-contact pressure in Pa, replacing the historical
+            Nonnegative grain-contact pressure in Pa, replacing the default
             (mineral_density - 1000) * 9.8 * depth estimate. This is distinct
             from the pore-fluid pressure passed to batzle_wang_brine.
         fluid_modulus : array-like, optional
@@ -471,7 +471,7 @@ class HertzMindlinModel(BaseVelocityModel):
             bypassing fluid mixing and substitution.
         fluid_density : array-like, optional
             Liquid density in kg/m3, default 1000; used in bulk density only.
-            The historical pressure estimate is unchanged by this parameter.
+            The default pressure estimate does not depend on this parameter.
         return_moduli : bool
             False preserves (Vp_high, Vp_low). True adds a dictionary with
             Vs_low, Vs_high, K_dry_low, K_dry_high, G_dry_low, G_dry_high,
@@ -514,10 +514,10 @@ class HertzMindlinModel(BaseVelocityModel):
         p_gpa = pressure / 1e9
         k_hm = (contacts**2 * (1 - phi_c)**2 * gm**2
                 / (18 * np.pi**2 * (1 - v)**2) * p_gpa)**(1/3)
-        # Mavko, Mukerji & Dvorkin (2009), RPHtools/hertzmind.m;
-        # independently agrees with rockphypy.GM.hertzmindlin(..., f=1).
-        # The prefactor MUST stay outside the cube root. Historical versions
-        # used (10 - 2*v) and cubed-rooted the prefactor, overstating stiffness.
+        # Hertz-Mindlin contact moduli, Mavko, Mukerji & Dvorkin (2009), The
+        # Rock Physics Handbook, 2nd ed. The result is checked against the
+        # handbook's RPHtools hertzmind.m and rockphypy.GM.hertzmindlin(..., f=1).
+        # The shear prefactor (5 - 4v) / (5 (2 - v)) stays outside the cube root.
         shear_prefactor = (5 - 4*v) / (5 * (2 - v))
         shear_contact_term = (3 * contacts**2 * (1 - phi_c)**2 * gm**2 * p_gpa
                               / (2 * np.pi**2 * (1 - v)**2))
@@ -753,8 +753,7 @@ def vel_porous(
     Compatibility wrapper over HertzMindlinModel.calculate_velocity with
     critical porosity 0.4 and coordination number 4. Both return modes of
     that method and this function share the contact, HS and Gassmann
-    implementation, including the corrected Hertz-Mindlin shear prefactor.
-    Historical incorrect shear values are intentionally not preserved.
+    implementation.
 
     Parameters:
     phi (np.array): Array of porosities.

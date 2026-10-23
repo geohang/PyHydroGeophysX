@@ -30,16 +30,16 @@ def _input_directory(
 ) -> Iterator[Optional[str]]:
     """Yield a directory holding the run's inputs under their original names.
 
-    A run stores these inputs as one compressed bundle rather than as the loose
-    files it used to copy, because a time-lapse sequence or a hydrology array
-    set is several files that only ever get read together. The readers below are
+    A run stores these inputs as one compressed bundle rather than as loose
+    copied files, because a time-lapse sequence or a hydrology array set is
+    several files that only ever get read together. The readers below are
     PyGIMLi's loaders and ``np.load``, which want a real path, so the bundle is
     expanded for the length of the run and thrown away afterwards; only the
     compressed copy is what the Project keeps.
 
-    ``fallback`` is the older ``{name: path}`` mapping. Runs recorded before the
-    bundle existed still carry it, and their copied files are already a
-    directory, so those are used where they are.
+    ``fallback`` is the ``{name: path}`` mapping that runs recorded without a
+    bundle carry. Their copied files are already a directory, so those are used
+    where they are.
     """
     if bundle:
         with tempfile.TemporaryDirectory(prefix="phgx_inputs_") as scratch:
@@ -120,10 +120,10 @@ def _keywords_for(function: Callable[..., Any], parameters: Mapping[str, Any]) -
     function's own default applies and cannot drift from a copy kept here. A key
     the function does not take - page bookkeeping such as ``receiver_spacing`` -
     stays in the recipe without reaching it. A value is converted to the type of
-    the default it replaces, as these handlers used to do one keyword at a time,
-    so a recipe written with ``20.0`` iterations still runs, and a JSON list
-    arrives as the tuple a pair of bounds defaults to. Arguments without a
-    default (the data and output paths) and ``log`` are the handler's to pass.
+    the default it replaces, so a recipe written with ``20.0`` iterations still
+    runs, and a JSON list arrives as the tuple a pair of bounds defaults to.
+    Arguments without a default (the data and output paths) and ``log`` are the
+    handler's to pass.
     """
     keywords: Dict[str, Any] = {}
     for name, parameter in inspect.signature(function).parameters.items():
@@ -330,6 +330,8 @@ def run_mesh3d(spec: WorkflowSpec, context: RunContext) -> WorkflowRunResult:
     inputs = _materialize(spec.inputs, context)
     if inputs.get("topography_points"):
         config["topography_points"] = np.load(inputs["topography_points"])
+    if inputs.get("electrode_positions"):
+        config["electrode_positions"] = np.load(inputs["electrode_positions"])
     if inputs.get("e4d_config"):
         config["e4d_config_path"] = str(inputs["e4d_config"])
     config["output_dir"] = str(context.output_dir)

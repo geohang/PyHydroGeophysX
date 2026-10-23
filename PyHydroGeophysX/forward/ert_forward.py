@@ -9,6 +9,62 @@ from pygimli.physics import ert
 
 
 # ---------------------------------------------------------------------------
+# Model check
+# ---------------------------------------------------------------------------
+def check_resistivity_model(model: Any, *, log: bool = False,
+                            name: str = "resistivity model",
+                            hint: str = ("Look for masked or inactive hydrologic "
+                                         "cells, cells outside the interpolated "
+                                         "data, or a failed conversion.")) -> np.ndarray:
+    """Refuse a model the ERT forward operator would model as something else.
+
+    pyGIMLi's ERTModelling does not refuse a NaN cell: the NaN never reaches
+    the stiffness matrix, and the apparent resistivities come back finite and
+    plausible (fielddataline2 with one NaN cell, pgcore 1.5.5.post1). An
+    infinite cell is accepted with only a printed warning, the rows it empties
+    forced to Dirichlet. Zones refuse both and the petrophysical models clip to
+    a finite range, so either one is a hole in the model - a masked or
+    inactive hydrologic cell, a cell outside the interpolated data - and is
+    refused before the forward call, as zero and negative resistivity are.
+
+    Args:
+        model: Resistivity of each cell (ohm-m), or its natural log with ``log``.
+        log: The model holds ln(resistivity), so any finite value is valid.
+        name: What the model is, for the error message.
+        hint: Where a NaN or infinite cell may have come from, for the message.
+
+    Returns:
+        The model as a new flat float array.
+
+    Raises:
+        ValueError: naming how many cells are NaN, infinite or not positive,
+            and the first of them.
+    """
+    if model is None:
+        raise ValueError(f"No {name} was given.")
+    # A copy: an array viewing a temporary pyGIMLi vector can outlive it.
+    values = np.array(model, dtype=float).ravel()
+    nan, inf = np.isnan(values), np.isinf(values)
+    bad = nan | inf
+    problems = [f"{int(count)} {kind}" for count, kind in
+                ((nan.sum(), "NaN"), (inf.sum(), "infinite")) if count]
+    if not log:
+        not_positive = values <= 0
+        bad |= not_positive
+        if not_positive.any():
+            problems.append(f"{int(not_positive.sum())} zero or negative")
+    if problems:
+        first = np.flatnonzero(bad)[:5].tolist()
+        message = (f"The {name} has {', '.join(problems)} of its {values.size} "
+                   f"cells (the first at cells {first}).")
+        if nan.any() or inf.any():
+            message += (" pyGIMLi's ERT forward would not refuse them and would "
+                        f"return plausible but wrong apparent resistivities. {hint}")
+        raise ValueError(message)
+    return values
+
+
+# ---------------------------------------------------------------------------
 # ERTForward Modeling
 # ---------------------------------------------------------------------------
 class ERTForwardModeling:
@@ -72,17 +128,10 @@ class ERTForwardModeling:
 
         # Apply exponentiation if log-transformed input
         if log_transform:
-            # Validate before exponentiation
-            model_array = np.array(model)
-            if not np.all(np.isfinite(model_array)):
-                raise ValueError(f"Non-finite values in log-resistivity model")
-
+            check_resistivity_model(model, log=True, name="log-resistivity model")
             model = pg.Vector(np.exp(model))
 
-        # Validate resistivity values before PyGIMLi call
-        model_array = np.array(model)
-        if np.any(model_array <= 0):
-            raise ValueError(f"Forward modeling received invalid resistivity values: min={np.min(model_array):.2e}, max={np.max(model_array):.2e}")
+        check_resistivity_model(model)
 
         # Calculate response
         response = self.fwd_operator.response(model)
@@ -115,10 +164,11 @@ class ERTForwardModeling:
         # Apply exponentiation if log-transformed input
         if log_transform:
             model = pg.Vector(np.exp(model))
-        
+        check_resistivity_model(model)
+
         # Calculate response
         response = self.fwd_operator.response(model)
-        
+
         # Create Jacobian matrix
         self.fwd_operator.createJacobian(model)
         jacobian = self.fwd_operator.jacobian()
@@ -156,7 +206,8 @@ class ERTForwardModeling:
         # Apply exponentiation if log-transformed input
         if log_transform:
             model = pg.Vector(np.exp(model))
-        
+        check_resistivity_model(model)
+
         # Calculate response and Jacobian
         response = self.fwd_operator.response(model)
         self.fwd_operator.createJacobian(model)
@@ -229,8 +280,8 @@ class ERTForwardModeling:
         
         # Prepare mesh for forward modeling
         if mesh is not None:
-            # Set all cells to same marker, on a copy: this used to relabel
-            # the caller's own mesh, wiping whatever layer markers it carried.
+            # Set all cells to the same marker, on a copy, so the caller's own
+            # mesh keeps whatever layer markers it carries.
             mesh = pg.Mesh(mesh)
             mesh.setCellMarkers(np.ones(mesh.cellCount()) * 2)
             
@@ -254,16 +305,15 @@ class ERTForwardModeling:
         synth_data = scheme.copy()
         
         # Forward response
+        check_resistivity_model(res_models)
         fob = ert.ERTModelling()
         fob.setData(scheme)
         fob.setMesh(grid)
         dr = fob.response(res_models)
         
         # Add noise. pg.randn draws from NumPy's global legacy RNG and reseeds
-        # it when given a seed; the pg.rrng.randpin.seed call used before does
-        # not exist, so any seed raised AttributeError. A private RandomState
-        # makes the same draws as pg.randn(n, seed=seed) without resetting the
-        # caller's global NumPy RNG.
+        # it when given a seed. A private RandomState makes the same draws as
+        # pg.randn(n, seed=seed) without resetting the caller's global NumPy RNG.
         if seed is not None:
             noise = np.random.RandomState(seed).randn(dr.size())
         else:
@@ -299,23 +349,26 @@ def ertforward(
     xr: Any,
 ) -> Any:
     """
-    Forward model for ERT.
+    Forward model for ERT, with only the cells of marker 2 taken from ``xr``.
 
     Args:
         fob (pygimli.ERTModelling): ERT forward operator.
-        mesh (pg.Mesh): Mesh for the forward model.
-        rhomodel (pg.RVector): Resistivity model vector.
-        xr (np.ndarray): Log-transformed model parameter (resistivity).
+        mesh (pg.Mesh): Mesh whose cell markers pick the cells to update.
+        rhomodel (pg.RVector): Resistivity of every cell (ohm-m).
+        xr (np.ndarray): Natural-log resistivity of the cells of marker 2.
 
     Returns:
         dr (np.ndarray): Log-transformed forward response.
-        rhomodel (pg.RVector): Updated resistivity model.
+        rhomodel (pg.RVector): Updated resistivity model (ohm-m).
     """
-    xr1 = np.log(rhomodel.array())
-    xr1[mesh.cellMarkers() == 2] = np.exp(xr)
-    rhomodel = pg.matrix.RVector(xr1)
+    # Cells of other markers keep their resistivity from ``rhomodel`` (ohm-m);
+    # only the marker-2 cells are replaced by exp(xr).
+    rho = np.array(rhomodel, dtype=float).ravel()
+    rho[np.asarray(mesh.cellMarkers()) == 2] = np.exp(np.asarray(xr, dtype=float).ravel())
+    rhomodel = pg.Vector(rho)
+    check_resistivity_model(rhomodel)
     dr = fob.response(rhomodel)
-    return np.log(dr.array()), rhomodel
+    return np.log(np.array(dr, dtype=float)), rhomodel
 
 
 # ---------------------------------------------------------------------------
@@ -330,10 +383,7 @@ def _bounded_ert_resistivity(xr: Any) -> Tuple[np.ndarray, np.ndarray]:
     derivative, allowing a bounded optimizer to move back into the interval.
     """
     model = np.asarray(xr)
-    if not np.all(np.isfinite(model)):
-        raise ValueError(
-            f"Non-finite values in log-resistivity model: "
-            f"NaN={np.sum(np.isnan(model))}, Inf={np.sum(np.isinf(model))}")
+    check_resistivity_model(model, log=True, name="log-resistivity model")
     if np.any(model > 20) or np.any(model < -20):
         print(f'WARNING: Extreme log-resistivity values detected: '
               f'min={np.min(model):.2f}, max={np.max(model):.2f}')
@@ -394,6 +444,7 @@ def ertforandjac(
         dr (np.ndarray): Log-transformed forward response.
         J (np.ndarray): Jacobian matrix.
     """
+    check_resistivity_model(rhomodel)
     dr = fob.response(rhomodel)
     fob.createJacobian(rhomodel)
     J = fob.jacobian()
@@ -444,8 +495,8 @@ def ertforandjac2(
     solved = fob.response(rhomodel) if response is None else response
     fob.createJacobian(rhomodel)
     J = fob.jacobian()
-    # gmat2numpy builds a new array, so it is scaled in place: two more D x n
-    # copies of every survey's Jacobian, one per operation, used to be made.
+    # gmat2numpy builds a new array, so it is scaled in place; a scaling
+    # expression would make two more D x n copies of every survey's Jacobian.
     J = pg.utils.gmat2numpy(J)
     J *= derivative.reshape(1, -1)
     dr = np.array(solved, dtype=float)

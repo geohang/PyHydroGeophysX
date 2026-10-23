@@ -84,7 +84,7 @@ class StructuralConstraint:
         """
         Build the local design matrix ``X=[x, z, 1]`` used by cross-gradient.
 
-        This mirrors the legacy ``xyzpos[:, 2] = 1`` construction.
+        The column of ones is the constant term of the local linear fit.
         """
         centers = StructuralConstraint._cell_centers_xy(mesh)
         if centers.size == 0:
@@ -125,8 +125,8 @@ class StructuralConstraint:
         -------
         scipy.sparse.csr_matrix
             The ``n x n`` matrix, sparse. ``Wm^T Wm`` of a smoothness operator
-            has a handful of entries per row; it used to be formed as a dense
-            array, 0.2 GB at 5,000 cells and growing as n^2.
+            has a handful of entries per row, so it is kept sparse; a dense
+            array would take 0.2 GB at 5,000 cells and grow as n^2.
         """
         src = str(source).lower().strip()
 
@@ -173,9 +173,8 @@ class StructuralConstraint:
         cells ``j`` with ``RCM[i, j] != 0``, so ``B1`` and ``B2`` have the
         sparsity of ``RCM`` and are returned as CSR matrices. ``RCM`` may be
         dense or sparse. Each row is assembled from its own neighbourhood:
-        ``X^T W X`` with ``W = diag(RCM[i])`` used to be formed from an
-        ``n x n`` ``W`` for every row, O(n^3) per call, on dense ``n x n``
-        blocks.
+        forming ``X^T W X`` with ``W = diag(RCM[i])`` from an ``n x n`` ``W``
+        for every row would be O(n^3) per call, on dense ``n x n`` blocks.
         """
         if issparse(RCM):
             R = csr_matrix(RCM)

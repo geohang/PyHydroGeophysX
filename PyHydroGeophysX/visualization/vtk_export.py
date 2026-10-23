@@ -40,10 +40,10 @@ def export_mesh_to_vtk(
     if hasattr(mesh, "exportVTK"):
         if cell_data:
             # Hand the fields to pyGIMLi on a copy, so it writes them in its
-            # own CELL_DATA section. Appending them to the file put them after
-            # the POINT_DATA section whenever the mesh carried node data, where
-            # VTK readers take them for point arrays (and report a size
-            # mismatch); pyvista read 'rho' as a point array.
+            # own CELL_DATA section. Appended to the file, they would land after
+            # the POINT_DATA section whenever the mesh carries node data, where
+            # VTK readers take them for point arrays and report a size
+            # mismatch.
             import pygimli as pg
 
             n_cells = mesh.cellCount()

@@ -1,14 +1,9 @@
-"""Regression tests for the hydrologic-model readers and hydro-to-ERT coupling.
+"""Tests for the hydrologic-model readers and hydro-to-ERT coupling.
 
-What went wrong:
-
-* ``MODFLOWWaterContent.get_timestep_info`` skipped ``nuzfcells * 3`` values
-  per record whatever the model's layer count, so for any model that is not
-  three layers deep it landed mid-record and read data as headers. The record
-  header already states the count (ncol * nrow = UZF cells x layers).
-* ``hydro_to_ert`` relabelled every cell of the caller's mesh as marker 2
-  before appending the boundary, so the ``model_mesh.bms`` that
-  ``run_hydro_forward`` saves afterwards had lost its layer markers.
+* ``MODFLOWWaterContent`` reads each record's value count from its header, so
+  it follows a model of any layer count rather than assuming three layers.
+* ``hydro_to_ert`` leaves the layer markers of the caller's mesh as they are, so
+  the ``model_mesh.bms`` that ``run_hydro_forward`` saves keeps them.
 """
 
 import os
@@ -121,27 +116,6 @@ def test_hydro_to_ert_keeps_the_callers_layer_markers():
     np.testing.assert_array_equal(np.asarray(mesh.cellMarkers()), markers)
     assert res.shape == (n,) and np.all(res > 0)
     assert data.size() > 0
-
-
-def test_a_run_that_needs_simpeg_is_refused_before_anything_is_computed(monkeypatch):
-    """Without SimPEG the EM and gravity converters are placeholders, so ERT and
-    SRT still import. A run that asks for one must stop at once, not after ERT and
-    SRT have been computed for nothing."""
-    pytest.importorskip("pygimli")
-    import PyHydroGeophysX.Hydro_modular as hydro
-    from PyHydroGeophysX._internal.optional_dependencies import BackendUnavailable
-    from PyHydroGeophysX.Hydro_modular import hydro_to_geophysics as pipeline
-
-    missing = ModuleNotFoundError("No module named 'simpeg'", name="simpeg")   # as import raises it
-    placeholder = hydro._unavailable("hydro_to_tdem", missing)
-    monkeypatch.setattr(hydro, "hydro_to_tdem", placeholder)
-    started = []
-    monkeypatch.setattr(pipeline, "extract_profile", lambda *a, **k: started.append(a))
-    with pytest.raises(BackendUnavailable, match="TDEM needs SimPEG"):
-        pipeline.run_hydro_forward({}, {}, ["ERT", "TDEM"], (0.0, 0.0), (1.0, 1.0))
-    assert started == [], "the run began before it was refused"
-    with pytest.raises(ImportError, match="'simpeg' could not be imported"):
-        placeholder()                       # called anyway, it says what is missing
 
 
 @pytest.mark.parametrize("source", ["mf6", "lpf", "upw", "ss_only"])

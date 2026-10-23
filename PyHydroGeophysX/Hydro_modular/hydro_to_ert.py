@@ -7,6 +7,7 @@ from pygimli.physics import ert
 from typing import Tuple, Optional, Dict, Any, Union, List
 
 from PyHydroGeophysX.core.interpolation import ProfileInterpolator
+from PyHydroGeophysX.forward.ert_forward import check_resistivity_model
 from PyHydroGeophysX.petrophysics.resistivity_models import water_content_to_resistivity
 
 
@@ -95,7 +96,7 @@ def hydro_to_ert(
         ID_layers[:layer_idx[1]] = marker_labels[0]  # Top layer
         ID_layers[layer_idx[1]:layer_idx[2]] = marker_labels[1]  # Middle layer
         ID_layers[layer_idx[2]:] = marker_labels[2]  # Bottom layer
-        # The whole array used to be printed on every call.
+        # The markers are printed only on request.
         if verbose:
             print(f"Layer markers along the profile: {np.unique(ID_layers).tolist()}")
 
@@ -158,8 +159,8 @@ def hydro_to_ert(
                     profile_interpolator.surface_profile)
     
     # Relabel a copy as the single parameter region. Relabelling the caller's
-    # mesh wiped its layer markers, so the model_mesh.bms run_hydro_forward
-    # saves afterwards, and any later use of the mesh, had no layers left.
+    # mesh would wipe its layer markers, which the model_mesh.bms that
+    # run_hydro_forward saves afterwards, and any later use of the mesh, need.
     forward_mesh = pg.Mesh(mesh)
     forward_mesh.setCellMarkers(np.ones(forward_mesh.cellCount())*2)
     grid = pg.meshtools.appendTriangleBoundary(forward_mesh, marker=1,
@@ -168,7 +169,11 @@ def hydro_to_ert(
     pos = np.hstack((xpos.reshape(-1,1),ypos.reshape(-1,1)))
     schemeert = ert.createData(elecs=pos,schemeName=scheme_name)
 
-    # 4. Perform forward modeling to create synthetic ERT data
+    # 4. Perform forward modeling to create synthetic ERT data. A NaN water
+    # content or porosity (a masked or inactive model cell, a cell outside the
+    # interpolation) passes through the petrophysical clip as NaN, and pyGIMLi
+    # would model it without saying so.
+    check_resistivity_model(res_model, name="resistivity converted from the hydrologic model")
     synth_data = schemeert.copy()
     fob = ert.ERTModelling()
     fob.setData(schemeert)
@@ -186,7 +191,7 @@ def hydro_to_ert(
         relativeError=float(rel_error),
     )
 
-    # save_path used to be accepted and ignored, so nothing was written.
+    # The synthetic data are written when a path is given.
     if save_path is not None:
         synth_data.save(str(save_path))
 

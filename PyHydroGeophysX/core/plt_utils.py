@@ -42,8 +42,8 @@ def _draw_first_picks(ax: Any, data: Any, tt: Any, plotva: Any, time_label: str,
                       **kwargs: Any) -> Any:
     """:func:`drawFirstPicks`, with the travel-time axis label as a parameter.
 
-    ``SeismicForwardModeling.draw_first_picks`` carried a copy of this that
-    differed only in that label, so both now draw through here.
+    ``SeismicForwardModeling.draw_first_picks`` differs only in that label, so
+    both draw through here.
     """
     # Extract coordinates
     px = pg.x(data)
