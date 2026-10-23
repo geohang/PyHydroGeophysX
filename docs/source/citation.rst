@@ -289,6 +289,15 @@ Cite the engines you used
      - Oldenburg, D. W. and Li, Y. (1999). Estimating depth of investigation
        in DC resistivity and IP surveys. *Geophysics*, 64(2), 403-416.
        https://doi.org/10.1190/1.1444545
+   * - The linearised posterior standard deviation
+       (``uncertainty.regularized_posterior_std``) and the water content's
+       +/- drawn from it
+     - Tarantola, A. (2005). *Inverse Problem Theory and Methods for Model
+       Parameter Estimation*. SIAM. https://doi.org/10.1137/1.9780898717921;
+       Aster, R. C., Borchers, B. and Thurber, C. H. (2018). *Parameter
+       Estimation and Inverse Problems* (3rd ed.). Elsevier.
+       https://doi.org/10.1016/C2015-0-02458-3 (BibTeX in
+       :ref:`posterior-references`)
    * - Ensemble Kalman updating, or ES-MDA
      - Evensen, G. (2003). *Ocean Dynamics*, 53(4), 343-367.
        https://doi.org/10.1007/s10236-003-0036-9; for ES-MDA, Emerick, A. A.
@@ -305,6 +314,8 @@ The README carries the references for the core packages and engines an analysis
 runs on. The papers behind individual methods, and supporting tools such as the
 Gmsh mesher, are kept here with their BibTeX; the table above says which of
 them to cite for which part of an analysis.
+
+.. _ert-reciprocal-references:
 
 ERT reciprocal errors
 ~~~~~~~~~~~~~~~~~~~~~
@@ -337,6 +348,8 @@ error model.
      doi     = {10.1029/2007WR006755}
    }
 
+.. _gmsh-references:
+
 3D meshes built with Gmsh
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -356,6 +369,8 @@ TetGen.
      year    = {2009},
      doi     = {10.1002/nme.2579}
    }
+
+.. _seismic-shallow-references:
 
 Shallow seismic processing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -423,6 +438,8 @@ listed by Steeples & Miller (1998).
      year    = {1998},
      doi     = {10.1190/1.1444422}
    }
+
+.. _gpr-references:
 
 Ground-penetrating radar
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -781,6 +798,38 @@ investigation is the cumulated sensitivity of Christiansen & Auken (2012).
      doi     = {10.1190/geo2011-0393.1}
    }
 
+
+.. _posterior-references:
+
+Linearised posterior uncertainty
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``uncertainty.regularized_posterior_std`` gives each cell's standard deviation
+from the linearised posterior covariance of a regularised Gauss-Newton model,
+and the water content's +/- draws the resistivity from it (see
+:ref:`water-content-uncertainty`).
+
+.. code-block:: bibtex
+
+   @book{tarantola2005inverse,
+     author    = {Tarantola, Albert},
+     title     = {Inverse Problem Theory and Methods for Model Parameter Estimation},
+     publisher = {Society for Industrial and Applied Mathematics},
+     year      = {2005},
+     doi       = {10.1137/1.9780898717921}
+   }
+
+   @book{aster2018parameter,
+     author    = {Aster, Richard C. and Borchers, Brian and Thurber, Clifford H.},
+     title     = {Parameter Estimation and Inverse Problems},
+     edition   = {3},
+     publisher = {Elsevier},
+     year      = {2018},
+     doi       = {10.1016/C2015-0-02458-3}
+   }
+
+
+.. _pore-fluid-references:
 
 Pore-fluid properties and grain contacts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1166,10 +1166,12 @@ class TimeLapseERTInversion(InversionBase):
         # model's solve already, and its Jacobian when the loop stopped at the
         # start of an iteration; they are the same only if the model handed to
         # pyGIMLi here is the one the forward wrappers passed (no resistivity
-        # clip, and not the float32 copy of low-memory mode).
+        # clip, and not the float32 copy of low-memory mode). A 3-D series'
+        # shared operator holds the last step's solve, so it solves again.
         mid_idx = self.size // 2
         block = np.reshape(mr, (-1, self.size), order='F')[:, mid_idx]
         held = (solved is not None and np.array_equal(solved[0], mr)
+                and not isinstance(self.fwd_operators[0], _StepForward)
                 and np.array_equal(np.clip(np.exp(np.clip(block, -20, 20)), 0.001, 1e6),
                                    final_model[:, mid_idx]))
         if held:

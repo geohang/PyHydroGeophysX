@@ -61,7 +61,8 @@ pip install pyhydrogeophysx[all]
 
 ## Configuration
 
-Set your LLM API key as an environment variable based on the provider you want to use:
+An agent uses an LLM API key only when you give it one. Pass the key as
+`api_key`, or `api_key="env"` to read the provider's environment variable:
 
 ```bash
 # For OpenAI GPT
@@ -74,15 +75,15 @@ export GEMINI_API_KEY='your-api-key-here'
 export ANTHROPIC_API_KEY='your-api-key-here'
 ```
 
-Or pass it directly when creating agents:
-
 ```python
-# Choose your LLM provider
-coordinator = AgentCoordinator(
-    api_key='your-api-key',
-    llm_provider='openai'  # or 'gemini', 'claude'
-)
+from PyHydroGeophysX.agents import ERTInversionAgent
+
+agent = ERTInversionAgent(api_key="env", llm_provider="openai")   # reads OPENAI_API_KEY
+agent = ERTInversionAgent(api_key="your-api-key", llm_provider="claude")
 ```
+
+Setting the variable alone does nothing: without `api_key` the agent runs without
+a model.
 
 **Note**: The system works without an API key, but LLM-enhanced features (parameter recommendations, interpretations) will be disabled.
 
@@ -396,8 +397,8 @@ When an LLM API key is provided (OpenAI/Gemini/Claude), agents can:
 import os
 print(os.getenv('OPENAI_API_KEY'))
 
-# Set temporarily in code (not recommended for production)
-coordinator = AgentCoordinator(api_key='your-key')
+# The variable is read only with api_key="env"
+agent = ERTInversionAgent(api_key="env")
 ```
 
 ### Missing Dependencies

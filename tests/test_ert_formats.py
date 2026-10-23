@@ -1228,16 +1228,19 @@ def test_rustmesh_backend_meshes_like_triangle_without_calling_it() -> None:
 _GRID = [(x, y) for x in (0.0, 15.0, 30.0) for y in (0.0, 7.0, 14.0, 21.0)]
 
 
-@pytest.mark.parametrize("table, three_d", [
+@pytest.mark.parametrize("table, three_d, stretch", [
     ("Cable,Elec,X,Y,Z\n" + "".join(f"1,{i + 1},{x},{y},{100 + 0.1 * x}\n"
-                                    for i, (x, y) in enumerate(_GRID)), True),
-    ("x,z\n" + "".join(f"{x},{100 + 3 * np.sin(x)}\n" for x in range(12)), False),
-    ("X,Y,Z\n" + "".join(f"{x},{x},{100 + 0.1 * x}\n" for x in range(12)), False),
-    ("".join(f"{x} {100 + 3 * np.sin(x)} 0\n" for x in range(12)), False),
-], ids=["grid on a slope", "profile", "line in plan", "pygimli profile"])
-def test_electrodes_that_cover_an_area_keep_their_y(tmp_path, table, three_d) -> None:
+                                    for i, (x, y) in enumerate(_GRID)), True, np.sqrt(1.01)),
+    ("Cable,Elec,X,Y,Z\n" + "".join(f"1,{i + 1},{x},{y},211\n"
+                                    for i, (x, y) in enumerate(_GRID)), True, 1.0),
+    ("x,z\n" + "".join(f"{x},{100 + 3 * np.sin(x)}\n" for x in range(12)), False, None),
+    ("X,Y,Z\n" + "".join(f"{x},{x},{100 + 0.1 * x}\n" for x in range(12)), False, None),
+    ("".join(f"{x} {100 + 3 * np.sin(x)} 0\n" for x in range(12)), False, None),
+], ids=["grid on a slope", "flat grid off z = 0", "profile", "line in plan", "pygimli profile"])
+def test_electrodes_that_cover_an_area_keep_their_y(tmp_path, table, three_d, stretch) -> None:
     """A 3-D survey's electrode file places (x, y, z) and its factors use the
-    distances in 3-D; a profile keeps PyGIMLi's (x, elevation, 0)."""
+    distances in 3-D, at any elevation; a profile keeps PyGIMLi's
+    (x, elevation, 0)."""
     pg = pytest.importorskip("pygimli")
     from PyHydroGeophysX.data_processing import ert_io
 
@@ -1256,10 +1259,10 @@ def test_electrodes_that_cover_an_area_keep_their_y(tmp_path, table, three_d) ->
     ert_io.place_electrodes(data, path)
     assert np.allclose(np.array(data.sensorPositions()), positions)
     if three_d:
-        assert np.ptp(positions[:, 1]) > 0 and np.ptp(positions[:, 2]) > 0
-        # On a plane the factors are those of the plane laid flat.
+        assert np.ptp(positions[:, 1]) > 0
+        # On a plane the factors are those of the plane laid flat at z = 0.
         flat = pg.DataContainerERT(data)
         for index, (x, y, _) in enumerate(positions):
-            flat.setSensorPosition(index, pg.Pos(x * np.sqrt(1.01), y, 0.0))
+            flat.setSensorPosition(index, pg.Pos(x * stretch, y, 0.0))
         k = ert_io.analytic_geometric_factors(flat)
         assert np.allclose(data["k"], k) and np.allclose(data["rhoa"], k)

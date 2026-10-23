@@ -660,8 +660,9 @@ class BaseAgent(ABC):
 
         if not self.llm_enabled:
             raise ValueError(
-                f"{self.llm_provider.upper()} API key not found. Set the appropriate "
-                f"environment variable or pass api_key during initialization."
+                f"{self.llm_provider.upper()} API key not found. Pass api_key during "
+                f"initialization, or api_key='{KEY_FROM_ENVIRONMENT}' to read the "
+                f"provider's environment variable."
             )
         from PyHydroGeophysX.llm.runtime_options import retrieved_context
         if self.llm_provider not in ('openai', 'openai_compatible') and retrieved_context.get():

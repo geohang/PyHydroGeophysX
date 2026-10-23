@@ -24,7 +24,9 @@ Run from the repository root with the project environment's Python (the
     # What a run would send, and to whom; sends nothing
     python tools/agent_eval/run_eval.py --provider claude --model claude-sonnet-5 --dry-run
 
-    # Score saved replies offline (no API call)
+    # Score saved replies offline (no API call). sample_replies.jsonl is
+    # hand-written, some replies wrong on purpose, to show the scoring; it is
+    # no model's output.
     python tools/agent_eval/run_eval.py --replies tools/agent_eval/sample_replies.jsonl --out <dir>
 
     # Live runs: these spend credit on the provider's account

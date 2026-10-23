@@ -114,7 +114,7 @@ class Skill:
 
 # -- reading ------------------------------------------------------------------
 
-_FRONT = re.compile(r"\A﻿?---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|\Z)", re.S)
+_FRONT = re.compile(r"\A\ufeff?---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|\Z)", re.S)
 
 
 def _strip_front_matter(text: str) -> str:

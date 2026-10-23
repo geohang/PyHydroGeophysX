@@ -2291,8 +2291,8 @@ class ERTInversion(InversionBase):
     def setup(self):
         """Set up ERT inversion (create operators, matrices, etc.)"""
         # Create mesh if not provided: pyGIMLi's, with the mesh settings the
-        # caller gave (quality, paraDX, paraMaxCellSize, paraDepth). Quality
-        # defaults to 34; a setting of 0 leaves pyGIMLi's own choice.
+        # caller gave (quality, paraDX, paraMaxCellSize, paraDepth). A setting
+        # of 0 or none keeps the default: quality 34, pyGIMLi's for the rest.
         if self.mesh is None:
             ert_manager = ert.ERTManager(self.data)
             settings = {'quality': 34.0}

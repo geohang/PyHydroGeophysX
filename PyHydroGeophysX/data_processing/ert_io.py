@@ -60,11 +60,13 @@ def analytic_geometric_factors(data) -> np.ndarray:
     from pygimli.physics import ert as pg_ert
 
     positions = np.asarray(data.sensorPositions(), dtype=float)
-    if len(positions) and np.ptp(positions[:, 1]) > 1e-9 and np.ptp(positions[:, 2]) > 1e-9:
-        # A 3-D survey on uneven ground. PyGIMLi's factor mirrors every
-        # electrode across a surface at z = 0, so an electrode at z = 211
-        # would get the whole-space factor; the ground is where the electrodes
-        # are, as it is for a profile, whose elevation PyGIMLi keeps in y.
+    if (len(positions) and np.ptp(positions[:, 1]) > 1e-9
+            and np.abs(positions[:, 2]).max() > 1e-9):
+        # A 3-D survey with its electrodes off z = 0, on even ground or not.
+        # PyGIMLi's factor mirrors every electrode across a surface at z = 0,
+        # which doubles k for a flat grid at z = 211; the ground is where the
+        # electrodes are, as it is for a profile, whose elevation PyGIMLi
+        # keeps in y.
         return _surface_factors(data, positions)
     try:
         return pg_ert.createGeometricFactors(data, numerical=False, skipCache=True)
