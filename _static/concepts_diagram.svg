@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="220" viewBox="0 0 900 220">
+  <defs>
+    <style>
+      .box { fill: #f7f7f7; stroke: #2f4f4f; stroke-width: 2; rx: 10; }
+      .label { font-family: Arial, sans-serif; font-size: 18px; fill: #1f2a44; }
+      .arrow { stroke: #1f2a44; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <polygon points="0 0, 10 5, 0 10" fill="#1f2a44" />
+    </marker>
+  </defs>
+
+  <rect class="box" x="30" y="70" width="180" height="80" />
+  <text class="label" x="60" y="115">Hydrology</text>
+
+  <rect class="box" x="250" y="70" width="180" height="80" />
+  <text class="label" x="270" y="115">Petrophysics</text>
+
+  <rect class="box" x="470" y="70" width="180" height="80" />
+  <text class="label" x="505" y="115">Geophysics</text>
+
+  <rect class="box" x="690" y="70" width="180" height="80" />
+  <text class="label" x="705" y="108">Inversion and</text>
+  <text class="label" x="720" y="130">Interpretation</text>
+
+  <line class="arrow" x1="210" y1="110" x2="250" y2="110" />
+  <line class="arrow" x1="430" y1="110" x2="470" y2="110" />
+  <line class="arrow" x1="650" y1="110" x2="690" y2="110" />
+</svg>

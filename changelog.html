@@ -1,0 +1,794 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Changelog &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="_static/documentation_options.js?v=1dd76d02"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'changelog';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/changelog.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Citation" href="citation.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="_static/searchtools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script src="searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="agents/index.html">
+    Agentic AI
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class=" current active">
+  <a class="nav-link dropdown-item nav-internal" href="#">
+    Changelog
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="agents/index.html">
+    Agentic AI
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    Changelog
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"></div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Changelog</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="changelog">
+<h1>Changelog<a class="headerlink" href="#changelog" title="Link to this heading">#</a></h1>
+<p>Key changes to PyHydroGeophysX, following <a class="reference external" href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>.
+Before 1.0, minor releases may change the API.</p>
+<section id="unreleased">
+<h2>[Unreleased]<a class="headerlink" href="#unreleased" title="Link to this heading">#</a></h2>
+<section id="added">
+<h3>Added<a class="headerlink" href="#added" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>Studio 3D Mesh Builder:</strong> sensor positions from a file (<code class="docutils literal notranslate"><span class="pre">Cable,Elec,X,Y,Z</span></code> and the like), and “Build mesh from sensor file…” to read one and generate the mesh in one step; “Use for ERT inversion” sends the mesh to the ERT page.</p></li>
+<li><p><strong>Studio ERT Mesh tab:</strong> 3D meshes shown in an interactive 3D view; “Build a 3D mesh…” opens the 3D Mesh Builder with the page’s electrodes.</p></li>
+<li><p><strong>ERT:</strong> the in-house, PyGIMLi and ADTLERT engines invert a profile on an imported 3D mesh; the section along the line is shown and the whole model saved as <code class="docutils literal notranslate"><span class="pre">resistivity_3d.vtk</span></code>. Time-lapse series too, each step’s volume saved beside its section.</p></li>
+<li><p><strong>ERT 3D surveys:</strong> electrodes covering an area (a grid from an <code class="docutils literal notranslate"><span class="pre">X,Y,Z</span></code> electrode file) keep their y; the Data tab shows the readings in plan, a prism mesh is built under the array, and the in-house, PyGIMLi and ADTLERT engines (on the prisms split into tetrahedra, with quadratic elements) invert single surveys and time-lapse series in 3D. Studio and Saved Results show 3D models in an interactive 3D view and correct them for temperature; Add to Map takes them as depth slices.</p></li>
+<li><p><strong>MT:</strong> <code class="docutils literal notranslate"><span class="pre">TimeSeriesRun.with_dipole_length</span></code> reads an electric channel with another dipole length, for a line that changed during a recording, such as one arm left measuring against the ground electrode after an electrode broke off.</p></li>
+<li><p><strong>Assistants:</strong> written procedures (skills) in the open Agent Skills format. AQUAH ships its own, a group adds more with <code class="docutils literal notranslate"><span class="pre">PHGX_SKILLS_PATH</span></code>, and the assistant reads one when it fits: in Auto to report as a free look, in the chat with a <code class="docutils literal notranslate"><span class="pre">read_skill</span></code> tool.</p></li>
+<li><p><strong>Uncertainty:</strong> <code class="docutils literal notranslate"><span class="pre">uncertainty.interval_coverage</span></code> checks a reported mean +/- standard deviation against a known truth (synthetic models, cores, logs): coverage at 1 and 2 sigma, z statistics and bias, overall and per group such as depth bins.</p></li>
+<li><p><strong>Examples:</strong> <code class="docutils literal notranslate"><span class="pre">Ex_GPR_workflow</span></code> runs the GPR tools on the line simulated over the MODFLOW model: processing, a check of time zero and of the velocity against the CRIM permittivity that made the line (a first-break time zero against peak-timed reflections reads 27 % slow), depth and elevation sections, and the saved line. It is linked from the README, the GPR guide and the examples page.</p></li>
+<li><p><strong>Uncertainty:</strong> <code class="docutils literal notranslate"><span class="pre">uncertainty.regularized_posterior_std</span></code> gives each cell’s linearised posterior standard deviation of a regularised Gauss-Newton model; <code class="docutils literal notranslate"><span class="pre">ERTInversion(posterior_std=True)</span></code> returns it as <code class="docutils literal notranslate"><span class="pre">result.model_log_std</span></code>, and <code class="docutils literal notranslate"><span class="pre">run_petrophysics_monte_carlo(log_resistivity_std=...)</span></code> draws the resistivity with it.</p></li>
+<li><p><strong>ADTLERT 3D:</strong> <code class="docutils literal notranslate"><span class="pre">engine=&quot;adtlert&quot;</span></code> inverts 3D surveys on tetrahedral meshes (<code class="docutils literal notranslate"><span class="pre">mesh_file</span></code>), in single and windowed time-lapse runs, with ADTLERT’s 3D forward.</p></li>
+<li><p><strong>ADTLERT remote electrodes:</strong> pole-dipole and pole-pole surveys (negative ABMN indices) run on ADTLERT, on flat and topographic 2D profiles and on 3D meshes; they no longer fall back to PyHydro. adtlert 0.3 applies the far-field mixed condition on 2.5D terrain meshes, which also changes ADTLERT’s 2.5D terrain results.</p></li>
+</ul>
+</section>
+<section id="changed">
+<h3>Changed<a class="headerlink" href="#changed" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>3D Mesh Builder:</strong> field meshes (prism, Gmsh, structured grid) reach 4 spreads beyond their domain, sideways and down, through a coarse outer region that is never inverted, as the ERT page’s own mesh does (“Outer region”; 0 leaves it out, a Box mesh has none). On a two-layer ground the error fell from 1.0 to 0.45 % (prism), 1.3 to 0.55 % (Gmsh) and 2.2 to 0.39 % (structured grid), 90th percentile. The prism mesh’s narrow ring around its domain is no longer inverted, and the view hides the outer region unless “Outer region” above it is ticked.</p></li>
+<li><p><strong>ADTLERT backend:</strong> requires <code class="docutils literal notranslate"><span class="pre">adtlert&gt;=0.3,&lt;0.4</span></code>. The <code class="docutils literal notranslate"><span class="pre">adtlert</span></code> extra no longer installs CuPy, or cuDSS and nvmath-python separately on Windows; ADTLERT brings cuDSS and compiles its kernel with NVRTC. GPU availability is checked with Torch and an NVRTC compile instead of CuPy, and <code class="docutils literal notranslate"><span class="pre">gpu_cgls</span></code> runs on Torch.</p></li>
+<li><p><strong>ADTLERT backend:</strong> surveys are passed with their recorded receiver polarity; ADTLERT 0.2.3 handles negative geometric factors, so the M/N exchange that canonicalized them is gone. Over topography the forward still frees its P2 setup systems (potentials, assembly templates and cuDSS factorizations) once their results are cached, now from adtlert 0.3’s caches: on the DAS-1 example its GPU memory after the first solves falls from 1.7 to 0.6 GB, with the same solves.</p></li>
+<li><p><strong>3D mesh, prism engine:</strong> a single electrode line no longer gives a zero-width domain.</p></li>
+<li><p><strong>AQUAH:</strong> every decision in Auto to report states a confidence, kept on the step in the run’s plan; leaving route steps out with low confidence is put to the user instead of decided alone.</p></li>
+<li><p><strong>AQUAH:</strong> file previews, reference-document excerpts and a script’s output reach the model fenced as data, so text in them that reads like an instruction is not taken as one.</p></li>
+<li><p><strong>Water content:</strong> a single-survey ERT run now draws the resistivity with the inversion’s linearised posterior as well as the petrophysical parameters, so the +/- carries both. Reports say what the +/- contains and that it is still too narrow at depth and where coverage is low.</p></li>
+<li><p><strong>Agents:</strong> an agent uses an API key only when given one (<code class="docutils literal notranslate"><span class="pre">api_key=&quot;env&quot;</span></code> reads the provider’s variable). It used to read <code class="docutils literal notranslate"><span class="pre">OPENAI_API_KEY</span></code> and the like by itself, so a library call, or <code class="docutils literal notranslate"><span class="pre">api_key=None</span></code> in the documentation’s no-model examples, could send requests and spend credit. When a key is set but not passed, the agent warns once.</p></li>
+<li><p><strong>AQUAH chat:</strong> removing inputs or electrodes, and exporting or saving to a path the assistant names, now always wait for the user’s approval.</p></li>
+<li><p><strong>AQUAH:</strong> the request reader treats rain or weather named as a cause, and data of unstated type, as cases to mark true. A site given as coordinates (“41.37 N, 106.24 W”) is no longer taken for a place name.</p></li>
+<li><p><strong>MT reading:</strong> a Phoenix recording read with <code class="docutils literal notranslate"><span class="pre">start</span></code> and <code class="docutils literal notranslate"><span class="pre">end</span></code> now opens only the 24 kHz and 150 Hz files within them, as it already did for native files, so an hour of a day-long recording reads in a fraction of a second rather than loading gigabytes of bursts.</p></li>
+<li><p><strong>Third-party notices:</strong> the DAS-1 and E4D example data now name their data releases (HydroShare, ESS-DIVE) and CC BY 4.0 licence, ResIPy and the MIT-licensed Phoenix receiver rules (PhoenixGeoPy, mth5) have entries, and the desktop-build notes state what each archive bundles and where its notices are.</p></li>
+<li><p><strong>ERT mesh settings:</strong> <code class="docutils literal notranslate"><span class="pre">ERTInversion</span></code> builds its mesh with the <code class="docutils literal notranslate"><span class="pre">quality</span></code>, <code class="docutils literal notranslate"><span class="pre">paraDX</span></code>, <code class="docutils literal notranslate"><span class="pre">paraMaxCellSize</span></code> and <code class="docutils literal notranslate"><span class="pre">paraDepth</span></code> it is given (it always used quality 34 and pyGIMLi’s defaults). The ERT agent passes only the settings a request gives, so default runs are unchanged. The time-lapse mesh keeps its defaults unless the request gives its own.</p></li>
+<li><p><strong>Desktop archives:</strong> each archive now carries <code class="docutils literal notranslate"><span class="pre">BUILD_INFO.txt</span></code> (the components it bundles, with versions, origins and licences), <code class="docutils literal notranslate"><span class="pre">SOURCE_CODE.md</span></code> (the source of its LGPL libraries and how to replace Qt) and <code class="docutils literal notranslate"><span class="pre">LICENSES/</span></code> at its root. <code class="docutils literal notranslate"><span class="pre">packaging/release_audit.py</span></code> writes them and checks every archive (Qt module and plugin licences, excluded engines such as Gmsh and TetGen, bundled third-party libraries, source links, a Qt library swap) before the workflow attaches it to a draft release. Full builds take Qt, PySide6 and VTK from conda-forge (one Qt build, no FFmpeg) and use OpenBLAS.</p></li>
+<li><p><strong>Desktop Full builds:</strong> pyGIMLi’s core solves its systems with rustsolve instead of SuiteSparse CHOLMOD and UMFPACK, and is built without Triangle; its 2-D meshes come from rustmesh through <code class="docutils literal notranslate"><span class="pre">PyHydroGeophysX/core/rustmesh_backend.py</span></code>. The prebuilt files and their checks are in <code class="docutils literal notranslate"><span class="pre">packaging/rustsolve/</span></code>.</p></li>
+<li><p><strong>README:</strong> the method list, Features, install notes, package structure and examples table now cover GPR, gravity and magnetics, laterally constrained TEM lines, joint FDEM+TDEM and gravity+magnetics inversion, and writing results back to MODFLOW 6 or ParFlow. The examples table gains the eight examples it was missing.</p></li>
+<li><p><strong>README citations:</strong> the README keeps the two PyHydroGeophysX papers and the core packages and engines (pyGIMLi, SimPEG, ADTLERT, ResIPy, E4D, R2/R3t, FloPy/MODFLOW, ParFlow, ATS, PFLOTRAN). The papers behind individual methods (ERT reciprocal errors, shallow seismic and GPR processing, MT, laterally constrained EM inversion, petrophysics and pore fluids) and the Gmsh reference moved, with their BibTeX, to the new Method references section of the website’s citation page. The web app’s reference list follows the README.</p></li>
+<li><p><strong>Extras:</strong> the README’s extras table now matches <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>: it adds the <code class="docutils literal notranslate"><span class="pre">ert</span></code> and <code class="docutils literal notranslate"><span class="pre">mcp</span></code> groups and the packages each group was missing, and names the groups <code class="docutils literal notranslate"><span class="pre">all</span></code> leaves out (<code class="docutils literal notranslate"><span class="pre">adtlert</span></code>, <code class="docutils literal notranslate"><span class="pre">ert</span></code>, <code class="docutils literal notranslate"><span class="pre">mcp</span></code>). <code class="docutils literal notranslate"><span class="pre">all</span></code> now also installs <code class="docutils literal notranslate"><span class="pre">pyproj</span></code>, as <code class="docutils literal notranslate"><span class="pre">desktop</span></code> does.</p></li>
+<li><p><strong>Citations:</strong> the laterally constrained EM inversion (<code class="docutils literal notranslate"><span class="pre">inversion.em1d_lci</span></code>) now credits the method it follows, Auken and Christiansen (2004), and its depth of investigation, Christiansen and Auken (2012), on the docs’ citation page (with BibTeX under Method references) and in the module docstring.</p></li>
+<li><p><strong>Citations:</strong> the PyHydroGeophysX software paper is now cited as published, SoftwareX 34, 102710 (https://doi.org/10.1016/j.softx.2026.102710), in the README, the docs’ citation page, the agents README and the web app’s reference list, instead of “in press” with the SSRN preprint.</p></li>
+<li><p><strong>Wording:</strong> docstrings and comments across the package state what the code does and the rule it keeps, without the history of how it was found; the code, the Studio, the README and the website describe each feature by what it does, such as 3D meshes from E4D mesh configurations.</p></li>
+<li><p><strong>Documentation:</strong> the GPR pages credit GPRPy, readgssi, ImpDAR and RGPR for the standard processing sequence, not for the readers; the petrophysics page names the release (0.5.0) that corrected the Hertz-Mindlin shear prefactor; the desktop studio page gives the PyInstaller commands the build workflow runs.</p></li>
+</ul>
+</section>
+<section id="fixed">
+<h3>Fixed<a class="headerlink" href="#fixed" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>3D ERT meshes from elsewhere:</strong> PyGIMLi reads the outer faces’ markers as boundary conditions, and the 3D Mesh Builder’s Gmsh, structured-grid and E4D meshes (or any imported mesh) left them no flow, an insulating box: on a two-layer ground the structured grid missed by 25 % (90th percentile). The Mesh Builder and the ERT page’s mesh import now mark the ground no flow and every other outer face far-field (2.4 %).</p></li>
+<li><p><strong>3D Mesh Builder, Gmsh:</strong> electrodes on the ground were embedded in the volume, which left each one twice in the mesh with flat cells between; neither ERT engine could use it. They are now embedded in the ground surface.</p></li>
+<li><p><strong>ADTLERT 3D memory:</strong> ADTLERT built its background map as a dense cells x parameters array (3.4 GB on an E4D mesh of 35 644 cells) and padded its assembly to 64 entries (over 7.5 GB with quadratic elements); both are now built lean in PyHydroGeophysX (2.0 GB, same results).</p></li>
+<li><p><strong>Studio assistant:</strong> an ERT run the page declines (ADTLERT’s GPU check not yet passed, say) was reported to the assistant as started; it is now reported as not started, with the page’s reason.</p></li>
+<li><p><strong>Studio seismic picking:</strong> a Ctrl+drag line pick that ended with Ctrl released before the mouse button left the dashed line on the gather and started the next pick from the old start; whether a drag draws a line is now settled when it starts. A drag no longer redraws every wiggle of the gather (about 7 ms per drag), picks made or undone by hand keep the zoom, and clicks above time zero or past the end of the record make no picks.</p></li>
+<li><p><strong>Water content (AgentCoordinator):</strong> <code class="docutils literal notranslate"><span class="pre">WaterContentAgent</span></code> no longer reads an inversion mesh’s per-cell markers as layers in index order or drops petrophysical parameters given by name. It converts through <code class="docutils literal notranslate"><span class="pre">PetrophysicsAgent</span></code>, as AQUAH does: one unit unless the markers are layers, the user’s parameters applied, and the not-reliable statement when they are missing. On a synthetic with the truth known, cells within one sigma rose from 27 % to 69 %. Distributions given for every marker of the mesh are still used as given, the inversion’s posterior is drawn on both routes, and the result keeps <code class="docutils literal notranslate"><span class="pre">saturation_all</span></code>.</p></li>
+<li><p><strong>ERT loader:</strong> the data-quality figures read a field the observations do not have, so they were never computed. They now come from each reading’s apparent resistivity.</p></li>
+<li><p><strong>GPR migration:</strong> <code class="docutils literal notranslate"><span class="pre">gpr.migrate</span></code> (F-K Stolt) drops each trace’s mean, and with the record zero-padded before time zero a trace whose first samples cut through a strong arrival kept a constant offset down its whole length, a pale block under the cut once gained. Time now goes through a sine transform, which extends the record to negative times as its own negative, so the offset is gone. The studio’s GPR page and the AQUAH workflow get the fix through <code class="docutils literal notranslate"><span class="pre">gpr.process</span></code>, and <code class="docutils literal notranslate"><span class="pre">Ex_GPR_workflow</span></code> no longer band-passes a second time after migration.</p></li>
+<li><p><strong>GPR migration late in the record:</strong> the Stolt mapping read the spectrum between frequency samples by linear interpolation, which lost amplitude of dipping energy late in the record (a diffraction at 90 ns in a 100 ns record focused 14 % low). It now uses a 10-tap Kaiser-windowed sinc, in the same memory and about 1.5 times the run time.</p></li>
+<li><p><strong>GPR band-pass after time zero:</strong> <code class="docutils literal notranslate"><span class="pre">gpr.process</span></code> cut the record at time zero and then band-passed it, so every trace started partway through the direct wave and the filter’s low corner rang on that edge, drawing arcs under the shallowest reflection. When a band-pass follows, the samples before time zero are now dropped after it; the time-zero pick and the line’s length are unchanged, and the band-pass line of the history says so. The studio’s GPR page and the AQUAH workflow get the fix through <code class="docutils literal notranslate"><span class="pre">gpr.process</span></code>; <code class="docutils literal notranslate"><span class="pre">gpr.bandpass</span></code> and <code class="docutils literal notranslate"><span class="pre">gpr.set_time_zero</span></code> called one after the other still cut first, and their docstrings say to band-pass before cutting.</p></li>
+<li><p><strong>ERT forward with a NaN or infinite cell:</strong> pyGIMLi’s <code class="docutils literal notranslate"><span class="pre">ERTModelling</span></code> models a NaN cell without a word and only prints a warning for an infinite one, and a NaN water content (a masked or inactive hydrologic cell) keeps its NaN through the petrophysical clip, so <code class="docutils literal notranslate"><span class="pre">hydro_to_ert</span></code> could make plausible but wrong synthetic data. <code class="docutils literal notranslate"><span class="pre">ERTForwardModeling</span></code>, <code class="docutils literal notranslate"><span class="pre">ertforward</span></code>, <code class="docutils literal notranslate"><span class="pre">ertforandjac</span></code>, <code class="docutils literal notranslate"><span class="pre">ertforward2</span></code>, <code class="docutils literal notranslate"><span class="pre">ertforandjac2</span></code>, <code class="docutils literal notranslate"><span class="pre">hydro_to_ert</span></code> (and <code class="docutils literal notranslate"><span class="pre">run_ert3d_forward</span></code> through <code class="docutils literal notranslate"><span class="pre">ERTForwardModeling</span></code>) and the final models of the ERT and time-lapse inversions now go through one check, <code class="docutils literal notranslate"><span class="pre">forward.ert_forward.check_resistivity_model</span></code>, which refuses a NaN, infinite, zero or negative cell before the forward call and says how many there are and where. The single-survey ERT inversion used to set a NaN from a failed update solve to the lower resistivity bound, which the line search could then accept; it now stops with that error.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">ertforward</span></code>:</strong> the cells outside marker 2 were passed to the forward operator as ln(resistivity), so a 100 ohm-m background was modelled at 4.6 ohm-m, and the model was built with <code class="docutils literal notranslate"><span class="pre">pg.matrix.RVector</span></code>, which pyGIMLi 1.5.5 does not have (it is <code class="docutils literal notranslate"><span class="pre">pg.core.RVector</span></code>), so every call failed. Those cells now keep the given resistivity in ohm-m, and only the cells of marker 2 take <code class="docutils literal notranslate"><span class="pre">exp(xr)</span></code>, as the docstring says.</p></li>
+</ul>
+</section>
+</section>
+<section id="id1">
+<h2>[0.5.0] - 2026-10-15<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
+<p>First release after 0.3.0; 0.4.0 was not published. These notes cover every change since 0.3.0.</p>
+<section id="id2">
+<h3>Added<a class="headerlink" href="#id2" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>MT/AMT:</strong> instrument readers, robust remote-reference processing, isotropic and anisotropic 1D inversion, TEM static-shift correction, and 2D profile inversion.</p></li>
+<li><p><strong>GPR:</strong> file readers, signal processing, migration, velocity fitting, and time/depth/elevation views in Studio and AQUAH workflows.</p></li>
+<li><p><strong>EM:</strong> laterally constrained line inversion, joint FDEM/TDEM inversion, and TEMcompany, TEM2Go and tTEM readers.</p></li>
+<li><p><strong>ERT:</strong> a-priori resistivity zones, imported meshes, mesh generation from E4D configurations, automatic regularization search, reciprocal pairing, averaging and error models, and BGS PRIME/RESIMGR support.</p></li>
+<li><p><strong>ERT engines:</strong> external E4D, R2 and R3t engines, and optional ADTLERT GPU inversion.</p></li>
+<li><p><strong>Hydrology:</strong> ATS and PFLOTRAN output readers.</p></li>
+<li><p><strong>Hydrogeophysics:</strong> hydrological-model input export, joint gravity/magnetic inversion, resistivity temperature correction, and Monte Carlo water-content conversion.</p></li>
+<li><p><strong>Petrophysics:</strong> pore-fluid properties, ionic and surface conductivity helpers, and configurable pressure and fluids for Hertz–Mindlin models.</p></li>
+<li><p><strong>AQUAH:</strong> unified tool-driven runtime, model routing, local reference retrieval, live-panel capture, and request-aware reports.</p></li>
+<li><p><strong>Assistants:</strong> plug-in support, Codex/Claude CLI access, OpenAI-compatible inference endpoints, reusable tool loops, and approved temporary scripts.</p></li>
+<li><p><strong>Studio:</strong> integrated workflows, joint inversion, project maps, saved results, mesh previews, and process-isolated runs.</p></li>
+<li><p><strong>Run monitoring:</strong> live progress, pause/resume, replay, cost tracking, processing records, and unsaved-run recovery.</p></li>
+<li><p><strong>Workflows:</strong> versioned recipes, a CLI, optional MCP access, and reproducible Python scripts and notebooks.</p></li>
+<li><p><strong>Examples:</strong> EM sections, gravity/magnetics, hydrological feedback, sensitivity, assimilation, and posterior uncertainty.</p></li>
+</ul>
+</section>
+<section id="id3">
+<h3>Changed<a class="headerlink" href="#id3" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>Studio:</strong> consistent ERT-style pages, contextual controls, pinned result actions, light/dark themes, plot navigation, colour limits, and selectable length units.</p></li>
+<li><p><strong>Studio responsiveness:</strong> deferred numerical-engine imports, background EM checks, cached slice plots, batched logs, and no refresh of hidden quality/property panels.</p></li>
+<li><p><strong>AQUAH:</strong> shared step-by-step and automatic workflows, adaptive routes, reuse of Studio results, and model-first request parsing.</p></li>
+<li><p><strong>Water content:</strong> conversions always include uncertainty and identify uncalibrated parameter assumptions.</p></li>
+<li><p><strong>Solvers:</strong> time-lapse ERT and seismic solvers use Cholesky by default; time-lapse ERT adds interval-weighted temporal regularization.</p></li>
+<li><p><strong>Inversion:</strong> updated stopping rules, EM starting-model selection, regularization search, and ERT quality controls.</p></li>
+<li><p><strong>Performance:</strong> faster MT/TEM processing and Studio navigation; lower memory use in ERT and faster joint ERT+SRT inversion.</p></li>
+<li><p><strong>ERT reading:</strong> E4D, DAS-1 and BERT files load 3–7x faster with identical data (a 3.7k-reading E4D survey: about 300 → 40 ms), so a long time-lapse series spends seconds rather than minutes reading.</p></li>
+<li><p><strong>Package layout:</strong> scientific pipelines moved out of the Qt package; optional dependency groups updated.</p></li>
+<li><p><strong>Climate data:</strong> Open-Meteo ERA5 replaces Daymet.</p></li>
+<li><p><strong>Monte Carlo example:</strong> <code class="docutils literal notranslate"><span class="pre">Ex_MC_Hydro</span></code> estimates porosity with the package’s Monte Carlo and says where porosity has no solution and where the S = 1 assumption fails.</p></li>
+<li><p><strong>Documentation:</strong> concise README and changelog, with README images that also show on PyPI; detailed methods, references and setup guidance on the documentation website.</p></li>
+</ul>
+</section>
+<section id="upgrade-notes">
+<h3>Upgrade notes<a class="headerlink" href="#upgrade-notes" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>Python 3.10+ is required.</strong></p></li>
+<li><p><strong>Workbench becomes Studio:</strong> use <code class="docutils literal notranslate"><span class="pre">pyhydrogeophysx-studio</span></code> and the renamed Studio classes and launch scripts.</p></li>
+<li><p><strong>Syscal and Protocol DC/IP files require optional ResIPy.</strong></p></li>
+<li><p>Legacy agent classes and structural-mesh helpers were removed; import errors or warnings identify replacements.</p></li>
+<li><p>Compatibility module paths and renamed MODFLOW reader arguments are deprecated for removal in 0.6.0.</p></li>
+<li><p>Corrected petrophysics, FDEM receiver ordering, temporal weighting, geometry and uncertainty calculations can change results from 0.3.0.</p></li>
+</ul>
+</section>
+<section id="id4">
+<h3>Fixed<a class="headerlink" href="#id4" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>Hertz–Mindlin:</strong> corrected the shear-modulus formula and unified legacy and class APIs; results from affected revisions change, while default parameters are retained.</p></li>
+<li><p><strong>Numerical operators:</strong> corrected weighted cross-gradients, rotation invariance, gravity/magnetic broadcasting, and interpolation at large map coordinates.</p></li>
+<li><p><strong>Porosity from resistivity:</strong> where surface conduction alone exceeds the measured conductivity, porosity is now NaN with a warning instead of the solver’s starting guess (~0.05); the Monte Carlo leaves those draws out of the statistics and reports their share per cell. The conversion is now closed-form and about 60x faster on the Treeline example.</p></li>
+<li><p><strong>Uncertainty:</strong> corrected resolution and posterior covariance calculations and ES-MDA inflation validation; supplied variances are preserved.</p></li>
+<li><p><strong>Coupling:</strong> stabilized Gassmann endpoints, corrected hydro-profile geometry, hydro-to-geophysics outputs and seismic-to-water-content model selection, and flagged assumed MODFLOW porosity.</p></li>
+<li><p><strong>ERT:</strong> corrected geometric factors and reciprocal errors; improved format validation, electrode geometry handling, time-lapse QC, and solver memory use.</p></li>
+<li><p><strong>ERT auto-detection:</strong> a DAS-1 file is no longer read as a one-reading E4D survey, and trying a file with PyGIMLi no longer leaves <code class="docutils literal notranslate"><span class="pre">invalid.data</span></code> in the working folder.</p></li>
+<li><p><strong>MT:</strong> corrected interference removal, burst processing, calibration, channel directions, saturated-data handling, error propagation, and inversion data selection.</p></li>
+<li><p><strong>Seismic and TEM:</strong> corrected SEG-2 decoding, acquisition timing, shot geometry, picking, sounding signs, and failed-sounding reporting; SRT now honors requested solver settings.</p></li>
+<li><p><strong>Agent workflows:</strong> corrected method selection, file classification, missing products, background-job failures, recovery, and reporting of the parameters actually used.</p></li>
+<li><p><strong>Projects and reports:</strong> improved workflow reports, project portability, Unicode paths, run cleanup, and example reproducibility.</p></li>
+<li><p><strong>Documentation:</strong> the website builds without its 67 long-standing Sphinx warnings: example-gallery text blocks, docstring formatting, duplicate API entries, and an ambiguous <code class="docutils literal notranslate"><span class="pre">mesh</span></code> link.</p></li>
+</ul>
+</section>
+</section>
+<section id="id5">
+<h2>[0.3.0] - 2026-07-09<a class="headerlink" href="#id5" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Desktop Workbench downloads for Windows and macOS, with light and full builds.</p></li>
+<li><p>Automatic documentation-site deployment.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="citation.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Citation</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#unreleased">[Unreleased]</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#added">Added</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#changed">Changed</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fixed">Fixed</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">[0.5.0] - 2026-10-15</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Added</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Changed</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#upgrade-notes">Upgrade notes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Fixed</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">[0.3.0] - 2026-07-09</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/changelog.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="_sources/changelog.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

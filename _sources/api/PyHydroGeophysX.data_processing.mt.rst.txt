@@ -1,0 +1,165 @@
+PyHydroGeophysX.data\_processing.mt package
+===========================================
+
+Submodules
+----------
+
+PyHydroGeophysX.data\_processing.mt.analysis module
+---------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.analysis
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.edi module
+----------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.edi
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.emtf\_xml module
+----------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.emtf_xml
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.forward1d module
+----------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.forward1d
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.inversion1d module
+------------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.inversion1d
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.inversion2d module
+------------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.inversion2d
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.io module
+---------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.io
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.jfile module
+------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.jfile
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.lemi module
+-----------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.lemi
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.metronix module
+---------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.metronix
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.phoenix module
+--------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.phoenix
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.phoenix\_legacy module
+----------------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.phoenix_legacy
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.processing module
+-----------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.processing
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.robust module
+-------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.robust
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.spectra module
+--------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.spectra
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.timeseries module
+-----------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.timeseries
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.transfer\_function module
+-------------------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.transfer_function
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.zfile module
+------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.zfile
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+PyHydroGeophysX.data\_processing.mt.zonge module
+------------------------------------------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt.zonge
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: PyHydroGeophysX.data_processing.mt
+   :members:
+   :show-inheritance:
+   :undoc-members:
